@@ -8,11 +8,11 @@ const config: Config = {
     "^.+\\.(t|j)s$": [
       "ts-jest",
       {
-        tsconfig: "tsconfig.backend.json"
+        tsconfig: "tsconfig.json"
       }
     ]
   },
-  collectCoverageFrom: ["backend/src/**/*.ts"],
+  collectCoverageFrom: ["src/server/**/*.ts"],
   coverageDirectory: "./coverage",
   setupFiles: ["<rootDir>/test/jest.setup.ts"],
   testEnvironment: "node"
