@@ -1,0 +1,69 @@
+import { validateEnvironment } from "./environment.schema";
+
+describe("validateEnvironment", () => {
+  const validEnvironment = {
+    NODE_ENV: "test",
+    PORT: "3001",
+    DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/ai_system_design?schema=public",
+    APP_NAME: "AI System Design Copilot",
+    APP_VERSION: "0.1.0",
+    CORS_ORIGINS: "http://localhost:3000, https://example.com",
+    LOG_LEVEL: "info",
+    GEMINI_API_KEY: "test-gemini-key",
+    GEMINI_FAST_MODEL: "gemini-fast-test",
+    GEMINI_REASONING_MODEL: "gemini-reasoning-test",
+    GEMINI_EMBEDDING_MODEL: "gemini-embedding-test",
+    GEMINI_EMBEDDING_MODEL_VERSION: "test-version",
+    AI_TIMEOUT_MS: "5000",
+    AI_MAX_RETRIES: "1",
+    KNOWLEDGE_CHUNK_MAX_TOKENS: "500",
+    KNOWLEDGE_EMBEDDING_DIMENSIONS: "32",
+    KNOWLEDGE_EMBEDDING_BATCH_SIZE: "4",
+    RETRIEVAL_DEFAULT_TOP_K: "7",
+    RETRIEVAL_MIN_SIMILARITY: "0.35"
+  };
+
+  it("returns a typed configuration object for valid input", () => {
+    const config = validateEnvironment(validEnvironment);
+
+    expect(config).toEqual({
+      nodeEnv: "test",
+      port: 3001,
+      databaseUrl: validEnvironment.DATABASE_URL,
+      appName: "AI System Design Copilot",
+      appVersion: "0.1.0",
+      corsOrigins: ["http://localhost:3000", "https://example.com"],
+      logLevel: "info",
+      geminiApiKey: "test-gemini-key",
+      geminiFastModel: "gemini-fast-test",
+      geminiReasoningModel: "gemini-reasoning-test",
+      geminiEmbeddingModel: "gemini-embedding-test",
+      geminiEmbeddingModelVersion: "test-version",
+      aiTimeoutMs: 5000,
+      aiMaxRetries: 1,
+      knowledgeChunkMaxTokens: 500,
+      knowledgeEmbeddingDimensions: 32,
+      knowledgeEmbeddingBatchSize: 4,
+      retrievalDefaultTopK: 7,
+      retrievalMinSimilarity: 0.35
+    });
+  });
+
+  it("throws a clear error when DATABASE_URL is missing", () => {
+    const environmentWithoutDatabaseUrl: Record<string, string> = { ...validEnvironment };
+    delete environmentWithoutDatabaseUrl.DATABASE_URL;
+
+    expect(() => validateEnvironment(environmentWithoutDatabaseUrl)).toThrow(
+      "Invalid environment configuration: DATABASE_URL: DATABASE_URL is required"
+    );
+  });
+
+  it("rejects invalid CORS origins", () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        CORS_ORIGINS: "http://localhost:3000,ftp://example.com"
+      })
+    ).toThrow("CORS_ORIGINS must be a comma-separated list of HTTP(S) origins or *");
+  });
+});

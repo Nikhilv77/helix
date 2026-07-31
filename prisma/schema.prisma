@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum DesignSessionStatus {
+  DRAFT
+  REQUIREMENTS_PENDING
+  READY_FOR_DESIGN
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+enum KnowledgeSourceType {
+  PLAIN_TEXT
+  MARKDOWN
+}
+
+enum KnowledgeDocumentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum KnowledgeEmbeddingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Project {
+  id             String          @id @default(uuid()) @db.Uuid
+  ownerId        String          @default("local-dev")
+  name           String
+  description    String?
+  status         ProjectStatus   @default(ACTIVE)
+  archivedAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  designSessions DesignSession[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([name])
+  @@index([createdAt])
+}
+
+model DesignSession {
+  id                     String              @id @default(uuid()) @db.Uuid
+  projectId              String              @db.Uuid
+  title                  String
+  problemStatement       String
+  status                 DesignSessionStatus @default(DRAFT)
+  currentStep            String?
+  failureCode            String?
+  failureMessage         String?
+  requirementAnalysis    Json?
+  clarificationAnswers   Json?
+  requirementsAnalyzedAt DateTime?
+  capacityCalculation    Json?
+  capacityCalculatedAt   DateTime?
+  generatedDesign        Json?
+  designGeneratedAt      DateTime?
+  architectureDiagram    Json?
+  diagramGeneratedAt     DateTime?
+  designValidation       Json?
+  designValidatedAt      DateTime?
+  startedAt              DateTime?
+  completedAt            DateTime?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  project                Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([status])
+  @@index([projectId, createdAt])
+}
+
+model KnowledgeDocument {
+  id                    String                   @id @default(uuid()) @db.Uuid
+  title                 String
+  sourceType            KnowledgeSourceType
+  sourceUrl             String?
+  contentHash           String                   @unique
+  status                KnowledgeDocumentStatus  @default(PENDING)
+  errorMessage          String?
+  embeddingStatus       KnowledgeEmbeddingStatus @default(PENDING)
+  embeddingErrorMessage String?
+  embeddedAt            DateTime?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  chunks                KnowledgeChunk[]
+
+  @@index([status])
+  @@index([embeddingStatus])
+  @@index([sourceType])
+  @@index([createdAt])
+}
+
+model KnowledgeChunk {
+  id                    String                   @id @default(uuid()) @db.Uuid
+  documentId            String                   @db.Uuid
+  content               String
+  contentHash           String?
+  chunkIndex            Int
+  tokenEstimate         Int
+  metadata              Json
+  embedding             Unsupported("vector")?
+  embeddingStatus       KnowledgeEmbeddingStatus @default(PENDING)
+  embeddingModel        String?
+  embeddingModelVersion String?
+  embeddingContentHash  String?
+  embeddingErrorMessage String?
+  embeddedAt            DateTime?
+  createdAt             DateTime                 @default(now())
+  document              KnowledgeDocument        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
+  @@index([contentHash])
+  @@index([embeddingStatus])
+  @@index([embeddingModel, embeddingModelVersion])
+  @@index([chunkIndex])
+}
