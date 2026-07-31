@@ -93,12 +93,12 @@ describe("api client", () => {
       )
     );
 
-    await expect(listProjects()).rejects.toMatchObject<ApiClientError>({
+    await expect(listProjects()).rejects.toMatchObject({
       code: "PROJECT_NOT_FOUND",
       message: "Project not found",
       status: 404,
       path: "/api/v1/projects/example"
-    });
+    } satisfies Partial<ApiClientError>);
   });
 
   it("attaches Clerk bearer tokens when a provider is registered", async () => {
