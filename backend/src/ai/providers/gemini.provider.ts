@@ -1,15 +1,15 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { GenerateContentParameters } from "@google/genai";
+import type { GenerateContentParameters } from "@google/genai";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { isRecord } from "../../common/utils/is-record";
 import { AppConfigService } from "../../config/app-config.service";
 import { AiProviderException } from "../ai-provider.exception";
-import {
+import type {
   GenerateStructuredRequest,
   SystemDesignerAIProvider
 } from "../interfaces/system-designer-ai-provider.interface";
 import { GEMINI_CLIENT } from "../tokens/gemini-client.token";
-import { GeminiGenerateContentClient, GeminiGenerateContentResponse } from "./gemini-provider.types";
+import type { GeminiGenerateContentClient, GeminiGenerateContentResponse } from "./gemini-provider.types";
 
 const PROVIDER_NAME = "gemini";
 const DEFAULT_TEMPERATURE = 0.2;

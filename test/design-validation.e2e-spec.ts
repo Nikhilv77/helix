@@ -2,13 +2,13 @@ import { INestApplication } from "@nestjs/common";
 import { DesignSessionStatus, ProjectStatus } from "@prisma/client";
 import { Server } from "http";
 import request from "supertest";
-import { AiProviderException } from "../src/ai/ai-provider.exception";
+import { AiProviderException } from "../backend/src/ai/ai-provider.exception";
 import {
   GenerateStructuredRequest,
   SystemDesignerAIProvider
-} from "../src/ai/interfaces/system-designer-ai-provider.interface";
-import { isRecord } from "../src/common/utils/is-record";
-import { PrismaService } from "../src/database/prisma.service";
+} from "../backend/src/ai/interfaces/system-designer-ai-provider.interface";
+import { isRecord } from "../backend/src/common/utils/is-record";
+import { PrismaService } from "../backend/src/database/prisma.service";
 import { applyMigrations, createE2eApp, resetDatabase } from "./e2e-app";
 
 describe("Design validation e2e", () => {

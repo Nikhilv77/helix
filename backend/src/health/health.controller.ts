@@ -1,7 +1,7 @@
 import { Controller, Get, HttpCode, HttpStatus, Res } from "@nestjs/common";
-import { Response } from "express";
+import type { Response } from "express";
 import { HealthService } from "./health.service";
-import { HealthResponse } from "./health.types";
+import type { HealthResponse } from "./health.types";
 
 @Controller({
   path: "health",

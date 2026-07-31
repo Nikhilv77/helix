@@ -13,7 +13,7 @@ import type {
   ValidationResponse
 } from "./types";
 
-const DEFAULT_API_BASE_URL = "http://localhost:3000/api/v1";
+const DEFAULT_API_BASE_URL = "/api/v1";
 
 interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
@@ -82,7 +82,11 @@ function isApiSuccessResponse<TData>(value: unknown): value is ApiSuccessRespons
 }
 
 function buildUrl(path: string, query?: RequestOptions["query"]): string {
-  const url = new URL(`${getApiBaseUrl()}${path}`);
+  const baseUrl = getApiBaseUrl();
+  const isAbsoluteUrl = baseUrl.startsWith("http://") || baseUrl.startsWith("https://");
+  const url = isAbsoluteUrl
+    ? new URL(`${baseUrl}${path}`)
+    : new URL(`${baseUrl}${path}`, window.location.origin);
 
   if (query) {
     Object.entries(query).forEach(([key, value]) => {
@@ -92,7 +96,7 @@ function buildUrl(path: string, query?: RequestOptions["query"]): string {
     });
   }
 
-  return url.toString();
+  return isAbsoluteUrl ? url.toString() : `${url.pathname}${url.search}`;
 }
 
 function delay(milliseconds: number): Promise<void> {

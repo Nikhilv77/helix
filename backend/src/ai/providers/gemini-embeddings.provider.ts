@@ -1,15 +1,15 @@
-import { EmbedContentParameters } from "@google/genai";
+import type { EmbedContentParameters } from "@google/genai";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { isRecord } from "../../common/utils/is-record";
 import { AppConfigService } from "../../config/app-config.service";
 import { AiProviderException } from "../ai-provider.exception";
-import {
+import type {
   EmbeddingsProvider,
   GenerateEmbeddingsRequest,
   GenerateEmbeddingsResult
 } from "../interfaces/embeddings-provider.interface";
 import { GEMINI_CLIENT } from "../tokens/gemini-client.token";
-import { GeminiGenerateContentClient } from "./gemini-provider.types";
+import type { GeminiGenerateContentClient } from "./gemini-provider.types";
 
 const PROVIDER_NAME = "gemini";
 const TRANSIENT_STATUS_CODES = new Set([408, 409, 429, 500, 502, 503, 504]);

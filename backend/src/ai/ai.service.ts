@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import {
+import type {
   GenerateStructuredRequest,
   SystemDesignerAIProvider
 } from "./interfaces/system-designer-ai-provider.interface";

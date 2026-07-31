@@ -5,7 +5,7 @@ import { AppConfigService } from "../config/app-config.service";
 import { AiService } from "./ai.service";
 import { GeminiEmbeddingsProvider } from "./providers/gemini-embeddings.provider";
 import { GeminiProvider } from "./providers/gemini.provider";
-import { GeminiGenerateContentClient } from "./providers/gemini-provider.types";
+import type { GeminiGenerateContentClient } from "./providers/gemini-provider.types";
 import { EMBEDDINGS_PROVIDER } from "./tokens/embeddings-provider.token";
 import { SYSTEM_DESIGNER_AI_PROVIDER } from "./tokens/ai-provider.token";
 import { GEMINI_CLIENT } from "./tokens/gemini-client.token";

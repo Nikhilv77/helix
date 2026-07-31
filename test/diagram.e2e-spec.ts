@@ -2,8 +2,8 @@ import { INestApplication } from "@nestjs/common";
 import { DesignSessionStatus, ProjectStatus } from "@prisma/client";
 import { Server } from "http";
 import request from "supertest";
-import { isRecord } from "../src/common/utils/is-record";
-import { PrismaService } from "../src/database/prisma.service";
+import { isRecord } from "../backend/src/common/utils/is-record";
+import { PrismaService } from "../backend/src/database/prisma.service";
 import { applyMigrations, createE2eApp, resetDatabase } from "./e2e-app";
 
 describe("Architecture diagram generation e2e", () => {

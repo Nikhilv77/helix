@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { KnowledgeEmbeddingStatus } from "@prisma/client";
 import { AiProviderException } from "../ai/ai-provider.exception";
-import { EmbeddingsProvider } from "../ai/interfaces/embeddings-provider.interface";
+import type { EmbeddingsProvider } from "../ai/interfaces/embeddings-provider.interface";
 import { EMBEDDINGS_PROVIDER } from "../ai/tokens/embeddings-provider.token";
 import { NotFoundErrorException } from "../common/exceptions/not-found-error.exception";
 import { AppConfigService } from "../config/app-config.service";

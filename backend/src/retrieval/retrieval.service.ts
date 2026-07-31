@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { KnowledgeSourceType, Prisma } from "@prisma/client";
-import { EmbeddingsProvider } from "../ai/interfaces/embeddings-provider.interface";
+import type { EmbeddingsProvider } from "../ai/interfaces/embeddings-provider.interface";
 import { EMBEDDINGS_PROVIDER } from "../ai/tokens/embeddings-provider.token";
 import { AppConfigService } from "../config/app-config.service";
 import { RetrievalRepository, RetrievalSearchRow } from "./retrieval.repository";

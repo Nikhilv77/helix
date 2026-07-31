@@ -1,6 +1,9 @@
 import { ProjectForm } from "@/components/project-form";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { ArrowLeft, Sparkles } from "lucide-react";
+
+const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
 export default function NewProjectPage() {
   return (
@@ -32,7 +35,16 @@ export default function NewProjectPage() {
           </p>
         </div>
       </section>
-      <ProjectForm />
+      {clerkEnabled ? (
+        <ProjectForm />
+      ) : (
+        <Card>
+          <p className="text-lg font-semibold text-ink">Authentication setup required</p>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            Add `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` before creating projects in production.
+          </p>
+        </Card>
+      )}
     </div>
   );
 }

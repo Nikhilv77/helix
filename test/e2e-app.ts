@@ -4,15 +4,15 @@ import { Test } from "@nestjs/testing";
 import { execFileSync } from "child_process";
 import { INestApplication } from "@nestjs/common";
 import { Socket } from "net";
-import { EmbeddingsProvider } from "../src/ai/interfaces/embeddings-provider.interface";
+import { EmbeddingsProvider } from "../backend/src/ai/interfaces/embeddings-provider.interface";
 import {
   GenerateStructuredRequest,
   SystemDesignerAIProvider
-} from "../src/ai/interfaces/system-designer-ai-provider.interface";
-import { EMBEDDINGS_PROVIDER } from "../src/ai/tokens/embeddings-provider.token";
-import { SYSTEM_DESIGNER_AI_PROVIDER } from "../src/ai/tokens/ai-provider.token";
-import { AppModule } from "../src/app.module";
-import { PrismaService } from "../src/database/prisma.service";
+} from "../backend/src/ai/interfaces/system-designer-ai-provider.interface";
+import { EMBEDDINGS_PROVIDER } from "../backend/src/ai/tokens/embeddings-provider.token";
+import { SYSTEM_DESIGNER_AI_PROVIDER } from "../backend/src/ai/tokens/ai-provider.token";
+import { AppModule } from "../backend/src/app.module";
+import { PrismaService } from "../backend/src/database/prisma.service";
 
 export const testDatabaseUrl =
   process.env.DATABASE_URL ??

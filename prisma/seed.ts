@@ -6,9 +6,9 @@ import {
   PrismaClient,
   ProjectStatus
 } from "@prisma/client";
-import { createContentHash } from "../src/knowledge/utils/content-hash";
-import { chunkKnowledgeDocument } from "../src/knowledge/utils/knowledge-chunker";
-import { normalizeKnowledgeText } from "../src/knowledge/utils/text-normalizer";
+import { createContentHash } from "../backend/src/knowledge/utils/content-hash";
+import { chunkKnowledgeDocument } from "../backend/src/knowledge/utils/knowledge-chunker";
+import { normalizeKnowledgeText } from "../backend/src/knowledge/utils/text-normalizer";
 
 const prisma = new PrismaClient();
 

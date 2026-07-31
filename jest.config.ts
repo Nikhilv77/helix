@@ -5,9 +5,14 @@ const config: Config = {
   rootDir: ".",
   testRegex: ".*\\.spec\\.ts$",
   transform: {
-    "^.+\\.(t|j)s$": "ts-jest"
+    "^.+\\.(t|j)s$": [
+      "ts-jest",
+      {
+        tsconfig: "tsconfig.backend.json"
+      }
+    ]
   },
-  collectCoverageFrom: ["src/**/*.ts"],
+  collectCoverageFrom: ["backend/src/**/*.ts"],
   coverageDirectory: "./coverage",
   setupFiles: ["<rootDir>/test/jest.setup.ts"],
   testEnvironment: "node"

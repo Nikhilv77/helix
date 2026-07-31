@@ -1,4 +1,4 @@
-import { EmbedContentParameters, GenerateContentParameters } from "@google/genai";
+import type { EmbedContentParameters, GenerateContentParameters } from "@google/genai";
 
 export interface GeminiGenerateContentResponse {
   readonly text?: string;
