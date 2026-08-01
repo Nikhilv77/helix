@@ -245,6 +245,8 @@ function ProductBoard({ workspace }: { workspace: ProductWorkspace }) {
           }
         />
       </div>
+
+      <BuildContext workspace={workspace} />
     </div>
   );
 }
@@ -505,6 +507,220 @@ function ImplementationTree({ workspace }: { workspace: ProductWorkspace }) {
         </div>
       </div>
     </section>
+  );
+}
+
+function BuildContext({ workspace }: { workspace: ProductWorkspace }) {
+  return (
+    <section className="space-y-6">
+      <div className="flex flex-col gap-2 px-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+            Build context
+          </p>
+          <h4 className="mt-2 text-2xl font-semibold text-ink">Everything needed to start</h4>
+        </div>
+        <p className="max-w-2xl text-sm leading-6 text-muted">
+          The product shape, contracts, data, milestones, and guardrails stay visible without
+          turning the page into a long spec.
+        </p>
+      </div>
+
+      <RequirementsBoard workspace={workspace} />
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <ServiceBoard workspace={workspace} />
+        <ApiBoard workspace={workspace} />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <DataBoard workspace={workspace} />
+        <RoadmapBoard workspace={workspace} />
+      </div>
+
+      <GuardrailBoard workspace={workspace} />
+    </section>
+  );
+}
+
+function RequirementsBoard({ workspace }: { workspace: ProductWorkspace }) {
+  return (
+    <section className="rounded-xl border border-line bg-white/[0.04] p-5 sm:p-6">
+      <SectionHeader icon={ListChecks} title="Product requirements" />
+      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {workspace.requirements.slice(0, 6).map((requirement, index) => (
+          <div
+            key={`${requirement.label}-${index}`}
+            className="rounded-lg border border-white/10 bg-black/20 p-4"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+                {requirement.label}
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-slate-200">
+                {requirement.priority}
+              </span>
+            </div>
+            <p className="mt-4 text-sm font-semibold leading-6 text-ink">
+              {shortText(requirement.detail, 110)}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ServiceBoard({ workspace }: { workspace: ProductWorkspace }) {
+  return (
+    <section className="rounded-xl border border-line bg-white/[0.04] p-5 sm:p-6">
+      <SectionHeader icon={Server} title="Backend services" />
+      <div className="mt-5 space-y-3">
+        {workspace.backendServices.slice(0, 5).map((service, index) => (
+          <div
+            key={`${service.name}-${index}`}
+            className="grid gap-3 rounded-lg border border-white/10 bg-black/20 p-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_8rem] sm:items-center"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] text-sm font-semibold text-ink">
+              {index + 1}
+            </span>
+            <div className="min-w-0">
+              <p className="font-semibold text-ink">{service.name}</p>
+              <p className="mt-1 text-sm leading-5 text-muted">
+                {shortText(service.responsibility, 96)}
+              </p>
+            </div>
+            <span className="w-fit rounded-full border border-cyan-200/20 bg-cyan-200/[0.06] px-3 py-1 text-xs font-semibold text-cyan-100">
+              {service.trigger}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ApiBoard({ workspace }: { workspace: ProductWorkspace }) {
+  return (
+    <section className="rounded-xl border border-line bg-white/[0.04] p-5 sm:p-6">
+      <SectionHeader icon={Braces} title="API contracts" />
+      <div className="mt-5 space-y-3">
+        {workspace.apiPlan.slice(0, 5).map((api, index) => (
+          <div
+            key={`${api.method}-${api.path}-${index}`}
+            className="rounded-lg border border-white/10 bg-black/20 p-4"
+          >
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="rounded-md bg-white px-2.5 py-1 text-xs font-bold text-slate-950">
+                {api.method}
+              </span>
+              <code className="rounded-md border border-white/10 bg-white/[0.05] px-2.5 py-1 font-mono text-sm text-slate-100">
+                {api.path}
+              </code>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-muted">{shortText(api.purpose, 116)}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function DataBoard({ workspace }: { workspace: ProductWorkspace }) {
+  return (
+    <section className="rounded-xl border border-line bg-white/[0.04] p-5 sm:p-6">
+      <SectionHeader icon={Database} title="Data model" />
+      <div className="mt-5 grid gap-3">
+        {workspace.databasePlan.slice(0, 4).map((database, index) => (
+          <div
+            key={`${database.name}-${index}`}
+            className="rounded-lg border border-white/10 bg-black/20 p-4"
+          >
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06]">
+                <Database size={15} aria-hidden="true" />
+              </span>
+              <p className="font-semibold text-ink">{database.name}</p>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <InfoStrip label="Stores" value={database.stores} />
+              <InfoStrip label="Reads" value={database.accessPattern} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RoadmapBoard({ workspace }: { workspace: ProductWorkspace }) {
+  return (
+    <section className="rounded-xl border border-line bg-white/[0.04] p-5 sm:p-6">
+      <SectionHeader icon={GitBranch} title="Roadmap" />
+      <div className="mt-5 space-y-4">
+        {workspace.roadmap.slice(0, 4).map((phase, index) => (
+          <div key={`${phase.phase}-${index}`} className="relative pl-8">
+            <span className="absolute left-0 top-1 flex h-5 w-5 items-center justify-center rounded-full border border-white/20 bg-white text-[11px] font-semibold text-slate-950">
+              {index + 1}
+            </span>
+            {index < workspace.roadmap.slice(0, 4).length - 1 ? (
+              <span className="absolute left-[9px] top-7 h-[calc(100%-0.5rem)] w-px bg-white/12" />
+            ) : null}
+            <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+              <p className="font-semibold text-ink">{phase.phase}</p>
+              <p className="mt-2 text-sm leading-6 text-muted">{shortText(phase.goal, 110)}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {phase.deliverables.slice(0, 5).map((item) => (
+                  <span
+                    key={`${phase.phase}-${item}`}
+                    className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300"
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function GuardrailBoard({ workspace }: { workspace: ProductWorkspace }) {
+  const highlights = workspace.architectureHighlights.slice(0, 4);
+
+  if (highlights.length === 0) return null;
+
+  return (
+    <section className="rounded-xl border border-line bg-white/[0.04] p-5 sm:p-6">
+      <SectionHeader icon={Shield} title="Architecture guardrails" />
+      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {highlights.map((highlight, index) => (
+          <div
+            key={`${highlight.name}-${index}`}
+            className="rounded-lg border border-white/10 bg-black/20 p-4"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200/20 bg-emerald-200/[0.08] text-sm font-semibold text-emerald-100">
+              {index + 1}
+            </span>
+            <p className="mt-4 font-semibold text-ink">{highlight.name}</p>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              {shortText(highlight.description, 118)}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function InfoStrip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-white/10 bg-white/[0.035] p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">{label}</p>
+      <p className="mt-2 text-sm leading-5 text-slate-200">{shortText(value, 86)}</p>
+    </div>
   );
 }
 
