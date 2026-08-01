@@ -1,10 +1,16 @@
+"use client";
+
+import { useState } from "react";
 import {
   ArrowRight,
   Braces,
   CheckCircle2,
+  Clipboard,
   Code2,
   Database,
   Download,
+  FileJson,
+  FileText,
   Folder,
   FolderTree,
   GitBranch,
@@ -30,6 +36,8 @@ interface FolderGroup {
   icon: LucideIcon;
   items: string[];
 }
+
+type ExportStatus = "idle" | "copied" | "failed";
 
 function toKebabCase(value: string): string {
   return (
@@ -185,6 +193,127 @@ function buildFolderGroups(workspace: ProductWorkspace): FolderGroup[] {
   ];
 }
 
+function listMarkdown(items: string[]): string {
+  return items.map((item) => `- ${item}`).join("\n");
+}
+
+function formatFolderTree(workspace: ProductWorkspace): string {
+  const groups = buildFolderGroups(workspace);
+
+  return [
+    "product/",
+    ...groups.flatMap((group) => [`  ${group.name}/`, ...group.items.map((item) => `    ${item}/`)])
+  ].join("\n");
+}
+
+function formatWorkspaceMarkdown(workspace: ProductWorkspace): string {
+  return [
+    `# ${workspace.idea.name}`,
+    "",
+    workspace.idea.summary,
+    "",
+    "## Product",
+    "",
+    `- Users: ${workspace.idea.targetUsers}`,
+    `- Value: ${workspace.idea.primaryValue}`,
+    "",
+    "## Requirements",
+    "",
+    workspace.requirements
+      .map(
+        (requirement) => `- ${requirement.label} (${requirement.priority}): ${requirement.detail}`
+      )
+      .join("\n"),
+    "",
+    "## User Flow",
+    "",
+    workspace.userFlow
+      .map(
+        (step, index) =>
+          `${index + 1}. ${step.step} - ${step.actor}\n   - Action: ${step.action}\n   - System: ${
+            step.systemResponse
+          }`
+      )
+      .join("\n"),
+    "",
+    "## UI Surfaces",
+    "",
+    workspace.uiSurfaces
+      .map(
+        (surface) =>
+          `### ${surface.name}\n${surface.purpose}\n\n${listMarkdown(surface.keyElements)}`
+      )
+      .join("\n\n"),
+    "",
+    "## Backend Services",
+    "",
+    workspace.backendServices
+      .map((service) => `- ${service.name}: ${service.responsibility} Trigger: ${service.trigger}.`)
+      .join("\n"),
+    "",
+    "## API Contracts",
+    "",
+    workspace.apiPlan.map((api) => `- ${api.method} ${api.path}: ${api.purpose}`).join("\n"),
+    "",
+    "## Data Model",
+    "",
+    workspace.databasePlan
+      .map(
+        (database) =>
+          `- ${database.name}: stores ${database.stores}. Access pattern: ${database.accessPattern}`
+      )
+      .join("\n"),
+    "",
+    "## Folder Structure",
+    "",
+    "```text",
+    formatFolderTree(workspace),
+    "```",
+    "",
+    "## Roadmap",
+    "",
+    workspace.roadmap
+      .map((phase) => `### ${phase.phase}\n${phase.goal}\n\n${listMarkdown(phase.deliverables)}`)
+      .join("\n\n"),
+    "",
+    "## Architecture Guardrails",
+    "",
+    workspace.architectureHighlights
+      .map((highlight) => `- ${highlight.name}: ${highlight.description}`)
+      .join("\n"),
+    ""
+  ].join("\n");
+}
+
+function buildExportPayload(workspace: ProductWorkspace) {
+  return {
+    exportedAt: new Date().toISOString(),
+    product: workspace.idea,
+    requirements: workspace.requirements,
+    userFlow: workspace.userFlow,
+    uiSurfaces: workspace.uiSurfaces,
+    backendServices: workspace.backendServices,
+    databasePlan: workspace.databasePlan,
+    apiPlan: workspace.apiPlan,
+    folderTree: formatFolderTree(workspace),
+    architectureHighlights: workspace.architectureHighlights,
+    roadmap: workspace.roadmap,
+    exportArtifacts: workspace.exportArtifacts
+  };
+}
+
+function downloadText(filename: string, text: string, type: string): void {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 function ProductBoard({ workspace }: { workspace: ProductWorkspace }) {
   const primaryRequirement = workspace.requirements[0];
   const firstApi = workspace.apiPlan[0];
@@ -247,6 +376,8 @@ function ProductBoard({ workspace }: { workspace: ProductWorkspace }) {
       </div>
 
       <BuildContext workspace={workspace} />
+
+      <ExportPanel workspace={workspace} />
     </div>
   );
 }
@@ -721,6 +852,88 @@ function InfoStrip({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">{label}</p>
       <p className="mt-2 text-sm leading-5 text-slate-200">{shortText(value, 86)}</p>
     </div>
+  );
+}
+
+function ExportPanel({ workspace }: { workspace: ProductWorkspace }) {
+  const [status, setStatus] = useState<ExportStatus>("idle");
+  const filename = toKebabCase(workspace.idea.name);
+  const markdown = formatWorkspaceMarkdown(workspace);
+
+  function downloadMarkdown(): void {
+    downloadText(`${filename}-product-blueprint.md`, markdown, "text/markdown;charset=utf-8");
+  }
+
+  function downloadJson(): void {
+    downloadText(
+      `${filename}-workspace.json`,
+      JSON.stringify(buildExportPayload(workspace), null, 2),
+      "application/json;charset=utf-8"
+    );
+  }
+
+  function downloadTree(): void {
+    downloadText(
+      `${filename}-folder-structure.txt`,
+      formatFolderTree(workspace),
+      "text/plain;charset=utf-8"
+    );
+  }
+
+  async function copyMarkdown(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(markdown);
+      setStatus("copied");
+    } catch {
+      setStatus("failed");
+    }
+    window.setTimeout(() => setStatus("idle"), 1800);
+  }
+
+  return (
+    <section className="relative overflow-hidden rounded-xl border border-line bg-white/[0.045] p-5 shadow-[0_28px_100px_rgba(0,0,0,0.28)] sm:p-6">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/55 to-transparent" />
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(560px,0.95fr)] xl:items-center">
+        <div>
+          <SectionHeader icon={Download} title="Export workspace" />
+          <p className="mt-4 max-w-2xl text-sm leading-6 text-muted">
+            Package the product blueprint for docs, engineering handoff, or another tool.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <ExportButton icon={FileText} label="Markdown" onClick={downloadMarkdown} />
+          <ExportButton icon={FileJson} label="JSON" onClick={downloadJson} />
+          <ExportButton icon={FolderTree} label="Tree" onClick={downloadTree} />
+          <ExportButton
+            icon={Clipboard}
+            label={status === "copied" ? "Copied" : status === "failed" ? "Try again" : "Copy"}
+            onClick={() => void copyMarkdown()}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ExportButton({
+  icon: Icon,
+  label,
+  onClick
+}: {
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex min-h-24 flex-col justify-between rounded-lg border border-white/12 bg-white px-4 py-3 text-left text-slate-950 shadow-[0_18px_50px_rgba(255,255,255,0.1)] transition duration-200 hover:-translate-y-0.5 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+    >
+      <Icon size={18} aria-hidden="true" />
+      <span className="text-sm font-semibold">{label}</span>
+    </button>
   );
 }
 
