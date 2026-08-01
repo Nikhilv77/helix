@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ClerkProvider } from "@clerk/nextjs";
 import { AuthenticatedShell } from "@/components/auth/authenticated-shell";
+import { ScrollRestoration } from "@/components/scroll-restoration";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -29,7 +30,12 @@ function AppShell({ children }: { children: ReactNode }) {
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const app = <AppShell>{children}</AppShell>;
+  const app = (
+    <>
+      <ScrollRestoration />
+      <AppShell>{children}</AppShell>
+    </>
+  );
 
   return (
     <html lang="en">

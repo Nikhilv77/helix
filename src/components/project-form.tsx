@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import {
@@ -233,6 +233,8 @@ export function ProjectForm() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [generationStage, setGenerationStage] = useState<string | null>(null);
+  const formCardRef = useRef<HTMLDivElement | null>(null);
+  const didMountRef = useRef(false);
 
   const currentStep = steps[stepIndex]!;
   const selectedTemplate = projectTemplates.find((template) => template.id === templateId);
@@ -287,6 +289,17 @@ export function ProjectForm() {
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [saving]);
+
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      formCardRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  }, [stepIndex]);
 
   function applyTemplate(nextTemplateId: ProjectTemplateId) {
     const template = projectTemplates.find((item) => item.id === nextTemplateId);
@@ -401,7 +414,10 @@ export function ProjectForm() {
         stage={generationStage ?? "Preparing generation"}
         projectName={name.trim() || "Untitled project"}
       />
-      <div className="overflow-hidden rounded-lg border border-line bg-white/[0.045] shadow-[0_28px_100px_rgba(0,0,0,0.28)]">
+      <div
+        ref={formCardRef}
+        className="scroll-mt-24 overflow-hidden rounded-lg border border-line bg-white/[0.045] shadow-[0_28px_100px_rgba(0,0,0,0.28)]"
+      >
         <div className="border-b border-white/10 bg-black/18 px-5 py-4 sm:px-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
