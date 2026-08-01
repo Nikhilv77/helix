@@ -189,7 +189,7 @@ function ArchitectureResultView({
   const workspace = design.productWorkspace;
 
   return (
-    <div className="page-enter mx-auto max-w-7xl space-y-5 px-4 py-8 sm:px-6">
+    <div className="page-enter mx-auto max-w-[96rem] space-y-6 px-4 py-8 sm:px-6 2xl:px-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Button

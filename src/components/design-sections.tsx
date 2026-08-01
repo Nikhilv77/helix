@@ -195,56 +195,57 @@ function ProductBoard({ workspace }: { workspace: ProductWorkspace }) {
   const exportArtifact = workspace.exportArtifacts[0];
 
   return (
-    <section className="relative overflow-hidden rounded-xl border border-line bg-white/[0.045] shadow-[0_32px_120px_rgba(0,0,0,0.34)]">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
-      <div className="grid gap-0 2xl:grid-cols-[minmax(0,1fr)_25rem]">
-        <div className="p-5 sm:p-6">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div>
-              <p className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-200">
-                <Sparkles size={13} aria-hidden="true" />
-                Product blueprint
-              </p>
-              <h3 className="mt-4 text-3xl font-semibold tracking-normal text-ink sm:text-4xl">
-                {workspace.idea.name}
-              </h3>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[34rem]">
-              <InfoTile icon={Users} label="Users" value={workspace.idea.targetUsers} />
-              <InfoTile icon={CheckCircle2} label="Value" value={workspace.idea.primaryValue} />
-              <InfoTile
-                icon={ListChecks}
-                label="Must ship"
-                value={primaryRequirement?.detail ?? "Core workflow"}
-              />
-            </div>
+    <div className="space-y-6">
+      <section className="relative overflow-hidden rounded-xl border border-line bg-white/[0.045] p-6 shadow-[0_28px_100px_rgba(0,0,0,0.3)] sm:p-7">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(620px,1.1fr)] xl:items-end">
+          <div>
+            <p className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-200">
+              <Sparkles size={13} aria-hidden="true" />
+              Product blueprint
+            </p>
+            <h3 className="mt-5 max-w-2xl text-4xl font-semibold tracking-normal text-ink sm:text-5xl">
+              {workspace.idea.name}
+            </h3>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-muted">
+              {shortText(workspace.idea.summary, 170)}
+            </p>
           </div>
-
-          <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-            <ExperienceMap workspace={workspace} />
-            <ProductFlow
-              api={firstApi ? `${firstApi.method} ${firstApi.path}` : "Core API"}
-              service={firstService?.name ?? "Application Service"}
-              worker={secondService?.name ?? "Worker Service"}
-              database={firstDatabase?.name ?? "Primary Database"}
-            />
-          </div>
-
-          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(280px,0.52fr)]">
-            <ScreenStrip workspace={workspace} />
-            <ShipPlan
-              phase={firstRoadmap?.phase ?? "MVP"}
-              deliverables={firstRoadmap?.deliverables ?? ["UI", "API", "Database", "Auth"]}
-              exportLabel={
-                exportArtifact ? `${exportArtifact.name} · ${exportArtifact.format}` : "Build pack"
-              }
+          <div className="grid gap-3 md:grid-cols-3">
+            <InfoTile icon={Users} label="Users" value={workspace.idea.targetUsers} />
+            <InfoTile icon={CheckCircle2} label="Value" value={workspace.idea.primaryValue} />
+            <InfoTile
+              icon={ListChecks}
+              label="Must ship"
+              value={primaryRequirement?.detail ?? "Core workflow"}
             />
           </div>
         </div>
+      </section>
 
-        <ImplementationTree workspace={workspace} />
+      <ProductFlow
+        api={firstApi ? `${firstApi.method} ${firstApi.path}` : "Core API"}
+        service={firstService?.name ?? "Application Service"}
+        worker={secondService?.name ?? "Worker Service"}
+        database={firstDatabase?.name ?? "Primary Database"}
+      />
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
+        <ExperienceMap workspace={workspace} />
+        <ScreenStrip workspace={workspace} />
       </div>
-    </section>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.75fr)]">
+        <ImplementationTree workspace={workspace} />
+        <ShipPlan
+          phase={firstRoadmap?.phase ?? "MVP"}
+          deliverables={firstRoadmap?.deliverables ?? ["UI", "API", "Database", "Auth"]}
+          exportLabel={
+            exportArtifact ? `${exportArtifact.name} · ${exportArtifact.format}` : "Build pack"
+          }
+        />
+      </div>
+    </div>
   );
 }
 
@@ -258,37 +259,40 @@ function InfoTile({
   value: string;
 }) {
   return (
-    <div className="min-h-24 rounded-lg border border-white/10 bg-black/18 p-3">
+    <div className="min-h-32 rounded-lg border border-white/10 bg-black/18 p-4">
       <div className="flex items-center gap-2 text-muted">
         <Icon size={14} aria-hidden="true" />
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em]">{label}</p>
       </div>
-      <p className="mt-3 text-sm font-semibold leading-5 text-ink">{shortText(value, 64)}</p>
+      <p className="mt-4 text-base font-semibold leading-6 text-ink">{shortText(value, 82)}</p>
     </div>
   );
 }
 
 function ExperienceMap({ workspace }: { workspace: ProductWorkspace }) {
   return (
-    <div className="rounded-lg border border-line bg-black/18 p-4">
-      <SectionHeader icon={Route} title="User flow" />
-      <div className="mt-4 grid gap-2 md:grid-cols-3 xl:grid-cols-1">
+    <section className="rounded-xl border border-line bg-white/[0.04] p-5 sm:p-6">
+      <SectionHeader icon={Route} title="User journey" />
+      <div className="mt-5 grid gap-3">
         {workspace.userFlow.slice(0, 3).map((step, index) => (
           <div
             key={`${step.step}-${index}`}
-            className="grid grid-cols-[2rem_minmax(0,1fr)] gap-3 rounded-md border border-white/10 bg-white/[0.045] p-3"
+            className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-4 rounded-lg border border-white/10 bg-black/20 p-4"
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-semibold text-slate-950">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-sm font-semibold text-slate-950">
               {index + 1}
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-ink">{step.step}</p>
-              <p className="mt-1 text-xs leading-5 text-muted">{shortText(step.action, 72)}</p>
+              <p className="text-base font-semibold text-ink">{step.step}</p>
+              <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                {step.actor}
+              </p>
+              <p className="mt-3 text-sm leading-6 text-muted">{shortText(step.action, 116)}</p>
             </div>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -304,20 +308,31 @@ function ProductFlow({
   database: string;
 }) {
   return (
-    <div className="rounded-lg border border-line bg-black/18 p-4">
-      <SectionHeader icon={GitBranch} title="Product flowchart" />
-      <div className="mt-4 overflow-x-auto pb-1">
-        <div className="grid min-w-[700px] grid-cols-[1fr_2.5rem_1fr_2.5rem_1fr_2.5rem_1fr] items-center">
-          <FlowNode icon={LayoutDashboard} label="UI" title="Product screens" />
+    <section className="relative overflow-hidden rounded-xl border border-line bg-white/[0.04] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:p-6">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/50 to-transparent" />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <SectionHeader icon={GitBranch} title="Product flowchart" />
+        <p className="max-w-xl text-sm leading-6 text-muted">
+          Main product path separated by layer, so it reads like an implementation map.
+        </p>
+      </div>
+      <div className="mt-6 overflow-x-auto pb-3">
+        <div className="grid min-w-[1040px] grid-cols-[1.15fr_4rem_1fr_4rem_1.25fr_4rem_1.1fr] items-center">
+          <FlowNode
+            icon={LayoutDashboard}
+            label="Experience"
+            title="Product screens"
+            subTitle="User creates, reviews, and operates the product"
+          />
           <FlowArrow />
           <FlowNode icon={Code2} label="API" title={api} />
           <FlowArrow />
-          <FlowNode icon={Server} label="Services" title={service} subTitle={worker} />
+          <FlowNode icon={Server} label="Backend" title={service} subTitle={worker} emphasis />
           <FlowArrow />
           <FlowNode icon={Database} label="Data" title={database} />
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -325,25 +340,33 @@ function FlowNode({
   icon: Icon,
   label,
   title,
-  subTitle
+  subTitle,
+  emphasis = false
 }: {
   icon: LucideIcon;
   label: string;
   title: string;
   subTitle?: string;
+  emphasis?: boolean;
 }) {
   return (
-    <div className="min-h-36 rounded-lg border border-white/10 bg-white/[0.045] p-4">
-      <span className="flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-white text-slate-950">
+    <div
+      className={`min-h-52 rounded-xl border p-5 ${
+        emphasis
+          ? "border-cyan-200/25 bg-cyan-200/[0.07] shadow-[0_0_60px_rgba(103,232,249,0.1)]"
+          : "border-white/10 bg-black/22"
+      }`}
+    >
+      <span className="flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-white text-slate-950">
         <Icon size={16} aria-hidden="true" />
       </span>
-      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+      <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
         {label}
       </p>
-      <p className="mt-2 text-sm font-semibold leading-5 text-ink">{shortText(title, 46)}</p>
+      <p className="mt-3 text-lg font-semibold leading-6 text-ink">{shortText(title, 72)}</p>
       {subTitle ? (
-        <p className="mt-2 rounded-md border border-white/10 bg-black/18 px-2 py-1.5 text-xs text-muted">
-          {shortText(subTitle, 42)}
+        <p className="mt-4 rounded-md border border-white/10 bg-black/18 px-3 py-2 text-sm leading-5 text-muted">
+          {shortText(subTitle, 82)}
         </p>
       ) : null}
     </div>
@@ -353,48 +376,50 @@ function FlowNode({
 function FlowArrow() {
   return (
     <div className="flex justify-center text-white/35">
-      <ArrowRight size={20} aria-hidden="true" />
+      <ArrowRight size={26} aria-hidden="true" />
     </div>
   );
 }
 
 function ScreenStrip({ workspace }: { workspace: ProductWorkspace }) {
   return (
-    <div className="rounded-lg border border-line bg-black/18 p-4">
+    <section className="rounded-xl border border-line bg-white/[0.04] p-5 sm:p-6">
       <SectionHeader icon={LayoutDashboard} title="Product screens" />
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
+      <div className="mt-5 grid gap-4 md:grid-cols-3">
         {workspace.uiSurfaces.slice(0, 3).map((surface, index) => (
-          <div
-            key={surface.name}
-            className="rounded-md border border-white/10 bg-white/[0.045] p-3"
-          >
-            <div className="h-24 rounded-md border border-white/10 bg-black/24 p-2">
+          <div key={surface.name} className="rounded-lg border border-white/10 bg-black/20 p-4">
+            <div className="h-40 rounded-lg border border-white/10 bg-black/24 p-3">
               <div className="flex gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-white/35" />
-                <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
-                <span className="h-1.5 w-1.5 rounded-full bg-white/12" />
+                <span className="h-2 w-2 rounded-full bg-white/35" />
+                <span className="h-2 w-2 rounded-full bg-white/20" />
+                <span className="h-2 w-2 rounded-full bg-white/12" />
               </div>
-              <div className="mt-3 grid grid-cols-[0.35fr_1fr] gap-2">
-                <span className="h-14 rounded bg-white/10" />
-                <span className="h-14 rounded bg-white/20" />
+              <div className="mt-4 grid grid-cols-[0.38fr_1fr] gap-3">
+                <span className="h-24 rounded-md bg-white/10" />
+                <div className="space-y-2">
+                  <span className="block h-8 rounded-md bg-white/24" />
+                  <span className="block h-4 w-3/4 rounded bg-white/12" />
+                  <span className="block h-4 w-1/2 rounded bg-white/12" />
+                  <span className="block h-8 rounded-md bg-white/16" />
+                </div>
               </div>
             </div>
-            <p className="mt-3 text-sm font-semibold text-ink">{surface.name}</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <p className="mt-4 text-base font-semibold text-ink">{surface.name}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
               {surface.keyElements.slice(0, 3).map((item) => (
                 <span
                   key={`${surface.name}-${item}`}
-                  className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-muted"
+                  className="rounded-full border border-white/10 px-3 py-1 text-xs text-muted"
                 >
                   {item}
                 </span>
               ))}
             </div>
-            {index === 0 ? <div className="mt-3 h-1 rounded-full bg-white/70" /> : null}
+            {index === 0 ? <div className="mt-4 h-1 rounded-full bg-white/70" /> : null}
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -408,27 +433,27 @@ function ShipPlan({
   exportLabel: string;
 }) {
   return (
-    <div className="rounded-lg border border-line bg-white/[0.045] p-4">
+    <section className="rounded-xl border border-line bg-white/[0.04] p-5 sm:p-6">
       <SectionHeader icon={Shield} title="Ship first" />
-      <p className="mt-4 text-2xl font-semibold text-ink">{phase}</p>
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <p className="mt-5 text-3xl font-semibold text-ink">{phase}</p>
+      <div className="mt-5 grid grid-cols-2 gap-3">
         {deliverables.slice(0, 4).map((item) => (
           <span
             key={item}
-            className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold text-slate-300"
+            className="rounded-lg border border-white/10 bg-black/20 px-4 py-3 text-sm font-semibold text-slate-300"
           >
             {item}
           </span>
         ))}
       </div>
-      <div className="mt-4 rounded-md border border-white/10 bg-black/18 p-3">
+      <div className="mt-5 rounded-lg border border-white/10 bg-black/18 p-4">
         <div className="flex items-center gap-2 text-muted">
           <Download size={14} aria-hidden="true" />
           <p className="text-xs font-semibold uppercase tracking-[0.14em]">Export</p>
         </div>
-        <p className="mt-2 text-sm font-semibold text-ink">{shortText(exportLabel, 54)}</p>
+        <p className="mt-3 text-base font-semibold text-ink">{shortText(exportLabel, 72)}</p>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -436,7 +461,7 @@ function ImplementationTree({ workspace }: { workspace: ProductWorkspace }) {
   const groups = buildFolderGroups(workspace);
 
   return (
-    <aside className="border-t border-white/10 bg-black/18 p-5 2xl:border-l 2xl:border-t-0">
+    <section className="rounded-xl border border-line bg-white/[0.04] p-5 sm:p-6">
       <div className="flex items-center gap-3">
         <span className="flex h-10 w-10 items-center justify-center rounded-md border border-white/12 bg-white text-slate-950">
           <FolderTree size={18} aria-hidden="true" />
@@ -449,12 +474,12 @@ function ImplementationTree({ workspace }: { workspace: ProductWorkspace }) {
         </div>
       </div>
 
-      <div className="mt-5 rounded-lg border border-white/10 bg-black/24 p-4 font-mono text-sm">
+      <div className="mt-5 rounded-xl border border-white/10 bg-black/24 p-5 font-mono text-sm">
         <div className="flex items-center gap-2 text-ink">
           <Folder size={15} aria-hidden="true" />
           <span>product/</span>
         </div>
-        <div className="mt-4 space-y-3">
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
           {groups.map((group) => {
             const Icon = group.icon;
             return (
@@ -466,7 +491,7 @@ function ImplementationTree({ workspace }: { workspace: ProductWorkspace }) {
                   <Icon size={14} aria-hidden="true" />
                   <span>{group.name}/</span>
                 </div>
-                <div className="mt-2 space-y-1.5 pl-4 text-xs text-muted">
+                <div className="mt-3 space-y-2 pl-4 text-xs text-muted">
                   {group.items.map((item) => (
                     <div key={`${group.name}-${item}`} className="flex items-center gap-2">
                       <span className="h-px w-3 bg-white/18" />
@@ -479,7 +504,7 @@ function ImplementationTree({ workspace }: { workspace: ProductWorkspace }) {
           })}
         </div>
       </div>
-    </aside>
+    </section>
   );
 }
 
