@@ -16,10 +16,13 @@ import {
   GitBranch,
   LayoutDashboard,
   ListChecks,
+  MousePointer2,
+  PanelsTopLeft,
   Route,
   Shield,
   Server,
   Sparkles,
+  Table2,
   Users
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -35,6 +38,15 @@ interface FolderGroup {
   name: string;
   icon: LucideIcon;
   items: string[];
+}
+
+interface PrototypeScreen {
+  name: string;
+  purpose: string;
+  primaryAction: string;
+  navigation: string[];
+  widgets: string[];
+  records: string[];
 }
 
 type ExportStatus = "idle" | "copied" | "failed";
@@ -193,6 +205,46 @@ function buildFolderGroups(workspace: ProductWorkspace): FolderGroup[] {
   ];
 }
 
+function buildPrototypeScreens(workspace: ProductWorkspace): PrototypeScreen[] {
+  const fallbackSurfaces = [
+    {
+      name: "Workspace",
+      purpose: workspace.idea.primaryValue,
+      keyElements: ["Overview", "Create", "Review", "Activity"]
+    },
+    {
+      name: "Operations",
+      purpose: "Monitor and operate the product.",
+      keyElements: ["Health", "Events", "Controls", "Settings"]
+    }
+  ];
+  const surfaces = workspace.uiSurfaces.length > 0 ? workspace.uiSurfaces : fallbackSurfaces;
+  const serviceNames = workspace.backendServices.map((service) => service.name);
+  const roadmapItems = workspace.roadmap.flatMap((phase) => phase.deliverables);
+
+  return surfaces.slice(0, 5).map((surface, index) => {
+    const widgets = [
+      ...surface.keyElements,
+      ...serviceNames.slice(index, index + 2),
+      ...roadmapItems.slice(index, index + 1)
+    ].filter(Boolean);
+
+    return {
+      name: surface.name,
+      purpose: surface.purpose,
+      primaryAction:
+        surface.keyElements.find((item) => /create|add|new|start|send|launch/i.test(item)) ??
+        `Open ${surface.name}`,
+      navigation: surfaces.slice(0, 5).map((item) => item.name),
+      widgets: widgets.length > 0 ? widgets.slice(0, 5) : ["Overview", "Workflow", "Status"],
+      records:
+        workspace.userFlow.length > 0
+          ? workspace.userFlow.slice(0, 4).map((step) => step.step)
+          : ["Draft", "Review", "Launch"]
+    };
+  });
+}
+
 function listMarkdown(items: string[]): string {
   return items.map((item) => `- ${item}`).join("\n");
 }
@@ -245,6 +297,15 @@ function formatWorkspaceMarkdown(workspace: ProductWorkspace): string {
       )
       .join("\n\n"),
     "",
+    "## Interactive Prototype",
+    "",
+    buildPrototypeScreens(workspace)
+      .map(
+        (screen) =>
+          `### ${screen.name}\n${screen.purpose}\n\n- Primary action: ${screen.primaryAction}\n- Widgets: ${screen.widgets.join(", ")}`
+      )
+      .join("\n\n"),
+    "",
     "## Backend Services",
     "",
     workspace.backendServices
@@ -292,6 +353,7 @@ function buildExportPayload(workspace: ProductWorkspace) {
     requirements: workspace.requirements,
     userFlow: workspace.userFlow,
     uiSurfaces: workspace.uiSurfaces,
+    prototypeScreens: buildPrototypeScreens(workspace),
     backendServices: workspace.backendServices,
     databasePlan: workspace.databasePlan,
     apiPlan: workspace.apiPlan,
@@ -358,6 +420,8 @@ function ProductBoard({ workspace }: { workspace: ProductWorkspace }) {
         worker={secondService?.name ?? "Worker Service"}
         database={firstDatabase?.name ?? "Primary Database"}
       />
+
+      <InteractivePrototype workspace={workspace} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
         <ExperienceMap workspace={workspace} />
@@ -510,6 +574,221 @@ function FlowArrow() {
   return (
     <div className="flex justify-center text-white/35">
       <ArrowRight size={26} aria-hidden="true" />
+    </div>
+  );
+}
+
+function InteractivePrototype({ workspace }: { workspace: ProductWorkspace }) {
+  const screens = buildPrototypeScreens(workspace);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const activeScreen = screens[activeIndex] ?? screens[0]!;
+
+  return (
+    <section className="relative overflow-hidden rounded-xl border border-line bg-white/[0.045] p-5 shadow-[0_30px_110px_rgba(0,0,0,0.34)] sm:p-6">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-200/55 to-transparent" />
+      <div className="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
+        <div>
+          <SectionHeader icon={MousePointer2} title="Clickable prototype" />
+          <p className="mt-4 text-sm leading-6 text-muted">
+            Helix turns the product map into a live prototype shell, so the generated output feels
+            like screens and workflows instead of only notes.
+          </p>
+
+          <div className="mt-5 space-y-2">
+            {screens.map((screen, index) => (
+              <button
+                key={`${screen.name}-${index}`}
+                type="button"
+                onClick={() => setActiveIndex(index)}
+                className={[
+                  "group w-full rounded-lg border p-4 text-left transition duration-200 hover:-translate-y-0.5",
+                  index === activeIndex
+                    ? "border-white bg-white text-slate-950 shadow-[0_18px_60px_rgba(255,255,255,0.08)]"
+                    : "border-white/10 bg-black/20 text-ink hover:border-white/18 hover:bg-white/[0.055]"
+                ].join(" ")}
+              >
+                <span className="flex items-center gap-3">
+                  <span
+                    className={[
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border",
+                      index === activeIndex
+                        ? "border-slate-950/10 bg-slate-950 text-white"
+                        : "border-white/10 bg-white/[0.04] text-muted group-hover:text-ink"
+                    ].join(" ")}
+                  >
+                    <PanelsTopLeft size={16} aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold">{screen.name}</span>
+                    <span
+                      className={[
+                        "mt-1 block truncate text-xs",
+                        index === activeIndex ? "text-slate-600" : "text-muted"
+                      ].join(" ")}
+                    >
+                      {screen.primaryAction}
+                    </span>
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <PrototypeFrame screen={activeScreen} productName={workspace.idea.name} />
+      </div>
+    </section>
+  );
+}
+
+function PrototypeFrame({ screen, productName }: { screen: PrototypeScreen; productName: string }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-white/12 bg-[#090b10] shadow-[0_28px_120px_rgba(0,0,0,0.48)]">
+      <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.045] px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-red-300/70" />
+          <span className="h-2.5 w-2.5 rounded-full bg-amber-300/70" />
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-300/70" />
+        </div>
+        <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1 font-mono text-xs text-muted">
+          prototype/{toKebabCase(screen.name)}
+        </span>
+      </div>
+
+      <div className="grid min-h-[34rem] lg:grid-cols-[14rem_minmax(0,1fr)]">
+        <aside className="border-b border-white/10 bg-black/24 p-4 lg:border-b-0 lg:border-r">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white text-slate-950">
+              <Sparkles size={15} aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-ink">{productName}</p>
+              <p className="text-xs text-muted">Generated app</p>
+            </div>
+          </div>
+
+          <nav className="mt-6 space-y-2">
+            {screen.navigation.map((item) => (
+              <div
+                key={`${screen.name}-nav-${item}`}
+                className={[
+                  "flex items-center gap-2 rounded-md border px-3 py-2 text-sm",
+                  item === screen.name
+                    ? "border-white/18 bg-white/[0.09] text-ink"
+                    : "border-transparent text-muted"
+                ].join(" ")}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                <span className="truncate">{item}</span>
+              </div>
+            ))}
+          </nav>
+        </aside>
+
+        <main className="p-5 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+                {screen.primaryAction}
+              </p>
+              <h4 className="mt-2 text-3xl font-semibold tracking-normal text-ink">
+                {screen.name}
+              </h4>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
+                {shortText(screen.purpose, 150)}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-white px-4 text-sm font-semibold text-slate-950 shadow-[0_18px_60px_rgba(255,255,255,0.12)]"
+            >
+              <MousePointer2 size={15} aria-hidden="true" />
+              {shortText(screen.primaryAction, 28)}
+            </button>
+          </div>
+
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            {screen.widgets.slice(0, 3).map((widget, index) => (
+              <div
+                key={`${screen.name}-metric-${widget}`}
+                className="rounded-lg border border-white/10 bg-white/[0.045] p-4"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                    {shortText(widget, 22)}
+                  </p>
+                  <span className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 bg-black/20">
+                    {index === 0 ? (
+                      <CheckCircle2 size={15} aria-hidden="true" />
+                    ) : index === 1 ? (
+                      <Table2 size={15} aria-hidden="true" />
+                    ) : (
+                      <Route size={15} aria-hidden="true" />
+                    )}
+                  </span>
+                </div>
+                <p className="mt-5 text-2xl font-semibold text-ink">
+                  {index === 0 ? "92" : index === 1 ? "14" : "3"}
+                </p>
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-white"
+                    style={{ width: `${index === 0 ? 82 : index === 1 ? 56 : 68}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+            <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-semibold text-ink">Primary workspace</p>
+                <span className="rounded-full border border-emerald-200/20 bg-emerald-200/[0.08] px-3 py-1 text-xs font-semibold text-emerald-100">
+                  Live preview
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {screen.records.slice(0, 4).map((record, index) => (
+                  <div
+                    key={`${screen.name}-record-${record}`}
+                    className="grid gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-3 sm:grid-cols-[2rem_minmax(0,1fr)_6rem] sm:items-center"
+                  >
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-semibold text-slate-950">
+                      {index + 1}
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-ink">{record}</p>
+                      <p className="mt-1 text-xs text-muted">
+                        {shortText(screen.widgets[index] ?? screen.primaryAction, 58)}
+                      </p>
+                    </div>
+                    <span className="w-fit rounded-full border border-white/10 px-2.5 py-1 text-xs text-muted">
+                      {index === 0 ? "Active" : index === 1 ? "Queued" : "Ready"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <aside className="rounded-xl border border-white/10 bg-white/[0.045] p-4">
+              <p className="font-semibold text-ink">Interaction model</p>
+              <div className="mt-4 space-y-3">
+                {screen.widgets.slice(0, 4).map((widget) => (
+                  <div
+                    key={`${screen.name}-widget-${widget}`}
+                    className="rounded-md bg-black/20 p-3"
+                  >
+                    <p className="text-sm font-semibold text-slate-200">{shortText(widget, 42)}</p>
+                    <p className="mt-1 text-xs leading-5 text-muted">Generated component</p>
+                  </div>
+                ))}
+              </div>
+            </aside>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
