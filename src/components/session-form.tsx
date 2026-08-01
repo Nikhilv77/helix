@@ -44,7 +44,7 @@ export function SessionForm({ projectId }: SessionFormProps) {
       });
       router.push(`/design-sessions/${session.id}`);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Design session could not be created.");
+      setError(caught instanceof Error ? caught.message : "Product build could not be created.");
     } finally {
       setSaving(false);
     }
@@ -61,18 +61,18 @@ export function SessionForm({ projectId }: SessionFormProps) {
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           className="field mt-2 min-h-11 w-full rounded-md px-3 text-sm outline-none"
-          placeholder="Design scalable notifications"
+          placeholder="Build a notification platform"
         />
       </label>
       <label className="block">
-        <span className="text-sm font-medium text-ink">Problem statement</span>
+        <span className="text-sm font-medium text-ink">Idea brief</span>
         <textarea
           required
           minLength={20}
           value={problemStatement}
           onChange={(event) => setProblemStatement(event.target.value)}
           className="field mt-2 min-h-56 w-full rounded-md px-3 py-2 text-sm leading-6 outline-none"
-          placeholder="Describe users, core workflows, scale, reliability needs, constraints, and any known trade-offs."
+          placeholder="Describe users, core workflows, UI needs, integrations, scale, constraints, and any known trade-offs."
         />
       </label>
       <div className="flex justify-end">
@@ -87,7 +87,7 @@ export function SessionForm({ projectId }: SessionFormProps) {
             problemStatement.trim().length < 20
           }
         >
-          {saving ? "Creating" : "Create session"}
+          {saving ? "Creating" : "Create build"}
         </Button>
       </div>
     </form>

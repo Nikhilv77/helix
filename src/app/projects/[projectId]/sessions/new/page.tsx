@@ -64,7 +64,7 @@ export default function NewSessionPage({ params }: NewSessionPageProps) {
   if (project?.status === "ARCHIVED") {
     return (
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-        <ErrorState message="Archived projects cannot receive new design sessions. Restore the project first." />
+        <ErrorState message="Archived projects cannot receive new product builds. Restore the project first." />
       </div>
     );
   }
@@ -76,11 +76,11 @@ export default function NewSessionPage({ params }: NewSessionPageProps) {
           Back to project
         </Button>
         <h1 className="mt-4 text-3xl font-semibold tracking-normal text-ink">
-          Create design session
+          Create product build
         </h1>
         <p className="mt-2 text-sm leading-6 text-muted">
-          Describe the software system you want designed. More product, scale, and constraint
-          context produces better requirement analysis.
+          Describe the product you want to build. More user, workflow, scale, integration, and
+          constraint context produces a better workspace.
         </p>
       </div>
       <Card className="p-5">

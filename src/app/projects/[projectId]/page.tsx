@@ -100,7 +100,7 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsPageProps) 
           icon={<Plus size={18} />}
           className={canCreateSession ? "" : "pointer-events-none opacity-55"}
         >
-          New session
+          New build
         </Button>
       </div>
 
@@ -108,24 +108,24 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsPageProps) 
         <div className="flex items-center justify-between gap-3">
           <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
             <Layers3 size={17} className="text-brand" aria-hidden="true" />
-            Design sessions
+            Product builds
           </h2>
           <p className="text-sm text-muted">{sessions.length} total</p>
         </div>
         {!canCreateSession ? (
           <p className="mt-3 rounded-md border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-sm text-amber-200">
-            Archived projects cannot receive new design sessions.
+            Archived projects cannot receive new product builds.
           </p>
         ) : null}
         <div className="mt-5">
           {sessions.length === 0 ? (
             <EmptyState
-              title="No design sessions"
-              description="Create a session with a problem statement to begin the copilot flow."
+              title="No product builds"
+              description="Create a build from an idea brief to generate the product workspace."
               action={
                 canCreateSession ? (
                   <Button href={`/projects/${project.id}/sessions/new`} icon={<Plus size={18} />}>
-                    Create session
+                    Create build
                   </Button>
                 ) : undefined
               }

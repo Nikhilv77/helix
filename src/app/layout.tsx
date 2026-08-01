@@ -6,7 +6,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Helix",
-  description: "A modern system design workspace for product and architecture teams.",
+  description: "An AI product builder workspace for product and architecture teams.",
   icons: {
     icon: "/brand/helix-icon.svg",
     shortcut: "/brand/helix-icon.svg",

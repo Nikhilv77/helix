@@ -149,7 +149,7 @@ export function AuthenticatedShell({ children }: AuthenticatedShellProps) {
   const activeLabel = useMemo(() => {
     if (pathname?.startsWith("/projects/new")) return "New project";
     if (pathname?.startsWith("/projects/")) return "Portfolio";
-    if (pathname?.startsWith("/design-sessions/")) return "Design session";
+    if (pathname?.startsWith("/design-sessions/")) return "Product build";
     return "Portfolio";
   }, [pathname]);
 
@@ -462,7 +462,12 @@ export function AuthenticatedShell({ children }: AuthenticatedShellProps) {
 
               if (item.type === "templates") {
                 return (
-                  <button key={item.label} type="button" onClick={openTemplates} className={className}>
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={openTemplates}
+                    className={className}
+                  >
                     {content}
                   </button>
                 );
@@ -470,7 +475,12 @@ export function AuthenticatedShell({ children }: AuthenticatedShellProps) {
 
               if (item.type === "settings") {
                 return (
-                  <button key={item.label} type="button" onClick={openSettings} className={className}>
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={openSettings}
+                    className={className}
+                  >
                     {content}
                   </button>
                 );

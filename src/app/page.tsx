@@ -67,11 +67,11 @@ function MarketingPage() {
           <div className="page-enter max-w-3xl">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-brand">Helix</p>
             <h1 className="mt-5 max-w-4xl text-5xl font-semibold tracking-normal text-ink sm:text-7xl lg:text-[6.8rem] lg:leading-[0.92]">
-              Design the system before it designs you.
+              Build product ideas into real plans.
             </h1>
             <p className="mt-7 max-w-2xl text-base leading-8 text-muted sm:text-lg">
-              Turn rough product ideas into requirements, capacity estimates, architecture maps,
-              diagrams, and review notes inside one focused workspace.
+              Turn rough ideas into requirements, user flows, UI surfaces, backend services,
+              databases, APIs, architecture, roadmap, and export-ready build packs.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
               {clerkEnabled ? (
@@ -86,7 +86,9 @@ function MarketingPage() {
                   Add Clerk keys to start
                 </button>
               )}
-              <span className="text-sm text-muted">Private workspace. Guided decisions.</span>
+              <span className="text-sm text-muted">
+                Private workspace. Product to architecture.
+              </span>
             </div>
           </div>
 
@@ -94,13 +96,7 @@ function MarketingPage() {
             <div className="absolute inset-y-8 left-0 right-[-9vw] rounded-l-[2rem] border border-white/10 bg-white/[0.025] shadow-[0_40px_120px_rgba(0,0,0,0.32)] backdrop-blur-2xl" />
             <div className="absolute inset-y-0 left-10 right-0">
               <div className="absolute left-[13%] top-[8%] h-12 w-12 rounded-xl border border-white/10 bg-[#0a0d12] p-2 shadow-2xl">
-                <Image
-                  src="/brand/helix-icon.svg"
-                  alt=""
-                  width={32}
-                  height={32}
-                  unoptimized
-                />
+                <Image src="/brand/helix-icon.svg" alt="" width={32} height={32} unoptimized />
               </div>
               <div className="architecture-line architecture-line-a" />
               <div className="architecture-line architecture-line-b" />
@@ -108,15 +104,15 @@ function MarketingPage() {
 
               <div className="preview-node preview-node-primary left-[5%] top-[34%] w-[330px]">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand">
-                  Requirements
+                  Product map
                 </p>
-                <p className="mt-3 text-lg font-semibold text-ink">Choice-led discovery</p>
+                <p className="mt-3 text-lg font-semibold text-ink">Idea to build plan</p>
                 <p className="mt-2 text-sm leading-6 text-muted">
-                  Ask only what changes the architecture.
+                  Requirements, flows, surfaces, APIs, and roadmap in one run.
                 </p>
               </div>
               <div className="preview-node left-[48%] top-[18%] w-[300px]">
-                <p className="text-sm font-semibold text-ink">Capacity model</p>
+                <p className="text-sm font-semibold text-ink">Workspace output</p>
                 <div className="mt-4 space-y-3">
                   <span className="block h-2 w-11/12 rounded-full bg-white/12" />
                   <span className="block h-2 w-7/12 rounded-full bg-white/12" />
@@ -124,9 +120,9 @@ function MarketingPage() {
                 </div>
               </div>
               <div className="preview-node left-[54%] top-[51%] w-[340px]">
-                <p className="text-sm font-semibold text-ink">Architecture map</p>
+                <p className="text-sm font-semibold text-ink">Build map</p>
                 <div className="mt-5 grid grid-cols-3 gap-3">
-                  {["Edge", "Queue", "Store", "Workers", "Cache", "Alerts"].map((item) => (
+                  {["UI", "API", "DB", "Jobs", "Auth", "Export"].map((item) => (
                     <span
                       key={item}
                       className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-center text-xs text-muted"
@@ -137,7 +133,7 @@ function MarketingPage() {
                 </div>
               </div>
               <div className="preview-node left-[20%] top-[72%] w-[285px]">
-                <p className="text-sm font-semibold text-ink">Review ready</p>
+                <p className="text-sm font-semibold text-ink">Launch path</p>
                 <div className="mt-4 flex items-center gap-2">
                   <span className="h-2 flex-1 rounded-full bg-emerald-300/70" />
                   <span className="text-xs font-semibold text-emerald-200">92</span>
@@ -346,10 +342,10 @@ function ProjectsWorkspace() {
             My projects
           </p>
           <h1 className="mt-4 max-w-3xl text-4xl font-semibold tracking-normal text-ink sm:text-5xl">
-            System design workspace
+            AI product builder
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-            Your private Helix portfolio for product ideas, design sessions, diagrams, and reviews.
+            Your private Helix portfolio for product ideas, build plans, diagrams, and launch work.
           </p>
         </div>
         <Button href="/projects/new" icon={<Plus size={18} />} className="min-h-12">
@@ -397,7 +393,7 @@ function ProjectsWorkspace() {
       {!loading && projects.length === 0 ? (
         <EmptyState
           title="No projects yet"
-          description="Create the first project to begin a guided system design session."
+          description="Create the first project to generate a product workspace."
           action={
             <Button href="/projects/new" icon={<Plus size={18} />}>
               Create project

@@ -57,10 +57,10 @@ interface Choice<TValue extends string> {
 }
 
 const steps: Array<{ id: StepId; label: string }> = [
-  { id: "template", label: "Template" },
-  { id: "basics", label: "Basics" },
-  { id: "profile", label: "Profile" },
-  { id: "review", label: "Generate" }
+  { id: "template", label: "Idea" },
+  { id: "basics", label: "Brief" },
+  { id: "profile", label: "Shape" },
+  { id: "review", label: "Build" }
 ];
 
 const projectTemplates: Array<Choice<ProjectTemplateId> & { suggestedName: string }> = [
@@ -114,9 +114,9 @@ const projectTemplates: Array<Choice<ProjectTemplateId> & { suggestedName: strin
   },
   {
     id: "custom",
-    label: "Custom system",
+    label: "Custom product",
     suggestedName: "",
-    description: "Start with a blank workspace and let Helix infer the first architecture.",
+    description: "Start with a blank workspace and let Helix infer the product and build plan.",
     icon: Pencil,
     tags: ["blank", "flexible"]
   }
@@ -205,11 +205,11 @@ const domains: Choice<DomainId>[] = [
 
 const generationSteps = [
   "Creating workspace",
-  "Starting design session",
-  "Analyzing and assuming defaults",
+  "Starting product build",
+  "Shaping requirements",
   "Resolving default decisions",
-  "Calculating capacity",
-  "Generating system design",
+  "Estimating capacity",
+  "Generating product workspace",
   "Rendering architecture diagram",
   "Opening results"
 ];
@@ -243,17 +243,18 @@ export function ProjectForm() {
 
   const generatedBrief = useMemo(() => {
     const baseDescription =
-      description.trim() || selectedTemplate?.description || "System design workspace.";
+      description.trim() || selectedTemplate?.description || "AI product builder workspace.";
 
     return [
       baseDescription,
       "",
-      "Helix quick design setup:",
-      `- Starting point: ${selectedTemplate?.label ?? "Custom system"}`,
+      "Helix quick product-builder setup:",
+      `- Starting point: ${selectedTemplate?.label ?? "Custom product"}`,
       `- Expected scale: ${selectedScale.label}`,
-      `- Design priority: ${selectedPriority.label}`,
+      `- Product priority: ${selectedPriority.label}`,
       `- Product domain: ${selectedDomain.label}`,
-      "- Workflow preference: generate a practical system design immediately using sensible assumptions.",
+      "- Workflow preference: generate a practical product workspace immediately using sensible assumptions.",
+      "- Output preference: return idea, requirements, user flow, UI, backend, database, API, architecture, roadmap, and export pack.",
       "- Requirement behavior: do not ask clarification questions in this quick-create path; choose reasonable defaults and list them as assumptions."
     ].join("\n");
   }, [
@@ -336,13 +337,13 @@ export function ProjectForm() {
         description: generatedBrief
       });
 
-      setGenerationStage("Starting design session");
+      setGenerationStage("Starting product build");
       const session = await createDesignSession(project.id, {
-        title: `${name.trim()} system design`,
+        title: `${name.trim()} product build`,
         problemStatement: generatedBrief
       });
 
-      setGenerationStage("Analyzing and assuming defaults");
+      setGenerationStage("Shaping requirements");
       let requirements = await analyzeRequirements(session.id);
 
       for (
@@ -372,10 +373,10 @@ export function ProjectForm() {
         );
       }
 
-      setGenerationStage("Calculating capacity");
+      setGenerationStage("Estimating capacity");
       await calculateCapacity(session.id, {});
 
-      setGenerationStage("Generating system design");
+      setGenerationStage("Generating product workspace");
       await generateDesign(session.id);
 
       setGenerationStage("Rendering architecture diagram");
@@ -384,7 +385,9 @@ export function ProjectForm() {
       setGenerationStage("Opening results");
       router.push(`/design-sessions/${session.id}`);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "System design could not be generated.");
+      setError(
+        caught instanceof Error ? caught.message : "Product workspace could not be generated."
+      );
     } finally {
       setGenerationStage(null);
       setSaving(false);
@@ -399,171 +402,178 @@ export function ProjectForm() {
         projectName={name.trim() || "Untitled project"}
       />
       <div className="overflow-hidden rounded-lg border border-line bg-white/[0.045] shadow-[0_28px_100px_rgba(0,0,0,0.28)]">
-      <div className="border-b border-white/10 bg-black/18 px-5 py-4 sm:px-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
-              Quick system design
-            </p>
-            <h2 className="mt-1 text-xl font-semibold text-ink">{currentStep.label}</h2>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {steps.map((step, index) => {
-              const active = index === stepIndex;
-              const completed = index < stepIndex;
+        <div className="border-b border-white/10 bg-black/18 px-5 py-4 sm:px-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
+                Quick product builder
+              </p>
+              <h2 className="mt-1 text-xl font-semibold text-ink">{currentStep.label}</h2>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {steps.map((step, index) => {
+                const active = index === stepIndex;
+                const completed = index < stepIndex;
 
-              return (
-                <button
-                  key={step.id}
-                  type="button"
-                  onClick={() => {
-                    if (!saving && (index <= stepIndex || name.trim().length >= 2)) {
-                      setStepIndex(index);
-                    }
-                  }}
-                  className={[
-                    "h-2.5 rounded-full transition-all",
-                    active
-                      ? "w-10 bg-white"
-                      : completed
-                        ? "w-5 bg-white/55"
-                        : "w-5 bg-white/14 hover:bg-white/24"
-                  ].join(" ")}
-                  aria-label={`Go to ${step.label}`}
-                />
-              );
-            })}
+                return (
+                  <button
+                    key={step.id}
+                    type="button"
+                    onClick={() => {
+                      if (!saving && (index <= stepIndex || name.trim().length >= 2)) {
+                        setStepIndex(index);
+                      }
+                    }}
+                    className={[
+                      "h-2.5 rounded-full transition-all",
+                      active
+                        ? "w-10 bg-white"
+                        : completed
+                          ? "w-5 bg-white/55"
+                          : "w-5 bg-white/14 hover:bg-white/24"
+                    ].join(" ")}
+                    aria-label={`Go to ${step.label}`}
+                  />
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="p-5 sm:p-6">
-        {error ? <ErrorState message={error} /> : null}
+        <div className="p-5 sm:p-6">
+          {error ? <ErrorState message={error} /> : null}
 
-        {currentStep.id === "template" ? (
-          <ChoiceSection
-            eyebrow="Step 1"
-            title="Pick the closest system type."
-            choices={projectTemplates}
-            value={templateId}
-            onChange={applyTemplate}
-            columns="lg:grid-cols-3"
-          />
-        ) : null}
-
-        {currentStep.id === "basics" ? (
-          <section className="mx-auto max-w-2xl py-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-md border border-white/10 bg-white/[0.06]">
-              <Sparkles size={18} aria-hidden="true" />
-            </div>
-            <p className="mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-              Step 2
-            </p>
-            <h3 className="mt-2 text-3xl font-semibold tracking-normal text-ink">
-              Name it and give a short brief.
-            </h3>
-            <input
-              required
-              minLength={2}
-              value={name}
-              onChange={(event) => {
-                setNameTouched(true);
-                setName(event.target.value);
-              }}
-              className="field mt-6 min-h-14 w-full rounded-md px-4 text-base outline-none"
-              placeholder="Notification platform"
-              autoFocus
-            />
-            <textarea
-              value={description}
-              onChange={(event) => {
-                setDescriptionTouched(true);
-                setDescription(event.target.value);
-              }}
-              className="field mt-3 min-h-32 w-full rounded-md px-4 py-3 text-sm leading-6 outline-none"
-              placeholder="Optional: describe users, workflow, reliability goals, or scale."
-            />
-          </section>
-        ) : null}
-
-        {currentStep.id === "profile" ? (
-          <div className="mx-auto max-w-4xl space-y-6">
+          {currentStep.id === "template" ? (
             <ChoiceSection
-              eyebrow="Step 3"
-              title="Choose the design profile."
-              choices={scales}
-              value={scale}
-              onChange={setScale}
+              eyebrow="Step 1"
+              title="Pick the closest product type."
+              choices={projectTemplates}
+              value={templateId}
+              onChange={applyTemplate}
+              columns="lg:grid-cols-3"
             />
-            <CompactChoice label="Priority" choices={priorities} value={priority} onChange={setPriority} />
-            <CompactChoice label="Domain" choices={domains} value={domain} onChange={setDomain} />
-          </div>
-        ) : null}
+          ) : null}
 
-        {currentStep.id === "review" ? (
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
-            <div className="rounded-lg border border-white/10 bg-black/18 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-                Ready to generate
+          {currentStep.id === "basics" ? (
+            <section className="mx-auto max-w-2xl py-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-md border border-white/10 bg-white/[0.06]">
+                <Sparkles size={18} aria-hidden="true" />
+              </div>
+              <p className="mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+                Step 2
               </p>
-              <h3 className="mt-3 text-2xl font-semibold text-ink">
-                {name.trim() || "Untitled project"}
+              <h3 className="mt-2 text-3xl font-semibold tracking-normal text-ink">
+                Name it and give a short brief.
               </h3>
-              <p className="mt-4 whitespace-pre-line text-sm leading-7 text-muted">
-                {generatedBrief}
-              </p>
-              {generationStage ? (
-                <div className="mt-5 flex items-center gap-3 rounded-md border border-white/10 bg-white/[0.055] px-3 py-3 text-sm text-ink">
-                  <Loader2 className="animate-spin" size={16} aria-hidden="true" />
-                  {generationStage}
-                </div>
-              ) : null}
-            </div>
-            <aside className="space-y-3">
-              <SummaryPill label="Template" value={selectedTemplate?.label ?? "Custom system"} />
-              <SummaryPill label="Scale" value={selectedScale.label} />
-              <SummaryPill label="Priority" value={selectedPriority.label} />
-              <SummaryPill label="Domain" value={selectedDomain.label} />
-            </aside>
-          </div>
-        ) : null}
-      </div>
+              <input
+                required
+                minLength={2}
+                value={name}
+                onChange={(event) => {
+                  setNameTouched(true);
+                  setName(event.target.value);
+                }}
+                className="field mt-6 min-h-14 w-full rounded-md px-4 text-base outline-none"
+                placeholder="Notification platform"
+                autoFocus
+              />
+              <textarea
+                value={description}
+                onChange={(event) => {
+                  setDescriptionTouched(true);
+                  setDescription(event.target.value);
+                }}
+                className="field mt-3 min-h-32 w-full rounded-md px-4 py-3 text-sm leading-6 outline-none"
+                placeholder="Optional: describe users, workflow, business rules, integrations, or scale."
+              />
+            </section>
+          ) : null}
 
-      <div className="flex flex-col-reverse gap-3 border-t border-white/10 bg-black/14 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <Button
-          type="button"
-          variant="secondary"
-          icon={<ArrowLeft size={16} />}
-          onClick={goBack}
-          disabled={stepIndex === 0 || saving}
-        >
-          Back
-        </Button>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <p className="text-xs text-muted">
-            {stepIndex + 1} / {steps.length}
-          </p>
+          {currentStep.id === "profile" ? (
+            <div className="mx-auto max-w-4xl space-y-6">
+              <ChoiceSection
+                eyebrow="Step 3"
+                title="Choose the design profile."
+                choices={scales}
+                value={scale}
+                onChange={setScale}
+              />
+              <CompactChoice
+                label="Priority"
+                choices={priorities}
+                value={priority}
+                onChange={setPriority}
+              />
+              <CompactChoice label="Domain" choices={domains} value={domain} onChange={setDomain} />
+            </div>
+          ) : null}
+
           {currentStep.id === "review" ? (
-            <Button
-              type="button"
-              icon={saving ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
-              onClick={() => void submit()}
-              disabled={!isLoaded || !isSignedIn || saving || name.trim().length < 2}
-            >
-              {saving ? "Generating" : "Generate system design"}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              icon={<ArrowRight size={16} />}
-              onClick={goNext}
-              disabled={!canContinue || saving}
-            >
-              Continue
-            </Button>
-          )}
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
+              <div className="rounded-lg border border-white/10 bg-black/18 p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+                  Ready to generate
+                </p>
+                <h3 className="mt-3 text-2xl font-semibold text-ink">
+                  {name.trim() || "Untitled project"}
+                </h3>
+                <p className="mt-4 whitespace-pre-line text-sm leading-7 text-muted">
+                  {generatedBrief}
+                </p>
+                {generationStage ? (
+                  <div className="mt-5 flex items-center gap-3 rounded-md border border-white/10 bg-white/[0.055] px-3 py-3 text-sm text-ink">
+                    <Loader2 className="animate-spin" size={16} aria-hidden="true" />
+                    {generationStage}
+                  </div>
+                ) : null}
+              </div>
+              <aside className="space-y-3">
+                <SummaryPill label="Template" value={selectedTemplate?.label ?? "Custom system"} />
+                <SummaryPill label="Scale" value={selectedScale.label} />
+                <SummaryPill label="Priority" value={selectedPriority.label} />
+                <SummaryPill label="Domain" value={selectedDomain.label} />
+              </aside>
+            </div>
+          ) : null}
         </div>
-      </div>
+
+        <div className="flex flex-col-reverse gap-3 border-t border-white/10 bg-black/14 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <Button
+            type="button"
+            variant="secondary"
+            icon={<ArrowLeft size={16} />}
+            onClick={goBack}
+            disabled={stepIndex === 0 || saving}
+          >
+            Back
+          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <p className="text-xs text-muted">
+              {stepIndex + 1} / {steps.length}
+            </p>
+            {currentStep.id === "review" ? (
+              <Button
+                type="button"
+                icon={
+                  saving ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />
+                }
+                onClick={() => void submit()}
+                disabled={!isLoaded || !isSignedIn || saving || name.trim().length < 2}
+              >
+                {saving ? "Building" : "Build product workspace"}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                icon={<ArrowRight size={16} />}
+                onClick={goNext}
+                disabled={!canContinue || saving}
+              >
+                Continue
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     </>
   );
@@ -608,8 +618,8 @@ function GenerationOverlay({
                 Building "{projectName}"
               </h2>
               <p className="mt-2 text-sm leading-6 text-muted">
-                Keep this tab open while Helix analyzes requirements, estimates capacity, writes the
-                architecture, and renders the diagram.
+                Keep this tab open while Helix shapes the product, maps the UI and backend,
+                estimates capacity, and renders the architecture.
               </p>
 
               <div className="mt-6">
@@ -668,7 +678,7 @@ function GenerationOverlay({
             </p>
             <p className="mt-2 text-sm leading-6 text-slate-300">
               Some AI steps can take a bit. The workspace is still alive, and the result page will
-              open automatically when the diagram is ready.
+              open automatically when the product build is ready.
             </p>
           </div>
         </div>

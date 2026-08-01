@@ -18,20 +18,19 @@ export default function NewProjectPage() {
             Guided setup
           </p>
           <h1 className="mt-4 max-w-3xl text-4xl font-semibold tracking-normal text-ink sm:text-5xl">
-            Create a system design workspace
+            Create an AI product builder workspace
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted sm:text-base">
-            Pick a starting point, set the design profile, and let Helix carry the context into
-            requirements, capacity, architecture, diagrams, and review.
+            Pick a starting point, set the product shape, and let Helix turn it into requirements,
+            user flows, UI surfaces, backend services, APIs, architecture, roadmap, and exports.
           </p>
         </div>
         <div className="rounded-lg border border-white/10 bg-white/[0.045] p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-            Setup time
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Setup time</p>
           <p className="mt-2 text-3xl font-semibold text-ink">2 min</p>
           <p className="mt-2 text-sm leading-6 text-muted">
-            Choice-based setup first, open-ended details only when they matter.
+            Choice-based setup first, open-ended details only when they unlock better product
+            output.
           </p>
         </div>
       </section>

@@ -527,7 +527,7 @@ export class DesignSessionsService {
 
   private buildRequirementAnalysisSystemInstruction(): string {
     return [
-      "You analyze software system design problem statements.",
+      "You analyze AI product builder problem statements.",
       "Return only structured data matching the provided schema.",
       "Do not invent precise scale numbers when the prompt does not provide enough evidence.",
       "Prefer reasonable assumptions over clarification questions for details that do not materially change the architecture.",
@@ -550,18 +550,26 @@ export class DesignSessionsService {
   }
 
   private shouldUseQuickCreateFallback(session: DesignSession): boolean {
-    return /Requirement behavior: do not ask clarification questions/i.test(session.problemStatement);
+    return /Requirement behavior: do not ask clarification questions/i.test(
+      session.problemStatement
+    );
   }
 
   private buildFallbackRequirementAnalysis(session: DesignSession): RequirementAnalysis {
     const template = this.extractQuickCreateValue(session.problemStatement, "Starting point");
-    const scale = this.extractQuickCreateValue(session.problemStatement, "Expected scale") ?? "Medium";
+    const scale =
+      this.extractQuickCreateValue(session.problemStatement, "Expected scale") ?? "Medium";
     const priority =
-      this.extractQuickCreateValue(session.problemStatement, "Design priority") ?? "Reliability";
-    const domain = this.extractQuickCreateValue(session.problemStatement, "Product domain") ?? "Enterprise";
+      this.extractQuickCreateValue(session.problemStatement, "Product priority") ??
+      this.extractQuickCreateValue(session.problemStatement, "Design priority") ??
+      "Reliability";
+    const domain =
+      this.extractQuickCreateValue(session.problemStatement, "Product domain") ?? "Enterprise";
     const summary = this.extractProblemSummary(session.problemStatement, template ?? session.title);
     const lowerSummary = `${summary} ${template ?? ""}`.toLowerCase();
-    const isMonitoring = /monitor|metric|observability|alert|dashboard|telemetry/.test(lowerSummary);
+    const isMonitoring = /monitor|metric|observability|alert|dashboard|telemetry/.test(
+      lowerSummary
+    );
     const isPayment = /payment|checkout|ledger|invoice|razorpay|stripe/.test(lowerSummary);
     const isNotification = /notification|email|sms|push|fanout/.test(lowerSummary);
     const isUrlShortener = /url|short|redirect|link/.test(lowerSummary);
@@ -607,7 +615,8 @@ export class DesignSessionsService {
         storage: this.scaleToStorage(scale, isMonitoring),
         regions: scale.toLowerCase() === "global" ? "Multi-region" : "Single region with multi-AZ",
         availabilityTarget: priority.toLowerCase() === "reliability" ? "99.9%" : "99.5%",
-        latencyTarget: priority.toLowerCase() === "speed" ? "p95 under 300ms" : "p95 under 1 second",
+        latencyTarget:
+          priority.toLowerCase() === "speed" ? "p95 under 300ms" : "p95 under 1 second",
         notes: ["Generated from quick-create defaults."]
       },
       constraints: ["Exact traffic, retention, and compliance requirements can be refined later."],
@@ -875,9 +884,12 @@ export class DesignSessionsService {
   ): GeneratedSystemDesign {
     const template =
       this.extractQuickCreateValue(session.problemStatement, "Starting point") ?? session.title;
-    const scale = this.extractQuickCreateValue(session.problemStatement, "Expected scale") ?? "Medium";
+    const scale =
+      this.extractQuickCreateValue(session.problemStatement, "Expected scale") ?? "Medium";
     const priority =
-      this.extractQuickCreateValue(session.problemStatement, "Design priority") ?? "Reliability";
+      this.extractQuickCreateValue(session.problemStatement, "Product priority") ??
+      this.extractQuickCreateValue(session.problemStatement, "Design priority") ??
+      "Reliability";
     const domain =
       this.extractQuickCreateValue(session.problemStatement, "Product domain") ?? "Enterprise";
     const normalizedContext = `${analysis.productSummary} ${template}`.toLowerCase();
@@ -889,6 +901,13 @@ export class DesignSessionsService {
     const isUrlShortener = /url|short|redirect|link/.test(normalizedContext);
     const peakQps = capacityCalculation.results.peakRequestsPerSecond.display;
     const storage = capacityCalculation.results.retainedStorageEstimate.display;
+    const majorComponents = this.buildFallbackComponents({
+      isMonitoring,
+      isPayment,
+      isNotification,
+      isUrlShortener
+    });
+    const primaryStore = this.fallbackPrimaryStoreName({ isMonitoring, isPayment, isUrlShortener });
 
     return {
       architectureSummary: [
@@ -896,12 +915,19 @@ export class DesignSessionsService {
         `The design targets ${scale.toLowerCase()} scale, prioritizes ${priority.toLowerCase()}, and assumes a ${domain.toLowerCase()} operating model.`,
         `Capacity baseline: ${peakQps} peak requests per second and ${storage} retained storage estimate.`
       ].join(" "),
-      majorComponents: this.buildFallbackComponents({
-        isMonitoring,
-        isPayment,
-        isNotification,
-        isUrlShortener
+      productWorkspace: this.buildFallbackProductWorkspace({
+        session,
+        analysis,
+        template,
+        scale,
+        priority,
+        domain,
+        peakQps,
+        storage,
+        majorComponents,
+        primaryStore
       }),
+      majorComponents,
       apiRecommendations: [
         {
           name: "Public API Gateway",
@@ -920,7 +946,7 @@ export class DesignSessionsService {
       ],
       databaseChoices: [
         {
-          name: this.fallbackPrimaryStoreName({ isMonitoring, isPayment, isUrlShortener }),
+          name: primaryStore,
           recommendation:
             "Use a durable primary data store for the system of record, partitioned around the highest-volume access path.",
           reasoning:
@@ -1030,8 +1056,9 @@ export class DesignSessionsService {
         },
         {
           category: "Data",
-          choice: this.fallbackPrimaryStoreName({ isMonitoring, isPayment, isUrlShortener }),
-          reasoning: "Matches the most important persistence pattern inferred from the project template.",
+          choice: primaryStore,
+          reasoning:
+            "Matches the most important persistence pattern inferred from the project template.",
           alternativesConsidered: ["Single generic document store", "In-memory-only state"]
         }
       ],
@@ -1069,6 +1096,206 @@ export class DesignSessionsService {
     };
   }
 
+  private buildFallbackProductWorkspace(input: {
+    session: DesignSession;
+    analysis: RequirementAnalysis;
+    template: string;
+    scale: string;
+    priority: string;
+    domain: string;
+    peakQps: string;
+    storage: string;
+    majorComponents: GeneratedSystemDesign["majorComponents"];
+    primaryStore: string;
+  }): NonNullable<GeneratedSystemDesign["productWorkspace"]> {
+    const productName = this.extractProblemSummary(input.session.problemStatement, input.template);
+    const uiSurfaces = this.buildFallbackUiSurfaces(input.template, input.domain);
+    const backendServices = input.majorComponents.slice(0, 6).map((component) => ({
+      name: component.name,
+      responsibility: component.responsibilities[0] ?? "Own a core product capability.",
+      trigger: this.inferServiceTrigger(component.name)
+    }));
+
+    return {
+      idea: {
+        name: productName,
+        summary: input.analysis.productSummary,
+        targetUsers: `${input.domain} users operating at ${input.scale.toLowerCase()} scale`,
+        primaryValue: `Deliver the core ${input.template.toLowerCase()} workflow with ${input.priority.toLowerCase()} as the leading product quality.`
+      },
+      requirements: input.analysis.functionalRequirements.slice(0, 6).map((requirement) => ({
+        label: requirement.id,
+        detail: requirement.requirement,
+        priority: requirement.priority ?? "MUST"
+      })),
+      userFlow: [
+        {
+          step: "Discover",
+          actor: "User",
+          action: "Opens the product and starts the primary workflow.",
+          systemResponse: "Loads the workspace, validates access, and prepares default state."
+        },
+        {
+          step: "Create",
+          actor: "User",
+          action: "Submits the main object or request.",
+          systemResponse: "Validates input, writes the system of record, and emits domain events."
+        },
+        {
+          step: "Process",
+          actor: "System",
+          action: "Runs background work and integrations.",
+          systemResponse: "Queues durable jobs, retries safely, and records status changes."
+        },
+        {
+          step: "Review",
+          actor: "User",
+          action: "Checks result, history, or operational status.",
+          systemResponse: "Serves cached views, audit data, and alerts for exceptions."
+        }
+      ],
+      uiSurfaces,
+      backendServices,
+      databasePlan: [
+        {
+          name: input.primaryStore,
+          stores: "Core entities, ownership metadata, workflow state, and audit records.",
+          accessPattern:
+            "Transactional writes with indexed reads by owner, status, and creation time."
+        },
+        {
+          name: "Cache and read model",
+          stores: "Hot views, status summaries, and frequently requested product data.",
+          accessPattern: "Low-latency reads with explicit TTLs and background refresh."
+        },
+        {
+          name: "Event log",
+          stores: "Domain events, retries, integration callbacks, and operational history.",
+          accessPattern: "Append-heavy writes with replay and dead-letter inspection."
+        }
+      ],
+      apiPlan: [
+        {
+          method: "POST",
+          path: "/api/v1/workspaces",
+          purpose: "Create the product workspace and initial ownership boundary."
+        },
+        {
+          method: "POST",
+          path: "/api/v1/workflows",
+          purpose: "Start the primary user workflow with idempotent writes."
+        },
+        {
+          method: "GET",
+          path: "/api/v1/workflows/:id",
+          purpose: "Return current state, timeline, and user-facing result data."
+        },
+        {
+          method: "POST",
+          path: "/api/v1/events/webhook",
+          purpose: "Receive provider or system callbacks with signature verification."
+        }
+      ],
+      architectureHighlights: [
+        {
+          name: "Capacity baseline",
+          description: `${input.peakQps} peak requests per second with ${input.storage} retained storage.`
+        },
+        {
+          name: "Durable async core",
+          description:
+            "Use queues and workers for expensive or failure-prone operations so the UI stays responsive."
+        },
+        {
+          name: "Operational visibility",
+          description:
+            "Expose health, latency, queue depth, and failed-job views from the first release."
+        }
+      ],
+      roadmap: [
+        {
+          phase: "MVP",
+          goal: "Ship the core user workflow end to end.",
+          deliverables: ["Primary UI", "Auth and ownership", "Core API", "Production database"]
+        },
+        {
+          phase: "Scale",
+          goal: "Make the product reliable under growth.",
+          deliverables: ["Async workers", "Caching", "Dashboards", "Alerting"]
+        },
+        {
+          phase: "Enterprise",
+          goal: "Add controls needed for teams and operations.",
+          deliverables: ["Audit logs", "Roles", "Exports", "Runbooks"]
+        }
+      ],
+      exportArtifacts: [
+        {
+          name: "Product brief",
+          format: "Markdown",
+          contents: ["Idea", "Target users", "Requirements", "Assumptions"]
+        },
+        {
+          name: "Implementation pack",
+          format: "Folder blueprint",
+          contents: ["Frontend surfaces", "Backend services", "Database plan", "API contracts"]
+        },
+        {
+          name: "Architecture review",
+          format: "Diagram and checklist",
+          contents: ["Mermaid diagram", "Risks", "Trade-offs", "Roadmap"]
+        }
+      ]
+    };
+  }
+
+  private buildFallbackUiSurfaces(
+    template: string,
+    domain: string
+  ): Array<{
+    name: string;
+    purpose: string;
+    keyElements: string[];
+  }> {
+    const normalized = template.toLowerCase();
+    const coreLabel = normalized.includes("payment")
+      ? "Payments console"
+      : normalized.includes("monitor")
+        ? "Observability workspace"
+        : normalized.includes("notification")
+          ? "Campaign and delivery console"
+          : normalized.includes("url")
+            ? "Link management workspace"
+            : "Product workspace";
+
+    return [
+      {
+        name: coreLabel,
+        purpose: "Run the primary workflow and inspect its current state.",
+        keyElements: ["Overview", "Create action", "Status timeline", "Recent activity"]
+      },
+      {
+        name: "Operations view",
+        purpose: "Help owners understand failures, queues, and user-impacting issues.",
+        keyElements: ["Health cards", "Alerts", "Retries", "Audit events"]
+      },
+      {
+        name: `${domain} settings`,
+        purpose: "Manage access, preferences, limits, and operational controls.",
+        keyElements: ["Members", "Roles", "Limits", "Integrations"]
+      }
+    ];
+  }
+
+  private inferServiceTrigger(componentName: string): string {
+    const normalized = componentName.toLowerCase();
+    if (/worker|processor|fanout|queue|stream/.test(normalized)) return "Queue event";
+    if (/webhook|provider|adapter/.test(normalized)) return "External callback";
+    if (/store|database|ledger/.test(normalized)) return "Domain write";
+    if (/query|dashboard|redirect/.test(normalized)) return "User read";
+    return "API request";
+  }
+
   private buildFallbackComponents(input: {
     isMonitoring: boolean;
     isPayment: boolean;
@@ -1079,7 +1306,11 @@ export class DesignSessionsService {
       return [
         {
           name: "Ingestion Gateway",
-          responsibilities: ["Accept telemetry writes", "Authenticate producers", "Apply rate limits"]
+          responsibilities: [
+            "Accept telemetry writes",
+            "Authenticate producers",
+            "Apply rate limits"
+          ]
         },
         {
           name: "Telemetry Buffer",
@@ -1133,10 +1364,7 @@ export class DesignSessionsService {
       return [
         {
           name: "Notification API",
-          responsibilities: [
-            "Accept notification requests",
-            "Validate sender and recipient policy"
-          ]
+          responsibilities: ["Accept notification requests", "Validate sender and recipient policy"]
         },
         {
           name: "Preference Service",
@@ -1251,8 +1479,11 @@ export class DesignSessionsService {
 
   private buildDesignGenerationSystemInstruction(): string {
     return [
-      "You generate practical software system designs from structured requirements.",
+      "You generate practical AI product-builder workspaces from structured requirements.",
       "Return only structured data matching the provided schema.",
+      "Always populate productWorkspace with idea, requirements, userFlow, uiSurfaces, backendServices, databasePlan, apiPlan, architectureHighlights, roadmap, and exportArtifacts.",
+      "Keep productWorkspace visual and implementation-oriented: concise labels, short descriptions, and concrete surfaces/contracts.",
+      "Use the architecture fields for deeper technical support, but make productWorkspace the primary user-facing output.",
       "Use retrieved knowledge only as supporting context, and reference the retrieved source chunks you used.",
       "Do not include Mermaid diagrams, final reports, chat follow-ups, or validation commentary.",
       "Make trade-offs and risks explicit."

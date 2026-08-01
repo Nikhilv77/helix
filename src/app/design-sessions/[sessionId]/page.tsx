@@ -1,24 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import {
-  Activity,
-  AlertTriangle,
   ArrowLeft,
   Brain,
   Calculator,
-  CheckCircle2,
-  Database,
   FileCheck,
-  FolderTree,
   GitBranch,
-  Layers3,
   Loader2,
   RefreshCw,
-  Route,
   ShieldCheck,
-  Sparkles,
+  Sparkles
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -85,37 +77,37 @@ const actionCopy: Record<
   }
 > = {
   requirements: {
-    title: "Analyzing requirements",
+    title: "Shaping requirements",
     description:
-      "Extracting product intent, scale signals, constraints, and only the decisions that matter.",
-    stages: ["Parsing problem statement", "Inferring defaults", "Preparing focused decisions"],
+      "Extracting product intent, user goals, scale signals, and only the decisions that matter.",
+    stages: ["Parsing product brief", "Inferring defaults", "Preparing focused decisions"],
     icon: Brain
   },
   capacity: {
-    title: "Calculating capacity",
+    title: "Estimating capacity",
     description:
       "Turning requirement inputs into deterministic traffic, bandwidth, and storage estimates.",
     stages: ["Normalizing scale", "Estimating peak load", "Checking storage retention"],
     icon: Calculator
   },
   design: {
-    title: "Generating architecture",
+    title: "Building product workspace",
     description:
-      "Composing components, APIs, storage choices, operational risks, and deployment guidance.",
-    stages: ["Mapping components", "Choosing data paths", "Balancing trade-offs"],
+      "Composing user flows, UI surfaces, services, APIs, data paths, roadmap, and exports.",
+    stages: ["Mapping product flow", "Choosing build surfaces", "Balancing trade-offs"],
     icon: FileCheck
   },
   diagram: {
     title: "Rendering diagram",
     description:
-      "Building a safe layered Mermaid architecture view with readable system boundaries.",
+      "Building a safe layered Mermaid view with readable product and architecture boundaries.",
     stages: ["Grouping layers", "Routing flows", "Validating Mermaid"],
     icon: GitBranch
   },
   validation: {
-    title: "Validating design",
+    title: "Reviewing build plan",
     description:
-      "Reviewing reliability, scalability, security, observability, cost, and operations.",
+      "Reviewing reliability, scalability, security, observability, cost, and launch readiness.",
     stages: ["Scoring categories", "Finding gaps", "Preparing recommendations"],
     icon: ShieldCheck
   }
@@ -169,312 +161,11 @@ function shortText(value: string, maxLength = 116): string {
   return value.length > maxLength ? `${value.slice(0, maxLength).trim()}...` : value;
 }
 
-function toModuleName(value: string): string {
-  return (
-    value
-      .replace(/[^a-zA-Z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .toLowerCase()
-      .slice(0, 34) || "module"
-  );
-}
-
-function uniqueItems(values: string[], fallback: string[]) {
-  const seen = new Set<string>();
-  const next = values
-    .map(toModuleName)
-    .filter((value) => {
-      if (seen.has(value)) return false;
-      seen.add(value);
-      return true;
-    });
-
-  return next.length > 0 ? next.slice(0, 6) : fallback;
-}
-
-function pickComponentNames(
-  design: GeneratedDesignResponse["design"],
-  keywords: string[],
-  fallback: string[]
-) {
-  if (!design) return fallback;
-  const matches = design.majorComponents
-    .map((component) => component.name)
-    .filter((name) => {
-      const normalized = name.toLowerCase();
-      return keywords.some((keyword) => normalized.includes(keyword));
-    });
-
-  return uniqueItems(matches, fallback);
-}
-
 function ArchitecturePill({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-md border border-white/10 bg-black/20 px-4 py-3">
-      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted">
-        {label}
-      </p>
+      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted">{label}</p>
       <p className="mt-1 text-lg font-semibold text-ink">{value}</p>
-    </div>
-  );
-}
-
-function VisualSection({
-  icon: Icon,
-  label,
-  title,
-  children
-}: {
-  icon: LucideIcon;
-  label: string;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <Card className="overflow-hidden p-0">
-      <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-md border border-white/10 bg-white/[0.055] text-ink">
-            <Icon size={18} aria-hidden="true" />
-          </span>
-          <div>
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted">
-              {label}
-            </p>
-            <h2 className="text-base font-semibold text-ink">{title}</h2>
-          </div>
-        </div>
-      </div>
-      <div className="p-5">{children}</div>
-    </Card>
-  );
-}
-
-function ArchitectureFlow({ design }: { design: NonNullable<GeneratedDesignResponse["design"]> }) {
-  const lanes = [
-    {
-      name: "Ingress",
-      icon: Route,
-      items: pickComponentNames(design, ["gateway", "ingest", "api", "scraper"], [
-        "api-gateway",
-        "ingestion-edge"
-      ])
-    },
-    {
-      name: "Processing",
-      icon: Activity,
-      items: pickComponentNames(design, ["stream", "worker", "process", "engine", "consumer"], [
-        "worker-pool",
-        "stream-engine"
-      ])
-    },
-    {
-      name: "Data plane",
-      icon: Database,
-      items: uniqueItems(
-        [
-          ...design.databaseChoices.map((item) => item.name),
-          ...design.messagingAndAsyncProcessing.map((item) => item.name),
-          ...design.cachingStrategy.map((item) => item.name),
-          ...design.storageStrategy.map((item) => item.name)
-        ],
-        ["primary-store", "cache", "queue"]
-      )
-    },
-    {
-      name: "Experience",
-      icon: Sparkles,
-      items: pickComponentNames(design, ["query", "dashboard", "visual", "alert", "notification"], [
-        "dashboard-api",
-        "notification-service"
-      ])
-    }
-  ];
-
-  return (
-    <div className="grid gap-3 lg:grid-cols-4">
-      {lanes.map((lane, laneIndex) => {
-        const Icon = lane.icon;
-        return (
-          <div
-            key={lane.name}
-            className="relative rounded-lg border border-white/10 bg-white/[0.035] p-4"
-          >
-            {laneIndex > 0 ? (
-              <span
-                className="absolute -left-3 top-8 hidden h-px w-3 bg-white/18 lg:block"
-                aria-hidden="true"
-              />
-            ) : null}
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 bg-black/25 text-slate-100">
-                  <Icon size={16} aria-hidden="true" />
-                </span>
-                <p className="text-sm font-semibold text-ink">{lane.name}</p>
-              </div>
-              <span className="rounded-full border border-white/10 px-2 py-0.5 text-xs text-muted">
-                0{laneIndex + 1}
-              </span>
-            </div>
-            <div className="space-y-2">
-              {lane.items.slice(0, 4).map((item) => (
-                <div
-                  key={`${lane.name}-${item}`}
-                  className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs font-medium text-slate-200"
-                >
-                  {item}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function ComponentBoard({ design }: { design: NonNullable<GeneratedDesignResponse["design"]> }) {
-  const componentIcons: LucideIcon[] = [Route, Activity, Database, Sparkles, ShieldCheck, Layers3];
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {design.majorComponents.slice(0, 6).map((component, index) => {
-        const Icon = componentIcons[index % componentIcons.length] ?? Layers3;
-
-        return (
-          <div
-            key={`${index}-${component.name}`}
-            className="group min-h-[164px] rounded-lg border border-white/10 bg-white/[0.035] p-4 transition hover:border-white/25 hover:bg-white/[0.06]"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-white/10 bg-black/25 text-slate-100">
-                <Icon size={17} aria-hidden="true" />
-              </span>
-              <span className="rounded-full border border-white/10 px-2 py-0.5 text-xs text-muted">
-                0{index + 1}
-              </span>
-            </div>
-            <p className="mt-4 text-sm font-semibold leading-5 text-ink">{component.name}</p>
-            <p className="mt-2 text-sm leading-5 text-muted">
-              {shortText(component.responsibilities[0] ?? "Owns a core part of the architecture.", 92)}
-            </p>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function BlueprintPreview({ design }: { design: NonNullable<GeneratedDesignResponse["design"]> }) {
-  const folders = [
-    {
-      name: "apps",
-      items: ["web-app", "admin-console", "api-gateway"]
-    },
-    {
-      name: "services",
-      items: uniqueItems(
-        design.majorComponents.map((component) => component.name),
-        ["application-service", "worker-service"]
-      )
-    },
-    {
-      name: "infra",
-      items: uniqueItems(
-        [
-          ...design.databaseChoices.map((item) => item.name),
-          ...design.cachingStrategy.map((item) => item.name),
-          ...design.messagingAndAsyncProcessing.map((item) => item.name)
-        ],
-        ["database", "cache", "queue"]
-      )
-    },
-    {
-      name: "ops",
-      items: uniqueItems(
-        [
-          ...design.observability.map((item) => item.name),
-          ...design.deploymentApproach.map((item) => item.name)
-        ],
-        ["alerts", "runbooks", "dashboards"]
-      )
-    }
-  ];
-
-  return (
-    <div className="rounded-lg border border-white/10 bg-black/25 p-4 font-mono text-xs">
-      <p className="text-slate-200">system-design/</p>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        {folders.map((folder) => (
-          <div key={folder.name}>
-            <p className="text-slate-100">{folder.name}/</p>
-            <div className="mt-2 space-y-1 pl-3 text-muted">
-              {folder.items.slice(0, 4).map((item) => (
-                <p key={`${folder.name}-${item}`}>{item}/</p>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function CompactInsightGrid({
-  decisions,
-  risks
-}: {
-  decisions: Array<{ name: string; recommendation: string }>;
-  risks: Array<{ name: string; description: string }>;
-}) {
-  return (
-    <div className="grid gap-5 lg:grid-cols-2">
-      <VisualSection icon={CheckCircle2} label="Decisions" title="What Helix selected">
-        <div className="grid gap-3">
-          {decisions.map((decision, index) => (
-            <div
-              key={`${index}-${decision.name}`}
-              className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-3 rounded-lg border border-white/10 bg-white/[0.035] p-4"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-sm font-semibold text-slate-950">
-                {index + 1}
-              </span>
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold text-ink">{decision.name}</span>
-                <span className="mt-1 block text-sm leading-5 text-muted">
-                  {shortText(decision.recommendation, 94)}
-                </span>
-              </span>
-            </div>
-          ))}
-        </div>
-      </VisualSection>
-
-      <VisualSection icon={AlertTriangle} label="Risk radar" title="Watch before build">
-        {risks.length === 0 ? (
-          <p className="text-sm text-muted">No major risks were flagged.</p>
-        ) : (
-          <div className="grid gap-3">
-            {risks.map((risk, index) => (
-              <div
-                key={`${index}-${risk.name}`}
-                className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-3 rounded-lg border border-white/10 bg-white/[0.035] p-4"
-              >
-                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-red-200/20 bg-red-500/10 text-sm font-semibold text-red-100">
-                  {index + 1}
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-ink">{risk.name}</span>
-                  <span className="mt-1 block text-sm leading-5 text-muted">
-                    {shortText(risk.description, 94)}
-                  </span>
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </VisualSection>
     </div>
   );
 }
@@ -495,13 +186,7 @@ function ArchitectureResultView({
   const design = session.generatedDesign;
   if (!design) return null;
 
-  const keyDecisions = [
-    ...design.apiRecommendations.slice(0, 2),
-    ...design.databaseChoices.slice(0, 2),
-    ...design.messagingAndAsyncProcessing.slice(0, 1),
-    ...design.cachingStrategy.slice(0, 1)
-  ];
-  const riskItems = [...design.risks, ...design.tradeOffs].slice(0, 4);
+  const workspace = design.productWorkspace;
 
   return (
     <div className="page-enter mx-auto max-w-7xl space-y-5 px-4 py-8 sm:px-6">
@@ -540,19 +225,19 @@ function ArchitectureResultView({
             <div>
               <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-sm font-medium text-slate-100">
                 <Sparkles size={14} aria-hidden="true" />
-                Architecture ready
+                Product workspace ready
               </p>
               <h2 className="mt-4 text-2xl font-semibold tracking-normal text-ink">
-                Visual system blueprint
+                Idea to build plan
               </h2>
               <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">
                 {shortText(design.architectureSummary, 180)}
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[460px]">
-              <ArchitecturePill label="Components" value={design.majorComponents.length} />
-              <ArchitecturePill label="Decisions" value={keyDecisions.length} />
-              <ArchitecturePill label="Risk areas" value={riskItems.length} />
+              <ArchitecturePill label="UI surfaces" value={workspace?.uiSurfaces.length ?? 0} />
+              <ArchitecturePill label="Services" value={design.majorComponents.length} />
+              <ArchitecturePill label="Roadmap" value={workspace?.roadmap.length ?? 0} />
             </div>
           </div>
         </div>
@@ -561,21 +246,7 @@ function ArchitectureResultView({
         </div>
       </Card>
 
-      <VisualSection icon={Route} label="System flow" title="How requests move through the design">
-        <ArchitectureFlow design={design} />
-      </VisualSection>
-
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_28rem]">
-        <VisualSection icon={Layers3} label="System map" title="Core modules">
-          <ComponentBoard design={design} />
-        </VisualSection>
-
-        <VisualSection icon={FolderTree} label="Build shape" title="Suggested workspace">
-          <BlueprintPreview design={design} />
-        </VisualSection>
-      </div>
-
-      <CompactInsightGrid decisions={keyDecisions} risks={riskItems} />
+      <DesignSections design={design} />
     </div>
   );
 }
@@ -725,15 +396,15 @@ export default function SessionPage({ params }: SessionPageProps) {
         </Card>
       ) : null}
 
-      <Section title="Problem statement">
+      <Section title="Idea brief">
         <p className="whitespace-pre-wrap text-sm leading-6 text-slate-300">
           {mergedSession.problemStatement}
         </p>
       </Section>
 
       <Section
-        title="Requirement analysis"
-        description="Structured requirements and design inputs produced from the problem statement."
+        title="Product requirements"
+        description="Structured product requirements and build inputs produced from the idea brief."
         action={
           <Button
             icon={<Brain size={16} />}
@@ -749,7 +420,7 @@ export default function SessionPage({ params }: SessionPageProps) {
 
       <Section
         title="Clarification questions"
-        description="Pick answers for the few decisions that materially affect the design."
+        description="Pick answers for the few decisions that materially affect the product."
       >
         <ClarificationPanel
           sessionId={sessionId}
@@ -761,7 +432,7 @@ export default function SessionPage({ params }: SessionPageProps) {
       </Section>
 
       <Section
-        title="Capacity results"
+        title="Capacity model"
         description="Deterministic traffic, bandwidth, and storage estimates."
         action={
           <Button
@@ -769,7 +440,7 @@ export default function SessionPage({ params }: SessionPageProps) {
             disabled={!canCalculateCapacity(mergedSession) || action !== null}
             onClick={() => void runAction("capacity", () => calculateCapacity(sessionId, {}))}
           >
-            {action === "capacity" ? "Calculating" : "Calculate"}
+            {action === "capacity" ? "Estimating" : "Estimate"}
           </Button>
         }
       >
@@ -777,15 +448,15 @@ export default function SessionPage({ params }: SessionPageProps) {
       </Section>
 
       <Section
-        title="Generated system design"
-        description="Architecture recommendations based on requirements, capacity, and retrieved knowledge."
+        title="Product workspace"
+        description="Visual build plan across idea, requirements, user flow, UI, backend, database, API, architecture, roadmap, and exports."
         action={
           <Button
             icon={<FileCheck size={16} />}
             disabled={!canGenerateDesign(mergedSession) || action !== null}
             onClick={() => void runAction("design", () => generateDesign(sessionId))}
           >
-            {action === "design" ? "Generating" : "Generate design"}
+            {action === "design" ? "Building" : "Build workspace"}
           </Button>
         }
       >
@@ -793,8 +464,8 @@ export default function SessionPage({ params }: SessionPageProps) {
       </Section>
 
       <Section
-        title="Mermaid architecture diagram"
-        description="A safe flowchart rendering of the completed system design."
+        title="Architecture map"
+        description="A safe flowchart rendering of the generated product architecture."
         action={
           <Button
             icon={
@@ -815,7 +486,7 @@ export default function SessionPage({ params }: SessionPageProps) {
       </Section>
 
       <Section
-        title="Design validation"
+        title="Launch review"
         description="Scored review across reliability, scalability, security, observability, cost, and operations."
         action={
           <Button
@@ -827,7 +498,7 @@ export default function SessionPage({ params }: SessionPageProps) {
               ? "Validating"
               : mergedSession.designValidation
                 ? "Validate again"
-                : "Validate design"}
+                : "Review build"}
           </Button>
         }
       >

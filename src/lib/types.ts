@@ -170,6 +170,56 @@ export interface DescriptionItem {
 
 export interface GeneratedDesign {
   architectureSummary: string;
+  productWorkspace?: {
+    idea: {
+      name: string;
+      summary: string;
+      targetUsers: string;
+      primaryValue: string;
+    };
+    requirements: Array<{
+      label: string;
+      detail: string;
+      priority: string;
+    }>;
+    userFlow: Array<{
+      step: string;
+      actor: string;
+      action: string;
+      systemResponse: string;
+    }>;
+    uiSurfaces: Array<{
+      name: string;
+      purpose: string;
+      keyElements: string[];
+    }>;
+    backendServices: Array<{
+      name: string;
+      responsibility: string;
+      trigger: string;
+    }>;
+    databasePlan: Array<{
+      name: string;
+      stores: string;
+      accessPattern: string;
+    }>;
+    apiPlan: Array<{
+      method: string;
+      path: string;
+      purpose: string;
+    }>;
+    architectureHighlights: DescriptionItem[];
+    roadmap: Array<{
+      phase: string;
+      goal: string;
+      deliverables: string[];
+    }>;
+    exportArtifacts: Array<{
+      name: string;
+      format: string;
+      contents: string[];
+    }>;
+  };
   majorComponents: Array<{
     name: string;
     responsibilities: string[];
