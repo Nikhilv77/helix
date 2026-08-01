@@ -1,9 +1,12 @@
 import {
   ArrowRight,
+  Braces,
   CheckCircle2,
   Code2,
   Database,
   Download,
+  Folder,
+  FolderTree,
   GitBranch,
   LayoutDashboard,
   ListChecks,
@@ -22,6 +25,12 @@ interface DesignSectionsProps {
 
 type ProductWorkspace = NonNullable<GeneratedDesign["productWorkspace"]>;
 
+interface FolderGroup {
+  name: string;
+  icon: LucideIcon;
+  items: string[];
+}
+
 function toKebabCase(value: string): string {
   return (
     value
@@ -34,6 +43,19 @@ function toKebabCase(value: string): string {
 
 function shortText(value: string, maxLength = 86): string {
   return value.length > maxLength ? `${value.slice(0, maxLength).trim()}...` : value;
+}
+
+function uniqueSlugs(values: string[], fallback: string[]): string[] {
+  const seen = new Set<string>();
+  const slugs = values
+    .map((value) => toKebabCase(value))
+    .filter((value) => {
+      if (seen.has(value)) return false;
+      seen.add(value);
+      return true;
+    });
+
+  return slugs.length > 0 ? slugs.slice(0, 5) : fallback;
 }
 
 function buildWorkspaceFromDesign(design: GeneratedDesign): ProductWorkspace {
@@ -382,6 +404,179 @@ function ExportStrip({ workspace }: { workspace: ProductWorkspace }) {
   );
 }
 
+function FlowchartPanel({ workspace }: { workspace: ProductWorkspace }) {
+  const primaryUi = workspace.uiSurfaces[0]?.name ?? "Product UI";
+  const secondaryUi = workspace.uiSurfaces[1]?.name ?? "Admin UI";
+  const api = workspace.apiPlan[0];
+  const apiLabel = api ? `${api.method} ${api.path}` : "Core API";
+  const service = workspace.backendServices[0]?.name ?? "Application Service";
+  const worker =
+    workspace.backendServices.find((item) => /queue|worker|process|event/i.test(item.trigger))
+      ?.name ??
+    workspace.backendServices[1]?.name ??
+    "Worker Service";
+  const database = workspace.databasePlan[0]?.name ?? "Primary Database";
+
+  return (
+    <section className="rounded-xl border border-line bg-white/[0.04] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.26)]">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-md border border-white/12 bg-white/[0.06] text-ink">
+            <GitBranch size={18} aria-hidden="true" />
+          </span>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+              Flowchart
+            </p>
+            <h3 className="text-lg font-semibold text-ink">How the product is built</h3>
+          </div>
+        </div>
+        <span className="rounded-full border border-white/10 bg-black/18 px-3 py-1 text-xs text-muted">
+          UI → API → Service → Data
+        </span>
+      </div>
+
+      <div className="overflow-x-auto pb-1">
+        <div className="grid min-w-[900px] grid-cols-[1fr_3rem_1fr_3rem_1fr_3rem_1fr] items-center">
+          <FlowStack icon={LayoutDashboard} label="Interface" nodes={[primaryUi, secondaryUi]} />
+          <FlowArrow />
+          <FlowStack icon={Code2} label="Contract" nodes={[apiLabel, "Auth + validation"]} />
+          <FlowArrow />
+          <FlowStack icon={Server} label="Logic" nodes={[service, worker]} />
+          <FlowArrow />
+          <FlowStack icon={Database} label="State" nodes={[database, "Cache / events"]} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FlowStack({
+  icon: Icon,
+  label,
+  nodes
+}: {
+  icon: LucideIcon;
+  label: string;
+  nodes: string[];
+}) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+      <div className="mb-4 flex items-center gap-2 text-muted">
+        <Icon size={15} aria-hidden="true" />
+        <p className="text-xs font-semibold uppercase tracking-[0.16em]">{label}</p>
+      </div>
+      <div className="space-y-2">
+        {nodes.map((node, index) => (
+          <div
+            key={`${label}-${node}-${index}`}
+            className={[
+              "rounded-md border px-3 py-3 text-sm font-semibold",
+              index === 0
+                ? "border-white/18 bg-white text-slate-950"
+                : "border-white/10 bg-white/[0.045] text-slate-300"
+            ].join(" ")}
+          >
+            {shortText(node, 44)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FlowArrow() {
+  return (
+    <div className="flex justify-center text-white/35">
+      <ArrowRight size={22} aria-hidden="true" />
+    </div>
+  );
+}
+
+function FolderStructure({ workspace }: { workspace: ProductWorkspace }) {
+  const groups: FolderGroup[] = [
+    {
+      name: "apps",
+      icon: LayoutDashboard,
+      items: uniqueSlugs(
+        workspace.uiSurfaces.map((surface) => surface.name),
+        ["web-app", "admin-console"]
+      )
+    },
+    {
+      name: "services",
+      icon: Server,
+      items: uniqueSlugs(
+        workspace.backendServices.map((service) => service.name),
+        ["api-service", "worker-service"]
+      )
+    },
+    {
+      name: "data",
+      icon: Database,
+      items: uniqueSlugs(
+        workspace.databasePlan.map((database) => database.name),
+        ["primary-db", "cache", "event-log"]
+      )
+    },
+    {
+      name: "contracts",
+      icon: Braces,
+      items: uniqueSlugs(
+        workspace.apiPlan.map((api) => `${api.method}-${api.path}`),
+        ["rest-api", "webhooks"]
+      )
+    }
+  ];
+
+  return (
+    <section className="rounded-xl border border-line bg-white/[0.04] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.24)]">
+      <div className="mb-5 flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-md border border-white/12 bg-white/[0.06] text-ink">
+          <FolderTree size={18} aria-hidden="true" />
+        </span>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+            Folder structure
+          </p>
+          <h3 className="text-lg font-semibold text-ink">Suggested implementation layout</h3>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-white/10 bg-black/24 p-4 font-mono text-sm">
+        <div className="flex items-center gap-2 text-ink">
+          <Folder size={15} aria-hidden="true" />
+          <span>product/</span>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {groups.map((group) => {
+            const Icon = group.icon;
+            return (
+              <div
+                key={group.name}
+                className="rounded-md border border-white/10 bg-white/[0.035] p-3"
+              >
+                <div className="flex items-center gap-2 text-slate-100">
+                  <Icon size={14} aria-hidden="true" />
+                  <span>{group.name}/</span>
+                </div>
+                <div className="mt-3 space-y-2 pl-3 text-xs text-muted">
+                  {group.items.slice(0, 4).map((item) => (
+                    <div key={`${group.name}-${item}`} className="flex items-center gap-2">
+                      <span className="h-px w-3 bg-white/18" />
+                      <span>{item}/</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function MiniPanel({
   icon: Icon,
   label,
@@ -414,6 +609,8 @@ export function DesignSections({ design }: DesignSectionsProps) {
   return (
     <div className="space-y-4">
       <ProductBlueprint workspace={workspace} />
+      <FlowchartPanel workspace={workspace} />
+      <FolderStructure workspace={workspace} />
       <ExportStrip workspace={workspace} />
     </div>
   );
