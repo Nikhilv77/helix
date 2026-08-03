@@ -65,8 +65,8 @@ export async function POST(request: NextRequest) {
       roomJoin: true,
       canPublish: true,
       canSubscribe: true,
-      // The candidate speaks and listens; they do not manage the room.
-      canPublishData: false
+      // Reliable data packets carry typed answers to the same interviewer.
+      canPublishData: true
     });
 
     // The agent registers under an explicit name, which means it does NOT

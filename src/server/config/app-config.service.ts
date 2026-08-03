@@ -2,13 +2,21 @@ import { EnvironmentConfig } from "./environment.schema";
 
 type AppConfigInput = Omit<
   EnvironmentConfig,
-  "clerkSecretKey" | "groqApiKey" | "livekitUrl" | "livekitApiKey" | "livekitApiSecret"
+  | "clerkSecretKey"
+  | "groqApiKey"
+  | "livekitUrl"
+  | "livekitApiKey"
+  | "livekitApiSecret"
+  | "deepgramApiKey"
+  | "deepgramTtsModel"
 > & {
   clerkSecretKey?: EnvironmentConfig["clerkSecretKey"];
   groqApiKey?: EnvironmentConfig["groqApiKey"];
   livekitUrl?: EnvironmentConfig["livekitUrl"];
   livekitApiKey?: EnvironmentConfig["livekitApiKey"];
   livekitApiSecret?: EnvironmentConfig["livekitApiSecret"];
+  deepgramApiKey?: EnvironmentConfig["deepgramApiKey"];
+  deepgramTtsModel?: EnvironmentConfig["deepgramTtsModel"];
 };
 
 export class AppConfigService {
@@ -116,6 +124,14 @@ export class AppConfigService {
 
   get livekitAgentName(): EnvironmentConfig["livekitAgentName"] {
     return this.config.livekitAgentName;
+  }
+
+  get deepgramApiKey(): string | undefined {
+    return this.config.deepgramApiKey;
+  }
+
+  get deepgramTtsModel(): string {
+    return this.config.deepgramTtsModel ?? "aura-2-asteria-en";
   }
 
   get clerkSecretKey(): string | undefined {

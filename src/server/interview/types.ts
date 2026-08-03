@@ -15,11 +15,29 @@ export interface InterviewSetup {
   intensity: Intensity;
   /** Free text: "what have you actually worked on?" — drives the whole plan. */
   context: string;
+  /**
+   * A chosen template's objectives. When present the round covers these and
+   * nothing else, so picking "Defend your projects" cannot drift into a general
+   * behavioural interview.
+   */
+  agenda?: string[];
+  /** Which template produced the agenda, for history and reports. */
+  templateId?: string;
+  templateTitle?: string;
 }
 
 export interface PlannedQuestion {
   /** Spoken verbatim. The decider never rewrites this. */
   text: string;
+  /** Structured presentation metadata. Optional for sessions saved before code rounds existed. */
+  kind?: "conversation" | "code";
+  language?: string;
+  codeTask?: string;
+  codeSnippet?: string;
+  /** Human-readable skill area, used to keep the interview arc balanced. */
+  competency?: string;
+  /** What the interviewer is trying to learn, not spoken to the candidate. */
+  intent?: string;
   mustHit: string[];
   /** Fallback probe used when the decider call fails or times out. */
   probeIfMissing: string;
@@ -27,8 +45,9 @@ export interface PlannedQuestion {
 
 export type Phase = "intro" | "questioning" | "wrap" | "done";
 export type Speaker = "agent" | "user";
-export type DecisionAction = "probe" | "challenge" | "move_on";
-export type MissingDimension = "structure" | "specificity" | "ownership" | "outcome" | "none";
+export type DecisionAction = "clarify" | "probe" | "challenge" | "move_on";
+export type MissingDimension =
+  "clarity" | "structure" | "specificity" | "ownership" | "outcome" | "none";
 
 /** Timestamps are offsets in milliseconds from the session start. */
 export interface Turn {

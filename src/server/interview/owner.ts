@@ -24,3 +24,8 @@ export async function resolveOwnerId(
 
   return `anon:${fingerprint}`;
 }
+
+/** Canonical durable owner key for server-rendered, Clerk-authenticated pages. */
+export function authenticatedOwnerId(userId: string): string {
+  return `user:${userId}`;
+}

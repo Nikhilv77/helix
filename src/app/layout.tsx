@@ -5,6 +5,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { ScrollRestoration } from "@/components/scroll-restoration";
+import { clerkAppearance } from "@/lib/clerk-theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -55,7 +56,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 
   return (
     <html lang="en" className={fontVariables}>
-      <body>{clerkPublishableKey ? <ClerkProvider>{app}</ClerkProvider> : app}</body>
+      <body>
+        {clerkPublishableKey ? (
+          <ClerkProvider appearance={clerkAppearance}>{app}</ClerkProvider>
+        ) : (
+          app
+        )}
+      </body>
     </html>
   );
 }

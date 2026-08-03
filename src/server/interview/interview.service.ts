@@ -5,6 +5,8 @@ import { NotFoundErrorException } from "../common/exceptions/not-found-error.exc
 import { InterviewDecider, normaliseMissing } from "./decider";
 import { InterviewPlanner } from "./planner";
 import { SessionStore } from "./session-store";
+import { createHistoryItem, createInterviewReport, createWorkspaceInsights } from "./report";
+import type { InterviewHistoryItem, InterviewReport, WorkspaceInsights } from "@/lib/types";
 import {
   advance,
   appendTurn,
@@ -14,7 +16,7 @@ import {
   elapsedMs,
   finish
 } from "./state-machine";
-import { Decision, HARD_CAP_MS, InterviewSetup, InterviewState, QUESTION_COUNT } from "./types";
+import { Decision, HARD_CAP_MS, InterviewSetup, InterviewState } from "./types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** A spoken conversation should never wait on the model's full provider timeout. */
@@ -91,6 +93,28 @@ export class InterviewService {
     };
   }
 
+  async history(ownerId: string, limit = 20, now = Date.now()): Promise<InterviewHistoryItem[]> {
+    const boundedLimit = Math.max(1, Math.min(limit, 50));
+    const sessions = await this.store.listByOwner(ownerId, boundedLimit);
+    return sessions.map((session) => createHistoryItem(session, now));
+  }
+
+  async insights(ownerId: string, limit = 30, now = Date.now()): Promise<WorkspaceInsights> {
+    const boundedLimit = Math.max(1, Math.min(limit, 50));
+    return createWorkspaceInsights(await this.store.listByOwner(ownerId, boundedLimit), now);
+  }
+
+  async report(ownerId: string, sessionId: string, now = Date.now()): Promise<InterviewReport> {
+    const session = await this.store.getOwned(sessionId, ownerId);
+    if (!session) {
+      throw new NotFoundErrorException("SESSION_NOT_FOUND", "Interview session not found", {
+        sessionId
+      });
+    }
+
+    return createInterviewReport(session, now);
+  }
+
   async get(sessionId: string): Promise<InterviewState> {
     const state = await this.store.get(sessionId);
     if (!state) {
@@ -139,14 +163,28 @@ export class InterviewService {
     const raw = await this.decideWithFallback({
       setup: withAnswer.setup,
       questionAsked: question.text,
+      competency: question.competency,
+      intent: question.intent,
+      questionKind: question.kind,
+      language: question.language,
+      codeTask: question.codeTask,
+      codeSnippet: question.codeSnippet,
       mustHit: question.mustHit,
       userAnswer: answer.text,
       followUpCount: withAnswer.followUpCount,
-      fallbackProbe: question.probeIfMissing
+      fallbackProbe: question.probeIfMissing,
+      conversationHistory: withAnswer.turns
+        .slice(0, -1)
+        .slice(-8)
+        .map((turn) => ({ speaker: turn.speaker, text: turn.text.slice(0, 600) }))
     });
 
     const result = advance(withAnswer, raw.action, now);
-    const utterance = this.composeUtterance(result.state, result.action, raw.line);
+    const utterance = this.composeUtterance(
+      result.state,
+      result.action,
+      joinSpoken(raw.acknowledgement.trim(), raw.line.trim())
+    );
 
     const spokenAt = elapsedMs(result.state, now);
     const withReply = appendTurn(result.state, {
@@ -200,10 +238,17 @@ export class InterviewService {
   private async decideWithFallback(input: {
     setup: InterviewSetup;
     questionAsked: string;
+    competency?: string;
+    intent?: string;
+    questionKind?: "conversation" | "code";
+    language?: string;
+    codeTask?: string;
+    codeSnippet?: string;
     mustHit: string[];
     userAnswer: string;
     followUpCount: number;
     fallbackProbe: string;
+    conversationHistory: Array<{ speaker: "agent" | "user"; text: string }>;
   }) {
     try {
       return await within(this.decider.decide(input), DECIDER_BUDGET_MS);
@@ -219,6 +264,7 @@ export class InterviewService {
         action: input.followUpCount >= 1 ? ("move_on" as const) : ("probe" as const),
         missing: "specificity",
         reason: "decider unavailable; used planned fallback",
+        acknowledgement: input.followUpCount >= 1 ? "Understood" : "",
         line: input.followUpCount >= 1 ? "" : input.fallbackProbe
       };
     }
@@ -230,22 +276,30 @@ export class InterviewService {
     action: Decision["action"],
     line: string
   ): string {
-    const bridge = line.trim();
+    const acknowledgement = line.trim();
 
     if (action !== "move_on") {
-      return bridge.length > 0 ? bridge : "What was the outcome?";
+      return acknowledgement.length > 0
+        ? acknowledgement
+        : "Could you walk me through that once more?";
     }
 
-    if (state.phase === "wrap") {
-      return joinSpoken(bridge, "That's all my questions. What would you like to ask me?");
+    if (state.phase === "done" || state.phase === "wrap") {
+      return joinSpoken(
+        acknowledgement,
+        "That covers everything I wanted to explore. Thanks for the conversation. Your feedback will be ready shortly."
+      );
     }
 
     const next = currentQuestion(state);
     if (!next) {
-      return joinSpoken(bridge, "That's all my questions. What would you like to ask me?");
+      return joinSpoken(
+        acknowledgement,
+        "That covers everything I wanted to explore. Thanks for the conversation."
+      );
     }
 
-    return joinSpoken(bridge, next.text);
+    return joinSpoken(acknowledgement, next.text);
   }
 }
 
@@ -272,9 +326,9 @@ function joinSpoken(bridge: string, sentence: string): string {
 function introUtterance(state: InterviewState): string {
   const first = state.plan[0];
   const minutes = Math.round(HARD_CAP_MS / 60000);
-  const intro = `I'm Helix. I'll run your ${state.setup.roundType.replace("-", " ")} interview for about ${minutes} minutes. I'll ask ${QUESTION_COUNT} questions and may interrupt to keep us on time.`;
+  const intro = `Hi, I'm Maya, your Helix interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
 
-  return first ? `${intro} Let's start. ${first.text}` : intro;
+  return first ? `${intro} Ready? Let's begin. ${first.text}` : intro;
 }
 
 export function closingDecision(): Decision {

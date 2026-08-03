@@ -45,11 +45,11 @@ describe("interview state machine", () => {
     expect(result.state.followUpCount).toBe(0);
   });
 
-  it("moves to wrap after the last question", () => {
+  it("ends naturally after the last question", () => {
     const last = stateWith({ questionIndex: 3 });
     const result = advance(last, "move_on", 4000);
 
-    expect(result.state.phase).toBe("wrap");
+    expect(result.state.phase).toBe("done");
     expect(currentQuestion(result.state)).toBeNull();
   });
 
@@ -58,7 +58,15 @@ describe("interview state machine", () => {
 
     expect(result.action).toBe("move_on");
     expect(result.forcedBy).toBe("soft-time");
-    expect(result.state.phase).toBe("wrap");
+    expect(result.state.phase).toBe("done");
+  });
+
+  it("counts clarification against the follow-up budget", () => {
+    const result = advance(stateWith(), "clarify", 1000);
+
+    expect(result.action).toBe("clarify");
+    expect(result.state.followUpCount).toBe(1);
+    expect(result.state.questionIndex).toBe(0);
   });
 
   it("ends the session at the hard cap regardless of the requested action", () => {

@@ -209,30 +209,79 @@ select {
     radial-gradient(34rem 26rem at 4% 92%, rgba(126, 160, 255, 0.14), transparent 70%);
 }
 
-/* Scrollbars styled to the palette. The OS default reads as a grey gash
-   against the blueprint blue. */
+@keyframes interview-loading {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(220%);
+  }
+}
+
+.interview-loading-bar {
+  animation: interview-loading 1.35s ease-in-out infinite;
+}
+
+/* ---------------------------------------------------------------------------
+   Scrollbars. The OS default reads as a grey gash against the blueprint blue,
+   so every scrollable surface — page, panels, textareas — gets the same slim
+   cream rail. `.thin-scroll` stays as an explicit opt-in for nested panels.
+   --------------------------------------------------------------------------- */
+
+/* The canvas behind the scrollbar gutter and macOS overscroll comes from <html>,
+   not from the page's own surface. Left dark it reads as a black gash beside the
+   blueprint blue. */
+html {
+  background-color: #22409b;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(239, 232, 214, 0.24) transparent;
+  scrollbar-gutter: stable;
+}
+
+*::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 9999px;
+  background: rgba(239, 232, 214, 0.2);
+  background-clip: content-box;
+  transition: background 160ms ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(239, 232, 214, 0.42);
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: rgba(247, 242, 229, 0.58);
+  background-clip: content-box;
+}
+
+/* Chrome draws a filled square where the two bars meet. */
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 .thin-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(239, 232, 214, 0.22) transparent;
 }
 
 .thin-scroll::-webkit-scrollbar {
-  width: 10px;
-}
-
-.thin-scroll::-webkit-scrollbar-track {
-  background: transparent;
+  width: 9px;
 }
 
 .thin-scroll::-webkit-scrollbar-thumb {
-  border: 3px solid transparent;
-  border-radius: 9999px;
+  border-width: 2.5px;
   background: rgba(239, 232, 214, 0.18);
-  background-clip: content-box;
-}
-
-.thin-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(239, 232, 214, 0.38);
   background-clip: content-box;
 }
 

@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X } from "lucide-react";
 import { HelixMark } from "./blueprint-art";
 
+// Every href below resolves to a section that exists on this page. A dead
+// anchor ("#product") and a column of links that all pointed at the same
+// section used to sit here.
 const navLinks = [
   { label: "How it works", href: "#interview" },
-  { label: "The product", href: "#product" },
   { label: "Follow-ups", href: "#features" },
   { label: "Scoring", href: "#report" },
   { label: "Session", href: "#flow" }
@@ -22,15 +24,6 @@ const footerColumns = [
       { label: "The follow-up", href: "#features" },
       { label: "Scoring", href: "#report" },
       { label: "Session flow", href: "#flow" }
-    ]
-  },
-  {
-    heading: "Rounds",
-    links: [
-      { label: "Behavioral", href: "#interview" },
-      { label: "Technical deep-dive", href: "#interview" },
-      { label: "Hiring manager", href: "#interview" },
-      { label: "History", href: "/" }
     ]
   }
 ];
@@ -118,7 +111,7 @@ export function SiteFooter() {
   return (
     <footer className="relative z-10 rounded-t-[2.5rem] bg-cream-soft px-6 pb-10 pt-16 text-blueprint sm:px-10 sm:rounded-t-[3.5rem]">
       <div className="mx-auto w-full max-w-[78rem]">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
           {footerColumns.map((column) => (
             <div key={column.heading}>
               <p className="blueprint-label text-blueprint/55">{column.heading}</p>
@@ -138,23 +131,24 @@ export function SiteFooter() {
           ))}
 
           <div>
-            <p className="blueprint-label text-blueprint/55">Contact</p>
-            <a
-              href="mailto:hello@helix.build"
-              className="mt-5 inline-flex items-center gap-3 text-sm font-medium text-blueprint/85 transition hover:text-blueprint"
+            <p className="blueprint-label text-blueprint/55">Practice</p>
+            <p className="mt-5 max-w-xs text-sm leading-6 text-blueprint/75">
+              Upload the resume you actually use, then take a voice round that presses on the
+              evidence in it.
+            </p>
+            <Link
+              href="/"
+              className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blueprint transition hover:gap-3"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full border border-blueprint/25">
-                <HelixMark className="h-5 w-5 text-blueprint" />
-              </span>
-              hello@helix.build
-            </a>
+              Start a mock interview <ArrowRight size={15} />
+            </Link>
           </div>
 
           <div>
             <p className="blueprint-label text-blueprint/55">Privacy</p>
             <p className="mt-5 max-w-xs text-sm leading-6 text-blueprint/75">
-              Practice without an account. Sign in only when you want transcripts and reports kept
-              across sessions.
+              Your interview transcripts and reports stay inside your private account workspace.
+              Resume files are read in memory and never stored.
             </p>
           </div>
         </div>
@@ -173,9 +167,9 @@ export function SiteFooter() {
 
         <div className="mt-8 flex flex-col gap-3 border-t border-blueprint/20 pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="blueprint-label text-blueprint/70">
-            © {new Date().getFullYear()} Helix — AI product builder
+            © {new Date().getFullYear()} Helix — AI interview practice
           </p>
-          <p className="blueprint-label text-blueprint/70">From idea to architecture</p>
+          <p className="blueprint-label text-blueprint/70">Evidence in, pressure out</p>
         </div>
       </div>
     </footer>

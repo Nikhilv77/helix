@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
+import { currentQuestion } from "@/server/interview/state-machine";
 import type { InterviewState } from "@/server/interview/types";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 }
 
 function serialise(state: InterviewState) {
+  const question = currentQuestion(state);
+
   return {
     sessionId: state.id,
     phase: state.phase,
@@ -38,7 +41,17 @@ function serialise(state: InterviewState) {
     followUpCount: state.followUpCount,
     startedAt: state.startedAt,
     setup: state.setup,
-    turns: state.turns
+    turns: state.turns,
+    currentQuestion: question
+      ? {
+          text: question.text,
+          kind: question.kind ?? "conversation",
+          competency: question.competency ?? null,
+          language: question.language || null,
+          codeTask: question.codeTask || null,
+          codeSnippet: question.codeSnippet || null
+        }
+      : null
   };
 }
 

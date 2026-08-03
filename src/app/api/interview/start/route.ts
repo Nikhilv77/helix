@@ -14,7 +14,10 @@ const setupSchema = z.object({
   level: z.enum(LEVELS),
   roundType: z.enum(ROUND_TYPES),
   intensity: z.enum(INTENSITIES),
-  context: z.string().trim().min(10, "Tell me a little about what you've worked on").max(1200)
+  context: z.string().trim().min(10, "Tell me a little about what you've worked on").max(1200),
+  agenda: z.array(z.string().trim().min(3).max(200)).max(6).optional(),
+  templateId: z.string().trim().max(60).optional(),
+  templateTitle: z.string().trim().max(80).optional()
 });
 
 export async function POST(request: NextRequest) {

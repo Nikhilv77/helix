@@ -8,39 +8,79 @@ import { DecisionAction, InterviewSetup, MAX_FOLLOW_UPS, MissingDimension } from
  * Gemini's structured output handles poorly, so the shape stays flat and the
  * caller narrows on `action`.
  *
- * `line` is what the model writes. For probe/challenge it is the whole spoken
- * utterance; for move_on it is only a short bridge clause and the caller
- * appends the planned question verbatim.
+ * `acknowledgement` and `line` remain separate so the application can append a
+ * planned question without asking the model to rewrite it.
  */
 const decisionSchema = z.object({
-  action: z.enum(["probe", "challenge", "move_on"]),
-  missing: z.enum(["structure", "specificity", "ownership", "outcome", "none"]),
+  action: z.enum(["clarify", "probe", "challenge", "move_on"]),
+  missing: z.enum(["clarity", "structure", "specificity", "ownership", "outcome", "none"]),
   reason: z.string().min(1).max(200),
+  acknowledgement: z.string().max(80),
   line: z.string().max(240)
 });
 
 export type RawDecision = z.infer<typeof decisionSchema>;
 
-const SYSTEM_INSTRUCTION = `You are conducting a job interview. You return only JSON matching the requested schema.
+const SYSTEM_INSTRUCTION = `You are Maya, a perceptive senior interviewer conducting a live job interview. Return only JSON matching the requested schema.
 
-You never evaluate the candidate out loud. You never compliment. You ask one thing at a time.`;
+Listen like a person: remember earlier evidence, notice what is new, and follow the most consequential thread. Be concise and conversational. Never score, flatter, lecture, or expose your internal evaluation. Ask exactly one thing at a time.`;
 
 export interface DecideInput {
   setup: InterviewSetup;
   questionAsked: string;
+  competency?: string;
+  intent?: string;
+  questionKind?: "conversation" | "code";
+  language?: string;
+  codeTask?: string;
+  codeSnippet?: string;
   mustHit: string[];
   userAnswer: string;
   followUpCount: number;
+  conversationHistory: Array<{ speaker: "agent" | "user"; text: string }>;
 }
 
 function buildPrompt(input: DecideInput): string {
-  const { setup, questionAsked, mustHit, userAnswer, followUpCount } = input;
+  const {
+    setup,
+    questionAsked,
+    competency,
+    intent,
+    questionKind,
+    language,
+    codeTask,
+    codeSnippet,
+    mustHit,
+    userAnswer,
+    followUpCount,
+    conversationHistory
+  } = input;
+
+  const history = conversationHistory.length
+    ? conversationHistory
+        .slice(-8)
+        .map((turn) => `${turn.speaker === "agent" ? "Interviewer" : "Candidate"}: ${turn.text}`)
+        .join("\n")
+    : "No earlier turns.";
 
   return `You are conducting a ${describeRound(setup.roundType)} interview for a ${describeLevel(setup.level)} interviewing as a ${describeRole(setup.role)}.
 
 Interviewer style: ${intensityRules(setup.intensity)}
 
 You just asked: "${questionAsked}"
+
+Competency: ${competency ?? "Role-relevant judgement"}
+Interview intent: ${intent ?? "Collect concrete evidence from the candidate's real experience."}
+Question format: ${questionKind ?? "conversation"}
+${
+  questionKind === "code"
+    ? `Coding language: ${language ?? "unspecified"}
+Task: ${codeTask ?? questionAsked}
+Starter code:
+${codeSnippet ?? ""}
+For code answers, judge correctness, failure handling, and the candidate's explanation. Do not demand one exact implementation if their approach is sound.`
+    : ""
+}
 
 A complete answer contains:
 ${mustHit.map((item) => `- ${item}`).join("\n")}
@@ -50,22 +90,36 @@ The candidate answered:
 ${userAnswer.trim()}
 """
 
+Relevant conversation so far:
+"""
+${history}
+"""
+
 Follow-ups already used on this question: ${followUpCount} of ${MAX_FOLLOW_UPS}
 
 Choose exactly one action:
 
-probe — the answer described WHAT happened but not HOW they did it, or it stayed at a level of generality where any candidate could have said the same thing. Ask for the specific mechanism, decision, or number that is missing.
+clarify — the transcript is fragmentary, nonsensical, clearly misheard, unrelated to the question, or the candidate asks you to repeat/rephrase. Briefly restate one clear question without blaming them.
 
-challenge — the answer contains a claim that does not hold up: an unsupported result, credit taken for work described as the team's, a trade-off asserted without its cost, or a contradiction with something said earlier. Name the specific hole.
+probe — the answer is relevant but misses the most important evidence. Follow the strongest thread and ask for one mechanism, decision, personal action, trade-off, or measurable result.
 
-move_on — the answer covered the must-hit criteria with concrete detail.
+challenge — use sparingly, only for a concrete unsupported claim, contradiction with an earlier answer, unclear ownership, or a claimed trade-off with no cost. Turn skepticism into one professional question.
+
+move_on — the answer supplied enough credible evidence for this question. It need not be perfect.
+
+Rules for "acknowledgement":
+- Zero to seven spoken words before the next question.
+- Sound attentive, not evaluative: "Got it", "Okay", "That gives me the context", or a similarly natural variation.
+- Do not use praise such as "great", "excellent", "impressive", "good answer", or "I love that".
+- Avoid repeating the same acknowledgement visible in the recent conversation.
+- Use an empty string for clarify, or when an acknowledgement would feel forced.
 
 Rules for "line":
-- If action is probe or challenge: one sentence, under 25 words, spoken aloud. Quote or reference a specific phrase from their answer. Never write "can you elaborate" or "tell me more".
-- If action is move_on: a bridge clause of at most 8 words, or an empty string. Do NOT write the next question — it is appended for you.
-- Never compliment or evaluate out loud.
+- If action is clarify, probe, or challenge: one natural question, under 22 words. Reference specifics without mechanically quoting the candidate.
+- If action is move_on: an empty string. The next planned question is appended by the application.
+- Never ask two questions, give advice, summarize the full answer, or say "can you elaborate" or "tell me more".
 
-"missing" is whichever of structure, specificity, ownership, or outcome was weakest, or "none" when moving on.
+"missing" is clarity for clarify; otherwise whichever of structure, specificity, ownership, or outcome is weakest; use none when moving on.
 "reason" is one clause explaining your choice. It is never spoken.`;
 }
 
@@ -86,11 +140,12 @@ export class InterviewDecider {
 }
 
 export function isDecisionAction(value: string): value is DecisionAction {
-  return value === "probe" || value === "challenge" || value === "move_on";
+  return value === "clarify" || value === "probe" || value === "challenge" || value === "move_on";
 }
 
 export function normaliseMissing(value: string): MissingDimension {
   switch (value) {
+    case "clarity":
     case "structure":
     case "specificity":
     case "ownership":

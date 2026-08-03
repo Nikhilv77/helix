@@ -6,12 +6,15 @@ import type { InterviewState } from "./types";
 export interface SessionStore {
   create(state: InterviewState, ownerId: string): Promise<void>;
   get(id: string): Promise<InterviewState | null>;
+  /** Durable owner-scoped read used by history and reports; does not enforce room TTL. */
+  getOwned(id: string, ownerId: string): Promise<StoredInterviewSession | null>;
+  listByOwner(ownerId: string, limit: number): Promise<StoredInterviewSession[]>;
   save(state: InterviewState): Promise<void>;
   /** Backs the "2 sessions per user per day" cap. */
   countStartedSince(ownerId: string, since: number): Promise<number>;
 }
 
-const SESSION_TTL_MS = 60 * 60 * 1000;
+export const SESSION_TTL_MS = 60 * 60 * 1000;
 /** Long enough to still enforce the daily cap after sessions themselves expire. */
 const OWNER_HISTORY_TTL_MS = 25 * 60 * 60 * 1000;
 
@@ -21,14 +24,22 @@ interface StoredSession {
   touchedAt: number;
 }
 
+export interface StoredInterviewSession {
+  state: InterviewState;
+  touchedAt: number;
+}
+
 export class MemorySessionStore implements SessionStore {
   private readonly sessions = new Map<string, StoredSession>();
+  private readonly durableSessions = new Map<string, StoredSession>();
   /** Start times per owner, kept beyond session lifetime for the daily cap. */
   private readonly startsByOwner = new Map<string, number[]>();
 
   async create(state: InterviewState, ownerId: string): Promise<void> {
     this.evictExpired();
-    this.sessions.set(state.id, { state, ownerId, touchedAt: Date.now() });
+    const stored = { state, ownerId, touchedAt: Date.now() };
+    this.sessions.set(state.id, stored);
+    this.durableSessions.set(state.id, stored);
 
     const starts = this.startsByOwner.get(ownerId) ?? [];
     starts.push(state.startedAt);
@@ -47,10 +58,28 @@ export class MemorySessionStore implements SessionStore {
     return stored.state;
   }
 
+  async getOwned(id: string, ownerId: string): Promise<StoredInterviewSession | null> {
+    const stored = this.durableSessions.get(id);
+    if (!stored || stored.ownerId !== ownerId) return null;
+    return { state: stored.state, touchedAt: stored.touchedAt };
+  }
+
+  async listByOwner(ownerId: string, limit: number): Promise<StoredInterviewSession[]> {
+    return [...this.durableSessions.values()]
+      .filter((session) => session.ownerId === ownerId)
+      .sort((left, right) => right.state.startedAt - left.state.startedAt)
+      .slice(0, limit)
+      .map((session) => ({ state: session.state, touchedAt: session.touchedAt }));
+  }
+
   async save(state: InterviewState): Promise<void> {
-    const stored = this.sessions.get(state.id);
+    const stored = this.durableSessions.get(state.id);
     if (!stored) return;
-    this.sessions.set(state.id, { ...stored, state, touchedAt: Date.now() });
+    const updated = { ...stored, state, touchedAt: Date.now() };
+    this.durableSessions.set(state.id, updated);
+    if (this.sessions.has(state.id)) {
+      this.sessions.set(state.id, updated);
+    }
   }
 
   async countStartedSince(ownerId: string, since: number): Promise<number> {
@@ -102,6 +131,29 @@ export class PrismaSessionStore implements SessionStore {
     }
 
     return stored.state as unknown as InterviewState;
+  }
+
+  async getOwned(id: string, ownerId: string): Promise<StoredInterviewSession | null> {
+    const stored = await this.prisma.interviewSession.findFirst({ where: { id, ownerId } });
+    if (!stored) return null;
+
+    return {
+      state: stored.state as unknown as InterviewState,
+      touchedAt: stored.touchedAt.getTime()
+    };
+  }
+
+  async listByOwner(ownerId: string, limit: number): Promise<StoredInterviewSession[]> {
+    const sessions = await this.prisma.interviewSession.findMany({
+      where: { ownerId },
+      orderBy: { startedAt: "desc" },
+      take: limit
+    });
+
+    return sessions.map((session) => ({
+      state: session.state as unknown as InterviewState,
+      touchedAt: session.touchedAt.getTime()
+    }));
   }
 
   async save(state: InterviewState): Promise<void> {

@@ -36,7 +36,7 @@ export class GroqProvider implements SystemDesignerAIProvider {
   ) {}
 
   async generateStructured<T>(request: GenerateStructuredRequest<T>): Promise<T> {
-    const maxAttempts = this.config.aiMaxRetries + 1;
+    const maxAttempts = request.maxAttempts ?? this.config.aiMaxRetries + 1;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       const startedAt = Date.now();
@@ -49,7 +49,7 @@ export class GroqProvider implements SystemDesignerAIProvider {
           model: this.model,
           attempt,
           maxAttempts,
-          timeoutMs: this.config.aiTimeoutMs
+          timeoutMs: request.timeoutMs ?? this.config.aiTimeoutMs
         })
       );
 
@@ -101,7 +101,10 @@ export class GroqProvider implements SystemDesignerAIProvider {
 
   private async requestCompletion<T>(request: GenerateStructuredRequest<T>): Promise<string> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.config.aiTimeoutMs);
+    const timeout = setTimeout(
+      () => controller.abort(),
+      request.timeoutMs ?? this.config.aiTimeoutMs
+    );
 
     try {
       const response = await fetch(ENDPOINT, {
@@ -132,9 +135,10 @@ export class GroqProvider implements SystemDesignerAIProvider {
       });
 
       if (!response.ok) {
+        const detail = (await response.text()).replace(/\s+/g, " ").trim().slice(0, 500);
         throw new AiProviderException({
           code: "AI_PROVIDER_ERROR",
-          message: `Groq responded with ${response.status}`,
+          message: `Groq responded with ${response.status}${detail ? `: ${detail}` : ""}`,
           provider: PROVIDER_NAME,
           operation: request.operation,
           retryable: TRANSIENT_STATUS_CODES.has(response.status)

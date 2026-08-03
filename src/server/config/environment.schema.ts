@@ -81,7 +81,11 @@ export const environmentSchema = z
     LIVEKIT_URL: z.string().optional(),
     LIVEKIT_API_KEY: z.string().optional(),
     LIVEKIT_API_SECRET: z.string().optional(),
-    LIVEKIT_AGENT_NAME: z.string().min(1).default("helix-interviewer-v2")
+    LIVEKIT_AGENT_NAME: z.string().min(1).default("helix-interviewer-v2"),
+    DEEPGRAM_API_KEY: z.string().optional(),
+    // Maya's voice. Matches HELIX_TTS_MODEL in the agent so the coach in the
+    // workspace and the interviewer in the room sound like the same person.
+    DEEPGRAM_TTS_MODEL: z.string().min(1).default("aura-2-asteria-en")
   })
   .transform((env) => ({
     nodeEnv: env.NODE_ENV,
@@ -110,7 +114,9 @@ export const environmentSchema = z
     livekitUrl: env.LIVEKIT_URL,
     livekitApiKey: env.LIVEKIT_API_KEY,
     livekitApiSecret: env.LIVEKIT_API_SECRET,
-    livekitAgentName: env.LIVEKIT_AGENT_NAME
+    livekitAgentName: env.LIVEKIT_AGENT_NAME,
+    deepgramApiKey: env.DEEPGRAM_API_KEY,
+    deepgramTtsModel: env.DEEPGRAM_TTS_MODEL
   }));
 
 export type EnvironmentConfig = z.infer<typeof environmentSchema>;

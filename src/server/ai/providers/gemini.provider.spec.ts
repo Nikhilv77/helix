@@ -5,7 +5,10 @@ import { AppConfigService } from "../../config/app-config.service";
 import { AiProviderException } from "../ai-provider.exception";
 import { GenerateStructuredRequest } from "../interfaces/system-designer-ai-provider.interface";
 import { GeminiProvider } from "./gemini.provider";
-import { GeminiGenerateContentClient, GeminiGenerateContentResponse } from "./gemini-provider.types";
+import {
+  GeminiGenerateContentClient,
+  GeminiGenerateContentResponse
+} from "./gemini-provider.types";
 
 describe("GeminiProvider", () => {
   const outputSchema = z.object({
@@ -24,7 +27,9 @@ describe("GeminiProvider", () => {
     jest.restoreAllMocks();
   });
 
-  function createConfig(overrides: Partial<ConstructorParameters<typeof AppConfigService>[0]> = {}) {
+  function createConfig(
+    overrides: Partial<ConstructorParameters<typeof AppConfigService>[0]> = {}
+  ) {
     return new AppConfigService({
       nodeEnv: "test",
       port: 3000,
@@ -92,6 +97,64 @@ describe("GeminiProvider", () => {
     });
   });
 
+  it("sends a response schema stripped of the bounds Gemini rejects", async () => {
+    // A schema carrying these keywords is refused with 400 INVALID_ARGUMENT
+    // before the model reads anything, which is what broke resume onboarding.
+    const boundedSchema = z.object({
+      headline: z.string().min(4).max(140),
+      confidence: z.number().min(0).max(1),
+      skills: z.array(z.string().min(1).max(40)).max(16),
+      entries: z.array(z.object({ quote: z.string().min(8).max(180) })).max(6)
+    });
+    const calls: GenerateContentParameters[] = [];
+    const generateContent = jest.fn((params: GenerateContentParameters) => {
+      calls.push(params);
+      return Promise.resolve({
+        text: JSON.stringify({ headline: "Engineer", confidence: 1, skills: [], entries: [] })
+      });
+    });
+    const provider = new GeminiProvider(createConfig(), createClient(generateContent));
+
+    await provider.generateStructured({
+      operation: "test.bounded",
+      systemInstruction: "Return JSON only.",
+      prompt: "Return the object.",
+      schema: boundedSchema,
+      modelClass: "fast"
+    });
+
+    const serialised = JSON.stringify(calls[0]?.config?.responseJsonSchema);
+    for (const keyword of [
+      "minLength",
+      "maxLength",
+      "minItems",
+      "maxItems",
+      "minimum",
+      "maximum"
+    ]) {
+      expect(serialised).not.toContain(keyword);
+    }
+    expect(calls[0]?.config?.responseJsonSchema).toMatchObject({
+      type: "object",
+      required: ["headline", "confidence", "skills", "entries"]
+    });
+  });
+
+  it("honours a per-request timeout and attempt budget", async () => {
+    const generateContent = jest.fn(() =>
+      Promise.reject(Object.assign(new Error("temporarily unavailable"), { status: 503 }))
+    );
+    const provider = new GeminiProvider(
+      createConfig({ aiMaxRetries: 5 }),
+      createClient(generateContent)
+    );
+
+    await expect(
+      provider.generateStructured(createRequest({ maxAttempts: 2, timeoutMs: 50 }))
+    ).rejects.toMatchObject({ code: "AI_PROVIDER_ERROR" });
+    expect(generateContent).toHaveBeenCalledTimes(2);
+  });
+
   it("returns successful structured output validated with Zod", async () => {
     const generateContent = jest.fn(() =>
       Promise.resolve({
@@ -106,13 +169,43 @@ describe("GeminiProvider", () => {
     });
   });
 
+  it("sends inline documents as multimodal content", async () => {
+    const generateContent = jest.fn(() =>
+      Promise.resolve({ text: JSON.stringify({ ok: true, message: "done" }) })
+    );
+    const provider = new GeminiProvider(createConfig(), createClient(generateContent));
+
+    await provider.generateStructured(
+      createRequest({
+        attachments: [{ mimeType: "application/pdf", data: "cGRm" }]
+      })
+    );
+
+    expect(generateContent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { inlineData: { mimeType: "application/pdf", data: "cGRm" } },
+              { text: "Return { ok: true, message: 'done' }." }
+            ]
+          }
+        ]
+      })
+    );
+  });
+
   it("maps invalid model output to a safe invalid response error", async () => {
     const generateContent = jest.fn(() =>
       Promise.resolve({
         text: JSON.stringify({ ok: true })
       })
     );
-    const provider = new GeminiProvider(createConfig({ aiMaxRetries: 1 }), createClient(generateContent));
+    const provider = new GeminiProvider(
+      createConfig({ aiMaxRetries: 1 }),
+      createClient(generateContent)
+    );
 
     await expect(provider.generateStructured(createRequest())).rejects.toMatchObject({
       code: "AI_INVALID_RESPONSE",
@@ -126,7 +219,10 @@ describe("GeminiProvider", () => {
     const providerError = new Error("raw provider message with prompt details");
     Object.assign(providerError, { status: 400 });
     const generateContent = jest.fn(() => Promise.reject(providerError));
-    const provider = new GeminiProvider(createConfig({ aiMaxRetries: 1 }), createClient(generateContent));
+    const provider = new GeminiProvider(
+      createConfig({ aiMaxRetries: 1 }),
+      createClient(generateContent)
+    );
 
     await expect(provider.generateStructured(createRequest())).rejects.toMatchObject({
       code: "AI_PROVIDER_ERROR",
@@ -141,7 +237,10 @@ describe("GeminiProvider", () => {
       .fn<Promise<GeminiGenerateContentResponse>, [GenerateContentParameters]>()
       .mockRejectedValueOnce({ status: 503, message: "temporarily unavailable" })
       .mockResolvedValueOnce({ text: JSON.stringify({ ok: true, message: "done" }) });
-    const provider = new GeminiProvider(createConfig({ aiMaxRetries: 1 }), createClient(generateContent));
+    const provider = new GeminiProvider(
+      createConfig({ aiMaxRetries: 1 }),
+      createClient(generateContent)
+    );
 
     await expect(provider.generateStructured(createRequest())).resolves.toEqual({
       ok: true,

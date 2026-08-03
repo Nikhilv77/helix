@@ -47,4 +47,20 @@ describe("MemorySessionStore", () => {
 
     await expect(store.get(created.id)).resolves.toBeNull();
   });
+
+  it("keeps expired sessions available to their owner for reports", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-08-03T00:00:00Z"));
+    const store = new MemorySessionStore();
+    const created = state("33333333-3333-4333-8333-333333333333", Date.now());
+    await store.create(created, "user-1");
+
+    jest.setSystemTime(Date.now() + HOUR_MS + 1);
+
+    await expect(store.get(created.id)).resolves.toBeNull();
+    await expect(store.getOwned(created.id, "user-1")).resolves.toMatchObject({
+      state: { id: created.id }
+    });
+    await expect(store.getOwned(created.id, "user-2")).resolves.toBeNull();
+    await expect(store.listByOwner("user-1", 10)).resolves.toHaveLength(1);
+  });
 });

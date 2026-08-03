@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SignInButton } from "@clerk/nextjs";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
@@ -13,7 +14,7 @@ import {
   Timer
 } from "lucide-react";
 import { Counter, Reveal, useScrollProgress } from "./reveal";
-import { ExchangeCard, HelixMark, VoiceRing, WaveStrip } from "./blueprint-art";
+import { ExchangeCard, HelixMark, InterviewSignal, WaveStrip } from "./blueprint-art";
 import type { Exchange } from "./blueprint-art";
 import { LiveBars, ProductShowcase } from "./product-frames";
 import { MarketingAvatar } from "./marketing-avatar";
@@ -65,11 +66,21 @@ const flowSteps = [
   { label: "Report", detail: "Scores, evidence, one fix" }
 ];
 
-/**
- * Interviews run logged out, so the primary action goes straight to setup
- * rather than through a sign-in wall.
- */
 function PrimaryAction({ children, className }: { children: ReactNode; className: string }) {
+  if (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    return (
+      <SignInButton
+        mode="modal"
+        forceRedirectUrl="/auth/continue"
+        signUpForceRedirectUrl="/auth/continue"
+      >
+        <button type="button" className={className}>
+          {children}
+        </button>
+      </SignInButton>
+    );
+  }
+
   return (
     <Link href="/interview" className={className}>
       {children}
@@ -84,55 +95,66 @@ function Hero() {
   return (
     <section
       ref={heroRef}
-      className="sticky top-0 z-0 flex h-[100svh] flex-col items-center justify-center overflow-hidden px-5"
+      className="sticky top-0 z-0 flex h-[100svh] min-h-[46rem] items-center overflow-hidden px-5 pb-10 pt-24 sm:px-10 lg:pb-0 lg:pt-20"
     >
-      <VoiceRing className="hero-art pointer-events-none absolute -right-24 top-1/2 h-[38rem] w-[38rem] -translate-y-1/3 opacity-40 sm:-right-16 lg:right-[-6rem] lg:h-[46rem] lg:w-[46rem]" />
-
-      <div className="hero-parallax relative z-10 flex w-full max-w-[80rem] flex-col items-center text-center">
-        <Reveal>
-          <span className="inline-flex items-center gap-3 rounded-full border border-cream/25 bg-cream/5 px-4 py-2 backdrop-blur-sm">
-            <HelixMark className="h-4 w-4 text-cream" />
-            <span className="blueprint-label whitespace-nowrap text-cream/90">
-              Real-time voice interviews
+      <div className="hero-parallax relative z-10 mx-auto grid w-full max-w-[72rem] items-center gap-3 lg:grid-cols-[0.84fr_1.16fr] lg:gap-12">
+        <div className="order-2 flex flex-col items-center text-center lg:order-1 lg:items-start lg:text-left">
+          <Reveal>
+            <span className="inline-flex items-center gap-3 rounded-full border border-cream/25 bg-cream/5 px-4 py-2 backdrop-blur-sm">
+              <HelixMark className="h-4 w-4 text-cream" />
+              <span className="blueprint-label whitespace-nowrap text-cream/90">
+                Real-time voice interviews
+              </span>
+              <span className="blueprint-label hidden text-cream/45 sm:inline">Live</span>
             </span>
-            <span className="blueprint-label hidden text-cream/45 sm:inline">Live</span>
-          </span>
-        </Reveal>
+          </Reveal>
 
-        <Reveal delay={90}>
-          <h1
-            className="wordmark mt-8 text-cream"
-            style={{ fontSize: "clamp(4.5rem, 19vw, 17rem)" }}
-          >
-            Helix
-          </h1>
-        </Reveal>
+          <Reveal delay={90}>
+            <h1
+              className="wordmark mt-5 text-cream"
+              style={{ fontSize: "clamp(4rem, 8vw, 7.5rem)" }}
+            >
+              Helix
+            </h1>
+          </Reveal>
 
-        <Reveal delay={180}>
-          <p className="mt-4 max-w-2xl text-lg font-medium leading-snug text-cream/85 sm:text-2xl">
-            The mock interview that
-            <br />
-            <span className="text-white">pushes back</span>.
-          </p>
-        </Reveal>
+          <Reveal delay={180}>
+            <p className="mt-3 max-w-lg text-lg font-medium leading-snug text-cream/85 sm:text-2xl lg:text-[1.7rem]">
+              The mock interview that
+              <br />
+              <span className="text-white">pushes back</span>.
+            </p>
+          </Reveal>
 
-        <Reveal delay={240}>
-          <LiveBars count={22} className="mt-8 h-10 opacity-70" />
-        </Reveal>
+          <Reveal delay={240}>
+            <LiveBars count={18} className="mt-6 hidden h-9 opacity-60 sm:flex" />
+          </Reveal>
 
-        <Reveal delay={300}>
-          <PrimaryAction className="ghost-button mt-6 inline-flex min-h-14 items-center gap-3 rounded-2xl border border-cream/40 px-8 text-base font-semibold text-cream">
-            Start a mock interview
-            <ArrowRight size={18} aria-hidden="true" />
-          </PrimaryAction>
-        </Reveal>
+          <Reveal delay={300}>
+            <PrimaryAction className="ghost-button mt-6 inline-flex min-h-12 items-center gap-3 rounded-2xl border border-cream/40 px-7 text-sm font-semibold text-cream sm:text-base">
+              Start a mock interview
+              <ArrowRight size={18} aria-hidden="true" />
+            </PrimaryAction>
+          </Reveal>
 
-        <Reveal delay={360}>
-          <p className="blueprint-label mt-6 text-cream/45">No account needed to practice</p>
-        </Reveal>
+          <Reveal delay={360}>
+            <p className="blueprint-label mt-4 text-cream/45">Sign in to keep every report</p>
+          </Reveal>
+        </div>
+
+        <div className="order-1 relative mx-auto h-[17rem] w-full max-w-[21rem] sm:h-[20rem] sm:max-w-[25rem] lg:order-2 lg:h-[35rem] lg:max-w-none">
+          <InterviewSignal className="pointer-events-none absolute left-1/2 top-1/2 h-[19rem] w-[24rem] -translate-x-1/2 -translate-y-1/2 opacity-55 sm:h-[23rem] sm:w-[29rem] lg:h-[36rem] lg:w-[44rem]" />
+          <MarketingAvatar
+            priority
+            className="pointer-events-none absolute inset-0 drop-shadow-[0_24px_30px_rgba(4,12,35,0.5)]"
+          />
+          <div className="pointer-events-none absolute bottom-3 left-1/2 h-px w-40 -translate-x-1/2 bg-cream/25 shadow-[0_0_24px_rgba(239,232,214,0.35)] lg:bottom-8 lg:w-64" />
+        </div>
       </div>
 
-      <div className="blueprint-label absolute bottom-8 z-10 text-cream/40">Scroll</div>
+      <div className="blueprint-label absolute bottom-6 left-1/2 z-10 hidden -translate-x-1/2 text-cream/40 lg:block">
+        Scroll
+      </div>
     </section>
   );
 }
@@ -160,7 +182,10 @@ function TheInterview() {
   if (!active) return null;
 
   return (
-    <section id="interview" className="relative z-10 bg-blueprint px-6 pb-24 pt-28 sm:px-10 sm:pt-32">
+    <section
+      id="interview"
+      className="relative z-10 bg-blueprint px-6 pb-24 pt-28 sm:px-10 sm:pt-32"
+    >
       <div className="mx-auto grid w-full max-w-[78rem] gap-16 lg:grid-cols-2 lg:items-center">
         <div>
           <Reveal>
@@ -257,7 +282,11 @@ function TheInterview() {
           ].map((stat, statIndex) => (
             <Reveal key={stat.label} delay={statIndex * 110}>
               <div style={{ fontSize: "clamp(3rem, 8vw, 6.5rem)" }}>
-                <Counter value={stat.value} suffix={stat.suffix} className="wordmark block text-cream" />
+                <Counter
+                  value={stat.value}
+                  suffix={stat.suffix}
+                  className="wordmark block text-cream"
+                />
                 <p className="blueprint-label mt-3 text-cream/55">{stat.label}</p>
               </div>
             </Reveal>
@@ -398,8 +427,8 @@ function FeatureBoard() {
                   title="How you sounded"
                 >
                   <p className="text-sm leading-6 text-blueprint/75">
-                    Filler rate, longest unbroken ramble, average time to the point, and talk
-                    ratio &mdash; measured, not guessed.
+                    Filler rate, longest unbroken ramble, average time to the point, and talk ratio
+                    &mdash; measured, not guessed.
                   </p>
                   <div className="mt-5 space-y-2">
                     {[
@@ -446,7 +475,11 @@ function NoteCard({
 }) {
   return (
     <article
-      className={["note-card rounded-2xl p-6 shadow-note hover:shadow-note-lift sm:p-7", tone, className ?? ""]
+      className={[
+        "note-card rounded-2xl p-6 shadow-note hover:shadow-note-lift sm:p-7",
+        tone,
+        className ?? ""
+      ]
         .join(" ")
         .trim()}
       style={{ "--tilt": tilt } as React.CSSProperties}

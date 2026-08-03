@@ -2,6 +2,11 @@ import type {
   ApiErrorResponse,
   ApiSuccessResponse,
   DecideResponse,
+  CandidateProfile,
+  CandidateProfileInput,
+  Level,
+  ResumeExtractionResponse,
+  Role,
   InterviewSetup,
   SessionResponse,
   StartResponse
@@ -32,7 +37,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 async function request<TData>(
   path: string,
-  options: { method?: "GET" | "POST" | "DELETE"; body?: unknown } = {}
+  options: { method?: "GET" | "POST" | "PUT" | "DELETE"; body?: unknown } = {}
 ): Promise<TData> {
   const response = await fetch(path, {
     method: options.method ?? "GET",
@@ -91,4 +96,53 @@ export function getSession(sessionId: string): Promise<SessionResponse> {
 
 export function endInterview(sessionId: string): Promise<SessionResponse> {
   return request<SessionResponse>(`/api/interview/${sessionId}`, { method: "DELETE" });
+}
+
+export function getProfile(): Promise<CandidateProfile> {
+  return request<CandidateProfile>("/api/profile");
+}
+
+export function saveProfile(profile: CandidateProfileInput): Promise<CandidateProfile> {
+  return request<CandidateProfile>("/api/profile", { method: "PUT", body: profile });
+}
+
+export async function uploadResume(input: {
+  file: File;
+  targetRole: Role;
+  level: Level;
+  signal?: AbortSignal;
+}): Promise<ResumeExtractionResponse> {
+  const body = new FormData();
+  body.set("resume", input.file);
+  body.set("targetRole", input.targetRole);
+  body.set("level", input.level);
+
+  const response = await fetch("/api/onboarding/resume", {
+    method: "POST",
+    body,
+    cache: "no-store",
+    signal: input.signal
+  });
+  const payload: unknown = await response.json().catch(() => null);
+
+  if (!response.ok || !isSuccess(payload)) {
+    // A response with no readable envelope means the request died in transit
+    // or was cut short by the platform, not that the resume was rejected.
+    const error = isErrorEnvelope(payload)
+      ? payload.error
+      : {
+          code: "RESUME_UPLOAD_FAILED",
+          message:
+            "The upload did not complete. Check your connection and try the same file again.",
+          details: {}
+        };
+    throw new ApiClientError({
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      status: response.status
+    });
+  }
+
+  return payload.data as ResumeExtractionResponse;
 }

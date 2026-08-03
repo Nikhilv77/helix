@@ -146,3 +146,26 @@ model InterviewSession {
   @@index([ownerId, startedAt])
   @@index([touchedAt])
 }
+
+model CandidateProfile {
+  ownerId               String    @id
+  targetRole            String?
+  level                 String?
+  targetCompany         String?
+  targetDate            DateTime?
+  headline              String?
+  context               String?
+  focusAreas            Json
+  stories               Json
+  resumeFileName        String?
+  resumeMimeType        String?
+  resumeAnalysis        Json?
+  resumeUploadedAt      DateTime?
+  resumeVerifiedAt      DateTime?
+  resumeConfidence      Float?
+  onboardingCompletedAt DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([updatedAt])
+}

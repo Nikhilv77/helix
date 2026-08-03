@@ -4,11 +4,15 @@ import { Logger } from "../../common/logger";
 import { isRecord } from "../../common/utils/is-record";
 import { AppConfigService } from "../../config/app-config.service";
 import { AiProviderException } from "../ai-provider.exception";
+import { toStrictJsonSchema } from "../strict-json-schema";
 import type {
   GenerateStructuredRequest,
   SystemDesignerAIProvider
 } from "../interfaces/system-designer-ai-provider.interface";
-import type { GeminiGenerateContentClient, GeminiGenerateContentResponse } from "./gemini-provider.types";
+import type {
+  GeminiGenerateContentClient,
+  GeminiGenerateContentResponse
+} from "./gemini-provider.types";
 
 const PROVIDER_NAME = "gemini";
 const DEFAULT_TEMPERATURE = 0.2;
@@ -17,6 +21,18 @@ const convertZodToJsonSchema = zodToJsonSchema as (
   schema: unknown,
   options: { $refStrategy: "none" }
 ) => unknown;
+
+/**
+ * Gemini rejects a response schema outright — 400 INVALID_ARGUMENT, before it
+ * reads a single token — once the combined weight of validation keywords
+ * crosses an undocumented budget. The resume extraction schema sat past it, so
+ * every upload failed. The same pruning the Groq path already needs keeps the
+ * shape intact while dropping the bounds; Zod still enforces them on the way
+ * back.
+ */
+export function toGeminiResponseSchema(schema: unknown): unknown {
+  return toStrictJsonSchema(convertZodToJsonSchema(schema, { $refStrategy: "none" }));
+}
 
 export class GeminiProvider implements SystemDesignerAIProvider {
   private readonly logger = new Logger(GeminiProvider.name);
@@ -28,7 +44,7 @@ export class GeminiProvider implements SystemDesignerAIProvider {
 
   async generateStructured<T>(request: GenerateStructuredRequest<T>): Promise<T> {
     const model = this.selectModel(request.modelClass);
-    const maxAttempts = this.config.aiMaxRetries + 1;
+    const maxAttempts = request.maxAttempts ?? this.config.aiMaxRetries + 1;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       const startedAt = Date.now();
@@ -37,7 +53,8 @@ export class GeminiProvider implements SystemDesignerAIProvider {
       try {
         const response = await this.withTimeout(
           () => this.generateContent(request, model),
-          request.operation
+          request.operation,
+          request.timeoutMs ?? this.config.aiTimeoutMs
         );
         const result = this.parseAndValidateResponse(response, request);
 
@@ -95,14 +112,30 @@ export class GeminiProvider implements SystemDesignerAIProvider {
     request: GenerateStructuredRequest<T>,
     model: string
   ): Promise<GeminiGenerateContentResponse> {
+    const contents = request.attachments?.length
+      ? [
+          {
+            role: "user",
+            parts: [
+              ...request.attachments.map((attachment) => ({
+                inlineData: {
+                  mimeType: attachment.mimeType,
+                  data: attachment.data
+                }
+              })),
+              { text: request.prompt }
+            ]
+          }
+        ]
+      : request.prompt;
     const params: GenerateContentParameters = {
       model,
-      contents: request.prompt,
+      contents,
       config: {
         systemInstruction: request.systemInstruction,
         temperature: request.temperature ?? DEFAULT_TEMPERATURE,
         responseMimeType: "application/json",
-        responseJsonSchema: convertZodToJsonSchema(request.schema, { $refStrategy: "none" })
+        responseJsonSchema: toGeminiResponseSchema(request.schema)
       }
     };
 
@@ -145,7 +178,11 @@ export class GeminiProvider implements SystemDesignerAIProvider {
     }
   }
 
-  private async withTimeout<T>(operation: () => Promise<T>, requestOperation: string): Promise<T> {
+  private async withTimeout<T>(
+    operation: () => Promise<T>,
+    requestOperation: string,
+    timeoutMs: number
+  ): Promise<T> {
     let timeoutId: NodeJS.Timeout | undefined;
 
     try {
@@ -162,7 +199,7 @@ export class GeminiProvider implements SystemDesignerAIProvider {
                 retryable: true
               })
             );
-          }, this.config.aiTimeoutMs);
+          }, timeoutMs);
         })
       ]);
     } finally {
@@ -187,7 +224,11 @@ export class GeminiProvider implements SystemDesignerAIProvider {
     });
   }
 
-  private invalidResponseError(operation: string, message: string, cause?: unknown): AiProviderException {
+  private invalidResponseError(
+    operation: string,
+    message: string,
+    cause?: unknown
+  ): AiProviderException {
     return new AiProviderException({
       code: "AI_INVALID_RESPONSE",
       message,
@@ -247,7 +288,8 @@ export class GeminiProvider implements SystemDesignerAIProvider {
         model,
         attempt,
         maxAttempts,
-        timeoutMs: this.config.aiTimeoutMs,
+        timeoutMs: request.timeoutMs ?? this.config.aiTimeoutMs,
+        attachmentCount: request.attachments?.length ?? 0,
         temperature: request.temperature ?? DEFAULT_TEMPERATURE
       })
     );

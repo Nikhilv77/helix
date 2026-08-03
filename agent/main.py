@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import fcntl
 import hashlib
+import json
 import logging
 import os
 import tempfile
@@ -44,6 +45,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("helix.agent")
 
 ROOM_PREFIX = "interview-"
+TYPED_ANSWER_TOPIC = "helix.typed-answer"
 _worker_lock: IO[str] | None = None
 
 
@@ -259,6 +261,35 @@ async def interview_session(ctx: agents.JobContext) -> None:
     async def on_turn(text: str) -> None:
         await handle_turn(session, helix, session_id, state, text)
 
+    @ctx.room.on("data_received")
+    def _on_data(packet: object) -> None:
+        if getattr(packet, "topic", None) != TYPED_ANSWER_TOPIC:
+            return
+
+        try:
+            payload = json.loads(getattr(packet, "data", b"").decode("utf-8"))
+            text = str(payload.get("text", "")).strip()
+            start_ms = max(0, int(payload.get("startMs", 0)))
+            end_ms = max(start_ms, int(payload.get("endMs", start_ms)))
+        except (UnicodeDecodeError, ValueError, TypeError, json.JSONDecodeError):
+            logger.warning("ignoring malformed typed answer")
+            return
+
+        if not text:
+            return
+
+        logger.info("typed answer received: %r", text[:90])
+        asyncio.create_task(
+            handle_turn(
+                session,
+                helix,
+                session_id,
+                state,
+                text,
+                timing=(start_ms, end_ms),
+            )
+        )
+
     await session.start(room=ctx.room, agent=Interviewer(on_turn))
 
     # The opening question was written by the planner when the session was
@@ -323,6 +354,19 @@ class TurnState:
 
         return answer, start_ms, end_ms
 
+    def begin_typed_dispatch(
+        self, text: str, start_ms: int, end_ms: int
+    ) -> tuple[str, int, int] | None:
+        answer = text.strip()
+        if not answer or self._busy:
+            return None
+
+        self._finals.clear()
+        self._partial = ""
+        self._speech_started_ms = None
+        self._busy = True
+        return answer, max(0, start_ms), max(start_ms, end_ms)
+
     def end_dispatch(self) -> None:
         self._busy = False
 
@@ -333,8 +377,13 @@ async def handle_turn(
     session_id: str,
     state: TurnState,
     text: str,
+    timing: tuple[int, int] | None = None,
 ) -> None:
-    dispatch = state.begin_dispatch(text)
+    dispatch = (
+        state.begin_typed_dispatch(text, timing[0], timing[1])
+        if timing is not None
+        else state.begin_dispatch(text)
+    )
     if dispatch is None:
         return
 

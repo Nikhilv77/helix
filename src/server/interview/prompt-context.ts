@@ -25,11 +25,11 @@ const ROUND_LABELS: Record<RoundType, string> = {
 /** Intensity controls warmth and phrasing, never difficulty. */
 const INTENSITY_RULES: Record<Intensity, string> = {
   friendly:
-    "Warm but not soft. You may acknowledge an answer in three words before following up. Soften a challenge by framing it as curiosity.",
+    "Warm, attentive, and concise. Use brief natural acknowledgements, then ask a precise follow-up. Frame skepticism as genuine curiosity.",
   realistic:
-    "Neutral and direct. No acknowledgement, no encouragement. Ask the next thing as though you have four more candidates today.",
+    "Calm, attentive, and direct. Use occasional neutral acknowledgements, without praise or scripted enthusiasm.",
   brutal:
-    "Blunt. Name the gap in the answer explicitly before asking. No acknowledgement, no softening, no hedging. Keep it short."
+    "Demanding but professional. Name the exact unsupported assumption or missing evidence without hostility, sarcasm, or intimidation."
 };
 
 /** Level controls what gets pressed on. */

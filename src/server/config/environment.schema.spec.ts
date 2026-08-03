@@ -48,7 +48,8 @@ describe("validateEnvironment", () => {
       retrievalMinSimilarity: 0.35,
       groqDeciderModel: "openai/gpt-oss-20b",
       interviewDailyLimit: 2,
-      livekitAgentName: "helix-interviewer-v2"
+      livekitAgentName: "helix-interviewer-v2",
+      deepgramTtsModel: "aura-2-asteria-en"
     });
   });
 

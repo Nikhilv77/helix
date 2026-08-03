@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
 import { HelixMark } from "@/components/helix-mark";
-import { ApiClientError, startInterview } from "@/lib/api-client";
+import { ApiClientError, getProfile, startInterview } from "@/lib/api-client";
+import { findTemplate, type InterviewTemplate } from "@/lib/interview-templates";
 import type { Intensity, InterviewSetup, Level, Role, RoundType } from "@/lib/types";
 
 const roleOptions: Array<{ value: Role; label: string }> = [
@@ -37,13 +38,8 @@ const intensityOptions: Array<{ value: Intensity; label: string; hint: string }>
 ];
 
 const MIN_CONTEXT = 10;
-const TOTAL_STEPS = 5;
 
-const startingLabels = [
-  "Reading your experience",
-  "Writing your questions",
-  "Setting the room"
-];
+const startingLabels = ["Reading your experience", "Writing your questions", "Setting the room"];
 
 export default function InterviewSetupPage() {
   const router = useRouter();
@@ -56,6 +52,77 @@ export default function InterviewSetupPage() {
   const [starting, setStarting] = useState(false);
   const [startingLabel, setStartingLabel] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [template, setTemplate] = useState<InterviewTemplate | null>(null);
+
+  // Signed-in candidates should not have to retype their role and project
+  // context for every round. Query params win so dashboard drills can narrow
+  // the next interview to a specific competency.
+  useEffect(() => {
+    let cancelled = false;
+    const params = new URLSearchParams(window.location.search);
+    const roleParam = params.get("role");
+    const levelParam = params.get("level");
+    const focus = params.get("focus")?.trim();
+
+    const queryRole = roleOptions.find((option) => option.value === roleParam)?.value ?? null;
+    const queryLevel = levelOptions.find((option) => option.value === levelParam)?.value ?? null;
+
+    if (queryRole) setRole(queryRole);
+    if (queryLevel) setLevel(queryLevel);
+
+    // A template picked on the home page fixes the round and its agenda, so the
+    // setup only still needs the candidate's role, level, and context.
+    const chosen = findTemplate(params.get("template"));
+    if (chosen) {
+      setTemplate(chosen);
+      setRoundType(chosen.roundType);
+      setIntensity(chosen.intensity);
+    }
+
+    void getProfile()
+      .then((profile) => {
+        if (cancelled) return;
+        if (!queryRole && profile.targetRole) setRole(profile.targetRole);
+        if (!queryLevel && profile.level) setLevel(profile.level);
+
+        const strongestStory = profile.stories[0];
+        const verifiedExperience = profile.resume?.experience[0];
+        const preparedQuestion = findPreparedQuestion(
+          profile.resume?.practiceQuestions ?? [],
+          focus
+        );
+        const memory = [
+          profile.context,
+          verifiedExperience
+            ? `Verified resume evidence — ${verifiedExperience.role} at ${verifiedExperience.organization}${verifiedExperience.period ? ` (${verifiedExperience.period})` : ""}: ${verifiedExperience.summary} ${verifiedExperience.achievements.join(" ")}`
+            : "",
+          strongestStory
+            ? `Project story — ${strongestStory.title}: ${strongestStory.situation} ${strongestStory.action} ${strongestStory.outcome}`
+            : "",
+          preparedQuestion
+            ? `Prepared question — ${preparedQuestion.prompt} Evidence anchor: ${preparedQuestion.evidenceAnchor}. Use this as a starting point, then ask natural follow-ups based on the answer.`
+            : "",
+          focus ? `Practice focus: ${focus}. Probe this competency using the experience above.` : ""
+        ]
+          .filter(Boolean)
+          .join("\n\n")
+          .slice(0, 1200);
+
+        if (memory) setContext((current) => current || memory);
+      })
+      .catch(() => {
+        if (focus) {
+          setContext(
+            (current) =>
+              current || `Practice focus: ${focus}. Ask for concrete evidence from my experience.`
+          );
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const answered = useMemo(
     () =>
@@ -82,7 +149,16 @@ export default function InterviewSetupPage() {
   const begin = useCallback(async () => {
     if (!role || !level || !roundType || !intensity) return;
 
-    const setup: InterviewSetup = { role, level, roundType, intensity, context: context.trim() };
+    const setup: InterviewSetup = {
+      role,
+      level,
+      roundType,
+      intensity,
+      context: context.trim(),
+      ...(template
+        ? { agenda: template.agenda, templateId: template.id, templateTitle: template.title }
+        : {})
+    };
 
     setStarting(true);
     setError(null);
@@ -98,22 +174,39 @@ export default function InterviewSetupPage() {
       );
       setStarting(false);
     }
-  }, [context, intensity, level, role, roundType, router]);
+  }, [context, intensity, level, role, roundType, router, template]);
+
+  // A template already fixes the round and the intensity, so those two steps
+  // drop out of the wizard rather than asking a question with one answer.
+  const activeSteps = useMemo(() => (template ? [0, 1, 4] : [0, 1, 2, 3, 4]), [template]);
+  const position = Math.max(0, activeSteps.indexOf(step));
+  const onLastStep = position === activeSteps.length - 1;
+
+  const goTo = useCallback(
+    (offset: number) => {
+      const target = activeSteps[Math.min(Math.max(position + offset, 0), activeSteps.length - 1)];
+      if (target !== undefined) setStep(target);
+    },
+    [activeSteps, position]
+  );
 
   const next = useCallback(() => {
     if (!canContinue) return;
-    if (step < TOTAL_STEPS - 1) {
-      setStep((current) => current + 1);
+    if (!onLastStep) {
+      goTo(1);
       return;
     }
     void begin();
-  }, [begin, canContinue, step]);
+  }, [begin, canContinue, goTo, onLastStep]);
 
   /** Selecting advances on a short beat so the choice visibly registers. */
-  const choose = useCallback((apply: () => void) => {
-    apply();
-    window.setTimeout(() => setStep((current) => Math.min(TOTAL_STEPS - 1, current + 1)), 220);
-  }, []);
+  const choose = useCallback(
+    (apply: () => void) => {
+      apply();
+      window.setTimeout(() => goTo(1), 220);
+    },
+    [goTo]
+  );
 
   // Cycle the label while the planner writes the questions.
   useEffect(() => {
@@ -167,12 +260,16 @@ export default function InterviewSetupPage() {
         </Link>
 
         <div className="ml-auto flex items-center gap-2.5">
-          {Array.from({ length: TOTAL_STEPS }, (_, index) => (
+          {activeSteps.map((value, index) => (
             <span
-              key={index}
+              key={value}
               className={[
                 "h-1 rounded-full transition-all duration-500",
-                index < step ? "w-8 bg-cream/80" : index === step ? "w-8 bg-cream" : "w-4 bg-cream/20"
+                index < position
+                  ? "w-8 bg-cream/80"
+                  : index === position
+                    ? "w-8 bg-cream"
+                    : "w-4 bg-cream/20"
               ].join(" ")}
             />
           ))}
@@ -185,9 +282,17 @@ export default function InterviewSetupPage() {
             <StartingState label={startingLabels[startingLabel] ?? startingLabels[0] ?? ""} />
           ) : (
             <div key={step} className="step-in">
-              <p className="blueprint-label text-cream/40">
-                {String(step + 1).padStart(2, "0")} / {String(TOTAL_STEPS).padStart(2, "0")}
-              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="blueprint-label text-cream/40">
+                  {String(position + 1).padStart(2, "0")} /{" "}
+                  {String(activeSteps.length).padStart(2, "0")}
+                </p>
+                {template ? (
+                  <span className="inline-flex items-center gap-2 rounded-full border border-cream/20 bg-cream/[0.06] px-3 py-1 text-[11px] font-medium text-cream/75">
+                    <Check size={12} /> {template.title}
+                  </span>
+                ) : null}
+              </div>
 
               <h1
                 className="display-heading mt-4 max-w-2xl text-cream"
@@ -284,8 +389,8 @@ export default function InterviewSetupPage() {
               <div className="mt-10 flex items-center gap-4">
                 <button
                   type="button"
-                  onClick={() => setStep((current) => Math.max(0, current - 1))}
-                  disabled={step === 0}
+                  onClick={() => goTo(-1)}
+                  disabled={position === 0}
                   className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-cream/55 transition hover:text-cream disabled:pointer-events-none disabled:opacity-0"
                 >
                   <ArrowLeft size={15} aria-hidden="true" />
@@ -298,7 +403,7 @@ export default function InterviewSetupPage() {
                   disabled={!canContinue}
                   className="ml-auto inline-flex min-h-12 items-center gap-2.5 rounded-xl border border-cream bg-cream px-6 text-sm font-semibold text-blueprint transition hover:-translate-y-0.5 hover:bg-white disabled:pointer-events-none disabled:opacity-30"
                 >
-                  {step === TOTAL_STEPS - 1 ? "Start interview" : "Continue"}
+                  {onLastStep ? "Start interview" : "Continue"}
                   <ArrowRight size={16} aria-hidden="true" />
                 </button>
               </div>
@@ -327,6 +432,20 @@ export default function InterviewSetupPage() {
         </p>
       </footer>
     </main>
+  );
+}
+
+function findPreparedQuestion(
+  questions: Array<{ competency: string; prompt: string; evidenceAnchor: string }>,
+  focus?: string
+) {
+  if (!questions.length) return null;
+  if (!focus) return questions[0] ?? null;
+  const normalizedFocus = focus.toLowerCase();
+  return (
+    questions.find((question) => question.competency.toLowerCase().includes(normalizedFocus)) ??
+    questions[0] ??
+    null
   );
 }
 

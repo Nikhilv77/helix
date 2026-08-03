@@ -13,7 +13,13 @@ const AvatarStage = dynamic(
 
 const AVATAR_URL = process.env.NEXT_PUBLIC_AVATAR_URL ?? "";
 
-export function MarketingAvatar({ className }: { className?: string }) {
+export function MarketingAvatar({
+  className,
+  priority = false
+}: {
+  className?: string;
+  priority?: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const visible = useInView(ref, "200px 0px 200px 0px");
 
@@ -21,7 +27,7 @@ export function MarketingAvatar({ className }: { className?: string }) {
 
   return (
     <div ref={ref} className={className}>
-      {visible ? (
+      {priority || visible ? (
         <AvatarStage agentTrack={null} state="listening" url={AVATAR_URL} />
       ) : null}
     </div>

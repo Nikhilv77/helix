@@ -99,6 +99,7 @@ export function InterviewerPresence({
 
       drawHalo(ctx!, cx, cy, radius, energy, current);
       drawOuterRing(ctx!, cx, cy, radius, phase, reduced);
+      drawThinkingOrbit(ctx!, cx, cy, radius, phase, current, reduced);
       drawSpectrum(ctx!, cx, cy, radius, agentAnalyser.current, energy, reduced);
       drawFigure(ctx!, cx, cy, radius, energy, phase, current, reduced);
       drawListeningArc(ctx!, cx, cy, radius, localSmoothed, current);
@@ -113,6 +114,37 @@ export function InterviewerPresence({
   }, [agentAnalyser, localAnalyser]);
 
   return <canvas ref={canvasRef} className="h-full w-full" aria-hidden="true" />;
+}
+
+/** Three restrained orbiting points make model latency read as active thought. */
+function drawThinkingOrbit(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  radius: number,
+  phase: number,
+  state: PresenceState,
+  reduced: boolean
+) {
+  if (state !== "thinking") return;
+
+  const orbit = radius * 1.38;
+  const rotation = reduced ? 0 : phase * 1.8;
+
+  for (let index = 0; index < 3; index += 1) {
+    const angle = rotation + (index / 3) * TAU - Math.PI / 2;
+    const pulse = reduced ? 1 : 0.72 + Math.sin(phase * 3 + index * 1.8) * 0.28;
+    ctx.fillStyle = `rgba(${CREAM}, ${0.3 + pulse * 0.45})`;
+    ctx.beginPath();
+    ctx.arc(
+      cx + Math.cos(angle) * orbit,
+      cy + Math.sin(angle) * orbit,
+      2.3 + pulse * 1.7,
+      0,
+      TAU
+    );
+    ctx.fill();
+  }
 }
 
 function drawHalo(

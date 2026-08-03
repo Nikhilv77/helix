@@ -92,7 +92,7 @@ export function advance(
   return {
     state: {
       ...state,
-      phase: outOfQuestions || outOfTime ? "wrap" : "questioning",
+      phase: outOfQuestions || outOfTime ? "done" : "questioning",
       questionIndex,
       followUpCount: 0
     },
