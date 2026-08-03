@@ -1,10 +1,67 @@
-export type ProjectStatus = "ACTIVE" | "ARCHIVED";
+export type Role = "backend" | "frontend" | "fullstack" | "data" | "ai-ml" | "pm";
+export type Level = "fresher" | "0-2" | "3-5" | "5-plus";
+export type RoundType = "behavioral" | "technical" | "hiring-manager";
+export type Intensity = "friendly" | "realistic" | "brutal";
 
-export type DesignSessionStatus =
-  "DRAFT" | "REQUIREMENTS_PENDING" | "READY_FOR_DESIGN" | "GENERATING" | "COMPLETED" | "FAILED";
+export interface InterviewSetup {
+  role: Role;
+  level: Level;
+  roundType: RoundType;
+  intensity: Intensity;
+  context: string;
+}
 
-export type JsonValue =
-  string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type Phase = "intro" | "questioning" | "wrap" | "done";
+export type Speaker = "agent" | "user";
+export type DecisionAction = "probe" | "challenge" | "move_on";
+export type MissingDimension = "structure" | "specificity" | "ownership" | "outcome" | "none";
+export type ForcedReason = "follow-up-budget" | "soft-time" | "hard-time";
+
+export type TurnAction = DecisionAction | "interrupt" | "intro";
+
+/** Timestamps are milliseconds from session start. */
+export interface Turn {
+  speaker: Speaker;
+  text: string;
+  startMs: number;
+  endMs: number;
+  /** Display metadata on agent turns, so a reload renders the same annotations. */
+  action?: TurnAction;
+  forcedBy?: ForcedReason | null;
+  questionIndex?: number;
+}
+
+export interface StartResponse {
+  sessionId: string;
+  phase: Phase;
+  questionCount: number;
+  questionIndex: number;
+  startedAt: number;
+  utterance: string;
+}
+
+export interface DecideResponse {
+  action: DecisionAction;
+  utterance: string;
+  missing: MissingDimension;
+  forcedBy: ForcedReason | null;
+  phase: Phase;
+  questionIndex: number;
+  questionCount: number;
+  followUpCount: number;
+  elapsedMs: number;
+}
+
+export interface SessionResponse {
+  sessionId: string;
+  phase: Phase;
+  questionIndex: number;
+  questionCount: number;
+  followUpCount: number;
+  startedAt: number;
+  setup: InterviewSetup;
+  turns: Turn[];
+}
 
 export interface ApiSuccessResponse<TData> {
   success: true;
@@ -21,284 +78,5 @@ export interface ApiErrorResponse {
     details: Record<string, unknown>;
   };
   timestamp: string;
-  path: string;
-}
-
-export interface PaginationMeta {
-  pagination?: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
-
-export interface Project {
-  id: string;
-  ownerId: string;
-  name: string;
-  description: string | null;
-  status: ProjectStatus;
-  archivedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface DesignSession {
-  id: string;
-  projectId: string;
-  title: string;
-  problemStatement: string;
-  status: DesignSessionStatus;
-  currentStep: string | null;
-  failureCode: string | null;
-  failureMessage: string | null;
-  requirementAnalysis: RequirementAnalysis | null;
-  clarificationAnswers: ClarificationAnswer[] | null;
-  requirementsAnalyzedAt: string | null;
-  capacityCalculation: CapacityCalculation | null;
-  capacityCalculatedAt: string | null;
-  generatedDesign: GeneratedDesign | null;
-  designGeneratedAt: string | null;
-  architectureDiagram: ArchitectureDiagram | null;
-  diagramGeneratedAt: string | null;
-  designValidation: DesignValidation | null;
-  designValidatedAt: string | null;
-  startedAt: string | null;
-  completedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface RequirementItem {
-  id: string;
-  requirement: string;
-  priority?: "MUST" | "SHOULD" | "COULD";
-}
-
-export interface NonFunctionalRequirement {
-  id: string;
-  category: string;
-  requirement: string;
-  target: string | null;
-}
-
-export interface ScaleInputs {
-  expectedUsers: string | null;
-  requestRate: string | null;
-  storage: string | null;
-  regions: string | null;
-  availabilityTarget: string | null;
-  latencyTarget: string | null;
-  notes: string[];
-}
-
-export interface ClarificationQuestion {
-  id: string;
-  question: string;
-  reason: string;
-  options?: string[];
-}
-
-export interface RequirementAnalysis {
-  productSummary: string;
-  functionalRequirements: RequirementItem[];
-  nonFunctionalRequirements: NonFunctionalRequirement[];
-  assumptions: string[];
-  scaleInputs: ScaleInputs;
-  constraints: string[];
-  missingInformation: string[];
-  clarificationQuestions: ClarificationQuestion[];
-}
-
-export interface ClarificationAnswer {
-  questionId: string;
-  question: string;
-  answer: string;
-  answeredAt: string;
-}
-
-export interface RequirementsResponse {
-  designSessionId: string;
-  status: DesignSessionStatus;
-  analysis: RequirementAnalysis | null;
-  clarificationAnswers: ClarificationAnswer[];
-  analyzedAt: string | null;
-}
-
-export interface MetricValue {
-  raw: number;
-  display: string;
-  unit: string;
-}
-
-export interface CapacityCalculation {
-  toolName: "capacity-calculator";
-  inputs: Record<string, number | string>;
-  results: {
-    dailyActiveUsers: MetricValue;
-    averageRequestsPerSecond: MetricValue;
-    peakRequestsPerSecond: MetricValue;
-    readQps: MetricValue;
-    writeQps: MetricValue;
-    dailyBandwidth: MetricValue;
-    monthlyBandwidth: MetricValue;
-    monthlyStorageGrowth: MetricValue;
-    retainedStorageEstimate: MetricValue;
-  };
-  assumptions: string[];
-  warnings: string[];
-}
-
-export interface CapacityResponse {
-  designSessionId: string;
-  status: DesignSessionStatus;
-  calculation: CapacityCalculation | null;
-  calculatedAt: string | null;
-}
-
-export interface NamedRecommendation {
-  name: string;
-  recommendation: string;
-  reasoning: string;
-}
-
-export interface DescriptionItem {
-  name: string;
-  description: string;
-}
-
-export interface GeneratedDesign {
-  architectureSummary: string;
-  productWorkspace?: {
-    idea: {
-      name: string;
-      summary: string;
-      targetUsers: string;
-      primaryValue: string;
-    };
-    requirements: Array<{
-      label: string;
-      detail: string;
-      priority: string;
-    }>;
-    userFlow: Array<{
-      step: string;
-      actor: string;
-      action: string;
-      systemResponse: string;
-    }>;
-    uiSurfaces: Array<{
-      name: string;
-      purpose: string;
-      keyElements: string[];
-    }>;
-    backendServices: Array<{
-      name: string;
-      responsibility: string;
-      trigger: string;
-    }>;
-    databasePlan: Array<{
-      name: string;
-      stores: string;
-      accessPattern: string;
-    }>;
-    apiPlan: Array<{
-      method: string;
-      path: string;
-      purpose: string;
-    }>;
-    architectureHighlights: DescriptionItem[];
-    roadmap: Array<{
-      phase: string;
-      goal: string;
-      deliverables: string[];
-    }>;
-    exportArtifacts: Array<{
-      name: string;
-      format: string;
-      contents: string[];
-    }>;
-  };
-  majorComponents: Array<{
-    name: string;
-    responsibilities: string[];
-  }>;
-  apiRecommendations: NamedRecommendation[];
-  databaseChoices: NamedRecommendation[];
-  cachingStrategy: NamedRecommendation[];
-  messagingAndAsyncProcessing: NamedRecommendation[];
-  storageStrategy: NamedRecommendation[];
-  scalabilityApproach: DescriptionItem[];
-  reliabilityAndFailureHandling: DescriptionItem[];
-  security: DescriptionItem[];
-  observability: DescriptionItem[];
-  deploymentApproach: DescriptionItem[];
-  technologyChoices: Array<{
-    category: string;
-    choice: string;
-    reasoning: string;
-    alternativesConsidered: string[];
-  }>;
-  assumptions: string[];
-  tradeOffs: DescriptionItem[];
-  risks: DescriptionItem[];
-  retrievedSourceReferences: Array<{
-    chunkId: string;
-    documentId: string;
-    documentTitle: string;
-    sourceUrl: string | null;
-    similarity: number;
-    usedFor: string;
-  }>;
-}
-
-export interface GeneratedDesignResponse {
-  designSessionId: string;
-  status: DesignSessionStatus;
-  design: GeneratedDesign | null;
-  generatedAt: string | null;
-}
-
-export interface ArchitectureDiagram {
-  type: "flowchart";
-  direction: "TD";
-  mermaid: string;
-  generatedAt: string;
-}
-
-export interface DiagramResponse {
-  designSessionId: string;
-  diagram: ArchitectureDiagram | null;
-  generatedAt: string | null;
-}
-
-export interface ValidationFinding {
-  category: string;
-  message: string;
-  recommendation?: string;
-}
-
-export interface DesignValidation {
-  overallScore: number;
-  categoryScores: Array<{
-    category: string;
-    score: number;
-    summary: string;
-  }>;
-  criticalIssues: ValidationFinding[];
-  warnings: ValidationFinding[];
-  missingAreas: ValidationFinding[];
-  improvementSuggestions: ValidationFinding[];
-  strengths: ValidationFinding[];
-  unresolvedAssumptions: string[];
-  deterministicReview?: JsonValue;
-  aiReview?: JsonValue;
-  validatedAt: string;
-}
-
-export interface ValidationResponse {
-  designSessionId: string;
-  validation: DesignValidation | null;
-  validatedAt: string | null;
+  path?: string;
 }

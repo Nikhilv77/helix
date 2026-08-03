@@ -1,0 +1,425 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { HelixMark } from "@/components/helix-mark";
+import { ApiClientError, startInterview } from "@/lib/api-client";
+import type { Intensity, InterviewSetup, Level, Role, RoundType } from "@/lib/types";
+
+const roleOptions: Array<{ value: Role; label: string }> = [
+  { value: "backend", label: "Backend" },
+  { value: "frontend", label: "Frontend" },
+  { value: "fullstack", label: "Full-stack" },
+  { value: "data", label: "Data" },
+  { value: "ai-ml", label: "AI / ML" },
+  { value: "pm", label: "Product" }
+];
+
+const levelOptions: Array<{ value: Level; label: string }> = [
+  { value: "fresher", label: "Fresher" },
+  { value: "0-2", label: "0–2 yrs" },
+  { value: "3-5", label: "3–5 yrs" },
+  { value: "5-plus", label: "5+ yrs" }
+];
+
+const roundOptions: Array<{ value: RoundType; label: string; hint: string }> = [
+  { value: "behavioral", label: "Behavioral", hint: "Ownership, conflict, judgement" },
+  { value: "technical", label: "Technical deep-dive", hint: "How you built it, and why" },
+  { value: "hiring-manager", label: "Hiring manager", hint: "Impact, scope, trade-offs" }
+];
+
+const intensityOptions: Array<{ value: Intensity; label: string; hint: string }> = [
+  { value: "friendly", label: "Friendly", hint: "Warm, but still follows up" },
+  { value: "realistic", label: "Realistic", hint: "Neutral and direct" },
+  { value: "brutal", label: "Brutal", hint: "Names the gap, no softening" }
+];
+
+const MIN_CONTEXT = 10;
+const TOTAL_STEPS = 5;
+
+const startingLabels = [
+  "Reading your experience",
+  "Writing your questions",
+  "Setting the room"
+];
+
+export default function InterviewSetupPage() {
+  const router = useRouter();
+  const [step, setStep] = useState(0);
+  const [role, setRole] = useState<Role | null>(null);
+  const [level, setLevel] = useState<Level | null>(null);
+  const [roundType, setRoundType] = useState<RoundType | null>(null);
+  const [intensity, setIntensity] = useState<Intensity | null>(null);
+  const [context, setContext] = useState("");
+  const [starting, setStarting] = useState(false);
+  const [startingLabel, setStartingLabel] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  const answered = useMemo(
+    () =>
+      [
+        { label: "Role", value: roleOptions.find((o) => o.value === role)?.label },
+        { label: "Level", value: levelOptions.find((o) => o.value === level)?.label },
+        { label: "Round", value: roundOptions.find((o) => o.value === roundType)?.label },
+        { label: "Intensity", value: intensityOptions.find((o) => o.value === intensity)?.label }
+      ].filter((item): item is { label: string; value: string } => Boolean(item.value)),
+    [intensity, level, role, roundType]
+  );
+
+  const canContinue =
+    step === 0
+      ? role !== null
+      : step === 1
+        ? level !== null
+        : step === 2
+          ? roundType !== null
+          : step === 3
+            ? intensity !== null
+            : context.trim().length >= MIN_CONTEXT;
+
+  const begin = useCallback(async () => {
+    if (!role || !level || !roundType || !intensity) return;
+
+    const setup: InterviewSetup = { role, level, roundType, intensity, context: context.trim() };
+
+    setStarting(true);
+    setError(null);
+
+    try {
+      const session = await startInterview(setup);
+      router.push(`/interview/voice?session=${session.sessionId}`);
+    } catch (caught) {
+      setError(
+        caught instanceof ApiClientError
+          ? caught.message
+          : "The interview could not be started. Try again."
+      );
+      setStarting(false);
+    }
+  }, [context, intensity, level, role, roundType, router]);
+
+  const next = useCallback(() => {
+    if (!canContinue) return;
+    if (step < TOTAL_STEPS - 1) {
+      setStep((current) => current + 1);
+      return;
+    }
+    void begin();
+  }, [begin, canContinue, step]);
+
+  /** Selecting advances on a short beat so the choice visibly registers. */
+  const choose = useCallback((apply: () => void) => {
+    apply();
+    window.setTimeout(() => setStep((current) => Math.min(TOTAL_STEPS - 1, current + 1)), 220);
+  }, []);
+
+  // Cycle the label while the planner writes the questions.
+  useEffect(() => {
+    if (!starting) return;
+    const timer = window.setInterval(
+      () => setStartingLabel((current) => (current + 1) % startingLabels.length),
+      1400
+    );
+    return () => window.clearInterval(timer);
+  }, [starting]);
+
+  // Number keys pick an option; Enter continues. Disabled on the text step.
+  useEffect(() => {
+    if (starting) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Enter" && (event.metaKey || step < 4)) {
+        event.preventDefault();
+        next();
+        return;
+      }
+
+      if (step >= 4 || event.metaKey || event.ctrlKey) return;
+
+      const index = Number(event.key) - 1;
+      if (Number.isNaN(index) || index < 0) return;
+
+      const role = roleOptions[index];
+      const level = levelOptions[index];
+      const round = roundOptions[index];
+      const intensityOption = intensityOptions[index];
+
+      if (step === 0 && role) choose(() => setRole(role.value));
+      if (step === 1 && level) choose(() => setLevel(level.value));
+      if (step === 2 && round) choose(() => setRoundType(round.value));
+      if (step === 3 && intensityOption) choose(() => setIntensity(intensityOption.value));
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [choose, next, starting, step]);
+
+  return (
+    <main className="blueprint relative flex min-h-screen flex-col overflow-hidden">
+      <div className="blueprint-glow" />
+
+      <header className="relative z-10 mx-auto flex w-full max-w-3xl items-center gap-4 px-6 pt-7">
+        <Link href="/" className="flex items-center gap-2.5 text-cream">
+          <HelixMark className="h-7 w-7" />
+          <span className="text-base font-semibold tracking-tight">Helix</span>
+        </Link>
+
+        <div className="ml-auto flex items-center gap-2.5">
+          {Array.from({ length: TOTAL_STEPS }, (_, index) => (
+            <span
+              key={index}
+              className={[
+                "h-1 rounded-full transition-all duration-500",
+                index < step ? "w-8 bg-cream/80" : index === step ? "w-8 bg-cream" : "w-4 bg-cream/20"
+              ].join(" ")}
+            />
+          ))}
+        </div>
+      </header>
+
+      <div className="relative z-10 flex flex-1 items-center justify-center px-6 py-10">
+        <div className="w-full max-w-3xl">
+          {starting ? (
+            <StartingState label={startingLabels[startingLabel] ?? startingLabels[0] ?? ""} />
+          ) : (
+            <div key={step} className="step-in">
+              <p className="blueprint-label text-cream/40">
+                {String(step + 1).padStart(2, "0")} / {String(TOTAL_STEPS).padStart(2, "0")}
+              </p>
+
+              <h1
+                className="display-heading mt-4 max-w-2xl text-cream"
+                style={{ fontSize: "clamp(2rem, 4.6vw, 3.25rem)" }}
+              >
+                {step === 0 ? "What role are you interviewing for?" : null}
+                {step === 1 ? "How much experience do you have?" : null}
+                {step === 2 ? "Which round is this?" : null}
+                {step === 3 ? "How hard should it be?" : null}
+                {step === 4 ? "What have you actually worked on?" : null}
+              </h1>
+
+              {step === 4 ? (
+                <p className="mt-4 max-w-xl text-[15px] leading-7 text-cream/55">
+                  One or two lines. Every question is written from this, so name the real systems
+                  and the real numbers.
+                </p>
+              ) : null}
+
+              <div className="mt-9">
+                {step === 0 ? (
+                  <OptionGrid
+                    options={roleOptions}
+                    selected={role}
+                    columns={3}
+                    onSelect={(value) => choose(() => setRole(value))}
+                  />
+                ) : null}
+
+                {step === 1 ? (
+                  <OptionGrid
+                    options={levelOptions}
+                    selected={level}
+                    columns={4}
+                    onSelect={(value) => choose(() => setLevel(value))}
+                  />
+                ) : null}
+
+                {step === 2 ? (
+                  <OptionGrid
+                    options={roundOptions}
+                    selected={roundType}
+                    columns={1}
+                    onSelect={(value) => choose(() => setRoundType(value))}
+                  />
+                ) : null}
+
+                {step === 3 ? (
+                  <OptionGrid
+                    options={intensityOptions}
+                    selected={intensity}
+                    columns={1}
+                    onSelect={(value) => choose(() => setIntensity(value))}
+                  />
+                ) : null}
+
+                {step === 4 ? (
+                  <div>
+                    <textarea
+                      value={context}
+                      onChange={(event) => setContext(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                          event.preventDefault();
+                          next();
+                        }
+                      }}
+                      rows={4}
+                      autoFocus
+                      maxLength={1200}
+                      placeholder="Rebuilt the payments retry pipeline at a fintech — idempotency keys, dead-letter queues, cut p99 by 40%."
+                      className="w-full resize-none rounded-2xl border border-cream/25 bg-white/[0.06] p-5 text-[17px] leading-8 text-cream outline-none transition placeholder:text-cream/25 focus:border-cream/60 focus:bg-white/[0.09]"
+                    />
+                    <div className="mt-2.5 flex items-center justify-between">
+                      <p className="font-mono text-[11px] text-cream/35">
+                        {context.trim().length < MIN_CONTEXT
+                          ? `${MIN_CONTEXT - context.trim().length} more characters`
+                          : "Looks good"}
+                      </p>
+                      <p className="font-mono text-[11px] text-cream/30">
+                        {context.trim().length} / 1200
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              {error ? (
+                <p className="mt-6 rounded-xl border border-[#dd5f5f]/45 bg-[#dd5f5f]/10 px-4 py-3 text-sm text-cream">
+                  {error}
+                </p>
+              ) : null}
+
+              <div className="mt-10 flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setStep((current) => Math.max(0, current - 1))}
+                  disabled={step === 0}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-cream/55 transition hover:text-cream disabled:pointer-events-none disabled:opacity-0"
+                >
+                  <ArrowLeft size={15} aria-hidden="true" />
+                  Back
+                </button>
+
+                <button
+                  type="button"
+                  onClick={next}
+                  disabled={!canContinue}
+                  className="ml-auto inline-flex min-h-12 items-center gap-2.5 rounded-xl border border-cream bg-cream px-6 text-sm font-semibold text-blueprint transition hover:-translate-y-0.5 hover:bg-white disabled:pointer-events-none disabled:opacity-30"
+                >
+                  {step === TOTAL_STEPS - 1 ? "Start interview" : "Continue"}
+                  <ArrowRight size={16} aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <footer className="relative z-10 mx-auto flex w-full max-w-3xl flex-wrap items-center gap-3 px-6 pb-8">
+        {answered.length > 0 && !starting ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {answered.map((item) => (
+              <span
+                key={item.label}
+                className="inline-flex items-center gap-1.5 rounded-full border border-cream/20 bg-white/5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-cream/60"
+              >
+                <Check size={11} aria-hidden="true" />
+                {item.value}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
+        <p className="ml-auto font-mono text-[10px] uppercase tracking-[0.16em] text-cream/25">
+          {step < 4 ? "Press 1–6 to choose · Enter to continue" : "⌘ + Enter to start"}
+        </p>
+      </footer>
+    </main>
+  );
+}
+
+function StartingState({ label }: { label: string }) {
+  const bars = Array.from({ length: 20 }, (_, index) => 30 + Math.abs(Math.sin(index * 0.7)) * 60);
+
+  return (
+    <div className="step-in flex flex-col items-center py-10 text-center">
+      <span className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-cream/25 bg-cream/5 text-cream">
+        <span className="ring-pulse absolute inset-0 rounded-2xl border border-cream/50" />
+        <HelixMark className="h-9 w-9" />
+      </span>
+
+      <div className="mt-8 flex h-10 items-center justify-center gap-1.5" aria-hidden="true">
+        {bars.map((height, index) => (
+          <span
+            key={index}
+            className="wave-bar w-1.5 rounded-full bg-cream/45"
+            style={{ height: `${height}%`, animationDelay: `${index * 70}ms` }}
+          />
+        ))}
+      </div>
+
+      <p className="mt-8 text-xl font-semibold tracking-tight text-cream">{label}</p>
+      <p className="mt-2 flex items-center gap-2 text-sm text-cream/50">
+        <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+        This takes a few seconds
+      </p>
+    </div>
+  );
+}
+
+function OptionGrid<TValue extends string>({
+  options,
+  selected,
+  onSelect,
+  columns
+}: {
+  options: Array<{ value: TValue; label: string; hint?: string }>;
+  selected: TValue | null;
+  onSelect: (value: TValue) => void;
+  columns: 1 | 3 | 4;
+}) {
+  const grid =
+    columns === 1
+      ? "grid gap-3"
+      : columns === 4
+        ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        : "grid gap-3 sm:grid-cols-2 lg:grid-cols-3";
+
+  return (
+    <div className={grid}>
+      {options.map((option, index) => {
+        const active = option.value === selected;
+
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onSelect(option.value)}
+            aria-pressed={active}
+            className={[
+              "step-in group flex items-center gap-3.5 rounded-2xl border px-5 py-4 text-left transition duration-200",
+              active
+                ? "border-cream bg-cream text-blueprint"
+                : "border-cream/20 bg-white/[0.04] text-cream hover:-translate-y-0.5 hover:border-cream/55 hover:bg-white/[0.08]"
+            ].join(" ")}
+            style={{ "--step-delay": `${60 + index * 45}ms` } as React.CSSProperties}
+          >
+            <span
+              className={[
+                "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border font-mono text-[11px] transition",
+                active
+                  ? "border-blueprint/25 bg-blueprint/10 text-blueprint"
+                  : "border-cream/20 text-cream/45 group-hover:border-cream/40 group-hover:text-cream/80"
+              ].join(" ")}
+            >
+              {active ? <Check size={13} aria-hidden="true" /> : index + 1}
+            </span>
+
+            <span className="min-w-0">
+              <span className="block text-base font-semibold tracking-tight">{option.label}</span>
+              {option.hint ? (
+                <span
+                  className={`mt-0.5 block text-sm leading-5 ${active ? "text-blueprint/65" : "text-cream/45"}`}
+                >
+                  {option.hint}
+                </span>
+              ) : null}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}

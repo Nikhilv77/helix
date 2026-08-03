@@ -45,7 +45,9 @@ describe("validateEnvironment", () => {
       knowledgeEmbeddingDimensions: 32,
       knowledgeEmbeddingBatchSize: 4,
       retrievalDefaultTopK: 7,
-      retrievalMinSimilarity: 0.35
+      retrievalMinSimilarity: 0.35,
+      groqDeciderModel: "openai/gpt-oss-20b",
+      interviewDailyLimit: 2
     });
   });
 

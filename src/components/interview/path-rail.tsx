@@ -1,0 +1,97 @@
+"use client";
+
+import { Check } from "lucide-react";
+import type { Phase } from "@/lib/types";
+
+const MAX_FOLLOW_UPS = 2;
+
+interface PathRailProps {
+  phase: Phase;
+  questionIndex: number;
+  questionCount: number;
+  followUpCount: number;
+}
+
+type NodeState = "done" | "active" | "upcoming";
+
+/**
+ * The interview path.
+ *
+ * Deliberately shows position and nothing else — the planned question text is
+ * available in state, but revealing what is coming would let the candidate
+ * prepare, which is the whole thing this product is trying to prevent.
+ */
+export function PathRail({ phase, questionIndex, questionCount, followUpCount }: PathRailProps) {
+  const finished = phase === "done";
+
+  function stateFor(index: number): NodeState {
+    if (finished) return "done";
+    if (phase === "wrap") return "done";
+    if (index < questionIndex) return "done";
+    if (index === questionIndex) return "active";
+    return "upcoming";
+  }
+
+  const wrapState: NodeState = finished ? "done" : phase === "wrap" ? "active" : "upcoming";
+
+  return (
+    <div className="flex items-center gap-2.5">
+      {Array.from({ length: questionCount }, (_, index) => {
+        const state = stateFor(index);
+
+        return (
+          <div key={index} className="flex items-center gap-2.5">
+            <Node state={state} label={String(index + 1)} />
+            {state === "active" ? <FollowUpPips used={followUpCount} /> : null}
+            {index < questionCount - 1 ? <Connector filled={state === "done"} /> : null}
+          </div>
+        );
+      })}
+
+      <Connector filled={phase === "wrap" || finished} />
+      <Node state={wrapState} label="W" title="Wrap" />
+    </div>
+  );
+}
+
+function Node({ state, label, title }: { state: NodeState; label: string; title?: string }) {
+  const styles =
+    state === "done"
+      ? "border-cream/70 bg-cream/70 text-blueprint"
+      : state === "active"
+        ? "border-cream bg-cream text-blueprint shadow-[0_0_0_4px_rgba(239,232,214,0.14)]"
+        : "border-cream/25 text-cream/35";
+
+  return (
+    <span
+      title={title}
+      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-mono text-[10px] transition-all duration-300 ${styles}`}
+    >
+      {state === "done" ? <Check size={11} aria-hidden="true" /> : label}
+    </span>
+  );
+}
+
+function Connector({ filled }: { filled: boolean }) {
+  return (
+    <span
+      className={`h-px w-4 shrink-0 transition-colors duration-300 ${filled ? "bg-cream/50" : "bg-cream/15"}`}
+    />
+  );
+}
+
+/** How much of the follow-up budget this question has burned. */
+function FollowUpPips({ used }: { used: number }) {
+  return (
+    <span className="flex items-center gap-1" title={`${used} of ${MAX_FOLLOW_UPS} follow-ups`}>
+      {Array.from({ length: MAX_FOLLOW_UPS }, (_, index) => (
+        <span
+          key={index}
+          className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
+            index < used ? "bg-[#e0a13c]" : "bg-cream/20"
+          }`}
+        />
+      ))}
+    </span>
+  );
+}

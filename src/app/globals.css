@@ -22,6 +22,7 @@
 body {
   margin: 0;
   min-height: 100vh;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   background:
     radial-gradient(circle at 18% 10%, rgba(226, 232, 240, 0.1), transparent 27rem),
     radial-gradient(circle at 82% 14%, rgba(148, 163, 184, 0.075), transparent 25rem),
@@ -156,86 +157,304 @@ select {
   position: absolute;
 }
 
-.marketing-shell {
-  background:
-    linear-gradient(120deg, rgba(226, 232, 240, 0.095), transparent 30%),
-    linear-gradient(260deg, rgba(148, 163, 184, 0.065), transparent 36%),
-    linear-gradient(145deg, #07080c 0%, #10141b 46%, #07080c 100%);
-}
+/* ---------------------------------------------------------------------------
+   Blueprint theme — scoped to the marketing home page.
+   --------------------------------------------------------------------------- */
 
-.marketing-shell::before {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 96px 96px;
-  mask-image: linear-gradient(90deg, transparent, black 18%, black 82%, transparent);
-  content: "";
-  opacity: 0.28;
-}
-
-.marketing-shell::after {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 0%, rgba(7, 8, 12, 0.68) 100%);
-  content: "";
-}
-
-.marketing-shell > * {
+.blueprint {
+  --bp-blue: #22409b;
+  --bp-blue-deep: #1b3480;
+  --bp-cream: #efe8d6;
   position: relative;
-  z-index: 1;
+  isolation: isolate;
+  background-color: var(--bp-blue);
+  color: var(--bp-cream);
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  overflow-x: clip;
 }
 
-.full-bleed-page {
-  margin-left: calc(50% - 50vw);
-  margin-right: calc(50% - 50vw);
-  margin-top: -2rem;
-  width: 100vw;
-}
-
-.preview-node {
+/* Fine + coarse blueprint grid, plus a soft top vignette. */
+.blueprint-grid {
+  pointer-events: none;
   position: absolute;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0.75rem;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.035));
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.26);
-  padding: 1.25rem;
-  backdrop-filter: blur(18px);
+  inset: 0;
+  z-index: 0;
+  background-image:
+    linear-gradient(90deg, rgba(239, 232, 214, 0.1) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(239, 232, 214, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(239, 232, 214, 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(239, 232, 214, 0.045) 1px, transparent 1px);
+  background-size:
+    112px 112px,
+    112px 112px,
+    28px 28px,
+    28px 28px;
+  background-position: center top;
 }
 
-.preview-node-primary {
-  background: linear-gradient(180deg, rgba(226, 232, 240, 0.105), rgba(255, 255, 255, 0.04));
-}
-
-.architecture-line {
+/*
+ * Ambient background for the app surfaces (setup, interview, loader).
+ * The blueprint grid stays on marketing, where it sits behind display type —
+ * at app density it competes with the content, so these screens get soft
+ * light instead.
+ */
+.blueprint-glow {
+  pointer-events: none;
   position: absolute;
-  height: 1px;
-  transform-origin: left center;
-  background: linear-gradient(90deg, transparent, rgba(232, 237, 246, 0.34), transparent);
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(58rem 38rem at 50% -12%, rgba(126, 160, 255, 0.26), transparent 68%),
+    radial-gradient(42rem 30rem at 92% 108%, rgba(88, 122, 224, 0.2), transparent 70%),
+    radial-gradient(34rem 26rem at 4% 92%, rgba(126, 160, 255, 0.14), transparent 70%);
 }
 
-.architecture-line-a {
-  left: 23%;
-  top: 41%;
-  width: 42%;
-  transform: rotate(-16deg);
+/* Scrollbars styled to the palette. The OS default reads as a grey gash
+   against the blueprint blue. */
+.thin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(239, 232, 214, 0.22) transparent;
 }
 
-.architecture-line-b {
-  left: 27%;
-  top: 52%;
-  width: 46%;
-  transform: rotate(14deg);
+.thin-scroll::-webkit-scrollbar {
+  width: 10px;
 }
 
-.architecture-line-c {
-  left: 36%;
-  top: 73%;
-  width: 31%;
-  transform: rotate(-28deg);
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thin-scroll::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 9999px;
+  background: rgba(239, 232, 214, 0.18);
+  background-clip: content-box;
+}
+
+.thin-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(239, 232, 214, 0.38);
+  background-clip: content-box;
+}
+
+/* Messages dissolve under the header instead of being sliced by it. */
+.fade-top {
+  mask-image: linear-gradient(to bottom, transparent 0, #000 3.5rem, #000 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 3.5rem, #000 100%);
+}
+
+/* Transcript entries. */
+@keyframes msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.msg-in {
+  animation: msg-in 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dot-bounce {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
+.typing-dot {
+  animation: dot-bounce 1.2s ease-in-out infinite;
+}
+
+/* Step transitions for the guided setup. */
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.step-in {
+  animation: step-in 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--step-delay, 0ms);
+}
+
+/* The two brighter rules that frame the content column. */
+.blueprint-rails {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.blueprint-rails::before,
+.blueprint-rails::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(239, 232, 214, 0.14);
+  content: "";
+}
+
+.blueprint-rails::before {
+  left: max(1.5rem, calc(50% - 41rem));
+}
+
+.blueprint-rails::after {
+  right: max(1.5rem, calc(50% - 41rem));
+}
+
+.blueprint-label {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.wordmark {
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 0.86;
+  text-shadow: 0.055em 0.07em 0 rgba(13, 28, 78, 0.55);
+}
+
+.display-heading {
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 0.94;
+  text-shadow: 0.03em 0.04em 0 rgba(13, 28, 78, 0.42);
+}
+
+/* Hero content reacts to scroll via --p, set by the page in rAF. */
+.hero-parallax {
+  opacity: clamp(0, calc(1 - var(--p, 0) * 1.35), 1);
+  transform: translateY(calc(var(--p, 0) * -60px)) scale(calc(1 - var(--p, 0) * 0.07));
+  will-change: transform, opacity;
+}
+
+.hero-art {
+  transform: translateY(calc(var(--p, 0) * 90px)) rotate(calc(var(--p, 0) * 14deg));
+  will-change: transform;
+}
+
+/* Scroll reveal. */
+@keyframes bp-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.reveal {
+  opacity: 0;
+}
+
+.reveal.is-visible {
+  animation: bp-reveal 780ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+
+/* Pinned note cards. */
+.note-card {
+  position: relative;
+  transition:
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform: rotate(var(--tilt, 0deg));
+}
+
+.note-card:hover {
+  transform: rotate(0deg) translateY(-8px);
+}
+
+.note-pin {
+  position: absolute;
+  top: -0.75rem;
+  left: 50%;
+  height: 1.375rem;
+  width: 1.375rem;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle at 32% 28%,
+    rgba(255, 255, 255, 0.92),
+    var(--pin, #d94f4f) 46%,
+    rgba(0, 0, 0, 0.45)
+  );
+  box-shadow:
+    0 6px 12px rgba(9, 21, 60, 0.45),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.28);
+}
+
+/* Live audio bars — used in the hero, product mock, and the app loader. */
+@keyframes bar-pulse {
+  0%,
+  100% {
+    transform: scaleY(0.28);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.wave-bar {
+  transform-origin: center;
+  animation: bar-pulse 1150ms ease-in-out infinite;
+}
+
+@keyframes ring-pulse {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.45);
+  }
+}
+
+.ring-pulse {
+  animation: ring-pulse 1800ms cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.ghost-button {
+  transition:
+    background 260ms ease,
+    border-color 260ms ease,
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ghost-button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(239, 232, 214, 0.85);
+  background: rgba(239, 232, 214, 0.1);
+}
+
+.ghost-button svg {
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ghost-button:hover svg {
+  transform: translateX(4px);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -246,5 +465,25 @@ select {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .hero-parallax,
+  .hero-art,
+  .note-card {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .wave-bar {
+    transform: scaleY(0.7) !important;
+  }
+
+  .step-in {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .reveal {
+    opacity: 1 !important;
   }
 }

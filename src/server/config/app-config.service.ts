@@ -1,7 +1,14 @@
 import { EnvironmentConfig } from "./environment.schema";
 
-type AppConfigInput = Omit<EnvironmentConfig, "clerkSecretKey"> & {
+type AppConfigInput = Omit<
+  EnvironmentConfig,
+  "clerkSecretKey" | "groqApiKey" | "livekitUrl" | "livekitApiKey" | "livekitApiSecret"
+> & {
   clerkSecretKey?: EnvironmentConfig["clerkSecretKey"];
+  groqApiKey?: EnvironmentConfig["groqApiKey"];
+  livekitUrl?: EnvironmentConfig["livekitUrl"];
+  livekitApiKey?: EnvironmentConfig["livekitApiKey"];
+  livekitApiSecret?: EnvironmentConfig["livekitApiSecret"];
 };
 
 export class AppConfigService {
@@ -81,6 +88,30 @@ export class AppConfigService {
 
   get retrievalMinSimilarity(): EnvironmentConfig["retrievalMinSimilarity"] {
     return this.config.retrievalMinSimilarity;
+  }
+
+  get interviewDailyLimit(): EnvironmentConfig["interviewDailyLimit"] {
+    return this.config.interviewDailyLimit;
+  }
+
+  get groqApiKey(): EnvironmentConfig["groqApiKey"] {
+    return this.config.groqApiKey;
+  }
+
+  get groqDeciderModel(): EnvironmentConfig["groqDeciderModel"] {
+    return this.config.groqDeciderModel;
+  }
+
+  get livekitUrl(): EnvironmentConfig["livekitUrl"] {
+    return this.config.livekitUrl;
+  }
+
+  get livekitApiKey(): EnvironmentConfig["livekitApiKey"] {
+    return this.config.livekitApiKey;
+  }
+
+  get livekitApiSecret(): EnvironmentConfig["livekitApiSecret"] {
+    return this.config.livekitApiSecret;
   }
 
   get clerkSecretKey(): string | undefined {

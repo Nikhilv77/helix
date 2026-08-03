@@ -1,0 +1,270 @@
+"""Helix voice agent.
+
+Architecture note: this service has no LLM and no interview state. It converts
+speech to text, hands the text to /api/interview/decide, and speaks whatever
+comes back. Every decision — probe, challenge, move on, when to stop — belongs
+to the Next.js app.
+
+The interview session id travels in the room name (`interview-<uuid>`), which
+the token endpoint mints.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import time
+
+import aiohttp
+from collections.abc import Awaitable, Callable
+from dotenv import load_dotenv
+from livekit import agents
+from livekit.agents import (
+    Agent,
+    AgentServer,
+    AgentSession,
+    UserInputTranscribedEvent,
+    UserStateChangedEvent,
+    llm,
+)
+from livekit.plugins import deepgram, silero
+
+from config import SPEECH
+from helix import HelixApiError, HelixClient
+
+load_dotenv(".env.local")
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("helix.agent")
+
+ROOM_PREFIX = "interview-"
+
+
+server = AgentServer()
+
+
+class Interviewer(Agent):
+    """A mouth, not a mind. Instructions are intentionally empty."""
+
+    def __init__(self, on_turn: Callable[[str], Awaitable[None]]) -> None:
+        super().__init__(instructions="")
+        self._on_turn = on_turn
+
+    async def on_user_turn_completed(
+        self, turn_ctx: llm.ChatContext, new_message: llm.ChatMessage
+    ) -> None:
+        """The framework's own end-of-turn signal.
+
+        Dispatching off raw VAD state changes was cutting answers off after the
+        first fragment: Deepgram finalises at every pause, so "Yeah. So" and "I"
+        arrived as separate complete answers. This fires once, after semantic
+        turn detection, with the whole utterance assembled.
+        """
+        text = (new_message.text_content or "").strip()
+        logger.info("end of turn: %r", text[:90])
+        if text:
+            await self._on_turn(text)
+        else:
+            logger.warning("end of turn with empty transcript")
+
+
+def session_id_from_room(room_name: str) -> str:
+    if not room_name.startswith(ROOM_PREFIX):
+        raise ValueError(f"room {room_name!r} is not an interview room")
+    return room_name[len(ROOM_PREFIX) :]
+
+
+@server.rtc_session(agent_name="helix-interviewer")
+async def interview_session(ctx: agents.JobContext) -> None:
+    try:
+        session_id = session_id_from_room(ctx.room.name)
+    except ValueError:
+        # LiveKit's console/test rooms get dispatched here too. Decline quietly
+        # rather than crashing the job.
+        logger.warning("declining non-interview room %r", ctx.room.name)
+        return
+
+    logger.info("joining interview %s", session_id)
+
+    http = aiohttp.ClientSession()
+
+    async def close_http() -> None:
+        await http.close()
+
+    ctx.add_shutdown_callback(close_http)
+
+    helix = HelixClient(http)
+    snapshot = await helix.get_session(session_id)
+
+    # No `llm=` argument at all. The parameter is NotGivenOr[...] and does
+    # not accept None — omitting it is how you run a session with no LLM,
+    # which is what keeps question generation out of this service.
+    session = AgentSession(
+        stt=deepgram.STT(
+            model=SPEECH.stt_model,
+            language=SPEECH.stt_language,
+            interim_results=True,
+            filler_words=SPEECH.stt_filler_words,
+            endpointing_ms=SPEECH.endpointing_ms,
+        ),
+        # Aura-2: the voice is baked into the model id, no `voice` param.
+        tts=deepgram.TTS(model=SPEECH.tts_model),
+        vad=silero.VAD.load(),
+        # Defaults (0.5s) are tuned for "what's the weather". A candidate
+        # recalling an incident pauses mid-answer, and cutting in there is what
+        # made this feel like it kept hanging up.
+        turn_handling={
+            "endpointing": {
+                "min_delay": SPEECH.turn_min_delay_s,
+                "max_delay": SPEECH.turn_max_delay_s,
+            }
+        },
+    )
+
+    state = TurnState(started_at_ms=snapshot.started_at)
+
+    @session.on("user_input_transcribed")
+    def _on_transcript(event: UserInputTranscribedEvent) -> None:
+        logger.info(
+            "STT %s: %r", "final" if event.is_final else "interim", event.transcript[:70]
+        )
+        state.note_transcript(event.transcript, event.is_final)
+
+    @session.on("conversation_item_added")
+    def _on_item(event: object) -> None:
+        logger.info("conversation item: %r", event)
+
+    # Only used to stamp when the answer began. The end of the turn comes from
+    # Interviewer.on_user_turn_completed, not from raw voice activity.
+    @session.on("user_state_changed")
+    def _on_user_state(event: UserStateChangedEvent) -> None:
+        logger.info("user state: %s -> %s", event.old_state, event.new_state)
+        if event.new_state == "speaking":
+            state.mark_speech_start()
+
+    async def on_turn(text: str) -> None:
+        await handle_turn(session, helix, session_id, state, text)
+
+    await session.start(room=ctx.room, agent=Interviewer(on_turn))
+
+    # The opening question was written by the planner when the session was
+    # created, so it is spoken verbatim rather than generated.
+    if snapshot.opening_utterance:
+        logger.info("speaking opening: %s", snapshot.opening_utterance[:80])
+        await session.say(snapshot.opening_utterance)
+        logger.info("opening delivered")
+    else:
+        logger.warning("no opening utterance on session %s", session_id)
+
+
+class TurnState:
+    """Accumulates one spoken answer and its wall-clock bounds."""
+
+    def __init__(self, started_at_ms: int) -> None:
+        self._session_start_ms = started_at_ms
+        self._finals: list[str] = []
+        self._partial = ""
+        self._speech_started_ms: int | None = None
+        self._busy = False
+
+
+    def _now_offset_ms(self) -> int:
+        return max(0, int(time.time() * 1000) - self._session_start_ms)
+
+    def mark_speech_start(self) -> None:
+        if self._speech_started_ms is None:
+            self._speech_started_ms = self._now_offset_ms()
+
+    def note_transcript(self, text: str, is_final: bool) -> None:
+        if is_final:
+            self._finals.append(text)
+            self._partial = ""
+        else:
+            self._partial = text
+
+    @property
+    def busy(self) -> bool:
+        return self._busy
+
+    def begin_dispatch(self, text: str) -> tuple[str, int, int] | None:
+        """Returns (answer, start_ms, end_ms) and clears the buffer."""
+        # The framework hands over the assembled turn; the local buffer is only
+        # a fallback for the rare case where it arrives empty.
+        answer = text.strip() or " ".join(p.strip() for p in self._finals if p.strip()).strip()
+
+        if not answer:
+            logger.info("no transcript to dispatch; ignoring turn")
+            return None
+
+        if self._busy:
+            logger.info("turn already in flight; ignoring")
+            return None
+
+        start_ms = self._speech_started_ms if self._speech_started_ms is not None else 0
+        end_ms = self._now_offset_ms()
+
+        self._finals.clear()
+        self._partial = ""
+        self._speech_started_ms = None
+        self._busy = True
+
+        return answer, start_ms, end_ms
+
+    def end_dispatch(self) -> None:
+        self._busy = False
+
+
+async def handle_turn(
+    session: AgentSession,
+    helix: HelixClient,
+    session_id: str,
+    state: TurnState,
+    text: str,
+) -> None:
+    dispatch = state.begin_dispatch(text)
+    if dispatch is None:
+        return
+
+    answer, start_ms, end_ms = dispatch
+    logger.info("answer (%dms): %s", end_ms - start_ms, answer[:80])
+
+    try:
+        decision = await helix.decide(session_id, answer, start_ms, end_ms)
+    except HelixApiError as error:
+        logger.error("decide failed: %s", error)
+        state.end_dispatch()
+        return
+    except asyncio.TimeoutError:
+        logger.error("decide timed out")
+        state.end_dispatch()
+        return
+    except Exception:
+        # These run in a fire-and-forget task, where an unhandled exception
+        # vanishes without a trace. Always log.
+        logger.exception("decide raised")
+        state.end_dispatch()
+        return
+
+    logger.info(
+        "decision action=%s q=%d/%d follow_ups=%d",
+        decision.action,
+        decision.question_index + 1,
+        decision.question_count,
+        decision.follow_up_count,
+    )
+
+    # Streams to the room as it synthesises; it does not wait for the full clip.
+    try:
+        await session.say(decision.utterance)
+    except Exception:
+        logger.exception("say failed")
+    finally:
+        state.end_dispatch()
+
+    if decision.phase == "done":
+        logger.info("interview complete, leaving room")
+        await session.aclose()
+
+
+if __name__ == "__main__":
+    agents.cli.run_app(server)

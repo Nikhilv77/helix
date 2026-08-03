@@ -74,7 +74,13 @@ export const environmentSchema = z
     KNOWLEDGE_EMBEDDING_BATCH_SIZE: z.coerce.number().int().min(1).max(100).default(16),
     RETRIEVAL_DEFAULT_TOP_K: z.coerce.number().int().min(1).max(50).default(5),
     RETRIEVAL_MIN_SIMILARITY: z.coerce.number().min(0).max(1).default(0.2),
-    CLERK_SECRET_KEY: z.string().optional()
+    CLERK_SECRET_KEY: z.string().optional(),
+    INTERVIEW_DAILY_LIMIT: z.coerce.number().int().min(1).max(100).default(2),
+    GROQ_API_KEY: z.string().optional(),
+    GROQ_DECIDER_MODEL: z.string().min(1).default("openai/gpt-oss-20b"),
+    LIVEKIT_URL: z.string().optional(),
+    LIVEKIT_API_KEY: z.string().optional(),
+    LIVEKIT_API_SECRET: z.string().optional()
   })
   .transform((env) => ({
     nodeEnv: env.NODE_ENV,
@@ -96,7 +102,13 @@ export const environmentSchema = z
     knowledgeEmbeddingBatchSize: env.KNOWLEDGE_EMBEDDING_BATCH_SIZE,
     retrievalDefaultTopK: env.RETRIEVAL_DEFAULT_TOP_K,
     retrievalMinSimilarity: env.RETRIEVAL_MIN_SIMILARITY,
-    clerkSecretKey: env.CLERK_SECRET_KEY
+    clerkSecretKey: env.CLERK_SECRET_KEY,
+    interviewDailyLimit: env.INTERVIEW_DAILY_LIMIT,
+    groqApiKey: env.GROQ_API_KEY,
+    groqDeciderModel: env.GROQ_DECIDER_MODEL,
+    livekitUrl: env.LIVEKIT_URL,
+    livekitApiKey: env.LIVEKIT_API_KEY,
+    livekitApiSecret: env.LIVEKIT_API_SECRET
   }));
 
 export type EnvironmentConfig = z.infer<typeof environmentSchema>;

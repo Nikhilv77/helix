@@ -4,7 +4,8 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: [".next", "coverage", "dist", "frontend", "node_modules"]
+    // `agent` is the Python service; its venv ships vendored JS.
+    ignores: [".next", "agent", "coverage", "dist", "frontend", "node_modules"]
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

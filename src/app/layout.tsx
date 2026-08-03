@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
-import { AuthenticatedShell } from "@/components/auth/authenticated-shell";
+import { auth } from "@clerk/nextjs/server";
+import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { ScrollRestoration } from "@/components/scroll-restoration";
 import "./globals.css";
 
@@ -15,30 +17,44 @@ export const metadata: Metadata = {
   }
 };
 
+const displayFont = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-display",
+  display: "swap"
+});
+
+const sansFont = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap"
+});
+
+const monoFont = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-mono",
+  display: "swap"
+});
+
+const fontVariables = `${displayFont.variable} ${sansFont.variable} ${monoFont.variable}`;
+
 const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
-function AppShell({ children }: { children: ReactNode }) {
-  return (
-    <div className="min-h-screen">
-      {clerkPublishableKey ? (
-        <AuthenticatedShell>{children}</AuthenticatedShell>
-      ) : (
-        <main>{children}</main>
-      )}
-    </div>
-  );
-}
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // Resolved on the server so the workspace chrome is never wrong on first
+  // paint, and signed-in users never see the marketing page flash through.
+  const { userId } = clerkPublishableKey ? await auth() : { userId: null };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
   const app = (
     <>
       <ScrollRestoration />
-      <AppShell>{children}</AppShell>
+      {userId ? <WorkspaceShell>{children}</WorkspaceShell> : <main>{children}</main>}
     </>
   );
 
   return (
-    <html lang="en">
+    <html lang="en" className={fontVariables}>
       <body>{clerkPublishableKey ? <ClerkProvider>{app}</ClerkProvider> : app}</body>
     </html>
   );

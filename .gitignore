@@ -7,3 +7,16 @@ frontend/.next
 .env.*
 !.env.example
 *.log
+agent/.venv
+agent/__pycache__
+
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo
+
+# macOS
+.DS_Store
+
+# Python build artefacts
+agent/*.egg-info
+agent/__pycache__
+**/__pycache__
