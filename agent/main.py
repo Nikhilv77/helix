@@ -12,35 +12,112 @@ the token endpoint mints.
 from __future__ import annotations
 
 import asyncio
+import fcntl
+import hashlib
 import logging
+import os
+import tempfile
 import time
+import uuid
+from pathlib import Path
+from typing import IO
 
 import aiohttp
 from collections.abc import Awaitable, Callable
-from dotenv import load_dotenv
 from livekit import agents
 from livekit.agents import (
     Agent,
     AgentServer,
     AgentSession,
+    TurnHandlingOptions,
     UserInputTranscribedEvent,
     UserStateChangedEvent,
+    inference,
     llm,
 )
 from livekit.plugins import deepgram, silero
 
-from config import SPEECH
+from config import HELIX, SPEECH
 from helix import HelixApiError, HelixClient
-
-load_dotenv(".env.local")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("helix.agent")
 
 ROOM_PREFIX = "interview-"
+_worker_lock: IO[str] | None = None
+
+
+def acquire_worker_lock() -> Path:
+    """Allow one worker for this LiveKit project and agent name per host."""
+    global _worker_lock
+
+    scope = f"{os.getenv('LIVEKIT_URL', '')}:{HELIX.agent_name}"
+    digest = hashlib.sha256(scope.encode()).hexdigest()[:12]
+    path = Path(tempfile.gettempdir()) / f"helix-voice-worker-{digest}.lock"
+    handle = path.open("w", encoding="utf-8")
+
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        handle.close()
+        raise SystemExit(
+            f"Another Helix voice worker is already running for "
+            f"{HELIX.agent_name!r}. Stop it before starting another."
+        ) from None
+
+    handle.write(str(os.getpid()))
+    handle.flush()
+    _worker_lock = handle
+    return path
+
+
+def _log_config() -> None:
+    """Print the resolved config at boot.
+
+    A stale process silently running old settings has cost real debugging
+    time — this makes what is actually live visible in the first line.
+    """
+    logger.info(
+        "config agent=%s stt=%s/%s eot=%dms turn_delay=%.2f-%.1fs tts=%s api=%s",
+        HELIX.agent_name,
+        SPEECH.stt_model,
+        SPEECH.stt_language,
+        SPEECH.stt_eot_timeout_ms,
+        SPEECH.turn_min_delay_s,
+        SPEECH.turn_max_delay_s,
+        SPEECH.tts_model,
+        HELIX.api_base_url,
+    )
 
 
 server = AgentServer()
+
+
+def build_stt():
+    if SPEECH.stt_model.startswith("flux-"):
+        options = {
+            "model": SPEECH.stt_model,
+            "eager_eot_threshold": SPEECH.stt_eager_eot_threshold,
+            "eot_threshold": SPEECH.stt_eot_threshold,
+            "eot_timeout_ms": SPEECH.stt_eot_timeout_ms,
+        }
+        if SPEECH.stt_model.endswith("-multi"):
+            options["language_hint"] = [SPEECH.stt_language]
+        return deepgram.STTv2(**options)
+
+    return deepgram.STT(
+        model=SPEECH.stt_model,
+        language=SPEECH.stt_language,
+        interim_results=True,
+        filler_words=SPEECH.stt_filler_words,
+        endpointing_ms=SPEECH.endpointing_ms,
+    )
+
+
+def turn_detection():
+    if SPEECH.stt_model.startswith("flux-"):
+        return "stt"
+    return inference.TurnDetector()
 
 
 class Interviewer(Agent):
@@ -57,8 +134,8 @@ class Interviewer(Agent):
 
         Dispatching off raw VAD state changes was cutting answers off after the
         first fragment: Deepgram finalises at every pause, so "Yeah. So" and "I"
-        arrived as separate complete answers. This fires once, after semantic
-        turn detection, with the whole utterance assembled.
+        arrived as separate complete answers. This fires once after the active
+        turn detector reports end-of-turn, with the whole utterance assembled.
         """
         text = (new_message.text_content or "").strip()
         logger.info("end of turn: %r", text[:90])
@@ -71,10 +148,20 @@ class Interviewer(Agent):
 def session_id_from_room(room_name: str) -> str:
     if not room_name.startswith(ROOM_PREFIX):
         raise ValueError(f"room {room_name!r} is not an interview room")
-    return room_name[len(ROOM_PREFIX) :]
+
+    value = room_name[len(ROOM_PREFIX) :]
+    session_id = value[:36]
+    try:
+        uuid.UUID(session_id)
+    except ValueError as error:
+        raise ValueError(f"room {room_name!r} has no interview session id") from error
+
+    if len(value) > 36 and value[36] != "-":
+        raise ValueError(f"room {room_name!r} has an invalid connection suffix")
+    return session_id
 
 
-@server.rtc_session(agent_name="helix-interviewer")
+@server.rtc_session(agent_name=HELIX.agent_name)
 async def interview_session(ctx: agents.JobContext) -> None:
     try:
         session_id = session_id_from_room(ctx.room.name)
@@ -94,31 +181,42 @@ async def interview_session(ctx: agents.JobContext) -> None:
     ctx.add_shutdown_callback(close_http)
 
     helix = HelixClient(http)
-    snapshot = await helix.get_session(session_id)
+    try:
+        snapshot = await helix.get_session(session_id)
+    except Exception:
+        logger.exception("could not load interview %s", session_id)
+        return
 
     # No `llm=` argument at all. The parameter is NotGivenOr[...] and does
     # not accept None — omitting it is how you run a session with no LLM,
     # which is what keeps question generation out of this service.
     session = AgentSession(
-        stt=deepgram.STT(
-            model=SPEECH.stt_model,
-            language=SPEECH.stt_language,
-            interim_results=True,
-            filler_words=SPEECH.stt_filler_words,
-            endpointing_ms=SPEECH.endpointing_ms,
-        ),
+        stt=build_stt(),
         # Aura-2: the voice is baked into the model id, no `voice` param.
         tts=deepgram.TTS(model=SPEECH.tts_model),
         vad=silero.VAD.load(),
         # Defaults (0.5s) are tuned for "what's the weather". A candidate
         # recalling an incident pauses mid-answer, and cutting in there is what
         # made this feel like it kept hanging up.
-        turn_handling={
-            "endpointing": {
+        turn_handling=TurnHandlingOptions(
+            turn_detection=turn_detection(),
+            endpointing={
                 "min_delay": SPEECH.turn_min_delay_s,
                 "max_delay": SPEECH.turn_max_delay_s,
-            }
-        },
+            },
+            interruption={
+                "enabled": True,
+                "min_duration": 0.4,
+                "min_words": 1,
+                "resume_false_interruption": True,
+                "false_interruption_timeout": 1.2,
+            },
+            # There is no in-session LLM to speculate with. Leaving this on
+            # creates work without reducing the HTTP decision latency.
+            preemptive_generation={"enabled": False},
+        ),
+        aec_warmup_duration=1.0,
+        user_away_timeout=None,
     )
 
     state = TurnState(started_at_ms=snapshot.started_at)
@@ -133,6 +231,22 @@ async def interview_session(ctx: agents.JobContext) -> None:
     @session.on("conversation_item_added")
     def _on_item(event: object) -> None:
         logger.info("conversation item: %r", event)
+
+    @session.on("agent_state_changed")
+    def _on_agent_state(event: object) -> None:
+        logger.info(
+            "agent state: %s -> %s",
+            getattr(event, "old_state", "unknown"),
+            getattr(event, "new_state", "unknown"),
+        )
+
+    @session.on("error")
+    def _on_error(event: object) -> None:
+        logger.error("session error: %r", event)
+
+    @session.on("close")
+    def _on_close(event: object) -> None:
+        logger.info("session closed: %r", event)
 
     # Only used to stamp when the answer began. The end of the turn comes from
     # Interviewer.on_user_turn_completed, not from raw voice activity.
@@ -166,7 +280,6 @@ class TurnState:
         self._partial = ""
         self._speech_started_ms: int | None = None
         self._busy = False
-
 
     def _now_offset_ms(self) -> int:
         return max(0, int(time.time() * 1000) - self._session_start_ms)
@@ -228,29 +341,34 @@ async def handle_turn(
     answer, start_ms, end_ms = dispatch
     logger.info("answer (%dms): %s", end_ms - start_ms, answer[:80])
 
+    decision_started = time.monotonic()
     try:
         decision = await helix.decide(session_id, answer, start_ms, end_ms)
     except HelixApiError as error:
         logger.error("decide failed: %s", error)
         state.end_dispatch()
+        await say_recovery(session)
         return
     except asyncio.TimeoutError:
         logger.error("decide timed out")
         state.end_dispatch()
+        await say_recovery(session)
         return
     except Exception:
         # These run in a fire-and-forget task, where an unhandled exception
         # vanishes without a trace. Always log.
         logger.exception("decide raised")
         state.end_dispatch()
+        await say_recovery(session)
         return
 
     logger.info(
-        "decision action=%s q=%d/%d follow_ups=%d",
+        "decision action=%s q=%d/%d follow_ups=%d latency=%dms",
         decision.action,
         decision.question_index + 1,
         decision.question_count,
         decision.follow_up_count,
+        int((time.monotonic() - decision_started) * 1000),
     )
 
     # Streams to the room as it synthesises; it does not wait for the full clip.
@@ -266,5 +384,19 @@ async def handle_turn(
         await session.aclose()
 
 
+async def say_recovery(session: AgentSession) -> None:
+    """Keep a transient backend failure inside the conversation."""
+    try:
+        await session.say(
+            "I missed that response on my side. Please say it once more.",
+            allow_interruptions=True,
+        )
+    except Exception:
+        logger.exception("recovery speech failed")
+
+
 if __name__ == "__main__":
+    lock_path = acquire_worker_lock()
+    _log_config()
+    logger.info("worker lock acquired path=%s pid=%d", lock_path, os.getpid())
     agents.cli.run_app(server)

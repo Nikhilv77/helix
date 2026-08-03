@@ -9,13 +9,22 @@ import { useEffect, useRef, useState } from "react";
  * publishing audio, which separates a local mic problem from a transcription
  * problem further down the pipeline.
  */
-export function MicMeter({ track, muted }: { track: MediaStreamTrack | null; muted: boolean }) {
+export function MicMeter({
+  track,
+  muted,
+  onSignalChange
+}: {
+  track: MediaStreamTrack | null;
+  muted: boolean;
+  onSignalChange?: (hearing: boolean) => void;
+}) {
   const [level, setLevel] = useState(0);
   const raf = useRef(0);
 
   useEffect(() => {
     if (!track || muted) {
       setLevel(0);
+      onSignalChange?.(false);
       return;
     }
 
@@ -34,6 +43,7 @@ export function MicMeter({ track, muted }: { track: MediaStreamTrack | null; mut
 
     const buffer = new Uint8Array(analyser.fftSize);
     let smoothed = 0;
+    let lastHearing = false;
 
     function tick() {
       raf.current = requestAnimationFrame(tick);
@@ -48,6 +58,12 @@ export function MicMeter({ track, muted }: { track: MediaStreamTrack | null; mut
       const raw = Math.min(1, Math.sqrt(sum / buffer.length) * 5);
       smoothed += (raw - smoothed) * 0.3;
       setLevel(smoothed);
+
+      const hearing = smoothed > 0.025;
+      if (hearing !== lastHearing) {
+        lastHearing = hearing;
+        onSignalChange?.(hearing);
+      }
     }
 
     raf.current = requestAnimationFrame(tick);
@@ -57,8 +73,9 @@ export function MicMeter({ track, muted }: { track: MediaStreamTrack | null; mut
       source.disconnect();
       analyser.disconnect();
       void context.close().catch(() => null);
+      onSignalChange?.(false);
     };
-  }, [muted, track]);
+  }, [muted, onSignalChange, track]);
 
   const bars = 14;
   const active = Math.round(level * bars);

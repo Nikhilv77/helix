@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     const app = getAppContainer();
     const now = Date.now();
-    const existing = app.interviewService.get(parsed.data.sessionId);
+    const existing = await app.interviewService.get(parsed.data.sessionId);
     const defaultEnd = Math.max(0, now - existing.startedAt);
 
     const { state, decision } = await app.interviewService.answer(

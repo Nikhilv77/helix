@@ -1,17 +1,14 @@
-import { InterviewState } from "./types";
+import type { Prisma } from "@prisma/client";
+import type { PrismaService } from "../database/prisma.service";
+import type { InterviewState } from "./types";
 
-/**
- * In-memory session store.
- *
- * Phase 6 swaps this for Prisma. Everything above it talks to this interface
- * only, so that swap should not reach into the state machine or the routes.
- */
+/** Shared contract for the in-memory test store and durable production store. */
 export interface SessionStore {
-  create(state: InterviewState, ownerId: string): void;
-  get(id: string): InterviewState | null;
-  save(state: InterviewState): void;
+  create(state: InterviewState, ownerId: string): Promise<void>;
+  get(id: string): Promise<InterviewState | null>;
+  save(state: InterviewState): Promise<void>;
   /** Backs the "2 sessions per user per day" cap. */
-  countStartedSince(ownerId: string, since: number): number;
+  countStartedSince(ownerId: string, since: number): Promise<number>;
 }
 
 const SESSION_TTL_MS = 60 * 60 * 1000;
@@ -29,7 +26,7 @@ export class MemorySessionStore implements SessionStore {
   /** Start times per owner, kept beyond session lifetime for the daily cap. */
   private readonly startsByOwner = new Map<string, number[]>();
 
-  create(state: InterviewState, ownerId: string): void {
+  async create(state: InterviewState, ownerId: string): Promise<void> {
     this.evictExpired();
     this.sessions.set(state.id, { state, ownerId, touchedAt: Date.now() });
 
@@ -38,7 +35,7 @@ export class MemorySessionStore implements SessionStore {
     this.startsByOwner.set(ownerId, starts);
   }
 
-  get(id: string): InterviewState | null {
+  async get(id: string): Promise<InterviewState | null> {
     const stored = this.sessions.get(id);
     if (!stored) return null;
 
@@ -50,13 +47,13 @@ export class MemorySessionStore implements SessionStore {
     return stored.state;
   }
 
-  save(state: InterviewState): void {
+  async save(state: InterviewState): Promise<void> {
     const stored = this.sessions.get(state.id);
     if (!stored) return;
     this.sessions.set(state.id, { ...stored, state, touchedAt: Date.now() });
   }
 
-  countStartedSince(ownerId: string, since: number): number {
+  async countStartedSince(ownerId: string, since: number): Promise<number> {
     const starts = this.startsByOwner.get(ownerId) ?? [];
     return starts.filter((startedAt) => startedAt >= since).length;
   }
@@ -79,4 +76,51 @@ export class MemorySessionStore implements SessionStore {
       }
     }
   }
+}
+
+/** Durable store used by Next.js and the remote voice worker in production. */
+export class PrismaSessionStore implements SessionStore {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(state: InterviewState, ownerId: string): Promise<void> {
+    await this.prisma.interviewSession.create({
+      data: {
+        id: state.id,
+        ownerId,
+        state: toJson(state),
+        startedAt: new Date(state.startedAt)
+      }
+    });
+  }
+
+  async get(id: string): Promise<InterviewState | null> {
+    const stored = await this.prisma.interviewSession.findUnique({ where: { id } });
+    if (!stored) return null;
+
+    if (Date.now() - stored.touchedAt.getTime() > SESSION_TTL_MS) {
+      return null;
+    }
+
+    return stored.state as unknown as InterviewState;
+  }
+
+  async save(state: InterviewState): Promise<void> {
+    await this.prisma.interviewSession.updateMany({
+      where: { id: state.id },
+      data: { state: toJson(state), touchedAt: new Date() }
+    });
+  }
+
+  async countStartedSince(ownerId: string, since: number): Promise<number> {
+    return this.prisma.interviewSession.count({
+      where: {
+        ownerId,
+        startedAt: { gte: new Date(since) }
+      }
+    });
+  }
+}
+
+function toJson(state: InterviewState): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(state)) as Prisma.InputJsonValue;
 }

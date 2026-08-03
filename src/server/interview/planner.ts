@@ -1,17 +1,12 @@
 import { z } from "zod";
 import { AiService } from "../ai/ai.service";
-import {
-  describeLevel,
-  describeRole,
-  describeRound,
-  levelFocus
-} from "./prompt-context";
+import { describeLevel, describeRole, describeRound, levelFocus } from "./prompt-context";
 import { InterviewSetup, PlannedQuestion, QUESTION_COUNT } from "./types";
 
 const plannedQuestionSchema = z.object({
-  text: z.string().min(1),
+  text: z.string().min(1).max(180),
   mustHit: z.array(z.string().min(1)).min(2).max(3),
-  probeIfMissing: z.string().min(1)
+  probeIfMissing: z.string().min(1).max(160)
 });
 
 const planSchema = z.object({
@@ -41,9 +36,9 @@ Constraints:
 - ${levelFocus(setup.level)}
 
 For each question return:
-- text: the exact words the interviewer speaks. One sentence.
+- text: the exact words the interviewer speaks. One sentence, at most 22 spoken words.
 - mustHit: 2-3 things a complete answer contains. These are used to judge follow-ups.
-- probeIfMissing: the single follow-up to ask if the answer skips the "how".`;
+- probeIfMissing: the single follow-up to ask if the answer skips the "how". At most 18 spoken words.`;
 }
 
 export class InterviewPlanner {

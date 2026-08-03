@@ -11,7 +11,7 @@ type RouteContext = { params: Promise<{ sessionId: string }> | { sessionId: stri
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const { sessionId } = await context.params;
-    const state = getAppContainer().interviewService.get(requireUuid(sessionId));
+    const state = await getAppContainer().interviewService.get(requireUuid(sessionId));
     return apiSuccess(serialise(state));
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     const { sessionId } = await context.params;
-    const state = getAppContainer().interviewService.end(requireUuid(sessionId));
+    const state = await getAppContainer().interviewService.end(requireUuid(sessionId));
     return apiSuccess(serialise(state));
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);

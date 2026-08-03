@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const app = getAppContainer();
     const ownerId = await resolveOwnerId(request, app.config);
-    return apiSuccess(app.interviewService.quota(ownerId));
+    return apiSuccess(await app.interviewService.quota(ownerId));
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   }

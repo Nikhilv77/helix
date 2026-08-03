@@ -80,7 +80,8 @@ export const environmentSchema = z
     GROQ_DECIDER_MODEL: z.string().min(1).default("openai/gpt-oss-20b"),
     LIVEKIT_URL: z.string().optional(),
     LIVEKIT_API_KEY: z.string().optional(),
-    LIVEKIT_API_SECRET: z.string().optional()
+    LIVEKIT_API_SECRET: z.string().optional(),
+    LIVEKIT_AGENT_NAME: z.string().min(1).default("helix-interviewer-v2")
   })
   .transform((env) => ({
     nodeEnv: env.NODE_ENV,
@@ -108,7 +109,8 @@ export const environmentSchema = z
     groqDeciderModel: env.GROQ_DECIDER_MODEL,
     livekitUrl: env.LIVEKIT_URL,
     livekitApiKey: env.LIVEKIT_API_KEY,
-    livekitApiSecret: env.LIVEKIT_API_SECRET
+    livekitApiSecret: env.LIVEKIT_API_SECRET,
+    livekitAgentName: env.LIVEKIT_AGENT_NAME
   }));
 
 export type EnvironmentConfig = z.infer<typeof environmentSchema>;

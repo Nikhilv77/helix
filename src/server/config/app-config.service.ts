@@ -114,6 +114,10 @@ export class AppConfigService {
     return this.config.livekitApiSecret;
   }
 
+  get livekitAgentName(): EnvironmentConfig["livekitAgentName"] {
+    return this.config.livekitAgentName;
+  }
+
   get clerkSecretKey(): string | undefined {
     return this.config.clerkSecretKey;
   }

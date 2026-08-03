@@ -14,15 +14,11 @@ import {
   elapsedMs,
   finish
 } from "./state-machine";
-import {
-  Decision,
-  HARD_CAP_MS,
-  InterviewSetup,
-  InterviewState,
-  QUESTION_COUNT
-} from "./types";
+import { Decision, HARD_CAP_MS, InterviewSetup, InterviewState, QUESTION_COUNT } from "./types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** A spoken conversation should never wait on the model's full provider timeout. */
+const DECIDER_BUDGET_MS = 4_000;
 
 export interface StartResult {
   state: InterviewState;
@@ -46,7 +42,7 @@ export class InterviewService {
   ) {}
 
   async start(setup: InterviewSetup, ownerId: string, now = Date.now()): Promise<StartResult> {
-    const used = this.store.countStartedSince(ownerId, now - DAY_MS);
+    const used = await this.store.countStartedSince(ownerId, now - DAY_MS);
     if (used >= this.dailyLimit) {
       throw new BadRequestErrorException("SESSION_LIMIT_REACHED", "Daily session limit reached", {
         limit: this.dailyLimit,
@@ -70,7 +66,7 @@ export class InterviewService {
       questionIndex: 0
     });
 
-    this.store.create(withIntro, ownerId);
+    await this.store.create(withIntro, ownerId);
 
     this.logger.log(
       JSON.stringify({
@@ -88,15 +84,15 @@ export class InterviewService {
   }
 
   /** Backs the "sessions left today" indicator in the workspace sidebar. */
-  quota(ownerId: string, now = Date.now()): { used: number; limit: number } {
+  async quota(ownerId: string, now = Date.now()): Promise<{ used: number; limit: number }> {
     return {
-      used: Math.min(this.dailyLimit, this.store.countStartedSince(ownerId, now - DAY_MS)),
+      used: Math.min(this.dailyLimit, await this.store.countStartedSince(ownerId, now - DAY_MS)),
       limit: this.dailyLimit
     };
   }
 
-  get(sessionId: string): InterviewState {
-    const state = this.store.get(sessionId);
+  async get(sessionId: string): Promise<InterviewState> {
+    const state = await this.store.get(sessionId);
     if (!state) {
       throw new NotFoundErrorException("SESSION_NOT_FOUND", "Interview session not found", {
         sessionId
@@ -117,7 +113,7 @@ export class InterviewService {
     answer: { text: string; startMs: number; endMs: number },
     now = Date.now()
   ): Promise<AnswerResult> {
-    const existing = this.get(sessionId);
+    const existing = await this.get(sessionId);
 
     if (existing.phase === "done") {
       throw new BadRequestErrorException("SESSION_COMPLETE", "This interview has ended", {
@@ -128,7 +124,7 @@ export class InterviewService {
     const question = currentQuestion(existing);
     if (!question) {
       const closed = finish(existing);
-      this.store.save(closed);
+      await this.store.save(closed);
       return { state: closed, decision: closingDecision() };
     }
 
@@ -164,7 +160,7 @@ export class InterviewService {
     });
 
     const finalState = withReply;
-    this.store.save(finalState);
+    await this.store.save(finalState);
 
     const decision: Decision = {
       action: result.action,
@@ -191,9 +187,9 @@ export class InterviewService {
     return { state: finalState, decision };
   }
 
-  end(sessionId: string): InterviewState {
-    const closed = finish(this.get(sessionId));
-    this.store.save(closed);
+  async end(sessionId: string): Promise<InterviewState> {
+    const closed = finish(await this.get(sessionId));
+    await this.store.save(closed);
     return closed;
   }
 
@@ -210,7 +206,7 @@ export class InterviewService {
     fallbackProbe: string;
   }) {
     try {
-      return await this.decider.decide(input);
+      return await within(this.decider.decide(input), DECIDER_BUDGET_MS);
     } catch (error) {
       this.logger.warn(
         JSON.stringify({
@@ -253,6 +249,21 @@ export class InterviewService {
   }
 }
 
+async function within<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error("Interview decider timed out")), timeoutMs);
+      })
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function joinSpoken(bridge: string, sentence: string): string {
   if (bridge.length === 0) return sentence;
   return /[.!?]$/.test(bridge) ? `${bridge} ${sentence}` : `${bridge}. ${sentence}`;
@@ -261,7 +272,7 @@ function joinSpoken(bridge: string, sentence: string): string {
 function introUtterance(state: InterviewState): string {
   const first = state.plan[0];
   const minutes = Math.round(HARD_CAP_MS / 60000);
-  const intro = `I'm Helix, and I'll be running your ${state.setup.roundType.replace("-", " ")} round today. We have ${minutes} minutes and I'll ask about ${QUESTION_COUNT} questions. I'll interrupt if you run long — that's deliberate.`;
+  const intro = `I'm Helix. I'll run your ${state.setup.roundType.replace("-", " ")} interview for about ${minutes} minutes. I'll ask ${QUESTION_COUNT} questions and may interrupt to keep us on time.`;
 
   return first ? `${intro} Let's start. ${first.text}` : intro;
 }

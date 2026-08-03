@@ -17,6 +17,8 @@
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
     "prisma:studio": "prisma studio",
+    "agent:dev": "cd agent && .venv/bin/python main.py dev",
+    "agent:start": "cd agent && python main.py start",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down"
   },

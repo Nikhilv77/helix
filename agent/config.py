@@ -8,36 +8,40 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from dotenv import load_dotenv
+
+
+# Configuration dataclasses are evaluated at import time, so the local file
+# must be loaded before their defaults read os.environ.
+load_dotenv(".env.local")
 
 
 @dataclass(frozen=True)
 class SpeechConfig:
     # --- Speech to text -----------------------------------------------------
-    # Streaming with interim results, so the interruption watchdog can see a
-    # partial transcript before the turn ends.
-    stt_model: str = os.getenv("HELIX_STT_MODEL", "nova-3")
-    # "multi" runs Deepgram's multilingual model, which handles accented
-    # English far better than the en-US model. Pinning en-US was turning real
-    # sentences into fragments like "I just they're".
-    stt_language: str = os.getenv("HELIX_STT_LANGUAGE", "multi")
+    # Flux is designed for conversational voice agents and emits semantic
+    # end-of-turn events. That avoids choosing between clipped answers and a
+    # multi-second fixed silence delay.
+    stt_model: str = os.getenv("HELIX_STT_MODEL", "flux-general-en")
+    stt_language: str = os.getenv("HELIX_STT_LANGUAGE", "en")
+    stt_eager_eot_threshold: float = float(
+        os.getenv("HELIX_STT_EAGER_EOT_THRESHOLD", "0.5")
+    )
+    stt_eot_threshold: float = float(os.getenv("HELIX_STT_EOT_THRESHOLD", "0.7"))
+    stt_eot_timeout_ms: int = int(os.getenv("HELIX_STT_EOT_TIMEOUT_MS", "1600"))
 
     # Deepgram keeps filler words in the transcript by default, which the
     # Phase 5 filler-rate metric depends on. Do not turn this off.
     stt_filler_words: bool = True
 
-    # Deepgram's own utterance finalisation. Short values chop a sentence into
-    # fragments at every natural pause, so this stays generous and LiveKit's
-    # semantic turn detector decides when the turn is actually over.
-    # Deepgram only decides when to emit a final here; LiveKit's semantic turn
-    # detector owns the actual end of turn, so this stays short. 900ms was
-    # starving the pipeline of finals entirely.
+    # Nova fallback only. Flux uses its EOT settings above.
     endpointing_ms: int = int(os.getenv("HELIX_ENDPOINTING_MS", "300"))
 
     # --- Turn taking --------------------------------------------------------
     # How long a silence must run before the turn is considered finished.
     # Candidates think mid-answer; cutting in at 0.5s makes it feel twitchy.
-    turn_min_delay_s: float = float(os.getenv("HELIX_TURN_MIN_DELAY_S", "1.4"))
-    turn_max_delay_s: float = float(os.getenv("HELIX_TURN_MAX_DELAY_S", "5.0"))
+    turn_min_delay_s: float = float(os.getenv("HELIX_TURN_MIN_DELAY_S", "0.35"))
+    turn_max_delay_s: float = float(os.getenv("HELIX_TURN_MAX_DELAY_S", "1.8"))
 
     # --- Text to speech -----------------------------------------------------
     # Deepgram Aura-2. The voice is part of the model id — there is no separate
@@ -51,7 +55,10 @@ class HelixConfig:
     """Where the interview brain lives. The agent owns no interview state."""
 
     api_base_url: str = os.getenv("HELIX_API_BASE_URL", "http://localhost:3001")
-    request_timeout_s: float = float(os.getenv("HELIX_API_TIMEOUT_S", "20"))
+    request_timeout_s: float = float(os.getenv("HELIX_API_TIMEOUT_S", "10"))
+    # Must match LIVEKIT_AGENT_NAME in the Next.js app. Versioning this name
+    # prevents an older deployed worker from receiving a newly created call.
+    agent_name: str = os.getenv("LIVEKIT_AGENT_NAME", "helix-interviewer-v2")
 
 
 SPEECH = SpeechConfig()

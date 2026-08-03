@@ -47,7 +47,8 @@ describe("validateEnvironment", () => {
       retrievalDefaultTopK: 7,
       retrievalMinSimilarity: 0.35,
       groqDeciderModel: "openai/gpt-oss-20b",
-      interviewDailyLimit: 2
+      interviewDailyLimit: 2,
+      livekitAgentName: "helix-interviewer-v2"
     });
   });
 

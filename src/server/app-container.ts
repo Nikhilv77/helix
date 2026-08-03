@@ -9,7 +9,7 @@ import { HealthService } from "./health/health.service";
 import { InterviewDecider } from "./interview/decider";
 import { InterviewPlanner } from "./interview/planner";
 import { InterviewService } from "./interview/interview.service";
-import { MemorySessionStore } from "./interview/session-store";
+import { PrismaSessionStore } from "./interview/session-store";
 
 export interface AppContainer {
   config: AppConfigService;
@@ -42,8 +42,7 @@ export function getAppContainer(): AppContainer {
     interviewService: new InterviewService(
       new InterviewPlanner(planningAi),
       new InterviewDecider(decidingAi),
-      // Phase 6 swaps this for a Prisma-backed store.
-      new MemorySessionStore(),
+      new PrismaSessionStore(prisma),
       config.interviewDailyLimit
     )
   };

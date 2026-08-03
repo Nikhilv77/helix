@@ -1,85 +1,58 @@
-# Helix voice agent
+# Helix voice worker
 
-Speech in, speech out. This service has **no LLM and no interview state** — it
-transcribes the candidate, posts the text to `/api/interview/decide`, and speaks
-whatever comes back. Probe, challenge, move on, and every cap live in the
-Next.js app.
+This service is the realtime speech edge for Helix. It joins dispatched
+LiveKit rooms, transcribes the candidate with Deepgram Flux, sends completed
+turns to the Next.js interview brain, and streams Aura-2 speech back.
 
-```
-browser ──audio──► LiveKit room ──audio──► agent (this service)
-                                              │  POST /api/interview/decide
-                                              ▼
-                                        Next.js interview brain
-                                              │  { action, utterance }
-                                              ▼
-                                        agent speaks it verbatim
-```
+It deliberately owns no interview state or LLM prompt.
 
 ## Setup
 
 ```bash
-cd agent
-uv sync                 # or: pip install -e .
+python3 -m venv .venv
+.venv/bin/pip install -e .
 cp .env.example .env.local
 ```
 
-Fill in `.env.local`:
+Fill in:
 
-| Variable | Where to get it |
-| --- | --- |
-| `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | LiveKit Cloud → Settings → Keys |
-| `DEEPGRAM_API_KEY` | console.deepgram.com — one key covers STT and TTS |
-
-The **same** LiveKit credentials go in the repo-root `.env` so the Next.js
-token endpoint mints tokens for the same project:
-
-```bash
-LIVEKIT_URL=wss://your-project.livekit.cloud
-LIVEKIT_API_KEY=...
-LIVEKIT_API_SECRET=...
+```text
+LIVEKIT_URL
+LIVEKIT_API_KEY
+LIVEKIT_API_SECRET
+DEEPGRAM_API_KEY
+HELIX_API_BASE_URL=http://localhost:3001
 ```
+
+The LiveKit values must match the root Next.js environment.
 
 ## Run
 
-```bash
-# Terminal 1 — the brain
-pnpm dev
+From the repository root:
 
-# Terminal 2 — the voice
-cd agent && uv run python main.py dev
+```bash
+pnpm agent:dev
 ```
 
-## Testing one spoken exchange
+Production workers use:
 
-1. Create an interview and copy its `sessionId`:
+```bash
+pnpm agent:start
+```
 
-   ```bash
-   curl -s -X POST http://localhost:3001/api/interview/start \
-     -H 'content-type: application/json' \
-     -d '{"role":"backend","level":"3-5","roundType":"behavioral",
-          "intensity":"realistic","context":"Rebuilt a payments retry pipeline."}'
-   ```
+The first log line prints the resolved STT, end-of-turn, TTS, and API settings.
+For production, deploy this directory to a persistent worker platform and set
+`HELIX_API_BASE_URL` to the public Helix URL.
 
-2. Mint a room token:
+## Conversation pipeline
 
-   ```bash
-   curl -s -X POST http://localhost:3001/api/livekit/token \
-     -H 'content-type: application/json' \
-     -d '{"sessionId":"<paste-it>"}'
-   ```
+```text
+candidate audio
+  -> Flux conversational STT and end-of-turn
+  -> POST /api/interview/decide
+  -> streamed Aura-2 response
+```
 
-3. Join `interview-<sessionId>` with that token from the
-   [LiveKit Agents Playground](https://agents-playground.livekit.io) and speak.
-
-The agent should read the planned opening question aloud, wait for you to
-finish, then speak the follow-up the decide endpoint returned.
-
-## Configuration
-
-Providers and models are all in `config.py`. TTS is roughly 60% of running
-cost, so it is the first thing to swap.
-
-## Not built yet
-
-Barge-in tuning (Phase 3), latency instrumentation (Phase 4), and the in-app
-voice client. The playground stands in for the client until then.
+Transient decision failures are spoken as a short retry prompt rather than
+silently abandoning the turn. The Next.js decision endpoint also has a strict
+latency budget and falls back to a planned probe.

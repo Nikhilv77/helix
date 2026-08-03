@@ -20,6 +20,12 @@ export function apiSuccess<TData>(data: TData): NextResponse {
 }
 
 export function apiError(error: unknown, path: string): NextResponse {
+  if (!isApiRouteError(error) && !(error instanceof AppHttpError)) {
+    // Keep implementation details out of the HTTP response, but never hide
+    // the exception from server logs. Voice workers otherwise fail silently.
+    console.error(`[api] Unhandled error at ${path}`, error);
+  }
+
   const normalized = normalizeError(error);
 
   return NextResponse.json(
@@ -70,8 +76,3 @@ function normalizeError(error: unknown): {
     details: {}
   };
 }
-
-
-
-
-

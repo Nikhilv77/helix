@@ -8,12 +8,9 @@ import { HARD_CAP_MS } from "@/server/interview/types";
 
 export const dynamic = "force-dynamic";
 
-/** Must match `agent_name` in agent/main.py's @server.rtc_session decorator. */
-const AGENT_NAME = "helix-interviewer";
-
-/** The agent derives the interview session id from the room name. */
-export function roomNameFor(sessionId: string): string {
-  return `interview-${sessionId}`;
+/** A fresh room guarantees that reconnecting triggers a fresh agent dispatch. */
+export function roomNameFor(sessionId: string, connectionId = crypto.randomUUID()): string {
+  return `interview-${sessionId}-${connectionId.slice(0, 8)}`;
 }
 
 const requestSchema = z.object({
@@ -31,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     const app = getAppContainer();
-    const { livekitUrl, livekitApiKey, livekitApiSecret } = app.config;
+    const { livekitUrl, livekitApiKey, livekitApiSecret, livekitAgentName } = app.config;
 
     if (!livekitUrl || !livekitApiKey || !livekitApiSecret) {
       throw new ApiRouteError(503, "LIVEKIT_NOT_CONFIGURED", "Voice is not configured", {
@@ -44,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Throws SESSION_NOT_FOUND if the interview does not exist.
-    const state = app.interviewService.get(parsed.data.sessionId);
+    const state = await app.interviewService.get(parsed.data.sessionId);
 
     if (state.phase === "done") {
       throw new ApiRouteError(409, "SESSION_COMPLETE", "This interview has ended", {});
@@ -77,13 +74,14 @@ export async function POST(request: NextRequest) {
     // waits forever. Attaching the dispatch to the token means joining is the
     // only step — the interviewer is summoned with them.
     token.roomConfig = new RoomConfiguration({
-      agents: [new RoomAgentDispatch({ agentName: AGENT_NAME })]
+      agents: [new RoomAgentDispatch({ agentName: livekitAgentName })]
     });
 
     return apiSuccess({
       token: await token.toJwt(),
       url: livekitUrl,
       roomName,
+      agentName: livekitAgentName,
       expiresInMs: remainingMs
     });
   } catch (error) {

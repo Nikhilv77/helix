@@ -134,3 +134,15 @@ model KnowledgeChunk {
   @@index([embeddingModel, embeddingModelVersion])
   @@index([chunkIndex])
 }
+
+model InterviewSession {
+  id        String   @id @db.Uuid
+  ownerId   String
+  state     Json
+  startedAt DateTime
+  touchedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@index([ownerId, startedAt])
+  @@index([touchedAt])
+}
