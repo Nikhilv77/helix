@@ -14,6 +14,12 @@ const AvatarStage = dynamic(
   }
 );
 
-export function MayaStage() {
-  return <AvatarStage agentTrack={null} state="listening" url="/avatars/interviewer.glb" />;
+export function MayaStage({ speaking = false }: { speaking?: boolean }) {
+  return (
+    <AvatarStage
+      agentTrack={null}
+      state={speaking ? "speaking" : "listening"}
+      url="/avatars/interviewer.glb"
+    />
+  );
 }

@@ -1,4 +1,10 @@
-import type { ResumeEducationEntry, ResumeExperienceEntry, ResumeProjectEntry } from "@/lib/types";
+import type {
+  Level,
+  ResumeEducationEntry,
+  ResumeExperienceEntry,
+  ResumeProjectEntry
+} from "@/lib/types";
+import type { ResumeDocumentEvidence } from "./resume-document";
 import type { ResumeAnalysis } from "./resume.service";
 
 /** Model confidence below this is treated as an unverified document. */
@@ -22,16 +28,39 @@ export interface GroundedResumeEvidence {
  * part of this verdict. Folding the two together meant a thin roadmap was
  * reported to the candidate as "this is not a real resume".
  */
-export function verifyResumeDocument(analysis: ResumeAnalysis): boolean {
+export function verifyResumeDocument(
+  analysis: ResumeAnalysis,
+  context?: { level: Level; evidence: ResumeDocumentEvidence }
+): boolean {
   const acceptedDocumentType = analysis.documentType === "resume" || analysis.documentType === "cv";
+  const strongEducationLedEvidence = context
+    ? hasStrongEducationLedEvidence(context.evidence)
+    : false;
+  const chronologySupported = analysis.chronologyCoherent || strongEducationLedEvidence;
+  const careerEvidenceSupported = analysis.personalCareerEvidence || strongEducationLedEvidence;
 
   return (
     acceptedDocumentType &&
     analysis.isLikelyResume &&
     analysis.confidence >= MINIMUM_DOCUMENT_CONFIDENCE &&
     analysis.candidateIdentitySupported &&
-    analysis.chronologyCoherent &&
-    analysis.personalCareerEvidence
+    chronologySupported &&
+    careerEvidenceSupported
+  );
+}
+
+function hasStrongEducationLedEvidence(evidence: ResumeDocumentEvidence): boolean {
+  const contactSignals = [
+    evidence.identity.emailPresent,
+    evidence.identity.phonePresent,
+    evidence.identity.profileLinkPresent
+  ].filter(Boolean).length;
+
+  return (
+    evidence.educationEntries >= 1 &&
+    evidence.achievementLines >= 1 &&
+    evidence.sections.length >= 4 &&
+    (Boolean(evidence.identity.name) || contactSignals >= 2)
   );
 }
 

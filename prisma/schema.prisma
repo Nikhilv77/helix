@@ -164,6 +164,9 @@ model CandidateProfile {
   resumeVerifiedAt      DateTime?
   resumeConfidence      Float?
   onboardingCompletedAt DateTime?
+  /// Maya's curated session plan for this candidate, generated from the resume.
+  curriculum            Json?
+  curriculumBuiltAt     DateTime?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 

@@ -1,9 +1,14 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { privatePageMetadata } from "@/lib/seo";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
 
 export const dynamic = "force-dynamic";
+export const metadata = privatePageMetadata(
+  "Continue",
+  "Continue into your Helix interview workspace."
+);
 
 export default async function ContinueAfterAuthentication() {
   const { userId } = await auth();

@@ -6,7 +6,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
 import { HelixMark } from "@/components/helix-mark";
 import { ApiClientError, getProfile, startInterview } from "@/lib/api-client";
+import type { Curriculum, CurriculumSession } from "@/lib/curriculum";
 import { findTemplate, type InterviewTemplate } from "@/lib/interview-templates";
+import { pageTitle } from "@/lib/seo";
 import type { Intensity, InterviewSetup, Level, Role, RoundType } from "@/lib/types";
 
 const roleOptions: Array<{ value: Role; label: string }> = [
@@ -40,6 +42,7 @@ const intensityOptions: Array<{ value: Intensity; label: string; hint: string }>
 const MIN_CONTEXT = 10;
 
 const startingLabels = ["Reading your experience", "Writing your questions", "Setting the room"];
+const setupStepTitles = ["Role", "Experience", "Round", "Intensity", "Context"];
 
 export default function InterviewSetupPage() {
   const router = useRouter();
@@ -53,6 +56,15 @@ export default function InterviewSetupPage() {
   const [startingLabel, setStartingLabel] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [template, setTemplate] = useState<InterviewTemplate | null>(null);
+  const [plannedSession, setPlannedSession] = useState<CurriculumSession | null>(null);
+  const [scope, setScope] = useState<"session" | "overall" | null>(null);
+  const [planAgenda, setPlanAgenda] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    document.title = pageTitle(
+      starting ? "Starting Interview" : `Interview Setup - ${setupStepTitles[step] ?? "Context"}`
+    );
+  }, [starting, step]);
 
   // Signed-in candidates should not have to retype their role and project
   // context for every round. Query params win so dashboard drills can narrow
@@ -69,6 +81,7 @@ export default function InterviewSetupPage() {
 
     if (queryRole) setRole(queryRole);
     if (queryLevel) setLevel(queryLevel);
+    if (params.get("session") || params.get("scope") === "overall") setStep(4);
 
     // A template picked on the home page fixes the round and its agenda, so the
     // setup only still needs the candidate's role, level, and context.
@@ -77,6 +90,39 @@ export default function InterviewSetupPage() {
       setTemplate(chosen);
       setRoundType(chosen.roundType);
       setIntensity(chosen.intensity);
+    }
+
+    // Rounds launched from the plan already know their subject. Onboarding
+    // captured the role and level, so nothing is asked again here.
+    const sessionId = params.get("session");
+    const overall = params.get("scope") === "overall";
+    if (sessionId || overall) {
+      setScope(overall ? "overall" : "session");
+      setIntensity("realistic");
+      void fetch("/api/curriculum", { cache: "no-store" })
+        .then((response) => (response.ok ? response.json() : Promise.reject(response.status)))
+        .then((payload: { data: Curriculum }) => {
+          if (cancelled) return;
+          const sessions = payload.data.sessions;
+          const match = sessionId ? sessions.find((item) => item.id === sessionId) : undefined;
+          if (match) {
+            setPlannedSession(match);
+            setRoundType(match.roundType);
+            setPlanAgenda(match.agenda);
+          } else if (overall) {
+            setRoundType("behavioral");
+            // One objective per session, so the round spans the plan the
+            // candidate has actually been taught.
+            setPlanAgenda(
+              sessions
+                .slice(0, 4)
+                .map((item) => `${item.title}: ${item.agenda[0] ?? item.objective}`)
+            );
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setScope(null);
+        });
     }
 
     void getProfile()
@@ -155,9 +201,16 @@ export default function InterviewSetupPage() {
       roundType,
       intensity,
       context: context.trim(),
-      ...(template
-        ? { agenda: template.agenda, templateId: template.id, templateTitle: template.title }
-        : {})
+      ...(planAgenda
+        ? {
+            agenda: planAgenda,
+            ...(plannedSession
+              ? { templateId: plannedSession.id, templateTitle: plannedSession.title }
+              : { templateTitle: "Full interview across your sessions" })
+          }
+        : template
+          ? { agenda: template.agenda, templateId: template.id, templateTitle: template.title }
+          : {})
     };
 
     setStarting(true);
@@ -174,11 +227,14 @@ export default function InterviewSetupPage() {
       );
       setStarting(false);
     }
-  }, [context, intensity, level, role, roundType, router, template]);
+  }, [context, intensity, level, planAgenda, plannedSession, role, roundType, router, template]);
 
   // A template already fixes the round and the intensity, so those two steps
   // drop out of the wizard rather than asking a question with one answer.
-  const activeSteps = useMemo(() => (template ? [0, 1, 4] : [0, 1, 2, 3, 4]), [template]);
+  const activeSteps = useMemo(
+    () => (scope ? [4] : template ? [0, 1, 4] : [0, 1, 2, 3, 4]),
+    [scope, template]
+  );
   const position = Math.max(0, activeSteps.indexOf(step));
   const onLastStep = position === activeSteps.length - 1;
 
@@ -287,9 +343,12 @@ export default function InterviewSetupPage() {
                   {String(position + 1).padStart(2, "0")} /{" "}
                   {String(activeSteps.length).padStart(2, "0")}
                 </p>
-                {template ? (
-                  <span className="inline-flex items-center gap-2 rounded-full border border-cream/20 bg-cream/[0.06] px-3 py-1 text-[11px] font-medium text-cream/75">
-                    <Check size={12} /> {template.title}
+                {plannedSession || template || scope === "overall" ? (
+                  <span className="pill inline-flex items-center gap-2 px-3 py-1 text-[11px] font-medium text-cream/75">
+                    <Check size={12} />{" "}
+                    {plannedSession?.title ??
+                      template?.title ??
+                      "Full interview across all sessions"}
                   </span>
                 ) : null}
               </div>

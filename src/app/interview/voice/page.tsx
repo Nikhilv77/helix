@@ -36,6 +36,7 @@ import { InterviewerPresence } from "@/components/interview/interviewer-presence
 import { AvatarStage } from "@/components/interview/avatar-stage";
 import type { PresenceState } from "@/components/interview/interviewer-presence";
 import { ApiClientError, endInterview, getSession } from "@/lib/api-client";
+import { pageTitle } from "@/lib/seo";
 import type { InterviewQuestion, InterviewSetup, Phase, Turn } from "@/lib/types";
 
 const HARD_CAP_MS = 15 * 60 * 1000;
@@ -110,6 +111,20 @@ function VoiceInterview() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const typedUserTurnsRef = useRef(0);
   const [connectionAttempt, setConnectionAttempt] = useState(0);
+
+  useEffect(() => {
+    const title =
+      status === "live"
+        ? phase === "wrap"
+          ? "Interview Wrap-up"
+          : "Live Interview"
+        : status === "ended"
+          ? "Interview Complete"
+          : status === "error"
+            ? "Interview Error"
+            : "Connecting Interview";
+    document.title = pageTitle(title);
+  }, [phase, status]);
 
   // Join the room. The token carries the agent dispatch, so connecting is what
   // summons the interviewer.

@@ -1,7 +1,9 @@
 /** Shared Clerk styling so every auth surface belongs to the Helix product. */
 export const clerkAppearance = {
   options: {
-    logoImageUrl: "/brand/helix-icon.svg",
+    // The tiled version: Clerk's card can be light, where the white-on-
+    // transparent icon would disappear.
+    logoImageUrl: "/brand/helix-favicon.svg",
     logoLinkUrl: "/",
     logoPlacement: "inside" as const,
     socialButtonsVariant: "blockButton" as const,

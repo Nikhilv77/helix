@@ -33,6 +33,48 @@ SKILLS
 TypeScript, React, Node.js, PostgreSQL, Redis, Docker, WebRTC, testing, observability
 `;
 
+const fresherResumeText = `
+K Mahesh Babu
+kmaheshbabu733@gmail.com • +91 9014-633-596 • Madanapalle, AP, India • linkedin.com/in/mahesh-babu-AI
+
+SUMMARY
+Emerging AI Engineer with hands-on experience in LLM-powered applications, multi-agent
+orchestration, and voice AI systems. Built Talk2Campus AI, a multilingual voice assistant, and a
+Multi-Agent Orchestration System with Groq/OpenAI LLM routing and shared memory. Driven to deliver
+production-ready GenAI solutions.
+
+EDUCATION
+Madanapalle Institute of Technology & Science (MITS)
+Master of Computer Applications (MCA)
+
+S.D.H.R Degree College
+Bachelor of Computer Applications (BCA) • AI & Data Science
+CGPA: 8.20
+
+Sunku Usha Gouthami Junior College, APBIE Board
+Intermediate (Class 12) • CEC
+85.2%
+
+LICENSES & CERTIFICATIONS
+Scientific Computing with Python
+FreeCodeCamp
+
+Python Full Stack Development
+Sattva Infotech
+
+SKILLS
+Python • Java • C • Google Gemini • OpenAI GPT • Groq • Prompt Engineering • RAG • Vector Databases
+• Multi-Agent AI
+
+HONORS & AWARDS
+Singularity Summit Project Expo
+Showcased Talk2Campus AI demonstrating voice AI and multilingual LLM capabilities to industry
+professionals.
+
+FDP Participant
+Redefining the Role of English in the AI Era.
+`;
+
 function document(text: string): ParsedResumeDocument {
   return { text, format: "pdf", pageCount: 2, pageCountEstimated: false };
 }
@@ -66,6 +108,35 @@ describe("resume document inspection", () => {
     );
     expect(result.experienceEntries).toBeGreaterThanOrEqual(1);
     expect(result.achievementLines).toBeGreaterThanOrEqual(2);
+  });
+
+  it("accepts a fresher resume with education and project evidence instead of work history", () => {
+    const result = inspectResumeDocument(document(fresherResumeText), "fresher");
+
+    expect(result.identity).toMatchObject({
+      name: "K Mahesh Babu",
+      emailPresent: true,
+      phonePresent: true,
+      profileLinkPresent: true
+    });
+    expect(result.sections).toEqual(
+      expect.arrayContaining(["summary", "education", "certifications", "skills", "achievements"])
+    );
+    expect(result.educationEntries).toBe(1);
+    expect(result.achievementLines).toBeGreaterThanOrEqual(2);
+    expect(result.warnings).toContain(
+      "No dated education, work, or project timeline was detected."
+    );
+  });
+
+  it("warns instead of rejecting when an education-led resume is uploaded for early career", () => {
+    const result = inspectResumeDocument(document(fresherResumeText), "0-2");
+
+    expect(result.identity.name).toBe("K Mahesh Babu");
+    expect(result.educationEntries).toBe(1);
+    expect(result.warnings).toContain(
+      "No dated education, work, or project timeline was detected."
+    );
   });
 
   it("rejects explicit sample and placeholder resumes", () => {

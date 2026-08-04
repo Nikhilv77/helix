@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { attachTrack, detachVoice, readVoice, type VoiceBands } from "@/lib/voice-bus";
 import type { PresenceState } from "./interviewer-presence";
 
 /** Feathers the bottom of the canvas so the figure is not visibly cut off. */
-const FADE = "linear-gradient(to bottom, #000 0%, #000 72%, rgba(0,0,0,0.55) 88%, transparent 100%)";
+const FADE =
+  "linear-gradient(to bottom, #000 0%, #000 72%, rgba(0,0,0,0.55) 88%, transparent 100%)";
 
 interface AvatarStageProps {
   /** The agent's audio. Drives the mouth. */
@@ -29,10 +31,18 @@ interface AvatarStageProps {
  * versus dark audio leans the shape between a wide "E" and a rounded "O". It
  * reads correctly in conversation without pretending to be real lip sync.
  */
+const SILENT_VOICE: VoiceBands = { level: 0, low: 0, mid: 0, high: 0, silent: true };
+
 export function AvatarStage({ agentTrack, state, url }: AvatarStageProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
-  const analyser = useAudioAnalyser(agentTrack);
+  // A LiveKit track feeds the shared bus; elsewhere Maya's <audio> element has
+  // already registered itself there, so the mouth works on every surface.
+  useEffect(() => {
+    if (!agentTrack) return;
+    attachTrack(agentTrack);
+    return () => detachVoice();
+  }, [agentTrack]);
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -78,7 +88,20 @@ export function AvatarStage({ agentTrack, state, url }: AvatarStageProps) {
 
     let blinkAt = performance.now() + 2500;
     let blinkPhase = -1;
-    let mouth = 0;
+    let lastFrame = 0;
+    // One value per shape, each eased separately: mouths open fast and close
+    // slowly, and a single shared scalar could not express that.
+    const shapes = {
+      jaw: 0,
+      aa: 0,
+      E: 0,
+      O: 0,
+      U: 0,
+      I: 0,
+      sil: 0,
+      press: 0,
+      smile: 0
+    };
     let clock = 0;
 
     function resize() {
@@ -121,8 +144,7 @@ export function AvatarStage({ agentTrack, state, url }: AvatarStageProps) {
         model.position.x -= centre.x;
         model.position.z -= centre.z;
 
-        const distance =
-          framedHeight / 2 / Math.tan((camera.fov / 2) * THREE.MathUtils.DEG2RAD);
+        const distance = framedHeight / 2 / Math.tan((camera.fov / 2) * THREE.MathUtils.DEG2RAD);
         camera.position.set(0, headY, distance);
         camera.lookAt(0, headY - size.y * 0.02, 0);
 
@@ -135,6 +157,87 @@ export function AvatarStage({ agentTrack, state, url }: AvatarStageProps) {
       }
     );
 
+    /** Ease toward a target with separate attack and release rates. */
+    function ease(current: number, target: number, attack: number, release: number, delta: number) {
+      const rate = target > current ? attack : release;
+      // Frame-rate independent: the same motion on a 60Hz and a 120Hz display.
+      return current + (target - current) * (1 - Math.exp(-rate * delta));
+    }
+
+    function shapeMouth(voice: VoiceBands, delta: number, speaking: boolean) {
+      const energy = voice.low + voice.mid + voice.high || 1;
+      const lowShare = voice.low / energy;
+      const midShare = voice.mid / energy;
+      const highShare = voice.high / energy;
+
+      const open = voice.level;
+      const voicing = speaking && !voice.silent;
+      // Lips only meet between words *within* a line. At rest every mouth shape
+      // returns to zero, otherwise the face sits there with pressed lips.
+      const betweenWords = speaking && voice.silent;
+
+      // One shape at a time. Blend targets are additive, so driving aa, E, I, O
+      // and U together summed into a pucker no real mouth makes. Pick the vowel
+      // the spectrum actually points at and let the rest fall to zero.
+      const rounded = lowShare > 0.52 && highShare < 0.24;
+      let aa = 0;
+      let E = 0;
+      let I = 0;
+      let O = 0;
+      let U = 0;
+
+      if (voicing) {
+        if (rounded) {
+          O = open * 0.62;
+          U = open * 0.18;
+        } else if (highShare > midShare && highShare > lowShare) {
+          I = open * 0.5;
+        } else if (midShare >= lowShare) {
+          E = open * 0.66;
+        } else {
+          aa = open * 0.8;
+        }
+      }
+
+      shapes.jaw = ease(shapes.jaw, open * 0.7, 26, 13, delta);
+      shapes.aa = ease(shapes.aa, aa, 24, 14, delta);
+      shapes.E = ease(shapes.E, E, 26, 15, delta);
+      shapes.I = ease(shapes.I, I, 28, 16, delta);
+      shapes.O = ease(shapes.O, O, 20, 12, delta);
+      shapes.U = ease(shapes.U, U, 18, 11, delta);
+      shapes.sil = ease(shapes.sil, betweenWords ? 0.22 : 0, 22, 18, delta);
+      shapes.press = ease(shapes.press, betweenWords ? 0.07 : 0, 20, 16, delta);
+      // Barely there. On this rig the smile target pushes the lips up and out,
+      // so anything higher reads as a pout rather than a resting expression.
+      shapes.smile = ease(shapes.smile, speaking ? 0 : 0.025, 6, 6, delta);
+
+      // jawOpen and mouthOpen both open the mouth; applying both doubles it.
+      if (hasMorph("jawOpen")) {
+        setMorph("jawOpen", shapes.jaw);
+      } else {
+        setMorph("mouthOpen", shapes.jaw * 0.7);
+      }
+      setMorph("viseme_aa", shapes.aa);
+      setMorph("viseme_E", shapes.E);
+      setMorph("viseme_I", shapes.I);
+      setMorph("viseme_O", shapes.O);
+      setMorph("viseme_U", shapes.U);
+      setMorph("viseme_sil", shapes.sil);
+      setMorph("mouthClose", shapes.press);
+      setMorph("viseme_PP", shapes.press * 0.5);
+      if (hasMorph("mouthSmile")) {
+        setMorph("mouthSmile", shapes.smile);
+      } else {
+        setMorph("mouthSmileLeft", shapes.smile);
+        setMorph("mouthSmileRight", shapes.smile);
+      }
+      setMorph("browInnerUp", shapes.jaw * 0.12);
+    }
+
+    function hasMorph(name: string): boolean {
+      return morphMeshes.some((mesh) => mesh.morphTargetDictionary?.[name] !== undefined);
+    }
+
     function setMorph(name: string, value: number) {
       for (const mesh of morphMeshes) {
         const index = mesh.morphTargetDictionary?.[name];
@@ -145,22 +248,15 @@ export function AvatarStage({ agentTrack, state, url }: AvatarStageProps) {
 
     function render(now: number) {
       frame = requestAnimationFrame(render);
-      clock += 0.016;
+      const delta = Math.min(0.05, (now - lastFrame) / 1000 || 0.016);
+      lastFrame = now;
+      clock += delta;
 
       const speaking = stateRef.current === "speaking";
-      const { level, brightness } = analyser.current.read();
-      const target = speaking ? level : 0;
-      mouth += (target - mouth) * 0.35;
+      const voice = speaking ? readVoice() : SILENT_VOICE;
+      shapeMouth(voice, delta, speaking);
 
-      // Loudness opens the jaw; spectral tilt leans the shape.
-      setMorph("jawOpen", mouth * 0.75);
-      setMorph("mouthOpen", mouth * 0.5);
-      setMorph("viseme_aa", mouth * 0.55);
-      setMorph("viseme_O", mouth * (1 - brightness) * 0.5);
-      setMorph("viseme_E", mouth * brightness * 0.45);
-      setMorph("mouthSmile", stateRef.current === "listening" ? 0.12 : 0.04);
-
-      // Blink.
+      // Blink.      // Blink.
       if (blinkPhase < 0 && now > blinkAt) {
         blinkPhase = 0;
         blinkAt = now + 2600 + Math.random() * 3800;
@@ -176,7 +272,8 @@ export function AvatarStage({ agentTrack, state, url }: AvatarStageProps) {
       if (!reduced) {
         // Breathing and a little attention drift, so it is never truly still.
         root.position.y = Math.sin(clock * 1.1) * 0.004;
-        root.rotation.y = Math.sin(clock * 0.35) * 0.05 + (speaking ? Math.sin(clock * 2.4) * 0.012 : 0);
+        root.rotation.y =
+          Math.sin(clock * 0.35) * 0.05 + (speaking ? Math.sin(clock * 2.4) * 0.012 : 0);
         root.rotation.x = Math.sin(clock * 0.27) * 0.02;
       }
 
@@ -202,7 +299,7 @@ export function AvatarStage({ agentTrack, state, url }: AvatarStageProps) {
       renderer.dispose();
       if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
     };
-  }, [analyser, url]);
+  }, [url]);
 
   return (
     <div className="relative h-full w-full">
@@ -226,72 +323,4 @@ export function AvatarStage({ agentTrack, state, url }: AvatarStageProps) {
   );
 }
 
-
 /** Loudness plus spectral tilt from the live agent audio. */
-function useAudioAnalyser(track: MediaStreamTrack | null) {
-  const ref = useRef({ read: () => ({ level: 0, brightness: 0.5 }) });
-
-  useEffect(() => {
-    if (!track) {
-      ref.current = { read: () => ({ level: 0, brightness: 0.5 }) };
-      return;
-    }
-
-    const AudioContextCtor =
-      window.AudioContext ??
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextCtor) return;
-
-    const context = new AudioContextCtor();
-    const source = context.createMediaStreamSource(new MediaStream([track]));
-    const analyser = context.createAnalyser();
-    analyser.fftSize = 512;
-    analyser.smoothingTimeConstant = 0.6;
-
-    const mute = context.createGain();
-    mute.gain.value = 0;
-    source.connect(analyser);
-    analyser.connect(mute);
-    mute.connect(context.destination);
-    void context.resume().catch(() => null);
-
-    const time = new Uint8Array(analyser.fftSize);
-    const freq = new Uint8Array(analyser.frequencyBinCount);
-
-    ref.current = {
-      read: () => {
-        analyser.getByteTimeDomainData(time as Uint8Array<ArrayBuffer>);
-        analyser.getByteFrequencyData(freq as Uint8Array<ArrayBuffer>);
-
-        let sum = 0;
-        for (let i = 0; i < time.length; i += 1) {
-          const centred = ((time[i] ?? 128) - 128) / 128;
-          sum += centred * centred;
-        }
-
-        let low = 0;
-        let high = 0;
-        const split = Math.floor(freq.length * 0.18);
-        for (let i = 0; i < freq.length; i += 1) {
-          if (i < split) low += freq[i] ?? 0;
-          else high += freq[i] ?? 0;
-        }
-
-        return {
-          level: Math.min(1, Math.sqrt(sum / time.length) * 4.2),
-          brightness: low + high === 0 ? 0.5 : Math.min(1, (high / (low + high)) * 2.2)
-        };
-      }
-    };
-
-    return () => {
-      ref.current = { read: () => ({ level: 0, brightness: 0.5 }) };
-      source.disconnect();
-      analyser.disconnect();
-      mute.disconnect();
-      void context.close().catch(() => null);
-    };
-  }, [track]);
-
-  return ref;
-}

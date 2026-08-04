@@ -1,10 +1,15 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { OnboardingFlow } from "@/components/onboarding/onboarding-flow";
+import { privatePageMetadata } from "@/lib/seo";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
 
 export const dynamic = "force-dynamic";
+export const metadata = privatePageMetadata(
+  "Onboarding",
+  "Set your role, experience level, and resume evidence before starting Helix interviews."
+);
 
 export default async function OnboardingPage({
   searchParams

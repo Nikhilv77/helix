@@ -27,12 +27,17 @@ const speakSchema = z.object({
   text: z.string().trim().min(1).max(1_200)
 });
 
-export async function POST(request: NextRequest) {
+/**
+ * GET so the browser can stream and cache it: an <audio> element pointed
+ * straight at this URL starts playing on the first chunk, instead of waiting
+ * for the whole file to arrive as a blob.
+ */
+export async function GET(request: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
 
-    const parsed = speakSchema.safeParse(await readJson(request));
+    const parsed = speakSchema.safeParse({ text: request.nextUrl.searchParams.get("text") ?? "" });
     if (!parsed.success) {
       throw new ApiRouteError(
         400,
@@ -56,10 +61,25 @@ export async function POST(request: NextRequest) {
     const cached = audioCache.get(cacheKey);
     if (cached) return audioResponse(cached, "hit");
 
-    const audio = await synthesize({ text: parsed.data.text, model, apiKey });
-    rememberAudio(cacheKey, audio);
+    const upstream = await synthesize({ text: parsed.data.text, model, apiKey });
+    if (!upstream.body) {
+      return audioResponse(Buffer.from(await upstream.arrayBuffer()), "miss");
+    }
 
-    return audioResponse(audio, "miss");
+    // One branch goes to the listener as it arrives, the other fills the cache.
+    const [toClient, toCache] = upstream.body.tee();
+    void collect(toCache)
+      .then((audio) => rememberAudio(cacheKey, audio))
+      .catch(() => undefined);
+
+    return new Response(toClient, {
+      status: 200,
+      headers: {
+        "content-type": "audio/mpeg",
+        "cache-control": "private, max-age=3600",
+        "x-helix-voice-cache": "miss"
+      }
+    });
   } catch (error) {
     if (!(error instanceof ApiRouteError)) {
       logger.error(
@@ -73,8 +93,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function synthesize(input: { text: string; model: string; apiKey: string }): Promise<Buffer> {
+async function synthesize(input: {
+  text: string;
+  model: string;
+  apiKey: string;
+}): Promise<Response> {
   const controller = new AbortController();
+  // Cleared once the headers land: the body keeps streaming after that, and
+  // aborting mid-stream would truncate the audio.
   const timeout = setTimeout(() => controller.abort(), SPEECH_TIMEOUT_MS);
 
   try {
@@ -106,7 +132,7 @@ async function synthesize(input: { text: string; model: string; apiKey: string }
       );
     }
 
-    return Buffer.from(await response.arrayBuffer());
+    return response;
   } catch (error) {
     if (error instanceof ApiRouteError) throw error;
     throw new ApiRouteError(
@@ -139,10 +165,15 @@ function audioResponse(audio: Buffer, cache: "hit" | "miss"): Response {
   });
 }
 
-async function readJson(request: NextRequest): Promise<unknown> {
-  try {
-    return await request.json();
-  } catch {
-    return {};
+async function collect(stream: ReadableStream<Uint8Array>): Promise<Buffer> {
+  const chunks: Uint8Array[] = [];
+  const reader = stream.getReader();
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) chunks.push(value);
   }
+
+  return Buffer.concat(chunks);
 }

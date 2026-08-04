@@ -10,6 +10,7 @@ import { InterviewDecider } from "./interview/decider";
 import { InterviewPlanner } from "./interview/planner";
 import { InterviewService } from "./interview/interview.service";
 import { PrismaSessionStore } from "./interview/session-store";
+import { CurriculumService } from "./curriculum/curriculum.service";
 import { ProfileService } from "./profile/profile.service";
 import { ResumeService } from "./onboarding/resume.service";
 
@@ -18,6 +19,7 @@ export interface AppContainer {
   healthService: HealthService;
   interviewService: InterviewService;
   profileService: ProfileService;
+  curriculumService: CurriculumService;
   resumeService: ResumeService;
 }
 
@@ -43,6 +45,8 @@ export function getAppContainer(): AppContainer {
     config,
     healthService: new HealthService(config, prisma),
     profileService: new ProfileService(prisma),
+    // The plan is written once per resume, so quality matters more than latency.
+    curriculumService: new CurriculumService(geminiAi),
     // Resume classification benefits from the document-oriented model path;
     // keep the low-latency interview model reserved for live conversation.
     resumeService: new ResumeService(geminiAi),

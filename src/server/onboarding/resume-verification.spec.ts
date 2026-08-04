@@ -70,6 +70,33 @@ describe("verifyResumeDocument", () => {
     expect(verifyResumeDocument(analysis())).toBe(true);
   });
 
+  it("accepts resumes when deterministic evidence supports an education-led profile", () => {
+    expect(
+      verifyResumeDocument(analysis({ chronologyCoherent: false, personalCareerEvidence: false }), {
+        level: "0-2",
+        evidence: {
+          confidence: 0.82,
+          score: 82,
+          signals: [],
+          warnings: [],
+          identity: {
+            name: "K Mahesh Babu",
+            emailPresent: true,
+            phonePresent: true,
+            profileLinkPresent: true
+          },
+          sections: ["summary", "education", "certifications", "skills", "achievements"],
+          dateRanges: 0,
+          achievementLines: 2,
+          quantifiedAchievements: 1,
+          experienceEntries: 0,
+          projectEntries: 0,
+          educationEntries: 1
+        }
+      })
+    ).toBe(true);
+  });
+
   it("rejects documents the model classified as something other than a resume", () => {
     expect(verifyResumeDocument(analysis({ documentType: "job_description" }))).toBe(false);
     expect(verifyResumeDocument(analysis({ isLikelyResume: false }))).toBe(false);

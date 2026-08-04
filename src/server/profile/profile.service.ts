@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import type {
   CandidateProfile,
   CandidateProfileInput,
@@ -14,6 +14,7 @@ import type {
   ResumeRoadmapItem,
   Role
 } from "@/lib/types";
+import type { Curriculum, CurriculumSession } from "@/lib/curriculum";
 import type { PrismaService } from "../database/prisma.service";
 
 const roles = new Set<Role>(["backend", "frontend", "fullstack", "data", "ai-ml", "pm"]);
@@ -21,6 +22,22 @@ const levels = new Set<Level>(["fresher", "0-2", "3-5", "5-plus"]);
 
 export class ProfileService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Maya's plan is generated once and reused until the resume changes. */
+  async curriculum(ownerId: string): Promise<Curriculum | null> {
+    const stored = await this.prisma.candidateProfile.findUnique({
+      where: { ownerId },
+      select: { curriculum: true }
+    });
+    return curriculumFromJson(stored?.curriculum ?? null);
+  }
+
+  async saveCurriculum(ownerId: string, curriculum: Curriculum): Promise<void> {
+    await this.prisma.candidateProfile.update({
+      where: { ownerId },
+      data: { curriculum: toJson(curriculum), curriculumBuiltAt: new Date(curriculum.builtAt) }
+    });
+  }
 
   async get(ownerId: string): Promise<CandidateProfile> {
     const stored = await this.prisma.candidateProfile.findUnique({ where: { ownerId } });
@@ -152,7 +169,10 @@ export class ProfileService {
         resumeUploadedAt: now,
         resumeVerifiedAt: now,
         resumeConfidence: input.resume.confidence,
-        onboardingCompletedAt: now
+        onboardingCompletedAt: now,
+        // The plan is built from resume evidence, so a new resume invalidates it.
+        curriculum: Prisma.DbNull,
+        curriculumBuiltAt: null
       }
     });
 
@@ -417,4 +437,21 @@ function resumeEvidenceFromJson(value: Prisma.JsonValue | undefined): ResumeEvid
 
 function numberValue(value: Prisma.JsonValue | undefined, fallback = 0): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function curriculumFromJson(value: Prisma.JsonValue | null): Curriculum | null {
+  if (!isRecord(value) || !Array.isArray(value.sessions)) return null;
+
+  const sessions = value.sessions.flatMap((session) =>
+    isRecord(session) && typeof session.id === "string" && typeof session.title === "string"
+      ? [session as unknown as CurriculumSession]
+      : []
+  );
+  if (sessions.length === 0) return null;
+
+  return {
+    builtAt: numberValue(value.builtAt, Date.now()),
+    headline: stringValue(value.headline),
+    sessions
+  };
 }

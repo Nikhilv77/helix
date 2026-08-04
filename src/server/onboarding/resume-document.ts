@@ -33,7 +33,9 @@ const SECTION_ALIASES = {
 type ResumeSection = keyof typeof SECTION_ALIASES;
 
 const ACTION_LINE =
-  /^(?:[-•▪◦*]\s*)?(?:built|created|developed|designed|implemented|led|owned|launched|improved|reduced|increased|optimized|automated|managed|delivered|architected|migrated|deployed|introduced|integrated|analyzed|researched|collaborated|mentored|scaled|secured)\b/i;
+  /^(?:[-•▪◦*]\s*)?(?:built|created|developed|designed|implemented|led|owned|launched|improved|reduced|increased|optimized|automated|managed|delivered|architected|migrated|deployed|introduced|integrated|analyzed|researched|collaborated|mentored|scaled|secured|showcased)\b/i;
+const CONTRIBUTION_LANGUAGE =
+  /\b(?:built|created|developed|designed|implemented|led|owned|launched|improved|reduced|increased|optimized|automated|managed|delivered|architected|migrated|deployed|introduced|integrated|analyzed|researched|collaborated|mentored|scaled|secured|showcased)\b/i;
 const JOB_DESCRIPTION_LANGUAGE =
   /\b(?:we are looking for|the ideal candidate|responsibilities include|job description|minimum qualifications|required qualifications|equal opportunity employer|apply now|salary range)\b/i;
 const DEGREE_LANGUAGE =
@@ -201,7 +203,7 @@ export function inspectResumeDocument(
     /\b(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+)?(?:19|20)\d{2}\s*(?:-|–|—|to)\s*(?:(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+)?(?:19|20)\d{2}|present|current|now)\b/gi
   );
   const yearMarkers = countMatches(compact, /\b(?:19|20)\d{2}\b/g);
-  const achievementLines = lines.filter((line) => ACTION_LINE.test(line)).length;
+  const achievementLines = lines.filter((line) => hasContributionLanguage(line)).length;
   const quantifiedAchievements = lines.filter(
     (line) =>
       ACTION_LINE.test(line) &&
@@ -226,11 +228,20 @@ export function inspectResumeDocument(
   const projectEntries = sections.includes("projects")
     ? Math.max(
         1,
-        Math.min(8, projectText.split("\n").filter((line) => ACTION_LINE.test(line)).length)
+        Math.min(8, projectText.split("\n").filter((line) => hasContributionLanguage(line)).length)
       )
     : 0;
   const educationEntries =
     sections.includes("education") && DEGREE_LANGUAGE.test(educationText) ? 1 : 0;
+  const strongEducationLedEvidence =
+    educationEntries >= 1 &&
+    achievementLines >= 1 &&
+    sections.length >= 4 &&
+    (Boolean(name) || contactSignals >= 2) &&
+    (sections.includes("summary") ||
+      sections.includes("projects") ||
+      sections.includes("achievements") ||
+      sections.includes("certifications"));
 
   /**
    * Only signals that a genuine resume cannot plausibly lack are allowed to
@@ -247,8 +258,10 @@ export function inspectResumeDocument(
     ),
     requirement(
       "a dated career timeline",
-      dateRanges >= 1 || yearMarkers >= 2,
-      "Helix could not find dated education, work, or project entries."
+      dateRanges >= 1 || yearMarkers >= 2 || strongEducationLedEvidence,
+      level === "fresher" || level === "0-2"
+        ? "Helix could not find education or project evidence for an early-career resume."
+        : "Helix could not find dated education, work, or project entries."
     ),
     requirement(
       "personal contribution statements",
@@ -257,7 +270,9 @@ export function inspectResumeDocument(
     ),
     requirement(
       level === "fresher" ? "project or work evidence" : "work or project evidence",
-      experienceEntries + projectEntries >= 1 || sections.includes("experience"),
+      experienceEntries + projectEntries >= 1 ||
+        sections.includes("experience") ||
+        strongEducationLedEvidence,
       "Helix could not find an experience or projects section with real entries."
     ),
     requirement(
@@ -298,6 +313,9 @@ export function inspectResumeDocument(
   const warnings: string[] = [];
   if (quantifiedAchievements === 0) {
     warnings.push("No measurable outcome was detected in the experience bullets.");
+  }
+  if (dateRanges === 0 && yearMarkers < 2) {
+    warnings.push("No dated education, work, or project timeline was detected.");
   }
   if (!profileLinkPresent) warnings.push("No LinkedIn, GitHub, or portfolio profile was detected.");
   if (educationEntries === 0) warnings.push("No education section was detected.");
@@ -363,6 +381,10 @@ function rejectKnownNonResumes(text: string): void {
   }
 }
 
+function hasContributionLanguage(line: string): boolean {
+  return ACTION_LINE.test(line) || CONTRIBUTION_LANGUAGE.test(line);
+}
+
 function findSections(lines: string[]): Array<{ section: ResumeSection; index: number }> {
   return lines.flatMap((line, index) => {
     // Real resumes decorate headings ("EDUCATION & TRAINING", "Relevant
@@ -417,7 +439,7 @@ function findCandidateName(lines: string[]): string {
       .find((candidate) => {
         if (candidate.length < 4 || candidate.length > 60 || excluded.test(candidate)) return false;
         if (/[@:/\d]/.test(candidate)) return false;
-        return /^[\p{L}][\p{L}'.-]+(?:\s+[\p{L}][\p{L}'.-]+){1,4}$/u.test(candidate);
+        return /^[\p{L}][\p{L}'.-]*(?:\s+[\p{L}][\p{L}'.-]*){1,4}$/u.test(candidate);
       }) ?? ""
   );
 }

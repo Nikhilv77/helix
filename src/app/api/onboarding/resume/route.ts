@@ -177,7 +177,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!verifyResumeDocument(analysis)) {
+    if (
+      !verifyResumeDocument(analysis, { level: selection.data.level, evidence: documentEvidence })
+    ) {
       logger.log(
         JSON.stringify({
           event: "resume.rejected",
