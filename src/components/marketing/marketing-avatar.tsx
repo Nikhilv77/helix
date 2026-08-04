@@ -11,7 +11,7 @@ const AvatarStage = dynamic(
   { ssr: false }
 );
 
-const AVATAR_URL = process.env.NEXT_PUBLIC_AVATAR_URL ?? "";
+const AVATAR_URL = process.env.NEXT_PUBLIC_AVATAR_URL || "/avatars/interviewer.glb";
 
 export function MarketingAvatar({
   className,
@@ -22,8 +22,6 @@ export function MarketingAvatar({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const visible = useInView(ref, "200px 0px 200px 0px");
-
-  if (!AVATAR_URL) return null;
 
   return (
     <div ref={ref} className={className}>

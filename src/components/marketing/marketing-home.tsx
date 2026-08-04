@@ -142,11 +142,11 @@ function Hero() {
           </Reveal>
         </div>
 
-        <div className="order-1 relative mx-auto h-[17rem] w-full max-w-[21rem] sm:h-[20rem] sm:max-w-[25rem] lg:order-2 lg:h-[35rem] lg:max-w-none">
-          <InterviewSignal className="pointer-events-none absolute left-1/2 top-1/2 h-[19rem] w-[24rem] -translate-x-1/2 -translate-y-1/2 opacity-55 sm:h-[23rem] sm:w-[29rem] lg:h-[36rem] lg:w-[44rem]" />
+        <div className="order-1 relative mx-auto h-[20rem] w-full max-w-[24rem] sm:h-[22rem] sm:max-w-[27rem] lg:order-2 lg:h-[35rem] lg:max-w-none">
+          <InterviewSignal className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[18rem] w-[23rem] -translate-x-1/2 -translate-y-1/2 opacity-35 sm:h-[23rem] sm:w-[29rem] sm:opacity-50 lg:h-[36rem] lg:w-[44rem]" />
           <MarketingAvatar
             priority
-            className="pointer-events-none absolute inset-0 drop-shadow-[0_24px_30px_rgba(4,12,35,0.5)]"
+            className="pointer-events-none absolute inset-0 z-10 drop-shadow-[0_24px_30px_rgba(4,12,35,0.5)]"
           />
           <div className="pointer-events-none absolute bottom-3 left-1/2 h-px w-40 -translate-x-1/2 bg-cream/25 shadow-[0_0_24px_rgba(239,232,214,0.35)] lg:bottom-8 lg:w-64" />
         </div>
