@@ -219,10 +219,6 @@ function TheInterview() {
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >
-          <Reveal delay={60}>
-            <MarketingAvatar className="mx-auto mb-2 h-[19rem] w-full max-w-[19rem]" />
-          </Reveal>
-
           <Reveal delay={80}>
             <div className="relative min-h-[22rem]">
               {exchanges.map((exchange, exchangeIndex) => (
