@@ -1,7 +1,7 @@
 [project]
-name = "helix-agent"
+name = "trailgrad-agent"
 version = "0.1.0"
-description = "Helix voice interviewer. Speech in, speech out; the interview brain lives in the Next.js app."
+description = "Trailgrad voice interviewer. Speech in, speech out; the interview brain lives in the Next.js app."
 requires-python = ">=3.11"
 
 dependencies = [
@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 # This is a service, not a library — there is nothing to package. Without this
-# setuptools refuses to build, seeing config/helix/main as a flat layout.
+# setuptools refuses to build, seeing config/trailgrad/main as a flat layout.
 [tool.setuptools]
 py-modules = []
 

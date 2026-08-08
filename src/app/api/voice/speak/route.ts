@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       throw new ApiRouteError(
         503,
         "SPEECH_UNAVAILABLE",
-        "Helix voice is not configured on this environment."
+        "Trailgrad voice is not configured on this environment."
       );
     }
 
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
       headers: {
         "content-type": "audio/mpeg",
         "cache-control": "private, max-age=3600",
-        "x-helix-voice-cache": "miss"
+        "x-trailgrad-voice-cache": "miss"
       }
     });
   } catch (error) {
@@ -128,7 +128,7 @@ async function synthesize(input: {
       throw new ApiRouteError(
         502,
         "SPEECH_PROVIDER_FAILED",
-        "Helix could not generate the voice line right now."
+        "Trailgrad could not generate the voice line right now."
       );
     }
 
@@ -138,7 +138,7 @@ async function synthesize(input: {
     throw new ApiRouteError(
       504,
       "SPEECH_TIMEOUT",
-      "Helix voice took too long to respond. Try again in a moment."
+      "Trailgrad voice took too long to respond. Try again in a moment."
     );
   } finally {
     clearTimeout(timeout);
@@ -160,7 +160,7 @@ function audioResponse(audio: Buffer, cache: "hit" | "miss"): Response {
       "content-type": "audio/mpeg",
       "content-length": String(audio.byteLength),
       "cache-control": "private, max-age=3600",
-      "x-helix-voice-cache": cache
+      "x-trailgrad-voice-cache": cache
     }
   });
 }

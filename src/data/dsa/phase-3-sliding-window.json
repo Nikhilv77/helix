@@ -1,0 +1,1204 @@
+{
+  "phase": "Phase 3 — Sliding Window",
+  "questions": [
+    {
+      "title": "Maximum Average Subarray I",
+      "slug": "maximum-average-subarray-i",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/maximum-average-subarray-i/",
+      "primaryPattern": "sliding-window",
+      "subPatterns": ["fixed-window", "running-aggregate"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 1,
+      "prerequisites": [],
+      "conceptsTested": [
+        "fixed-size window sum",
+        "incremental add and remove instead of recomputing",
+        "comparing sums to avoid repeated float division"
+      ],
+      "commonMistakes": [
+        "Recomputing the window sum from scratch, making it O(n*k)",
+        "Dividing inside the loop and accumulating floating-point error",
+        "Off-by-one when seeding the first full window"
+      ],
+      "interviewSignals": [
+        "Compares sums during the scan and divides once at the end",
+        "Seeds the first window before entering the slide loop"
+      ],
+      "followUpPrompts": [
+        "Return the window's start index too.",
+        "What if k can exceed the array length?",
+        "Handle a stream where the array does not fit in memory."
+      ],
+      "promptSummary": "Find the maximum average over all contiguous subarrays of a fixed length k.",
+      "highLevelApproach": "Seed the sum of the first k elements, then slide by adding the entering element and subtracting the leaving one, keeping the best sum and dividing once at the end.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Find the maximum average over all contiguous subarrays of a fixed length k. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around fixed-size window sum. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sliding window structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Recomputing the window sum from scratch, making it O(n*k).",
+        "The intended path is: Seed the sum of the first k elements, then slide by adding the entering element and subtracting the leaving one, keeping the best sum and dividing once at the end."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sliding window",
+          "idea": "Seed the sum of the first k elements, then slide by adding the entering element and subtracting the leaving one, keeping the best sum and dividing once at the end.",
+          "steps": [
+            "Track the state needed for fixed-size window sum.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Recomputing the window sum from scratch, making it O(n*k)"
+      ],
+      "relatedQuestions": [
+        "grumpy-bookstore-owner",
+        "repeated-dna-sequences",
+        "minimum-size-subarray-sum",
+        "max-consecutive-ones-iii"
+      ]
+    },
+    {
+      "title": "Grumpy Bookstore Owner",
+      "slug": "grumpy-bookstore-owner",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/grumpy-bookstore-owner/",
+      "primaryPattern": "sliding-window",
+      "subPatterns": ["fixed-window"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 2,
+      "prerequisites": ["maximum-average-subarray-i"],
+      "conceptsTested": [
+        "splitting an answer into a fixed baseline plus a recoverable gain",
+        "sliding the window over only the recoverable part",
+        "avoiding double counting"
+      ],
+      "commonMistakes": [
+        "Sliding the window over total customers instead of only the lost ones",
+        "Double counting customers who were already satisfied",
+        "Recomputing the baseline inside the window loop"
+      ],
+      "interviewSignals": [
+        "Decomposes the answer into base plus best window before writing code",
+        "Keeps each window update O(1)"
+      ],
+      "followUpPrompts": [
+        "What if the technique can be used twice on disjoint windows?",
+        "What if the window length may vary up to a budget?",
+        "Return the minute at which the technique should start."
+      ],
+      "promptSummary": "Customers arrive each minute and are lost whenever the owner is grumpy; one fixed-length stretch of grumpiness can be suppressed. Maximize satisfied customers.",
+      "highLevelApproach": "Sum the customers satisfied regardless as a fixed baseline, then slide a window of the given length over only the customers lost to grumpiness and add the best window's gain.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Customers arrive each minute and are lost whenever the owner is grumpy; one fixed-length stretch of grumpiness can be suppressed. Maximize satisfied customers. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around splitting an answer into a fixed baseline plus a recoverable gain. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sliding window structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Sliding the window over total customers instead of only the lost ones.",
+        "The intended path is: Sum the customers satisfied regardless as a fixed baseline, then slide a window of the given length over only the customers lost to grumpiness and add the best window's gain."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sliding window",
+          "idea": "Sum the customers satisfied regardless as a fixed baseline, then slide a window of the given length over only the customers lost to grumpiness and add the best window's gain.",
+          "steps": [
+            "Track the state needed for splitting an answer into a fixed baseline plus a recoverable gain.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Sliding the window over total customers instead of only the lost ones"
+      ],
+      "relatedQuestions": [
+        "maximum-average-subarray-i",
+        "repeated-dna-sequences",
+        "minimum-size-subarray-sum",
+        "max-consecutive-ones-iii"
+      ]
+    },
+    {
+      "title": "Repeated DNA Sequences",
+      "slug": "repeated-dna-sequences",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/repeated-dna-sequences/",
+      "primaryPattern": "sliding-window",
+      "subPatterns": ["fixed-window", "hash-set-membership", "string-matching", "bit-manipulation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 3,
+      "prerequisites": ["maximum-average-subarray-i"],
+      "conceptsTested": [
+        "fixed-length window over a string",
+        "a seen set plus a reported set so answers appear once",
+        "rolling hash or two-bit base encoding"
+      ],
+      "commonMistakes": [
+        "Emitting a sequence every time it repeats instead of once",
+        "Rebuilding a fresh substring at each position when a rolling encoding is expected",
+        "Not guarding inputs shorter than the window"
+      ],
+      "interviewSignals": [
+        "Uses a second set so each repeated sequence is reported exactly once",
+        "Mentions packing each base into two bits to make a 20-bit rolling key"
+      ],
+      "followUpPrompts": [
+        "Encode each base in two bits and roll the key in O(1).",
+        "Generalize to a window of length k.",
+        "How would you handle rolling-hash collisions?"
+      ],
+      "promptSummary": "Return every 10-letter DNA substring that occurs more than once in a sequence.",
+      "highLevelApproach": "Slide a 10-character window keeping a set of substrings already seen and a second set of those already reported; a two-bit-per-base rolling key avoids rebuilding each substring.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Return every 10-letter DNA substring that occurs more than once in a sequence. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around fixed-length window over a string. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sliding window structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Emitting a sequence every time it repeats instead of once.",
+        "The intended path is: Slide a 10-character window keeping a set of substrings already seen and a second set of those already reported; a two-bit-per-base rolling key avoids rebuilding each substring."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sliding window",
+          "idea": "Slide a 10-character window keeping a set of substrings already seen and a second set of those already reported; a two-bit-per-base rolling key avoids rebuilding each substring.",
+          "steps": [
+            "Track the state needed for fixed-length window over a string.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Emitting a sequence every time it repeats instead of once"
+      ],
+      "relatedQuestions": [
+        "maximum-average-subarray-i",
+        "grumpy-bookstore-owner",
+        "minimum-size-subarray-sum",
+        "max-consecutive-ones-iii"
+      ]
+    },
+    {
+      "title": "Minimum Size Subarray Sum",
+      "slug": "minimum-size-subarray-sum",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/minimum-size-subarray-sum/",
+      "primaryPattern": "sliding-window",
+      "subPatterns": ["variable-window", "running-aggregate"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 4,
+      "prerequisites": ["maximum-average-subarray-i"],
+      "conceptsTested": [
+        "expand until valid, then shrink while still valid",
+        "why the window trick needs non-negative values",
+        "reporting zero when no window qualifies"
+      ],
+      "commonMistakes": [
+        "Shrinking with a single if instead of a while loop",
+        "Forgetting the case where no subarray reaches the target",
+        "Assuming the same window works with negative numbers"
+      ],
+      "interviewSignals": [
+        "States that monotone window sums depend on non-negative input",
+        "Shrinks fully at each step rather than one element per iteration"
+      ],
+      "followUpPrompts": [
+        "What if the array may contain negative numbers?",
+        "Solve it in O(n log n) with prefix sums and binary search.",
+        "Return the subarray, not just its length."
+      ],
+      "promptSummary": "Find the shortest contiguous subarray whose sum is at least a given target.",
+      "highLevelApproach": "Grow the right edge accumulating the sum, and each time the sum meets the target shrink from the left as far as it stays valid, recording the shortest length seen.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Find the shortest contiguous subarray whose sum is at least a given target. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around expand until valid, then shrink while still valid. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sliding window structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Shrinking with a single if instead of a while loop.",
+        "The intended path is: Grow the right edge accumulating the sum, and each time the sum meets the target shrink from the left as far as it stays valid, recording the shortest length seen."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sliding window",
+          "idea": "Grow the right edge accumulating the sum, and each time the sum meets the target shrink from the left as far as it stays valid, recording the shortest length seen.",
+          "steps": [
+            "Track the state needed for expand until valid, then shrink while still valid.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Shrinking with a single if instead of a while loop"
+      ],
+      "relatedQuestions": [
+        "maximum-average-subarray-i",
+        "grumpy-bookstore-owner",
+        "repeated-dna-sequences",
+        "max-consecutive-ones-iii"
+      ]
+    },
+    {
+      "title": "Max Consecutive Ones III",
+      "slug": "max-consecutive-ones-iii",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/max-consecutive-ones-iii/",
+      "primaryPattern": "sliding-window",
+      "subPatterns": ["variable-window"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 5,
+      "prerequisites": ["minimum-size-subarray-sum"],
+      "conceptsTested": [
+        "recasting a flip budget as an at-most-k constraint",
+        "longest window satisfying a budget",
+        "keeping the left bound monotone"
+      ],
+      "commonMistakes": [
+        "Counting flips performed rather than zeros inside the window",
+        "Resetting the whole window when the budget is exceeded",
+        "Shrinking past the point where the window is valid again"
+      ],
+      "interviewSignals": [
+        "Reframes flip at most k zeros as at most k zeros inside the window",
+        "Never moves the left bound backwards"
+      ],
+      "followUpPrompts": [
+        "Return the flipped array, not just the length.",
+        "What if you may also flip ones to zeros?",
+        "Solve the streaming version with no random access."
+      ],
+      "promptSummary": "Find the longest run of ones in a binary array when at most k zeros may be flipped. Some question lists title this one Longest Ones.",
+      "highLevelApproach": "Slide a window allowed to contain at most k zeros: extend the right edge, advance the left edge whenever the zero count exceeds k, and track the widest valid window.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Find the longest run of ones in a binary array when at most k zeros may be flipped. Some question lists title this one Longest Ones. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around recasting a flip budget as an at-most-k constraint. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sliding window structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Counting flips performed rather than zeros inside the window.",
+        "The intended path is: Slide a window allowed to contain at most k zeros: extend the right edge, advance the left edge whenever the zero count exceeds k, and track the widest valid window."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sliding window",
+          "idea": "Slide a window allowed to contain at most k zeros: extend the right edge, advance the left edge whenever the zero count exceeds k, and track the widest valid window.",
+          "steps": [
+            "Track the state needed for recasting a flip budget as an at-most-k constraint.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Counting flips performed rather than zeros inside the window"
+      ],
+      "relatedQuestions": [
+        "minimum-size-subarray-sum",
+        "maximum-average-subarray-i",
+        "grumpy-bookstore-owner",
+        "repeated-dna-sequences",
+        "fruit-into-baskets"
+      ]
+    },
+    {
+      "title": "Fruit Into Baskets",
+      "slug": "fruit-into-baskets",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/fruit-into-baskets/",
+      "primaryPattern": "sliding-window",
+      "subPatterns": ["variable-window", "frequency-map"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 6,
+      "prerequisites": ["max-consecutive-ones-iii"],
+      "conceptsTested": [
+        "longest subarray with at most two distinct values",
+        "a type-to-count map scoped to the window",
+        "evicting a type once its count reaches zero"
+      ],
+      "commonMistakes": [
+        "Tracking only the last two types seen instead of their counts",
+        "Leaving exhausted types in the map so the distinct count is wrong",
+        "Reading the limit as two fruits rather than two types"
+      ],
+      "interviewSignals": [
+        "Names the underlying at-most-k-distinct template",
+        "Generalizes from two baskets to k without rewriting the loop"
+      ],
+      "followUpPrompts": [
+        "Generalize to k baskets.",
+        "Return the range of trees actually harvested.",
+        "What if each basket also has a capacity limit?"
+      ],
+      "promptSummary": "Walking a row of fruit trees, collect the longest contiguous run containing at most two types of fruit.",
+      "highLevelApproach": "Slide a window backed by a type-to-count map, advancing the left edge and dropping exhausted types whenever a third type enters, tracking the longest valid window.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1) for a bounded number of types"
+      },
+      "problemStatement": "Walking a row of fruit trees, collect the longest contiguous run containing at most two types of fruit. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) for a bounded number of types space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around longest subarray with at most two distinct values. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sliding window structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Tracking only the last two types seen instead of their counts.",
+        "The intended path is: Slide a window backed by a type-to-count map, advancing the left edge and dropping exhausted types whenever a third type enters, tracking the longest valid window."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sliding window",
+          "idea": "Slide a window backed by a type-to-count map, advancing the left edge and dropping exhausted types whenever a third type enters, tracking the longest valid window.",
+          "steps": [
+            "Track the state needed for longest subarray with at most two distinct values.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1) for a bounded number of types"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Tracking only the last two types seen instead of their counts"
+      ],
+      "relatedQuestions": [
+        "max-consecutive-ones-iii",
+        "maximum-average-subarray-i",
+        "grumpy-bookstore-owner",
+        "repeated-dna-sequences",
+        "longest-repeating-character-replacement"
+      ]
+    },
+    {
+      "title": "Longest Repeating Character Replacement",
+      "slug": "longest-repeating-character-replacement",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/longest-repeating-character-replacement/",
+      "primaryPattern": "sliding-window",
+      "subPatterns": ["variable-window", "frequency-map"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 7,
+      "prerequisites": ["fruit-into-baskets"],
+      "conceptsTested": [
+        "window valid while length minus the most frequent count is at most k",
+        "why a stale running max frequency is still correct",
+        "the window never needing to shrink below the best seen"
+      ],
+      "commonMistakes": [
+        "Rescanning the whole alphabet for the max frequency at every step",
+        "Shrinking the window repeatedly instead of by one per step",
+        "Assuming a stale max count breaks correctness without checking why it does not"
+      ],
+      "interviewSignals": [
+        "Justifies keeping the historical max frequency rather than recomputing it",
+        "States the validity condition as an explicit formula"
+      ],
+      "followUpPrompts": [
+        "Why is it safe never to decrease the running max count?",
+        "Return the resulting string, not just its length.",
+        "Generalize to replacing with only a fixed set of characters."
+      ],
+      "promptSummary": "Find the longest substring that can be made from a single repeated character by replacing at most k characters.",
+      "highLevelApproach": "Slide a window with per-character counts; it is valid while its length minus the count of its most frequent character is at most k, and the left edge advances only when that fails.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Find the longest substring that can be made from a single repeated character by replacing at most k characters. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around window valid while length minus the most frequent count is at most k. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sliding window structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Rescanning the whole alphabet for the max frequency at every step.",
+        "The intended path is: Slide a window with per-character counts; it is valid while its length minus the count of its most frequent character is at most k, and the left edge advances only when that fails."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sliding window",
+          "idea": "Slide a window with per-character counts; it is valid while its length minus the count of its most frequent character is at most k, and the left edge advances only when that fails.",
+          "steps": [
+            "Track the state needed for window valid while length minus the most frequent count is at most k.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Rescanning the whole alphabet for the max frequency at every step"
+      ],
+      "relatedQuestions": [
+        "fruit-into-baskets",
+        "maximum-average-subarray-i",
+        "grumpy-bookstore-owner",
+        "repeated-dna-sequences",
+        "subarray-product-less-than-k"
+      ]
+    },
+    {
+      "title": "Subarray Product Less Than K",
+      "slug": "subarray-product-less-than-k",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/subarray-product-less-than-k/",
+      "primaryPattern": "sliding-window",
+      "subPatterns": ["variable-window"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 8,
+      "prerequisites": ["minimum-size-subarray-sum"],
+      "conceptsTested": [
+        "counting every subarray ending at the current right index",
+        "the window length is the count it contributes",
+        "guarding the degenerate k values"
+      ],
+      "commonMistakes": [
+        "Counting only the maximal window instead of every subarray ending at the right edge",
+        "Not handling k less than or equal to 1",
+        "Dividing out a leaving element that could be zero"
+      ],
+      "interviewSignals": [
+        "Derives the right minus left plus one contribution rule",
+        "Handles the k <= 1 base case before the loop"
+      ],
+      "followUpPrompts": [
+        "Do the same counting for sums rather than products.",
+        "What if the array contains zeros or negatives?",
+        "Return the longest qualifying subarray as well."
+      ],
+      "promptSummary": "Count the contiguous subarrays of positive integers whose product is strictly less than k.",
+      "highLevelApproach": "Keep a window whose product stays under k by dividing out left elements, and at each right index add the current window length to the running count.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Count the contiguous subarrays of positive integers whose product is strictly less than k. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around counting every subarray ending at the current right index. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sliding window structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Counting only the maximal window instead of every subarray ending at the right edge.",
+        "The intended path is: Keep a window whose product stays under k by dividing out left elements, and at each right index add the current window length to the running count."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sliding window",
+          "idea": "Keep a window whose product stays under k by dividing out left elements, and at each right index add the current window length to the running count.",
+          "steps": [
+            "Track the state needed for counting every subarray ending at the current right index.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Counting only the maximal window instead of every subarray ending at the right edge"
+      ],
+      "relatedQuestions": [
+        "minimum-size-subarray-sum",
+        "maximum-average-subarray-i",
+        "grumpy-bookstore-owner",
+        "repeated-dna-sequences",
+        "longest-repeating-character-replacement"
+      ]
+    },
+    {
+      "title": "Binary Subarrays With Sum",
+      "slug": "binary-subarrays-with-sum",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/binary-subarrays-with-sum/",
+      "primaryPattern": "sliding-window",
+      "subPatterns": ["at-most-k-decomposition", "running-aggregate"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 9,
+      "prerequisites": ["subarray-product-less-than-k"],
+      "conceptsTested": [
+        "exactly(k) expressed as atMost(k) minus atMost(k-1)",
+        "why an exact target cannot be held by one window",
+        "prefix-sum frequency map as the alternative"
+      ],
+      "commonMistakes": [
+        "Trying to maintain a window with an exact sum directly",
+        "Calling the helper with a negative bound and not guarding it",
+        "Overlooking that runs of zeros create many valid windows"
+      ],
+      "interviewSignals": [
+        "Reaches for the atMost decomposition instead of patching a single window",
+        "Offers the prefix-sum counting solution as an equal alternative"
+      ],
+      "followUpPrompts": [
+        "Solve it with prefix sums and a hash map instead.",
+        "Generalize beyond binary arrays.",
+        "Return the qualifying subarrays themselves."
+      ],
+      "promptSummary": "Count the contiguous subarrays of a binary array whose sum equals a given goal.",
+      "highLevelApproach": "Count subarrays with sum at most the goal and subtract those with sum at most goal minus one; a prefix-sum frequency map counts the same thing in a single pass.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1) with the two-window decomposition"
+      },
+      "problemStatement": "Count the contiguous subarrays of a binary array whose sum equals a given goal. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) with the two-window decomposition space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around exactly(k) expressed as atMost(k) minus atMost(k-1). Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sliding window structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Trying to maintain a window with an exact sum directly.",
+        "The intended path is: Count subarrays with sum at most the goal and subtract those with sum at most goal minus one; a prefix-sum frequency map counts the same thing in a single pass."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sliding window",
+          "idea": "Count subarrays with sum at most the goal and subtract those with sum at most goal minus one; a prefix-sum frequency map counts the same thing in a single pass.",
+          "steps": [
+            "Track the state needed for exactly(k) expressed as atMost(k) minus atMost(k-1).",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1) with the two-window decomposition"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Trying to maintain a window with an exact sum directly"
+      ],
+      "relatedQuestions": [
+        "subarray-product-less-than-k",
+        "maximum-average-subarray-i",
+        "grumpy-bookstore-owner",
+        "repeated-dna-sequences",
+        "count-number-of-nice-subarrays"
+      ]
+    },
+    {
+      "title": "Count Number of Nice Subarrays",
+      "slug": "count-number-of-nice-subarrays",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/count-number-of-nice-subarrays/",
+      "primaryPattern": "sliding-window",
+      "subPatterns": ["at-most-k-decomposition", "frequency-map", "running-aggregate"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 10,
+      "prerequisites": ["binary-subarrays-with-sum"],
+      "conceptsTested": [
+        "mapping odd and even onto one and zero",
+        "reusing the exactly-k decomposition",
+        "counting by prefix parity"
+      ],
+      "commonMistakes": [
+        "Not recognizing it as the binary-sum problem in disguise",
+        "Counting odd numbers rather than qualifying subarrays",
+        "Re-deriving the window from scratch instead of reusing the helper"
+      ],
+      "interviewSignals": [
+        "Maps the problem onto a binary array in a single sentence",
+        "Reuses the same atMost helper as the binary-sum problem"
+      ],
+      "followUpPrompts": [
+        "Generalize to counts divisible by m.",
+        "Solve it with prefix parity counts instead.",
+        "Return the nice subarrays themselves."
+      ],
+      "promptSummary": "Count the contiguous subarrays containing exactly k odd numbers.",
+      "highLevelApproach": "Replace each value by its parity to reduce this to counting binary subarrays with sum k, then apply the atMost(k) minus atMost(k-1) decomposition.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Count the contiguous subarrays containing exactly k odd numbers. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around mapping odd and even onto one and zero. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sliding window structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Not recognizing it as the binary-sum problem in disguise.",
+        "The intended path is: Replace each value by its parity to reduce this to counting binary subarrays with sum k, then apply the atMost(k) minus atMost(k-1) decomposition."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sliding window",
+          "idea": "Replace each value by its parity to reduce this to counting binary subarrays with sum k, then apply the atMost(k) minus atMost(k-1) decomposition.",
+          "steps": [
+            "Track the state needed for mapping odd and even onto one and zero.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Not recognizing it as the binary-sum problem in disguise"
+      ],
+      "relatedQuestions": [
+        "binary-subarrays-with-sum",
+        "maximum-average-subarray-i",
+        "grumpy-bookstore-owner",
+        "repeated-dna-sequences",
+        "frequency-of-the-most-frequent-element"
+      ]
+    },
+    {
+      "title": "Frequency of the Most Frequent Element",
+      "slug": "frequency-of-the-most-frequent-element",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/frequency-of-the-most-frequent-element/",
+      "primaryPattern": "sliding-window",
+      "subPatterns": ["variable-window", "running-aggregate", "greedy-choice"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 11,
+      "prerequisites": ["minimum-size-subarray-sum"],
+      "conceptsTested": [
+        "sorting so a window's target is always its right edge",
+        "cost to level a window equals length times max minus the window sum",
+        "treating the budget as the window's validity condition"
+      ],
+      "commonMistakes": [
+        "Forgetting to sort before sliding",
+        "Overflowing when computing length times the maximum",
+        "Shrinking with if instead of while"
+      ],
+      "interviewSignals": [
+        "Derives the window cost formula before coding it",
+        "Explains why the target is always the window's largest element"
+      ],
+      "followUpPrompts": [
+        "What if operations may decrease values as well?",
+        "Return which value the elements should converge on.",
+        "How does the answer behave as k grows very large?"
+      ],
+      "promptSummary": "Given a budget of k increments of one, maximize how many array elements can be made equal.",
+      "highLevelApproach": "Sort, then slide a window whose levelling cost is its length times its right-most value minus its sum, shrinking from the left whenever that cost exceeds k.",
+      "complexity": {
+        "time": "O(n log n)",
+        "space": "O(1) beyond the sort"
+      },
+      "problemStatement": "Given a budget of k increments of one, maximize how many array elements can be made equal. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log n) time and O(1) beyond the sort space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around sorting so a window's target is always its right edge. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sliding window structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Forgetting to sort before sliding.",
+        "The intended path is: Sort, then slide a window whose levelling cost is its length times its right-most value minus its sum, shrinking from the left whenever that cost exceeds k."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sliding window",
+          "idea": "Sort, then slide a window whose levelling cost is its length times its right-most value minus its sum, shrinking from the left whenever that cost exceeds k.",
+          "steps": [
+            "Track the state needed for sorting so a window's target is always its right edge.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log n)",
+            "space": "O(1) beyond the sort"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Forgetting to sort before sliding"
+      ],
+      "relatedQuestions": [
+        "minimum-size-subarray-sum",
+        "maximum-average-subarray-i",
+        "grumpy-bookstore-owner",
+        "repeated-dna-sequences",
+        "count-number-of-nice-subarrays"
+      ]
+    },
+    {
+      "title": "Find K Closest Elements",
+      "slug": "find-k-closest-elements",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/find-k-closest-elements/",
+      "primaryPattern": "two-pointers",
+      "subPatterns": ["boundary-search", "two-pointer-opposite-ends", "fixed-window"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 12,
+      "prerequisites": [],
+      "conceptsTested": [
+        "the answer is always a contiguous window in a sorted array",
+        "comparing the two boundary distances instead of sorting by distance",
+        "binary searching the window's start index"
+      ],
+      "commonMistakes": [
+        "Sorting by distance and losing the required ascending output order",
+        "Mishandling ties, where the smaller value wins",
+        "Binary searching over the full range instead of stopping at n minus k"
+      ],
+      "interviewSignals": [
+        "Argues the answer must be contiguous before choosing an approach",
+        "Binary searches the start index rather than scanning from the target"
+      ],
+      "followUpPrompts": [
+        "Prove the answer is always a contiguous window.",
+        "What if the array were not sorted?",
+        "Solve it with a heap and compare the tradeoffs."
+      ],
+      "promptSummary": "In a sorted array, return the k elements closest to a target value, in ascending order.",
+      "highLevelApproach": "Since the answer is a contiguous window of length k, either discard the farther endpoint until k remain, or binary search the window's start by comparing the distances at its two boundaries.",
+      "complexity": {
+        "time": "O(log(n-k) + k)",
+        "space": "O(1) excluding output"
+      },
+      "problemStatement": "In a sorted array, return the k elements closest to a target value, in ascending order. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(log(n-k) + k) time and O(1) excluding output space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around the answer is always a contiguous window in a sorted array. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the two-pointer scan structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Sorting by distance and losing the required ascending output order.",
+        "The intended path is: Since the answer is a contiguous window of length k, either discard the farther endpoint until k remain, or binary search the window's start by comparing the distances at its two boundaries."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — two-pointer scan",
+          "idea": "Since the answer is a contiguous window of length k, either discard the farther endpoint until k remain, or binary search the window's start by comparing the distances at its two boundaries.",
+          "steps": [
+            "Track the state needed for the answer is always a contiguous window in a sorted array.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(log(n-k) + k)",
+            "space": "O(1) excluding output"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Sorting by distance and losing the required ascending output order"
+      ],
+      "relatedQuestions": ["frequency-of-the-most-frequent-element", "sliding-window-maximum"]
+    },
+    {
+      "title": "Sliding Window Maximum",
+      "slug": "sliding-window-maximum",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/sliding-window-maximum/",
+      "primaryPattern": "sliding-window",
+      "subPatterns": ["monotonic-deque", "fixed-window"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 40,
+      "recommendedOrder": 13,
+      "prerequisites": ["maximum-average-subarray-i"],
+      "conceptsTested": [
+        "monotonic decreasing deque",
+        "storing indices so out-of-window entries can expire",
+        "amortized O(1) work per element"
+      ],
+      "commonMistakes": [
+        "Storing values instead of indices, making expiry impossible",
+        "Failing to pop smaller values from the back before pushing",
+        "Recomputing each window's maximum, giving O(n*k)"
+      ],
+      "interviewSignals": [
+        "Argues each index is pushed and popped at most once",
+        "Explains why the deque front is always the current window maximum"
+      ],
+      "followUpPrompts": [
+        "Solve it with a heap and compare the complexities.",
+        "Return the window minimum in the same pass.",
+        "How would you compute the sliding window median?"
+      ],
+      "promptSummary": "Return the maximum of every contiguous window of length k as the window slides across the array.",
+      "highLevelApproach": "Maintain a deque of indices with decreasing values: pop smaller values off the back before pushing, drop the front once it falls outside the window, and read the front as each window's maximum.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(k)"
+      },
+      "problemStatement": "Return the maximum of every contiguous window of length k as the window slides across the array. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(k) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around monotonic decreasing deque. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sliding window structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Storing values instead of indices, making expiry impossible.",
+        "The intended path is: Maintain a deque of indices with decreasing values: pop smaller values off the back before pushing, drop the front once it falls outside the window, and read the front as each window's maximum."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sliding window",
+          "idea": "Maintain a deque of indices with decreasing values: pop smaller values off the back before pushing, drop the front once it falls outside the window, and read the front as each window's maximum.",
+          "steps": [
+            "Track the state needed for monotonic decreasing deque.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(k)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Storing values instead of indices, making expiry impossible"
+      ],
+      "relatedQuestions": [
+        "maximum-average-subarray-i",
+        "grumpy-bookstore-owner",
+        "repeated-dna-sequences",
+        "minimum-size-subarray-sum",
+        "find-k-closest-elements"
+      ]
+    }
+  ]
+}

@@ -40,6 +40,46 @@ enum KnowledgeEmbeddingStatus {
   FAILED
 }
 
+enum RoadmapTemplateStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum UserRoadmapStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum RoadmapProgressStatus {
+  LOCKED
+  ACTIVE
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+enum RoadmapQuestionSourceType {
+  DSA
+  PREP
+  CUSTOM
+}
+
+enum RoadmapQuestionAttemptStatus {
+  STARTED
+  SUBMITTED
+  COMPLETED
+  SKIPPED
+}
+
+enum MayaInsightKind {
+  NEXT_PRIORITY
+  COMMON_TRAP
+  STRONG_SIGNAL
+  STREAK
+  RECOMMENDED_ACTION
+}
+
 model Project {
   id             String          @id @default(uuid()) @db.Uuid
   ownerId        String          @default("local-dev")
@@ -148,7 +188,7 @@ model InterviewSession {
 }
 
 model CandidateProfile {
-  ownerId               String    @id
+  ownerId               String                @id
   targetRole            String?
   level                 String?
   targetCompany         String?
@@ -167,8 +207,366 @@ model CandidateProfile {
   /// Maya's curated session plan for this candidate, generated from the resume.
   curriculum            Json?
   curriculumBuiltAt     DateTime?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  roadmaps              UserRoadmap[]
+  questionAttempts      UserQuestionAttempt[]
+  mayaInsights          UserMayaInsight[]
 
   @@index([updatedAt])
+}
+
+model DsaPhase {
+  slug          String        @id
+  title         String
+  phaseNumber   Int
+  questionCount Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  questions     DsaQuestion[]
+
+  @@index([phaseNumber])
+}
+
+model DsaQuestion {
+  slug                 String                    @id
+  phaseSlug            String
+  title                String
+  source               String
+  externalUrl          String
+  primaryPattern       String
+  subPatterns          String[]
+  difficulty           String
+  expectedTimeMinutes  Int
+  recommendedOrder     Int
+  prerequisites        String[]
+  conceptsTested       String[]
+  commonMistakes       String[]
+  interviewSignals     String[]
+  followUpPrompts      String[]
+  promptSummary        String                    @db.Text
+  highLevelApproach    String                    @db.Text
+  complexity           Json
+  problemStatement     String?                   @db.Text
+  constraints          String[]
+  examples             Json?
+  keyInsight           String?                   @db.Text
+  hints                String[]
+  approaches           Json?
+  edgeCases            String[]
+  relatedQuestions     String[]
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  phase                DsaPhase                  @relation(fields: [phaseSlug], references: [slug], onDelete: Cascade)
+  roadmapQuestions     RoadmapQuestionTemplate[]
+  userQuestionProgress UserQuestionProgress[]
+  userQuestionAttempts UserQuestionAttempt[]
+
+  @@unique([phaseSlug, recommendedOrder])
+  @@index([phaseSlug])
+  @@index([primaryPattern])
+  @@index([difficulty])
+  @@index([recommendedOrder])
+}
+
+model PrepQuestionTemplate {
+  id                   String                    @id
+  bank                 String
+  category             String
+  title                String
+  roles                String[]
+  levels               String[]
+  difficulty           String
+  expectedMinutes      Int
+  evidenceType         String
+  competency           String
+  prompt               String                    @db.Text
+  promptTemplate       String?                   @db.Text
+  tags                 String[]
+  whatItTests          String[]
+  goodAnswerSignals    String[]
+  weakAnswerSignals    String[]
+  followUpPrompts      String[]
+  mayaPushbacks        String[]
+  answerStructure      Json
+  scoringRubric        Json
+  sourceLinks          Json
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  roadmapQuestions     RoadmapQuestionTemplate[]
+  userQuestionProgress UserQuestionProgress[]
+  userQuestionAttempts UserQuestionAttempt[]
+
+  @@index([bank])
+  @@index([category])
+  @@index([competency])
+  @@index([difficulty])
+}
+
+model RoadmapTemplate {
+  id           String                   @id @default(uuid()) @db.Uuid
+  role         String
+  slug         String                   @unique
+  title        String
+  description  String?                  @db.Text
+  version      Int                      @default(1)
+  status       RoadmapTemplateStatus    @default(ACTIVE)
+  metadata     Json?
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+  sessions     RoadmapSessionTemplate[]
+  userRoadmaps UserRoadmap[]
+
+  @@unique([role, version])
+  @@index([role])
+  @@index([status])
+}
+
+model RoadmapSessionTemplate {
+  id         String                    @id @default(uuid()) @db.Uuid
+  templateId String                    @db.Uuid
+  slug       String
+  order      Int
+  title      String
+  purpose    String                    @db.Text
+  covers     String[]
+  metadata   Json?
+  createdAt  DateTime                  @default(now())
+  updatedAt  DateTime                  @updatedAt
+  template   RoadmapTemplate           @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  chapters   RoadmapChapterTemplate[]
+  questions  RoadmapQuestionTemplate[]
+  progress   UserSessionProgress[]
+
+  @@unique([templateId, slug])
+  @@unique([templateId, order])
+  @@index([templateId])
+}
+
+model RoadmapChapterTemplate {
+  id                String                    @id @default(uuid()) @db.Uuid
+  sessionTemplateId String                    @db.Uuid
+  slug              String
+  order             Int
+  title             String
+  purpose           String?                   @db.Text
+  metadata          Json?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  sessionTemplate   RoadmapSessionTemplate    @relation(fields: [sessionTemplateId], references: [id], onDelete: Cascade)
+  questions         RoadmapQuestionTemplate[]
+  progress          UserChapterProgress[]
+
+  @@unique([sessionTemplateId, slug])
+  @@unique([sessionTemplateId, order])
+  @@index([sessionTemplateId])
+}
+
+model RoadmapQuestionTemplate {
+  id                     String                    @id @default(uuid()) @db.Uuid
+  sessionTemplateId      String                    @db.Uuid
+  chapterTemplateId      String?                   @db.Uuid
+  order                  Int
+  sourceType             RoadmapQuestionSourceType
+  dsaQuestionSlug        String?
+  prepQuestionTemplateId String?
+  titleSnapshot          String
+  difficulty             String?
+  expectedMinutes        Int?
+  metadata               Json?
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+  sessionTemplate        RoadmapSessionTemplate    @relation(fields: [sessionTemplateId], references: [id], onDelete: Cascade)
+  chapterTemplate        RoadmapChapterTemplate?   @relation(fields: [chapterTemplateId], references: [id], onDelete: Cascade)
+  dsaQuestion            DsaQuestion?              @relation(fields: [dsaQuestionSlug], references: [slug], onDelete: SetNull)
+  prepQuestionTemplate   PrepQuestionTemplate?     @relation(fields: [prepQuestionTemplateId], references: [id], onDelete: SetNull)
+  userQuestionProgress   UserQuestionProgress[]
+
+  @@unique([sessionTemplateId, order])
+  @@index([sessionTemplateId])
+  @@index([chapterTemplateId])
+  @@index([sourceType])
+  @@index([dsaQuestionSlug])
+  @@index([prepQuestionTemplateId])
+}
+
+model UserRoadmap {
+  id                         String                 @id @default(uuid()) @db.Uuid
+  ownerId                    String
+  templateId                 String?                @db.Uuid
+  role                       String
+  status                     UserRoadmapStatus      @default(ACTIVE)
+  title                      String
+  templateVersion            Int?
+  currentSessionTemplateSlug String?
+  currentChapterTemplateSlug String?
+  nextQuestionKey            String?
+  totalSessions              Int                    @default(0)
+  completedSessions          Int                    @default(0)
+  totalQuestions             Int                    @default(0)
+  attemptedQuestions         Int                    @default(0)
+  completedQuestions         Int                    @default(0)
+  estimatedMinutesRemaining  Int?
+  overallProgressPercent     Float                  @default(0)
+  personalization            Json?
+  stats                      Json?
+  generatedAt                DateTime               @default(now())
+  recalculatedAt             DateTime?
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
+  owner                      CandidateProfile       @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  template                   RoadmapTemplate?       @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  sessionProgress            UserSessionProgress[]
+  chapterProgress            UserChapterProgress[]
+  questionProgress           UserQuestionProgress[]
+  insights                   UserMayaInsight[]
+
+  @@unique([ownerId, role])
+  @@index([ownerId])
+  @@index([templateId])
+  @@index([role])
+  @@index([status])
+}
+
+model UserSessionProgress {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  roadmapId          String                 @db.Uuid
+  sessionTemplateId  String                 @db.Uuid
+  status             RoadmapProgressStatus  @default(LOCKED)
+  order              Int
+  startedAt          DateTime?
+  completedAt        DateTime?
+  totalQuestions     Int                    @default(0)
+  attemptedQuestions Int                    @default(0)
+  completedQuestions Int                    @default(0)
+  progressPercent    Float                  @default(0)
+  metadata           Json?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  roadmap            UserRoadmap            @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  sessionTemplate    RoadmapSessionTemplate @relation(fields: [sessionTemplateId], references: [id], onDelete: Cascade)
+  chapters           UserChapterProgress[]
+  questions          UserQuestionProgress[]
+
+  @@unique([roadmapId, sessionTemplateId])
+  @@index([roadmapId])
+  @@index([sessionTemplateId])
+  @@index([status])
+}
+
+model UserChapterProgress {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  roadmapId          String                 @db.Uuid
+  sessionProgressId  String                 @db.Uuid
+  chapterTemplateId  String                 @db.Uuid
+  status             RoadmapProgressStatus  @default(LOCKED)
+  order              Int
+  startedAt          DateTime?
+  completedAt        DateTime?
+  totalQuestions     Int                    @default(0)
+  attemptedQuestions Int                    @default(0)
+  completedQuestions Int                    @default(0)
+  progressPercent    Float                  @default(0)
+  metadata           Json?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  roadmap            UserRoadmap            @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  sessionProgress    UserSessionProgress    @relation(fields: [sessionProgressId], references: [id], onDelete: Cascade)
+  chapterTemplate    RoadmapChapterTemplate @relation(fields: [chapterTemplateId], references: [id], onDelete: Cascade)
+  questions          UserQuestionProgress[]
+
+  @@unique([roadmapId, chapterTemplateId])
+  @@index([roadmapId])
+  @@index([sessionProgressId])
+  @@index([chapterTemplateId])
+  @@index([status])
+}
+
+model UserQuestionProgress {
+  id                        String                    @id @default(uuid()) @db.Uuid
+  roadmapId                 String                    @db.Uuid
+  sessionProgressId         String                    @db.Uuid
+  chapterProgressId         String?                   @db.Uuid
+  roadmapQuestionTemplateId String?                   @db.Uuid
+  sourceType                RoadmapQuestionSourceType
+  dsaQuestionSlug           String?
+  prepQuestionTemplateId    String?
+  status                    RoadmapProgressStatus     @default(LOCKED)
+  order                     Int
+  attemptCount              Int                       @default(0)
+  bestScore                 Float?
+  lastAttemptedAt           DateTime?
+  completedAt               DateTime?
+  metadata                  Json?
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime                  @updatedAt
+  roadmap                   UserRoadmap               @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  sessionProgress           UserSessionProgress       @relation(fields: [sessionProgressId], references: [id], onDelete: Cascade)
+  chapterProgress           UserChapterProgress?      @relation(fields: [chapterProgressId], references: [id], onDelete: SetNull)
+  roadmapQuestionTemplate   RoadmapQuestionTemplate?  @relation(fields: [roadmapQuestionTemplateId], references: [id], onDelete: SetNull)
+  dsaQuestion               DsaQuestion?              @relation(fields: [dsaQuestionSlug], references: [slug], onDelete: SetNull)
+  prepQuestionTemplate      PrepQuestionTemplate?     @relation(fields: [prepQuestionTemplateId], references: [id], onDelete: SetNull)
+  attempts                  UserQuestionAttempt[]
+
+  @@unique([roadmapId, order])
+  @@index([roadmapId])
+  @@index([sessionProgressId])
+  @@index([chapterProgressId])
+  @@index([roadmapQuestionTemplateId])
+  @@index([sourceType])
+  @@index([status])
+  @@index([dsaQuestionSlug])
+  @@index([prepQuestionTemplateId])
+}
+
+model UserQuestionAttempt {
+  id                     String                       @id @default(uuid()) @db.Uuid
+  ownerId                String
+  questionProgressId     String                       @db.Uuid
+  sourceType             RoadmapQuestionSourceType
+  dsaQuestionSlug        String?
+  prepQuestionTemplateId String?
+  status                 RoadmapQuestionAttemptStatus @default(STARTED)
+  answer                 String?                      @db.Text
+  score                  Float?
+  correctness            String?
+  durationMs             Int?
+  feedback               Json?
+  createdAt              DateTime                     @default(now())
+  updatedAt              DateTime                     @updatedAt
+  owner                  CandidateProfile             @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  questionProgress       UserQuestionProgress         @relation(fields: [questionProgressId], references: [id], onDelete: Cascade)
+  dsaQuestion            DsaQuestion?                 @relation(fields: [dsaQuestionSlug], references: [slug], onDelete: SetNull)
+  prepQuestionTemplate   PrepQuestionTemplate?        @relation(fields: [prepQuestionTemplateId], references: [id], onDelete: SetNull)
+
+  @@index([ownerId, createdAt])
+  @@index([questionProgressId])
+  @@index([sourceType])
+  @@index([status])
+  @@index([dsaQuestionSlug])
+  @@index([prepQuestionTemplateId])
+}
+
+model UserMayaInsight {
+  id            String           @id @default(uuid()) @db.Uuid
+  roadmapId     String           @db.Uuid
+  ownerId       String
+  kind          MayaInsightKind
+  title         String
+  body          String           @db.Text
+  evidenceLabel String?
+  ctaLabel      String?
+  ctaHref       String?
+  priority      Int              @default(0)
+  isActive      Boolean          @default(true)
+  source        Json?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  roadmap       UserRoadmap      @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  owner         CandidateProfile @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+
+  @@index([roadmapId])
+  @@index([ownerId, isActive])
+  @@index([kind])
+  @@index([priority])
 }

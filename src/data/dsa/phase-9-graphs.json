@@ -1,0 +1,1855 @@
+{
+  "phase": "Phase 9 — Graphs",
+  "questions": [
+    {
+      "title": "Number of Islands",
+      "slug": "number-of-islands",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/number-of-islands/",
+      "primaryPattern": "graph",
+      "subPatterns": ["flood-fill", "dfs-recursion", "in-place-mutation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 1,
+      "prerequisites": [],
+      "conceptsTested": [
+        "treating a grid as an implicit graph",
+        "flood filling each component exactly once",
+        "marking visited in place versus keeping a separate set"
+      ],
+      "commonMistakes": [
+        "Revisiting cells and counting one island many times",
+        "Recursing without bounds checks",
+        "Mutating the caller's grid without asking"
+      ],
+      "interviewSignals": [
+        "Asks whether the grid may be modified before choosing a visited strategy",
+        "Counts components rather than land cells"
+      ],
+      "followUpPrompts": [
+        "Do it with BFS and compare the stack depth.",
+        "What if the grid arrives row by row as a stream?",
+        "Count islands after each of a series of land additions."
+      ],
+      "promptSummary": "Count the connected groups of land cells in a grid of land and water.",
+      "highLevelApproach": "Scan the grid and, at each unvisited land cell, flood fill its entire component with DFS or BFS, counting one island per fill.",
+      "complexity": {
+        "time": "O(m*n)",
+        "space": "O(m*n)"
+      },
+      "problemStatement": "Count the connected groups of land cells in a grid of land and water. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n) time and O(m*n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around treating a grid as an implicit graph. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the graph traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Revisiting cells and counting one island many times.",
+        "The intended path is: Scan the grid and, at each unvisited land cell, flood fill its entire component with DFS or BFS, counting one island per fill."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — graph traversal",
+          "idea": "Scan the grid and, at each unvisited land cell, flood fill its entire component with DFS or BFS, counting one island per fill.",
+          "steps": [
+            "Track the state needed for treating a grid as an implicit graph.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n)",
+            "space": "O(m*n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Revisiting cells and counting one island many times"
+      ],
+      "relatedQuestions": [
+        "max-area-of-island",
+        "surrounded-regions",
+        "rotting-oranges",
+        "pacific-atlantic-water-flow"
+      ]
+    },
+    {
+      "title": "Max Area of Island",
+      "slug": "max-area-of-island",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/max-area-of-island/",
+      "primaryPattern": "graph",
+      "subPatterns": ["flood-fill", "dfs-recursion"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 2,
+      "prerequisites": ["number-of-islands"],
+      "conceptsTested": [
+        "returning a size from the flood fill instead of a count",
+        "accumulating across all four directions",
+        "the same visited discipline as island counting"
+      ],
+      "commonMistakes": [
+        "Marking visited after recursing and counting a cell twice",
+        "Returning early and losing part of the area",
+        "Overlooking the all-water grid returning zero"
+      ],
+      "interviewSignals": [
+        "Marks the cell visited before recursing into its neighbours",
+        "Reuses the island-counting skeleton with a different accumulator"
+      ],
+      "followUpPrompts": [
+        "Return the cells of the largest island.",
+        "What if you may flip one water cell to land?",
+        "Solve it iteratively."
+      ],
+      "promptSummary": "Return the size of the largest connected group of land cells in a grid.",
+      "highLevelApproach": "Flood fill each unvisited component and have the fill return how many cells it covered, keeping the running maximum.",
+      "complexity": {
+        "time": "O(m*n)",
+        "space": "O(m*n)"
+      },
+      "problemStatement": "Return the size of the largest connected group of land cells in a grid. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n) time and O(m*n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around returning a size from the flood fill instead of a count. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the graph traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Marking visited after recursing and counting a cell twice.",
+        "The intended path is: Flood fill each unvisited component and have the fill return how many cells it covered, keeping the running maximum."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — graph traversal",
+          "idea": "Flood fill each unvisited component and have the fill return how many cells it covered, keeping the running maximum.",
+          "steps": [
+            "Track the state needed for returning a size from the flood fill instead of a count.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n)",
+            "space": "O(m*n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Marking visited after recursing and counting a cell twice"
+      ],
+      "relatedQuestions": [
+        "number-of-islands",
+        "surrounded-regions",
+        "rotting-oranges",
+        "pacific-atlantic-water-flow"
+      ]
+    },
+    {
+      "title": "Surrounded Regions",
+      "slug": "surrounded-regions",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/surrounded-regions/",
+      "primaryPattern": "graph",
+      "subPatterns": ["flood-fill"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 3,
+      "prerequisites": ["number-of-islands"],
+      "conceptsTested": [
+        "inverting the question to find what survives instead of what is captured",
+        "seeding the search from border cells",
+        "a temporary marker separating safe cells from captured ones"
+      ],
+      "commonMistakes": [
+        "Searching for enclosed regions directly and mishandling the edges",
+        "Forgetting that a region touching any border is safe",
+        "Leaving the temporary marker behind in the final pass"
+      ],
+      "interviewSignals": [
+        "Flips the problem to mark border-reachable regions instead",
+        "Uses a distinct sentinel and cleans it up afterwards"
+      ],
+      "followUpPrompts": [
+        "Solve it with union-find instead.",
+        "What if diagonal connections counted?",
+        "Return which regions were captured."
+      ],
+      "promptSummary": "Capture every region of one symbol that is fully surrounded by another, leaving border-touching regions untouched.",
+      "highLevelApproach": "Flood fill inward from every border cell to mark the regions that escape, then sweep once, converting unmarked cells and restoring the marked ones.",
+      "complexity": {
+        "time": "O(m*n)",
+        "space": "O(m*n)"
+      },
+      "problemStatement": "Capture every region of one symbol that is fully surrounded by another, leaving border-touching regions untouched. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n) time and O(m*n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around inverting the question to find what survives instead of what is captured. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the graph traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Searching for enclosed regions directly and mishandling the edges.",
+        "The intended path is: Flood fill inward from every border cell to mark the regions that escape, then sweep once, converting unmarked cells and restoring the marked ones."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — graph traversal",
+          "idea": "Flood fill inward from every border cell to mark the regions that escape, then sweep once, converting unmarked cells and restoring the marked ones.",
+          "steps": [
+            "Track the state needed for inverting the question to find what survives instead of what is captured.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n)",
+            "space": "O(m*n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Searching for enclosed regions directly and mishandling the edges"
+      ],
+      "relatedQuestions": [
+        "number-of-islands",
+        "max-area-of-island",
+        "rotting-oranges",
+        "pacific-atlantic-water-flow"
+      ]
+    },
+    {
+      "title": "Rotting Oranges",
+      "slug": "rotting-oranges",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/rotting-oranges/",
+      "primaryPattern": "graph",
+      "subPatterns": ["multi-source-bfs", "bfs-level-order"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 4,
+      "prerequisites": ["number-of-islands"],
+      "conceptsTested": [
+        "seeding BFS with every source at once",
+        "levels corresponding to elapsed minutes",
+        "detecting cells that are never reached"
+      ],
+      "commonMistakes": [
+        "Running BFS from one source at a time and combining the results wrongly",
+        "Counting an extra minute after the final level",
+        "Not checking whether fresh cells remain at the end"
+      ],
+      "interviewSignals": [
+        "Seeds the queue with all rotten cells before the first round",
+        "Counts levels rather than individual cells"
+      ],
+      "followUpPrompts": [
+        "What if rotting spread diagonally as well?",
+        "Return which cell rots last.",
+        "What if some cells were impassable walls?"
+      ],
+      "promptSummary": "Rotten cells spread to adjacent fresh cells each minute; return the minutes until none are fresh, or -1 when some never rot.",
+      "highLevelApproach": "Push every initially rotten cell into a BFS queue and expand level by level, counting one minute per level and confirming afterwards that nothing fresh remains.",
+      "complexity": {
+        "time": "O(m*n)",
+        "space": "O(m*n)"
+      },
+      "problemStatement": "Rotten cells spread to adjacent fresh cells each minute; return the minutes until none are fresh, or -1 when some never rot. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n) time and O(m*n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around seeding BFS with every source at once. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the graph traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Running BFS from one source at a time and combining the results wrongly.",
+        "The intended path is: Push every initially rotten cell into a BFS queue and expand level by level, counting one minute per level and confirming afterwards that nothing fresh remains."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — graph traversal",
+          "idea": "Push every initially rotten cell into a BFS queue and expand level by level, counting one minute per level and confirming afterwards that nothing fresh remains.",
+          "steps": [
+            "Track the state needed for seeding BFS with every source at once.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n)",
+            "space": "O(m*n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Running BFS from one source at a time and combining the results wrongly"
+      ],
+      "relatedQuestions": [
+        "number-of-islands",
+        "max-area-of-island",
+        "surrounded-regions",
+        "pacific-atlantic-water-flow"
+      ]
+    },
+    {
+      "title": "Pacific Atlantic Water Flow",
+      "slug": "pacific-atlantic-water-flow",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/pacific-atlantic-water-flow/",
+      "primaryPattern": "graph",
+      "subPatterns": ["multi-source-bfs", "hash-set-membership"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 5,
+      "prerequisites": ["rotting-oranges", "surrounded-regions"],
+      "conceptsTested": [
+        "reversing the flow so the search starts at the oceans",
+        "two independent reachability sets",
+        "intersecting the two results"
+      ],
+      "commonMistakes": [
+        "Searching downhill from every cell, which is far too slow",
+        "Comparing heights in the wrong direction after reversing the flow",
+        "Running one combined search instead of two separate ones"
+      ],
+      "interviewSignals": [
+        "Reverses the direction of the flow condition deliberately",
+        "Keeps the two ocean searches independent and intersects only at the end"
+      ],
+      "followUpPrompts": [
+        "What if water could also flow diagonally?",
+        "Return the count rather than the coordinates.",
+        "How would strict inequality on equal heights change the answer?"
+      ],
+      "promptSummary": "Find the grid cells from which water can reach both ocean borders, flowing only to neighbours of equal or lower height.",
+      "highLevelApproach": "Search upward from each ocean's border cells, allowing moves to equal-or-higher neighbours, then intersect the two sets of reachable cells.",
+      "complexity": {
+        "time": "O(m*n)",
+        "space": "O(m*n)"
+      },
+      "problemStatement": "Find the grid cells from which water can reach both ocean borders, flowing only to neighbours of equal or lower height. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n) time and O(m*n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around reversing the flow so the search starts at the oceans. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the graph traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Searching downhill from every cell, which is far too slow.",
+        "The intended path is: Search upward from each ocean's border cells, allowing moves to equal-or-higher neighbours, then intersect the two sets of reachable cells."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — graph traversal",
+          "idea": "Search upward from each ocean's border cells, allowing moves to equal-or-higher neighbours, then intersect the two sets of reachable cells.",
+          "steps": [
+            "Track the state needed for reversing the flow so the search starts at the oceans.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n)",
+            "space": "O(m*n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Searching downhill from every cell, which is far too slow"
+      ],
+      "relatedQuestions": [
+        "rotting-oranges",
+        "surrounded-regions",
+        "number-of-islands",
+        "max-area-of-island",
+        "word-search"
+      ]
+    },
+    {
+      "title": "Word Search",
+      "slug": "word-search",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/word-search/",
+      "primaryPattern": "graph",
+      "subPatterns": ["backtracking", "dfs-recursion", "in-place-mutation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 6,
+      "prerequisites": ["number-of-islands"],
+      "conceptsTested": [
+        "backtracking with an in-place visited marker",
+        "restoring the cell on the way back out",
+        "pruning as soon as a character mismatches"
+      ],
+      "commonMistakes": [
+        "Forgetting to restore the marker after a failed branch",
+        "Allowing the same cell to be reused within one path",
+        "Recursing before checking the current character matches"
+      ],
+      "interviewSignals": [
+        "Marks and unmarks tightly around the recursive call",
+        "Prunes on mismatch before descending"
+      ],
+      "followUpPrompts": [
+        "Search for many words at once using a trie.",
+        "What if letters could be reused?",
+        "Return the path taken through the grid."
+      ],
+      "promptSummary": "Decide whether a word can be spelled by moving between adjacent grid cells without reusing any cell.",
+      "highLevelApproach": "From each matching start cell, depth-first search the four directions with the current cell marked as used, restoring it whenever a branch fails.",
+      "complexity": {
+        "time": "O(m*n*4^L)",
+        "space": "O(L)"
+      },
+      "problemStatement": "Decide whether a word can be spelled by moving between adjacent grid cells without reusing any cell. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n*4^L) time and O(L) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around backtracking with an in-place visited marker. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the graph traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Forgetting to restore the marker after a failed branch.",
+        "The intended path is: From each matching start cell, depth-first search the four directions with the current cell marked as used, restoring it whenever a branch fails."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — graph traversal",
+          "idea": "From each matching start cell, depth-first search the four directions with the current cell marked as used, restoring it whenever a branch fails.",
+          "steps": [
+            "Track the state needed for backtracking with an in-place visited marker.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n*4^L)",
+            "space": "O(L)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Forgetting to restore the marker after a failed branch"
+      ],
+      "relatedQuestions": [
+        "number-of-islands",
+        "max-area-of-island",
+        "surrounded-regions",
+        "rotting-oranges",
+        "pacific-atlantic-water-flow"
+      ]
+    },
+    {
+      "title": "Clone Graph",
+      "slug": "clone-graph",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/clone-graph/",
+      "primaryPattern": "graph",
+      "subPatterns": ["dfs-recursion", "canonical-key", "cycle-detection"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 7,
+      "prerequisites": ["number-of-islands"],
+      "conceptsTested": [
+        "a map from original nodes to their clones",
+        "checking that map before recursing so cycles terminate",
+        "wiring edges only once the clone nodes exist"
+      ],
+      "commonMistakes": [
+        "Recursing without memoizing and looping forever on a cycle",
+        "Copying neighbour references instead of their clones",
+        "Not handling an empty graph or a single isolated node"
+      ],
+      "interviewSignals": [
+        "Registers the clone in the map before recursing into neighbours",
+        "Handles cycles through the clone map without a separate visited set"
+      ],
+      "followUpPrompts": [
+        "Do it iteratively with BFS.",
+        "Clone a directed graph instead.",
+        "What if the nodes carry heavy payloads?"
+      ],
+      "promptSummary": "Deep copy a connected undirected graph given a reference to one of its nodes.",
+      "highLevelApproach": "Traverse from the given node keeping a map from original to clone, creating each clone on first visit and then wiring its neighbour list through that map.",
+      "complexity": {
+        "time": "O(V + E)",
+        "space": "O(V)"
+      },
+      "problemStatement": "Deep copy a connected undirected graph given a reference to one of its nodes. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(V + E) time and O(V) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around a map from original nodes to their clones. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the graph traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Recursing without memoizing and looping forever on a cycle.",
+        "The intended path is: Traverse from the given node keeping a map from original to clone, creating each clone on first visit and then wiring its neighbour list through that map."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — graph traversal",
+          "idea": "Traverse from the given node keeping a map from original to clone, creating each clone on first visit and then wiring its neighbour list through that map.",
+          "steps": [
+            "Track the state needed for a map from original nodes to their clones.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(V + E)",
+            "space": "O(V)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Recursing without memoizing and looping forever on a cycle"
+      ],
+      "relatedQuestions": [
+        "number-of-islands",
+        "max-area-of-island",
+        "surrounded-regions",
+        "rotting-oranges",
+        "word-search"
+      ]
+    },
+    {
+      "title": "Number of Connected Components in an Undirected Graph",
+      "slug": "number-of-connected-components-in-an-undirected-graph",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/number-of-connected-components-in-an-undirected-graph/",
+      "primaryPattern": "union-find",
+      "subPatterns": ["union-find"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 8,
+      "prerequisites": ["clone-graph"],
+      "conceptsTested": [
+        "starting with n components and merging on each edge",
+        "union by rank or by size",
+        "path compression keeping finds near constant time"
+      ],
+      "commonMistakes": [
+        "Counting edges instead of successful merges",
+        "Skipping path compression and degrading finds to linear",
+        "Unioning without first comparing the two roots"
+      ],
+      "interviewSignals": [
+        "Decrements the component count only when a union actually merges two sets",
+        "Names both optimizations and why they matter together"
+      ],
+      "followUpPrompts": [
+        "Solve it with DFS instead and compare.",
+        "Support edges arriving as a stream.",
+        "Return the size of each component."
+      ],
+      "promptSummary": "Count the connected components of an undirected graph given its node count and edge list. This problem sits behind LeetCode Premium.",
+      "highLevelApproach": "Start each node as its own component and union the endpoints of every edge, decrementing the count each time two distinct components actually merge.",
+      "complexity": {
+        "time": "O(E * inverse Ackermann)",
+        "space": "O(V)"
+      },
+      "problemStatement": "Count the connected components of an undirected graph given its node count and edge list. This problem sits behind LeetCode Premium. Identify the input, required output, and constraints, then explain which disjoint set connectivity idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(E * inverse Ackermann) time and O(V) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the disjoint set connectivity pattern and maintain the right invariant around starting with n components and merging on each edge. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the disjoint set connectivity structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Counting edges instead of successful merges.",
+        "The intended path is: Start each node as its own component and union the endpoints of every edge, decrementing the count each time two distinct components actually merge."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — disjoint set connectivity",
+          "idea": "Start each node as its own component and union the endpoints of every edge, decrementing the count each time two distinct components actually merge.",
+          "steps": [
+            "Track the state needed for starting with n components and merging on each edge.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(E * inverse Ackermann)",
+            "space": "O(V)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Counting edges instead of successful merges"
+      ],
+      "relatedQuestions": [
+        "clone-graph",
+        "graph-valid-tree",
+        "redundant-connection",
+        "accounts-merge"
+      ]
+    },
+    {
+      "title": "Graph Valid Tree",
+      "slug": "graph-valid-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/graph-valid-tree/",
+      "primaryPattern": "union-find",
+      "subPatterns": ["union-find", "cycle-detection"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 9,
+      "prerequisites": ["number-of-connected-components-in-an-undirected-graph"],
+      "conceptsTested": [
+        "a tree having exactly n minus one edges and no cycle",
+        "connectivity and acyclicity together being sufficient",
+        "the edge count as a cheap first rejection"
+      ],
+      "commonMistakes": [
+        "Checking only for cycles and missing a disconnected graph",
+        "Checking only connectivity and missing a cycle",
+        "Skipping the edge-count shortcut that rules out most inputs immediately"
+      ],
+      "interviewSignals": [
+        "Checks the edge count before doing any real work",
+        "Explains why the two conditions together define a tree exactly"
+      ],
+      "followUpPrompts": [
+        "Solve it with DFS instead.",
+        "What changes if the graph is directed?",
+        "Return the components when it is not a tree."
+      ],
+      "promptSummary": "Decide whether an undirected graph with n nodes and a given edge list forms a single tree. This problem sits behind LeetCode Premium.",
+      "highLevelApproach": "Reject immediately unless there are exactly n minus one edges, then union every edge and confirm that no edge ever joins two nodes already in the same set.",
+      "complexity": {
+        "time": "O(E * inverse Ackermann)",
+        "space": "O(V)"
+      },
+      "problemStatement": "Decide whether an undirected graph with n nodes and a given edge list forms a single tree. This problem sits behind LeetCode Premium. Identify the input, required output, and constraints, then explain which disjoint set connectivity idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(E * inverse Ackermann) time and O(V) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the disjoint set connectivity pattern and maintain the right invariant around a tree having exactly n minus one edges and no cycle. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the disjoint set connectivity structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Checking only for cycles and missing a disconnected graph.",
+        "The intended path is: Reject immediately unless there are exactly n minus one edges, then union every edge and confirm that no edge ever joins two nodes already in the same set."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — disjoint set connectivity",
+          "idea": "Reject immediately unless there are exactly n minus one edges, then union every edge and confirm that no edge ever joins two nodes already in the same set.",
+          "steps": [
+            "Track the state needed for a tree having exactly n minus one edges and no cycle.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(E * inverse Ackermann)",
+            "space": "O(V)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Checking only for cycles and missing a disconnected graph"
+      ],
+      "relatedQuestions": [
+        "number-of-connected-components-in-an-undirected-graph",
+        "redundant-connection",
+        "accounts-merge"
+      ]
+    },
+    {
+      "title": "Redundant Connection",
+      "slug": "redundant-connection",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/redundant-connection/",
+      "primaryPattern": "union-find",
+      "subPatterns": ["union-find", "cycle-detection", "boundary-scan"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 10,
+      "prerequisites": ["graph-valid-tree"],
+      "conceptsTested": [
+        "the edge that closes a cycle being the redundant one",
+        "processing edges in input order to satisfy the tie-break",
+        "union failing exactly when both endpoints already connect"
+      ],
+      "commonMistakes": [
+        "Returning the first edge of the cycle rather than the last one in input order",
+        "Processing edges out of order and breaking the tie-break rule",
+        "Running a DFS per edge, which is quadratic"
+      ],
+      "interviewSignals": [
+        "Returns the edge whose union fails, walking the input in order",
+        "Recognizes the input is a tree plus exactly one extra edge"
+      ],
+      "followUpPrompts": [
+        "Solve the directed version of this problem.",
+        "What if more than one edge were redundant?",
+        "Do it with DFS and compare the cost."
+      ],
+      "promptSummary": "A tree had one extra edge added to it; return the edge that can be removed, choosing the last such edge in the input.",
+      "highLevelApproach": "Union each edge in input order; the first edge whose endpoints already share a root is the one closing a cycle, and is the answer.",
+      "complexity": {
+        "time": "O(E * inverse Ackermann)",
+        "space": "O(V)"
+      },
+      "problemStatement": "A tree had one extra edge added to it; return the edge that can be removed, choosing the last such edge in the input. Identify the input, required output, and constraints, then explain which disjoint set connectivity idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(E * inverse Ackermann) time and O(V) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the disjoint set connectivity pattern and maintain the right invariant around the edge that closes a cycle being the redundant one. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the disjoint set connectivity structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Returning the first edge of the cycle rather than the last one in input order.",
+        "The intended path is: Union each edge in input order; the first edge whose endpoints already share a root is the one closing a cycle, and is the answer."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — disjoint set connectivity",
+          "idea": "Union each edge in input order; the first edge whose endpoints already share a root is the one closing a cycle, and is the answer.",
+          "steps": [
+            "Track the state needed for the edge that closes a cycle being the redundant one.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(E * inverse Ackermann)",
+            "space": "O(V)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Returning the first edge of the cycle rather than the last one in input order"
+      ],
+      "relatedQuestions": [
+        "graph-valid-tree",
+        "number-of-connected-components-in-an-undirected-graph",
+        "accounts-merge"
+      ]
+    },
+    {
+      "title": "Accounts Merge",
+      "slug": "accounts-merge",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/accounts-merge/",
+      "primaryPattern": "union-find",
+      "subPatterns": ["union-find", "canonical-key"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 11,
+      "prerequisites": ["redundant-connection"],
+      "conceptsTested": [
+        "unioning accounts that share any email address",
+        "mapping each email to an owning account index",
+        "collecting and sorting each merged group at the end"
+      ],
+      "commonMistakes": [
+        "Merging by name, which wrongly collides different people",
+        "Forgetting to sort the emails within each merged group",
+        "Losing the account name when regrouping by root"
+      ],
+      "interviewSignals": [
+        "Unions on shared emails and keeps names only for the output",
+        "Builds the email-to-account map before starting to merge"
+      ],
+      "followUpPrompts": [
+        "Solve it with DFS over a bipartite graph instead.",
+        "What if accounts arrive as a stream?",
+        "How would you scale this to billions of records?"
+      ],
+      "promptSummary": "Merge account records that share any email address, treating same-name accounts with no shared email as different people.",
+      "highLevelApproach": "Union every account that shares an email through an email-to-account map, then group the emails by their root account and sort each group before attaching the name.",
+      "complexity": {
+        "time": "O(N*K log(N*K))",
+        "space": "O(N*K)"
+      },
+      "problemStatement": "Merge account records that share any email address, treating same-name accounts with no shared email as different people. Identify the input, required output, and constraints, then explain which disjoint set connectivity idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(N*K log(N*K)) time and O(N*K) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the disjoint set connectivity pattern and maintain the right invariant around unioning accounts that share any email address. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the disjoint set connectivity structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Merging by name, which wrongly collides different people.",
+        "The intended path is: Union every account that shares an email through an email-to-account map, then group the emails by their root account and sort each group before attaching the name."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — disjoint set connectivity",
+          "idea": "Union every account that shares an email through an email-to-account map, then group the emails by their root account and sort each group before attaching the name.",
+          "steps": [
+            "Track the state needed for unioning accounts that share any email address.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(N*K log(N*K))",
+            "space": "O(N*K)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Merging by name, which wrongly collides different people"
+      ],
+      "relatedQuestions": [
+        "redundant-connection",
+        "number-of-connected-components-in-an-undirected-graph",
+        "graph-valid-tree",
+        "course-schedule"
+      ]
+    },
+    {
+      "title": "Course Schedule",
+      "slug": "course-schedule",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/course-schedule/",
+      "primaryPattern": "graph",
+      "subPatterns": ["topological-sort", "cycle-detection"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 12,
+      "prerequisites": ["clone-graph"],
+      "conceptsTested": [
+        "a valid schedule existing exactly when the graph is acyclic",
+        "Kahn's algorithm peeling zero in-degree nodes",
+        "three-colour DFS as the alternative cycle check"
+      ],
+      "commonMistakes": [
+        "Reversing the direction of the prerequisite edges",
+        "Using a plain visited set in DFS and missing back edges",
+        "Overlooking nodes that have no edges at all"
+      ],
+      "interviewSignals": [
+        "States the direction of each edge before building the graph",
+        "Distinguishes visited-on-this-path from visited-ever in the DFS version"
+      ],
+      "followUpPrompts": [
+        "Return the order rather than just feasibility.",
+        "Find and report the cycle itself.",
+        "What if several courses could be taken in parallel?"
+      ],
+      "promptSummary": "Given course prerequisite pairs, decide whether every course can be completed.",
+      "highLevelApproach": "Build the dependency graph and run Kahn's algorithm, repeatedly removing zero in-degree nodes; a cycle exists exactly when some nodes never reach in-degree zero.",
+      "complexity": {
+        "time": "O(V + E)",
+        "space": "O(V + E)"
+      },
+      "problemStatement": "Given course prerequisite pairs, decide whether every course can be completed. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(V + E) time and O(V + E) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around a valid schedule existing exactly when the graph is acyclic. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the graph traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Reversing the direction of the prerequisite edges.",
+        "The intended path is: Build the dependency graph and run Kahn's algorithm, repeatedly removing zero in-degree nodes; a cycle exists exactly when some nodes never reach in-degree zero."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — graph traversal",
+          "idea": "Build the dependency graph and run Kahn's algorithm, repeatedly removing zero in-degree nodes; a cycle exists exactly when some nodes never reach in-degree zero.",
+          "steps": [
+            "Track the state needed for a valid schedule existing exactly when the graph is acyclic.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(V + E)",
+            "space": "O(V + E)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Reversing the direction of the prerequisite edges"
+      ],
+      "relatedQuestions": [
+        "clone-graph",
+        "number-of-islands",
+        "max-area-of-island",
+        "surrounded-regions",
+        "accounts-merge"
+      ]
+    },
+    {
+      "title": "Course Schedule II",
+      "slug": "course-schedule-ii",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/course-schedule-ii/",
+      "primaryPattern": "graph",
+      "subPatterns": ["topological-sort"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 13,
+      "prerequisites": ["course-schedule"],
+      "conceptsTested": [
+        "emitting nodes in the order their in-degree reaches zero",
+        "an incomplete output signalling a cycle",
+        "reverse post-order DFS as the alternative"
+      ],
+      "commonMistakes": [
+        "Returning a partial order when a cycle exists",
+        "Forgetting to reverse the DFS post-order",
+        "Emitting a course before its prerequisites"
+      ],
+      "interviewSignals": [
+        "Compares the output length against the node count to detect a cycle",
+        "Chooses Kahn or reverse post-order deliberately rather than by habit"
+      ],
+      "followUpPrompts": [
+        "Return every valid order.",
+        "Find the minimum number of semesters needed.",
+        "What if each term had a course limit?"
+      ],
+      "promptSummary": "Return an order in which all courses can be taken, or an empty result when no such order exists.",
+      "highLevelApproach": "Run Kahn's algorithm appending each node as its in-degree hits zero, treating an output shorter than the node count as proof of a cycle.",
+      "complexity": {
+        "time": "O(V + E)",
+        "space": "O(V + E)"
+      },
+      "problemStatement": "Return an order in which all courses can be taken, or an empty result when no such order exists. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(V + E) time and O(V + E) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around emitting nodes in the order their in-degree reaches zero. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the graph traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Returning a partial order when a cycle exists.",
+        "The intended path is: Run Kahn's algorithm appending each node as its in-degree hits zero, treating an output shorter than the node count as proof of a cycle."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — graph traversal",
+          "idea": "Run Kahn's algorithm appending each node as its in-degree hits zero, treating an output shorter than the node count as proof of a cycle.",
+          "steps": [
+            "Track the state needed for emitting nodes in the order their in-degree reaches zero.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(V + E)",
+            "space": "O(V + E)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Returning a partial order when a cycle exists"
+      ],
+      "relatedQuestions": [
+        "course-schedule",
+        "number-of-islands",
+        "max-area-of-island",
+        "surrounded-regions",
+        "alien-dictionary"
+      ]
+    },
+    {
+      "title": "Alien Dictionary",
+      "slug": "alien-dictionary",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/alien-dictionary/",
+      "primaryPattern": "graph",
+      "subPatterns": ["topological-sort"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 40,
+      "recommendedOrder": 14,
+      "prerequisites": ["course-schedule-ii"],
+      "conceptsTested": [
+        "deriving one edge from the first differing character of adjacent words",
+        "the prefix case that makes an input invalid",
+        "topologically sorting the derived alphabet"
+      ],
+      "commonMistakes": [
+        "Comparing every pair of words rather than adjacent pairs only",
+        "Missing the invalid case where a longer word precedes its own prefix",
+        "Including only the characters that appear in some constraint"
+      ],
+      "interviewSignals": [
+        "Handles the prefix contradiction explicitly rather than by accident",
+        "Seeds the graph with every character seen, not only constrained ones"
+      ],
+      "followUpPrompts": [
+        "Detect when more than one valid order exists.",
+        "What if the words are not guaranteed sorted?",
+        "Return the lexicographically smallest valid order."
+      ],
+      "promptSummary": "Infer a possible letter ordering for an alien alphabet from a list of words sorted in that alphabet. This problem sits behind LeetCode Premium.",
+      "highLevelApproach": "Compare adjacent words to extract one ordering edge from the first position where they differ, reject the prefix contradiction, then topologically sort the resulting character graph.",
+      "complexity": {
+        "time": "O(total characters)",
+        "space": "O(1) for a bounded alphabet"
+      },
+      "problemStatement": "Infer a possible letter ordering for an alien alphabet from a list of words sorted in that alphabet. This problem sits behind LeetCode Premium. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(total characters) time and O(1) for a bounded alphabet space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around deriving one edge from the first differing character of adjacent words. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the graph traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Comparing every pair of words rather than adjacent pairs only.",
+        "The intended path is: Compare adjacent words to extract one ordering edge from the first position where they differ, reject the prefix contradiction, then topologically sort the resulting character graph."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — graph traversal",
+          "idea": "Compare adjacent words to extract one ordering edge from the first position where they differ, reject the prefix contradiction, then topologically sort the resulting character graph.",
+          "steps": [
+            "Track the state needed for deriving one edge from the first differing character of adjacent words.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(total characters)",
+            "space": "O(1) for a bounded alphabet"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Comparing every pair of words rather than adjacent pairs only"
+      ],
+      "relatedQuestions": [
+        "course-schedule-ii",
+        "number-of-islands",
+        "max-area-of-island",
+        "surrounded-regions",
+        "minimum-height-trees"
+      ]
+    },
+    {
+      "title": "Minimum Height Trees",
+      "slug": "minimum-height-trees",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/minimum-height-trees/",
+      "primaryPattern": "graph",
+      "subPatterns": ["layer-peeling", "bfs-level-order"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 15,
+      "prerequisites": ["course-schedule-ii"],
+      "conceptsTested": [
+        "the answer being the one or two centroids of the tree",
+        "peeling leaves layer by layer until one or two nodes remain",
+        "why there can never be three answers"
+      ],
+      "commonMistakes": [
+        "Running BFS from every node, which is quadratic",
+        "Peeling until nothing remains instead of stopping at two nodes",
+        "Mishandling the single-node and two-node inputs"
+      ],
+      "interviewSignals": [
+        "Argues that the centre of the longest path is the answer",
+        "Stops the peeling at exactly the right size"
+      ],
+      "followUpPrompts": [
+        "Prove there are at most two answers.",
+        "Return the resulting height as well.",
+        "What if the input graph is not a tree?"
+      ],
+      "promptSummary": "Return every node that, used as the root of a tree, produces the minimum possible height.",
+      "highLevelApproach": "Repeatedly strip the current leaves layer by layer; the last one or two nodes remaining are the tree's centroids and therefore the minimum-height roots.",
+      "complexity": {
+        "time": "O(V)",
+        "space": "O(V)"
+      },
+      "problemStatement": "Return every node that, used as the root of a tree, produces the minimum possible height. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(V) time and O(V) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around the answer being the one or two centroids of the tree. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the graph traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Running BFS from every node, which is quadratic.",
+        "The intended path is: Repeatedly strip the current leaves layer by layer; the last one or two nodes remaining are the tree's centroids and therefore the minimum-height roots."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — graph traversal",
+          "idea": "Repeatedly strip the current leaves layer by layer; the last one or two nodes remaining are the tree's centroids and therefore the minimum-height roots.",
+          "steps": [
+            "Track the state needed for the answer being the one or two centroids of the tree.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(V)",
+            "space": "O(V)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Running BFS from every node, which is quadratic"
+      ],
+      "relatedQuestions": [
+        "course-schedule-ii",
+        "number-of-islands",
+        "max-area-of-island",
+        "surrounded-regions",
+        "alien-dictionary"
+      ]
+    },
+    {
+      "title": "Word Ladder",
+      "slug": "word-ladder",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/word-ladder/",
+      "primaryPattern": "graph",
+      "subPatterns": ["bfs-shortest-path"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 40,
+      "recommendedOrder": 16,
+      "prerequisites": ["rotting-oranges"],
+      "conceptsTested": [
+        "words as nodes and single-character edits as edges",
+        "BFS yielding the shortest transformation",
+        "wildcard buckets avoiding all-pairs comparison"
+      ],
+      "commonMistakes": [
+        "Comparing every pair of words to build the edges",
+        "Using DFS and returning a path that is not shortest",
+        "Not removing visited words and revisiting them endlessly"
+      ],
+      "interviewSignals": [
+        "Builds neighbours with wildcard patterns rather than pairwise comparison",
+        "Mentions bidirectional BFS as the practical speedup"
+      ],
+      "followUpPrompts": [
+        "Return the transformation sequence itself.",
+        "Do it with bidirectional BFS.",
+        "Return every shortest sequence."
+      ],
+      "promptSummary": "Find the fewest single-letter changes that turn one word into another, where every intermediate word must exist in a dictionary.",
+      "highLevelApproach": "Treat words as graph nodes and breadth-first search outward from the start, generating neighbours by replacing each position with a wildcard so lookups stay cheap.",
+      "complexity": {
+        "time": "O(N * L^2)",
+        "space": "O(N * L)"
+      },
+      "problemStatement": "Find the fewest single-letter changes that turn one word into another, where every intermediate word must exist in a dictionary. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(N * L^2) time and O(N * L) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around words as nodes and single-character edits as edges. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the graph traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Comparing every pair of words to build the edges.",
+        "The intended path is: Treat words as graph nodes and breadth-first search outward from the start, generating neighbours by replacing each position with a wildcard so lookups stay cheap."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — graph traversal",
+          "idea": "Treat words as graph nodes and breadth-first search outward from the start, generating neighbours by replacing each position with a wildcard so lookups stay cheap.",
+          "steps": [
+            "Track the state needed for words as nodes and single-character edits as edges.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(N * L^2)",
+            "space": "O(N * L)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Comparing every pair of words to build the edges"
+      ],
+      "relatedQuestions": [
+        "rotting-oranges",
+        "number-of-islands",
+        "max-area-of-island",
+        "surrounded-regions",
+        "minimum-height-trees"
+      ]
+    },
+    {
+      "title": "Network Delay Time",
+      "slug": "network-delay-time",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/network-delay-time/",
+      "primaryPattern": "graph",
+      "subPatterns": ["dijkstra", "bounded-k-heap"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 17,
+      "prerequisites": ["word-ladder"],
+      "conceptsTested": [
+        "Dijkstra driven by a min-heap of tentative distances",
+        "the answer being the largest finalized distance",
+        "unreachable nodes making the answer undefined"
+      ],
+      "commonMistakes": [
+        "Using plain BFS on a weighted graph",
+        "Re-processing nodes whose distance is already final",
+        "Forgetting to report failure when some node is never reached"
+      ],
+      "interviewSignals": [
+        "Skips stale heap entries instead of reaching for a decrease-key operation",
+        "Checks that every node was actually reached before answering"
+      ],
+      "followUpPrompts": [
+        "Why does Dijkstra break with negative weights?",
+        "Return the full distance table.",
+        "What if edge weights changed over time?"
+      ],
+      "promptSummary": "A signal spreads along weighted directed edges from one node; return the time for every node to receive it, or -1 if some cannot.",
+      "highLevelApproach": "Run Dijkstra from the source with a min-heap, finalizing the nearest unfinalized node each step, and return the largest finalized distance once every node is reached.",
+      "complexity": {
+        "time": "O(E log V)",
+        "space": "O(V + E)"
+      },
+      "problemStatement": "A signal spreads along weighted directed edges from one node; return the time for every node to receive it, or -1 if some cannot. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(E log V) time and O(V + E) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around Dijkstra driven by a min-heap of tentative distances. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the graph traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Using plain BFS on a weighted graph.",
+        "The intended path is: Run Dijkstra from the source with a min-heap, finalizing the nearest unfinalized node each step, and return the largest finalized distance once every node is reached."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — graph traversal",
+          "idea": "Run Dijkstra from the source with a min-heap, finalizing the nearest unfinalized node each step, and return the largest finalized distance once every node is reached.",
+          "steps": [
+            "Track the state needed for Dijkstra driven by a min-heap of tentative distances.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(E log V)",
+            "space": "O(V + E)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Using plain BFS on a weighted graph"
+      ],
+      "relatedQuestions": [
+        "word-ladder",
+        "number-of-islands",
+        "max-area-of-island",
+        "surrounded-regions",
+        "cheapest-flights-within-k-stops"
+      ]
+    },
+    {
+      "title": "Cheapest Flights Within K Stops",
+      "slug": "cheapest-flights-within-k-stops",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/cheapest-flights-within-k-stops/",
+      "primaryPattern": "graph",
+      "subPatterns": ["bellman-ford", "binary-search-on-answer"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 40,
+      "recommendedOrder": 18,
+      "prerequisites": ["network-delay-time"],
+      "conceptsTested": [
+        "the stop limit turning distance into a two-dimensional state",
+        "Bellman-Ford relaxing for exactly k plus one rounds",
+        "snapshotting distances so one round cannot cascade"
+      ],
+      "commonMistakes": [
+        "Relaxing in place so a single round consumes more hops than allowed",
+        "Running plain Dijkstra and pruning a node that is cheap but too deep",
+        "Off-by-one between counting stops and counting edges"
+      ],
+      "interviewSignals": [
+        "Copies the distance array per round, or carries the hop count inside the heap state",
+        "Translates k stops into k plus one edges up front"
+      ],
+      "followUpPrompts": [
+        "Solve it with Dijkstra over augmented states.",
+        "What if the number of stops were unbounded?",
+        "Return the actual route, not just its cost."
+      ],
+      "promptSummary": "Find the cheapest route between two cities using at most k intermediate stops.",
+      "highLevelApproach": "Run Bellman-Ford for exactly k plus one rounds, relaxing from a snapshot of the previous round so no single round can chain extra hops; a hop-augmented Dijkstra state works equally well.",
+      "complexity": {
+        "time": "O(K*E)",
+        "space": "O(V)"
+      },
+      "problemStatement": "Find the cheapest route between two cities using at most k intermediate stops. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(K*E) time and O(V) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around the stop limit turning distance into a two-dimensional state. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the graph traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Relaxing in place so a single round consumes more hops than allowed.",
+        "The intended path is: Run Bellman-Ford for exactly k plus one rounds, relaxing from a snapshot of the previous round so no single round can chain extra hops; a hop-augmented Dijkstra state works equally well."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — graph traversal",
+          "idea": "Run Bellman-Ford for exactly k plus one rounds, relaxing from a snapshot of the previous round so no single round can chain extra hops; a hop-augmented Dijkstra state works equally well.",
+          "steps": [
+            "Track the state needed for the stop limit turning distance into a two-dimensional state.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(K*E)",
+            "space": "O(V)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Relaxing in place so a single round consumes more hops than allowed"
+      ],
+      "relatedQuestions": [
+        "network-delay-time",
+        "number-of-islands",
+        "max-area-of-island",
+        "surrounded-regions",
+        "evaluate-division"
+      ]
+    },
+    {
+      "title": "Evaluate Division",
+      "slug": "evaluate-division",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/evaluate-division/",
+      "primaryPattern": "graph",
+      "subPatterns": ["graph-modeling", "dfs-recursion", "union-find"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 19,
+      "prerequisites": ["clone-graph", "number-of-connected-components-in-an-undirected-graph"],
+      "conceptsTested": [
+        "ratios modelled as weighted edges in both directions",
+        "multiplying weights along a path to answer a query",
+        "unknown variables making a query unanswerable"
+      ],
+      "commonMistakes": [
+        "Forgetting to add the reciprocal edge",
+        "Returning a value for a variable that never appeared",
+        "Revisiting nodes and looping on a cycle"
+      ],
+      "interviewSignals": [
+        "Adds both directions when building the graph",
+        "Distinguishes an unreachable pair from an entirely unknown variable"
+      ],
+      "followUpPrompts": [
+        "Solve it with weighted union-find.",
+        "Precompute so many queries become cheap.",
+        "Detect contradictory input equations."
+      ],
+      "promptSummary": "Given equations stating that one variable divided by another equals some value, answer division queries or report that they cannot be determined.",
+      "highLevelApproach": "Build a graph carrying each ratio and its reciprocal as edge weights, then answer each query by finding a path and multiplying the weights along it.",
+      "complexity": {
+        "time": "O(Q*(V + E))",
+        "space": "O(V + E)"
+      },
+      "problemStatement": "Given equations stating that one variable divided by another equals some value, answer division queries or report that they cannot be determined. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(Q*(V + E)) time and O(V + E) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around ratios modelled as weighted edges in both directions. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the graph traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Forgetting to add the reciprocal edge.",
+        "The intended path is: Build a graph carrying each ratio and its reciprocal as edge weights, then answer each query by finding a path and multiplying the weights along it."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — graph traversal",
+          "idea": "Build a graph carrying each ratio and its reciprocal as edge weights, then answer each query by finding a path and multiplying the weights along it.",
+          "steps": [
+            "Track the state needed for ratios modelled as weighted edges in both directions.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(Q*(V + E))",
+            "space": "O(V + E)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Forgetting to add the reciprocal edge"
+      ],
+      "relatedQuestions": [
+        "clone-graph",
+        "number-of-connected-components-in-an-undirected-graph",
+        "number-of-islands",
+        "max-area-of-island",
+        "cheapest-flights-within-k-stops"
+      ]
+    },
+    {
+      "title": "Reconstruct Itinerary",
+      "slug": "reconstruct-itinerary",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/reconstruct-itinerary/",
+      "primaryPattern": "graph",
+      "subPatterns": ["eulerian-path", "post-order-aggregation"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 40,
+      "recommendedOrder": 20,
+      "prerequisites": ["course-schedule-ii"],
+      "conceptsTested": [
+        "an Eulerian path using every edge exactly once",
+        "Hierholzer's algorithm appending nodes on the way out",
+        "always taking the smallest unused edge for lexicographic order"
+      ],
+      "commonMistakes": [
+        "Walking smallest-first greedily and dead-ending with tickets unused",
+        "Appending nodes in pre-order and producing a reversed or invalid route",
+        "Reusing a ticket because edges were never consumed"
+      ],
+      "interviewSignals": [
+        "Appends on the way out and reverses at the end rather than backtracking naively",
+        "Consumes each edge at the moment it is used"
+      ],
+      "followUpPrompts": [
+        "Explain why the post-order append cannot dead-end.",
+        "What should happen when no valid itinerary exists?",
+        "Find an Eulerian circuit instead."
+      ],
+      "promptSummary": "Order a set of one-way tickets into a single itinerary from a fixed starting airport, preferring the lexicographically smallest route.",
+      "highLevelApproach": "Hierholzer's algorithm: from each airport repeatedly take the smallest unused ticket, appending the airport to the route only once its tickets are exhausted, then reverse the result.",
+      "complexity": {
+        "time": "O(E log E)",
+        "space": "O(E)"
+      },
+      "problemStatement": "Order a set of one-way tickets into a single itinerary from a fixed starting airport, preferring the lexicographically smallest route. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(E log E) time and O(E) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around an Eulerian path using every edge exactly once. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the graph traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Walking smallest-first greedily and dead-ending with tickets unused.",
+        "The intended path is: Hierholzer's algorithm: from each airport repeatedly take the smallest unused ticket, appending the airport to the route only once its tickets are exhausted, then reverse the result."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — graph traversal",
+          "idea": "Hierholzer's algorithm: from each airport repeatedly take the smallest unused ticket, appending the airport to the route only once its tickets are exhausted, then reverse the result.",
+          "steps": [
+            "Track the state needed for an Eulerian path using every edge exactly once.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(E log E)",
+            "space": "O(E)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Walking smallest-first greedily and dead-ending with tickets unused"
+      ],
+      "relatedQuestions": [
+        "course-schedule-ii",
+        "number-of-islands",
+        "max-area-of-island",
+        "surrounded-regions",
+        "evaluate-division"
+      ]
+    }
+  ]
+}

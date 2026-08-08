@@ -101,7 +101,7 @@ Candidate's own stories:
 ${stories || "None recorded."}
 
 Skills the resume supports: ${(resume?.skills ?? []).join(", ") || "none"}
-Gaps Helix already flagged: ${(resume?.warnings ?? []).join(" ") || "none"}
+Gaps Trailgrad already flagged: ${(resume?.warnings ?? []).join(" ") || "none"}
 
 Design 4-6 sessions, ordered so each builds on the last. Rules:
 - roundType must be one of behavioral, technical, hiring-manager, and must suit the session's subject.

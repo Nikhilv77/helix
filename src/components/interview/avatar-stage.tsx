@@ -54,7 +54,20 @@ export function AvatarStage({ agentTrack, state, url }: AvatarStageProps) {
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+
+    // Creating the context throws outright when WebGL is unavailable — hardware
+    // acceleration switched off, a crashed GPU process, some VMs and remote
+    // desktops. Unhandled, that error escaped the effect and took the whole
+    // page down with it, which is severe for a decorative avatar that already
+    // has an "unavailable" state to fall back to.
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    } catch {
+      setStatus("failed");
+      return;
+    }
+
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     // Filmic tone mapping plus image-based lighting: PBR skin and hair look

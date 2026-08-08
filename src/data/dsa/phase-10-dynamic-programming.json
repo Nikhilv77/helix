@@ -1,0 +1,2213 @@
+{
+  "phase": "Phase 10 — Dynamic Programming",
+  "questions": [
+    {
+      "title": "Climbing Stairs",
+      "slug": "climbing-stairs",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/climbing-stairs/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["one-dimensional-dp"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 1,
+      "prerequisites": [],
+      "conceptsTested": [
+        "ways to reach a step being the sum of the two steps below",
+        "memoization turning exponential recursion linear",
+        "rolling two variables instead of an array"
+      ],
+      "commonMistakes": [
+        "Recursing without memoization and blowing up exponentially",
+        "Getting the base cases for zero and one steps wrong",
+        "Allocating a whole array when two variables suffice"
+      ],
+      "interviewSignals": [
+        "Identifies the overlapping subproblems that justify dynamic programming",
+        "Reduces to constant space without being prompted"
+      ],
+      "followUpPrompts": [
+        "What if you may climb up to k steps at a time?",
+        "What if certain steps are broken and cannot be used?",
+        "Return the count modulo a large prime."
+      ],
+      "promptSummary": "Count the distinct ways to climb a staircase taking one or two steps at a time.",
+      "highLevelApproach": "The count for a step is the sum of the counts for the two steps below it, so iterate upward carrying only the last two values.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Count the distinct ways to climb a staircase taking one or two steps at a time. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around ways to reach a step being the sum of the two steps below. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Recursing without memoization and blowing up exponentially.",
+        "The intended path is: The count for a step is the sum of the counts for the two steps below it, so iterate upward carrying only the last two values."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "The count for a step is the sum of the counts for the two steps below it, so iterate upward carrying only the last two values.",
+          "steps": [
+            "Track the state needed for ways to reach a step being the sum of the two steps below.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Recursing without memoization and blowing up exponentially"
+      ],
+      "relatedQuestions": ["house-robber", "house-robber-ii", "decode-ways", "unique-paths"]
+    },
+    {
+      "title": "House Robber",
+      "slug": "house-robber",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/house-robber/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["one-dimensional-dp"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 2,
+      "prerequisites": ["climbing-stairs"],
+      "conceptsTested": [
+        "choosing between taking the current value plus two back, or skipping it",
+        "state as the best achievable up to each index",
+        "constant space with two rolling values"
+      ],
+      "commonMistakes": [
+        "Assuming that robbing alternate houses is always optimal",
+        "Off-by-one when reaching two indices back",
+        "Botching the base cases for one and two houses"
+      ],
+      "interviewSignals": [
+        "Writes the recurrence before writing any code",
+        "Refutes the alternate-houses heuristic with a concrete counterexample"
+      ],
+      "followUpPrompts": [
+        "What if the houses form a circle?",
+        "Return which houses were robbed.",
+        "How does the tree version change the recurrence?"
+      ],
+      "promptSummary": "Choose non-adjacent houses to rob so the total taken is as large as possible.",
+      "highLevelApproach": "At each house take the better of skipping it or robbing it plus the best total two houses back, carrying only those two running values.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Choose non-adjacent houses to rob so the total taken is as large as possible. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around choosing between taking the current value plus two back, or skipping it. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Assuming that robbing alternate houses is always optimal.",
+        "The intended path is: At each house take the better of skipping it or robbing it plus the best total two houses back, carrying only those two running values."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "At each house take the better of skipping it or robbing it plus the best total two houses back, carrying only those two running values.",
+          "steps": [
+            "Track the state needed for choosing between taking the current value plus two back, or skipping it.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Assuming that robbing alternate houses is always optimal"
+      ],
+      "relatedQuestions": ["climbing-stairs", "house-robber-ii", "decode-ways", "unique-paths"]
+    },
+    {
+      "title": "House Robber II",
+      "slug": "house-robber-ii",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/house-robber-ii/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["one-dimensional-dp", "modulo-indexing"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 3,
+      "prerequisites": ["house-robber"],
+      "conceptsTested": [
+        "a circular constraint reducing to two linear runs",
+        "excluding either the first or the last house",
+        "reusing the linear solver unchanged"
+      ],
+      "commonMistakes": [
+        "Trying to patch the linear recurrence to handle wrap-around",
+        "Forgetting the single-house case where both runs are empty",
+        "Running only one of the two passes"
+      ],
+      "interviewSignals": [
+        "Reduces the circular version to two calls of the linear one",
+        "Handles the one-house and two-house inputs explicitly"
+      ],
+      "followUpPrompts": [
+        "Generalize to two separate circles.",
+        "Return the chosen houses.",
+        "What if adjacency meant within distance k?"
+      ],
+      "promptSummary": "Rob non-adjacent houses arranged in a circle, where the first and last houses are neighbours.",
+      "highLevelApproach": "Since the first and last house cannot both be taken, run the linear solver twice — once excluding the first and once excluding the last — and keep the better result.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Rob non-adjacent houses arranged in a circle, where the first and last houses are neighbours. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around a circular constraint reducing to two linear runs. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Trying to patch the linear recurrence to handle wrap-around.",
+        "The intended path is: Since the first and last house cannot both be taken, run the linear solver twice — once excluding the first and once excluding the last — and keep the better result."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Since the first and last house cannot both be taken, run the linear solver twice — once excluding the first and once excluding the last — and keep the better result.",
+          "steps": [
+            "Track the state needed for a circular constraint reducing to two linear runs.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Trying to patch the linear recurrence to handle wrap-around"
+      ],
+      "relatedQuestions": ["house-robber", "climbing-stairs", "decode-ways", "unique-paths"]
+    },
+    {
+      "title": "Decode Ways",
+      "slug": "decode-ways",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/decode-ways/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["one-dimensional-dp", "two-dimensional-dp"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 4,
+      "prerequisites": ["climbing-stairs"],
+      "conceptsTested": [
+        "the same two-step recurrence gated by validity rules",
+        "a single digit decoding unless it is zero",
+        "a two-digit code being valid only between ten and twenty-six"
+      ],
+      "commonMistakes": [
+        "Treating a leading zero as decodable",
+        "Allowing a two-digit code above twenty-six",
+        "Mishandling a zero that cannot pair with the digit before it"
+      ],
+      "interviewSignals": [
+        "Enumerates the validity rules before writing the recurrence",
+        "Reaches for strings containing zeros as the first test cases"
+      ],
+      "followUpPrompts": [
+        "What if the string may contain wildcard characters?",
+        "Return the decodings themselves.",
+        "Handle an alphabet larger than twenty-six."
+      ],
+      "promptSummary": "Count the ways a digit string can be decoded into letters, where one maps to A and twenty-six maps to Z.",
+      "highLevelApproach": "Walk the string carrying the counts for the previous two positions, adding the one-step count when the current digit is non-zero and the two-step count when the pair lies between ten and twenty-six.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Count the ways a digit string can be decoded into letters, where one maps to A and twenty-six maps to Z. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around the same two-step recurrence gated by validity rules. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Treating a leading zero as decodable.",
+        "The intended path is: Walk the string carrying the counts for the previous two positions, adding the one-step count when the current digit is non-zero and the two-step count when the pair lies between ten and twenty-six."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Walk the string carrying the counts for the previous two positions, adding the one-step count when the current digit is non-zero and the two-step count when the pair lies between ten and twenty-six.",
+          "steps": [
+            "Track the state needed for the same two-step recurrence gated by validity rules.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Treating a leading zero as decodable"
+      ],
+      "relatedQuestions": ["climbing-stairs", "house-robber", "house-robber-ii", "unique-paths"]
+    },
+    {
+      "title": "Unique Paths",
+      "slug": "unique-paths",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/unique-paths/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["grid-dp", "combinatorics"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 5,
+      "prerequisites": ["climbing-stairs"],
+      "conceptsTested": [
+        "each cell's count as the sum of the cell above and the cell to the left",
+        "the first row and column as base cases",
+        "the closed-form binomial coefficient"
+      ],
+      "commonMistakes": [
+        "Forgetting to seed the first row and column with ones",
+        "Allocating the full grid when one row suffices",
+        "Overflowing while computing the binomial coefficient"
+      ],
+      "interviewSignals": [
+        "Compresses to a single rolling row after writing the two-dimensional version",
+        "Mentions the combinatorial answer along with its overflow risk"
+      ],
+      "followUpPrompts": [
+        "Solve it with the closed-form binomial coefficient.",
+        "What if diagonal moves were allowed?",
+        "Reduce the space to a single row."
+      ],
+      "promptSummary": "Count the paths from the top-left to the bottom-right of a grid moving only right or down.",
+      "highLevelApproach": "Fill the grid so each cell holds the sum of the cell above and the cell to its left, seeded with ones along the first row and column; one rolling row is enough.",
+      "complexity": {
+        "time": "O(m*n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Count the paths from the top-left to the bottom-right of a grid moving only right or down. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around each cell's count as the sum of the cell above and the cell to the left. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Forgetting to seed the first row and column with ones.",
+        "The intended path is: Fill the grid so each cell holds the sum of the cell above and the cell to its left, seeded with ones along the first row and column; one rolling row is enough."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Fill the grid so each cell holds the sum of the cell above and the cell to its left, seeded with ones along the first row and column; one rolling row is enough.",
+          "steps": [
+            "Track the state needed for each cell's count as the sum of the cell above and the cell to the left.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Forgetting to seed the first row and column with ones"
+      ],
+      "relatedQuestions": [
+        "climbing-stairs",
+        "house-robber",
+        "house-robber-ii",
+        "decode-ways",
+        "unique-paths-ii"
+      ]
+    },
+    {
+      "title": "Unique Paths II",
+      "slug": "unique-paths-ii",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/unique-paths-ii/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["grid-dp"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 6,
+      "prerequisites": ["unique-paths"],
+      "conceptsTested": [
+        "an obstacle forcing a cell's count to zero",
+        "the first row and column stopping at the first obstacle",
+        "in-place accumulation over the provided grid"
+      ],
+      "commonMistakes": [
+        "Continuing to seed ones along the border past an obstacle",
+        "Not handling an obstacle sitting on the start or finish cell",
+        "Mutating the caller's grid without asking"
+      ],
+      "interviewSignals": [
+        "Stops seeding the border the moment an obstacle appears",
+        "Checks the start and end cells before doing any work"
+      ],
+      "followUpPrompts": [
+        "What if obstacles could be removed at a cost?",
+        "Return one valid path.",
+        "What if the grid were enormous and sparse?"
+      ],
+      "promptSummary": "Count the paths across a grid moving right or down while avoiding blocked cells.",
+      "highLevelApproach": "Run the same grid recurrence but force every blocked cell to zero, which propagates the blockage naturally to everything downstream.",
+      "complexity": {
+        "time": "O(m*n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Count the paths across a grid moving right or down while avoiding blocked cells. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around an obstacle forcing a cell's count to zero. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Continuing to seed ones along the border past an obstacle.",
+        "The intended path is: Run the same grid recurrence but force every blocked cell to zero, which propagates the blockage naturally to everything downstream."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Run the same grid recurrence but force every blocked cell to zero, which propagates the blockage naturally to everything downstream.",
+          "steps": [
+            "Track the state needed for an obstacle forcing a cell's count to zero.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Continuing to seed ones along the border past an obstacle"
+      ],
+      "relatedQuestions": [
+        "unique-paths",
+        "climbing-stairs",
+        "house-robber",
+        "house-robber-ii",
+        "minimum-path-sum"
+      ]
+    },
+    {
+      "title": "Minimum Path Sum",
+      "slug": "minimum-path-sum",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/minimum-path-sum/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["grid-dp", "in-place-mutation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 7,
+      "prerequisites": ["unique-paths-ii"],
+      "conceptsTested": [
+        "swapping the summing recurrence for a minimizing one",
+        "the first row and column as running prefixes",
+        "in-place accumulation for constant extra space"
+      ],
+      "commonMistakes": [
+        "Taking a minimum against an out-of-range neighbour",
+        "Seeding the borders with zero instead of running totals",
+        "Reaching for Dijkstra when the moves are already monotone"
+      ],
+      "interviewSignals": [
+        "Notes that right-and-down-only movement is what makes plain DP sufficient",
+        "Accumulates in place or in a single row"
+      ],
+      "followUpPrompts": [
+        "What if you could also move up and left?",
+        "Return the path itself.",
+        "What if some cells had negative cost?"
+      ],
+      "promptSummary": "Find the minimum sum of values along a path from the top-left to the bottom-right, moving only right or down.",
+      "highLevelApproach": "Each cell takes its own value plus the cheaper of the cell above and the cell to its left, with the first row and column accumulating straight through.",
+      "complexity": {
+        "time": "O(m*n)",
+        "space": "O(1) in place"
+      },
+      "problemStatement": "Find the minimum sum of values along a path from the top-left to the bottom-right, moving only right or down. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n) time and O(1) in place space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around swapping the summing recurrence for a minimizing one. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Taking a minimum against an out-of-range neighbour.",
+        "The intended path is: Each cell takes its own value plus the cheaper of the cell above and the cell to its left, with the first row and column accumulating straight through."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Each cell takes its own value plus the cheaper of the cell above and the cell to its left, with the first row and column accumulating straight through.",
+          "steps": [
+            "Track the state needed for swapping the summing recurrence for a minimizing one.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n)",
+            "space": "O(1) in place"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Taking a minimum against an out-of-range neighbour"
+      ],
+      "relatedQuestions": [
+        "unique-paths-ii",
+        "climbing-stairs",
+        "house-robber",
+        "house-robber-ii",
+        "coin-change"
+      ]
+    },
+    {
+      "title": "Coin Change",
+      "slug": "coin-change",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/coin-change/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["knapsack-unbounded", "one-dimensional-dp"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 8,
+      "prerequisites": ["climbing-stairs"],
+      "conceptsTested": [
+        "amount as the dynamic-programming dimension with coins as reusable items",
+        "a sentinel marking unreachable amounts",
+        "why greedy fails on arbitrary denominations"
+      ],
+      "commonMistakes": [
+        "Greedily taking the largest coin first",
+        "Using a sentinel that overflows once incremented",
+        "Confusing the minimum-count version with the counting version"
+      ],
+      "interviewSignals": [
+        "Offers a denomination set where greedy demonstrably fails",
+        "Guards the sentinel before adding one to it"
+      ],
+      "followUpPrompts": [
+        "Count the combinations instead of minimizing the coin count.",
+        "Return which coins were used.",
+        "What if each coin had a limited supply?"
+      ],
+      "promptSummary": "Find the fewest coins from given denominations that sum to an amount, or report that it is impossible.",
+      "highLevelApproach": "Build every amount up from zero, taking one plus the best solution for the amount minus each coin and leaving unreachable amounts at a sentinel value.",
+      "complexity": {
+        "time": "O(amount * coins)",
+        "space": "O(amount)"
+      },
+      "problemStatement": "Find the fewest coins from given denominations that sum to an amount, or report that it is impossible. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(amount * coins) time and O(amount) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around amount as the dynamic-programming dimension with coins as reusable items. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Greedily taking the largest coin first.",
+        "The intended path is: Build every amount up from zero, taking one plus the best solution for the amount minus each coin and leaving unreachable amounts at a sentinel value."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Build every amount up from zero, taking one plus the best solution for the amount minus each coin and leaving unreachable amounts at a sentinel value.",
+          "steps": [
+            "Track the state needed for amount as the dynamic-programming dimension with coins as reusable items.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(amount * coins)",
+            "space": "O(amount)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Greedily taking the largest coin first"
+      ],
+      "relatedQuestions": [
+        "climbing-stairs",
+        "house-robber",
+        "house-robber-ii",
+        "decode-ways",
+        "minimum-path-sum"
+      ]
+    },
+    {
+      "title": "Coin Change II",
+      "slug": "coin-change-ii",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/coin-change-ii/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["knapsack-unbounded"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 9,
+      "prerequisites": ["coin-change"],
+      "conceptsTested": [
+        "counting combinations rather than ordered permutations",
+        "the outer loop over coins being what prevents double counting",
+        "the empty-amount base case equalling one"
+      ],
+      "commonMistakes": [
+        "Looping amounts outside and coins inside, which counts orderings separately",
+        "Initializing the zero amount to zero instead of one",
+        "Reusing the minimum-count recurrence unchanged"
+      ],
+      "interviewSignals": [
+        "Explains precisely why the loop order changes what is counted",
+        "Gets the base case right by reasoning rather than trial and error"
+      ],
+      "followUpPrompts": [
+        "Count permutations instead and show which loop swap does it.",
+        "What if each coin could be used only once?",
+        "Return the combinations themselves."
+      ],
+      "promptSummary": "Count the distinct combinations of coins that add up to a target amount.",
+      "highLevelApproach": "Iterate coins in the outer loop and amounts in the inner loop, accumulating counts so that each combination is counted exactly once regardless of order.",
+      "complexity": {
+        "time": "O(amount * coins)",
+        "space": "O(amount)"
+      },
+      "problemStatement": "Count the distinct combinations of coins that add up to a target amount. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(amount * coins) time and O(amount) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around counting combinations rather than ordered permutations. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Looping amounts outside and coins inside, which counts orderings separately.",
+        "The intended path is: Iterate coins in the outer loop and amounts in the inner loop, accumulating counts so that each combination is counted exactly once regardless of order."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Iterate coins in the outer loop and amounts in the inner loop, accumulating counts so that each combination is counted exactly once regardless of order.",
+          "steps": [
+            "Track the state needed for counting combinations rather than ordered permutations.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(amount * coins)",
+            "space": "O(amount)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Looping amounts outside and coins inside, which counts orderings separately"
+      ],
+      "relatedQuestions": [
+        "coin-change",
+        "climbing-stairs",
+        "house-robber",
+        "house-robber-ii",
+        "perfect-squares"
+      ]
+    },
+    {
+      "title": "Perfect Squares",
+      "slug": "perfect-squares",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/perfect-squares/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["knapsack-unbounded", "one-dimensional-dp"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 10,
+      "prerequisites": ["coin-change"],
+      "conceptsTested": [
+        "perfect squares as the reusable item set",
+        "the same minimum-count recurrence as coin change",
+        "Lagrange's four-square theorem bounding the answer at four"
+      ],
+      "commonMistakes": [
+        "Generating squares beyond the target value",
+        "Re-deriving the recurrence instead of recognizing coin change",
+        "Assuming the greedy largest square is always correct"
+      ],
+      "interviewSignals": [
+        "Recognizes it as coin change with a computed coin set",
+        "Knows the answer never exceeds four"
+      ],
+      "followUpPrompts": [
+        "Use the four-square theorem for a near-constant solution.",
+        "Solve it with BFS over remainders.",
+        "Return which squares were used."
+      ],
+      "promptSummary": "Find the fewest perfect squares that sum to a given number.",
+      "highLevelApproach": "Treat the perfect squares below the target as unlimited coins and run the minimum-count coin-change recurrence over every value up to it.",
+      "complexity": {
+        "time": "O(n sqrt n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Find the fewest perfect squares that sum to a given number. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n sqrt n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around perfect squares as the reusable item set. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Generating squares beyond the target value.",
+        "The intended path is: Treat the perfect squares below the target as unlimited coins and run the minimum-count coin-change recurrence over every value up to it."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Treat the perfect squares below the target as unlimited coins and run the minimum-count coin-change recurrence over every value up to it.",
+          "steps": [
+            "Track the state needed for perfect squares as the reusable item set.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n sqrt n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Generating squares beyond the target value"
+      ],
+      "relatedQuestions": [
+        "coin-change",
+        "climbing-stairs",
+        "house-robber",
+        "house-robber-ii",
+        "coin-change-ii"
+      ]
+    },
+    {
+      "title": "Partition Equal Subset Sum",
+      "slug": "partition-equal-subset-sum",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/partition-equal-subset-sum/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["knapsack-zero-one", "bit-manipulation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 11,
+      "prerequisites": ["coin-change-ii"],
+      "conceptsTested": [
+        "halving the total and asking whether that sum is reachable",
+        "each item being usable at most once",
+        "iterating sums downward to enforce single use"
+      ],
+      "commonMistakes": [
+        "Iterating sums upward and silently reusing an item",
+        "Forgetting to reject an odd total immediately",
+        "Tracking counts when boolean reachability is all that is needed"
+      ],
+      "interviewSignals": [
+        "Rejects odd totals in one line before any dynamic programming",
+        "Iterates downward and can explain exactly why"
+      ],
+      "followUpPrompts": [
+        "Return the actual partition.",
+        "Generalize to k equal subsets.",
+        "Optimize it with a bitset."
+      ],
+      "promptSummary": "Decide whether an array can be split into two subsets with equal sums.",
+      "highLevelApproach": "Reject an odd total, then run a zero-one subset-sum targeting half the total, iterating each item's reachable sums downward so no item is counted twice.",
+      "complexity": {
+        "time": "O(n * sum)",
+        "space": "O(sum)"
+      },
+      "problemStatement": "Decide whether an array can be split into two subsets with equal sums. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n * sum) time and O(sum) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around halving the total and asking whether that sum is reachable. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Iterating sums upward and silently reusing an item.",
+        "The intended path is: Reject an odd total, then run a zero-one subset-sum targeting half the total, iterating each item's reachable sums downward so no item is counted twice."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Reject an odd total, then run a zero-one subset-sum targeting half the total, iterating each item's reachable sums downward so no item is counted twice.",
+          "steps": [
+            "Track the state needed for halving the total and asking whether that sum is reachable.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n * sum)",
+            "space": "O(sum)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Iterating sums upward and silently reusing an item"
+      ],
+      "relatedQuestions": [
+        "coin-change-ii",
+        "climbing-stairs",
+        "house-robber",
+        "house-robber-ii",
+        "perfect-squares"
+      ]
+    },
+    {
+      "title": "Target Sum",
+      "slug": "target-sum",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/target-sum/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["knapsack-zero-one"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 12,
+      "prerequisites": ["partition-equal-subset-sum"],
+      "conceptsTested": [
+        "assigning a plus or minus sign to every number",
+        "reducing the problem to a subset-sum on a derived target",
+        "memoizing on index and running total"
+      ],
+      "commonMistakes": [
+        "Enumerating all two-to-the-n sign assignments",
+        "Getting the derived target formula wrong",
+        "Skipping the parity and range checks that make some inputs infeasible"
+      ],
+      "interviewSignals": [
+        "Derives the subset-sum reduction instead of brute-forcing signs",
+        "Checks feasibility before running any dynamic programming"
+      ],
+      "followUpPrompts": [
+        "Derive the reduction to subset-sum.",
+        "Return one valid sign assignment.",
+        "How do zeros in the input affect the count?"
+      ],
+      "promptSummary": "Count the ways to put a plus or minus in front of each number so the expression evaluates to a target.",
+      "highLevelApproach": "The positively signed numbers form a subset whose sum is fixed by the target and the total, so the count reduces to a zero-one subset-sum counting problem.",
+      "complexity": {
+        "time": "O(n * sum)",
+        "space": "O(sum)"
+      },
+      "problemStatement": "Count the ways to put a plus or minus in front of each number so the expression evaluates to a target. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n * sum) time and O(sum) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around assigning a plus or minus sign to every number. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Enumerating all two-to-the-n sign assignments.",
+        "The intended path is: The positively signed numbers form a subset whose sum is fixed by the target and the total, so the count reduces to a zero-one subset-sum counting problem."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "The positively signed numbers form a subset whose sum is fixed by the target and the total, so the count reduces to a zero-one subset-sum counting problem.",
+          "steps": [
+            "Track the state needed for assigning a plus or minus sign to every number.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n * sum)",
+            "space": "O(sum)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Enumerating all two-to-the-n sign assignments"
+      ],
+      "relatedQuestions": [
+        "partition-equal-subset-sum",
+        "climbing-stairs",
+        "house-robber",
+        "house-robber-ii",
+        "word-break"
+      ]
+    },
+    {
+      "title": "Word Break",
+      "slug": "word-break",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/word-break/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["one-dimensional-dp", "two-dimensional-dp", "hash-set-membership"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 13,
+      "prerequisites": ["coin-change", "decode-ways"],
+      "conceptsTested": [
+        "reachability over prefix boundaries",
+        "testing every split point for the current prefix",
+        "a set or trie giving constant-time word lookup"
+      ],
+      "commonMistakes": [
+        "Recursing over every split without memoizing, which is exponential",
+        "Scanning the dictionary linearly inside the inner loop",
+        "Bounding the inner split by the string rather than the longest word"
+      ],
+      "interviewSignals": [
+        "Memoizes on the prefix boundary index",
+        "Bounds the inner loop by the longest dictionary word"
+      ],
+      "followUpPrompts": [
+        "Return every possible sentence.",
+        "Use a trie instead of a hash set.",
+        "What if the dictionary were enormous?"
+      ],
+      "promptSummary": "Decide whether a string can be segmented into a sequence of dictionary words.",
+      "highLevelApproach": "Mark position zero reachable, then mark each later boundary reachable when some earlier reachable boundary is followed by a dictionary word ending exactly here.",
+      "complexity": {
+        "time": "O(n^2 * L)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Decide whether a string can be segmented into a sequence of dictionary words. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n^2 * L) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around reachability over prefix boundaries. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Recursing over every split without memoizing, which is exponential.",
+        "The intended path is: Mark position zero reachable, then mark each later boundary reachable when some earlier reachable boundary is followed by a dictionary word ending exactly here."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Mark position zero reachable, then mark each later boundary reachable when some earlier reachable boundary is followed by a dictionary word ending exactly here.",
+          "steps": [
+            "Track the state needed for reachability over prefix boundaries.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n^2 * L)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Recursing over every split without memoizing, which is exponential"
+      ],
+      "relatedQuestions": [
+        "coin-change",
+        "decode-ways",
+        "climbing-stairs",
+        "house-robber",
+        "target-sum"
+      ]
+    },
+    {
+      "title": "Longest Increasing Subsequence",
+      "slug": "longest-increasing-subsequence",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/longest-increasing-subsequence/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["one-dimensional-dp", "binary-search-template"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 14,
+      "prerequisites": ["house-robber"],
+      "conceptsTested": [
+        "the quadratic recurrence over all smaller earlier elements",
+        "patience sorting maintaining the smallest tail per length",
+        "binary search replacing the inner scan"
+      ],
+      "commonMistakes": [
+        "Treating the tails array as if it were an actual subsequence",
+        "Using the wrong boundary search and mishandling equal values",
+        "Confusing a subsequence with a contiguous subarray"
+      ],
+      "interviewSignals": [
+        "Explains that the tails array has the right length but not the right contents",
+        "Picks the boundary convention that matches strict increase"
+      ],
+      "followUpPrompts": [
+        "Reconstruct the actual subsequence.",
+        "Count how many longest increasing subsequences exist.",
+        "What changes if non-decreasing were allowed?"
+      ],
+      "promptSummary": "Find the length of the longest strictly increasing subsequence of an array.",
+      "highLevelApproach": "Either take, at each index, one plus the best over all smaller earlier values, or maintain the smallest possible tail for each length and binary search each new value into place.",
+      "complexity": {
+        "time": "O(n log n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Find the length of the longest strictly increasing subsequence of an array. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around the quadratic recurrence over all smaller earlier elements. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Treating the tails array as if it were an actual subsequence.",
+        "The intended path is: Either take, at each index, one plus the best over all smaller earlier values, or maintain the smallest possible tail for each length and binary search each new value into place."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Either take, at each index, one plus the best over all smaller earlier values, or maintain the smallest possible tail for each length and binary search each new value into place.",
+          "steps": [
+            "Track the state needed for the quadratic recurrence over all smaller earlier elements.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Treating the tails array as if it were an actual subsequence"
+      ],
+      "relatedQuestions": [
+        "house-robber",
+        "climbing-stairs",
+        "house-robber-ii",
+        "decode-ways",
+        "word-break"
+      ]
+    },
+    {
+      "title": "Longest Common Subsequence",
+      "slug": "longest-common-subsequence",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/longest-common-subsequence/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["two-dimensional-dp"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 15,
+      "prerequisites": ["minimum-path-sum", "longest-increasing-subsequence"],
+      "conceptsTested": [
+        "a table indexed by prefixes of both strings",
+        "matching characters advancing both indices, otherwise taking the better skip",
+        "rolling two rows for linear space"
+      ],
+      "commonMistakes": [
+        "Confusing subsequence with substring",
+        "Off-by-one between string indices and table indices",
+        "Allocating the full table when two rows suffice"
+      ],
+      "interviewSignals": [
+        "Writes the two-case recurrence cleanly on the first attempt",
+        "Reduces to two rows and can still reconstruct when asked"
+      ],
+      "followUpPrompts": [
+        "Reconstruct the subsequence itself.",
+        "Reduce the space to a single row.",
+        "Extend it to three strings."
+      ],
+      "promptSummary": "Find the length of the longest subsequence common to two strings.",
+      "highLevelApproach": "Fill a table over prefixes of both strings: equal characters extend the diagonal by one, otherwise take the better of dropping a character from either string.",
+      "complexity": {
+        "time": "O(m*n)",
+        "space": "O(min(m, n))"
+      },
+      "problemStatement": "Find the length of the longest subsequence common to two strings. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n) time and O(min(m, n)) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around a table indexed by prefixes of both strings. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Confusing subsequence with substring.",
+        "The intended path is: Fill a table over prefixes of both strings: equal characters extend the diagonal by one, otherwise take the better of dropping a character from either string."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Fill a table over prefixes of both strings: equal characters extend the diagonal by one, otherwise take the better of dropping a character from either string.",
+          "steps": [
+            "Track the state needed for a table indexed by prefixes of both strings.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n)",
+            "space": "O(min(m, n))"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Confusing subsequence with substring"
+      ],
+      "relatedQuestions": [
+        "minimum-path-sum",
+        "longest-increasing-subsequence",
+        "climbing-stairs",
+        "house-robber",
+        "longest-palindromic-subsequence"
+      ]
+    },
+    {
+      "title": "Longest Palindromic Subsequence",
+      "slug": "longest-palindromic-subsequence",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/longest-palindromic-subsequence/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["interval-dp", "two-dimensional-dp"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 16,
+      "prerequisites": ["longest-common-subsequence"],
+      "conceptsTested": [
+        "the answer equalling the common subsequence with the reversed string",
+        "interval dynamic programming filled by increasing length",
+        "the single-character and empty base cases"
+      ],
+      "commonMistakes": [
+        "Confusing it with the longest palindromic substring",
+        "Filling the interval table in an order whose dependencies are not ready",
+        "Mishandling the two-character interval"
+      ],
+      "interviewSignals": [
+        "Spots the reverse-string reduction immediately",
+        "Fills intervals by increasing length so every dependency is already computed"
+      ],
+      "followUpPrompts": [
+        "Prove the reduction to common subsequence with the reverse.",
+        "Reconstruct the subsequence.",
+        "What is the minimum number of insertions to make the string a palindrome?"
+      ],
+      "promptSummary": "Find the length of the longest subsequence of a string that reads the same in both directions.",
+      "highLevelApproach": "Either run interval dynamic programming where matching ends add two to the inner interval, or reduce it to the longest common subsequence of the string and its reverse.",
+      "complexity": {
+        "time": "O(n^2)",
+        "space": "O(n^2)"
+      },
+      "problemStatement": "Find the length of the longest subsequence of a string that reads the same in both directions. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n^2) time and O(n^2) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around the answer equalling the common subsequence with the reversed string. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Confusing it with the longest palindromic substring.",
+        "The intended path is: Either run interval dynamic programming where matching ends add two to the inner interval, or reduce it to the longest common subsequence of the string and its reverse."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Either run interval dynamic programming where matching ends add two to the inner interval, or reduce it to the longest common subsequence of the string and its reverse.",
+          "steps": [
+            "Track the state needed for the answer equalling the common subsequence with the reversed string.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n^2)",
+            "space": "O(n^2)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Confusing it with the longest palindromic substring"
+      ],
+      "relatedQuestions": [
+        "longest-common-subsequence",
+        "climbing-stairs",
+        "house-robber",
+        "house-robber-ii",
+        "edit-distance"
+      ]
+    },
+    {
+      "title": "Edit Distance",
+      "slug": "edit-distance",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/edit-distance/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["two-dimensional-dp"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 17,
+      "prerequisites": ["longest-common-subsequence"],
+      "conceptsTested": [
+        "insert, delete and replace as the three transitions",
+        "base rows and columns being pure insert or delete counts",
+        "the diagonal neighbour carrying the replace case"
+      ],
+      "commonMistakes": [
+        "Mixing up which neighbour corresponds to which operation",
+        "Initializing the borders to zero instead of the index",
+        "Recomputing overlapping subproblems without memoizing"
+      ],
+      "interviewSignals": [
+        "Labels each of the three neighbours with the operation it represents",
+        "Gets the border initialization right by reasoning rather than trial"
+      ],
+      "followUpPrompts": [
+        "Reconstruct the sequence of edits.",
+        "Reduce the space to a single row.",
+        "What if the three operations had different costs?"
+      ],
+      "promptSummary": "Find the minimum number of insertions, deletions and replacements that turn one string into another.",
+      "highLevelApproach": "Fill a table over prefixes where equal characters copy the diagonal and otherwise take one plus the best of the insert, delete and replace neighbours.",
+      "complexity": {
+        "time": "O(m*n)",
+        "space": "O(min(m, n))"
+      },
+      "problemStatement": "Find the minimum number of insertions, deletions and replacements that turn one string into another. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n) time and O(min(m, n)) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around insert, delete and replace as the three transitions. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Mixing up which neighbour corresponds to which operation.",
+        "The intended path is: Fill a table over prefixes where equal characters copy the diagonal and otherwise take one plus the best of the insert, delete and replace neighbours."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Fill a table over prefixes where equal characters copy the diagonal and otherwise take one plus the best of the insert, delete and replace neighbours.",
+          "steps": [
+            "Track the state needed for insert, delete and replace as the three transitions.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n)",
+            "space": "O(min(m, n))"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Mixing up which neighbour corresponds to which operation"
+      ],
+      "relatedQuestions": [
+        "longest-common-subsequence",
+        "climbing-stairs",
+        "house-robber",
+        "house-robber-ii",
+        "longest-palindromic-subsequence"
+      ]
+    },
+    {
+      "title": "Interleaving String",
+      "slug": "interleaving-string",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/interleaving-string/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["two-dimensional-dp"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 18,
+      "prerequisites": ["longest-common-subsequence"],
+      "conceptsTested": [
+        "a table over how much of each source string has been consumed",
+        "the target index being implied by the two prefix lengths",
+        "the total-length check as an immediate rejection"
+      ],
+      "commonMistakes": [
+        "Greedily matching whichever source offers the next character",
+        "Forgetting the total-length precondition",
+        "Treating it as a subsequence problem rather than an ordered interleaving"
+      ],
+      "interviewSignals": [
+        "Rejects mismatched lengths before doing any work",
+        "Observes that the third index needs no dimension of its own"
+      ],
+      "followUpPrompts": [
+        "Reduce the space to a single row.",
+        "Reconstruct which characters came from which source.",
+        "Extend it to three source strings."
+      ],
+      "promptSummary": "Decide whether one string is formed by interleaving two others while preserving the internal order of each.",
+      "highLevelApproach": "Fill a table indexed by how many characters are taken from each source, where a cell is reachable when a matching neighbour is reachable and its character matches the target.",
+      "complexity": {
+        "time": "O(m*n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Decide whether one string is formed by interleaving two others while preserving the internal order of each. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around a table over how much of each source string has been consumed. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Greedily matching whichever source offers the next character.",
+        "The intended path is: Fill a table indexed by how many characters are taken from each source, where a cell is reachable when a matching neighbour is reachable and its character matches the target."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Fill a table indexed by how many characters are taken from each source, where a cell is reachable when a matching neighbour is reachable and its character matches the target.",
+          "steps": [
+            "Track the state needed for a table over how much of each source string has been consumed.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Greedily matching whichever source offers the next character"
+      ],
+      "relatedQuestions": [
+        "longest-common-subsequence",
+        "climbing-stairs",
+        "house-robber",
+        "house-robber-ii",
+        "edit-distance"
+      ]
+    },
+    {
+      "title": "Palindromic Substrings",
+      "slug": "palindromic-substrings",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/palindromic-substrings/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["interval-dp", "expand-around-center"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 19,
+      "prerequisites": ["longest-palindromic-subsequence"],
+      "conceptsTested": [
+        "counting palindromes rather than measuring the longest",
+        "expanding from each of the possible centres",
+        "interval dynamic programming as the alternative formulation"
+      ],
+      "commonMistakes": [
+        "Checking every substring for palindromicity, which is cubic",
+        "Counting only the odd-length centres",
+        "Double counting the single-character palindromes"
+      ],
+      "interviewSignals": [
+        "Reuses the expand-around-centre routine from the longest-substring problem",
+        "Counts every successful expansion rather than tracking a maximum"
+      ],
+      "followUpPrompts": [
+        "Return the distinct palindromic substrings.",
+        "Solve it with Manacher's algorithm.",
+        "Count palindromic subsequences instead."
+      ],
+      "promptSummary": "Count how many substrings of a string are palindromes.",
+      "highLevelApproach": "Expand outward from every possible centre, counting one palindrome per successful expansion; interval dynamic programming over substrings gives the same count.",
+      "complexity": {
+        "time": "O(n^2)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Count how many substrings of a string are palindromes. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n^2) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around counting palindromes rather than measuring the longest. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Checking every substring for palindromicity, which is cubic.",
+        "The intended path is: Expand outward from every possible centre, counting one palindrome per successful expansion; interval dynamic programming over substrings gives the same count."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Expand outward from every possible centre, counting one palindrome per successful expansion; interval dynamic programming over substrings gives the same count.",
+          "steps": [
+            "Track the state needed for counting palindromes rather than measuring the longest.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n^2)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Checking every substring for palindromicity, which is cubic"
+      ],
+      "relatedQuestions": [
+        "longest-palindromic-subsequence",
+        "climbing-stairs",
+        "house-robber",
+        "house-robber-ii",
+        "interleaving-string"
+      ]
+    },
+    {
+      "title": "Best Time to Buy and Sell Stock II",
+      "slug": "best-time-to-buy-and-sell-stock-ii",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock-ii/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["state-machine-dp"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 20,
+      "prerequisites": ["house-robber"],
+      "conceptsTested": [
+        "holding versus not holding as the two daily states",
+        "unlimited transactions making every rise collectable",
+        "the greedy sum of positive differences agreeing with the state machine"
+      ],
+      "commonMistakes": [
+        "Hunting for explicit buy and sell pairs",
+        "Allowing two positions to be held at once",
+        "Carrying over the single-transaction limit from the first stock problem"
+      ],
+      "interviewSignals": [
+        "Shows that the greedy and the state machine produce the same answer",
+        "States the transition for each of the two states"
+      ],
+      "followUpPrompts": [
+        "Add a fee to every transaction.",
+        "Limit it to at most two transactions.",
+        "Add a mandatory cooldown day after each sale."
+      ],
+      "promptSummary": "Maximize profit from a price series with unlimited buys and sells, holding at most one share at any time.",
+      "highLevelApproach": "Track the best value while holding and while not holding and update both each day; equivalently, sum every positive day-to-day difference.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Maximize profit from a price series with unlimited buys and sells, holding at most one share at any time. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around holding versus not holding as the two daily states. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Hunting for explicit buy and sell pairs.",
+        "The intended path is: Track the best value while holding and while not holding and update both each day; equivalently, sum every positive day-to-day difference."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Track the best value while holding and while not holding and update both each day; equivalently, sum every positive day-to-day difference.",
+          "steps": [
+            "Track the state needed for holding versus not holding as the two daily states.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Hunting for explicit buy and sell pairs"
+      ],
+      "relatedQuestions": [
+        "house-robber",
+        "climbing-stairs",
+        "house-robber-ii",
+        "decode-ways",
+        "palindromic-substrings"
+      ]
+    },
+    {
+      "title": "Best Time to Buy and Sell Stock with Cooldown",
+      "slug": "best-time-to-buy-and-sell-stock-with-cooldown",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock-with-cooldown/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["state-machine-dp", "tree-dp"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 21,
+      "prerequisites": ["best-time-to-buy-and-sell-stock-ii"],
+      "conceptsTested": [
+        "three states: holding, just sold, and free to buy",
+        "the cooldown forcing every rebuy through the sold state",
+        "initializing the states so no illegal first move is possible"
+      ],
+      "commonMistakes": [
+        "Collapsing to two states and permitting an immediate rebuy",
+        "Updating states in place so one day's value feeds itself",
+        "Initializing the holding state to zero rather than negative infinity"
+      ],
+      "interviewSignals": [
+        "Draws the three-state machine before writing the transitions",
+        "Updates from the previous day's snapshot rather than in place"
+      ],
+      "followUpPrompts": [
+        "Generalize the cooldown to k days.",
+        "Add a transaction fee on top of the cooldown.",
+        "Return the trades that were taken."
+      ],
+      "promptSummary": "Maximize profit with unlimited transactions where every sale is followed by a mandatory one-day cooldown.",
+      "highLevelApproach": "Carry three daily states — holding, just sold, and resting — updating each from the previous day's values so the cooldown is enforced structurally.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Maximize profit with unlimited transactions where every sale is followed by a mandatory one-day cooldown. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around three states: holding, just sold, and free to buy. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Collapsing to two states and permitting an immediate rebuy.",
+        "The intended path is: Carry three daily states — holding, just sold, and resting — updating each from the previous day's values so the cooldown is enforced structurally."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Carry three daily states — holding, just sold, and resting — updating each from the previous day's values so the cooldown is enforced structurally.",
+          "steps": [
+            "Track the state needed for three states: holding, just sold, and free to buy.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Collapsing to two states and permitting an immediate rebuy"
+      ],
+      "relatedQuestions": [
+        "best-time-to-buy-and-sell-stock-ii",
+        "climbing-stairs",
+        "house-robber",
+        "house-robber-ii",
+        "best-time-to-buy-and-sell-stock-iii"
+      ]
+    },
+    {
+      "title": "Best Time to Buy and Sell Stock III",
+      "slug": "best-time-to-buy-and-sell-stock-iii",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock-iii/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["state-machine-dp"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 22,
+      "prerequisites": ["best-time-to-buy-and-sell-stock-with-cooldown"],
+      "conceptsTested": [
+        "at most two transactions modelled as four sequential states",
+        "each state depending only on the state before it that same day",
+        "the shape generalizing directly to k transactions"
+      ],
+      "commonMistakes": [
+        "Splitting the array at every index and running the single-transaction solver",
+        "Updating the four states in the wrong order",
+        "Forgetting that using fewer than two transactions is allowed"
+      ],
+      "interviewSignals": [
+        "Writes the four rolling states along with their update order",
+        "Shows how the same structure extends to k transactions"
+      ],
+      "followUpPrompts": [
+        "Generalize to at most k transactions.",
+        "What if k exceeds half the number of days?",
+        "Return the two transactions chosen."
+      ],
+      "promptSummary": "Maximize profit from a price series using at most two buy-and-sell transactions.",
+      "highLevelApproach": "Carry four rolling values — after the first buy, first sell, second buy and second sell — updating them in order each day so each builds on the state before it.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Maximize profit from a price series using at most two buy-and-sell transactions. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around at most two transactions modelled as four sequential states. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Splitting the array at every index and running the single-transaction solver.",
+        "The intended path is: Carry four rolling values — after the first buy, first sell, second buy and second sell — updating them in order each day so each builds on the state before it."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Carry four rolling values — after the first buy, first sell, second buy and second sell — updating them in order each day so each builds on the state before it.",
+          "steps": [
+            "Track the state needed for at most two transactions modelled as four sequential states.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Splitting the array at every index and running the single-transaction solver"
+      ],
+      "relatedQuestions": [
+        "best-time-to-buy-and-sell-stock-with-cooldown",
+        "climbing-stairs",
+        "house-robber",
+        "house-robber-ii",
+        "burst-balloons"
+      ]
+    },
+    {
+      "title": "Burst Balloons",
+      "slug": "burst-balloons",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/burst-balloons/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["interval-dp", "layer-peeling"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 45,
+      "recommendedOrder": 23,
+      "prerequisites": ["longest-palindromic-subsequence", "palindromic-substrings"],
+      "conceptsTested": [
+        "choosing the last balloon burst in an interval rather than the first",
+        "padding both ends with virtual balloons of value one",
+        "filling intervals by increasing length"
+      ],
+      "commonMistakes": [
+        "Framing the recurrence around the first burst, which does not decompose",
+        "Omitting the padding and then mishandling the edges",
+        "Iterating intervals in an order whose dependencies are not yet computed"
+      ],
+      "interviewSignals": [
+        "Explains why last-burst framing leaves the two subintervals independent",
+        "Pads the array before writing any recurrence"
+      ],
+      "followUpPrompts": [
+        "Why does first-burst framing fail?",
+        "Return the burst order.",
+        "What if you could only burst k balloons?"
+      ],
+      "promptSummary": "Burst every balloon to maximize the total of each balloon's value times its neighbours at the moment it bursts.",
+      "highLevelApproach": "Pad both ends with ones and, for each interval, try every balloon as the last one burst within it, which leaves the two sides independent and already solved.",
+      "complexity": {
+        "time": "O(n^3)",
+        "space": "O(n^2)"
+      },
+      "problemStatement": "Burst every balloon to maximize the total of each balloon's value times its neighbours at the moment it bursts. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n^3) time and O(n^2) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around choosing the last balloon burst in an interval rather than the first. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Framing the recurrence around the first burst, which does not decompose.",
+        "The intended path is: Pad both ends with ones and, for each interval, try every balloon as the last one burst within it, which leaves the two sides independent and already solved."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Pad both ends with ones and, for each interval, try every balloon as the last one burst within it, which leaves the two sides independent and already solved.",
+          "steps": [
+            "Track the state needed for choosing the last balloon burst in an interval rather than the first.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n^3)",
+            "space": "O(n^2)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Framing the recurrence around the first burst, which does not decompose"
+      ],
+      "relatedQuestions": [
+        "longest-palindromic-subsequence",
+        "palindromic-substrings",
+        "climbing-stairs",
+        "house-robber",
+        "best-time-to-buy-and-sell-stock-iii"
+      ]
+    },
+    {
+      "title": "Regular Expression Matching",
+      "slug": "regular-expression-matching",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/regular-expression-matching/",
+      "primaryPattern": "dynamic-programming",
+      "subPatterns": ["two-dimensional-dp", "string-matching"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 45,
+      "recommendedOrder": 24,
+      "prerequisites": ["edit-distance", "interleaving-string"],
+      "conceptsTested": [
+        "the star quantifier applying to the character before it",
+        "the star matching zero or more occurrences",
+        "the empty-pattern and empty-string base cases"
+      ],
+      "commonMistakes": [
+        "Treating the star as a standalone wildcard",
+        "Missing the zero-occurrence branch of the star",
+        "Initializing the first row without allowing patterns that match empty"
+      ],
+      "interviewSignals": [
+        "Splits the star case into zero-use and one-more-use explicitly",
+        "Seeds the first row for star pairs that can vanish entirely"
+      ],
+      "followUpPrompts": [
+        "Add support for the plus quantifier.",
+        "Compare it with wildcard matching where the star stands alone.",
+        "Solve it by building an automaton instead."
+      ],
+      "promptSummary": "Match a string against a pattern supporting any-single-character and zero-or-more-of-the-preceding-character.",
+      "highLevelApproach": "Fill a table over prefixes where a star either drops its pair entirely or consumes one more matching character, and a dot matches any single character.",
+      "complexity": {
+        "time": "O(m*n)",
+        "space": "O(m*n)"
+      },
+      "problemStatement": "Match a string against a pattern supporting any-single-character and zero-or-more-of-the-preceding-character. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n) time and O(m*n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around the star quantifier applying to the character before it. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the dynamic programming state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Treating the star as a standalone wildcard.",
+        "The intended path is: Fill a table over prefixes where a star either drops its pair entirely or consumes one more matching character, and a dot matches any single character."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often exponential without memoization",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — dynamic programming state",
+          "idea": "Fill a table over prefixes where a star either drops its pair entirely or consumes one more matching character, and a dot matches any single character.",
+          "steps": [
+            "Track the state needed for the star quantifier applying to the character before it.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n)",
+            "space": "O(m*n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Treating the star as a standalone wildcard"
+      ],
+      "relatedQuestions": [
+        "edit-distance",
+        "interleaving-string",
+        "climbing-stairs",
+        "house-robber",
+        "burst-balloons"
+      ]
+    }
+  ]
+}

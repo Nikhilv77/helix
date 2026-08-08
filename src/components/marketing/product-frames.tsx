@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { ArrowRight, Check, Mic } from "lucide-react";
+import { Check, Mic } from "lucide-react";
 import { Reveal } from "./reveal";
 
 /** Deterministic bar heights so server and client markup match. */
@@ -19,7 +19,9 @@ function LiveBars({ count = 28, className }: { count?: number; className?: strin
 
   return (
     <div
-      className={["flex h-24 items-center justify-center gap-1.5", className ?? ""].join(" ").trim()}
+      className={["flex h-24 items-center justify-center gap-1.5", className ?? ""]
+        .join(" ")
+        .trim()}
       aria-hidden="true"
     >
       {heights.map((height, index) => (
@@ -38,9 +40,7 @@ function Chip({ children, selected = false }: { children: ReactNode; selected?: 
     <span
       className={[
         "rounded-full px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] transition",
-        selected
-          ? "bg-cream text-blueprint"
-          : "border border-cream/20 text-cream/50"
+        selected ? "bg-cream text-blueprint" : "border border-cream/20 text-cream/50"
       ].join(" ")}
     >
       {children}
@@ -48,7 +48,7 @@ function Chip({ children, selected = false }: { children: ReactNode; selected?: 
   );
 }
 
-function SetupScreen() {
+function SetupScreen({ action }: { action?: ReactNode }) {
   const rows = [
     { label: "Role", options: ["Backend", "Frontend", "Data", "PM"], selected: "Backend" },
     { label: "Level", options: ["Fresher", "0–2 yrs", "3–5 yrs", "5+ yrs"], selected: "3–5 yrs" },
@@ -102,10 +102,7 @@ function SetupScreen() {
         <p className="text-xs leading-5 text-cream/45">
           This last answer is what the questions get built from.
         </p>
-        <span className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-cream px-4 py-2.5 text-sm font-semibold text-blueprint">
-          Start interview
-          <ArrowRight size={15} aria-hidden="true" />
-        </span>
+        <span className="shrink-0">{action}</span>
       </div>
     </div>
   );
@@ -151,13 +148,13 @@ function LiveScreen() {
       <div className="mt-5 space-y-2 font-mono text-[11px] leading-5">
         {[
           { who: "You", text: "So originally the team had this legacy setup, and there was…" },
-          { who: "Helix", text: "Where did the keys live when that store went down?" },
+          { who: "Trailgrad", text: "Where did the keys live when that store went down?" },
           { who: "You", text: "We kept them in Redis with a Postgres fallback." }
         ].map((line) => (
           <div key={line.text} className="flex gap-3">
             <span
               className={`w-12 shrink-0 uppercase tracking-[0.12em] ${
-                line.who === "Helix" ? "text-cream/70" : "text-cream/35"
+                line.who === "Trailgrad" ? "text-cream/70" : "text-cream/35"
               }`}
             >
               {line.who}
@@ -204,10 +201,7 @@ function ReportScreen() {
               <span className="font-mono text-xs text-cream/60">{row.score}</span>
             </div>
             <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-cream/80"
-                style={{ width: `${row.score}%` }}
-              />
+              <div className="h-full rounded-full bg-cream/80" style={{ width: `${row.score}%` }} />
             </div>
             <p className="mt-1.5 font-mono text-[11px] leading-5 text-cream/45">{row.line}</p>
           </div>
@@ -226,13 +220,13 @@ function ReportScreen() {
 }
 
 const tabs = [
-  { id: "setup", label: "Setup", caption: "Under a minute", screen: <SetupScreen /> },
-  { id: "live", label: "Interview", caption: "Ten to fifteen minutes", screen: <LiveScreen /> },
-  { id: "report", label: "Report", caption: "Scored on evidence", screen: <ReportScreen /> }
+  { id: "setup", label: "Setup", caption: "Under a minute" },
+  { id: "live", label: "Interview", caption: "Ten to fifteen minutes" },
+  { id: "report", label: "Report", caption: "Scored on evidence" }
 ];
 
 /** Faithful mock of the three product screens, with a tab switcher. */
-export function ProductShowcase() {
+export function ProductShowcase({ action }: { action?: ReactNode }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   // Once a tab is chosen by hand, stop cycling — auto-play must not fight the user.
@@ -249,8 +243,17 @@ export function ProductShowcase() {
 
   if (!active) return null;
 
+  const screen =
+    active.id === "setup" ? (
+      <SetupScreen action={action} />
+    ) : active.id === "live" ? (
+      <LiveScreen />
+    ) : (
+      <ReportScreen />
+    );
+
   return (
-    <section id="product" className="relative z-10 bg-blueprint px-6 py-24 sm:px-10">
+    <section id="product" className="relative z-10 bg-blueprint px-6 py-16 sm:px-10 sm:py-24">
       <div className="mx-auto w-full max-w-[68rem]">
         <Reveal>
           <p className="blueprint-label text-center text-cream/50">The whole session</p>
@@ -304,12 +307,14 @@ export function ProductShowcase() {
                   <span key={dot} className={`h-2.5 w-2.5 rounded-full ${dot} opacity-70`} />
                 ))}
               </span>
-              <span className="font-mono text-[11px] text-cream/40">helix / mock interview</span>
+              <span className="font-mono text-[11px] text-cream/40">
+                trailgrad / mock interview
+              </span>
               <span className="ml-auto font-mono text-[11px] uppercase tracking-[0.16em] text-cream/40">
                 {active.caption}
               </span>
             </div>
-            <div className="p-6 sm:p-8">{active.screen}</div>
+            <div className="p-6 sm:p-8">{screen}</div>
           </div>
         </Reveal>
       </div>

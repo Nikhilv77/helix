@@ -1,8 +1,8 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Tile behind the mark: helix-icon.png is white on transparency, which
+  <!-- Tile behind the mark: trailgrad-icon.png is white on transparency, which
        disappears against a light browser tab. -->
   <rect width="64" height="64" rx="14" fill="#1E3A8F"/>
-  <!-- Bars traced from helix-icon.png, kept in the source artwork's own
+  <!-- Bars traced from trailgrad-icon.png, kept in the source artwork's own
        coordinates and scaled into the tile. -->
   <g transform="translate(5.8 6.32) scale(0.06577)" fill="#FFFFFF">
     <rect x="72" y="295" width="83" height="194" rx="41.5"/>

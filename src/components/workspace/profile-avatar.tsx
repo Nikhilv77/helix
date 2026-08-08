@@ -29,7 +29,7 @@ function hash(value: string): number {
 }
 
 export function ProfileAvatar({ name, className }: { name: string; className?: string }) {
-  const seed = hash(name.trim().toLowerCase() || "helix");
+  const seed = hash(name.trim().toLowerCase() || "trailgrad");
   const id = `av-${seed.toString(36)}`;
 
   // Three hues spaced around the list, then geometry offsets — all from the

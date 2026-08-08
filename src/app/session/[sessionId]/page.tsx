@@ -8,7 +8,7 @@ import { authenticatedOwnerId } from "@/server/interview/owner";
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
   "Practice Session",
-  "Review a planned Helix practice session from your personalized interview roadmap."
+  "Review a planned Trailgrad practice session from your personalized interview roadmap."
 );
 
 export default async function SessionPage({ params }: { params: Promise<{ sessionId: string }> }) {

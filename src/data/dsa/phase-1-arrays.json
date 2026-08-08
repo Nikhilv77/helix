@@ -1,0 +1,2247 @@
+{
+  "phase": "Phase 1 — Arrays",
+  "questions": [
+    {
+      "title": "Contains Duplicate",
+      "slug": "contains-duplicate",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/contains-duplicate/",
+      "primaryPattern": "arrays-hashing",
+      "subPatterns": ["frequency-map", "hash-set-membership"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 10,
+      "recommendedOrder": 1,
+      "prerequisites": [],
+      "conceptsTested": ["hash set membership", "space-time tradeoff", "early exit"],
+      "commonMistakes": [
+        "Comparing all pairs in nested loops",
+        "Sorting when a single hashing pass suffices",
+        "Not returning early on the first repeat"
+      ],
+      "interviewSignals": [
+        "States the hash-set vs sorting tradeoff unprompted",
+        "Reasons about memory when the input is large"
+      ],
+      "followUpPrompts": [
+        "Solve it with O(1) extra space.",
+        "Return the duplicated values instead of a boolean.",
+        "What if the array does not fit in memory?"
+      ],
+      "promptSummary": "Given an integer array, decide whether any value appears more than once.",
+      "highLevelApproach": "Stream elements into a hash set and stop at the first element already present. Sorting then checking adjacent pairs is the O(1)-extra-space alternative.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Given an integer array, decide whether any value appears more than once. Identify the input, required output, and constraints, then explain which array/hash lookup idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the array/hash lookup pattern and maintain the right invariant around hash set membership. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the array/hash lookup structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Comparing all pairs in nested loops.",
+        "The intended path is: Stream elements into a hash set and stop at the first element already present. Sorting then checking adjacent pairs is the O(1)-extra-space alternative."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — array/hash lookup",
+          "idea": "Stream elements into a hash set and stop at the first element already present. Sorting then checking adjacent pairs is the O(1)-extra-space alternative.",
+          "steps": [
+            "Track the state needed for hash set membership.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Comparing all pairs in nested loops"
+      ],
+      "relatedQuestions": ["two-sum", "first-missing-positive"]
+    },
+    {
+      "title": "Two Sum",
+      "slug": "two-sum",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/two-sum/",
+      "primaryPattern": "arrays-hashing",
+      "subPatterns": ["frequency-map"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 2,
+      "prerequisites": ["contains-duplicate"],
+      "conceptsTested": ["hash map for O(1) lookup", "complement search", "index bookkeeping"],
+      "commonMistakes": [
+        "Brute-forcing all pairs",
+        "Inserting into the map before checking the complement, so an index pairs with itself",
+        "Assuming the array is sorted"
+      ],
+      "interviewSignals": [
+        "Moves from O(n^2) to a one-pass hash without hints",
+        "Handles duplicate values and returns indices, not values"
+      ],
+      "followUpPrompts": [
+        "What changes if the array is sorted?",
+        "Return all unique pairs instead of one.",
+        "How would you handle a streaming input?"
+      ],
+      "promptSummary": "Return the indices of the two numbers in an array that add up to a target.",
+      "highLevelApproach": "Single pass with a value-to-index map: for each element check whether target minus that element was already seen, otherwise record the element.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Return the indices of the two numbers in an array that add up to a target. Identify the input, required output, and constraints, then explain which array/hash lookup idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the array/hash lookup pattern and maintain the right invariant around hash map for O(1) lookup. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the array/hash lookup structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Brute-forcing all pairs.",
+        "The intended path is: Single pass with a value-to-index map: for each element check whether target minus that element was already seen, otherwise record the element."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — array/hash lookup",
+          "idea": "Single pass with a value-to-index map: for each element check whether target minus that element was already seen, otherwise record the element.",
+          "steps": [
+            "Track the state needed for hash map for O(1) lookup.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Brute-forcing all pairs"
+      ],
+      "relatedQuestions": [
+        "contains-duplicate",
+        "first-missing-positive",
+        "best-time-to-buy-and-sell-stock"
+      ]
+    },
+    {
+      "title": "Best Time to Buy and Sell Stock",
+      "slug": "best-time-to-buy-and-sell-stock",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/",
+      "primaryPattern": "kadane",
+      "subPatterns": ["running-aggregate"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 3,
+      "prerequisites": [],
+      "conceptsTested": [
+        "running minimum",
+        "single-pass optimization",
+        "buy-before-sell ordering constraint"
+      ],
+      "commonMistakes": [
+        "Returning max minus min without respecting order",
+        "Allowing the sell day to precede the buy day",
+        "Resetting profit instead of only the running minimum"
+      ],
+      "interviewSignals": [
+        "Recognizes it as Kadane over consecutive price deltas",
+        "Handles a strictly decreasing price series returning 0"
+      ],
+      "followUpPrompts": [
+        "Allow unlimited transactions.",
+        "Allow at most two transactions.",
+        "Add a per-transaction fee or a cooldown day."
+      ],
+      "promptSummary": "Given daily prices, find the maximum profit from one buy followed by one later sell.",
+      "highLevelApproach": "Scan left to right holding the minimum price seen so far and the best profit measured against it; equivalently run Kadane on the array of consecutive differences.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Given daily prices, find the maximum profit from one buy followed by one later sell. Identify the input, required output, and constraints, then explain which running best state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the running best state pattern and maintain the right invariant around running minimum. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the running best state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Returning max minus min without respecting order.",
+        "The intended path is: Scan left to right holding the minimum price seen so far and the best profit measured against it; equivalently run Kadane on the array of consecutive differences."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — running best state",
+          "idea": "Scan left to right holding the minimum price seen so far and the best profit measured against it; equivalently run Kadane on the array of consecutive differences.",
+          "steps": [
+            "Track the state needed for running minimum.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Returning max minus min without respecting order"
+      ],
+      "relatedQuestions": ["maximum-subarray", "maximum-product-subarray", "two-sum"]
+    },
+    {
+      "title": "Maximum Subarray",
+      "slug": "maximum-subarray",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/maximum-subarray/",
+      "primaryPattern": "kadane",
+      "subPatterns": ["running-aggregate", "one-dimensional-dp"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 4,
+      "prerequisites": ["best-time-to-buy-and-sell-stock"],
+      "conceptsTested": ["Kadane's algorithm", "local vs global optimum", "all-negative inputs"],
+      "commonMistakes": [
+        "Initializing the best sum to 0 so all-negative arrays return 0",
+        "Resetting the running sum at the wrong point",
+        "Confusing contiguous subarray with subsequence"
+      ],
+      "interviewSignals": [
+        "Derives the recurrence best_here = max(x, best_here + x)",
+        "Can extend the solution to report the subarray boundaries"
+      ],
+      "followUpPrompts": [
+        "Return the subarray boundaries, not just the sum.",
+        "Solve it with divide and conquer.",
+        "What if the array is circular?"
+      ],
+      "promptSummary": "Find the contiguous subarray with the largest sum.",
+      "highLevelApproach": "Kadane: track the best sum ending at the current index, restarting whenever extending is worse than starting fresh, while keeping a global maximum.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Find the contiguous subarray with the largest sum. Identify the input, required output, and constraints, then explain which running best state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the running best state pattern and maintain the right invariant around Kadane's algorithm. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the running best state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Initializing the best sum to 0 so all-negative arrays return 0.",
+        "The intended path is: Kadane: track the best sum ending at the current index, restarting whenever extending is worse than starting fresh, while keeping a global maximum."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — running best state",
+          "idea": "Kadane: track the best sum ending at the current index, restarting whenever extending is worse than starting fresh, while keeping a global maximum.",
+          "steps": [
+            "Track the state needed for Kadane's algorithm.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Initializing the best sum to 0 so all-negative arrays return 0"
+      ],
+      "relatedQuestions": ["best-time-to-buy-and-sell-stock", "maximum-product-subarray"]
+    },
+    {
+      "title": "Maximum Product Subarray",
+      "slug": "maximum-product-subarray",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/maximum-product-subarray/",
+      "primaryPattern": "kadane",
+      "subPatterns": ["state-machine-dp"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 5,
+      "prerequisites": ["maximum-subarray"],
+      "conceptsTested": [
+        "tracking min and max together",
+        "effect of negative numbers",
+        "zeros as reset points"
+      ],
+      "commonMistakes": [
+        "Reusing the additive Kadane recurrence unchanged",
+        "Forgetting that the running minimum becomes the maximum after a negative",
+        "Not resetting state when a zero is encountered"
+      ],
+      "interviewSignals": [
+        "Explains why the minimum product must also be carried",
+        "Handles zeros and single-element arrays cleanly"
+      ],
+      "followUpPrompts": [
+        "Return the subarray itself.",
+        "What if the array is circular?",
+        "Handle floating-point values and overflow."
+      ],
+      "promptSummary": "Find the contiguous subarray with the largest product.",
+      "highLevelApproach": "Carry both the maximum and minimum product ending at each index, swapping them when the current element is negative; the answer is the running maximum.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Find the contiguous subarray with the largest product. Identify the input, required output, and constraints, then explain which running best state idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the running best state pattern and maintain the right invariant around tracking min and max together. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the running best state structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Reusing the additive Kadane recurrence unchanged.",
+        "The intended path is: Carry both the maximum and minimum product ending at each index, swapping them when the current element is negative; the answer is the running maximum."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — running best state",
+          "idea": "Carry both the maximum and minimum product ending at each index, swapping them when the current element is negative; the answer is the running maximum.",
+          "steps": [
+            "Track the state needed for tracking min and max together.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Reusing the additive Kadane recurrence unchanged"
+      ],
+      "relatedQuestions": ["maximum-subarray", "best-time-to-buy-and-sell-stock", "move-zeroes"]
+    },
+    {
+      "title": "Move Zeroes",
+      "slug": "move-zeroes",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/move-zeroes/",
+      "primaryPattern": "two-pointers",
+      "subPatterns": ["in-place-mutation", "two-pointer-same-direction"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 6,
+      "prerequisites": [],
+      "conceptsTested": [
+        "stable in-place partitioning",
+        "write pointer invariant",
+        "preserving relative order"
+      ],
+      "commonMistakes": [
+        "Losing the relative order of non-zero elements",
+        "Allocating a second array when in-place is required",
+        "Overwriting values before the tail is filled with zeros"
+      ],
+      "interviewSignals": [
+        "Single pass with a clearly stated write-index invariant",
+        "Mentions minimizing the number of writes"
+      ],
+      "followUpPrompts": [
+        "Minimize the number of writes.",
+        "Move all zeros to the front instead.",
+        "Generalize to partitioning by an arbitrary predicate."
+      ],
+      "promptSummary": "Shift all zeros to the end of an array in place while keeping the order of the non-zero elements.",
+      "highLevelApproach": "Maintain a write index, copy each non-zero element to it, then fill the remaining tail with zeros; swapping as you go achieves the same in one pass.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Shift all zeros to the end of an array in place while keeping the order of the non-zero elements. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around stable in-place partitioning. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the two-pointer scan structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Losing the relative order of non-zero elements.",
+        "The intended path is: Maintain a write index, copy each non-zero element to it, then fill the remaining tail with zeros; swapping as you go achieves the same in one pass."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — two-pointer scan",
+          "idea": "Maintain a write index, copy each non-zero element to it, then fill the remaining tail with zeros; swapping as you go achieves the same in one pass.",
+          "steps": [
+            "Track the state needed for stable in-place partitioning.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Losing the relative order of non-zero elements"
+      ],
+      "relatedQuestions": [
+        "remove-duplicates-from-sorted-array",
+        "rotate-array",
+        "sort-colors",
+        "container-with-most-water",
+        "maximum-product-subarray"
+      ]
+    },
+    {
+      "title": "Remove Duplicates from Sorted Array",
+      "slug": "remove-duplicates-from-sorted-array",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/remove-duplicates-from-sorted-array/",
+      "primaryPattern": "two-pointers",
+      "subPatterns": ["in-place-mutation", "two-pointer-same-direction"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 7,
+      "prerequisites": ["move-zeroes"],
+      "conceptsTested": [
+        "read/write pointer pair",
+        "sorted-array adjacency",
+        "returning a length with a mutated prefix"
+      ],
+      "commonMistakes": [
+        "Shifting the array on each removal, making it O(n^2)",
+        "Off-by-one errors on the write index",
+        "Not handling the empty array"
+      ],
+      "interviewSignals": [
+        "States a clean invariant for the write pointer",
+        "Generalizes naturally to allowing k copies"
+      ],
+      "followUpPrompts": [
+        "Allow each value to appear at most twice.",
+        "What if the array is unsorted?",
+        "Do the same for a singly linked list."
+      ],
+      "promptSummary": "Compact a sorted array in place so each value appears once, returning the new length.",
+      "highLevelApproach": "A read pointer scans the array while a write pointer advances only when the current value differs from the last written one.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Compact a sorted array in place so each value appears once, returning the new length. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around read/write pointer pair. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the two-pointer scan structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Shifting the array on each removal, making it O(n^2).",
+        "The intended path is: A read pointer scans the array while a write pointer advances only when the current value differs from the last written one."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — two-pointer scan",
+          "idea": "A read pointer scans the array while a write pointer advances only when the current value differs from the last written one.",
+          "steps": [
+            "Track the state needed for read/write pointer pair.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Shifting the array on each removal, making it O(n^2)"
+      ],
+      "relatedQuestions": [
+        "move-zeroes",
+        "rotate-array",
+        "sort-colors",
+        "container-with-most-water",
+        "majority-element"
+      ]
+    },
+    {
+      "title": "Majority Element",
+      "slug": "majority-element",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/majority-element/",
+      "primaryPattern": "greedy",
+      "subPatterns": ["greedy-choice", "frequency-map"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 8,
+      "prerequisites": ["contains-duplicate"],
+      "conceptsTested": [
+        "Boyer-Moore voting",
+        "cancellation vs counting",
+        "guaranteed-majority assumption"
+      ],
+      "commonMistakes": [
+        "Trusting the candidate without a verification pass when a majority is not guaranteed",
+        "Resetting the counter or candidate in the wrong order",
+        "Sorting when O(1) space is requested"
+      ],
+      "interviewSignals": [
+        "Explains why pairwise cancellation preserves the majority",
+        "Asks whether a majority element is guaranteed to exist"
+      ],
+      "followUpPrompts": [
+        "Find all elements appearing more than n/3 times.",
+        "Verify the candidate when a majority is not guaranteed.",
+        "Generalize to elements appearing more than n/k times."
+      ],
+      "promptSummary": "Find the element that appears more than half the time in an array.",
+      "highLevelApproach": "Boyer-Moore voting: hold a candidate with a counter, decrement on a mismatch and adopt a new candidate at zero; optionally confirm with a second counting pass.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Find the element that appears more than half the time in an array. Identify the input, required output, and constraints, then explain which greedy invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the greedy invariant pattern and maintain the right invariant around Boyer-Moore voting. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the greedy invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Trusting the candidate without a verification pass when a majority is not guaranteed.",
+        "The intended path is: Boyer-Moore voting: hold a candidate with a counter, decrement on a mismatch and adopt a new candidate at zero; optionally confirm with a second counting pass."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — greedy invariant",
+          "idea": "Boyer-Moore voting: hold a candidate with a counter, decrement on a mismatch and adopt a new candidate at zero; optionally confirm with a second counting pass.",
+          "steps": [
+            "Track the state needed for Boyer-Moore voting.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Trusting the candidate without a verification pass when a majority is not guaranteed"
+      ],
+      "relatedQuestions": [
+        "contains-duplicate",
+        "next-permutation",
+        "remove-duplicates-from-sorted-array",
+        "missing-number"
+      ]
+    },
+    {
+      "title": "Missing Number",
+      "slug": "missing-number",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/missing-number/",
+      "primaryPattern": "math",
+      "subPatterns": ["bit-manipulation", "digit-arithmetic", "index-as-hash"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 9,
+      "prerequisites": [],
+      "conceptsTested": [
+        "arithmetic series formula",
+        "XOR self-cancellation",
+        "pigeonhole reasoning"
+      ],
+      "commonMistakes": [
+        "Integer overflow with the sum approach on large n",
+        "Sorting when a single linear pass suffices",
+        "Off-by-one on the inclusive 0..n range"
+      ],
+      "interviewSignals": [
+        "Offers both the sum and XOR variants and notes XOR avoids overflow",
+        "Achieves O(1) space without mutating the input"
+      ],
+      "followUpPrompts": [
+        "What if exactly two numbers are missing?",
+        "Solve it without extra space and without overflow risk.",
+        "What if the range is 1..n instead of 0..n?"
+      ],
+      "promptSummary": "One value from the range 0..n is absent from an array of length n; return it.",
+      "highLevelApproach": "XOR every index with every value so matching pairs cancel and the missing value remains, or subtract the array sum from n(n+1)/2.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "One value from the range 0..n is absent from an array of length n; return it. Identify the input, required output, and constraints, then explain which math or bit cancellation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the math or bit cancellation pattern and maintain the right invariant around arithmetic series formula. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the math or bit cancellation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Integer overflow with the sum approach on large n.",
+        "The intended path is: XOR every index with every value so matching pairs cancel and the missing value remains, or subtract the array sum from n(n+1)/2."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — math or bit cancellation",
+          "idea": "XOR every index with every value so matching pairs cancel and the missing value remains, or subtract the array sum from n(n+1)/2.",
+          "steps": [
+            "Track the state needed for arithmetic series formula.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Integer overflow with the sum approach on large n"
+      ],
+      "relatedQuestions": ["majority-element", "product-of-array-except-self"]
+    },
+    {
+      "title": "Product of Array Except Self",
+      "slug": "product-of-array-except-self",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/product-of-array-except-self/",
+      "primaryPattern": "prefix-sum",
+      "subPatterns": ["running-aggregate", "in-place-mutation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 10,
+      "prerequisites": ["two-sum"],
+      "conceptsTested": [
+        "prefix and suffix accumulation",
+        "avoiding division",
+        "output array excluded from space budget"
+      ],
+      "commonMistakes": [
+        "Using division, which breaks on zeros",
+        "Allocating two auxiliary arrays when O(1) extra space is asked for",
+        "Mishandling the one-zero and two-zero cases"
+      ],
+      "interviewSignals": [
+        "Builds prefix products in the output array, then folds a running suffix in reverse",
+        "Handles the zero cases explicitly if division is proposed"
+      ],
+      "followUpPrompts": [
+        "Solve it with O(1) extra space.",
+        "How do zeros change a division-based solution?",
+        "Support point updates to the array between queries."
+      ],
+      "promptSummary": "For each index return the product of all other elements, without using division.",
+      "highLevelApproach": "First pass writes the prefix product of everything to the left into the result; second pass multiplies each slot by a running suffix product accumulated from the right.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1) excluding output"
+      },
+      "problemStatement": "For each index return the product of all other elements, without using division. Identify the input, required output, and constraints, then explain which prefix accumulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) excluding output space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the prefix accumulation pattern and maintain the right invariant around prefix and suffix accumulation. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the prefix accumulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Using division, which breaks on zeros.",
+        "The intended path is: First pass writes the prefix product of everything to the left into the result; second pass multiplies each slot by a running suffix product accumulated from the right."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — prefix accumulation",
+          "idea": "First pass writes the prefix product of everything to the left into the result; second pass multiplies each slot by a running suffix product accumulated from the right.",
+          "steps": [
+            "Track the state needed for prefix and suffix accumulation.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1) excluding output"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Using division, which breaks on zeros"
+      ],
+      "relatedQuestions": ["two-sum", "missing-number", "rotate-array"]
+    },
+    {
+      "title": "Rotate Array",
+      "slug": "rotate-array",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/rotate-array/",
+      "primaryPattern": "two-pointers",
+      "subPatterns": ["array-reversal", "in-place-mutation", "modulo-indexing"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 11,
+      "prerequisites": ["remove-duplicates-from-sorted-array"],
+      "conceptsTested": [
+        "triple-reversal identity",
+        "modulo reduction of k",
+        "cycle decomposition via gcd"
+      ],
+      "commonMistakes": [
+        "Forgetting to reduce k modulo n",
+        "Using an auxiliary array when in-place is required",
+        "Looping forever or skipping elements in the cyclic-replacement variant"
+      ],
+      "interviewSignals": [
+        "Derives reverse-all then reverse-the-two-parts",
+        "Handles k greater than n and k equal to 0"
+      ],
+      "followUpPrompts": [
+        "Do it in O(1) extra space.",
+        "Rotate left instead of right.",
+        "Explain the cyclic-replacement variant and how many cycles it has."
+      ],
+      "promptSummary": "Rotate an array to the right by k positions in place.",
+      "highLevelApproach": "Reduce k modulo n, reverse the entire array, then reverse the first k elements and the remaining n-k separately.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Rotate an array to the right by k positions in place. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around triple-reversal identity. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the two-pointer scan structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Forgetting to reduce k modulo n.",
+        "The intended path is: Reduce k modulo n, reverse the entire array, then reverse the first k elements and the remaining n-k separately."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — two-pointer scan",
+          "idea": "Reduce k modulo n, reverse the entire array, then reverse the first k elements and the remaining n-k separately.",
+          "steps": [
+            "Track the state needed for triple-reversal identity.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Forgetting to reduce k modulo n"
+      ],
+      "relatedQuestions": [
+        "remove-duplicates-from-sorted-array",
+        "move-zeroes",
+        "sort-colors",
+        "container-with-most-water",
+        "product-of-array-except-self"
+      ]
+    },
+    {
+      "title": "Sort Colors",
+      "slug": "sort-colors",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/sort-colors/",
+      "primaryPattern": "two-pointers",
+      "subPatterns": ["two-pointer-opposite-ends", "in-place-mutation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 12,
+      "prerequisites": ["move-zeroes"],
+      "conceptsTested": [
+        "three-way partitioning",
+        "loop invariants for low/mid/high",
+        "one-pass vs counting sort"
+      ],
+      "commonMistakes": [
+        "Advancing the mid pointer after swapping with the high pointer",
+        "Falling back to a two-pass counting sort when one pass is requested",
+        "Vague invariants leading to infinite loops"
+      ],
+      "interviewSignals": [
+        "States the invariant for each of the three regions",
+        "Explains why mid must not advance after a swap with high"
+      ],
+      "followUpPrompts": [
+        "Do it in one pass with constant space.",
+        "Generalize to k colors.",
+        "What if the elements are objects sorted by a key?"
+      ],
+      "promptSummary": "Sort an array containing only three distinct values in place.",
+      "highLevelApproach": "Dutch national flag partition: low, mid and high pointers push the smallest values left and the largest right while mid scans forward.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Sort an array containing only three distinct values in place. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around three-way partitioning. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the two-pointer scan structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Advancing the mid pointer after swapping with the high pointer.",
+        "The intended path is: Dutch national flag partition: low, mid and high pointers push the smallest values left and the largest right while mid scans forward."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — two-pointer scan",
+          "idea": "Dutch national flag partition: low, mid and high pointers push the smallest values left and the largest right while mid scans forward.",
+          "steps": [
+            "Track the state needed for three-way partitioning.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Advancing the mid pointer after swapping with the high pointer"
+      ],
+      "relatedQuestions": [
+        "move-zeroes",
+        "remove-duplicates-from-sorted-array",
+        "rotate-array",
+        "container-with-most-water"
+      ]
+    },
+    {
+      "title": "Container With Most Water",
+      "slug": "container-with-most-water",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/container-with-most-water/",
+      "primaryPattern": "two-pointers",
+      "subPatterns": ["two-pointer-opposite-ends"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 13,
+      "prerequisites": ["move-zeroes"],
+      "conceptsTested": [
+        "area as min(height) times width",
+        "why moving the shorter side is safe",
+        "greedy exchange argument"
+      ],
+      "commonMistakes": [
+        "Evaluating all pairs in O(n^2)",
+        "Moving the taller pointer instead of the shorter one",
+        "Giving no justification for the pointer move"
+      ],
+      "interviewSignals": [
+        "Argues that pairs discarded by moving the shorter side cannot be better",
+        "Distinguishes this from Trapping Rain Water"
+      ],
+      "followUpPrompts": [
+        "Prove the two-pointer move is optimal.",
+        "What if the walls have non-zero thickness?",
+        "Return the pair of indices, not just the area."
+      ],
+      "promptSummary": "Given bar heights, choose two bars that together with the x-axis hold the most water.",
+      "highLevelApproach": "Start pointers at both ends, compute the area, then advance whichever side is shorter because that side caps the area for every remaining pair with it.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Given bar heights, choose two bars that together with the x-axis hold the most water. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around area as min(height) times width. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the two-pointer scan structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Evaluating all pairs in O(n^2).",
+        "The intended path is: Start pointers at both ends, compute the area, then advance whichever side is shorter because that side caps the area for every remaining pair with it."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — two-pointer scan",
+          "idea": "Start pointers at both ends, compute the area, then advance whichever side is shorter because that side caps the area for every remaining pair with it.",
+          "steps": [
+            "Track the state needed for area as min(height) times width.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Evaluating all pairs in O(n^2)"
+      ],
+      "relatedQuestions": [
+        "move-zeroes",
+        "remove-duplicates-from-sorted-array",
+        "rotate-array",
+        "sort-colors",
+        "3sum"
+      ]
+    },
+    {
+      "title": "3Sum",
+      "slug": "3sum",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/3sum/",
+      "primaryPattern": "two-pointers",
+      "subPatterns": ["sort-then-scan"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 14,
+      "prerequisites": ["two-sum", "sort-colors"],
+      "conceptsTested": [
+        "sorting to unlock two pointers",
+        "triplet deduplication",
+        "reducing to a two-sum subproblem"
+      ],
+      "commonMistakes": [
+        "Deduplicating with a set of sorted triplets instead of skipping equal neighbours",
+        "Skipping duplicates only on the outer loop",
+        "Breaking out of the loop where continue is correct"
+      ],
+      "interviewSignals": [
+        "Handles duplicates without an auxiliary set",
+        "Terminates early once the fixed element is positive"
+      ],
+      "followUpPrompts": [
+        "Find the triplet whose sum is closest to a target.",
+        "Count the triplets instead of listing them.",
+        "Extend the approach to k-sum."
+      ],
+      "promptSummary": "Return every unique triplet in an array that sums to zero.",
+      "highLevelApproach": "Sort the array, fix each index in turn, and two-pointer the suffix for the needed complement, skipping equal neighbours at both levels to avoid duplicate triplets.",
+      "complexity": {
+        "time": "O(n^2)",
+        "space": "O(log n) excluding output"
+      },
+      "problemStatement": "Return every unique triplet in an array that sums to zero. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n^2) time and O(log n) excluding output space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around sorting to unlock two pointers. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the two-pointer scan structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Deduplicating with a set of sorted triplets instead of skipping equal neighbours.",
+        "The intended path is: Sort the array, fix each index in turn, and two-pointer the suffix for the needed complement, skipping equal neighbours at both levels to avoid duplicate triplets."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — two-pointer scan",
+          "idea": "Sort the array, fix each index in turn, and two-pointer the suffix for the needed complement, skipping equal neighbours at both levels to avoid duplicate triplets.",
+          "steps": [
+            "Track the state needed for sorting to unlock two pointers.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n^2)",
+            "space": "O(log n) excluding output"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Deduplicating with a set of sorted triplets instead of skipping equal neighbours"
+      ],
+      "relatedQuestions": [
+        "two-sum",
+        "sort-colors",
+        "move-zeroes",
+        "remove-duplicates-from-sorted-array",
+        "container-with-most-water"
+      ]
+    },
+    {
+      "title": "4Sum",
+      "slug": "4sum",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/4sum/",
+      "primaryPattern": "two-pointers",
+      "subPatterns": ["backtracking", "sort-then-scan"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 15,
+      "prerequisites": ["3sum"],
+      "conceptsTested": [
+        "generalized k-sum recursion",
+        "pruning with reachable min/max sums",
+        "overflow-safe summation"
+      ],
+      "commonMistakes": [
+        "Integer overflow when summing four large values",
+        "Deduplicating at only one nesting level",
+        "Skipping the pruning checks and timing out"
+      ],
+      "interviewSignals": [
+        "Writes a generic k-sum reduction rather than four nested loops",
+        "Prunes branches using the smallest and largest sums still reachable"
+      ],
+      "followUpPrompts": [
+        "Generalize the solution to k-sum.",
+        "Count quadruplets instead of listing them.",
+        "What if the array is too large to hold in memory?"
+      ],
+      "promptSummary": "Return every unique quadruplet in an array that sums to a given target.",
+      "highLevelApproach": "Sort, then recurse: fix indices one level at a time down to a two-pointer base case, skipping duplicates at each level and pruning branches that cannot reach the target.",
+      "complexity": {
+        "time": "O(n^3)",
+        "space": "O(k) recursion depth"
+      },
+      "problemStatement": "Return every unique quadruplet in an array that sums to a given target. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n^3) time and O(k) recursion depth space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around generalized k-sum recursion. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the two-pointer scan structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Integer overflow when summing four large values.",
+        "The intended path is: Sort, then recurse: fix indices one level at a time down to a two-pointer base case, skipping duplicates at each level and pruning branches that cannot reach the target."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — two-pointer scan",
+          "idea": "Sort, then recurse: fix indices one level at a time down to a two-pointer base case, skipping duplicates at each level and pruning branches that cannot reach the target.",
+          "steps": [
+            "Track the state needed for generalized k-sum recursion.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n^3)",
+            "space": "O(k) recursion depth"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Integer overflow when summing four large values"
+      ],
+      "relatedQuestions": [
+        "3sum",
+        "move-zeroes",
+        "remove-duplicates-from-sorted-array",
+        "rotate-array",
+        "trapping-rain-water"
+      ]
+    },
+    {
+      "title": "Trapping Rain Water",
+      "slug": "trapping-rain-water",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/trapping-rain-water/",
+      "primaryPattern": "two-pointers",
+      "subPatterns": ["running-aggregate", "monotonic-stack"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 40,
+      "recommendedOrder": 16,
+      "prerequisites": ["container-with-most-water", "product-of-array-except-self"],
+      "conceptsTested": [
+        "water at an index equals min of side maxima minus height",
+        "prefix/suffix maxima",
+        "monotonic stack alternative"
+      ],
+      "commonMistakes": [
+        "Recomputing side maxima per index, giving O(n^2)",
+        "Advancing the wrong pointer in the two-pointer version",
+        "Not clamping negative contributions to zero"
+      ],
+      "interviewSignals": [
+        "Derives the per-index formula before optimizing the space",
+        "Explains why the side with the smaller max can be settled immediately"
+      ],
+      "followUpPrompts": [
+        "Solve it with O(1) extra space.",
+        "Solve it with a monotonic stack instead.",
+        "Extend it to a 2D elevation map."
+      ],
+      "promptSummary": "Given an elevation map of bar heights, compute how much rain water is trapped between the bars.",
+      "highLevelApproach": "Water above each index is min(max to the left, max to the right) minus its height; precompute those maxima, or converge two pointers always processing the side whose running max is smaller.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Given an elevation map of bar heights, compute how much rain water is trapped between the bars. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around water at an index equals min of side maxima minus height. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the two-pointer scan structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Recomputing side maxima per index, giving O(n^2).",
+        "The intended path is: Water above each index is min(max to the left, max to the right) minus its height; precompute those maxima, or converge two pointers always processing the side whose running max is smaller."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — two-pointer scan",
+          "idea": "Water above each index is min(max to the left, max to the right) minus its height; precompute those maxima, or converge two pointers always processing the side whose running max is smaller.",
+          "steps": [
+            "Track the state needed for water at an index equals min of side maxima minus height.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Recomputing side maxima per index, giving O(n^2)"
+      ],
+      "relatedQuestions": [
+        "container-with-most-water",
+        "product-of-array-except-self",
+        "move-zeroes",
+        "remove-duplicates-from-sorted-array",
+        "4sum"
+      ]
+    },
+    {
+      "title": "Next Permutation",
+      "slug": "next-permutation",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/next-permutation/",
+      "primaryPattern": "greedy",
+      "subPatterns": ["boundary-scan", "in-place-mutation", "array-reversal"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 17,
+      "prerequisites": ["rotate-array"],
+      "conceptsTested": [
+        "lexicographic ordering",
+        "pivot and successor search",
+        "reversing a descending suffix"
+      ],
+      "commonMistakes": [
+        "Sorting the suffix instead of reversing an already-descending one",
+        "Swapping the pivot with the wrong successor rather than the smallest larger value",
+        "Missing the fully descending case that wraps to sorted order"
+      ],
+      "interviewSignals": [
+        "Explains why the suffix after the pivot is always non-increasing",
+        "Handles duplicates and the last permutation correctly"
+      ],
+      "followUpPrompts": [
+        "Implement previous permutation.",
+        "Find the k-th next permutation efficiently.",
+        "Generate all permutations in lexicographic order."
+      ],
+      "promptSummary": "Rearrange numbers in place into the next lexicographically greater permutation, wrapping to the sorted order if none exists.",
+      "highLevelApproach": "Scan from the right for the first index smaller than its successor, swap it with the smallest larger value in the suffix, then reverse that suffix.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Rearrange numbers in place into the next lexicographically greater permutation, wrapping to the sorted order if none exists. Identify the input, required output, and constraints, then explain which greedy invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the greedy invariant pattern and maintain the right invariant around lexicographic ordering. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the greedy invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Sorting the suffix instead of reversing an already-descending one.",
+        "The intended path is: Scan from the right for the first index smaller than its successor, swap it with the smallest larger value in the suffix, then reverse that suffix."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — greedy invariant",
+          "idea": "Scan from the right for the first index smaller than its successor, swap it with the smallest larger value in the suffix, then reverse that suffix.",
+          "steps": [
+            "Track the state needed for lexicographic ordering.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Sorting the suffix instead of reversing an already-descending one"
+      ],
+      "relatedQuestions": [
+        "rotate-array",
+        "majority-element",
+        "trapping-rain-water",
+        "find-the-duplicate-number"
+      ]
+    },
+    {
+      "title": "Find the Duplicate Number",
+      "slug": "find-the-duplicate-number",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/find-the-duplicate-number/",
+      "primaryPattern": "two-pointers",
+      "subPatterns": ["fast-slow-pointer", "cycle-detection", "binary-search-on-answer"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 18,
+      "prerequisites": ["missing-number"],
+      "conceptsTested": [
+        "array as an implicit linked list",
+        "Floyd cycle detection",
+        "pigeonhole with binary search on the value range"
+      ],
+      "commonMistakes": [
+        "Mutating or sorting the array when it must stay read-only",
+        "Using O(n) extra space via a hash set",
+        "Returning the meeting point instead of finding the cycle entrance"
+      ],
+      "interviewSignals": [
+        "Maps the read-only plus O(1) space constraints onto Floyd's algorithm",
+        "Can justify the second phase that locates the cycle entrance"
+      ],
+      "followUpPrompts": [
+        "Prove that the cycle entrance is the duplicated value.",
+        "Solve it with binary search over the value range.",
+        "What if there can be more than one duplicate?"
+      ],
+      "promptSummary": "An array of n+1 values drawn from 1..n contains one repeated value; find it without modifying the array and in constant space.",
+      "highLevelApproach": "Treat each value as a next-pointer and run Floyd's tortoise and hare to find the cycle entrance; alternatively binary search the value range, counting how many elements are at most mid.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "An array of n+1 values drawn from 1..n contains one repeated value; find it without modifying the array and in constant space. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around array as an implicit linked list. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the two-pointer scan structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Mutating or sorting the array when it must stay read-only.",
+        "The intended path is: Treat each value as a next-pointer and run Floyd's tortoise and hare to find the cycle entrance; alternatively binary search the value range, counting how many elements are at most mid."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — two-pointer scan",
+          "idea": "Treat each value as a next-pointer and run Floyd's tortoise and hare to find the cycle entrance; alternatively binary search the value range, counting how many elements are at most mid.",
+          "steps": [
+            "Track the state needed for array as an implicit linked list.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Mutating or sorting the array when it must stay read-only"
+      ],
+      "relatedQuestions": [
+        "missing-number",
+        "move-zeroes",
+        "remove-duplicates-from-sorted-array",
+        "rotate-array",
+        "next-permutation"
+      ]
+    },
+    {
+      "title": "First Missing Positive",
+      "slug": "first-missing-positive",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/first-missing-positive/",
+      "primaryPattern": "arrays-hashing",
+      "subPatterns": ["index-as-hash", "in-place-mutation"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 40,
+      "recommendedOrder": 19,
+      "prerequisites": ["missing-number", "find-the-duplicate-number"],
+      "conceptsTested": [
+        "bounding the answer to 1..n+1",
+        "placing value v at index v-1",
+        "using the input array as a hash table"
+      ],
+      "commonMistakes": [
+        "Sorting, which violates the O(n) requirement",
+        "Infinite swap loops when duplicates are present",
+        "Not ignoring values outside the 1..n range"
+      ],
+      "interviewSignals": [
+        "Bounds the answer to at most n+1 before designing anything",
+        "Writes a swap loop with a clear termination argument"
+      ],
+      "followUpPrompts": [
+        "Prove each element is moved O(1) times amortized.",
+        "How does the approach behave with many duplicates and negatives?",
+        "Return the first k missing positive integers."
+      ],
+      "promptSummary": "Find the smallest positive integer not present in an unsorted array, in linear time and constant space.",
+      "highLevelApproach": "Cyclic sort: repeatedly swap any value v in 1..n into index v-1, then return the first index whose value does not match, or n+1.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Find the smallest positive integer not present in an unsorted array, in linear time and constant space. Identify the input, required output, and constraints, then explain which array/hash lookup idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the array/hash lookup pattern and maintain the right invariant around bounding the answer to 1..n+1. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the array/hash lookup structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Sorting, which violates the O(n) requirement.",
+        "The intended path is: Cyclic sort: repeatedly swap any value v in 1..n into index v-1, then return the first index whose value does not match, or n+1."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — array/hash lookup",
+          "idea": "Cyclic sort: repeatedly swap any value v in 1..n into index v-1, then return the first index whose value does not match, or n+1.",
+          "steps": [
+            "Track the state needed for bounding the answer to 1..n+1.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Sorting, which violates the O(n) requirement"
+      ],
+      "relatedQuestions": [
+        "missing-number",
+        "find-the-duplicate-number",
+        "contains-duplicate",
+        "two-sum",
+        "merge-intervals"
+      ]
+    },
+    {
+      "title": "Merge Intervals",
+      "slug": "merge-intervals",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/merge-intervals/",
+      "primaryPattern": "intervals",
+      "subPatterns": ["sort-then-scan", "interval-sweep"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 20,
+      "prerequisites": ["sort-colors"],
+      "conceptsTested": [
+        "sorting by start time",
+        "overlap condition start <= previous end",
+        "accumulating merged output"
+      ],
+      "commonMistakes": [
+        "Forgetting to sort before sweeping",
+        "Using strict inequality so touching intervals are not merged",
+        "Taking the new end instead of the maximum of both ends"
+      ],
+      "interviewSignals": [
+        "States the overlap invariant precisely",
+        "Asks whether touching endpoints count as overlapping"
+      ],
+      "followUpPrompts": [
+        "What if intervals arrive as a stream?",
+        "Return the total length covered instead of the merged list.",
+        "Find the maximum number of intervals overlapping at once."
+      ],
+      "promptSummary": "Merge all overlapping intervals in a list and return the non-overlapping result.",
+      "highLevelApproach": "Sort by start, then sweep: if the next interval starts at or before the last kept end, extend that end to the maximum of the two; otherwise start a new interval.",
+      "complexity": {
+        "time": "O(n log n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Merge all overlapping intervals in a list and return the non-overlapping result. Identify the input, required output, and constraints, then explain which sorted interval sweep idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sorted interval sweep pattern and maintain the right invariant around sorting by start time. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sorted interval sweep structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Forgetting to sort before sweeping.",
+        "The intended path is: Sort by start, then sweep: if the next interval starts at or before the last kept end, extend that end to the maximum of the two; otherwise start a new interval."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sorted interval sweep",
+          "idea": "Sort by start, then sweep: if the next interval starts at or before the last kept end, extend that end to the maximum of the two; otherwise start a new interval.",
+          "steps": [
+            "Track the state needed for sorting by start time.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Forgetting to sort before sweeping"
+      ],
+      "relatedQuestions": ["sort-colors", "insert-interval", "first-missing-positive"]
+    },
+    {
+      "title": "Insert Interval",
+      "slug": "insert-interval",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/insert-interval/",
+      "primaryPattern": "intervals",
+      "subPatterns": ["interval-sweep"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 21,
+      "prerequisites": ["merge-intervals"],
+      "conceptsTested": [
+        "exploiting pre-sorted input",
+        "before / overlapping / after phases",
+        "merging by min start and max end"
+      ],
+      "commonMistakes": [
+        "Re-sorting input that is already sorted",
+        "Off-by-one comparisons at the phase boundaries",
+        "Failing to merge a chain of intervals swallowed by the new one"
+      ],
+      "interviewSignals": [
+        "Solves it in a single linear pass with no sort",
+        "Keeps the three phases cleanly separated"
+      ],
+      "followUpPrompts": [
+        "Support many repeated insertions efficiently.",
+        "Use binary search to locate the insertion point.",
+        "Support interval removal as well."
+      ],
+      "promptSummary": "Insert a new interval into a sorted list of non-overlapping intervals, merging where necessary.",
+      "highLevelApproach": "Copy intervals that end before the new one starts, absorb every overlapping interval by taking the minimum start and maximum end, then copy the remainder.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Insert a new interval into a sorted list of non-overlapping intervals, merging where necessary. Identify the input, required output, and constraints, then explain which sorted interval sweep idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sorted interval sweep pattern and maintain the right invariant around exploiting pre-sorted input. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sorted interval sweep structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Re-sorting input that is already sorted.",
+        "The intended path is: Copy intervals that end before the new one starts, absorb every overlapping interval by taking the minimum start and maximum end, then copy the remainder."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sorted interval sweep",
+          "idea": "Copy intervals that end before the new one starts, absorb every overlapping interval by taking the minimum start and maximum end, then copy the remainder.",
+          "steps": [
+            "Track the state needed for exploiting pre-sorted input.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Re-sorting input that is already sorted"
+      ],
+      "relatedQuestions": ["merge-intervals", "set-matrix-zeroes"]
+    },
+    {
+      "title": "Set Matrix Zeroes",
+      "slug": "set-matrix-zeroes",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/set-matrix-zeroes/",
+      "primaryPattern": "matrix",
+      "subPatterns": ["in-place-mutation", "boundary-scan"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 22,
+      "prerequisites": ["product-of-array-except-self"],
+      "conceptsTested": [
+        "marking state without extra space",
+        "first row and column as marker storage",
+        "ordering the write-back pass"
+      ],
+      "commonMistakes": [
+        "Zeroing during the first pass so new zeros cascade",
+        "Forgetting separate flags for the first row and column",
+        "Writing back in an order that destroys the markers"
+      ],
+      "interviewSignals": [
+        "Identifies the cascade bug before writing code",
+        "Handles the collision between markers and real data in row 0 / column 0"
+      ],
+      "followUpPrompts": [
+        "Do it with O(1) extra space.",
+        "What if the matrix is sparse?",
+        "Generalize to setting a sentinel value other than zero."
+      ],
+      "promptSummary": "If any cell of a matrix is zero, set its entire row and column to zero, in place.",
+      "highLevelApproach": "First pass records affected rows and columns inside the first row and column (with two separate flags for those), second pass writes zeros from the interior outward.",
+      "complexity": {
+        "time": "O(m*n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "If any cell of a matrix is zero, set its entire row and column to zero, in place. Identify the input, required output, and constraints, then explain which matrix traversal or in-place marking idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the matrix traversal or in-place marking pattern and maintain the right invariant around marking state without extra space. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the matrix traversal or in-place marking structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Zeroing during the first pass so new zeros cascade.",
+        "The intended path is: First pass records affected rows and columns inside the first row and column (with two separate flags for those), second pass writes zeros from the interior outward."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O((m*n)^2) or more",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — matrix traversal or in-place marking",
+          "idea": "First pass records affected rows and columns inside the first row and column (with two separate flags for those), second pass writes zeros from the interior outward.",
+          "steps": [
+            "Track the state needed for marking state without extra space.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Zeroing during the first pass so new zeros cascade"
+      ],
+      "relatedQuestions": [
+        "product-of-array-except-self",
+        "spiral-matrix",
+        "rotate-image",
+        "game-of-life",
+        "insert-interval"
+      ]
+    },
+    {
+      "title": "Spiral Matrix",
+      "slug": "spiral-matrix",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/spiral-matrix/",
+      "primaryPattern": "matrix",
+      "subPatterns": ["boundary-scan", "layer-peeling"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 23,
+      "prerequisites": ["set-matrix-zeroes"],
+      "conceptsTested": [
+        "four shrinking boundaries",
+        "termination when boundaries cross",
+        "degenerate single row or column"
+      ],
+      "commonMistakes": [
+        "Omitting the boundary guard before the reverse passes",
+        "Visiting cells twice on the final single row or column",
+        "Assuming the matrix is square"
+      ],
+      "interviewSignals": [
+        "Updates boundaries with explicit guards rather than ad-hoc conditions",
+        "Tests 1xN and Nx1 shapes without prompting"
+      ],
+      "followUpPrompts": [
+        "Generate a spiral matrix instead of reading one.",
+        "Traverse in counter-clockwise spiral order.",
+        "Traverse the matrix diagonally instead."
+      ],
+      "promptSummary": "Return all elements of an m x n matrix in spiral order.",
+      "highLevelApproach": "Track top, bottom, left and right boundaries; walk one edge at a time, shrink that boundary, and re-check before the reverse passes so no cell is emitted twice.",
+      "complexity": {
+        "time": "O(m*n)",
+        "space": "O(1) excluding output"
+      },
+      "problemStatement": "Return all elements of an m x n matrix in spiral order. Identify the input, required output, and constraints, then explain which matrix traversal or in-place marking idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n) time and O(1) excluding output space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the matrix traversal or in-place marking pattern and maintain the right invariant around four shrinking boundaries. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the matrix traversal or in-place marking structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Omitting the boundary guard before the reverse passes.",
+        "The intended path is: Track top, bottom, left and right boundaries; walk one edge at a time, shrink that boundary, and re-check before the reverse passes so no cell is emitted twice."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O((m*n)^2) or more",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — matrix traversal or in-place marking",
+          "idea": "Track top, bottom, left and right boundaries; walk one edge at a time, shrink that boundary, and re-check before the reverse passes so no cell is emitted twice.",
+          "steps": [
+            "Track the state needed for four shrinking boundaries.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n)",
+            "space": "O(1) excluding output"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Omitting the boundary guard before the reverse passes"
+      ],
+      "relatedQuestions": ["set-matrix-zeroes", "rotate-image", "game-of-life"]
+    },
+    {
+      "title": "Rotate Image",
+      "slug": "rotate-image",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/rotate-image/",
+      "primaryPattern": "matrix",
+      "subPatterns": ["in-place-mutation", "matrix-transform", "layer-peeling"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 24,
+      "prerequisites": ["rotate-array", "spiral-matrix"],
+      "conceptsTested": [
+        "transpose plus row reversal",
+        "four-way cycle swap",
+        "index arithmetic with n-1-i"
+      ],
+      "commonMistakes": [
+        "Transposing the whole matrix instead of the upper triangle, undoing the swap",
+        "Reflecting along the wrong axis for the requested direction",
+        "Allocating a second matrix when in-place is required"
+      ],
+      "interviewSignals": [
+        "Derives transpose-then-reverse from the index mapping",
+        "Verifies the mapping on a small 3x3 by hand"
+      ],
+      "followUpPrompts": [
+        "Rotate counter-clockwise instead.",
+        "Rotate a non-square matrix.",
+        "Do it with the four-way cycle swap rather than transpose plus reverse."
+      ],
+      "promptSummary": "Rotate an n x n matrix 90 degrees clockwise in place.",
+      "highLevelApproach": "Transpose over the upper triangle then reverse each row; equivalently rotate four corresponding cells at a time, layer by layer.",
+      "complexity": {
+        "time": "O(n^2)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Rotate an n x n matrix 90 degrees clockwise in place. Identify the input, required output, and constraints, then explain which matrix traversal or in-place marking idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n^2) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the matrix traversal or in-place marking pattern and maintain the right invariant around transpose plus row reversal. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the matrix traversal or in-place marking structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Transposing the whole matrix instead of the upper triangle, undoing the swap.",
+        "The intended path is: Transpose over the upper triangle then reverse each row; equivalently rotate four corresponding cells at a time, layer by layer."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O((m*n)^2) or more",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — matrix traversal or in-place marking",
+          "idea": "Transpose over the upper triangle then reverse each row; equivalently rotate four corresponding cells at a time, layer by layer.",
+          "steps": [
+            "Track the state needed for transpose plus row reversal.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n^2)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Transposing the whole matrix instead of the upper triangle, undoing the swap"
+      ],
+      "relatedQuestions": ["rotate-array", "spiral-matrix", "set-matrix-zeroes", "game-of-life"]
+    },
+    {
+      "title": "Game of Life",
+      "slug": "game-of-life",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/game-of-life/",
+      "primaryPattern": "matrix",
+      "subPatterns": ["in-place-mutation", "bit-manipulation", "flood-fill"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 25,
+      "prerequisites": ["set-matrix-zeroes"],
+      "conceptsTested": [
+        "simultaneous state transition",
+        "encoding two states per cell",
+        "bounded neighbor counting"
+      ],
+      "commonMistakes": [
+        "Updating cells in place so later cells read already-updated neighbors",
+        "Out-of-bounds indexing on edges and corners",
+        "Decoding the new state in the wrong pass"
+      ],
+      "interviewSignals": [
+        "Spots the simultaneity requirement immediately",
+        "Proposes a bit-encoding to avoid copying the board"
+      ],
+      "followUpPrompts": [
+        "Do it in place with O(1) extra space.",
+        "What if the board is infinite?",
+        "How would you shard or parallelize this across machines?"
+      ],
+      "promptSummary": "Advance a board of live and dead cells by one generation of Conway's rules, updating the board in place.",
+      "highLevelApproach": "Store the next state in a second bit of each cell during one pass so neighbor reads still see the old state, then shift every cell down in a second pass.",
+      "complexity": {
+        "time": "O(m*n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Advance a board of live and dead cells by one generation of Conway's rules, updating the board in place. Identify the input, required output, and constraints, then explain which matrix traversal or in-place marking idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the matrix traversal or in-place marking pattern and maintain the right invariant around simultaneous state transition. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the matrix traversal or in-place marking structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Updating cells in place so later cells read already-updated neighbors.",
+        "The intended path is: Store the next state in a second bit of each cell during one pass so neighbor reads still see the old state, then shift every cell down in a second pass."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O((m*n)^2) or more",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — matrix traversal or in-place marking",
+          "idea": "Store the next state in a second bit of each cell during one pass so neighbor reads still see the old state, then shift every cell down in a second pass.",
+          "steps": [
+            "Track the state needed for simultaneous state transition.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Updating cells in place so later cells read already-updated neighbors"
+      ],
+      "relatedQuestions": ["set-matrix-zeroes", "spiral-matrix", "rotate-image"]
+    }
+  ]
+}

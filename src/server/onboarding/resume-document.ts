@@ -254,31 +254,31 @@ export function inspectResumeDocument(
     requirement(
       "a candidate identity in the header",
       Boolean(name) || contactSignals >= 2,
-      "Helix could not find a candidate name or contact details in the header."
+      "Trailgrad could not find a candidate name or contact details in the header."
     ),
     requirement(
       "a dated career timeline",
       dateRanges >= 1 || yearMarkers >= 2 || strongEducationLedEvidence,
       level === "fresher" || level === "0-2"
-        ? "Helix could not find education or project evidence for an early-career resume."
-        : "Helix could not find dated education, work, or project entries."
+        ? "Trailgrad could not find education or project evidence for an early-career resume."
+        : "Trailgrad could not find dated education, work, or project entries."
     ),
     requirement(
       "personal contribution statements",
       achievementLines >= 2,
-      "Helix could not find statements describing what you personally did."
+      "Trailgrad could not find statements describing what you personally did."
     ),
     requirement(
       level === "fresher" ? "project or work evidence" : "work or project evidence",
       experienceEntries + projectEntries >= 1 ||
         sections.includes("experience") ||
         strongEducationLedEvidence,
-      "Helix could not find an experience or projects section with real entries."
+      "Trailgrad could not find an experience or projects section with real entries."
     ),
     requirement(
       "at least two recognizable resume sections",
       sections.length >= 2,
-      "Helix could not find the sections a resume normally has."
+      "Trailgrad could not find the sections a resume normally has."
     ),
     requirement(
       "resume-like line structure",

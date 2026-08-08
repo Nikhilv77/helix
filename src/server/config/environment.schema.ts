@@ -36,7 +36,7 @@ export const environmentSchema = z
       .refine((value) => value.startsWith("postgresql://") || value.startsWith("postgres://"), {
         message: "DATABASE_URL must use the PostgreSQL protocol"
       }),
-    APP_NAME: z.string().min(1).default("Helix"),
+    APP_NAME: z.string().min(1).default("Trailgrad"),
     APP_VERSION: z.string().min(1).default("0.1.0"),
     CORS_ORIGINS: z
       .string()
@@ -81,9 +81,13 @@ export const environmentSchema = z
     LIVEKIT_URL: z.string().optional(),
     LIVEKIT_API_KEY: z.string().optional(),
     LIVEKIT_API_SECRET: z.string().optional(),
+    // Kept as "helix-…" through the Trailgrad rename: this name is registered
+    // with LiveKit by the Python worker, and the two must change in the same
+    // deploy or new calls dispatch to an agent that is not listening. Rename it
+    // together with `agent_name` in agent/config.py when you next ship both.
     LIVEKIT_AGENT_NAME: z.string().min(1).default("helix-interviewer-v2"),
     DEEPGRAM_API_KEY: z.string().optional(),
-    // Maya's voice. Matches HELIX_TTS_MODEL in the agent so the coach in the
+    // Maya's voice. Matches TRAILGRAD_TTS_MODEL in the agent so the coach in the
     // workspace and the interviewer in the room sound like the same person.
     DEEPGRAM_TTS_MODEL: z.string().min(1).default("aura-2-asteria-en")
   })

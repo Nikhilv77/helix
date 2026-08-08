@@ -15,7 +15,7 @@ import sys
 
 import aiohttp
 
-from helix import HelixClient
+from trailgrad import TrailgradClient
 from main import Interviewer, TurnState, handle_turn
 
 API = "http://localhost:3001"
@@ -67,12 +67,12 @@ async def main() -> int:
         print(f"session   {session_id}")
         print(f"opening   {payload['data']['utterance'][:88]}…\n")
 
-        helix = HelixClient(http)
+        trailgrad = TrailgradClient(http)
         fake = FakeSession()
         state = TurnState(started_at_ms=started_at)
 
         async def on_turn(text: str) -> None:
-            await handle_turn(fake, helix, session_id, state, text)
+            await handle_turn(fake, trailgrad, session_id, state, text)
 
         # The real Agent subclass, driven through its real end-of-turn hook.
         interviewer = Interviewer(on_turn)
@@ -86,7 +86,7 @@ async def main() -> int:
                 print("FAIL: the agent said nothing back\n")
                 return 1
 
-            print(f"HELIX     {fake.spoken[-1]}\n")
+            print(f"TRAILGRAD     {fake.spoken[-1]}\n")
 
         print(f"PASS — {len(fake.spoken)} replies for {len(ANSWERS)} answers")
         return 0

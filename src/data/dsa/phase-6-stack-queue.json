@@ -1,0 +1,1565 @@
+{
+  "phase": "Phase 6 — Stack & Queue",
+  "questions": [
+    {
+      "title": "Valid Parentheses",
+      "slug": "valid-parentheses",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/valid-parentheses/",
+      "primaryPattern": "stack",
+      "subPatterns": ["stack-simulation"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 1,
+      "prerequisites": [],
+      "conceptsTested": [
+        "a stack as the natural structure for nesting",
+        "pushing openers and matching on closers",
+        "requiring an empty stack at the end"
+      ],
+      "commonMistakes": [
+        "Counting brackets instead of matching their types",
+        "Skipping the final emptiness check",
+        "Popping an empty stack on a leading closer"
+      ],
+      "interviewSignals": [
+        "Maps closers to openers with a table rather than a chain of conditions",
+        "Guards against popping an empty stack before doing it"
+      ],
+      "followUpPrompts": [
+        "What is the minimum number of insertions to make it valid?",
+        "Support arbitrary bracket types.",
+        "Find the longest valid parentheses substring."
+      ],
+      "promptSummary": "Decide whether a string of brackets is opened and closed correctly and in the right order.",
+      "highLevelApproach": "Push each opening bracket and require the stack top to be its match on each closer; the string is valid when nothing mismatches and the stack ends empty.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Decide whether a string of brackets is opened and closed correctly and in the right order. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around a stack as the natural structure for nesting. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the stack invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Counting brackets instead of matching their types.",
+        "The intended path is: Push each opening bracket and require the stack top to be its match on each closer; the string is valid when nothing mismatches and the stack ends empty."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — stack invariant",
+          "idea": "Push each opening bracket and require the stack top to be its match on each closer; the string is valid when nothing mismatches and the stack ends empty.",
+          "steps": [
+            "Track the state needed for a stack as the natural structure for nesting.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Counting brackets instead of matching their types"
+      ],
+      "relatedQuestions": [
+        "min-stack",
+        "evaluate-reverse-polish-notation",
+        "simplify-path",
+        "asteroid-collision"
+      ]
+    },
+    {
+      "title": "Min Stack",
+      "slug": "min-stack",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/min-stack/",
+      "primaryPattern": "stack",
+      "subPatterns": ["stack-simulation", "design-problem"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 2,
+      "prerequisites": ["valid-parentheses"],
+      "conceptsTested": [
+        "carrying the running minimum alongside each entry",
+        "constant-time minimum without rescanning",
+        "keeping push and pop in lockstep"
+      ],
+      "commonMistakes": [
+        "Holding a single minimum variable that breaks once that value is popped",
+        "Not recording duplicates of the current minimum",
+        "Letting the value and minimum stacks drift out of sync"
+      ],
+      "interviewSignals": [
+        "Stores the minimum as of each push so pop needs no rescan",
+        "Handles repeated minimum values correctly"
+      ],
+      "followUpPrompts": [
+        "Do it with a single stack storing encoded deltas.",
+        "Add a constant-time maximum as well.",
+        "Support reading the middle element in constant time."
+      ],
+      "promptSummary": "Design a stack that supports push, pop, top and retrieving the minimum, all in constant time.",
+      "highLevelApproach": "Alongside each value keep the minimum as of that push, in a parallel stack or encoded with the value, so popping restores the previous minimum for free.",
+      "complexity": {
+        "time": "O(1) per operation",
+        "space": "O(n)"
+      },
+      "problemStatement": "Design a stack that supports push, pop, top and retrieving the minimum, all in constant time. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(1) per operation time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around carrying the running minimum alongside each entry. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the stack invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Holding a single minimum variable that breaks once that value is popped.",
+        "The intended path is: Alongside each value keep the minimum as of that push, in a parallel stack or encoded with the value, so popping restores the previous minimum for free."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — stack invariant",
+          "idea": "Alongside each value keep the minimum as of that push, in a parallel stack or encoded with the value, so popping restores the previous minimum for free.",
+          "steps": [
+            "Track the state needed for carrying the running minimum alongside each entry.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(1) per operation",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Holding a single minimum variable that breaks once that value is popped"
+      ],
+      "relatedQuestions": [
+        "valid-parentheses",
+        "evaluate-reverse-polish-notation",
+        "simplify-path",
+        "asteroid-collision"
+      ]
+    },
+    {
+      "title": "Evaluate Reverse Polish Notation",
+      "slug": "evaluate-reverse-polish-notation",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/evaluate-reverse-polish-notation/",
+      "primaryPattern": "stack",
+      "subPatterns": ["stack-simulation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 3,
+      "prerequisites": ["valid-parentheses"],
+      "conceptsTested": [
+        "postfix notation needing no precedence rules",
+        "operand order mattering for subtraction and division",
+        "integer division truncating toward zero"
+      ],
+      "commonMistakes": [
+        "Popping operands in the wrong order for non-commutative operators",
+        "Truncating division toward negative infinity instead of zero",
+        "Assuming every token is a single character"
+      ],
+      "interviewSignals": [
+        "States the operand order explicitly before writing the operators",
+        "Asks about integer division semantics rather than guessing"
+      ],
+      "followUpPrompts": [
+        "Convert an infix expression to postfix.",
+        "Support unary minus.",
+        "Evaluate prefix notation instead."
+      ],
+      "promptSummary": "Evaluate an arithmetic expression written in reverse Polish notation.",
+      "highLevelApproach": "Push operands, and on each operator pop two values, apply it in the correct order and push the result; the single remaining entry is the answer.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Evaluate an arithmetic expression written in reverse Polish notation. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around postfix notation needing no precedence rules. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the stack invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Popping operands in the wrong order for non-commutative operators.",
+        "The intended path is: Push operands, and on each operator pop two values, apply it in the correct order and push the result; the single remaining entry is the answer."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — stack invariant",
+          "idea": "Push operands, and on each operator pop two values, apply it in the correct order and push the result; the single remaining entry is the answer.",
+          "steps": [
+            "Track the state needed for postfix notation needing no precedence rules.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Popping operands in the wrong order for non-commutative operators"
+      ],
+      "relatedQuestions": ["valid-parentheses", "min-stack", "simplify-path", "asteroid-collision"]
+    },
+    {
+      "title": "Simplify Path",
+      "slug": "simplify-path",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/simplify-path/",
+      "primaryPattern": "stack",
+      "subPatterns": ["stack-simulation", "tokenization"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 4,
+      "prerequisites": ["valid-parentheses"],
+      "conceptsTested": [
+        "splitting on separators and discarding empty segments",
+        "treating a parent segment as a pop",
+        "rebuilding a canonical absolute path"
+      ],
+      "commonMistakes": [
+        "Popping past the root on a leading parent segment",
+        "Treating leading or trailing separators as real segments",
+        "Mishandling names made only of dots, such as three dots"
+      ],
+      "interviewSignals": [
+        "Enumerates the four segment cases before writing any code",
+        "Guards the pop when already at the root"
+      ],
+      "followUpPrompts": [
+        "Support relative paths.",
+        "How would symbolic links change this?",
+        "What changes for Windows-style paths?"
+      ],
+      "promptSummary": "Convert a Unix-style absolute file path into its canonical form.",
+      "highLevelApproach": "Split on separators, pushing real names onto a stack while skipping empty and current-directory segments and popping on a parent segment, then join what remains.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Convert a Unix-style absolute file path into its canonical form. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around splitting on separators and discarding empty segments. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the stack invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Popping past the root on a leading parent segment.",
+        "The intended path is: Split on separators, pushing real names onto a stack while skipping empty and current-directory segments and popping on a parent segment, then join what remains."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — stack invariant",
+          "idea": "Split on separators, pushing real names onto a stack while skipping empty and current-directory segments and popping on a parent segment, then join what remains.",
+          "steps": [
+            "Track the state needed for splitting on separators and discarding empty segments.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Popping past the root on a leading parent segment"
+      ],
+      "relatedQuestions": [
+        "valid-parentheses",
+        "min-stack",
+        "evaluate-reverse-polish-notation",
+        "asteroid-collision"
+      ]
+    },
+    {
+      "title": "Asteroid Collision",
+      "slug": "asteroid-collision",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/asteroid-collision/",
+      "primaryPattern": "stack",
+      "subPatterns": ["stack-simulation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 5,
+      "prerequisites": ["valid-parentheses"],
+      "conceptsTested": [
+        "only a right-mover followed by a left-mover can collide",
+        "resolving repeatedly against the stack top",
+        "equal sizes destroying both asteroids"
+      ],
+      "commonMistakes": [
+        "Stopping after a single collision instead of resolving fully",
+        "Pushing a survivor without re-checking the new top",
+        "Mishandling the equal-size case that removes both"
+      ],
+      "interviewSignals": [
+        "States exactly which direction pairs can collide before coding",
+        "Uses an inner loop so a survivor keeps colliding"
+      ],
+      "followUpPrompts": [
+        "What if asteroids travel at different speeds?",
+        "Return the collision events, not only the survivors.",
+        "Extend the simulation to two dimensions."
+      ],
+      "promptSummary": "Simulate asteroids moving left or right, where a collision destroys the smaller one and equal sizes destroy both.",
+      "highLevelApproach": "Push asteroids onto a stack; each left-mover collides with right-movers on top, popping them or being destroyed itself until it survives or is annihilated.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Simulate asteroids moving left or right, where a collision destroys the smaller one and equal sizes destroy both. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around only a right-mover followed by a left-mover can collide. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the stack invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Stopping after a single collision instead of resolving fully.",
+        "The intended path is: Push asteroids onto a stack; each left-mover collides with right-movers on top, popping them or being destroyed itself until it survives or is annihilated."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — stack invariant",
+          "idea": "Push asteroids onto a stack; each left-mover collides with right-movers on top, popping them or being destroyed itself until it survives or is annihilated.",
+          "steps": [
+            "Track the state needed for only a right-mover followed by a left-mover can collide.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Stopping after a single collision instead of resolving fully"
+      ],
+      "relatedQuestions": [
+        "valid-parentheses",
+        "min-stack",
+        "evaluate-reverse-polish-notation",
+        "simplify-path",
+        "implement-queue-using-stacks"
+      ]
+    },
+    {
+      "title": "Implement Queue using Stacks",
+      "slug": "implement-queue-using-stacks",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/implement-queue-using-stacks/",
+      "primaryPattern": "stack",
+      "subPatterns": ["amortized-two-structure", "design-problem"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 6,
+      "prerequisites": ["min-stack"],
+      "conceptsTested": [
+        "an input stack paired with an output stack",
+        "transferring only when the output stack empties",
+        "amortized constant time per operation"
+      ],
+      "commonMistakes": [
+        "Transferring on every operation, making each one linear",
+        "Transferring while the output stack still holds items and breaking the order",
+        "Quoting worst-case cost without the amortized argument"
+      ],
+      "interviewSignals": [
+        "Defers the transfer until the output stack runs empty",
+        "Gives the amortized bound rather than only the worst case"
+      ],
+      "followUpPrompts": [
+        "Prove the amortized O(1) bound.",
+        "What is the worst case for a single operation?",
+        "Implement a deque from stacks."
+      ],
+      "promptSummary": "Implement a first-in-first-out queue using only stack operations.",
+      "highLevelApproach": "Push arrivals onto an input stack and serve from an output stack, refilling the output by draining the input only when the output is empty.",
+      "complexity": {
+        "time": "Amortized O(1) per operation",
+        "space": "O(n)"
+      },
+      "problemStatement": "Implement a first-in-first-out queue using only stack operations. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended Amortized O(1) per operation time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around an input stack paired with an output stack. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the stack invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Transferring on every operation, making each one linear.",
+        "The intended path is: Push arrivals onto an input stack and serve from an output stack, refilling the output by draining the input only when the output is empty."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — stack invariant",
+          "idea": "Push arrivals onto an input stack and serve from an output stack, refilling the output by draining the input only when the output is empty.",
+          "steps": [
+            "Track the state needed for an input stack paired with an output stack.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "Amortized O(1) per operation",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Transferring on every operation, making each one linear"
+      ],
+      "relatedQuestions": [
+        "min-stack",
+        "valid-parentheses",
+        "evaluate-reverse-polish-notation",
+        "simplify-path",
+        "asteroid-collision"
+      ]
+    },
+    {
+      "title": "Implement Stack using Queues",
+      "slug": "implement-stack-using-queues",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/implement-stack-using-queues/",
+      "primaryPattern": "queue",
+      "subPatterns": ["amortized-two-structure", "design-problem"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 7,
+      "prerequisites": ["implement-queue-using-stacks"],
+      "conceptsTested": [
+        "rotating the queue so the newest element reaches the front",
+        "choosing which operation absorbs the linear cost",
+        "one-queue versus two-queue designs"
+      ],
+      "commonMistakes": [
+        "Rotating by the wrong count and corrupting the order",
+        "Claiming constant time for both push and pop",
+        "Keeping two queues where one suffices"
+      ],
+      "interviewSignals": [
+        "Decides deliberately whether push or pop pays the O(n)",
+        "Handles the single-element case in the rotation"
+      ],
+      "followUpPrompts": [
+        "Do it with a single queue.",
+        "Which operation should carry the cost, and why?",
+        "Implement a deque from queues."
+      ],
+      "promptSummary": "Implement a last-in-first-out stack using only queue operations.",
+      "highLevelApproach": "After enqueuing a new element, rotate every earlier element to the back so the newest sits at the front, letting pop and top read the queue head directly.",
+      "complexity": {
+        "time": "O(n) push, O(1) pop",
+        "space": "O(n)"
+      },
+      "problemStatement": "Implement a last-in-first-out stack using only queue operations. Identify the input, required output, and constraints, then explain which queue ordering idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) push, O(1) pop time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the queue ordering pattern and maintain the right invariant around rotating the queue so the newest element reaches the front. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the queue ordering structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Rotating by the wrong count and corrupting the order.",
+        "The intended path is: After enqueuing a new element, rotate every earlier element to the back so the newest sits at the front, letting pop and top read the queue head directly."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — queue ordering",
+          "idea": "After enqueuing a new element, rotate every earlier element to the back so the newest sits at the front, letting pop and top read the queue head directly.",
+          "steps": [
+            "Track the state needed for rotating the queue so the newest element reaches the front.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n) push, O(1) pop",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Rotating by the wrong count and corrupting the order"
+      ],
+      "relatedQuestions": ["implement-queue-using-stacks", "design-circular-queue"]
+    },
+    {
+      "title": "Design Circular Queue",
+      "slug": "design-circular-queue",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/design-circular-queue/",
+      "primaryPattern": "queue",
+      "subPatterns": ["ring-buffer", "modulo-indexing", "design-problem"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 8,
+      "prerequisites": ["implement-stack-using-queues"],
+      "conceptsTested": [
+        "a fixed array with wrapping head and tail indices",
+        "distinguishing full from empty",
+        "modulo arithmetic when advancing"
+      ],
+      "commonMistakes": [
+        "Confusing full and empty when head equals tail",
+        "Growing the array instead of rejecting when full",
+        "Off-by-one in the wrap-around computation"
+      ],
+      "interviewSignals": [
+        "Keeps an explicit count, or leaves one slot free, to disambiguate full from empty",
+        "Holds every operation to constant time"
+      ],
+      "followUpPrompts": [
+        "Make it safe for one producer and one consumer.",
+        "Implement a circular deque.",
+        "How would you resize it without losing order?"
+      ],
+      "promptSummary": "Design a fixed-capacity circular queue supporting enqueue, dequeue and inspection of both ends.",
+      "highLevelApproach": "Back the queue with a fixed array, advancing head and tail modulo the capacity and tracking a count so a full buffer stays distinguishable from an empty one.",
+      "complexity": {
+        "time": "O(1) per operation",
+        "space": "O(k)"
+      },
+      "problemStatement": "Design a fixed-capacity circular queue supporting enqueue, dequeue and inspection of both ends. Identify the input, required output, and constraints, then explain which queue ordering idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(1) per operation time and O(k) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the queue ordering pattern and maintain the right invariant around a fixed array with wrapping head and tail indices. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the queue ordering structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Confusing full and empty when head equals tail.",
+        "The intended path is: Back the queue with a fixed array, advancing head and tail modulo the capacity and tracking a count so a full buffer stays distinguishable from an empty one."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — queue ordering",
+          "idea": "Back the queue with a fixed array, advancing head and tail modulo the capacity and tracking a count so a full buffer stays distinguishable from an empty one.",
+          "steps": [
+            "Track the state needed for a fixed array with wrapping head and tail indices.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(1) per operation",
+            "space": "O(k)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Confusing full and empty when head equals tail"
+      ],
+      "relatedQuestions": ["implement-stack-using-queues", "daily-temperatures"]
+    },
+    {
+      "title": "Daily Temperatures",
+      "slug": "daily-temperatures",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/daily-temperatures/",
+      "primaryPattern": "stack",
+      "subPatterns": ["monotonic-stack", "boundary-scan", "stack-simulation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 9,
+      "prerequisites": ["valid-parentheses"],
+      "conceptsTested": [
+        "a decreasing stack of indices awaiting a greater value",
+        "settling many pending entries in one pop cycle",
+        "amortized linear time"
+      ],
+      "commonMistakes": [
+        "Storing values rather than indices, so distances cannot be computed",
+        "Scanning ahead from every index, making it quadratic",
+        "Leaving unresolved entries without their zero default"
+      ],
+      "interviewSignals": [
+        "Argues each index is pushed and popped exactly once",
+        "Recognizes this as the next-greater-element template"
+      ],
+      "followUpPrompts": [
+        "Report the previous warmer day instead.",
+        "Solve it scanning right to left.",
+        "What if you need the next day at least k degrees warmer?"
+      ],
+      "promptSummary": "For each day, report how many days you must wait for a warmer temperature, or zero if none ever comes.",
+      "highLevelApproach": "Sweep left to right with a stack of indices of decreasing temperature; each warmer day pops every index it exceeds and settles their waiting distances.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "For each day, report how many days you must wait for a warmer temperature, or zero if none ever comes. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around a decreasing stack of indices awaiting a greater value. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the stack invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Storing values rather than indices, so distances cannot be computed.",
+        "The intended path is: Sweep left to right with a stack of indices of decreasing temperature; each warmer day pops every index it exceeds and settles their waiting distances."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — stack invariant",
+          "idea": "Sweep left to right with a stack of indices of decreasing temperature; each warmer day pops every index it exceeds and settles their waiting distances.",
+          "steps": [
+            "Track the state needed for a decreasing stack of indices awaiting a greater value.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Storing values rather than indices, so distances cannot be computed"
+      ],
+      "relatedQuestions": [
+        "valid-parentheses",
+        "min-stack",
+        "evaluate-reverse-polish-notation",
+        "simplify-path",
+        "design-circular-queue"
+      ]
+    },
+    {
+      "title": "Next Greater Element I",
+      "slug": "next-greater-element-i",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/next-greater-element-i/",
+      "primaryPattern": "stack",
+      "subPatterns": ["monotonic-stack", "canonical-key", "hash-set-membership"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 10,
+      "prerequisites": ["daily-temperatures"],
+      "conceptsTested": [
+        "precomputing answers for the full array and then looking them up",
+        "a value-to-result map because the queries are a subset",
+        "distinct values making value keys safe"
+      ],
+      "commonMistakes": [
+        "Searching the second array for each query, giving quadratic time",
+        "Assuming the query array's order matches the other array",
+        "Using value keys in a variant where duplicates exist"
+      ],
+      "interviewSignals": [
+        "Precomputes once and answers each query in constant time",
+        "Notes that the distinct-values guarantee is what makes value keys safe"
+      ],
+      "followUpPrompts": [
+        "What changes if the values are not distinct?",
+        "Handle queries arriving as a stream.",
+        "Return the next smaller element instead."
+      ],
+      "promptSummary": "For each element of a subset array, find its next greater element within a second array, or -1.",
+      "highLevelApproach": "Run the monotonic-stack next-greater sweep across the full array once, recording each value's answer in a map, then resolve every query by lookup.",
+      "complexity": {
+        "time": "O(n + m)",
+        "space": "O(n)"
+      },
+      "problemStatement": "For each element of a subset array, find its next greater element within a second array, or -1. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n + m) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around precomputing answers for the full array and then looking them up. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the stack invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Searching the second array for each query, giving quadratic time.",
+        "The intended path is: Run the monotonic-stack next-greater sweep across the full array once, recording each value's answer in a map, then resolve every query by lookup."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — stack invariant",
+          "idea": "Run the monotonic-stack next-greater sweep across the full array once, recording each value's answer in a map, then resolve every query by lookup.",
+          "steps": [
+            "Track the state needed for precomputing answers for the full array and then looking them up.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n + m)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Searching the second array for each query, giving quadratic time"
+      ],
+      "relatedQuestions": [
+        "daily-temperatures",
+        "valid-parentheses",
+        "min-stack",
+        "evaluate-reverse-polish-notation",
+        "next-greater-element-ii"
+      ]
+    },
+    {
+      "title": "Next Greater Element II",
+      "slug": "next-greater-element-ii",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/next-greater-element-ii/",
+      "primaryPattern": "stack",
+      "subPatterns": ["monotonic-stack", "modulo-indexing"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 11,
+      "prerequisites": ["next-greater-element-i"],
+      "conceptsTested": [
+        "simulating circularity with two passes and modulo indices",
+        "not pushing new indices during the second pass",
+        "the wrap-around case"
+      ],
+      "commonMistakes": [
+        "Materializing a doubled array instead of using modulo indices",
+        "Pushing during the second pass and producing wrong answers",
+        "Looping more than twice, which never adds information"
+      ],
+      "interviewSignals": [
+        "Explains why exactly two passes are sufficient",
+        "Avoids allocating a doubled copy of the array"
+      ],
+      "followUpPrompts": [
+        "Prove two passes are always enough.",
+        "Return the next smaller element instead.",
+        "What if the array is huge and read-only?"
+      ],
+      "promptSummary": "For each element of a circular array, find the next greater element scanning forward with wrap-around.",
+      "highLevelApproach": "Run the monotonic-stack sweep over twice the length using modulo indices, recording answers on both laps but pushing new indices only on the first.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "For each element of a circular array, find the next greater element scanning forward with wrap-around. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around simulating circularity with two passes and modulo indices. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the stack invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Materializing a doubled array instead of using modulo indices.",
+        "The intended path is: Run the monotonic-stack sweep over twice the length using modulo indices, recording answers on both laps but pushing new indices only on the first."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — stack invariant",
+          "idea": "Run the monotonic-stack sweep over twice the length using modulo indices, recording answers on both laps but pushing new indices only on the first.",
+          "steps": [
+            "Track the state needed for simulating circularity with two passes and modulo indices.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Materializing a doubled array instead of using modulo indices"
+      ],
+      "relatedQuestions": [
+        "next-greater-element-i",
+        "valid-parentheses",
+        "min-stack",
+        "evaluate-reverse-polish-notation",
+        "online-stock-span"
+      ]
+    },
+    {
+      "title": "Online Stock Span",
+      "slug": "online-stock-span",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/online-stock-span/",
+      "primaryPattern": "stack",
+      "subPatterns": ["monotonic-stack", "streaming-input", "frequency-map"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 12,
+      "prerequisites": ["daily-temperatures"],
+      "conceptsTested": [
+        "a decreasing stack of price and span pairs",
+        "merging spans as smaller prices are absorbed",
+        "amortized constant time per streamed query"
+      ],
+      "commonMistakes": [
+        "Storing prices only and rescanning history to compute the span",
+        "Not accumulating popped spans into the new entry",
+        "Re-walking the whole stream on every call"
+      ],
+      "interviewSignals": [
+        "Explains why absorbing spans keeps total work linear across the stream",
+        "Handles the streaming interface without buffering all input"
+      ],
+      "followUpPrompts": [
+        "Prove the amortized bound over n calls.",
+        "Restrict the span to a sliding window of the last k days.",
+        "Report the span of decreasing prices instead."
+      ],
+      "promptSummary": "Design a stream where each new price reports how many consecutive prior days, including today, had a price at most today's.",
+      "highLevelApproach": "Keep a stack of price and span pairs in decreasing price order; a new price absorbs the spans of every entry it meets or exceeds, and that accumulated total is its span.",
+      "complexity": {
+        "time": "Amortized O(1) per call",
+        "space": "O(n)"
+      },
+      "problemStatement": "Design a stream where each new price reports how many consecutive prior days, including today, had a price at most today's. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended Amortized O(1) per call time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around a decreasing stack of price and span pairs. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the stack invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Storing prices only and rescanning history to compute the span.",
+        "The intended path is: Keep a stack of price and span pairs in decreasing price order; a new price absorbs the spans of every entry it meets or exceeds, and that accumulated total is its span."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — stack invariant",
+          "idea": "Keep a stack of price and span pairs in decreasing price order; a new price absorbs the spans of every entry it meets or exceeds, and that accumulated total is its span.",
+          "steps": [
+            "Track the state needed for a decreasing stack of price and span pairs.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "Amortized O(1) per call",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Storing prices only and rescanning history to compute the span"
+      ],
+      "relatedQuestions": [
+        "daily-temperatures",
+        "valid-parentheses",
+        "min-stack",
+        "evaluate-reverse-polish-notation",
+        "next-greater-element-ii"
+      ]
+    },
+    {
+      "title": "Remove K Digits",
+      "slug": "remove-k-digits",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/remove-k-digits/",
+      "primaryPattern": "stack",
+      "subPatterns": ["monotonic-stack", "in-place-mutation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 13,
+      "prerequisites": ["daily-temperatures"],
+      "conceptsTested": [
+        "greedily dropping a digit wherever it exceeds its successor",
+        "spending any leftover budget from the end",
+        "trimming leading zeros and the empty result"
+      ],
+      "commonMistakes": [
+        "Not spending the remaining budget when the digits are non-decreasing",
+        "Leaving leading zeros in the answer",
+        "Returning an empty string instead of zero"
+      ],
+      "interviewSignals": [
+        "Argues why removing the first descent is the optimal choice",
+        "Handles the leftover-budget and leading-zero cases explicitly"
+      ],
+      "followUpPrompts": [
+        "Prove the greedy choice is optimal.",
+        "Maximize the resulting number instead.",
+        "What if the digits may also be reordered?"
+      ],
+      "promptSummary": "Remove k digits from a numeric string so the remaining digits form the smallest possible number.",
+      "highLevelApproach": "Push digits onto a stack, popping while the top exceeds the incoming digit and budget remains, then spend any leftover budget from the end and strip leading zeros.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Remove k digits from a numeric string so the remaining digits form the smallest possible number. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around greedily dropping a digit wherever it exceeds its successor. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the stack invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Not spending the remaining budget when the digits are non-decreasing.",
+        "The intended path is: Push digits onto a stack, popping while the top exceeds the incoming digit and budget remains, then spend any leftover budget from the end and strip leading zeros."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — stack invariant",
+          "idea": "Push digits onto a stack, popping while the top exceeds the incoming digit and budget remains, then spend any leftover budget from the end and strip leading zeros.",
+          "steps": [
+            "Track the state needed for greedily dropping a digit wherever it exceeds its successor.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Not spending the remaining budget when the digits are non-decreasing"
+      ],
+      "relatedQuestions": [
+        "daily-temperatures",
+        "valid-parentheses",
+        "min-stack",
+        "evaluate-reverse-polish-notation",
+        "online-stock-span"
+      ]
+    },
+    {
+      "title": "Car Fleet",
+      "slug": "car-fleet",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/car-fleet/",
+      "primaryPattern": "stack",
+      "subPatterns": ["monotonic-stack", "sort-then-scan"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 14,
+      "prerequisites": ["remove-k-digits"],
+      "conceptsTested": [
+        "converting position and speed into an arrival time",
+        "processing cars from the target backwards",
+        "a fleet forming when a car cannot beat the one ahead"
+      ],
+      "commonMistakes": [
+        "Comparing speeds instead of arrival times",
+        "Sorting ascending and then scanning the wrong direction",
+        "Using integer division and losing precision on arrival times"
+      ],
+      "interviewSignals": [
+        "Reduces the problem to counting increases in arrival time",
+        "Explains why a slower car ahead absorbs everything behind it"
+      ],
+      "followUpPrompts": [
+        "Return the fleet compositions, not just the count.",
+        "What if cars were allowed to overtake?",
+        "Extend it to multiple lanes."
+      ],
+      "promptSummary": "Cars drive toward a shared target at fixed speeds and cannot overtake; count how many distinct fleets arrive.",
+      "highLevelApproach": "Sort cars by starting position descending and compute each unobstructed arrival time; every time that exceeds all times seen so far starts a new fleet, while smaller ones merge into the fleet ahead.",
+      "complexity": {
+        "time": "O(n log n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Cars drive toward a shared target at fixed speeds and cannot overtake; count how many distinct fleets arrive. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around converting position and speed into an arrival time. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the stack invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Comparing speeds instead of arrival times.",
+        "The intended path is: Sort cars by starting position descending and compute each unobstructed arrival time; every time that exceeds all times seen so far starts a new fleet, while smaller ones merge into the fleet ahead."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — stack invariant",
+          "idea": "Sort cars by starting position descending and compute each unobstructed arrival time; every time that exceeds all times seen so far starts a new fleet, while smaller ones merge into the fleet ahead.",
+          "steps": [
+            "Track the state needed for converting position and speed into an arrival time.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Comparing speeds instead of arrival times"
+      ],
+      "relatedQuestions": [
+        "remove-k-digits",
+        "valid-parentheses",
+        "min-stack",
+        "evaluate-reverse-polish-notation",
+        "basic-calculator-ii"
+      ]
+    },
+    {
+      "title": "Basic Calculator II",
+      "slug": "basic-calculator-ii",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/basic-calculator-ii/",
+      "primaryPattern": "stack",
+      "subPatterns": ["stack-simulation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 15,
+      "prerequisites": ["evaluate-reverse-polish-notation"],
+      "conceptsTested": [
+        "applying multiplication and division immediately",
+        "deferring addition and subtraction to a final sum",
+        "carrying the pending operator between tokens"
+      ],
+      "commonMistakes": [
+        "Evaluating strictly left to right and ignoring precedence",
+        "Mishandling multi-digit numbers or embedded whitespace",
+        "Truncating division in the wrong direction"
+      ],
+      "interviewSignals": [
+        "Pushes signed terms and folds the high-precedence operators as it goes",
+        "Parses numbers inline rather than splitting the string first"
+      ],
+      "followUpPrompts": [
+        "Add support for parentheses.",
+        "Support unary minus.",
+        "Add exponentiation and rework the precedence handling."
+      ],
+      "promptSummary": "Evaluate an expression of non-negative integers and the four basic operators, with no parentheses.",
+      "highLevelApproach": "Scan while tracking the pending operator: push a signed number for addition or subtraction, and for multiplication or division fold it directly into the stack top; the answer is the sum of the stack.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Evaluate an expression of non-negative integers and the four basic operators, with no parentheses. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around applying multiplication and division immediately. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the stack invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Evaluating strictly left to right and ignoring precedence.",
+        "The intended path is: Scan while tracking the pending operator: push a signed number for addition or subtraction, and for multiplication or division fold it directly into the stack top; the answer is the sum of the stack."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — stack invariant",
+          "idea": "Scan while tracking the pending operator: push a signed number for addition or subtraction, and for multiplication or division fold it directly into the stack top; the answer is the sum of the stack.",
+          "steps": [
+            "Track the state needed for applying multiplication and division immediately.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Evaluating strictly left to right and ignoring precedence"
+      ],
+      "relatedQuestions": [
+        "evaluate-reverse-polish-notation",
+        "valid-parentheses",
+        "min-stack",
+        "simplify-path",
+        "car-fleet"
+      ]
+    },
+    {
+      "title": "Basic Calculator",
+      "slug": "basic-calculator",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/basic-calculator/",
+      "primaryPattern": "stack",
+      "subPatterns": ["stack-simulation"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 40,
+      "recommendedOrder": 16,
+      "prerequisites": ["basic-calculator-ii"],
+      "conceptsTested": [
+        "stacking the running result and sign across parentheses",
+        "propagating a sign multiplier into a nested group",
+        "restoring the enclosing context on a closing bracket"
+      ],
+      "commonMistakes": [
+        "Losing the sign that precedes a parenthesized group",
+        "Treating unary minus as a binary operator",
+        "Building a full expression tree where one pass suffices"
+      ],
+      "interviewSignals": [
+        "Pushes both the running result and the sign when a group opens",
+        "Handles a leading or repeated unary minus"
+      ],
+      "followUpPrompts": [
+        "Add multiplication and division as well.",
+        "Support variables and assignment.",
+        "Rewrite it as a recursive-descent parser."
+      ],
+      "promptSummary": "Evaluate an expression containing non-negative integers, addition, subtraction and nested parentheses.",
+      "highLevelApproach": "Scan once with a running result and a current sign: an opening bracket pushes both and resets them, and a closing bracket pops them to fold the finished group back into the enclosing expression.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Evaluate an expression containing non-negative integers, addition, subtraction and nested parentheses. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around stacking the running result and sign across parentheses. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the stack invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Losing the sign that precedes a parenthesized group.",
+        "The intended path is: Scan once with a running result and a current sign: an opening bracket pushes both and resets them, and a closing bracket pops them to fold the finished group back into the enclosing expression."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — stack invariant",
+          "idea": "Scan once with a running result and a current sign: an opening bracket pushes both and resets them, and a closing bracket pops them to fold the finished group back into the enclosing expression.",
+          "steps": [
+            "Track the state needed for stacking the running result and sign across parentheses.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Losing the sign that precedes a parenthesized group"
+      ],
+      "relatedQuestions": [
+        "basic-calculator-ii",
+        "valid-parentheses",
+        "min-stack",
+        "evaluate-reverse-polish-notation",
+        "largest-rectangle-in-histogram"
+      ]
+    },
+    {
+      "title": "Largest Rectangle in Histogram",
+      "slug": "largest-rectangle-in-histogram",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/largest-rectangle-in-histogram/",
+      "primaryPattern": "stack",
+      "subPatterns": ["monotonic-stack", "boundary-scan"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 40,
+      "recommendedOrder": 17,
+      "prerequisites": ["daily-temperatures", "next-greater-element-ii"],
+      "conceptsTested": [
+        "each bar's widest rectangle bounded by the nearest smaller bar on each side",
+        "an increasing stack of indices",
+        "a sentinel bar to flush the stack at the end"
+      ],
+      "commonMistakes": [
+        "Computing the width from the wrong boundary indices",
+        "Forgetting to drain the stack after the main loop",
+        "Trying every pair of boundaries, which is quadratic"
+      ],
+      "interviewSignals": [
+        "Derives the width as the gap between the two nearest smaller bars",
+        "Appends a zero-height sentinel instead of duplicating the flush logic"
+      ],
+      "followUpPrompts": [
+        "Use it to solve maximal rectangle in a binary matrix.",
+        "Return the rectangle's boundaries as well.",
+        "What if the bars have unequal widths?"
+      ],
+      "promptSummary": "Find the largest rectangle that fits under a histogram of equal-width bars.",
+      "highLevelApproach": "Keep an increasing stack of indices; when a shorter bar arrives, pop each taller bar and measure its rectangle out to the nearest smaller bars on either side, using a sentinel to flush the remainder.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Find the largest rectangle that fits under a histogram of equal-width bars. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around each bar's widest rectangle bounded by the nearest smaller bar on each side. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the stack invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Computing the width from the wrong boundary indices.",
+        "The intended path is: Keep an increasing stack of indices; when a shorter bar arrives, pop each taller bar and measure its rectangle out to the nearest smaller bars on either side, using a sentinel to flush the remainder."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — stack invariant",
+          "idea": "Keep an increasing stack of indices; when a shorter bar arrives, pop each taller bar and measure its rectangle out to the nearest smaller bars on either side, using a sentinel to flush the remainder.",
+          "steps": [
+            "Track the state needed for each bar's widest rectangle bounded by the nearest smaller bar on each side.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Computing the width from the wrong boundary indices"
+      ],
+      "relatedQuestions": [
+        "daily-temperatures",
+        "next-greater-element-ii",
+        "valid-parentheses",
+        "min-stack",
+        "basic-calculator"
+      ]
+    }
+  ]
+}

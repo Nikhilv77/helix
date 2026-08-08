@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 
-export const siteName = "Helix";
-export const defaultTitle = "Helix | Resume-Grounded AI Interview Practice";
+export const siteName = "Trailgrad";
+export const defaultTitle = "Trailgrad | Learn the Patterns, Then Defend Them";
 export const defaultDescription =
-  "Practice AI mock interviews that use your resume evidence, ask sharper follow-ups, and help you prepare with a personalized interview plan.";
-export const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://helixinterviews.com";
+  "A guided path through the 123 questions and 12 patterns interviews actually ask, plus AI voice mock interviews that press on your resume evidence and score what you can defend.";
+export const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://trailgrad.com";
 
 export function pageTitle(title: string): string {
   return `${title} | ${siteName}`;

@@ -11,7 +11,10 @@ import { InterviewPlanner } from "./interview/planner";
 import { InterviewService } from "./interview/interview.service";
 import { PrismaSessionStore } from "./interview/session-store";
 import { CurriculumService } from "./curriculum/curriculum.service";
+import { DsaService } from "./dsa/dsa.service";
 import { ProfileService } from "./profile/profile.service";
+import { ProgressService } from "./progress/progress.service";
+import { FrontendRoadmapService } from "./roadmap/frontend-roadmap.service";
 import { ResumeService } from "./onboarding/resume.service";
 
 export interface AppContainer {
@@ -21,6 +24,9 @@ export interface AppContainer {
   profileService: ProfileService;
   curriculumService: CurriculumService;
   resumeService: ResumeService;
+  dsaService: DsaService;
+  frontendRoadmapService: FrontendRoadmapService;
+  progressService: ProgressService;
 }
 
 let container: AppContainer | null = null;
@@ -45,6 +51,11 @@ export function getAppContainer(): AppContainer {
     config,
     healthService: new HealthService(config, prisma),
     profileService: new ProfileService(prisma),
+    // Seeded content, identical for every user, so the service caches it.
+    dsaService: new DsaService(prisma),
+    frontendRoadmapService: new FrontendRoadmapService(prisma),
+    // Read-only aggregate over roadmap progress and attempt history.
+    progressService: new ProgressService(prisma),
     // The plan is written once per resume, so quality matters more than latency.
     curriculumService: new CurriculumService(geminiAi),
     // Resume classification benefits from the document-oriented model path;

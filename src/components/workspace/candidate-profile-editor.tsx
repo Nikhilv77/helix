@@ -77,7 +77,7 @@ const focusOptions = [
 
 /** One input treatment for the page, so nothing drifts field to field. */
 const fieldClass =
-  "w-full rounded-2xl bg-[#102966]/70 text-cream outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_14px_34px_-22px_rgba(3,9,35,0.9)] transition placeholder:text-cream/25 hover:bg-[#143277]/78 focus:bg-[#102966]/90 focus:ring-4 focus:ring-cream/[0.08]";
+  "w-full rounded-xl bg-[#24439b] text-cream outline-none ring-1 ring-inset ring-cream/10 transition placeholder:text-cream/35 hover:bg-[#27479f] focus:bg-[#27479f] focus:ring-2 focus:ring-cream/35";
 
 export function CandidateProfileEditor({ initialProfile }: { initialProfile: CandidateProfile }) {
   const [profile, setProfile] = useState<CandidateProfileInput>(toInput(initialProfile));
@@ -191,7 +191,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
     );
   }
 
-  // Editing is deliberately narrow: role, level, the paragraph Helix quotes,
+  // Editing is deliberately narrow: role, level, the paragraph Trailgrad quotes,
   // and the story bank. Everything else on this page is derived or read-only,
   // so putting it in the form only invited people to fiddle with it.
   return (
@@ -256,7 +256,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
                 </span>
                 <span>
                   <span className="block">{section.label}</span>
-                  <span className="mt-0.5 block font-mono text-[10px] text-cream/30">
+                  <span className="mt-0.5 block font-mono text-[11px] text-cream/45">
                     Step {index + 1}
                   </span>
                 </span>
@@ -325,7 +325,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
                     onChange={(event) => update({ targetCompany: event.target.value })}
                     placeholder="Stripe, Figma, a startup…"
                     maxLength={100}
-                    className={`${fieldClass} min-h-11 px-4 text-sm`}
+                    className={`${fieldClass} min-h-11 px-4 text-[14px]`}
                   />
                 </FieldBlock>
                 <FieldBlock label="Interview date">
@@ -333,7 +333,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
                     type="date"
                     value={profile.targetDate ?? ""}
                     onChange={(event) => update({ targetDate: event.target.value || null })}
-                    className={`${fieldClass} min-h-11 px-4 text-sm`}
+                    className={`${fieldClass} min-h-11 px-4 text-[14px]`}
                   />
                 </FieldBlock>
               </div>
@@ -345,7 +345,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
             icon={Sparkles}
             tone="cream"
             title="What you have done"
-            hint="Helix quotes this back at you under pressure."
+            hint="Trailgrad quotes this back at you under pressure."
           >
             <FieldBlock
               label="Headline"
@@ -357,7 +357,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
                 onChange={(event) => update({ headline: event.target.value })}
                 placeholder="Full-stack engineer building reliable fintech workflows"
                 maxLength={140}
-                className={`${fieldClass} min-h-11 px-4 text-sm`}
+                className={`${fieldClass} min-h-11 px-4 text-[14px]`}
               />
             </FieldBlock>
 
@@ -469,7 +469,7 @@ function StoryField({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-[10px] font-medium uppercase tracking-[0.12em] text-cream/38">
+      <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.09em] text-cream/55">
         {label}
       </span>
       <textarea
@@ -478,7 +478,7 @@ function StoryField({
         rows={4}
         maxLength={800}
         placeholder={placeholder}
-        className={`${fieldClass} thin-scroll resize-y px-3.5 py-3 text-sm leading-6`}
+        className={`${fieldClass} thin-scroll resize-y px-3.5 py-3 text-[14px] leading-6`}
       />
     </label>
   );
@@ -534,7 +534,7 @@ function FieldBlock({
         <span className="block text-base font-semibold text-cream/88">{label}</span>
         {hint ? <span className="mt-1 block text-xs leading-5 text-cream/38">{hint}</span> : null}
         {counter ? (
-          <span className="mt-1.5 block font-mono text-[10px] text-cream/30">{counter}</span>
+          <span className="mt-1.5 block font-mono text-[11px] text-cream/45">{counter}</span>
         ) : null}
       </div>
       <div className="min-w-0">{children}</div>
@@ -611,7 +611,7 @@ function LevelOption({
       ].join(" ")}
     >
       <span className="flex items-center justify-between gap-3">
-        <span className="font-mono text-[11px] uppercase tracking-[0.16em] opacity-55">Level</span>
+        <span className="font-mono text-[11px] uppercase tracking-[0.1em] opacity-70">Level</span>
         {selected ? <Check size={16} className="shrink-0" /> : null}
       </span>
       <span className="mt-4 block text-base font-semibold">{option.label}</span>
@@ -748,7 +748,7 @@ function StoryRow({
               })
             }
             placeholder="Skills: React, API design, leadership"
-            className={`${fieldClass} min-h-11 px-4 text-sm`}
+            className={`${fieldClass} min-h-11 px-4 text-[14px]`}
           />
         </div>
       ) : null}
@@ -812,7 +812,7 @@ function ProfileHero({
             ) : null}
           </h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-cream/55 sm:text-[15px]">
-            {profile.headline || "Add a headline so Helix can frame your rounds."}
+            {profile.headline || "Add a headline so Trailgrad can frame your rounds."}
           </p>
 
           <div className="mt-5 flex flex-wrap items-center gap-2.5">
@@ -852,8 +852,6 @@ function AboutCard({ profile }: { profile: CandidateProfileInput }) {
             </>
           ) : null}
         </div>
-
-        <FocusOrbit areas={profile.focusAreas} />
       </div>
     </ViewCard>
   );
@@ -866,50 +864,43 @@ function ProfileSignalDeck({
   profile: CandidateProfileInput;
   saved: CandidateProfile;
 }) {
-  const name = saved.resume?.fullName?.trim() || "Candidate";
-  const resumeProgress = saved.resume ? Math.max(10, Math.min(100, saved.resume.confidence)) : 0;
-  const storyProgress = Math.min(100, Math.round((profile.stories.length / 4) * 100));
-  const focusProgress = Math.min(100, Math.round((profile.focusAreas.length / 6) * 100));
+  // Only the resume has a genuine percentage — the parser's own confidence.
+  // Stories and focus areas are counts; the previous tiles divided them by an
+  // invented target (4 and 6) to manufacture a ring, which implied goals this
+  // product never sets.
+  const confidence = saved.resume ? Math.max(0, Math.min(100, saved.resume.confidence)) : null;
 
   return (
-    <section className="profile-motion mt-5 grid gap-4 xl:grid-cols-[minmax(20rem,1.25fr)_repeat(3,minmax(0,0.75fr))]">
-      <div className="surface relative min-h-44 overflow-hidden p-5 sm:p-6">
-        <CardPattern variant="rings" />
-        <div className="relative flex h-full items-center gap-5">
-          <AvatarLink name={name} mayaName="Maya" />
-          <div className="min-w-0 flex-1">
-            <p className="blueprint-label text-cream/32">Calibration</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-cream">
-              Maya mirrors your evidence.
-            </h2>
-            <SignalPatternStrip />
+    <section className="profile-motion mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <article className="surface flex items-start justify-between gap-4 p-5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-[#a9f0cd]">
+            <ShieldCheck size={15} aria-hidden="true" />
+            <p className="blueprint-label">Resume</p>
           </div>
+          <p className="mt-3 text-[2rem] font-semibold leading-none tracking-tight text-cream">
+            {saved.resume ? "Verified" : "Missing"}
+          </p>
+          <p className="mt-2 text-[13px] text-cream/45">
+            {confidence === null ? "Upload to ground your answers" : "Parser confidence"}
+          </p>
         </div>
-      </div>
+        <PercentRing value={confidence} color="#9be8c1" />
+      </article>
 
-      <SignalTile
-        icon={ShieldCheck}
-        tone="mint"
-        label="Resume"
-        value={saved.resume ? "Verified" : "Missing"}
-        helper={saved.resume ? `${saved.resume.confidence}% grounded` : "Upload to unlock"}
-        progress={resumeProgress}
-      />
-      <SignalTile
+      <CountTile
         icon={BriefcaseBusiness}
         tone="amber"
         label="Stories"
-        value={`${profile.stories.length}`}
+        value={profile.stories.length}
         helper="banked examples"
-        progress={storyProgress}
       />
-      <SignalTile
+      <CountTile
         icon={Sparkles}
         tone="sky"
-        label="Focus"
-        value={`${profile.focusAreas.length}`}
-        helper="pressure points"
-        progress={focusProgress}
+        label="Focus areas"
+        value={profile.focusAreas.length}
+        helper="what Maya presses on"
       />
     </section>
   );
@@ -983,124 +974,71 @@ function EditMemoryPreview({
   );
 }
 
-function SignalPatternStrip() {
+/** A real ring: one track, one arc — no conic-gradient approximation. */
+function PercentRing({ value, color }: { value: number | null; color: string }) {
+  const radius = 26;
+  const circumference = 2 * Math.PI * radius;
+  const pct = value ?? 0;
+
   return (
-    <div className="mt-5 grid max-w-xs grid-cols-7 gap-1.5" aria-hidden>
-      {[0.35, 0.65, 0.45, 0.8, 0.5, 0.7, 0.38].map((opacity, index) => (
-        <span
-          key={`signal-pattern-${index}`}
-          className="h-8 rounded-full bg-cream"
-          style={{ opacity }}
+    <span className="relative grid h-[4.5rem] w-[4.5rem] shrink-0 place-items-center">
+      <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90" aria-hidden="true">
+        <circle
+          cx="32"
+          cy="32"
+          r={radius}
+          fill="none"
+          stroke="rgba(239,232,214,0.12)"
+          strokeWidth="5"
         />
-      ))}
-    </div>
+        {value === null ? null : (
+          <circle
+            cx="32"
+            cy="32"
+            r={radius}
+            fill="none"
+            stroke={color}
+            strokeWidth="5"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference - (circumference * pct) / 100}
+          />
+        )}
+      </svg>
+      <span className="absolute text-[15px] font-semibold tabular-nums text-cream">
+        {value === null ? "\u2014" : `${value}%`}
+      </span>
+    </span>
   );
 }
 
-function AvatarLink({ name, mayaName }: { name: string; mayaName: string }) {
-  return (
-    <div className="relative grid h-32 w-40 shrink-0 place-items-center" aria-hidden>
-      <span className="absolute left-11 right-11 top-1/2 h-1 -translate-y-1/2 rounded-full bg-gradient-to-r from-[#9be8c1]/70 via-cream/40 to-[#7ea0ff]/70" />
-      <span className="absolute left-4 top-6 h-20 w-20 rounded-full bg-[#9be8c1]/12" />
-      <ProfileAvatar
-        name={name}
-        className="absolute left-0 top-4 h-24 w-24 rounded-full shadow-[0_18px_40px_-18px_rgba(5,14,45,0.92)]"
-      />
-      <span className="absolute right-0 top-12 grid h-20 w-20 place-items-center rounded-full bg-[#102764] shadow-[0_18px_40px_-18px_rgba(5,14,45,0.92),inset_0_1px_0_rgba(255,255,255,0.12)]">
-        <ProfileAvatar name={mayaName} className="h-[4.4rem] w-[4.4rem] rounded-full" />
-      </span>
-      <span className="absolute bottom-3 left-3 rounded-full bg-[#71d6a5]/18 px-2 py-1 text-[10px] font-semibold text-[#b5efd2] shadow-soft-inset">
-        You
-      </span>
-      <span className="absolute bottom-0 right-3 rounded-full bg-[#7ea0ff]/18 px-2 py-1 text-[10px] font-semibold text-[#cfdcff] shadow-soft-inset">
-        Maya
-      </span>
-    </div>
-  );
-}
-
-function SignalTile({
+/** Counts get their colour on the icon, not a slab around it. */
+function CountTile({
   icon: Icon,
   tone,
   label,
   value,
-  helper,
-  progress
+  helper
 }: {
   icon: typeof Target;
-  tone: keyof typeof statTones;
+  tone: "mint" | "amber" | "sky";
   label: string;
-  value: string;
+  value: number;
   helper: string;
-  progress: number;
 }) {
-  const clamped = Math.max(0, Math.min(100, progress));
-  const color = tone === "mint" ? "#9be8c1" : tone === "amber" ? "#efcf84" : "#9fb8ff";
-
+  const ink =
+    tone === "mint" ? "text-[#a9f0cd]" : tone === "amber" ? "text-[#f7e3ae]" : "text-[#cfdcff]";
   return (
-    <article className="surface group relative min-h-44 overflow-hidden p-5 transition hover:-translate-y-0.5">
-      <span
-        aria-hidden
-        className="absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-20 blur-2xl"
-        style={{ backgroundColor: color }}
-      />
-      <div className="relative flex items-start justify-between gap-4">
-        <span
-          className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${statTones[tone]}`}
-        >
-          <Icon size={19} />
-        </span>
-        <span
-          className="grid h-16 w-16 place-items-center rounded-full shadow-soft-inset"
-          style={{
-            background: `conic-gradient(${color} ${clamped * 3.6}deg, rgba(255,255,255,0.075) 0deg)`
-          }}
-        >
-          <span className="grid h-11 w-11 place-items-center rounded-full bg-[#17357f] text-[10px] font-semibold text-cream/72">
-            {clamped}%
-          </span>
-        </span>
+    <article className="surface p-5">
+      <div className={`flex items-center gap-2 ${ink}`}>
+        <Icon size={15} aria-hidden="true" />
+        <p className="blueprint-label">{label}</p>
       </div>
-      <p className="relative mt-7 text-sm font-semibold text-cream/42">{label}</p>
-      <p className="relative mt-1 text-3xl font-semibold tracking-tight text-cream">{value}</p>
-      <p className="relative mt-1 text-xs text-cream/42">{helper}</p>
+      <p className="mt-3 text-[2rem] font-semibold leading-none tracking-tight text-cream">
+        {value}
+      </p>
+      <p className="mt-2 text-[13px] text-cream/45">{helper}</p>
     </article>
-  );
-}
-
-function FocusOrbit({ areas }: { areas: string[] }) {
-  const visible = areas.slice(0, 6);
-  const fallback = ["Ownership", "Depth", "Impact"];
-  const items = visible.length ? visible : fallback;
-  const positions = [
-    "left-1/2 top-3 -translate-x-1/2",
-    "right-2 top-16",
-    "right-8 bottom-8",
-    "left-1/2 bottom-3 -translate-x-1/2",
-    "left-3 bottom-14",
-    "left-2 top-16"
-  ];
-
-  return (
-    <div className="relative mx-auto h-72 w-full max-w-72" aria-hidden>
-      <span className="absolute inset-8 rounded-full bg-[#7ea0ff]/[0.055] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]" />
-      <span className="absolute inset-14 rounded-full bg-[#71d6a5]/[0.045] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]" />
-      <span className="absolute inset-20 rounded-full bg-cream/[0.055]" />
-      <span className="absolute left-1/2 top-1/2 grid h-24 w-24 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-cream text-blueprint shadow-[0_18px_52px_-24px_rgba(239,232,214,0.75)]">
-        <Sparkles size={24} />
-      </span>
-      {items.map((area, index) => (
-        <span
-          key={`${area}-${index}`}
-          className={[
-            "absolute max-w-[7.5rem] truncate rounded-full bg-white/[0.08] px-3 py-1.5 text-[11px] font-semibold text-cream/76 shadow-soft-inset backdrop-blur",
-            positions[index] ?? positions[0]
-          ].join(" ")}
-        >
-          {area}
-        </span>
-      ))}
-    </div>
   );
 }
 
@@ -1195,7 +1133,7 @@ function VerifiedResumeCard({
       ) : (
         <>
           <p className="text-sm leading-6 text-cream/50">
-            Helix asks sharper questions when it can quote your resume.
+            Trailgrad asks sharper questions when it can quote your resume.
           </p>
           <Link
             href="/onboarding?replace=resume"
@@ -1414,10 +1352,10 @@ function ViewRow({ label, value }: { label: string; value?: string }) {
 }
 
 const statTones = {
-  mint: "bg-[#71d6a5]/22 text-[#a9f0cd] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]",
-  sky: "bg-[#7ea0ff]/24 text-[#cfdcff] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]",
-  amber: "bg-[#efcf84]/22 text-[#f7e3ae] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]",
-  cream: "bg-cream/[0.18] text-cream shadow-[inset_0_1px_0_rgba(255,255,255,0.16)]"
+  mint: "bg-[#71d6a5]/16 text-[#a9f0cd] ring-1 ring-inset ring-[#71d6a5]/28",
+  sky: "bg-[#7ea0ff]/18 text-[#cfdcff] ring-1 ring-inset ring-[#7ea0ff]/30",
+  amber: "bg-[#efcf84]/16 text-[#f7e3ae] ring-1 ring-inset ring-[#efcf84]/30",
+  cream: "bg-cream/[0.14] text-cream ring-1 ring-inset ring-cream/25"
 } as const;
 
 function HeroChip({
@@ -1543,7 +1481,7 @@ function ResumeTab({ resume }: { resume: CandidateProfile["resume"] }) {
         <EmptyState
           icon={Upload}
           title="Nothing to show"
-          body="Upload a resume and Helix will extract the evidence it can trace back to the document."
+          body="Upload a resume and Trailgrad will extract the evidence it can trace back to the document."
           action={
             <Link
               href="/onboarding?replace=resume"
@@ -1571,7 +1509,7 @@ function ResumeTab({ resume }: { resume: CandidateProfile["resume"] }) {
             <EmptyState
               icon={BriefcaseBusiness}
               title="Project-led profile"
-              body="No professional role was verified, so Helix anchors rounds to your projects."
+              body="No professional role was verified, so Trailgrad anchors rounds to your projects."
             />
           ) : (
             <ol className="grid gap-4">
@@ -1596,7 +1534,7 @@ function ResumeTab({ resume }: { resume: CandidateProfile["resume"] }) {
                       </div>
                     </div>
                     {entry.period ? (
-                      <span className="pill px-3 py-1.5 font-mono text-[11px] text-cream/48">
+                      <span className="pill px-3 py-1.5 font-mono text-[12px] text-cream/60">
                         {entry.period}
                       </span>
                     ) : null}
@@ -1701,7 +1639,7 @@ function ResumeTab({ resume }: { resume: CandidateProfile["resume"] }) {
                     {entry.institution}
                   </p>
                   {entry.period ? (
-                    <p className="mt-3 font-mono text-[11px] text-cream/34">{entry.period}</p>
+                    <p className="mt-3 font-mono text-[12px] text-cream/48">{entry.period}</p>
                   ) : null}
                 </div>
               ))}
@@ -1716,7 +1654,7 @@ function ResumeTab({ resume }: { resume: CandidateProfile["resume"] }) {
               <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#efcf84]/15 text-[#f4dda6]">
                 <TriangleAlert size={18} />
               </span>
-              Helix will challenge these
+              Trailgrad will challenge these
             </p>
             <ul className="relative mt-5 grid gap-3">
               {resume.warnings.map((warning) => (
@@ -1927,7 +1865,7 @@ function SaveBar({
             </p>
           ) : (
             <p className="mt-0.5 text-xs text-cream/38">
-              Helix uses this from your next round onward.
+              Trailgrad uses this from your next round onward.
             </p>
           )}
         </div>

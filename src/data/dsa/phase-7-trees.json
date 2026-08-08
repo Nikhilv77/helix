@@ -1,0 +1,2792 @@
+{
+  "phase": "Phase 7 — Trees",
+  "questions": [
+    {
+      "title": "Maximum Depth of Binary Tree",
+      "slug": "maximum-depth-of-binary-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/maximum-depth-of-binary-tree/",
+      "primaryPattern": "tree",
+      "subPatterns": ["dfs-recursion", "post-order-aggregation", "bfs-level-order"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 10,
+      "recommendedOrder": 1,
+      "prerequisites": [],
+      "conceptsTested": [
+        "post-order recursion returning a value upward",
+        "the null child as the base case",
+        "BFS level counting as the iterative alternative"
+      ],
+      "commonMistakes": [
+        "Confusing a count of nodes with a count of edges without clarifying",
+        "Recursing into null and dereferencing it",
+        "Assuming balance when reasoning about the recursion stack"
+      ],
+      "interviewSignals": [
+        "States the recurrence in a single line",
+        "Notes the O(h) stack cost and the skewed-tree worst case"
+      ],
+      "followUpPrompts": [
+        "Do it iteratively.",
+        "Return the deepest node rather than the depth.",
+        "How would this change for an n-ary tree?"
+      ],
+      "promptSummary": "Return the number of nodes along the longest path from the root down to a leaf.",
+      "highLevelApproach": "Recurse into both children and return one plus the greater depth; a level-counting BFS produces the same answer without recursion.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Return the number of nodes along the longest path from the root down to a leaf. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around post-order recursion returning a value upward. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Confusing a count of nodes with a count of edges without clarifying.",
+        "The intended path is: Recurse into both children and return one plus the greater depth; a level-counting BFS produces the same answer without recursion."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Recurse into both children and return one plus the greater depth; a level-counting BFS produces the same answer without recursion.",
+          "steps": [
+            "Track the state needed for post-order recursion returning a value upward.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Confusing a count of nodes with a count of edges without clarifying"
+      ],
+      "relatedQuestions": [
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "symmetric-tree",
+        "invert-binary-tree"
+      ]
+    },
+    {
+      "title": "Minimum Depth of Binary Tree",
+      "slug": "minimum-depth-of-binary-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/minimum-depth-of-binary-tree/",
+      "primaryPattern": "tree",
+      "subPatterns": ["dfs-recursion", "bfs-level-order"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 2,
+      "prerequisites": ["maximum-depth-of-binary-tree"],
+      "conceptsTested": [
+        "a leaf being a node with no children at all",
+        "BFS reaching the shallowest leaf first",
+        "why the maximum-depth recurrence does not simply invert"
+      ],
+      "commonMistakes": [
+        "Taking the minimum across a null child and returning one",
+        "Treating a single-child node as a leaf",
+        "Using DFS where BFS could stop at the first leaf"
+      ],
+      "interviewSignals": [
+        "Catches the single-child case immediately",
+        "Chooses BFS to exit early on wide trees"
+      ],
+      "followUpPrompts": [
+        "Why can you not just swap max for min?",
+        "Solve it with BFS and compare the two.",
+        "Return the shallowest leaf node itself."
+      ],
+      "promptSummary": "Return the number of nodes on the shortest path from the root to any leaf.",
+      "highLevelApproach": "Recurse but ignore a null child whenever the other child exists, or run BFS and return the depth of the first leaf reached.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Return the number of nodes on the shortest path from the root to any leaf. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around a leaf being a node with no children at all. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Taking the minimum across a null child and returning one.",
+        "The intended path is: Recurse but ignore a null child whenever the other child exists, or run BFS and return the depth of the first leaf reached."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Recurse but ignore a null child whenever the other child exists, or run BFS and return the depth of the first leaf reached.",
+          "steps": [
+            "Track the state needed for a leaf being a node with no children at all.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Taking the minimum across a null child and returning one"
+      ],
+      "relatedQuestions": [
+        "maximum-depth-of-binary-tree",
+        "same-tree",
+        "symmetric-tree",
+        "invert-binary-tree"
+      ]
+    },
+    {
+      "title": "Same Tree",
+      "slug": "same-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/same-tree/",
+      "primaryPattern": "tree",
+      "subPatterns": ["dfs-recursion"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 10,
+      "recommendedOrder": 3,
+      "prerequisites": ["maximum-depth-of-binary-tree"],
+      "conceptsTested": [
+        "walking two trees in lockstep",
+        "null agreement as the base case",
+        "structure and values both mattering"
+      ],
+      "commonMistakes": [
+        "Comparing values while ignoring shape",
+        "Mishandling the one-null-one-present case",
+        "Comparing serializations that omit null markers"
+      ],
+      "interviewSignals": [
+        "Writes the three base cases before the recursive call",
+        "Notes that a value-only comparison is insufficient"
+      ],
+      "followUpPrompts": [
+        "Check whether one tree is a subtree of another.",
+        "Compare two n-ary trees.",
+        "What if child order does not matter?"
+      ],
+      "promptSummary": "Decide whether two binary trees have identical structure and identical values.",
+      "highLevelApproach": "Recurse on both trees together: two nulls agree, exactly one null disagrees, otherwise compare the values and both pairs of children.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Decide whether two binary trees have identical structure and identical values. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around walking two trees in lockstep. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Comparing values while ignoring shape.",
+        "The intended path is: Recurse on both trees together: two nulls agree, exactly one null disagrees, otherwise compare the values and both pairs of children."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Recurse on both trees together: two nulls agree, exactly one null disagrees, otherwise compare the values and both pairs of children.",
+          "steps": [
+            "Track the state needed for walking two trees in lockstep.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Comparing values while ignoring shape"
+      ],
+      "relatedQuestions": [
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "symmetric-tree",
+        "invert-binary-tree"
+      ]
+    },
+    {
+      "title": "Symmetric Tree",
+      "slug": "symmetric-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/symmetric-tree/",
+      "primaryPattern": "tree",
+      "subPatterns": ["dfs-recursion"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 4,
+      "prerequisites": ["same-tree"],
+      "conceptsTested": [
+        "comparing the left subtree against the right in mirror order",
+        "a helper that takes two nodes rather than one",
+        "the iterative version using a queue of pairs"
+      ],
+      "commonMistakes": [
+        "Comparing a node with its own sibling instead of the mirrored partner",
+        "Recursing down the same side twice",
+        "Checking values without checking mirrored structure"
+      ],
+      "interviewSignals": [
+        "Writes a two-argument mirror helper rather than forcing a one-argument recursion",
+        "Pairs outer children with outer and inner with inner"
+      ],
+      "followUpPrompts": [
+        "Do it iteratively.",
+        "Check whether one tree mirrors a second tree.",
+        "What would symmetry mean for an n-ary tree?"
+      ],
+      "promptSummary": "Decide whether a binary tree is a mirror image of itself about its centre.",
+      "highLevelApproach": "Compare the two subtrees with a helper that pairs each node's left child against the other node's right child, and vice versa.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Decide whether a binary tree is a mirror image of itself about its centre. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around comparing the left subtree against the right in mirror order. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Comparing a node with its own sibling instead of the mirrored partner.",
+        "The intended path is: Compare the two subtrees with a helper that pairs each node's left child against the other node's right child, and vice versa."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Compare the two subtrees with a helper that pairs each node's left child against the other node's right child, and vice versa.",
+          "steps": [
+            "Track the state needed for comparing the left subtree against the right in mirror order.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Comparing a node with its own sibling instead of the mirrored partner"
+      ],
+      "relatedQuestions": [
+        "same-tree",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "invert-binary-tree"
+      ]
+    },
+    {
+      "title": "Invert Binary Tree",
+      "slug": "invert-binary-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/invert-binary-tree/",
+      "primaryPattern": "tree",
+      "subPatterns": ["dfs-recursion", "pointer-rewiring", "bfs-level-order"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 10,
+      "recommendedOrder": 5,
+      "prerequisites": ["maximum-depth-of-binary-tree"],
+      "conceptsTested": [
+        "swapping children at every node",
+        "the swap being order-independent with respect to the recursion",
+        "the iterative traversal alternative"
+      ],
+      "commonMistakes": [
+        "Swapping without recursing into the subtrees",
+        "Overwriting a child reference before saving it",
+        "Assuming the input is a search tree"
+      ],
+      "interviewSignals": [
+        "Notes the swap works in any traversal order",
+        "Handles the empty tree without a special branch"
+      ],
+      "followUpPrompts": [
+        "Do it iteratively with a queue.",
+        "Invert only below a given depth.",
+        "Is the result the same tree the symmetric check compares against?"
+      ],
+      "promptSummary": "Mirror a binary tree by swapping every node's left and right children.",
+      "highLevelApproach": "Visit every node, swap its two children and recurse into both; any traversal order yields the same result.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Mirror a binary tree by swapping every node's left and right children. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around swapping children at every node. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Swapping without recursing into the subtrees.",
+        "The intended path is: Visit every node, swap its two children and recurse into both; any traversal order yields the same result."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Visit every node, swap its two children and recurse into both; any traversal order yields the same result.",
+          "steps": [
+            "Track the state needed for swapping children at every node.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Swapping without recursing into the subtrees"
+      ],
+      "relatedQuestions": [
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "symmetric-tree",
+        "subtree-of-another-tree"
+      ]
+    },
+    {
+      "title": "Subtree of Another Tree",
+      "slug": "subtree-of-another-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/subtree-of-another-tree/",
+      "primaryPattern": "tree",
+      "subPatterns": ["dfs-recursion", "tree-serialization"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 6,
+      "prerequisites": ["same-tree"],
+      "conceptsTested": [
+        "reusing the identical-trees check at every candidate root",
+        "the O(n*m) bound and when it matters",
+        "serialization with null markers as a linear alternative"
+      ],
+      "commonMistakes": [
+        "Accepting a partial match rather than a complete subtree",
+        "Serializing without null markers so distinct trees collide",
+        "Overlooking that an empty subtree is trivially contained"
+      ],
+      "interviewSignals": [
+        "Reuses the same-tree helper instead of rewriting the comparison",
+        "Offers the serialize-and-search alternative along with its caveat"
+      ],
+      "followUpPrompts": [
+        "Solve it with serialization and string matching.",
+        "What is the worst-case running time?",
+        "Find every matching subtree root."
+      ],
+      "promptSummary": "Decide whether one tree contains a subtree identical in structure and values to another tree.",
+      "highLevelApproach": "Run the identical-trees check at each node of the larger tree, or serialize both with explicit null markers and search for one string inside the other.",
+      "complexity": {
+        "time": "O(n*m)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Decide whether one tree contains a subtree identical in structure and values to another tree. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n*m) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around reusing the identical-trees check at every candidate root. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Accepting a partial match rather than a complete subtree.",
+        "The intended path is: Run the identical-trees check at each node of the larger tree, or serialize both with explicit null markers and search for one string inside the other."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Run the identical-trees check at each node of the larger tree, or serialize both with explicit null markers and search for one string inside the other.",
+          "steps": [
+            "Track the state needed for reusing the identical-trees check at every candidate root.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n*m)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Accepting a partial match rather than a complete subtree"
+      ],
+      "relatedQuestions": [
+        "same-tree",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "symmetric-tree",
+        "invert-binary-tree"
+      ]
+    },
+    {
+      "title": "Balanced Binary Tree",
+      "slug": "balanced-binary-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/balanced-binary-tree/",
+      "primaryPattern": "tree",
+      "subPatterns": ["dfs-recursion", "post-order-aggregation"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 7,
+      "prerequisites": ["maximum-depth-of-binary-tree"],
+      "conceptsTested": [
+        "computing height and balance in one post-order pass",
+        "propagating a failure sentinel upward",
+        "why the naive version is superlinear"
+      ],
+      "commonMistakes": [
+        "Calling a separate height routine at every node",
+        "Checking only the root's two subtrees",
+        "Returning a height with no way to signal imbalance"
+      ],
+      "interviewSignals": [
+        "Fuses the height computation with the balance check",
+        "Short-circuits as soon as an imbalance appears"
+      ],
+      "followUpPrompts": [
+        "Prove the single-pass version is linear.",
+        "Return the first unbalanced node.",
+        "How does an AVL tree maintain this invariant?"
+      ],
+      "promptSummary": "Decide whether every node's two subtrees differ in height by at most one.",
+      "highLevelApproach": "A post-order recursion returns each subtree's height, or a sentinel once any subtree is unbalanced, so the whole check costs a single pass.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Decide whether every node's two subtrees differ in height by at most one. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around computing height and balance in one post-order pass. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Calling a separate height routine at every node.",
+        "The intended path is: A post-order recursion returns each subtree's height, or a sentinel once any subtree is unbalanced, so the whole check costs a single pass."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "A post-order recursion returns each subtree's height, or a sentinel once any subtree is unbalanced, so the whole check costs a single pass.",
+          "steps": [
+            "Track the state needed for computing height and balance in one post-order pass.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Calling a separate height routine at every node"
+      ],
+      "relatedQuestions": [
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "symmetric-tree",
+        "subtree-of-another-tree"
+      ]
+    },
+    {
+      "title": "Diameter of Binary Tree",
+      "slug": "diameter-of-binary-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/diameter-of-binary-tree/",
+      "primaryPattern": "tree",
+      "subPatterns": ["dfs-recursion", "post-order-aggregation", "running-aggregate"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 8,
+      "prerequisites": ["balanced-binary-tree"],
+      "conceptsTested": [
+        "the longest path not necessarily passing through the root",
+        "returning height upward while recording a global best",
+        "separating the returned value from the recorded answer"
+      ],
+      "commonMistakes": [
+        "Returning the diameter instead of the height from the recursion",
+        "Assuming the answer must pass through the root",
+        "Confusing a count of nodes with a count of edges"
+      ],
+      "interviewSignals": [
+        "Separates what is returned from what is recorded, explicitly",
+        "States the edge-versus-node convention before coding"
+      ],
+      "followUpPrompts": [
+        "Return the actual path.",
+        "Solve the same problem for an n-ary tree.",
+        "What if the edges carry weights?"
+      ],
+      "promptSummary": "Find the length of the longest path between any two nodes of a binary tree.",
+      "highLevelApproach": "Post-order recursion returns each subtree's height while a running maximum records the best left-plus-right total seen at any node.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Find the length of the longest path between any two nodes of a binary tree. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around the longest path not necessarily passing through the root. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Returning the diameter instead of the height from the recursion.",
+        "The intended path is: Post-order recursion returns each subtree's height while a running maximum records the best left-plus-right total seen at any node."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Post-order recursion returns each subtree's height while a running maximum records the best left-plus-right total seen at any node.",
+          "steps": [
+            "Track the state needed for the longest path not necessarily passing through the root.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Returning the diameter instead of the height from the recursion"
+      ],
+      "relatedQuestions": [
+        "balanced-binary-tree",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "path-sum"
+      ]
+    },
+    {
+      "title": "Path Sum",
+      "slug": "path-sum",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/path-sum/",
+      "primaryPattern": "tree",
+      "subPatterns": ["dfs-recursion", "post-order-aggregation", "running-aggregate"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 9,
+      "prerequisites": ["maximum-depth-of-binary-tree"],
+      "conceptsTested": [
+        "subtracting on the way down instead of summing on the way up",
+        "leaf detection as the base case",
+        "short-circuiting once a path is found"
+      ],
+      "commonMistakes": [
+        "Returning true at a null node and accepting a path that does not exist",
+        "Treating a single-child node as a leaf",
+        "Pruning on the assumption that values are non-negative"
+      ],
+      "interviewSignals": [
+        "Bases the check on reaching a leaf, not on reaching null",
+        "Asks whether negative values are possible before pruning"
+      ],
+      "followUpPrompts": [
+        "Return the path rather than a boolean.",
+        "Count every such path.",
+        "What if paths need not start at the root?"
+      ],
+      "promptSummary": "Decide whether some root-to-leaf path's values add up to a target.",
+      "highLevelApproach": "Carry the remaining target down the tree and report success at a leaf whose value finishes it exactly.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Decide whether some root-to-leaf path's values add up to a target. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around subtracting on the way down instead of summing on the way up. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Returning true at a null node and accepting a path that does not exist.",
+        "The intended path is: Carry the remaining target down the tree and report success at a leaf whose value finishes it exactly."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Carry the remaining target down the tree and report success at a leaf whose value finishes it exactly.",
+          "steps": [
+            "Track the state needed for subtracting on the way down instead of summing on the way up.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Returning true at a null node and accepting a path that does not exist"
+      ],
+      "relatedQuestions": [
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "symmetric-tree",
+        "diameter-of-binary-tree"
+      ]
+    },
+    {
+      "title": "Sum Root to Leaf Numbers",
+      "slug": "sum-root-to-leaf-numbers",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/sum-root-to-leaf-numbers/",
+      "primaryPattern": "tree",
+      "subPatterns": ["dfs-recursion", "post-order-aggregation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 10,
+      "prerequisites": ["path-sum"],
+      "conceptsTested": [
+        "building a number by multiplying by ten while descending",
+        "accumulating into the total only at leaves",
+        "passing state down rather than returning it up"
+      ],
+      "commonMistakes": [
+        "Adding at every node instead of only at leaves",
+        "Building the number as a string and re-parsing it",
+        "Mishandling a tree with a single node"
+      ],
+      "interviewSignals": [
+        "Threads the partial number down through the recursion",
+        "Adds to the total only when both children are null"
+      ],
+      "followUpPrompts": [
+        "What if the digits formed the number bottom-up?",
+        "Return the individual numbers as well.",
+        "Handle bases other than ten."
+      ],
+      "promptSummary": "Each root-to-leaf path spells a number digit by digit; return the sum of all of them.",
+      "highLevelApproach": "Descend carrying the number built so far, multiplying by ten and adding the current digit, then add to the running total on reaching a leaf.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Each root-to-leaf path spells a number digit by digit; return the sum of all of them. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around building a number by multiplying by ten while descending. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Adding at every node instead of only at leaves.",
+        "The intended path is: Descend carrying the number built so far, multiplying by ten and adding the current digit, then add to the running total on reaching a leaf."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Descend carrying the number built so far, multiplying by ten and adding the current digit, then add to the running total on reaching a leaf.",
+          "steps": [
+            "Track the state needed for building a number by multiplying by ten while descending.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Adding at every node instead of only at leaves"
+      ],
+      "relatedQuestions": [
+        "path-sum",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "path-sum-ii"
+      ]
+    },
+    {
+      "title": "Path Sum II",
+      "slug": "path-sum-ii",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/path-sum-ii/",
+      "primaryPattern": "tree",
+      "subPatterns": ["dfs-recursion", "backtracking", "post-order-aggregation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 11,
+      "prerequisites": ["path-sum"],
+      "conceptsTested": [
+        "backtracking a shared path buffer",
+        "copying the buffer when recording a match",
+        "output size dominating the complexity"
+      ],
+      "commonMistakes": [
+        "Appending the live buffer without copying it",
+        "Forgetting to pop the node when backtracking",
+        "Recording at null rather than at a leaf"
+      ],
+      "interviewSignals": [
+        "Pops on the way out so the buffer stays accurate",
+        "Copies the path exactly once per qualifying leaf"
+      ],
+      "followUpPrompts": [
+        "Count the paths without materializing them.",
+        "What if a path may end anywhere?",
+        "Return only the shortest qualifying path."
+      ],
+      "promptSummary": "Return every root-to-leaf path whose values add up to a target.",
+      "highLevelApproach": "Depth-first search carrying a mutable path buffer, appending on entry and popping on exit, copying the buffer whenever a leaf completes the target.",
+      "complexity": {
+        "time": "O(n*h) worst case",
+        "space": "O(h) excluding output"
+      },
+      "problemStatement": "Return every root-to-leaf path whose values add up to a target. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n*h) worst case time and O(h) excluding output space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around backtracking a shared path buffer. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Appending the live buffer without copying it.",
+        "The intended path is: Depth-first search carrying a mutable path buffer, appending on entry and popping on exit, copying the buffer whenever a leaf completes the target."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Depth-first search carrying a mutable path buffer, appending on entry and popping on exit, copying the buffer whenever a leaf completes the target.",
+          "steps": [
+            "Track the state needed for backtracking a shared path buffer.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n*h) worst case",
+            "space": "O(h) excluding output"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Appending the live buffer without copying it"
+      ],
+      "relatedQuestions": [
+        "path-sum",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "sum-root-to-leaf-numbers"
+      ]
+    },
+    {
+      "title": "Binary Tree Level Order Traversal",
+      "slug": "binary-tree-level-order-traversal",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/binary-tree-level-order-traversal/",
+      "primaryPattern": "tree",
+      "subPatterns": ["bfs-level-order", "fixed-window"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 12,
+      "prerequisites": [],
+      "conceptsTested": [
+        "a queue driving breadth-first traversal",
+        "snapshotting the queue size to delimit each level",
+        "handling the empty tree"
+      ],
+      "commonMistakes": [
+        "Not capturing the level size before the inner loop",
+        "Enqueueing null children and crashing later",
+        "Using DFS with a depth index but appending in the wrong order"
+      ],
+      "interviewSignals": [
+        "Freezes the level size at the top of each round",
+        "Handles the empty tree without a special code path"
+      ],
+      "followUpPrompts": [
+        "Return the levels bottom-up.",
+        "Do it with DFS and a depth index.",
+        "What changes for an n-ary tree?"
+      ],
+      "promptSummary": "Return the node values grouped by depth, from the root downward.",
+      "highLevelApproach": "Run BFS with a queue, recording the queue's size at the start of each round so exactly the nodes of that level are consumed together.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(width)"
+      },
+      "problemStatement": "Return the node values grouped by depth, from the root downward. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(width) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around a queue driving breadth-first traversal. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Not capturing the level size before the inner loop.",
+        "The intended path is: Run BFS with a queue, recording the queue's size at the start of each round so exactly the nodes of that level are consumed together."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Run BFS with a queue, recording the queue's size at the start of each round so exactly the nodes of that level are consumed together.",
+          "steps": [
+            "Track the state needed for a queue driving breadth-first traversal.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(width)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Not capturing the level size before the inner loop"
+      ],
+      "relatedQuestions": [
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "symmetric-tree",
+        "path-sum-ii"
+      ]
+    },
+    {
+      "title": "Binary Tree Zigzag Level Order Traversal",
+      "slug": "binary-tree-zigzag-level-order-traversal",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/binary-tree-zigzag-level-order-traversal/",
+      "primaryPattern": "tree",
+      "subPatterns": ["bfs-level-order"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 13,
+      "prerequisites": ["binary-tree-level-order-traversal"],
+      "conceptsTested": [
+        "alternating output direction per level",
+        "reversing the collected level rather than the traversal",
+        "a deque as the reversal-free alternative"
+      ],
+      "commonMistakes": [
+        "Reversing the traversal itself and corrupting child order",
+        "Toggling the direction on the wrong parity",
+        "Reversing in place and disturbing the queue"
+      ],
+      "interviewSignals": [
+        "Leaves the BFS untouched and reverses only the output row",
+        "Toggles one boolean rather than duplicating the loop"
+      ],
+      "followUpPrompts": [
+        "Do it with a deque and no reversing at all.",
+        "Zigzag vertically instead.",
+        "What do the reversals cost in total?"
+      ],
+      "promptSummary": "Return level-order values with the direction alternating from level to level.",
+      "highLevelApproach": "Run the standard level-order BFS and reverse the collected values on alternate levels, or insert into a deque from the appropriate end.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(width)"
+      },
+      "problemStatement": "Return level-order values with the direction alternating from level to level. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(width) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around alternating output direction per level. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Reversing the traversal itself and corrupting child order.",
+        "The intended path is: Run the standard level-order BFS and reverse the collected values on alternate levels, or insert into a deque from the appropriate end."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Run the standard level-order BFS and reverse the collected values on alternate levels, or insert into a deque from the appropriate end.",
+          "steps": [
+            "Track the state needed for alternating output direction per level.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(width)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Reversing the traversal itself and corrupting child order"
+      ],
+      "relatedQuestions": [
+        "binary-tree-level-order-traversal",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "binary-tree-right-side-view"
+      ]
+    },
+    {
+      "title": "Binary Tree Right Side View",
+      "slug": "binary-tree-right-side-view",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/binary-tree-right-side-view/",
+      "primaryPattern": "tree",
+      "subPatterns": ["bfs-level-order"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 14,
+      "prerequisites": ["binary-tree-level-order-traversal"],
+      "conceptsTested": [
+        "exactly one node visible per depth",
+        "taking the last node of each BFS level",
+        "right-first DFS with a depth check as the alternative"
+      ],
+      "commonMistakes": [
+        "Assuming the visible node always lies on the right spine",
+        "Taking the first node of a level instead of the last",
+        "Recursing left first and overwriting the correct answer"
+      ],
+      "interviewSignals": [
+        "Notes the visible node can come from a left subtree when the right side is short",
+        "Offers both the BFS and the right-first DFS formulations"
+      ],
+      "followUpPrompts": [
+        "Return the left side view.",
+        "Solve it with DFS.",
+        "What about the bottom view?"
+      ],
+      "promptSummary": "Return the values visible when the tree is viewed from the right side, top to bottom.",
+      "highLevelApproach": "Take the last node of every BFS level, or run a right-first DFS that records the first node met at each newly reached depth.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(width)"
+      },
+      "problemStatement": "Return the values visible when the tree is viewed from the right side, top to bottom. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(width) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around exactly one node visible per depth. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Assuming the visible node always lies on the right spine.",
+        "The intended path is: Take the last node of every BFS level, or run a right-first DFS that records the first node met at each newly reached depth."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Take the last node of every BFS level, or run a right-first DFS that records the first node met at each newly reached depth.",
+          "steps": [
+            "Track the state needed for exactly one node visible per depth.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(width)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Assuming the visible node always lies on the right spine"
+      ],
+      "relatedQuestions": [
+        "binary-tree-level-order-traversal",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "binary-tree-zigzag-level-order-traversal"
+      ]
+    },
+    {
+      "title": "Populating Next Right Pointers in Each Node",
+      "slug": "populating-next-right-pointers-in-each-node",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/populating-next-right-pointers-in-each-node/",
+      "primaryPattern": "tree",
+      "subPatterns": ["bfs-level-order", "pointer-rewiring", "in-place-mutation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 15,
+      "prerequisites": ["binary-tree-level-order-traversal"],
+      "conceptsTested": [
+        "using an already-linked level to wire the level below",
+        "the perfect-tree guarantee removing gap handling",
+        "constant space by walking along next pointers"
+      ],
+      "commonMistakes": [
+        "Using a queue when constant space is required",
+        "Linking within each subtree but not across the sibling boundary",
+        "Assuming the same code survives on a non-perfect tree"
+      ],
+      "interviewSignals": [
+        "Walks the current level through next pointers to build the next one",
+        "Identifies the cross-subtree link as the interesting case"
+      ],
+      "followUpPrompts": [
+        "Solve the version where the tree is not perfect.",
+        "Write it recursively.",
+        "Use the new pointers to traverse without recursion."
+      ],
+      "promptSummary": "In a perfect binary tree, point each node's next pointer at the node immediately to its right on the same level.",
+      "highLevelApproach": "Walk each level along the next pointers already set, linking each node's left child to its right child and that right child to the following node's left child.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "In a perfect binary tree, point each node's next pointer at the node immediately to its right on the same level. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around using an already-linked level to wire the level below. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Using a queue when constant space is required.",
+        "The intended path is: Walk each level along the next pointers already set, linking each node's left child to its right child and that right child to the following node's left child."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Walk each level along the next pointers already set, linking each node's left child to its right child and that right child to the following node's left child.",
+          "steps": [
+            "Track the state needed for using an already-linked level to wire the level below.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Using a queue when constant space is required"
+      ],
+      "relatedQuestions": [
+        "binary-tree-level-order-traversal",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "binary-tree-right-side-view"
+      ]
+    },
+    {
+      "title": "Validate Binary Search Tree",
+      "slug": "validate-binary-search-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/validate-binary-search-tree/",
+      "primaryPattern": "binary-search-tree",
+      "subPatterns": ["dfs-recursion", "inorder-traversal"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 16,
+      "prerequisites": ["maximum-depth-of-binary-tree"],
+      "conceptsTested": [
+        "the ordering invariant binding whole subtrees, not just children",
+        "propagating tightening bounds down the recursion",
+        "inorder traversal yielding a strictly increasing sequence"
+      ],
+      "commonMistakes": [
+        "Comparing each node only against its direct children",
+        "Using inclusive bounds where duplicates are disallowed",
+        "Overflowing when seeding the bounds with extreme sentinels"
+      ],
+      "interviewSignals": [
+        "Catches that a deep descendant can violate an ancestor's bound",
+        "Offers the inorder-increasing formulation as a cross-check"
+      ],
+      "followUpPrompts": [
+        "Solve it with an inorder traversal instead.",
+        "How should duplicate values be treated?",
+        "Return the largest valid search-tree subtree."
+      ],
+      "promptSummary": "Decide whether a binary tree satisfies the binary search tree ordering invariant.",
+      "highLevelApproach": "Recurse carrying an open lower and upper bound that tightens at each step, or walk the tree inorder and confirm the values strictly increase.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Decide whether a binary tree satisfies the binary search tree ordering invariant. Identify the input, required output, and constraints, then explain which BST ordering idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the BST ordering pattern and maintain the right invariant around the ordering invariant binding whole subtrees, not just children. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the BST ordering structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Comparing each node only against its direct children.",
+        "The intended path is: Recurse carrying an open lower and upper bound that tightens at each step, or walk the tree inorder and confirm the values strictly increase."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — BST ordering",
+          "idea": "Recurse carrying an open lower and upper bound that tightens at each step, or walk the tree inorder and confirm the values strictly increase.",
+          "steps": [
+            "Track the state needed for the ordering invariant binding whole subtrees, not just children.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Comparing each node only against its direct children"
+      ],
+      "relatedQuestions": [
+        "maximum-depth-of-binary-tree",
+        "kth-smallest-element-in-a-bst",
+        "convert-sorted-array-to-binary-search-tree",
+        "recover-binary-search-tree",
+        "populating-next-right-pointers-in-each-node"
+      ]
+    },
+    {
+      "title": "Kth Smallest Element in a BST",
+      "slug": "kth-smallest-element-in-a-bst",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/kth-smallest-element-in-a-bst/",
+      "primaryPattern": "binary-search-tree",
+      "subPatterns": ["inorder-traversal", "stack-simulation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 17,
+      "prerequisites": ["validate-binary-search-tree"],
+      "conceptsTested": [
+        "inorder traversal visiting values in sorted order",
+        "stopping at the kth visit rather than traversing everything",
+        "augmenting nodes with subtree sizes for repeated queries"
+      ],
+      "commonMistakes": [
+        "Materializing the full inorder list when an early exit suffices",
+        "Mixing zero-based and one-based counting",
+        "Re-traversing from scratch for every query"
+      ],
+      "interviewSignals": [
+        "Uses an explicit stack so the traversal can stop part-way",
+        "Proposes subtree-size augmentation when queries are frequent"
+      ],
+      "followUpPrompts": [
+        "What if the tree is modified often between queries?",
+        "Return the kth largest instead.",
+        "Design it for many concurrent queries."
+      ],
+      "promptSummary": "Return the kth smallest value in a binary search tree.",
+      "highLevelApproach": "Walk the tree inorder with an explicit stack and return the kth value visited; storing subtree sizes turns repeated queries into single descents.",
+      "complexity": {
+        "time": "O(h + k)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Return the kth smallest value in a binary search tree. Identify the input, required output, and constraints, then explain which BST ordering idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(h + k) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the BST ordering pattern and maintain the right invariant around inorder traversal visiting values in sorted order. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the BST ordering structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Materializing the full inorder list when an early exit suffices.",
+        "The intended path is: Walk the tree inorder with an explicit stack and return the kth value visited; storing subtree sizes turns repeated queries into single descents."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — BST ordering",
+          "idea": "Walk the tree inorder with an explicit stack and return the kth value visited; storing subtree sizes turns repeated queries into single descents.",
+          "steps": [
+            "Track the state needed for inorder traversal visiting values in sorted order.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(h + k)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Materializing the full inorder list when an early exit suffices"
+      ],
+      "relatedQuestions": [
+        "validate-binary-search-tree",
+        "convert-sorted-array-to-binary-search-tree",
+        "recover-binary-search-tree"
+      ]
+    },
+    {
+      "title": "Convert Sorted Array to Binary Search Tree",
+      "slug": "convert-sorted-array-to-binary-search-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/convert-sorted-array-to-binary-search-tree/",
+      "primaryPattern": "binary-search-tree",
+      "subPatterns": ["divide-and-conquer"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 18,
+      "prerequisites": ["validate-binary-search-tree"],
+      "conceptsTested": [
+        "the middle element as root keeping the tree balanced",
+        "recursing on index ranges rather than copied slices",
+        "the answer not being unique"
+      ],
+      "commonMistakes": [
+        "Copying subarrays at every level and inflating the cost",
+        "Choosing a non-middle root and skewing the tree",
+        "Off-by-one on the inclusive range boundaries"
+      ],
+      "interviewSignals": [
+        "Passes index bounds instead of slicing arrays",
+        "Notes that either middle is acceptable on even-length ranges"
+      ],
+      "followUpPrompts": [
+        "Do the same starting from a sorted linked list.",
+        "Prove the result is height-balanced.",
+        "Return every possible balanced tree."
+      ],
+      "promptSummary": "Build a height-balanced binary search tree from a sorted array.",
+      "highLevelApproach": "Take the middle of the current index range as the root and recurse on the two halves, which keeps the two subtree heights within one of each other.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(log n)"
+      },
+      "problemStatement": "Build a height-balanced binary search tree from a sorted array. Identify the input, required output, and constraints, then explain which BST ordering idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(log n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the BST ordering pattern and maintain the right invariant around the middle element as root keeping the tree balanced. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the BST ordering structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Copying subarrays at every level and inflating the cost.",
+        "The intended path is: Take the middle of the current index range as the root and recurse on the two halves, which keeps the two subtree heights within one of each other."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — BST ordering",
+          "idea": "Take the middle of the current index range as the root and recurse on the two halves, which keeps the two subtree heights within one of each other.",
+          "steps": [
+            "Track the state needed for the middle element as root keeping the tree balanced.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(log n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Copying subarrays at every level and inflating the cost"
+      ],
+      "relatedQuestions": [
+        "validate-binary-search-tree",
+        "kth-smallest-element-in-a-bst",
+        "recover-binary-search-tree"
+      ]
+    },
+    {
+      "title": "Recover Binary Search Tree",
+      "slug": "recover-binary-search-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/recover-binary-search-tree/",
+      "primaryPattern": "binary-search-tree",
+      "subPatterns": ["inorder-traversal", "boundary-scan"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 19,
+      "prerequisites": ["validate-binary-search-tree", "kth-smallest-element-in-a-bst"],
+      "conceptsTested": [
+        "two swapped nodes producing one or two inorder descents",
+        "capturing the first and the last offending node",
+        "Morris traversal for constant space"
+      ],
+      "commonMistakes": [
+        "Handling only the two-descent case and missing adjacent swaps",
+        "Rebuilding the tree instead of swapping two values",
+        "Claiming O(1) space for a recursive traversal"
+      ],
+      "interviewSignals": [
+        "Distinguishes the adjacent-swap case from the separated one",
+        "Knows Morris traversal is what makes constant space possible"
+      ],
+      "followUpPrompts": [
+        "Do it in O(1) space with Morris traversal.",
+        "What if three nodes had been swapped?",
+        "Detect the swap without repairing it."
+      ],
+      "promptSummary": "Exactly two nodes of a binary search tree were swapped by mistake; restore it without changing the structure.",
+      "highLevelApproach": "Traverse inorder tracking descents: the first descent identifies the first offender and the last identifies the second, then swap those two values.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(h), O(1) with Morris"
+      },
+      "problemStatement": "Exactly two nodes of a binary search tree were swapped by mistake; restore it without changing the structure. Identify the input, required output, and constraints, then explain which BST ordering idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(h), O(1) with Morris space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the BST ordering pattern and maintain the right invariant around two swapped nodes producing one or two inorder descents. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the BST ordering structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Handling only the two-descent case and missing adjacent swaps.",
+        "The intended path is: Traverse inorder tracking descents: the first descent identifies the first offender and the last identifies the second, then swap those two values."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — BST ordering",
+          "idea": "Traverse inorder tracking descents: the first descent identifies the first offender and the last identifies the second, then swap those two values.",
+          "steps": [
+            "Track the state needed for two swapped nodes producing one or two inorder descents.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(h), O(1) with Morris"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Handling only the two-descent case and missing adjacent swaps"
+      ],
+      "relatedQuestions": [
+        "validate-binary-search-tree",
+        "kth-smallest-element-in-a-bst",
+        "convert-sorted-array-to-binary-search-tree",
+        "flatten-binary-tree-to-linked-list"
+      ]
+    },
+    {
+      "title": "Flatten Binary Tree to Linked List",
+      "slug": "flatten-binary-tree-to-linked-list",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/flatten-binary-tree-to-linked-list/",
+      "primaryPattern": "tree",
+      "subPatterns": ["post-order-aggregation", "in-place-mutation", "pointer-rewiring"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 20,
+      "prerequisites": ["invert-binary-tree"],
+      "conceptsTested": [
+        "producing a right-leaning list in preorder",
+        "rewiring in reverse preorder so no subtree is lost",
+        "predecessor threading as the constant-space alternative"
+      ],
+      "commonMistakes": [
+        "Overwriting the right child before saving that subtree",
+        "Flattening forward without tracking a tail",
+        "Leaving stale left pointers in place"
+      ],
+      "interviewSignals": [
+        "Either reverses the traversal order or threads via the rightmost predecessor",
+        "Clears the left pointer at every node"
+      ],
+      "followUpPrompts": [
+        "Do it with O(1) extra space.",
+        "Flatten into a doubly linked list instead.",
+        "Flatten in inorder rather than preorder."
+      ],
+      "promptSummary": "Flatten a binary tree in place into a right-leaning linked list that follows preorder.",
+      "highLevelApproach": "Walk in reverse preorder keeping the last flattened node and attach it as the current node's right child while clearing the left; alternatively thread each left subtree's rightmost node to the right subtree.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1) when threaded"
+      },
+      "problemStatement": "Flatten a binary tree in place into a right-leaning linked list that follows preorder. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) when threaded space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around producing a right-leaning list in preorder. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Overwriting the right child before saving that subtree.",
+        "The intended path is: Walk in reverse preorder keeping the last flattened node and attach it as the current node's right child while clearing the left; alternatively thread each left subtree's rightmost node to the right subtree."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Walk in reverse preorder keeping the last flattened node and attach it as the current node's right child while clearing the left; alternatively thread each left subtree's rightmost node to the right subtree.",
+          "steps": [
+            "Track the state needed for producing a right-leaning list in preorder.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1) when threaded"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Overwriting the right child before saving that subtree"
+      ],
+      "relatedQuestions": [
+        "invert-binary-tree",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "recover-binary-search-tree"
+      ]
+    },
+    {
+      "title": "Construct Binary Tree from Preorder and Inorder Traversal",
+      "slug": "construct-binary-tree-from-preorder-and-inorder-traversal",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal/",
+      "primaryPattern": "tree",
+      "subPatterns": ["divide-and-conquer", "canonical-key", "tree-serialization"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 21,
+      "prerequisites": ["binary-tree-level-order-traversal", "validate-binary-search-tree"],
+      "conceptsTested": [
+        "preorder supplying the root while inorder splits the subtrees",
+        "a value-to-index map replacing repeated linear searches",
+        "passing ranges instead of slicing arrays"
+      ],
+      "commonMistakes": [
+        "Searching the inorder array linearly at each level, giving quadratic time",
+        "Mis-sizing the left and right index ranges",
+        "Assuming values are unique without asking"
+      ],
+      "interviewSignals": [
+        "Builds the inorder index map before recursing",
+        "Derives the subtree range sizes deliberately rather than by trial"
+      ],
+      "followUpPrompts": [
+        "Build it from inorder and postorder instead.",
+        "Why are preorder and postorder alone insufficient?",
+        "What if values may repeat?"
+      ],
+      "promptSummary": "Reconstruct a binary tree from its preorder and inorder traversal sequences.",
+      "highLevelApproach": "Take the next preorder value as the root, find it in the inorder sequence through a precomputed index map to size both subtrees, and recurse on those ranges.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Reconstruct a binary tree from its preorder and inorder traversal sequences. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around preorder supplying the root while inorder splits the subtrees. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Searching the inorder array linearly at each level, giving quadratic time.",
+        "The intended path is: Take the next preorder value as the root, find it in the inorder sequence through a precomputed index map to size both subtrees, and recurse on those ranges."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Take the next preorder value as the root, find it in the inorder sequence through a precomputed index map to size both subtrees, and recurse on those ranges.",
+          "steps": [
+            "Track the state needed for preorder supplying the root while inorder splits the subtrees.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Searching the inorder array linearly at each level, giving quadratic time"
+      ],
+      "relatedQuestions": [
+        "binary-tree-level-order-traversal",
+        "validate-binary-search-tree",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "flatten-binary-tree-to-linked-list"
+      ]
+    },
+    {
+      "title": "Serialize and Deserialize Binary Tree",
+      "slug": "serialize-and-deserialize-binary-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/serialize-and-deserialize-binary-tree/",
+      "primaryPattern": "tree",
+      "subPatterns": ["tree-serialization", "design-problem"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 22,
+      "prerequisites": [
+        "construct-binary-tree-from-preorder-and-inorder-traversal",
+        "binary-tree-level-order-traversal"
+      ],
+      "conceptsTested": [
+        "null markers making a single traversal sufficient",
+        "a shared cursor while rebuilding",
+        "the format as a contract between the two halves"
+      ],
+      "commonMistakes": [
+        "Omitting null markers so the structure becomes ambiguous",
+        "Choosing a delimiter that can occur inside a value",
+        "Re-parsing the whole string at each recursive step"
+      ],
+      "interviewSignals": [
+        "Explains why one traversal plus null markers is enough",
+        "Picks the delimiter after asking about the value domain"
+      ],
+      "followUpPrompts": [
+        "Serialize a search tree more compactly.",
+        "Make the format language-independent.",
+        "What if the tree does not fit in memory?"
+      ],
+      "promptSummary": "Design a serialization format for a binary tree along with the deserializer that rebuilds it exactly.",
+      "highLevelApproach": "Emit a preorder walk with explicit markers for absent children, then rebuild by consuming that token stream through a shared cursor, recursing on each non-null token.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Design a serialization format for a binary tree along with the deserializer that rebuilds it exactly. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around null markers making a single traversal sufficient. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Omitting null markers so the structure becomes ambiguous.",
+        "The intended path is: Emit a preorder walk with explicit markers for absent children, then rebuild by consuming that token stream through a shared cursor, recursing on each non-null token."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Emit a preorder walk with explicit markers for absent children, then rebuild by consuming that token stream through a shared cursor, recursing on each non-null token.",
+          "steps": [
+            "Track the state needed for null markers making a single traversal sufficient.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Omitting null markers so the structure becomes ambiguous"
+      ],
+      "relatedQuestions": [
+        "construct-binary-tree-from-preorder-and-inorder-traversal",
+        "binary-tree-level-order-traversal",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "lowest-common-ancestor-of-a-binary-tree"
+      ]
+    },
+    {
+      "title": "Lowest Common Ancestor of a Binary Tree",
+      "slug": "lowest-common-ancestor-of-a-binary-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree/",
+      "primaryPattern": "tree",
+      "subPatterns": ["dfs-recursion", "post-order-aggregation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 23,
+      "prerequisites": ["path-sum"],
+      "conceptsTested": [
+        "returning a found node upward and merging the two results",
+        "the node where both sides report a hit",
+        "a node counting as its own descendant"
+      ],
+      "commonMistakes": [
+        "Assuming search-tree ordering that this problem does not provide",
+        "Mishandling the case where one target is an ancestor of the other",
+        "Building both root-to-node paths when one pass suffices"
+      ],
+      "interviewSignals": [
+        "Returns the node itself once both subtrees report a match",
+        "Handles the ancestor-of-the-other case without a special branch"
+      ],
+      "followUpPrompts": [
+        "How does the solution simplify if the tree is a binary search tree?",
+        "What if nodes carry parent pointers?",
+        "Handle the case where a target may be absent."
+      ],
+      "promptSummary": "Find the deepest node having both given nodes as descendants, where a node counts as a descendant of itself.",
+      "highLevelApproach": "Recurse returning either a matched target or null; the first node whose two subtrees both return non-null is the lowest common ancestor.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Find the deepest node having both given nodes as descendants, where a node counts as a descendant of itself. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around returning a found node upward and merging the two results. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Assuming search-tree ordering that this problem does not provide.",
+        "The intended path is: Recurse returning either a matched target or null; the first node whose two subtrees both return non-null is the lowest common ancestor."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Recurse returning either a matched target or null; the first node whose two subtrees both return non-null is the lowest common ancestor.",
+          "steps": [
+            "Track the state needed for returning a found node upward and merging the two results.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Assuming search-tree ordering that this problem does not provide"
+      ],
+      "relatedQuestions": [
+        "path-sum",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "serialize-and-deserialize-binary-tree"
+      ]
+    },
+    {
+      "title": "All Nodes Distance K in Binary Tree",
+      "slug": "all-nodes-distance-k-in-binary-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/all-nodes-distance-k-in-binary-tree/",
+      "primaryPattern": "tree",
+      "subPatterns": ["pointer-rewiring", "graph-modeling", "bfs-level-order"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 24,
+      "prerequisites": [
+        "lowest-common-ancestor-of-a-binary-tree",
+        "binary-tree-level-order-traversal"
+      ],
+      "conceptsTested": [
+        "treating the tree as an undirected graph",
+        "recording parent links in a first pass",
+        "BFS from the target with a visited set"
+      ],
+      "commonMistakes": [
+        "Walking back into the node you just came from",
+        "Ignoring the upward direction entirely",
+        "Revisiting nodes and looping forever"
+      ],
+      "interviewSignals": [
+        "Recognizes distance here is undirected and adds the parent edges",
+        "Tracks visited nodes rather than relying on tree structure alone"
+      ],
+      "followUpPrompts": [
+        "Solve it with a single DFS and no parent map.",
+        "Return every node at distance at most k.",
+        "What if the tree cannot be augmented with parent links?"
+      ],
+      "promptSummary": "Return every node exactly k edges away from a given target node in a binary tree.",
+      "highLevelApproach": "Record each node's parent in one pass so the tree becomes an undirected graph, then breadth-first search exactly k levels outward from the target, skipping visited nodes.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Return every node exactly k edges away from a given target node in a binary tree. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around treating the tree as an undirected graph. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Walking back into the node you just came from.",
+        "The intended path is: Record each node's parent in one pass so the tree becomes an undirected graph, then breadth-first search exactly k levels outward from the target, skipping visited nodes."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Record each node's parent in one pass so the tree becomes an undirected graph, then breadth-first search exactly k levels outward from the target, skipping visited nodes.",
+          "steps": [
+            "Track the state needed for treating the tree as an undirected graph.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Walking back into the node you just came from"
+      ],
+      "relatedQuestions": [
+        "lowest-common-ancestor-of-a-binary-tree",
+        "binary-tree-level-order-traversal",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "path-sum-iii"
+      ]
+    },
+    {
+      "title": "Path Sum III",
+      "slug": "path-sum-iii",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/path-sum-iii/",
+      "primaryPattern": "tree",
+      "subPatterns": ["running-aggregate", "dfs-recursion", "frequency-map"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 25,
+      "prerequisites": ["path-sum-ii"],
+      "conceptsTested": [
+        "prefix sums along the current root-to-node path",
+        "counting earlier prefixes that complete the target",
+        "undoing the map entry when backtracking"
+      ],
+      "commonMistakes": [
+        "Not decrementing the prefix count on the way back up",
+        "Omitting the empty-prefix seed entry",
+        "Restarting a full search from every node, giving quadratic time"
+      ],
+      "interviewSignals": [
+        "Adapts the subarray-sum-equals-k technique to a root-to-node path",
+        "Restores the map state precisely on backtrack"
+      ],
+      "followUpPrompts": [
+        "What is the brute-force complexity, and why is this better?",
+        "Return the paths themselves.",
+        "Do negative values break anything?"
+      ],
+      "promptSummary": "Count downward paths, not necessarily starting at the root, whose values add up to a target.",
+      "highLevelApproach": "Depth-first search carrying the running prefix sum and a map of prefix counts along the current path, adding the count of prefixes that complete the target and removing the entry on backtrack.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Count downward paths, not necessarily starting at the root, whose values add up to a target. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around prefix sums along the current root-to-node path. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Not decrementing the prefix count on the way back up.",
+        "The intended path is: Depth-first search carrying the running prefix sum and a map of prefix counts along the current path, adding the count of prefixes that complete the target and removing the entry on backtrack."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Depth-first search carrying the running prefix sum and a map of prefix counts along the current path, adding the count of prefixes that complete the target and removing the entry on backtrack.",
+          "steps": [
+            "Track the state needed for prefix sums along the current root-to-node path.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Not decrementing the prefix count on the way back up"
+      ],
+      "relatedQuestions": [
+        "path-sum-ii",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "all-nodes-distance-k-in-binary-tree"
+      ]
+    },
+    {
+      "title": "House Robber III",
+      "slug": "house-robber-iii",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/house-robber-iii/",
+      "primaryPattern": "tree",
+      "subPatterns": ["tree-dp", "post-order-aggregation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 26,
+      "prerequisites": ["diameter-of-binary-tree"],
+      "conceptsTested": [
+        "returning a pair of results per node: robbed and not robbed",
+        "combining children's states without recomputation",
+        "why memoizing a single value per node is not enough"
+      ],
+      "commonMistakes": [
+        "Returning one number and recursing into grandchildren, causing exponential work",
+        "Memoizing only the take case",
+        "Adding the wrong child state when the node is taken"
+      ],
+      "interviewSignals": [
+        "Returns a two-element state rather than memoizing a single number",
+        "Writes both transitions out explicitly"
+      ],
+      "followUpPrompts": [
+        "Compare this with the array version of house robber.",
+        "Return which houses were robbed.",
+        "What changes for an n-ary tree?"
+      ],
+      "promptSummary": "Rob a binary tree of houses for maximum total value without robbing two directly connected nodes.",
+      "highLevelApproach": "Post-order recursion returns two values per node — the best with that node robbed and the best without — so each parent combines its children's states in constant time.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Rob a binary tree of houses for maximum total value without robbing two directly connected nodes. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around returning a pair of results per node: robbed and not robbed. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Returning one number and recursing into grandchildren, causing exponential work.",
+        "The intended path is: Post-order recursion returns two values per node — the best with that node robbed and the best without — so each parent combines its children's states in constant time."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Post-order recursion returns two values per node — the best with that node robbed and the best without — so each parent combines its children's states in constant time.",
+          "steps": [
+            "Track the state needed for returning a pair of results per node: robbed and not robbed.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Returning one number and recursing into grandchildren, causing exponential work"
+      ],
+      "relatedQuestions": [
+        "diameter-of-binary-tree",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "path-sum-iii"
+      ]
+    },
+    {
+      "title": "Binary Tree Maximum Path Sum",
+      "slug": "binary-tree-maximum-path-sum",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/binary-tree-maximum-path-sum/",
+      "primaryPattern": "tree",
+      "subPatterns": ["tree-dp", "post-order-aggregation", "running-aggregate"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 27,
+      "prerequisites": ["diameter-of-binary-tree", "house-robber-iii"],
+      "conceptsTested": [
+        "distinguishing the value passed upward from the best path recorded",
+        "clamping negative contributions to zero",
+        "paths that bend at a node"
+      ],
+      "commonMistakes": [
+        "Returning the bent path upward, which no parent can extend",
+        "Letting negative subtree sums drag the answer down",
+        "Initializing the best to zero when every value is negative"
+      ],
+      "interviewSignals": [
+        "Separates the returned single-branch value from the recorded bent path",
+        "Clamps negative branches rather than special-casing them"
+      ],
+      "followUpPrompts": [
+        "Return the path itself.",
+        "Require the path to start or end at a leaf.",
+        "What changes on a general graph?"
+      ],
+      "promptSummary": "Find the largest sum along any path between two nodes, where the path need not pass through the root.",
+      "highLevelApproach": "Post-order recursion returns the best downward branch from each node, clamped at zero, while a global maximum records the best left-plus-node-plus-right combination.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Find the largest sum along any path between two nodes, where the path need not pass through the root. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around distinguishing the value passed upward from the best path recorded. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Returning the bent path upward, which no parent can extend.",
+        "The intended path is: Post-order recursion returns the best downward branch from each node, clamped at zero, while a global maximum records the best left-plus-node-plus-right combination."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Post-order recursion returns the best downward branch from each node, clamped at zero, while a global maximum records the best left-plus-node-plus-right combination.",
+          "steps": [
+            "Track the state needed for distinguishing the value passed upward from the best path recorded.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Returning the bent path upward, which no parent can extend"
+      ],
+      "relatedQuestions": [
+        "diameter-of-binary-tree",
+        "house-robber-iii",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "binary-tree-cameras"
+      ]
+    },
+    {
+      "title": "Binary Tree Cameras",
+      "slug": "binary-tree-cameras",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/binary-tree-cameras/",
+      "primaryPattern": "tree",
+      "subPatterns": ["tree-dp", "greedy-choice", "post-order-aggregation"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 40,
+      "recommendedOrder": 28,
+      "prerequisites": ["house-robber-iii", "binary-tree-maximum-path-sum"],
+      "conceptsTested": [
+        "three node states: uncovered, covered, and holding a camera",
+        "placing cameras at the parents of leaves, bottom-up",
+        "resolving the root's leftover state"
+      ],
+      "commonMistakes": [
+        "Placing cameras on leaves instead of their parents",
+        "Forgetting to cover the root after the traversal",
+        "Conflating covered with holding a camera"
+      ],
+      "interviewSignals": [
+        "Defines the three states before writing any transitions",
+        "Handles the root's uncovered case after the recursion returns"
+      ],
+      "followUpPrompts": [
+        "Prove the greedy placement is optimal.",
+        "What if a camera covered two levels?",
+        "Recast it as explicit dynamic programming."
+      ],
+      "promptSummary": "Place the fewest cameras on tree nodes so every node is watched by a camera on itself, its parent, or one of its children.",
+      "highLevelApproach": "Post-order recursion reports one of three states per node, placing a camera exactly when a child comes back uncovered, then adds one more if the root itself ends uncovered.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(h)"
+      },
+      "problemStatement": "Place the fewest cameras on tree nodes so every node is watched by a camera on itself, its parent, or one of its children. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(h) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around three node states: uncovered, covered, and holding a camera. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Placing cameras on leaves instead of their parents.",
+        "The intended path is: Post-order recursion reports one of three states per node, placing a camera exactly when a child comes back uncovered, then adds one more if the root itself ends uncovered."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Post-order recursion reports one of three states per node, placing a camera exactly when a child comes back uncovered, then adds one more if the root itself ends uncovered.",
+          "steps": [
+            "Track the state needed for three node states: uncovered, covered, and holding a camera.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(h)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Placing cameras on leaves instead of their parents"
+      ],
+      "relatedQuestions": [
+        "house-robber-iii",
+        "binary-tree-maximum-path-sum",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "count-complete-tree-nodes"
+      ]
+    },
+    {
+      "title": "Count Complete Tree Nodes",
+      "slug": "count-complete-tree-nodes",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/count-complete-tree-nodes/",
+      "primaryPattern": "tree",
+      "subPatterns": ["boundary-scan", "binary-search-template"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 29,
+      "prerequisites": ["maximum-depth-of-binary-tree"],
+      "conceptsTested": [
+        "matching left and right spine heights revealing a perfect subtree",
+        "the closed-form node count of a perfect subtree",
+        "only one child per level being imperfect"
+      ],
+      "commonMistakes": [
+        "Counting every node linearly when the structure permits better",
+        "Misjudging which subtree is the perfect one",
+        "Off-by-one in the perfect-subtree size formula"
+      ],
+      "interviewSignals": [
+        "Exploits the completeness guarantee instead of plain traversal",
+        "Argues the log-squared bound"
+      ],
+      "followUpPrompts": [
+        "Derive the running time precisely.",
+        "What if the tree is only nearly complete?",
+        "Find the last node in level order."
+      ],
+      "promptSummary": "Count the nodes of a complete binary tree without visiting every one of them.",
+      "highLevelApproach": "Compare the leftmost and rightmost spine depths: equal depths mean the subtree is perfect and its size is a closed form, otherwise recurse into both children, only one of which is imperfect.",
+      "complexity": {
+        "time": "O(log^2 n)",
+        "space": "O(log n)"
+      },
+      "problemStatement": "Count the nodes of a complete binary tree without visiting every one of them. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(log^2 n) time and O(log n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around matching left and right spine heights revealing a perfect subtree. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Counting every node linearly when the structure permits better.",
+        "The intended path is: Compare the leftmost and rightmost spine depths: equal depths mean the subtree is perfect and its size is a closed form, otherwise recurse into both children, only one of which is imperfect."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Compare the leftmost and rightmost spine depths: equal depths mean the subtree is perfect and its size is a closed form, otherwise recurse into both children, only one of which is imperfect.",
+          "steps": [
+            "Track the state needed for matching left and right spine heights revealing a perfect subtree.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(log^2 n)",
+            "space": "O(log n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Counting every node linearly when the structure permits better"
+      ],
+      "relatedQuestions": [
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "symmetric-tree",
+        "binary-tree-cameras"
+      ]
+    },
+    {
+      "title": "Vertical Order Traversal of a Binary Tree",
+      "slug": "vertical-order-traversal-of-a-binary-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/vertical-order-traversal-of-a-binary-tree/",
+      "primaryPattern": "tree",
+      "subPatterns": ["tree-serialization", "bfs-level-order", "sort-then-scan"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 30,
+      "prerequisites": ["binary-tree-level-order-traversal"],
+      "conceptsTested": [
+        "assigning column and row coordinates during traversal",
+        "the tie-break by row and then by value",
+        "grouping columns in increasing order"
+      ],
+      "commonMistakes": [
+        "Missing the value tie-break for nodes sharing a cell",
+        "Assuming traversal order alone resolves ties",
+        "Ordering columns lexicographically rather than numerically"
+      ],
+      "interviewSignals": [
+        "States the full three-level ordering rule before coding",
+        "Chooses a structure that keeps the columns ordered"
+      ],
+      "followUpPrompts": [
+        "How does the older version of this problem order ties?",
+        "Return the top view instead.",
+        "How would you handle an enormous tree?"
+      ],
+      "promptSummary": "Group node values by horizontal column, ordered top to bottom and, within a shared cell, by value.",
+      "highLevelApproach": "Traverse recording each node's column and row, then emit the columns in increasing order with each column's entries sorted by row and then by value.",
+      "complexity": {
+        "time": "O(n log n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Group node values by horizontal column, ordered top to bottom and, within a shared cell, by value. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around assigning column and row coordinates during traversal. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Missing the value tie-break for nodes sharing a cell.",
+        "The intended path is: Traverse recording each node's column and row, then emit the columns in increasing order with each column's entries sorted by row and then by value."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(nodes * repeated work)",
+            "space": "O(depth or queue)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — tree traversal",
+          "idea": "Traverse recording each node's column and row, then emit the columns in increasing order with each column's entries sorted by row and then by value.",
+          "steps": [
+            "Track the state needed for assigning column and row coordinates during traversal.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Missing the value tie-break for nodes sharing a cell"
+      ],
+      "relatedQuestions": [
+        "binary-tree-level-order-traversal",
+        "maximum-depth-of-binary-tree",
+        "minimum-depth-of-binary-tree",
+        "same-tree",
+        "count-complete-tree-nodes"
+      ]
+    }
+  ]
+}

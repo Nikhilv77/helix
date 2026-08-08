@@ -7,7 +7,7 @@ import type { CandidateProfile } from "@/lib/types";
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
   "Profile Preview",
-  "Internal Helix profile preview for design review."
+  "Internal Trailgrad profile preview for design review."
 );
 
 const profile: CandidateProfile = {

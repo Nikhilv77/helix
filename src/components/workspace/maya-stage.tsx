@@ -10,7 +10,11 @@ const AvatarStage = dynamic(
   () => import("@/components/interview/avatar-stage").then((module) => module.AvatarStage),
   {
     ssr: false,
-    loading: () => <div className="h-full w-full animate-pulse bg-[#102764]/60" />
+    loading: () => (
+      <div className="flex h-full w-full items-center justify-center">
+        <span className="h-10 w-10 animate-pulse rounded-full bg-cream/[0.08] shadow-[0_0_36px_rgba(239,232,214,0.12)]" />
+      </div>
+    )
   }
 );
 

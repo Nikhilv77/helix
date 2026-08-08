@@ -1,0 +1,837 @@
+{
+  "phase": "Phase 8 — Heap / Priority Queue",
+  "questions": [
+    {
+      "title": "Last Stone Weight",
+      "slug": "last-stone-weight",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/last-stone-weight/",
+      "primaryPattern": "heap",
+      "subPatterns": ["bounded-k-heap", "simulation", "heap-extraction"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 1,
+      "prerequisites": [],
+      "conceptsTested": [
+        "a max-heap for repeated largest extraction",
+        "simulating rounds until at most one element remains",
+        "pushing the difference back into the heap"
+      ],
+      "commonMistakes": [
+        "Re-sorting the array after every smash instead of using a heap",
+        "Pushing a zero difference back and inflating the heap",
+        "Mishandling the empty and single-stone end states"
+      ],
+      "interviewSignals": [
+        "Reaches for a heap rather than repeated sorting",
+        "Derives the O(n log n) bound from the number of extractions"
+      ],
+      "followUpPrompts": [
+        "What if you could choose which two stones to smash?",
+        "Solve it with counting when the weights are small.",
+        "Return the sequence of smashes."
+      ],
+      "promptSummary": "Repeatedly smash the two heaviest stones together and return the weight of the last remaining stone, or zero.",
+      "highLevelApproach": "Hold the weights in a max-heap, pop the two largest each round and push their difference back when it is non-zero, until at most one stone remains.",
+      "complexity": {
+        "time": "O(n log n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Repeatedly smash the two heaviest stones together and return the weight of the last remaining stone, or zero. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around a max-heap for repeated largest extraction. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the priority queue structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Re-sorting the array after every smash instead of using a heap.",
+        "The intended path is: Hold the weights in a max-heap, pop the two largest each round and push their difference back when it is non-zero, until at most one stone remains."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — priority queue",
+          "idea": "Hold the weights in a max-heap, pop the two largest each round and push their difference back when it is non-zero, until at most one stone remains.",
+          "steps": [
+            "Track the state needed for a max-heap for repeated largest extraction.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Re-sorting the array after every smash instead of using a heap"
+      ],
+      "relatedQuestions": [
+        "kth-largest-element-in-an-array",
+        "k-closest-points-to-origin",
+        "top-k-frequent-elements",
+        "top-k-frequent-words"
+      ]
+    },
+    {
+      "title": "Kth Largest Element in an Array",
+      "slug": "kth-largest-element-in-an-array",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/kth-largest-element-in-an-array/",
+      "primaryPattern": "heap",
+      "subPatterns": ["bounded-k-heap", "quickselect"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 2,
+      "prerequisites": ["last-stone-weight"],
+      "conceptsTested": [
+        "a size-k min-heap whose root is the answer",
+        "why the heap never needs to exceed k entries",
+        "quickselect reaching the same answer in average linear time"
+      ],
+      "commonMistakes": [
+        "Sorting the whole array when only one order statistic is needed",
+        "Building a heap of all n elements and popping k times without noting the cost",
+        "Choosing a poor quickselect pivot and hitting the quadratic worst case"
+      ],
+      "interviewSignals": [
+        "Bounds the heap at k rather than n",
+        "Compares heap and quickselect including their worst cases"
+      ],
+      "followUpPrompts": [
+        "Solve it with quickselect and state the worst case.",
+        "What if the elements arrive as a stream?",
+        "Return all k largest elements rather than just the kth."
+      ],
+      "promptSummary": "Return the kth largest value in an unsorted array.",
+      "highLevelApproach": "Keep a min-heap of the k largest values seen so far, evicting the root whenever the heap overflows, so its root is the answer; quickselect partitions to the same index in average linear time.",
+      "complexity": {
+        "time": "O(n log k)",
+        "space": "O(k)"
+      },
+      "problemStatement": "Return the kth largest value in an unsorted array. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log k) time and O(k) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around a size-k min-heap whose root is the answer. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the priority queue structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Sorting the whole array when only one order statistic is needed.",
+        "The intended path is: Keep a min-heap of the k largest values seen so far, evicting the root whenever the heap overflows, so its root is the answer; quickselect partitions to the same index in average linear time."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — priority queue",
+          "idea": "Keep a min-heap of the k largest values seen so far, evicting the root whenever the heap overflows, so its root is the answer; quickselect partitions to the same index in average linear time.",
+          "steps": [
+            "Track the state needed for a size-k min-heap whose root is the answer.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log k)",
+            "space": "O(k)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Sorting the whole array when only one order statistic is needed"
+      ],
+      "relatedQuestions": [
+        "last-stone-weight",
+        "k-closest-points-to-origin",
+        "top-k-frequent-elements",
+        "top-k-frequent-words"
+      ]
+    },
+    {
+      "title": "K Closest Points to Origin",
+      "slug": "k-closest-points-to-origin",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/k-closest-points-to-origin/",
+      "primaryPattern": "heap",
+      "subPatterns": ["bounded-k-heap", "custom-ordering", "quickselect"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 3,
+      "prerequisites": ["kth-largest-element-in-an-array"],
+      "conceptsTested": [
+        "ordering by a derived key rather than the stored value",
+        "comparing squared distances to avoid square roots",
+        "a size-k max-heap that evicts the farthest point"
+      ],
+      "commonMistakes": [
+        "Taking actual square roots and inviting floating-point error",
+        "Using a min-heap over all points when a bounded max-heap is cheaper",
+        "Sorting everything when k is small"
+      ],
+      "interviewSignals": [
+        "Skips the square root because it preserves ordering",
+        "Caps the heap at k and evicts the farthest on overflow"
+      ],
+      "followUpPrompts": [
+        "Solve it with quickselect.",
+        "What if the points arrive as a stream?",
+        "Generalize to distance from an arbitrary reference point."
+      ],
+      "promptSummary": "Return the k points closest to the origin from a list of coordinates.",
+      "highLevelApproach": "Order points by squared distance and keep a max-heap capped at k, evicting the farthest whenever it overflows; quickselect on the same key is the linear-average alternative.",
+      "complexity": {
+        "time": "O(n log k)",
+        "space": "O(k)"
+      },
+      "problemStatement": "Return the k points closest to the origin from a list of coordinates. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log k) time and O(k) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around ordering by a derived key rather than the stored value. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the priority queue structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Taking actual square roots and inviting floating-point error.",
+        "The intended path is: Order points by squared distance and keep a max-heap capped at k, evicting the farthest whenever it overflows; quickselect on the same key is the linear-average alternative."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — priority queue",
+          "idea": "Order points by squared distance and keep a max-heap capped at k, evicting the farthest whenever it overflows; quickselect on the same key is the linear-average alternative.",
+          "steps": [
+            "Track the state needed for ordering by a derived key rather than the stored value.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log k)",
+            "space": "O(k)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Taking actual square roots and inviting floating-point error"
+      ],
+      "relatedQuestions": [
+        "kth-largest-element-in-an-array",
+        "last-stone-weight",
+        "top-k-frequent-elements",
+        "top-k-frequent-words"
+      ]
+    },
+    {
+      "title": "Top K Frequent Elements",
+      "slug": "top-k-frequent-elements",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/top-k-frequent-elements/",
+      "primaryPattern": "heap",
+      "subPatterns": ["frequency-map", "bounded-k-heap", "sort-then-scan"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 4,
+      "prerequisites": ["kth-largest-element-in-an-array"],
+      "conceptsTested": [
+        "counting first, then selecting by count",
+        "a size-k heap over distinct values rather than all elements",
+        "bucket sort by frequency for linear time"
+      ],
+      "commonMistakes": [
+        "Heaping over every element instead of the distinct values",
+        "Sorting the whole frequency map when k is small",
+        "Missing that frequencies are bounded by n, which is what enables bucketing"
+      ],
+      "interviewSignals": [
+        "Separates the counting phase from the selection phase",
+        "Offers the linear bucket-sort solution when pushed below O(n log k)"
+      ],
+      "followUpPrompts": [
+        "Solve it in O(n) with bucket sort.",
+        "What if the input arrives as a stream?",
+        "Break ties deterministically."
+      ],
+      "promptSummary": "Return the k most frequent values in an array.",
+      "highLevelApproach": "Build a frequency map, then either keep a size-k min-heap over the distinct values or bucket the values by frequency and read the buckets from the top down.",
+      "complexity": {
+        "time": "O(n log k), O(n) with buckets",
+        "space": "O(n)"
+      },
+      "problemStatement": "Return the k most frequent values in an array. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log k), O(n) with buckets time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around counting first, then selecting by count. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the priority queue structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Heaping over every element instead of the distinct values.",
+        "The intended path is: Build a frequency map, then either keep a size-k min-heap over the distinct values or bucket the values by frequency and read the buckets from the top down."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — priority queue",
+          "idea": "Build a frequency map, then either keep a size-k min-heap over the distinct values or bucket the values by frequency and read the buckets from the top down.",
+          "steps": [
+            "Track the state needed for counting first, then selecting by count.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log k), O(n) with buckets",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Heaping over every element instead of the distinct values"
+      ],
+      "relatedQuestions": [
+        "kth-largest-element-in-an-array",
+        "last-stone-weight",
+        "k-closest-points-to-origin",
+        "top-k-frequent-words"
+      ]
+    },
+    {
+      "title": "Top K Frequent Words",
+      "slug": "top-k-frequent-words",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/top-k-frequent-words/",
+      "primaryPattern": "heap",
+      "subPatterns": ["frequency-map", "custom-ordering"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 5,
+      "prerequisites": ["top-k-frequent-elements"],
+      "conceptsTested": [
+        "a two-key comparator: frequency descending, then lexicographic ascending",
+        "inverting that comparator inside a bounded heap",
+        "making sure the evicted element is the weakest candidate"
+      ],
+      "commonMistakes": [
+        "Ignoring the lexicographic tie-break entirely",
+        "Using the same comparator direction for the heap and the final output",
+        "Sorting the entire map when k is tiny"
+      ],
+      "interviewSignals": [
+        "Writes the comparator once and reasons carefully about its direction in a bounded heap",
+        "Reverses the popped order correctly when producing the result"
+      ],
+      "followUpPrompts": [
+        "Solve it in O(n log k) and justify each part of the bound.",
+        "What if ties should be broken by first appearance instead?",
+        "Handle a streaming source of words."
+      ],
+      "promptSummary": "Return the k most frequent words, breaking ties in lexicographic order.",
+      "highLevelApproach": "Count the words, then keep a size-k heap ordered by the inverse of the answer's comparator so the weakest candidate sits at the root and is evicted first.",
+      "complexity": {
+        "time": "O(n log k)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Return the k most frequent words, breaking ties in lexicographic order. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log k) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around a two-key comparator: frequency descending, then lexicographic ascending. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the priority queue structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Ignoring the lexicographic tie-break entirely.",
+        "The intended path is: Count the words, then keep a size-k heap ordered by the inverse of the answer's comparator so the weakest candidate sits at the root and is evicted first."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — priority queue",
+          "idea": "Count the words, then keep a size-k heap ordered by the inverse of the answer's comparator so the weakest candidate sits at the root and is evicted first.",
+          "steps": [
+            "Track the state needed for a two-key comparator: frequency descending, then lexicographic ascending.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log k)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Ignoring the lexicographic tie-break entirely"
+      ],
+      "relatedQuestions": [
+        "top-k-frequent-elements",
+        "last-stone-weight",
+        "kth-largest-element-in-an-array",
+        "k-closest-points-to-origin",
+        "task-scheduler"
+      ]
+    },
+    {
+      "title": "Task Scheduler",
+      "slug": "task-scheduler",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/task-scheduler/",
+      "primaryPattern": "heap",
+      "subPatterns": ["greedy-choice", "bounded-k-heap"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 6,
+      "prerequisites": ["last-stone-weight"],
+      "conceptsTested": [
+        "always scheduling the most frequent remaining task",
+        "filling cooldown gaps with other tasks or idle slots",
+        "the closed-form answer built from the largest frequency"
+      ],
+      "commonMistakes": [
+        "Simulating one time unit at a time and timing out on large inputs",
+        "Forgetting that several tasks can tie for the maximum frequency",
+        "Reporting idle time when there are enough distinct tasks to fill the gaps"
+      ],
+      "interviewSignals": [
+        "Derives the formula from the busiest task's schedule skeleton",
+        "Checks the case where the total task count overflows that skeleton"
+      ],
+      "followUpPrompts": [
+        "Derive the closed-form answer.",
+        "Return the actual schedule, not just its length.",
+        "What if different tasks had different cooldowns?"
+      ],
+      "promptSummary": "Given tasks and a fixed cooldown between two runs of the same task, find the minimum time to run them all.",
+      "highLevelApproach": "Greedily run the most frequent remaining task each round using a max-heap, or compute the answer directly from the largest frequency and how many tasks tie at it.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1) for a bounded alphabet"
+      },
+      "problemStatement": "Given tasks and a fixed cooldown between two runs of the same task, find the minimum time to run them all. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) for a bounded alphabet space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around always scheduling the most frequent remaining task. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the priority queue structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Simulating one time unit at a time and timing out on large inputs.",
+        "The intended path is: Greedily run the most frequent remaining task each round using a max-heap, or compute the answer directly from the largest frequency and how many tasks tie at it."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — priority queue",
+          "idea": "Greedily run the most frequent remaining task each round using a max-heap, or compute the answer directly from the largest frequency and how many tasks tie at it.",
+          "steps": [
+            "Track the state needed for always scheduling the most frequent remaining task.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1) for a bounded alphabet"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Simulating one time unit at a time and timing out on large inputs"
+      ],
+      "relatedQuestions": [
+        "last-stone-weight",
+        "kth-largest-element-in-an-array",
+        "k-closest-points-to-origin",
+        "top-k-frequent-elements",
+        "top-k-frequent-words"
+      ]
+    },
+    {
+      "title": "Reorganize String",
+      "slug": "reorganize-string",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/reorganize-string/",
+      "primaryPattern": "heap",
+      "subPatterns": ["greedy-choice", "bounded-k-heap"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 7,
+      "prerequisites": ["task-scheduler"],
+      "conceptsTested": [
+        "placing the most frequent remaining character at each step",
+        "holding the just-used character back for exactly one round",
+        "the feasibility bound of half the length rounded up"
+      ],
+      "commonMistakes": [
+        "Not checking feasibility first and looping forever",
+        "Returning the previous character to the heap too early and repeating it",
+        "Picking greedily without a heap and getting stuck near the end"
+      ],
+      "interviewSignals": [
+        "States the feasibility condition before attempting any construction",
+        "Defers the just-placed character by exactly one slot"
+      ],
+      "followUpPrompts": [
+        "Prove the feasibility bound.",
+        "Generalize to keeping identical characters k apart.",
+        "Solve it by filling the even indices and then the odd ones."
+      ],
+      "promptSummary": "Rearrange a string so no two adjacent characters match, or report that it cannot be done.",
+      "highLevelApproach": "Drive a max-heap by remaining count, always appending the most frequent character other than the one just used and returning the previous character to the heap after each placement.",
+      "complexity": {
+        "time": "O(n log a)",
+        "space": "O(a)"
+      },
+      "problemStatement": "Rearrange a string so no two adjacent characters match, or report that it cannot be done. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log a) time and O(a) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around placing the most frequent remaining character at each step. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the priority queue structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Not checking feasibility first and looping forever.",
+        "The intended path is: Drive a max-heap by remaining count, always appending the most frequent character other than the one just used and returning the previous character to the heap after each placement."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — priority queue",
+          "idea": "Drive a max-heap by remaining count, always appending the most frequent character other than the one just used and returning the previous character to the heap after each placement.",
+          "steps": [
+            "Track the state needed for placing the most frequent remaining character at each step.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log a)",
+            "space": "O(a)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Not checking feasibility first and looping forever"
+      ],
+      "relatedQuestions": [
+        "task-scheduler",
+        "last-stone-weight",
+        "kth-largest-element-in-an-array",
+        "k-closest-points-to-origin",
+        "find-median-from-data-stream"
+      ]
+    },
+    {
+      "title": "Find Median from Data Stream",
+      "slug": "find-median-from-data-stream",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/find-median-from-data-stream/",
+      "primaryPattern": "heap",
+      "subPatterns": ["two-heaps", "streaming-input"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 8,
+      "prerequisites": ["kth-largest-element-in-an-array"],
+      "conceptsTested": [
+        "a max-heap over the lower half and a min-heap over the upper half",
+        "rebalancing so the two sizes differ by at most one",
+        "reading the median from one or both roots"
+      ],
+      "commonMistakes": [
+        "Letting the two heaps drift out of balance",
+        "Pushing straight into one heap without the cross-check that preserves ordering",
+        "Re-sorting a buffer on every median query"
+      ],
+      "interviewSignals": [
+        "Pushes through one heap and transfers its root to guarantee the ordering invariant",
+        "Derives the even and odd cases from the size difference"
+      ],
+      "followUpPrompts": [
+        "What if all values fall in a small fixed range?",
+        "Support removing values as well as adding them.",
+        "How would you compute a sliding window median?"
+      ],
+      "promptSummary": "Design a structure that accepts a stream of numbers and returns the running median on demand.",
+      "highLevelApproach": "Keep the smaller half in a max-heap and the larger half in a min-heap, pushing through one and moving its root across, then rebalance so the sizes differ by at most one.",
+      "complexity": {
+        "time": "O(log n) add, O(1) median",
+        "space": "O(n)"
+      },
+      "problemStatement": "Design a structure that accepts a stream of numbers and returns the running median on demand. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(log n) add, O(1) median time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around a max-heap over the lower half and a min-heap over the upper half. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the priority queue structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Letting the two heaps drift out of balance.",
+        "The intended path is: Keep the smaller half in a max-heap and the larger half in a min-heap, pushing through one and moving its root across, then rebalance so the sizes differ by at most one."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — priority queue",
+          "idea": "Keep the smaller half in a max-heap and the larger half in a min-heap, pushing through one and moving its root across, then rebalance so the sizes differ by at most one.",
+          "steps": [
+            "Track the state needed for a max-heap over the lower half and a min-heap over the upper half.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(log n) add, O(1) median",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Letting the two heaps drift out of balance"
+      ],
+      "relatedQuestions": [
+        "kth-largest-element-in-an-array",
+        "last-stone-weight",
+        "k-closest-points-to-origin",
+        "top-k-frequent-elements",
+        "reorganize-string"
+      ]
+    },
+    {
+      "title": "IPO",
+      "slug": "ipo",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/ipo/",
+      "primaryPattern": "heap",
+      "subPatterns": ["two-heaps", "greedy-choice"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 9,
+      "prerequisites": ["task-scheduler", "find-median-from-data-stream"],
+      "conceptsTested": [
+        "sorting projects by their capital requirement",
+        "unlocking newly affordable projects into a max-heap by profit",
+        "greedily taking the most profitable affordable project each round"
+      ],
+      "commonMistakes": [
+        "Rescanning every project each round instead of advancing a pointer",
+        "Selecting by profit without checking affordability",
+        "Continuing to loop when nothing affordable remains"
+      ],
+      "interviewSignals": [
+        "Separates unlocking from selecting, using a sorted pointer and a heap",
+        "Breaks out cleanly once no affordable project is left"
+      ],
+      "followUpPrompts": [
+        "Prove the greedy choice is optimal.",
+        "What if a project could be run more than once?",
+        "What if capital could be borrowed at interest?"
+      ],
+      "promptSummary": "With a starting capital and a limit of k projects, choose projects to maximize final capital, where each project requires a minimum capital and yields a profit.",
+      "highLevelApproach": "Sort projects by capital requirement and sweep a pointer that pushes every newly affordable project into a max-heap by profit; each round take the heap's best, which raises capital and unlocks more projects.",
+      "complexity": {
+        "time": "O(n log n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "With a starting capital and a limit of k projects, choose projects to maximize final capital, where each project requires a minimum capital and yields a profit. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around sorting projects by their capital requirement. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the priority queue structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Rescanning every project each round instead of advancing a pointer.",
+        "The intended path is: Sort projects by capital requirement and sweep a pointer that pushes every newly affordable project into a max-heap by profit; each round take the heap's best, which raises capital and unlocks more projects."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — priority queue",
+          "idea": "Sort projects by capital requirement and sweep a pointer that pushes every newly affordable project into a max-heap by profit; each round take the heap's best, which raises capital and unlocks more projects.",
+          "steps": [
+            "Track the state needed for sorting projects by their capital requirement.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Rescanning every project each round instead of advancing a pointer"
+      ],
+      "relatedQuestions": [
+        "task-scheduler",
+        "find-median-from-data-stream",
+        "last-stone-weight",
+        "kth-largest-element-in-an-array"
+      ]
+    }
+  ]
+}

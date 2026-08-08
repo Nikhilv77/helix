@@ -7,7 +7,7 @@ import { authenticatedOwnerId } from "@/server/interview/owner";
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
   "Continue",
-  "Continue into your Helix interview workspace."
+  "Continue into your Trailgrad interview workspace."
 );
 
 export default async function ContinueAfterAuthentication() {

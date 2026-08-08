@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
-import { HelixMark } from "@/components/helix-mark";
+import { TrailgradMark } from "@/components/trailgrad-mark";
 import { ApiClientError, getProfile, startInterview } from "@/lib/api-client";
 import type { Curriculum, CurriculumSession } from "@/lib/curriculum";
 import { findTemplate, type InterviewTemplate } from "@/lib/interview-templates";
@@ -311,8 +311,8 @@ export default function InterviewSetupPage() {
 
       <header className="relative z-10 mx-auto flex w-full max-w-3xl items-center gap-4 px-6 pt-7">
         <Link href="/" className="flex items-center gap-2.5 text-cream">
-          <HelixMark className="h-7 w-7" />
-          <span className="text-base font-semibold tracking-tight">Helix</span>
+          <TrailgradMark className="h-7 w-7" />
+          <span className="text-base font-semibold tracking-tight">Trailgrad</span>
         </Link>
 
         <div className="ml-auto flex items-center gap-2.5">
@@ -515,7 +515,7 @@ function StartingState({ label }: { label: string }) {
     <div className="step-in flex flex-col items-center py-10 text-center">
       <span className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-cream/25 bg-cream/5 text-cream">
         <span className="ring-pulse absolute inset-0 rounded-2xl border border-cream/50" />
-        <HelixMark className="h-9 w-9" />
+        <TrailgradMark className="h-9 w-9" />
       </span>
 
       <div className="mt-8 flex h-10 items-center justify-center gap-1.5" aria-hidden="true">

@@ -1,8 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { MarketingHome } from "@/components/marketing/marketing-home";
 import { Dashboard } from "@/components/workspace/dashboard";
+import { WorkspaceLoading } from "@/components/workspace/skeletons";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/seo";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
@@ -24,13 +26,22 @@ export const metadata: Metadata = {
  * Decided on the server. Gating this on the client meant a signed-in user
  * rendered the marketing page until Clerk's hooks resolved.
  */
+/**
+ * `/` serves two entirely different pages, so the work is split across two
+ * boundaries.
+ *
+ * The outer component does nothing but resolve auth, which is quick, and its
+ * fallback (app/loading.tsx) is deliberately brand-neutral — it renders before
+ * `auth()` settles, so it cannot know whether marketing or the workspace is
+ * coming. Marketing then returns immediately; the workspace's slower profile
+ * and roadmap reads suspend behind their own boundary, inside the shell —
+ * so the sidebar stays put and only the content area shows the loader.
+ */
 export default async function HomePage({
   searchParams
 }: {
   searchParams: Promise<{ welcome?: string | string[] }>;
 }) {
-  const query = await searchParams;
-  const showMayaWelcome = query.welcome === "maya";
   if (!clerkEnabled) {
     return (
       <>
@@ -50,25 +61,46 @@ export default async function HomePage({
     );
   }
 
+  return (
+    <Suspense fallback={<WorkspaceLoading />}>
+      <WorkspaceHome userId={userId} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+/** The signed-in half: everything that needs a database read. */
+async function WorkspaceHome({
+  userId,
+  searchParams
+}: {
+  userId: string;
+  searchParams: Promise<{ welcome?: string | string[] }>;
+}) {
+  const query = await searchParams;
+  const showMayaWelcome = query.welcome === "maya";
+
   let dashboardData;
   try {
-    const interviewService = getAppContainer().interviewService;
     const ownerId = authenticatedOwnerId(userId);
-    const [quota, sessions, profile, insights, curriculum] = await Promise.all([
-      interviewService.quota(ownerId),
-      interviewService.history(ownerId),
-      getAppContainer().profileService.get(ownerId),
-      interviewService.insights(ownerId),
-      // A stored plan renders with the page; a missing one is built on the
-      // client so a first visit is not held up by a model call.
-      getAppContainer().profileService.curriculum(ownerId)
-    ]);
-    dashboardData = { quota, sessions, profile, insights, curriculum };
+    // Home renders the preparation plan only, so it loads the profile it is
+    // keyed on and the plan itself — nothing else. Quota, history, insights and
+    // the generated curriculum still power Practice, Progress and Reports.
+    const profile = await getAppContainer().profileService.get(ownerId);
+    const [frontendRoadmap, frontendPlan] =
+      profile.targetRole === "frontend"
+        ? await Promise.all([
+            getAppContainer()
+              .frontendRoadmapService.home(ownerId)
+              .catch(() => null),
+            getAppContainer()
+              .dsaService.frontendPlan()
+              .catch(() => null)
+          ])
+        : [null, null];
+    dashboardData = { profile, frontendRoadmap, frontendPlan };
   } catch {
     return (
       <Dashboard
-        quota={{ used: 0, limit: 2 }}
-        sessions={[]}
         profile={{
           targetRole: null,
           level: null,
@@ -83,17 +115,8 @@ export default async function HomePage({
           updatedAt: null,
           completeness: 0
         }}
-        curriculum={null}
-        insights={{
-          readinessScore: null,
-          completedSessions: 0,
-          sessionsThisWeek: 0,
-          answeredQuestions: 0,
-          competencyMap: [],
-          strongest: null,
-          recommendedFocus: null
-        }}
-        historyAvailable={false}
+        frontendRoadmap={null}
+        frontendPlan={null}
       />
     );
   }

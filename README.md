@@ -1,6 +1,6 @@
-# Helix
+# Trailgrad
 
-Helix is an AI interview workspace with text and realtime voice interviews. The
+Trailgrad is an AI interview workspace with text and realtime voice interviews. The
 Next.js app plans questions, owns the interview state, decides follow-ups, and
 produces the final report. A small LiveKit worker handles streaming speech in
 and speech out.
@@ -66,7 +66,7 @@ LIVEKIT_URL
 LIVEKIT_API_KEY
 LIVEKIT_API_SECRET
 DEEPGRAM_API_KEY
-HELIX_API_BASE_URL=http://localhost:3001
+TRAILGRAD_API_BASE_URL=http://localhost:3001
 ```
 
 ## Voice architecture
@@ -98,7 +98,7 @@ pnpm prisma migrate deploy
 
 Deploy the Python worker as a persistent LiveKit Agent worker, such as LiveKit
 Cloud Agents. A Vercel function cannot host that long-running WebSocket worker.
-Set `HELIX_API_BASE_URL=https://tryhelix.online` in the deployed worker.
+Set `TRAILGRAD_API_BASE_URL=https://trailgrad.com` in the deployed worker.
 
 ## Verification
 

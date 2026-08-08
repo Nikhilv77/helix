@@ -1,0 +1,1396 @@
+{
+  "phase": "Phase 4 — Binary Search",
+  "questions": [
+    {
+      "title": "Binary Search",
+      "slug": "binary-search",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/binary-search/",
+      "primaryPattern": "binary-search",
+      "subPatterns": ["binary-search-template"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 1,
+      "prerequisites": [],
+      "conceptsTested": [
+        "halving the search space each step",
+        "a loop invariant over the candidate range",
+        "overflow-safe midpoint computation"
+      ],
+      "commonMistakes": [
+        "Computing mid as (low + high) / 2 and overflowing fixed-width integers",
+        "Mixing inclusive and exclusive bound conventions in one loop",
+        "Looping forever because the range fails to shrink"
+      ],
+      "interviewSignals": [
+        "Picks one bound convention and holds it consistently",
+        "States the invariant that the target, if present, lies inside the live range"
+      ],
+      "followUpPrompts": [
+        "Write it recursively instead.",
+        "Return the insertion point when the target is missing.",
+        "How does the template change when duplicates exist?"
+      ],
+      "promptSummary": "Find a target's index in a sorted array, or -1 when it is absent.",
+      "highLevelApproach": "Hold a candidate range, compare its middle element with the target, and discard the half that cannot contain the target until the range empties.",
+      "complexity": {
+        "time": "O(log n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Find a target's index in a sorted array, or -1 when it is absent. Identify the input, required output, and constraints, then explain which binary search invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(log n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the binary search invariant pattern and maintain the right invariant around halving the search space each step. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the binary search invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Computing mid as (low + high) / 2 and overflowing fixed-width integers.",
+        "The intended path is: Hold a candidate range, compare its middle element with the target, and discard the half that cannot contain the target until the range empties."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — binary search invariant",
+          "idea": "Hold a candidate range, compare its middle element with the target, and discard the half that cannot contain the target until the range empties.",
+          "steps": [
+            "Track the state needed for halving the search space each step.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(log n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Computing mid as (low + high) / 2 and overflowing fixed-width integers"
+      ],
+      "relatedQuestions": [
+        "search-insert-position",
+        "guess-number-higher-or-lower",
+        "first-bad-version",
+        "find-first-and-last-position-of-element-in-sorted-array"
+      ]
+    },
+    {
+      "title": "Search Insert Position",
+      "slug": "search-insert-position",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/search-insert-position/",
+      "primaryPattern": "binary-search",
+      "subPatterns": ["boundary-search"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 2,
+      "prerequisites": ["binary-search"],
+      "conceptsTested": [
+        "lower bound as the first index not less than the target",
+        "why the surviving left pointer is the insertion point",
+        "one template answering both found and not-found cases"
+      ],
+      "commonMistakes": [
+        "Returning -1 instead of the insertion index",
+        "Off-by-one from mixing high = mid - 1 with an exclusive convention",
+        "Special-casing insertion at the very end unnecessarily"
+      ],
+      "interviewSignals": [
+        "Recognizes this as lower_bound rather than a patched exact search",
+        "Explains why low lands on the answer once the loop ends"
+      ],
+      "followUpPrompts": [
+        "Return the upper bound instead.",
+        "What changes when duplicates are present?",
+        "Use it to implement insertion into a sorted list."
+      ],
+      "promptSummary": "Return a target's index in a sorted array, or the index where it would be inserted to keep the array sorted.",
+      "highLevelApproach": "Run a lower-bound search for the first index whose value is at least the target; the surviving left pointer is the answer whether or not the target exists.",
+      "complexity": {
+        "time": "O(log n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Return a target's index in a sorted array, or the index where it would be inserted to keep the array sorted. Identify the input, required output, and constraints, then explain which binary search invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(log n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the binary search invariant pattern and maintain the right invariant around lower bound as the first index not less than the target. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the binary search invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Returning -1 instead of the insertion index.",
+        "The intended path is: Run a lower-bound search for the first index whose value is at least the target; the surviving left pointer is the answer whether or not the target exists."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — binary search invariant",
+          "idea": "Run a lower-bound search for the first index whose value is at least the target; the surviving left pointer is the answer whether or not the target exists.",
+          "steps": [
+            "Track the state needed for lower bound as the first index not less than the target.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(log n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Returning -1 instead of the insertion index"
+      ],
+      "relatedQuestions": [
+        "binary-search",
+        "guess-number-higher-or-lower",
+        "first-bad-version",
+        "find-first-and-last-position-of-element-in-sorted-array"
+      ]
+    },
+    {
+      "title": "Guess Number Higher or Lower",
+      "slug": "guess-number-higher-or-lower",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/guess-number-higher-or-lower/",
+      "primaryPattern": "binary-search",
+      "subPatterns": ["binary-search-template"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 10,
+      "recommendedOrder": 3,
+      "prerequisites": ["binary-search"],
+      "conceptsTested": [
+        "binary searching against an API instead of an array",
+        "narrowing on a three-way comparison",
+        "minimizing calls to the oracle"
+      ],
+      "commonMistakes": [
+        "Overflowing the midpoint when the upper bound is near the integer limit",
+        "Inverting the meaning of the oracle's return value",
+        "Calling the oracle more than once per iteration"
+      ],
+      "interviewSignals": [
+        "Treats the oracle as the comparison and reuses the standard template unchanged",
+        "Asks what an oracle call costs before optimizing anything"
+      ],
+      "followUpPrompts": [
+        "What if each guess has a cost and total cost must be minimized?",
+        "What if the oracle occasionally lies?",
+        "Generalize to guessing a real number within a tolerance."
+      ],
+      "promptSummary": "Guess a hidden number in a range using an oracle that reports whether each guess is too high, too low, or correct.",
+      "highLevelApproach": "Binary search the range, calling the oracle once per iteration and discarding whichever half its answer rules out.",
+      "complexity": {
+        "time": "O(log n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Guess a hidden number in a range using an oracle that reports whether each guess is too high, too low, or correct. Identify the input, required output, and constraints, then explain which binary search invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(log n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the binary search invariant pattern and maintain the right invariant around binary searching against an API instead of an array. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the binary search invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Overflowing the midpoint when the upper bound is near the integer limit.",
+        "The intended path is: Binary search the range, calling the oracle once per iteration and discarding whichever half its answer rules out."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — binary search invariant",
+          "idea": "Binary search the range, calling the oracle once per iteration and discarding whichever half its answer rules out.",
+          "steps": [
+            "Track the state needed for binary searching against an API instead of an array.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(log n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Overflowing the midpoint when the upper bound is near the integer limit"
+      ],
+      "relatedQuestions": [
+        "binary-search",
+        "search-insert-position",
+        "first-bad-version",
+        "find-first-and-last-position-of-element-in-sorted-array"
+      ]
+    },
+    {
+      "title": "First Bad Version",
+      "slug": "first-bad-version",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/first-bad-version/",
+      "primaryPattern": "binary-search",
+      "subPatterns": ["predicate-search", "boundary-search"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 4,
+      "prerequisites": ["search-insert-position"],
+      "conceptsTested": [
+        "a monotone false-then-true predicate",
+        "searching for the first true rather than a value",
+        "minimizing calls to an expensive check"
+      ],
+      "commonMistakes": [
+        "Overflowing the midpoint with a large version count",
+        "Calling the API twice per iteration",
+        "Looping forever by setting low = mid instead of mid + 1"
+      ],
+      "interviewSignals": [
+        "Names the false-false-true-true structure that makes binary search valid here",
+        "Converges without ever re-testing a version already settled"
+      ],
+      "followUpPrompts": [
+        "What breaks if the predicate is not monotone?",
+        "Minimize the exact number of API calls.",
+        "Find the last good version instead."
+      ],
+      "promptSummary": "Given versions where everything after the first bad one is also bad, find that first bad version using an is-bad check.",
+      "highLevelApproach": "Binary search the predicate boundary, keeping a range whose left side is known good and right side known bad until the two meet.",
+      "complexity": {
+        "time": "O(log n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Given versions where everything after the first bad one is also bad, find that first bad version using an is-bad check. Identify the input, required output, and constraints, then explain which binary search invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(log n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the binary search invariant pattern and maintain the right invariant around a monotone false-then-true predicate. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the binary search invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Overflowing the midpoint with a large version count.",
+        "The intended path is: Binary search the predicate boundary, keeping a range whose left side is known good and right side known bad until the two meet."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — binary search invariant",
+          "idea": "Binary search the predicate boundary, keeping a range whose left side is known good and right side known bad until the two meet.",
+          "steps": [
+            "Track the state needed for a monotone false-then-true predicate.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(log n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Overflowing the midpoint with a large version count"
+      ],
+      "relatedQuestions": [
+        "search-insert-position",
+        "binary-search",
+        "guess-number-higher-or-lower",
+        "find-first-and-last-position-of-element-in-sorted-array"
+      ]
+    },
+    {
+      "title": "Find First and Last Position of Element in Sorted Array",
+      "slug": "find-first-and-last-position-of-element-in-sorted-array",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/",
+      "primaryPattern": "binary-search",
+      "subPatterns": ["boundary-search"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 5,
+      "prerequisites": ["search-insert-position"],
+      "conceptsTested": [
+        "two boundary searches instead of one exact search",
+        "lower bound versus upper bound conventions",
+        "detecting an absent target from the boundaries"
+      ],
+      "commonMistakes": [
+        "Finding one occurrence then expanding linearly, which is O(n) on an all-equal array",
+        "Confusing the two boundary conventions and returning an inverted range",
+        "Not checking that the lower bound actually holds the target"
+      ],
+      "interviewSignals": [
+        "Runs two independent boundary searches rather than expanding from a hit",
+        "Verifies the target exists before returning a range"
+      ],
+      "followUpPrompts": [
+        "Count occurrences without materializing the range.",
+        "Generalize to counting values inside a range.",
+        "How would you do this on a rotated array?"
+      ],
+      "promptSummary": "Return the first and last index of a target in a sorted array, or [-1, -1] when it is absent.",
+      "highLevelApproach": "Run a lower-bound search for the first index at least the target and an upper-bound search for the first index greater than it; that pair brackets every occurrence.",
+      "complexity": {
+        "time": "O(log n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Return the first and last index of a target in a sorted array, or [-1, -1] when it is absent. Identify the input, required output, and constraints, then explain which binary search invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(log n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the binary search invariant pattern and maintain the right invariant around two boundary searches instead of one exact search. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the binary search invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Finding one occurrence then expanding linearly, which is O(n) on an all-equal array.",
+        "The intended path is: Run a lower-bound search for the first index at least the target and an upper-bound search for the first index greater than it; that pair brackets every occurrence."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — binary search invariant",
+          "idea": "Run a lower-bound search for the first index at least the target and an upper-bound search for the first index greater than it; that pair brackets every occurrence.",
+          "steps": [
+            "Track the state needed for two boundary searches instead of one exact search.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(log n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Finding one occurrence then expanding linearly, which is O(n) on an all-equal array"
+      ],
+      "relatedQuestions": [
+        "search-insert-position",
+        "binary-search",
+        "guess-number-higher-or-lower",
+        "first-bad-version",
+        "time-based-key-value-store"
+      ]
+    },
+    {
+      "title": "Time Based Key-Value Store",
+      "slug": "time-based-key-value-store",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/time-based-key-value-store/",
+      "primaryPattern": "binary-search",
+      "subPatterns": ["boundary-search", "canonical-key", "design-problem"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 6,
+      "prerequisites": ["find-first-and-last-position-of-element-in-sorted-array"],
+      "conceptsTested": [
+        "an append-only timestamp list per key",
+        "binary searching for the greatest timestamp at most the query",
+        "exploiting the guarantee that writes arrive in increasing time order"
+      ],
+      "commonMistakes": [
+        "Scanning the timestamp list linearly on every get",
+        "Sorting on every write when appends are already ordered",
+        "Landing on the wrong side of the boundary when the timestamp matches exactly"
+      ],
+      "interviewSignals": [
+        "Notices that set arrives with increasing timestamps, so no sorting is needed",
+        "Chooses the boundary convention deliberately for an at-most query"
+      ],
+      "followUpPrompts": [
+        "What if timestamps can arrive out of order?",
+        "Support deletion or expiry of old versions.",
+        "How would you shard this across machines?"
+      ],
+      "promptSummary": "Design a store where values are written with timestamps and a read returns the value at the greatest timestamp not exceeding the one requested.",
+      "highLevelApproach": "Keep a per-key list of timestamp-value pairs appended in increasing order, and answer each read with a binary search for the last entry at or below the query timestamp.",
+      "complexity": {
+        "time": "O(1) set, O(log n) get",
+        "space": "O(n)"
+      },
+      "problemStatement": "Design a store where values are written with timestamps and a read returns the value at the greatest timestamp not exceeding the one requested. Identify the input, required output, and constraints, then explain which binary search invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(1) set, O(log n) get time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the binary search invariant pattern and maintain the right invariant around an append-only timestamp list per key. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the binary search invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Scanning the timestamp list linearly on every get.",
+        "The intended path is: Keep a per-key list of timestamp-value pairs appended in increasing order, and answer each read with a binary search for the last entry at or below the query timestamp."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — binary search invariant",
+          "idea": "Keep a per-key list of timestamp-value pairs appended in increasing order, and answer each read with a binary search for the last entry at or below the query timestamp.",
+          "steps": [
+            "Track the state needed for an append-only timestamp list per key.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(1) set, O(log n) get",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Scanning the timestamp list linearly on every get"
+      ],
+      "relatedQuestions": [
+        "find-first-and-last-position-of-element-in-sorted-array",
+        "binary-search",
+        "search-insert-position",
+        "guess-number-higher-or-lower",
+        "search-a-2d-matrix"
+      ]
+    },
+    {
+      "title": "Search a 2D Matrix",
+      "slug": "search-a-2d-matrix",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/search-a-2d-matrix/",
+      "primaryPattern": "binary-search",
+      "subPatterns": ["matrix-transform", "binary-search-template"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 7,
+      "prerequisites": ["binary-search"],
+      "conceptsTested": [
+        "treating a fully ordered matrix as one sorted array",
+        "mapping a flat index back with divide and modulo by the column count",
+        "how this differs from a staircase search"
+      ],
+      "commonMistakes": [
+        "Swapping rows and columns in the index conversion",
+        "Binary searching for the row then mishandling the row boundaries",
+        "Confusing it with the matrix where only rows and columns are individually sorted"
+      ],
+      "interviewSignals": [
+        "Derives the index-to-cell mapping explicitly rather than guessing",
+        "Distinguishes this from the Search a 2D Matrix II staircase walk"
+      ],
+      "followUpPrompts": [
+        "What if only each row and each column is sorted?",
+        "Solve it as two nested binary searches instead.",
+        "How would you handle a matrix streamed one row at a time?"
+      ],
+      "promptSummary": "Search a matrix whose rows are sorted and where each row begins after the previous row ends.",
+      "highLevelApproach": "Binary search the m*n virtual flat array, converting each candidate index back to a row and column by dividing and taking the remainder by the column count.",
+      "complexity": {
+        "time": "O(log(m*n))",
+        "space": "O(1)"
+      },
+      "problemStatement": "Search a matrix whose rows are sorted and where each row begins after the previous row ends. Identify the input, required output, and constraints, then explain which binary search invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(log(m*n)) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the binary search invariant pattern and maintain the right invariant around treating a fully ordered matrix as one sorted array. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the binary search invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Swapping rows and columns in the index conversion.",
+        "The intended path is: Binary search the m*n virtual flat array, converting each candidate index back to a row and column by dividing and taking the remainder by the column count."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — binary search invariant",
+          "idea": "Binary search the m*n virtual flat array, converting each candidate index back to a row and column by dividing and taking the remainder by the column count.",
+          "steps": [
+            "Track the state needed for treating a fully ordered matrix as one sorted array.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(log(m*n))",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Swapping rows and columns in the index conversion"
+      ],
+      "relatedQuestions": [
+        "binary-search",
+        "search-insert-position",
+        "guess-number-higher-or-lower",
+        "first-bad-version",
+        "time-based-key-value-store"
+      ]
+    },
+    {
+      "title": "Find Minimum in Rotated Sorted Array",
+      "slug": "find-minimum-in-rotated-sorted-array",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/",
+      "primaryPattern": "binary-search",
+      "subPatterns": ["boundary-scan", "predicate-search"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 8,
+      "prerequisites": ["first-bad-version"],
+      "conceptsTested": [
+        "comparing mid against the right endpoint rather than the left",
+        "the rotation point as a predicate boundary",
+        "handling a zero rotation without a special case"
+      ],
+      "commonMistakes": [
+        "Comparing mid with the left endpoint, which is ambiguous",
+        "Using high = mid - 1 and stepping over the minimum",
+        "Assuming the array was definitely rotated"
+      ],
+      "interviewSignals": [
+        "Explains why the right endpoint gives an unambiguous comparison",
+        "Keeps mid inside the range when it might itself be the minimum"
+      ],
+      "followUpPrompts": [
+        "What if the array contains duplicates?",
+        "Return the rotation count instead.",
+        "Find the maximum in the same array."
+      ],
+      "promptSummary": "Find the smallest element of a sorted array that has been rotated an unknown number of times.",
+      "highLevelApproach": "Compare the middle element with the right endpoint: if it is larger the minimum lies strictly right of mid, otherwise mid may itself be the minimum and stays in range.",
+      "complexity": {
+        "time": "O(log n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Find the smallest element of a sorted array that has been rotated an unknown number of times. Identify the input, required output, and constraints, then explain which binary search invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(log n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the binary search invariant pattern and maintain the right invariant around comparing mid against the right endpoint rather than the left. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the binary search invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Comparing mid with the left endpoint, which is ambiguous.",
+        "The intended path is: Compare the middle element with the right endpoint: if it is larger the minimum lies strictly right of mid, otherwise mid may itself be the minimum and stays in range."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — binary search invariant",
+          "idea": "Compare the middle element with the right endpoint: if it is larger the minimum lies strictly right of mid, otherwise mid may itself be the minimum and stays in range.",
+          "steps": [
+            "Track the state needed for comparing mid against the right endpoint rather than the left.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(log n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Comparing mid with the left endpoint, which is ambiguous"
+      ],
+      "relatedQuestions": [
+        "first-bad-version",
+        "binary-search",
+        "search-insert-position",
+        "guess-number-higher-or-lower",
+        "search-a-2d-matrix"
+      ]
+    },
+    {
+      "title": "Search in Rotated Sorted Array",
+      "slug": "search-in-rotated-sorted-array",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/search-in-rotated-sorted-array/",
+      "primaryPattern": "binary-search",
+      "subPatterns": ["boundary-scan", "binary-search-template"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 9,
+      "prerequisites": ["find-minimum-in-rotated-sorted-array"],
+      "conceptsTested": [
+        "at any split one half is always sorted",
+        "deciding which half can contain the target",
+        "solving it in one pass instead of finding the pivot first"
+      ],
+      "commonMistakes": [
+        "Getting the range test for the sorted half wrong",
+        "Using the wrong strictness on comparisons with equal endpoints",
+        "Finding the pivot then mis-mapping indices in the second search"
+      ],
+      "interviewSignals": [
+        "Proves one side is always sorted before branching on it",
+        "Handles a target that sits exactly on a boundary"
+      ],
+      "followUpPrompts": [
+        "What if duplicates are allowed?",
+        "Solve it by finding the pivot first and compare the two versions.",
+        "What if the array is rotated and contains a plateau?"
+      ],
+      "promptSummary": "Find a target in a sorted array that has been rotated at an unknown pivot.",
+      "highLevelApproach": "At each step identify which half of the range is sorted, test whether the target falls within that half's bounds, and discard the other half.",
+      "complexity": {
+        "time": "O(log n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Find a target in a sorted array that has been rotated at an unknown pivot. Identify the input, required output, and constraints, then explain which binary search invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(log n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the binary search invariant pattern and maintain the right invariant around at any split one half is always sorted. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the binary search invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Getting the range test for the sorted half wrong.",
+        "The intended path is: At each step identify which half of the range is sorted, test whether the target falls within that half's bounds, and discard the other half."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — binary search invariant",
+          "idea": "At each step identify which half of the range is sorted, test whether the target falls within that half's bounds, and discard the other half.",
+          "steps": [
+            "Track the state needed for at any split one half is always sorted.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(log n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Getting the range test for the sorted half wrong"
+      ],
+      "relatedQuestions": [
+        "find-minimum-in-rotated-sorted-array",
+        "binary-search",
+        "search-insert-position",
+        "guess-number-higher-or-lower",
+        "peak-index-in-a-mountain-array"
+      ]
+    },
+    {
+      "title": "Peak Index in a Mountain Array",
+      "slug": "peak-index-in-a-mountain-array",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/peak-index-in-a-mountain-array/",
+      "primaryPattern": "binary-search",
+      "subPatterns": ["predicate-search", "boundary-scan"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 10,
+      "prerequisites": ["binary-search"],
+      "conceptsTested": [
+        "binary searching an array that is not sorted",
+        "comparing neighbours to read the slope direction",
+        "unimodal structure guaranteeing exactly one turn"
+      ],
+      "commonMistakes": [
+        "Comparing mid with both neighbours and reading past the ends",
+        "Excluding mid from the kept range and losing the peak",
+        "Assuming a sorted array and reaching for a value comparison"
+      ],
+      "interviewSignals": [
+        "Realizes the slope, not the values, is the monotone signal",
+        "Keeps mid in range when the slope is descending"
+      ],
+      "followUpPrompts": [
+        "What if the array can contain plateaus?",
+        "Return the peak value without its index.",
+        "Search for an arbitrary target inside the mountain array."
+      ],
+      "promptSummary": "In an array that strictly increases and then strictly decreases, find the index of the peak.",
+      "highLevelApproach": "Binary search on the slope: compare each mid with its right neighbour and move toward the ascending side until the range collapses on the turning point.",
+      "complexity": {
+        "time": "O(log n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "In an array that strictly increases and then strictly decreases, find the index of the peak. Identify the input, required output, and constraints, then explain which binary search invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(log n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the binary search invariant pattern and maintain the right invariant around binary searching an array that is not sorted. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the binary search invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Comparing mid with both neighbours and reading past the ends.",
+        "The intended path is: Binary search on the slope: compare each mid with its right neighbour and move toward the ascending side until the range collapses on the turning point."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — binary search invariant",
+          "idea": "Binary search on the slope: compare each mid with its right neighbour and move toward the ascending side until the range collapses on the turning point.",
+          "steps": [
+            "Track the state needed for binary searching an array that is not sorted.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(log n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Comparing mid with both neighbours and reading past the ends"
+      ],
+      "relatedQuestions": [
+        "binary-search",
+        "search-insert-position",
+        "guess-number-higher-or-lower",
+        "first-bad-version",
+        "search-in-rotated-sorted-array"
+      ]
+    },
+    {
+      "title": "Find Peak Element",
+      "slug": "find-peak-element",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/find-peak-element/",
+      "primaryPattern": "binary-search",
+      "subPatterns": ["predicate-search", "boundary-scan"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 11,
+      "prerequisites": ["peak-index-in-a-mountain-array"],
+      "conceptsTested": [
+        "any local peak is an acceptable answer",
+        "treating out-of-range neighbours as negative infinity",
+        "why an ascending slope guarantees a peak further right"
+      ],
+      "commonMistakes": [
+        "Assuming the array is unimodal like the mountain version",
+        "Scanning linearly for the global maximum",
+        "Reading past the last index when comparing with the right neighbour"
+      ],
+      "interviewSignals": [
+        "Argues that following the ascending slope must terminate at a peak",
+        "Understands that returning any peak, not the highest, is sufficient"
+      ],
+      "followUpPrompts": [
+        "Prove the kept half always contains a peak.",
+        "Find all peaks instead of one.",
+        "Extend the idea to a 2D matrix peak."
+      ],
+      "promptSummary": "Find any index whose value exceeds both neighbours, treating out-of-range neighbours as negative infinity.",
+      "highLevelApproach": "Compare mid with its right neighbour and keep the higher side; that half always contains a peak because its inward boundary rises.",
+      "complexity": {
+        "time": "O(log n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Find any index whose value exceeds both neighbours, treating out-of-range neighbours as negative infinity. Identify the input, required output, and constraints, then explain which binary search invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(log n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the binary search invariant pattern and maintain the right invariant around any local peak is an acceptable answer. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the binary search invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Assuming the array is unimodal like the mountain version.",
+        "The intended path is: Compare mid with its right neighbour and keep the higher side; that half always contains a peak because its inward boundary rises."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — binary search invariant",
+          "idea": "Compare mid with its right neighbour and keep the higher side; that half always contains a peak because its inward boundary rises.",
+          "steps": [
+            "Track the state needed for any local peak is an acceptable answer.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(log n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Assuming the array is unimodal like the mountain version"
+      ],
+      "relatedQuestions": [
+        "peak-index-in-a-mountain-array",
+        "binary-search",
+        "search-insert-position",
+        "guess-number-higher-or-lower",
+        "koko-eating-bananas"
+      ]
+    },
+    {
+      "title": "Koko Eating Bananas",
+      "slug": "koko-eating-bananas",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/koko-eating-bananas/",
+      "primaryPattern": "binary-search",
+      "subPatterns": ["binary-search-on-answer", "predicate-search", "digit-arithmetic"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 12,
+      "prerequisites": ["first-bad-version"],
+      "conceptsTested": [
+        "searching the answer space rather than the input",
+        "a monotone feasibility predicate over that space",
+        "ceiling division for hours spent per pile"
+      ],
+      "commonMistakes": [
+        "Binary searching the array instead of the speed range",
+        "Using floating-point division and losing exactness",
+        "Setting the upper bound below the largest pile"
+      ],
+      "interviewSignals": [
+        "Identifies the monotone predicate that makes the answer space searchable",
+        "Bounds the search range tightly and justifies both ends"
+      ],
+      "followUpPrompts": [
+        "Prove feasibility is monotone in the eating speed.",
+        "What if a pile may be split across hours?",
+        "Minimize hours for a fixed speed instead."
+      ],
+      "promptSummary": "Find the slowest eating speed that clears every banana pile within a given number of hours, where each hour targets a single pile.",
+      "highLevelApproach": "Binary search the speed between one and the largest pile; total hours at a given speed is monotone, so keep the smallest speed that fits the deadline.",
+      "complexity": {
+        "time": "O(n log(max pile))",
+        "space": "O(1)"
+      },
+      "problemStatement": "Find the slowest eating speed that clears every banana pile within a given number of hours, where each hour targets a single pile. Identify the input, required output, and constraints, then explain which binary search invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log(max pile)) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the binary search invariant pattern and maintain the right invariant around searching the answer space rather than the input. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the binary search invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Binary searching the array instead of the speed range.",
+        "The intended path is: Binary search the speed between one and the largest pile; total hours at a given speed is monotone, so keep the smallest speed that fits the deadline."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — binary search invariant",
+          "idea": "Binary search the speed between one and the largest pile; total hours at a given speed is monotone, so keep the smallest speed that fits the deadline.",
+          "steps": [
+            "Track the state needed for searching the answer space rather than the input.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log(max pile))",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Binary searching the array instead of the speed range"
+      ],
+      "relatedQuestions": [
+        "first-bad-version",
+        "binary-search",
+        "search-insert-position",
+        "guess-number-higher-or-lower",
+        "find-peak-element"
+      ]
+    },
+    {
+      "title": "Capacity To Ship Packages Within D Days",
+      "slug": "capacity-to-ship-packages-within-d-days",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/",
+      "primaryPattern": "binary-search",
+      "subPatterns": ["binary-search-on-answer", "predicate-search", "greedy-choice"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 13,
+      "prerequisites": ["koko-eating-bananas"],
+      "conceptsTested": [
+        "the same answer-space search with a greedy feasibility check",
+        "deriving the range from the heaviest package and the total weight",
+        "order-preserving packing"
+      ],
+      "commonMistakes": [
+        "Starting the range below the heaviest package, making some targets unshippable",
+        "Reordering or splitting packages",
+        "Counting days off by one in the greedy sweep"
+      ],
+      "interviewSignals": [
+        "Derives both ends of the search range from the problem constraints",
+        "Writes the feasibility check as a single greedy pass"
+      ],
+      "followUpPrompts": [
+        "What if packages may be reordered?",
+        "Minimize days for a fixed capacity instead.",
+        "Handle several ships running in parallel."
+      ],
+      "promptSummary": "Find the smallest ship capacity that moves all packages, in their given order, within a fixed number of days.",
+      "highLevelApproach": "Binary search capacity from the heaviest package to the total weight, testing each candidate with a greedy pass that opens a new day whenever the next package would overflow the load.",
+      "complexity": {
+        "time": "O(n log(total weight))",
+        "space": "O(1)"
+      },
+      "problemStatement": "Find the smallest ship capacity that moves all packages, in their given order, within a fixed number of days. Identify the input, required output, and constraints, then explain which binary search invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log(total weight)) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the binary search invariant pattern and maintain the right invariant around the same answer-space search with a greedy feasibility check. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the binary search invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Starting the range below the heaviest package, making some targets unshippable.",
+        "The intended path is: Binary search capacity from the heaviest package to the total weight, testing each candidate with a greedy pass that opens a new day whenever the next package would overflow the load."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — binary search invariant",
+          "idea": "Binary search capacity from the heaviest package to the total weight, testing each candidate with a greedy pass that opens a new day whenever the next package would overflow the load.",
+          "steps": [
+            "Track the state needed for the same answer-space search with a greedy feasibility check.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log(total weight))",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Starting the range below the heaviest package, making some targets unshippable"
+      ],
+      "relatedQuestions": [
+        "koko-eating-bananas",
+        "binary-search",
+        "search-insert-position",
+        "guess-number-higher-or-lower",
+        "split-array-largest-sum"
+      ]
+    },
+    {
+      "title": "Split Array Largest Sum",
+      "slug": "split-array-largest-sum",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/split-array-largest-sum/",
+      "primaryPattern": "binary-search",
+      "subPatterns": ["binary-search-on-answer", "predicate-search", "two-dimensional-dp"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 40,
+      "recommendedOrder": 14,
+      "prerequisites": ["capacity-to-ship-packages-within-d-days"],
+      "conceptsTested": [
+        "recasting a minimax objective as a feasibility question",
+        "greedily counting the parts a candidate cap requires",
+        "the interval DP alternative and why the search is preferred"
+      ],
+      "commonMistakes": [
+        "Reaching for interval DP first and timing out on large inputs",
+        "Searching a range that excludes feasible answers",
+        "Comparing the part count with the wrong inequality"
+      ],
+      "interviewSignals": [
+        "Recognizes it as the shipping problem in different words",
+        "Explains why minimizing the maximum is monotone in the cap"
+      ],
+      "followUpPrompts": [
+        "Solve it with dynamic programming and compare the complexities.",
+        "Return the actual split, not just the largest sum.",
+        "What if the array may contain negative numbers?"
+      ],
+      "promptSummary": "Split an array into k contiguous parts so that the largest part sum is as small as possible.",
+      "highLevelApproach": "Binary search the candidate largest sum between the maximum element and the total, greedily counting the parts each cap needs, and keep the smallest cap requiring at most k.",
+      "complexity": {
+        "time": "O(n log(total sum))",
+        "space": "O(1)"
+      },
+      "problemStatement": "Split an array into k contiguous parts so that the largest part sum is as small as possible. Identify the input, required output, and constraints, then explain which binary search invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log(total sum)) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the binary search invariant pattern and maintain the right invariant around recasting a minimax objective as a feasibility question. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the binary search invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Reaching for interval DP first and timing out on large inputs.",
+        "The intended path is: Binary search the candidate largest sum between the maximum element and the total, greedily counting the parts each cap needs, and keep the smallest cap requiring at most k."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — binary search invariant",
+          "idea": "Binary search the candidate largest sum between the maximum element and the total, greedily counting the parts each cap needs, and keep the smallest cap requiring at most k.",
+          "steps": [
+            "Track the state needed for recasting a minimax objective as a feasibility question.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log(total sum))",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Reaching for interval DP first and timing out on large inputs"
+      ],
+      "relatedQuestions": [
+        "capacity-to-ship-packages-within-d-days",
+        "binary-search",
+        "search-insert-position",
+        "guess-number-higher-or-lower",
+        "median-of-two-sorted-arrays"
+      ]
+    },
+    {
+      "title": "Median of Two Sorted Arrays",
+      "slug": "median-of-two-sorted-arrays",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/median-of-two-sorted-arrays/",
+      "primaryPattern": "binary-search",
+      "subPatterns": ["binary-search-template", "custom-ordering"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 45,
+      "recommendedOrder": 15,
+      "prerequisites": ["binary-search"],
+      "conceptsTested": [
+        "binary searching the partition point of the shorter array",
+        "the four boundary values that define a valid partition",
+        "infinity sentinels when one side of a partition is empty"
+      ],
+      "commonMistakes": [
+        "Merging the arrays and losing the logarithmic bound",
+        "Searching the longer array and mishandling the derived index range",
+        "Fumbling the odd versus even median formula at the end"
+      ],
+      "interviewSignals": [
+        "Always binary searches the shorter array",
+        "States the partition validity condition before writing any code"
+      ],
+      "followUpPrompts": [
+        "Generalize to the kth smallest element across two arrays.",
+        "Extend the approach to m sorted arrays.",
+        "How would you handle streaming input?"
+      ],
+      "promptSummary": "Find the median of two sorted arrays in logarithmic time.",
+      "highLevelApproach": "Binary search a cut of the shorter array so both sides together hold half the combined elements, shifting the cut until the four boundary values interleave, then read the median off them.",
+      "complexity": {
+        "time": "O(log(min(m, n)))",
+        "space": "O(1)"
+      },
+      "problemStatement": "Find the median of two sorted arrays in logarithmic time. Identify the input, required output, and constraints, then explain which binary search invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(log(min(m, n))) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the binary search invariant pattern and maintain the right invariant around binary searching the partition point of the shorter array. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the binary search invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Merging the arrays and losing the logarithmic bound.",
+        "The intended path is: Binary search a cut of the shorter array so both sides together hold half the combined elements, shifting the cut until the four boundary values interleave, then read the median off them."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — binary search invariant",
+          "idea": "Binary search a cut of the shorter array so both sides together hold half the combined elements, shifting the cut until the four boundary values interleave, then read the median off them.",
+          "steps": [
+            "Track the state needed for binary searching the partition point of the shorter array.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(log(min(m, n)))",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Merging the arrays and losing the logarithmic bound"
+      ],
+      "relatedQuestions": [
+        "binary-search",
+        "search-insert-position",
+        "guess-number-higher-or-lower",
+        "first-bad-version",
+        "split-array-largest-sum"
+      ]
+    }
+  ]
+}

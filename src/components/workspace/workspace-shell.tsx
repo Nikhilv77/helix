@@ -6,33 +6,36 @@ import { ReactNode, useEffect, useState } from "react";
 import { useLinkStatus } from "next/link";
 import { SignOutButton, UserButton, useUser } from "@clerk/nextjs";
 import {
+  Braces,
+  ChartNoAxesCombined,
   ChevronRight,
-  FileText,
-  LayoutDashboard,
+  ClipboardList,
+  CircleUser,
+  House,
   LogOut,
   Menu,
   Mic,
   PanelLeft,
-  TrendingUp,
-  UserRound,
+  Search,
   X
 } from "lucide-react";
-import { HelixMark } from "@/components/helix-mark";
+import { TrailgradMark } from "@/components/trailgrad-mark";
 import { userProfileAppearance } from "@/lib/clerk-theme";
 
 const navGroups = [
   {
     label: "Workspace",
     items: [
-      { label: "Home", href: "/", icon: LayoutDashboard },
-      { label: "Practice", href: "/interview", icon: Mic },
-      { label: "Progress", href: "/#progress", icon: TrendingUp, hash: "#progress" },
-      { label: "Reports", href: "/#sessions", icon: FileText, hash: "#sessions" }
+      { label: "Home", href: "/", icon: House },
+      { label: "Practice", href: "/practice", icon: Braces },
+      { label: "Interviews", href: "/interviews", icon: Mic },
+      { label: "Progress", href: "/progress", icon: ChartNoAxesCombined },
+      { label: "Reports", href: "/reports", icon: ClipboardList }
     ]
   },
   {
     label: "Account",
-    items: [{ label: "My profile", href: "/profile", icon: UserRound }]
+    items: [{ label: "My profile", href: "/profile", icon: CircleUser }]
   }
 ];
 
@@ -54,6 +57,9 @@ function NavPending() {
   );
 }
 
+// Deliberately still "helix:" after the Trailgrad rename. This key is already
+// written in real browsers; renaming it would silently collapse every existing
+// user's sidebar back to the default. Nobody sees the string.
 const SIDEBAR_STORAGE_KEY = "helix:sidebar-collapsed";
 
 /** Signed-in workspace chrome. Interview and onboarding routes stay distraction-free. */
@@ -64,8 +70,16 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
     user?.fullName ?? user?.firstName ?? user?.primaryEmailAddress?.emailAddress ?? "";
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [hash, setHash] = useState("");
-  const bare = pathname?.startsWith("/interview") || pathname?.startsWith("/onboarding") || false;
+  const [query, setQuery] = useState("");
+  // Chrome-free routes: the live interview room and onboarding.
+  //
+  // This was a `startsWith("/interview")` prefix test, which is also true for
+  // "/interviews" — so the interviews *list* was rendered bare and lost its
+  // sidebar, while every other page kept one. Match the room exactly, or a
+  // path below it, and never the sibling route that merely shares a prefix.
+  const isBareRoute = (path: string) =>
+    path === "/interview" || path.startsWith("/interview/") || path.startsWith("/onboarding");
+  const bare = pathname ? isBareRoute(pathname) : false;
 
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true");
@@ -73,10 +87,6 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setMenuOpen(false);
-    const syncHash = () => setHash(window.location.hash);
-    syncHash();
-    window.addEventListener("hashchange", syncHash);
-    return () => window.removeEventListener("hashchange", syncHash);
   }, [pathname]);
 
   useEffect(() => {
@@ -102,11 +112,11 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
     });
   };
 
-  const isActive = (href: string, itemHash?: string) => {
-    if (itemHash) return pathname === "/" && hash === itemHash;
-    if (href === "/") return pathname === "/" && !hash;
-    return Boolean(pathname?.startsWith(href));
-  };
+  // Progress and Reports used to be hash links into other pages, matched here
+  // against a `hash` state that no longer has anything to match — every row is
+  // its own route now, so a plain path comparison is the whole rule.
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : Boolean(pathname?.startsWith(href));
 
   if (bare) return <>{children}</>;
 
@@ -115,8 +125,13 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
       className={[
         // overflow-x-clip, not overflow-hidden: `hidden` makes this a scroll
         // container, which silently kills the sticky mobile header inside it.
-        "blueprint relative min-h-screen overflow-x-clip bg-[#0b1740] transition-[padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:p-3",
-        collapsed ? "lg:pl-[6.75rem]" : "lg:pl-[18.5rem]"
+        //
+        // No bg override: `.blueprint` already defines the workspace blue
+        // (#22409b). Painting #0b1740 over it left a near-black base that only
+        // looked blue where the glow gradient happened to be strong, so the
+        // edges of every page read as black.
+        "blueprint relative min-h-screen overflow-x-clip transition-[padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        collapsed ? "md:pl-[5.5rem]" : "md:pl-[17rem]"
       ].join(" ")}
     >
       <div className="blueprint-glow" />
@@ -126,239 +141,248 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           type="button"
           aria-label="Close navigation"
           onClick={() => setMenuOpen(false)}
-          className="fixed inset-0 z-40 bg-blueprint-dark/70 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-blueprint-dark/70 backdrop-blur-sm md:hidden"
         />
       ) : null}
 
       <aside
         className={[
-          // Same light-blue glass as the resume hero: translucent, softly lit,
-          // and separated by depth instead of a hard outline.
-          "fixed inset-y-0 left-0 z-50 flex w-[min(18rem,calc(100vw-1rem))] flex-col overflow-hidden bg-[radial-gradient(20rem_18rem_at_30%_0%,rgba(154,184,255,0.26),transparent_70%),linear-gradient(180deg,rgba(75,104,184,0.94),rgba(44,74,154,0.92)_54%,rgba(31,59,132,0.94))] shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_20px_80px_-34px_rgba(5,14,45,0.88)] backdrop-blur-2xl transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:inset-y-3 lg:left-3 lg:rounded-[1.65rem]",
-          menuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
-          collapsed ? "lg:w-[5.25rem]" : "lg:w-[17rem]"
+          // Rail + panel, the way dense product consoles are built: a narrow
+          // always-visible icon column, and a wider labelled panel that is what
+          // actually collapses.
+          "fixed inset-y-0 left-0 z-50 flex w-[min(16rem,calc(100vw-1rem))] overflow-hidden bg-[#2a4aa0] shadow-[0_24px_70px_-40px_rgba(4,12,45,0.9)] transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:inset-y-2 md:left-2 md:rounded-2xl",
+          menuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+          collapsed ? "md:w-[4.5rem]" : "md:w-[16rem]"
         ].join(" ")}
       >
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -right-20 top-24 h-56 w-56 rounded-full bg-[#9be8c1]/10 blur-3xl"
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute bottom-0 right-0 h-52 w-52 opacity-[0.09]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(220,230,255,0.55) 1px, transparent 1px), linear-gradient(90deg, rgba(220,230,255,0.55) 1px, transparent 1px)",
-            backgroundSize: "26px 26px",
-            maskImage: "radial-gradient(100% 100% at 100% 100%, #000 20%, transparent 72%)",
-            WebkitMaskImage: "radial-gradient(100% 100% at 100% 100%, #000 20%, transparent 72%)"
-          }}
-        />
-        {/* Glass edge: catches the light along the top and right of the panel. */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cream/34 to-transparent"
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-y-10 right-0 w-px bg-gradient-to-b from-cream/18 via-cream/7 to-transparent"
-        />
+        {/* Icon rail */}
         <div
           className={[
-            // A soft hairline, not a stroke: the brand still separates from the
-            // nav without a bright line across the panel.
-            "flex h-[4.75rem] shrink-0 items-center shadow-[0_1px_0_rgba(255,255,255,0.05)]",
-            collapsed ? "lg:justify-center lg:px-3" : "px-4"
+            // Expanded, the rail is the darker of two columns. Collapsed, it is
+            // the whole sidebar, so it takes the lighter panel blue instead of
+            // leaving a dark sliver against the page.
+            "flex w-[3.5rem] shrink-0 flex-col items-center gap-1 py-3 transition-colors duration-300",
+            collapsed ? "md:w-[4.5rem] md:gap-1.5 md:py-4" : "",
+            collapsed ? "md:bg-[#3557b4]" : "",
+            "bg-[#254294]"
           ].join(" ")}
         >
           <Link
             href="/"
-            aria-label="Helix home"
+            aria-label="Trailgrad home"
             className={[
-              "flex min-w-0 items-center gap-3 text-cream outline-none transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-cream/50",
-              collapsed ? "lg:justify-center lg:gap-0" : ""
+              "mb-2 grid h-9 w-9 shrink-0 place-items-center rounded-[0.5rem] bg-[#1E3A8F] transition hover:bg-[#254294]",
+              collapsed ? "md:h-11 md:w-11" : ""
             ].join(" ")}
           >
-            <span
-              className={[
-                "relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_30%_18%,rgba(255,255,255,0.82),rgba(239,232,214,0.56)_38%,rgba(255,255,255,0.12)_100%)] text-cream shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-18px_30px_rgba(35,69,158,0.16),0_18px_34px_-26px_rgba(239,232,214,0.8)]",
-                collapsed ? "lg:hidden" : ""
-              ].join(" ")}
-            >
-              <span
-                aria-hidden
-                className="absolute inset-1.5 rounded-xl bg-[#274ca9]/18 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
-              />
-              <HelixMark className="relative h-5 w-5 drop-shadow-[0_2px_8px_rgba(20,42,109,0.28)]" />
-            </span>
-            <span className={collapsed ? "lg:hidden" : ""}>
-              <span className="block truncate text-base font-semibold text-cream">Helix</span>
-              <span className="block truncate text-[11px] text-cream/45">Interview workspace</span>
-            </span>
+            <TrailgradMark
+              className={collapsed ? "h-[1.4rem] w-[1.4rem]" : "h-[1.15rem] w-[1.15rem]"}
+            />
           </Link>
 
-          <button
-            type="button"
-            aria-label="Close navigation"
-            onClick={() => setMenuOpen(false)}
-            className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-cream/60 transition hover:bg-cream/10 hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/50 lg:hidden"
-          >
-            <X size={17} aria-hidden="true" />
-          </button>
+          {navGroups
+            .flatMap((group) => group.items)
+            .map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={`rail-${item.href}`}
+                  href={item.href}
+                  title={item.label}
+                  aria-label={item.label}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => setMenuOpen(false)}
+                  className={[
+                    "grid h-9 w-9 shrink-0 place-items-center rounded-lg outline-none transition focus-visible:ring-2 focus-visible:ring-cream/50",
+                    collapsed ? "md:h-11 md:w-11" : "",
+                    active
+                      ? "bg-cream/[0.18] text-cream"
+                      : "text-cream/50 hover:bg-cream/[0.09] hover:text-cream"
+                  ].join(" ")}
+                >
+                  <Icon
+                    size={collapsed ? 20 : 17}
+                    strokeWidth={active ? 2.1 : 1.7}
+                    aria-hidden="true"
+                  />
+                </Link>
+              );
+            })}
 
-          {/* Sits top-right beside the wordmark, and centres itself in the
-              collapsed rail so it never floats over the page edge. */}
+          <span className="flex-1" />
+
           <button
             type="button"
             onClick={toggleCollapsed}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className={[
-              "hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.055] text-cream/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-white/[0.1] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/40 lg:flex",
-              collapsed ? "lg:mx-auto" : "ml-auto"
+              "hidden h-9 w-9 shrink-0 place-items-center rounded-lg text-cream/45 outline-none transition hover:bg-cream/[0.09] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/40 md:grid",
+              collapsed ? "md:h-11 md:w-11" : ""
             ].join(" ")}
           >
-            {/* One calm glyph for both states, the way editors do it — the
-                arrow-in-panel variants turn to mush at this size. */}
-            <PanelLeft size={18} aria-hidden="true" />
+            <PanelLeft size={collapsed ? 18 : 16} aria-hidden="true" />
           </button>
-        </div>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 py-5">
-          <Link
-            href="/interview"
-            title={collapsed ? "Start an interview" : undefined}
-            onClick={() => setMenuOpen(false)}
-            className={[
-              "mb-6 flex h-12 shrink-0 items-center gap-3 rounded-2xl bg-cream px-3 font-semibold text-[#23459e] shadow-[0_18px_44px_-26px_rgba(239,232,214,0.75)] transition hover:bg-white focus-visible:ring-2 focus-visible:ring-white/70",
-              collapsed ? "lg:justify-center lg:gap-0 lg:px-0" : ""
-            ].join(" ")}
-          >
-            <Mic size={17} aria-hidden="true" />
-            <span className={collapsed ? "lg:hidden" : ""}>Start interview</span>
-          </Link>
+          <SignOutButton redirectUrl="/">
+            <button
+              type="button"
+              title="Log out"
+              aria-label="Log out"
+              className={[
+                "grid h-9 w-9 shrink-0 place-items-center rounded-lg text-cream/45 outline-none transition hover:bg-cream/[0.09] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/40",
+                collapsed ? "md:h-11 md:w-11" : ""
+              ].join(" ")}
+            >
+              <LogOut size={collapsed ? 18 : 16} aria-hidden="true" />
+            </button>
+          </SignOutButton>
 
-          <nav aria-label="Workspace navigation" className="space-y-6">
-            {navGroups.map((group) => (
-              <div key={group.label}>
-                <p
-                  className={[
-                    "mb-2.5 px-3.5 font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-cream/28",
-                    collapsed ? "lg:sr-only" : ""
-                  ].join(" ")}
-                >
-                  {group.label}
-                </p>
-                <div className="space-y-1">
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-                    const active = isActive(item.href, item.hash);
-
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        title={collapsed ? item.label : undefined}
-                        aria-current={active ? "page" : undefined}
-                        // Hash links keep the same pathname, so the route effect
-                        // never fires and the drawer would stay open over the page.
-                        onClick={() => setMenuOpen(false)}
-                        className={[
-                          "group relative flex h-12 items-center gap-3 rounded-xl px-3.5 text-sm font-medium outline-none transition",
-                          collapsed ? "lg:justify-center lg:gap-0 lg:px-0" : "",
-                          active
-                            ? "bg-cream/[0.16] text-cream shadow-[inset_0_1px_0_rgba(255,255,255,0.11),0_14px_34px_-26px_rgba(5,14,45,0.75)]"
-                            : "text-cream/62 hover:bg-white/[0.07] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/40"
-                        ].join(" ")}
-                      >
-                        {active ? (
-                          <span className="absolute inset-y-3 left-1 w-[3px] rounded-full bg-cream" />
-                        ) : null}
-                        <NavPending />
-                        <Icon
-                          size={18}
-                          strokeWidth={active ? 2.25 : 1.8}
-                          className="shrink-0 transition-transform duration-200 group-hover:scale-105"
-                          aria-hidden="true"
-                        />
-                        <span className={collapsed ? "lg:hidden" : ""}>{item.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </nav>
-        </div>
-
-        {/* Account card: the avatar opens Clerk's menu, the name goes to the
-            profile, so both actions are reachable without a hidden hover. */}
-        <div
-          className={[
-            "relative shrink-0 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]",
-            collapsed ? "lg:px-0 lg:py-4 lg:shadow-none" : ""
-          ].join(" ")}
-        >
           <div
             className={[
-              "flex items-center gap-3 rounded-3xl bg-white/[0.06] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.09),0_16px_34px_-28px_rgba(5,14,45,0.85)]",
-              collapsed
-                ? "lg:mx-auto lg:h-14 lg:w-14 lg:justify-center lg:rounded-full lg:bg-white/[0.07] lg:p-0 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_18px_42px_-30px_rgba(5,14,45,0.9)]"
-                : ""
+              "mt-1 grid h-9 w-9 shrink-0 place-items-center",
+              collapsed ? "md:h-11 md:w-11" : ""
             ].join(" ")}
           >
             <UserButton
               userProfileProps={{ appearance: userProfileAppearance }}
               appearance={{
                 elements: {
-                  // Clerk's root box is 100% wide by default. Unpinned it ate
-                  // the whole row once a session existed, collapsing the name
-                  // beside it to zero width.
-                  rootBox: "!h-9 !w-9 !shrink-0 !grow-0",
-                  userButtonBox: "!h-9 !w-9",
+                  // Clerk sizes its avatar in fixed classes, so it has to be
+                  // told about the collapsed rail too or it stays small beside
+                  // the larger icons.
+                  rootBox: collapsed
+                    ? "!h-9 !w-9 !shrink-0 !grow-0"
+                    : "!h-8 !w-8 !shrink-0 !grow-0",
+                  userButtonBox: collapsed ? "!h-9 !w-9" : "!h-8 !w-8",
                   userButtonTrigger:
                     "!rounded-full focus:!shadow-none focus-visible:!ring-2 focus-visible:!ring-cream/40",
-                  avatarBox: "!h-9 !w-9 !shadow-[inset_0_0_0_1px_rgba(239,232,214,0.18)]"
+                  avatarBox: collapsed
+                    ? "!h-9 !w-9 !shadow-[inset_0_0_0_1px_rgba(239,232,214,0.2)]"
+                    : "!h-8 !w-8 !shadow-[inset_0_0_0_1px_rgba(239,232,214,0.2)]"
                 }
               }}
             />
-            <Link
-              href="/profile"
+          </div>
+        </div>
+
+        {/* Labelled panel — this is what collapses away. */}
+        <div
+          className={[
+            "flex min-w-0 flex-1 flex-col bg-[#3557b4] px-3 py-3.5",
+            collapsed ? "md:hidden" : ""
+          ].join(" ")}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate text-[15px] font-semibold tracking-tight text-cream">
+              Workspace
+            </p>
+            <button
+              type="button"
+              aria-label="Close navigation"
               onClick={() => setMenuOpen(false)}
-              className={[
-                "min-w-0 flex-1 outline-none focus-visible:ring-2 focus-visible:ring-cream/40",
-                collapsed ? "lg:hidden" : ""
-              ].join(" ")}
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-cream/55 transition hover:bg-cream/[0.09] hover:text-cream md:hidden"
             >
-              <span className="block truncate text-sm font-semibold text-cream">
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+
+          <label className="relative mt-3 block">
+            <span className="sr-only">Filter navigation</span>
+            <Search
+              size={14}
+              aria-hidden="true"
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-cream/45"
+            />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search"
+              className="h-8 w-full rounded-lg bg-[#2a4aa0]/70 pl-8 pr-2.5 text-[13px] text-cream placeholder:text-cream/40 outline-none transition focus:bg-[#2a4aa0] focus-visible:ring-2 focus-visible:ring-cream/30"
+            />
+          </label>
+
+          <Link
+            href="/interview"
+            onClick={() => setMenuOpen(false)}
+            className="mt-3 flex h-9 shrink-0 items-center gap-2.5 rounded-lg bg-cream px-3 text-[13px] font-semibold text-[#254294] transition hover:bg-white focus-visible:ring-2 focus-visible:ring-white/70"
+          >
+            <Mic size={15} aria-hidden="true" />
+            Start interview
+          </Link>
+
+          <nav
+            aria-label="Workspace navigation"
+            className="thin-scroll mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto"
+          >
+            {navGroups.map((group) => {
+              const items = group.items.filter((item) =>
+                item.label.toLowerCase().includes(query.trim().toLowerCase())
+              );
+              if (!items.length) return null;
+
+              return (
+                <div key={group.label}>
+                  <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.13em] text-cream/45">
+                    {group.label}
+                  </p>
+
+                  <div className="mt-1 space-y-0.5">
+                    {items.map((item) => {
+                      const Icon = item.icon;
+                      const active = isActive(item.href);
+
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          aria-current={active ? "page" : undefined}
+                          // Hash links keep the same pathname, so the route
+                          // effect never fires and the drawer would stay open.
+                          onClick={() => setMenuOpen(false)}
+                          className={[
+                            "group relative flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium outline-none transition",
+                            active
+                              ? "bg-cream/[0.18] text-cream"
+                              : "text-cream/62 hover:bg-cream/[0.09] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/40"
+                          ].join(" ")}
+                        >
+                          <NavPending />
+                          <Icon
+                            size={16}
+                            strokeWidth={active ? 2.1 : 1.7}
+                            className="shrink-0"
+                            aria-hidden="true"
+                          />
+                          <span className="truncate">{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </nav>
+
+          <Link
+            href="/profile"
+            onClick={() => setMenuOpen(false)}
+            className="mt-3 flex shrink-0 items-center gap-2 rounded-lg px-2 py-2 text-[13px] outline-none transition hover:bg-cream/[0.07] focus-visible:ring-2 focus-visible:ring-cream/40"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-semibold text-cream/90">
                 {userName || "Your account"}
               </span>
               <span className="block truncate text-[11px] text-cream/45">View profile</span>
-            </Link>
-            <ChevronRight
-              size={15}
-              aria-hidden="true"
-              className={["shrink-0 text-cream/30", collapsed ? "lg:hidden" : ""].join(" ")}
-            />
-          </div>
-          <SignOutButton redirectUrl="/">
-            <button
-              type="button"
-              title={collapsed ? "Log out" : undefined}
-              className={[
-                "mt-2 flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-cream/58 outline-none transition hover:bg-white/[0.07] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/40",
-                collapsed ? "lg:mx-auto lg:h-11 lg:w-11 lg:justify-center lg:gap-0 lg:px-0" : ""
-              ].join(" ")}
-            >
-              <LogOut size={17} aria-hidden="true" />
-              <span className={collapsed ? "lg:hidden" : ""}>Log out</span>
-            </button>
-          </SignOutButton>
+            </span>
+            <ChevronRight size={14} aria-hidden="true" className="shrink-0 text-cream/30" />
+          </Link>
         </div>
       </aside>
 
       {/* Stays put while the page scrolls, so the drawer is always one tap away. */}
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 bg-[#4968b8]/88 px-3 shadow-[inset_0_-1px_0_rgba(239,232,214,0.08)] backdrop-blur-xl lg:hidden">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 bg-[#4968b8]/88 px-3 shadow-[inset_0_-1px_0_rgba(239,232,214,0.08)] backdrop-blur-xl md:hidden">
         <button
           type="button"
           aria-label="Open navigation"
@@ -381,7 +405,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
               elements: {
                 rootBox: "!h-9 !w-9 !shrink-0",
                 userButtonTrigger: "!h-9 !w-9",
-                avatarBox: "!h-9 !w-9 !shadow-[inset_0_0_0_1px_rgba(239,232,214,0.18)]"
+                avatarBox: "!h-7 !w-7 !shadow-[inset_0_0_0_1px_rgba(239,232,214,0.16)]"
               }
             }}
           />
@@ -392,7 +416,11 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           the sidebar's inset so the two read as one piece of chrome. */}
       <main
         key={pathname}
-        className="route-enter relative z-10 min-h-[calc(100vh-1.5rem)] overflow-hidden bg-gradient-to-b from-[#1c3a8e] via-[#1a3583] to-[#162e73] shadow-[0_2px_10px_rgba(4,11,38,0.3)] lg:rounded-2xl"
+        // No background of its own: the .blueprint surface behind the whole
+        // shell — grid, glow and all — carries through here, so the content
+        // area and the area around the sidebar are literally the same surface
+        // rather than two blues that nearly match.
+        className="route-enter relative z-10 min-h-screen overflow-hidden"
       >
         {children}
       </main>

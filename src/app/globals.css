@@ -23,6 +23,8 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
   background:
     radial-gradient(circle at 18% 10%, rgba(226, 232, 240, 0.1), transparent 27rem),
     radial-gradient(circle at 82% 14%, rgba(148, 163, 184, 0.075), transparent 25rem),
@@ -36,7 +38,22 @@ body {
   color: var(--ink);
   font-feature-settings:
     "ss01" on,
-    "cv01" on;
+    "cv01" on,
+    "cv11" on;
+}
+
+/* Signed in, the whole page is workspace, so the canvas under it has to be the
+   workspace colour. The near-black above belongs to the marketing page; when it
+   showed through anywhere the shell did not paint — past the last section, or
+   beside content narrower than the viewport — it read as a broken black band
+   next to the blue chrome. Matching the shell's own base makes any uncovered
+   region invisible instead. */
+body.workspace {
+  background: #22409b;
+}
+
+body.workspace::before {
+  content: none;
 }
 
 body::before {
@@ -101,11 +118,12 @@ select {
   animation: float-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Flat card, same fill Home uses for its hero columns. No blur, no drop
+   shadow: surfaces separate by value and a hairline, not by depth. */
 .surface-card {
-  border: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.074), rgba(255, 255, 255, 0.04));
-  box-shadow: 0 18px 58px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(20px);
+  background: #2a4aa0;
+  border-radius: 1rem;
+  box-shadow: inset 0 0 0 1px rgba(239, 232, 214, 0.07);
 }
 
 .interactive-card {
@@ -125,9 +143,9 @@ select {
 }
 
 .field {
-  border: 1px solid var(--line);
-  background: rgba(8, 10, 16, 0.72);
-  color: var(--ink);
+  border: 1px solid rgba(239, 232, 214, 0.1);
+  background: #24439b;
+  color: var(--bp-cream, #efe8d6);
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease,
@@ -230,27 +248,16 @@ select {
    --------------------------------------------------------------------------- */
 
 .surface {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.072), rgba(255, 255, 255, 0.034)),
-    rgba(17, 42, 104, 0.28);
-  border-radius: 1.4rem;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -28px 58px rgba(6, 16, 55, 0.11),
-    0 1px 2px rgba(5, 14, 45, 0.2),
-    0 22px 58px -28px rgba(5, 14, 45, 0.78);
+  background: #2a4aa0;
+  border-radius: 1rem;
+  box-shadow: inset 0 0 0 1px rgba(239, 232, 214, 0.07);
 }
 
+/* The page-level slab, one step lighter than the cards that sit on it. */
 .surface-raised {
-  background:
-    radial-gradient(48rem 24rem at 82% 0%, rgba(126, 160, 255, 0.16), transparent 70%),
-    linear-gradient(170deg, rgba(255, 255, 255, 0.118), rgba(255, 255, 255, 0.04) 58%);
-  border-radius: 1.65rem;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    inset 0 -34px 74px rgba(7, 20, 66, 0.16),
-    0 2px 4px rgba(5, 14, 45, 0.24),
-    0 34px 84px -34px rgba(5, 14, 45, 0.9);
+  background: #3557b4;
+  border-radius: 1.25rem;
+  box-shadow: inset 0 0 0 1px rgba(239, 232, 214, 0.08);
 }
 
 /* Interactive tiles: lift slightly instead of brightening a border. */
@@ -263,18 +270,14 @@ select {
 
 .surface-interactive:hover {
   transform: translateY(-2px);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.05));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    0 6px 12px rgba(5, 14, 45, 0.3),
-    0 26px 60px -18px rgba(5, 14, 45, 0.9);
+  background: #2f52ab;
+  box-shadow: inset 0 0 0 1px rgba(239, 232, 214, 0.14);
 }
 
 /* Soft filled pill, used for chips and tags. */
 .pill {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(239, 232, 214, 0.1);
   border-radius: 9999px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
 }
 
 .shadow-soft-inset {
@@ -379,6 +382,25 @@ html {
   scrollbar-width: thin;
   scrollbar-color: rgba(239, 232, 214, 0.24) transparent;
   scrollbar-gutter: stable;
+  /* In-page anchors glided only from the very top of the document before this,
+     because nothing declared smooth scrolling — the browser was jumping. The
+     reduced-motion block below forces this back to `auto`. */
+  scroll-behavior: smooth;
+}
+
+/* Anchor targets sit under a fixed nav roughly 5.5rem tall. Without a scroll
+   margin the browser aligns a section's top edge with the viewport's, so the
+   heading lands behind the bar. */
+[id="learn"],
+[id="interview"],
+[id="product"],
+[id="features"],
+[id="report"],
+[id="flow"] {
+  /* Just enough to clear the fixed nav — the sections carry their own top
+     padding, and stacking a large margin on top of that pushed anchored
+     headings most of a screen down. */
+  scroll-margin-top: 3rem;
 }
 
 *::-webkit-scrollbar {
@@ -426,6 +448,20 @@ html {
   border-width: 2.5px;
   background: rgba(239, 232, 214, 0.18);
   background-clip: content-box;
+}
+
+/* Scrolls, but the bar never draws. For overlays where a track floating over
+   the panel reads as an artifact rather than a control. Needs the class on the
+   pseudo-element to beat the global `*::-webkit-scrollbar` rule above. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 /* Messages dissolve under the header instead of being sliced by it. */
@@ -510,10 +546,13 @@ html {
   right: max(1.5rem, calc(50% - 41rem));
 }
 
+/* Section eyebrow. 0.22em tracking at 11px scattered the letters and read as
+   misalignment; a little larger and a lot tighter holds together. */
 .blueprint-label {
   font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 0.6875rem;
-  letter-spacing: 0.22em;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
 }
 
@@ -677,5 +716,28 @@ html {
 
   .reveal {
     opacity: 1 !important;
+  }
+}
+
+/* Carousel slide change: content fades up rather than snapping. Keyed on the
+   slide id, so React remounts and replays it on every advance. */
+@keyframes fade-slide {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-slide {
+  animation: fade-slide 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-slide {
+    animation: none;
   }
 }

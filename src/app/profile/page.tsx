@@ -8,7 +8,7 @@ import { authenticatedOwnerId } from "@/server/interview/owner";
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
   "My Profile",
-  "Review and edit the resume-grounded interview memory Helix uses for practice."
+  "Review and edit the resume-grounded interview memory Trailgrad uses for practice."
 );
 
 export default async function ProfilePage() {

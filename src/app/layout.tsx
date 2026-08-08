@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
+import { AuthSync } from "@/components/workspace/auth-sync";
 import { ScrollRestoration } from "@/components/scroll-restoration";
 import { clerkAppearance } from "@/lib/clerk-theme";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/seo";
@@ -33,11 +34,11 @@ export const metadata: Metadata = {
     // SVG first for the tab (the raw PNG is white on transparency and vanishes
     // on a light tab); the PNG stays for platforms that want a bitmap.
     icon: [
-      { url: "/brand/helix-favicon.svg", type: "image/svg+xml" },
-      { url: "/brand/helix-icon.png", type: "image/png", sizes: "790x796" }
+      { url: "/brand/trailgrad-favicon.svg", type: "image/svg+xml" },
+      { url: "/brand/trailgrad-icon.png", type: "image/png", sizes: "790x796" }
     ],
-    shortcut: "/brand/helix-favicon.svg",
-    apple: "/brand/helix-icon.png"
+    shortcut: "/brand/trailgrad-favicon.svg",
+    apple: "/brand/trailgrad-icon.png"
   },
   openGraph: {
     type: "website",
@@ -45,13 +46,13 @@ export const metadata: Metadata = {
     siteName,
     title: defaultTitle,
     description: defaultDescription,
-    images: [{ url: "/brand/helix-logo.png", width: 1200, height: 630, alt: "Helix" }]
+    images: [{ url: "/brand/trailgrad-logo.png", width: 1200, height: 630, alt: "Trailgrad" }]
   },
   twitter: {
     card: "summary_large_image",
     title: defaultTitle,
     description: defaultDescription,
-    images: ["/brand/helix-logo.png"]
+    images: ["/brand/trailgrad-logo.png"]
   },
   robots: {
     index: true,
@@ -66,22 +67,29 @@ export const metadata: Metadata = {
   }
 };
 
-const displayFont = Space_Grotesk({
+/**
+ * One typeface across the product. Geist is a neutral modern grotesque — it
+ * reads as product UI rather than as a brand font, which is what we want for
+ * a tool people work inside. Space Grotesk's distinctive letterforms were
+ * doing the opposite.
+ *
+ * Headings and body share the family and separate on weight and size instead,
+ * with Geist Mono for numerals, slugs and code.
+ */
+const displayFont = Geist({
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
   variable: "--font-display",
   display: "swap"
 });
 
-const sansFont = Inter({
+const sansFont = Geist({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap"
 });
 
-const monoFont = JetBrains_Mono({
+const monoFont = Geist_Mono({
   subsets: ["latin"],
-  weight: ["400", "500"],
   variable: "--font-mono",
   display: "swap"
 });
@@ -89,6 +97,17 @@ const monoFont = JetBrains_Mono({
 const fontVariables = `${displayFont.variable} ${sansFont.variable} ${monoFont.variable}`;
 
 const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+/**
+ * Never prerendered or reused across auth states.
+ *
+ * The layout decides whether the workspace chrome renders at all, and Next
+ * does not re-render layouts on client-side navigation. Without this, a layout
+ * that rendered once without a resolved session kept being reused, so pages
+ * reached by navigation appeared with no sidebar while a freshly loaded page
+ * had one.
+ */
+export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   // Resolved on the server so the workspace chrome is never wrong on first
@@ -98,13 +117,22 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const app = (
     <>
       <ScrollRestoration />
-      {userId ? <WorkspaceShell>{children}</WorkspaceShell> : <main>{children}</main>}
+      {userId ? (
+        <WorkspaceShell>{children}</WorkspaceShell>
+      ) : (
+        <>
+          <AuthSync />
+          <main>{children}</main>
+        </>
+      )}
     </>
   );
 
   return (
     <html lang="en" className={fontVariables}>
-      <body>
+      {/* Decided on the server alongside the shell itself, so the canvas is
+          never marketing-black for a signed-in user, even on first paint. */}
+      <body className={userId ? "workspace" : undefined}>
         {clerkPublishableKey ? (
           <ClerkProvider appearance={clerkAppearance}>{app}</ClerkProvider>
         ) : (

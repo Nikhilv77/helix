@@ -1,4 +1,4 @@
-"""HTTP client for the Helix interview brain.
+"""HTTP client for the Trailgrad interview brain.
 
 The decision logic lives in the Next.js app and is not duplicated here. This
 module only moves text back and forth.
@@ -11,9 +11,9 @@ from dataclasses import dataclass
 
 import aiohttp
 
-from config import HELIX
+from config import TRAILGRAD
 
-logger = logging.getLogger("helix.client")
+logger = logging.getLogger("trailgrad.client")
 
 
 @dataclass
@@ -37,10 +37,10 @@ class SessionSnapshot:
     opening_utterance: str
 
 
-class HelixClient:
+class TrailgradClient:
     def __init__(self, session: aiohttp.ClientSession) -> None:
         self._http = session
-        self._base = HELIX.api_base_url.rstrip("/")
+        self._base = TRAILGRAD.api_base_url.rstrip("/")
 
     async def get_session(self, session_id: str) -> SessionSnapshot:
         payload = await self._get(f"/api/interview/{session_id}")
@@ -90,7 +90,7 @@ class HelixClient:
 
     async def _get(self, path: str) -> dict:
         async with self._http.get(
-            f"{self._base}{path}", timeout=aiohttp.ClientTimeout(total=HELIX.request_timeout_s)
+            f"{self._base}{path}", timeout=aiohttp.ClientTimeout(total=TRAILGRAD.request_timeout_s)
         ) as response:
             return self._unwrap(await response.json(), path)
 
@@ -98,7 +98,7 @@ class HelixClient:
         async with self._http.post(
             f"{self._base}{path}",
             json=body,
-            timeout=aiohttp.ClientTimeout(total=HELIX.request_timeout_s),
+            timeout=aiohttp.ClientTimeout(total=TRAILGRAD.request_timeout_s),
         ) as response:
             return self._unwrap(await response.json(), path)
 
@@ -107,7 +107,7 @@ class HelixClient:
         """The API wraps everything in a success/error envelope."""
         if not payload.get("success"):
             error = payload.get("error", {})
-            raise HelixApiError(
+            raise TrailgradApiError(
                 code=error.get("code", "UNKNOWN"),
                 message=error.get("message", "Request failed"),
                 path=path,
@@ -115,7 +115,7 @@ class HelixClient:
         return payload["data"]
 
 
-class HelixApiError(RuntimeError):
+class TrailgradApiError(RuntimeError):
     def __init__(self, code: str, message: str, path: str) -> None:
         super().__init__(f"{code}: {message} ({path})")
         self.code = code

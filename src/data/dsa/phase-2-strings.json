@@ -1,0 +1,1811 @@
+{
+  "phase": "Phase 2 — Strings",
+  "questions": [
+    {
+      "title": "Valid Anagram",
+      "slug": "valid-anagram",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/valid-anagram/",
+      "primaryPattern": "arrays-hashing",
+      "subPatterns": ["frequency-map"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 10,
+      "recommendedOrder": 1,
+      "prerequisites": [],
+      "conceptsTested": [
+        "character frequency counting",
+        "fixed-size count array for a known alphabet",
+        "length check as a fast reject"
+      ],
+      "commonMistakes": [
+        "Sorting both strings when counting is linear",
+        "Skipping the length guard and reading past the end",
+        "Assuming ASCII when the input may be Unicode"
+      ],
+      "interviewSignals": [
+        "Asks about the character set before committing to a fixed count array",
+        "Notes the space is O(1) only because the alphabet is bounded"
+      ],
+      "followUpPrompts": [
+        "What if the strings contain Unicode characters?",
+        "Group many strings by anagram class instead.",
+        "What if you may only make one pass over each string?"
+      ],
+      "promptSummary": "Decide whether two strings are rearrangements of the same characters.",
+      "highLevelApproach": "Reject differing lengths, count the characters of the first string, then decrement with the second and fail if any count goes negative.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1) for a fixed alphabet"
+      },
+      "problemStatement": "Decide whether two strings are rearrangements of the same characters. Identify the input, required output, and constraints, then explain which array/hash lookup idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) for a fixed alphabet space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the array/hash lookup pattern and maintain the right invariant around character frequency counting. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the array/hash lookup structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Sorting both strings when counting is linear.",
+        "The intended path is: Reject differing lengths, count the characters of the first string, then decrement with the second and fail if any count goes negative."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — array/hash lookup",
+          "idea": "Reject differing lengths, count the characters of the first string, then decrement with the second and fail if any count goes negative.",
+          "steps": [
+            "Track the state needed for character frequency counting.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1) for a fixed alphabet"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Sorting both strings when counting is linear"
+      ],
+      "relatedQuestions": ["group-anagrams"]
+    },
+    {
+      "title": "Group Anagrams",
+      "slug": "group-anagrams",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/group-anagrams/",
+      "primaryPattern": "arrays-hashing",
+      "subPatterns": ["canonical-key", "frequency-map"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 2,
+      "prerequisites": ["valid-anagram"],
+      "conceptsTested": [
+        "canonical form as a hash key",
+        "sorted-string key vs count-signature key",
+        "bucketing with a hash map"
+      ],
+      "commonMistakes": [
+        "Comparing every pair of strings for anagram-ness",
+        "Rebuilding an expensive key inside an inner loop",
+        "Using a mutable array as a map key without serializing it"
+      ],
+      "interviewSignals": [
+        "Weighs the sorted key against the count signature using the word length k",
+        "States the O(k log k) vs O(k) per-string tradeoff explicitly"
+      ],
+      "followUpPrompts": [
+        "Which key is better when the strings are very long?",
+        "Handle a large or Unicode alphabet.",
+        "Stream the strings and emit groups incrementally."
+      ],
+      "promptSummary": "Group a list of strings so that anagrams of one another land in the same bucket.",
+      "highLevelApproach": "Reduce each string to a canonical key — its sorted characters, or a per-letter count signature — and append it to that key's bucket in a hash map.",
+      "complexity": {
+        "time": "O(n*k) with count keys",
+        "space": "O(n*k)"
+      },
+      "problemStatement": "Group a list of strings so that anagrams of one another land in the same bucket. Identify the input, required output, and constraints, then explain which array/hash lookup idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n*k) with count keys time and O(n*k) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the array/hash lookup pattern and maintain the right invariant around canonical form as a hash key. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the array/hash lookup structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Comparing every pair of strings for anagram-ness.",
+        "The intended path is: Reduce each string to a canonical key — its sorted characters, or a per-letter count signature — and append it to that key's bucket in a hash map."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — array/hash lookup",
+          "idea": "Reduce each string to a canonical key — its sorted characters, or a per-letter count signature — and append it to that key's bucket in a hash map.",
+          "steps": [
+            "Track the state needed for canonical form as a hash key.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n*k) with count keys",
+            "space": "O(n*k)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Comparing every pair of strings for anagram-ness"
+      ],
+      "relatedQuestions": ["valid-anagram", "valid-palindrome"]
+    },
+    {
+      "title": "Valid Palindrome",
+      "slug": "valid-palindrome",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/valid-palindrome/",
+      "primaryPattern": "two-pointers",
+      "subPatterns": ["two-pointer-opposite-ends", "in-place-mutation"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 3,
+      "prerequisites": [],
+      "conceptsTested": [
+        "converging pointers",
+        "skipping non-alphanumeric characters in place",
+        "case normalization"
+      ],
+      "commonMistakes": [
+        "Building a cleaned copy when O(1) space is requested",
+        "Advancing only one pointer while skipping junk characters",
+        "Off-by-one when the two pointers meet"
+      ],
+      "interviewSignals": [
+        "Filters during the scan rather than allocating a second string",
+        "Handles the empty string and all-punctuation input"
+      ],
+      "followUpPrompts": [
+        "Allow removing at most one character.",
+        "What counts as a character once Unicode is involved?",
+        "Find the longest palindromic prefix."
+      ],
+      "promptSummary": "Check whether a string reads the same both ways, ignoring case and non-alphanumeric characters.",
+      "highLevelApproach": "Converge two pointers from the ends, skipping characters that are not alphanumeric and comparing the rest case-insensitively.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Check whether a string reads the same both ways, ignoring case and non-alphanumeric characters. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around converging pointers. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the two-pointer scan structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Building a cleaned copy when O(1) space is requested.",
+        "The intended path is: Converge two pointers from the ends, skipping characters that are not alphanumeric and comparing the rest case-insensitively."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — two-pointer scan",
+          "idea": "Converge two pointers from the ends, skipping characters that are not alphanumeric and comparing the rest case-insensitively.",
+          "steps": [
+            "Track the state needed for converging pointers.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Building a cleaned copy when O(1) space is requested"
+      ],
+      "relatedQuestions": [
+        "longest-common-prefix",
+        "reverse-words-in-a-string",
+        "string-compression",
+        "longest-palindromic-substring",
+        "group-anagrams"
+      ]
+    },
+    {
+      "title": "Longest Common Prefix",
+      "slug": "longest-common-prefix",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/longest-common-prefix/",
+      "primaryPattern": "two-pointers",
+      "subPatterns": ["two-pointer-same-direction"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 4,
+      "prerequisites": [],
+      "conceptsTested": [
+        "column-wise scanning across many strings",
+        "bounding the answer by the shortest string",
+        "pairwise reduction as an alternative"
+      ],
+      "commonMistakes": [
+        "Indexing past the end of the shortest string",
+        "Not handling an empty input list",
+        "Returning the first string when nothing is shared"
+      ],
+      "interviewSignals": [
+        "Bounds the answer by the shortest string before writing any loop",
+        "Mentions the sort-then-compare-first-and-last shortcut"
+      ],
+      "followUpPrompts": [
+        "What if strings keep arriving over time?",
+        "Solve it with a trie.",
+        "Find the longest common suffix instead."
+      ],
+      "promptSummary": "Return the longest prefix shared by every string in a list.",
+      "highLevelApproach": "Scan the same character position across all strings in parallel and stop at the first mismatch or the end of the shortest string; a trie or pairwise reduction gives the same answer.",
+      "complexity": {
+        "time": "O(total characters)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Return the longest prefix shared by every string in a list. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(total characters) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around column-wise scanning across many strings. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the two-pointer scan structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Indexing past the end of the shortest string.",
+        "The intended path is: Scan the same character position across all strings in parallel and stop at the first mismatch or the end of the shortest string; a trie or pairwise reduction gives the same answer."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — two-pointer scan",
+          "idea": "Scan the same character position across all strings in parallel and stop at the first mismatch or the end of the shortest string; a trie or pairwise reduction gives the same answer.",
+          "steps": [
+            "Track the state needed for column-wise scanning across many strings.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(total characters)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Indexing past the end of the shortest string"
+      ],
+      "relatedQuestions": [
+        "valid-palindrome",
+        "reverse-words-in-a-string",
+        "string-compression",
+        "longest-palindromic-substring"
+      ]
+    },
+    {
+      "title": "Reverse Words in a String",
+      "slug": "reverse-words-in-a-string",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/reverse-words-in-a-string/",
+      "primaryPattern": "two-pointers",
+      "subPatterns": ["array-reversal", "in-place-mutation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 5,
+      "prerequisites": ["valid-palindrome"],
+      "conceptsTested": [
+        "reverse the whole buffer then reverse each word",
+        "collapsing leading, trailing and repeated spaces",
+        "in-place compaction with a write index"
+      ],
+      "commonMistakes": [
+        "Leaving leading, trailing or doubled spaces in the output",
+        "Splitting and joining when in-place is required",
+        "Reversing the characters inside each word by accident"
+      ],
+      "interviewSignals": [
+        "Separates whitespace cleanup from the reversal step",
+        "Reaches O(1) extra space on a mutable buffer"
+      ],
+      "followUpPrompts": [
+        "Do it in place with O(1) extra space.",
+        "Reverse the characters of each word but keep word order.",
+        "How would you handle a streamed input?"
+      ],
+      "promptSummary": "Reverse the order of the words in a string, trimming and collapsing whitespace.",
+      "highLevelApproach": "Compact the buffer to single-spaced words with a write index, reverse the whole buffer, then reverse each word back in place.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1) on a mutable buffer"
+      },
+      "problemStatement": "Reverse the order of the words in a string, trimming and collapsing whitespace. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) on a mutable buffer space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around reverse the whole buffer then reverse each word. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the two-pointer scan structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Leaving leading, trailing or doubled spaces in the output.",
+        "The intended path is: Compact the buffer to single-spaced words with a write index, reverse the whole buffer, then reverse each word back in place."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — two-pointer scan",
+          "idea": "Compact the buffer to single-spaced words with a write index, reverse the whole buffer, then reverse each word back in place.",
+          "steps": [
+            "Track the state needed for reverse the whole buffer then reverse each word.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1) on a mutable buffer"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Leaving leading, trailing or doubled spaces in the output"
+      ],
+      "relatedQuestions": [
+        "valid-palindrome",
+        "longest-common-prefix",
+        "string-compression",
+        "longest-palindromic-substring"
+      ]
+    },
+    {
+      "title": "String Compression",
+      "slug": "string-compression",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/string-compression/",
+      "primaryPattern": "two-pointers",
+      "subPatterns": ["in-place-mutation", "two-pointer-same-direction", "run-length-encoding"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 6,
+      "prerequisites": ["reverse-words-in-a-string"],
+      "conceptsTested": [
+        "run-length encoding",
+        "separate read and write pointers",
+        "writing multi-digit run counts"
+      ],
+      "commonMistakes": [
+        "Writing the count 1 after a single character",
+        "Not splitting counts of ten or more into individual digits",
+        "Assuming the write pointer could overtake the read pointer"
+      ],
+      "interviewSignals": [
+        "Argues why the write pointer can never pass the read pointer",
+        "Flushes the final run after the loop ends"
+      ],
+      "followUpPrompts": [
+        "Prove the compressed output never exceeds the input length.",
+        "Write the decompression routine.",
+        "What if compression would make the string longer?"
+      ],
+      "promptSummary": "Compress a character array in place using run lengths and return the new length.",
+      "highLevelApproach": "A fast pointer measures each run while a write pointer emits the character followed by the digits of the run length whenever the run exceeds one.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Compress a character array in place using run lengths and return the new length. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around run-length encoding. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the two-pointer scan structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Writing the count 1 after a single character.",
+        "The intended path is: A fast pointer measures each run while a write pointer emits the character followed by the digits of the run length whenever the run exceeds one."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — two-pointer scan",
+          "idea": "A fast pointer measures each run while a write pointer emits the character followed by the digits of the run length whenever the run exceeds one.",
+          "steps": [
+            "Track the state needed for run-length encoding.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Writing the count 1 after a single character"
+      ],
+      "relatedQuestions": [
+        "reverse-words-in-a-string",
+        "valid-palindrome",
+        "longest-common-prefix",
+        "longest-palindromic-substring",
+        "longest-substring-without-repeating-characters"
+      ]
+    },
+    {
+      "title": "Longest Substring Without Repeating Characters",
+      "slug": "longest-substring-without-repeating-characters",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/longest-substring-without-repeating-characters/",
+      "primaryPattern": "sliding-window",
+      "subPatterns": ["variable-window", "canonical-key", "frequency-map"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 7,
+      "prerequisites": ["valid-anagram"],
+      "conceptsTested": [
+        "variable-size window",
+        "shrinking the window on a duplicate",
+        "last-seen index to jump the left bound"
+      ],
+      "commonMistakes": [
+        "Letting the left bound move backwards to a stale index",
+        "Rescanning the window contents on every step",
+        "Discarding the whole window when a duplicate appears"
+      ],
+      "interviewSignals": [
+        "States the window invariant that all characters inside are distinct",
+        "Keeps the left bound monotone with a max() guard"
+      ],
+      "followUpPrompts": [
+        "Allow at most k distinct characters.",
+        "Return the substring itself, not just the length.",
+        "What if the alphabet is very large?"
+      ],
+      "promptSummary": "Find the length of the longest substring with no repeated character.",
+      "highLevelApproach": "Extend a window to the right while recording each character's last index; when a repeat lies inside the window, jump the left bound just past that earlier occurrence.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(min(n, alphabet))"
+      },
+      "problemStatement": "Find the length of the longest substring with no repeated character. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(min(n, alphabet)) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around variable-size window. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sliding window structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Letting the left bound move backwards to a stale index.",
+        "The intended path is: Extend a window to the right while recording each character's last index; when a repeat lies inside the window, jump the left bound just past that earlier occurrence."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sliding window",
+          "idea": "Extend a window to the right while recording each character's last index; when a repeat lies inside the window, jump the left bound just past that earlier occurrence.",
+          "steps": [
+            "Track the state needed for variable-size window.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(min(n, alphabet))"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Letting the left bound move backwards to a stale index"
+      ],
+      "relatedQuestions": [
+        "valid-anagram",
+        "find-all-anagrams-in-a-string",
+        "permutation-in-string",
+        "minimum-window-substring",
+        "string-compression"
+      ]
+    },
+    {
+      "title": "Find All Anagrams in a String",
+      "slug": "find-all-anagrams-in-a-string",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/find-all-anagrams-in-a-string/",
+      "primaryPattern": "sliding-window",
+      "subPatterns": ["fixed-window", "frequency-map"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 8,
+      "prerequisites": ["valid-anagram", "longest-substring-without-repeating-characters"],
+      "conceptsTested": [
+        "fixed-size sliding window",
+        "incremental count updates as characters enter and leave",
+        "a matched-character counter instead of comparing maps"
+      ],
+      "commonMistakes": [
+        "Comparing full frequency maps at every window position",
+        "Forgetting to decrement the character leaving the window",
+        "Not handling a pattern longer than the text"
+      ],
+      "interviewSignals": [
+        "Keeps each window update O(1) rather than O(alphabet)",
+        "Tracks how many characters are already balanced"
+      ],
+      "followUpPrompts": [
+        "Return the matching substrings instead of the indices.",
+        "What if the alphabet is Unicode-sized?",
+        "Extend it to match any of several patterns."
+      ],
+      "promptSummary": "Return every start index where a substring is an anagram of a given pattern.",
+      "highLevelApproach": "Slide a window the width of the pattern, adjusting counts as characters enter and leave, and record an index whenever the window's counts match the pattern's.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1) for a fixed alphabet"
+      },
+      "problemStatement": "Return every start index where a substring is an anagram of a given pattern. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) for a fixed alphabet space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around fixed-size sliding window. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sliding window structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Comparing full frequency maps at every window position.",
+        "The intended path is: Slide a window the width of the pattern, adjusting counts as characters enter and leave, and record an index whenever the window's counts match the pattern's."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sliding window",
+          "idea": "Slide a window the width of the pattern, adjusting counts as characters enter and leave, and record an index whenever the window's counts match the pattern's.",
+          "steps": [
+            "Track the state needed for fixed-size sliding window.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1) for a fixed alphabet"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Comparing full frequency maps at every window position"
+      ],
+      "relatedQuestions": [
+        "valid-anagram",
+        "longest-substring-without-repeating-characters",
+        "permutation-in-string",
+        "minimum-window-substring"
+      ]
+    },
+    {
+      "title": "Permutation in String",
+      "slug": "permutation-in-string",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/permutation-in-string/",
+      "primaryPattern": "sliding-window",
+      "subPatterns": ["fixed-window", "frequency-map"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 9,
+      "prerequisites": ["find-all-anagrams-in-a-string"],
+      "conceptsTested": [
+        "boolean variant of the fixed-window anagram scan",
+        "early exit on the first match",
+        "count-difference bookkeeping"
+      ],
+      "commonMistakes": [
+        "Rebuilding the count map for every window",
+        "Sorting each candidate substring, which is far slower",
+        "Off-by-one on the window boundaries"
+      ],
+      "interviewSignals": [
+        "Recognizes it as the same machinery as the anagram-indices problem",
+        "Returns as soon as one window matches"
+      ],
+      "followUpPrompts": [
+        "Return the index of the matching window.",
+        "Extend it to several patterns at once.",
+        "What changes if characters may be skipped?"
+      ],
+      "promptSummary": "Decide whether one string contains any permutation of another as a contiguous substring.",
+      "highLevelApproach": "Run a window the width of the pattern, maintaining character counts incrementally, and return true the first time the counts agree.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Decide whether one string contains any permutation of another as a contiguous substring. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around boolean variant of the fixed-window anagram scan. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sliding window structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Rebuilding the count map for every window.",
+        "The intended path is: Run a window the width of the pattern, maintaining character counts incrementally, and return true the first time the counts agree."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sliding window",
+          "idea": "Run a window the width of the pattern, maintaining character counts incrementally, and return true the first time the counts agree.",
+          "steps": [
+            "Track the state needed for boolean variant of the fixed-window anagram scan.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Rebuilding the count map for every window"
+      ],
+      "relatedQuestions": [
+        "find-all-anagrams-in-a-string",
+        "longest-substring-without-repeating-characters",
+        "minimum-window-substring"
+      ]
+    },
+    {
+      "title": "Minimum Window Substring",
+      "slug": "minimum-window-substring",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/minimum-window-substring/",
+      "primaryPattern": "sliding-window",
+      "subPatterns": ["variable-window", "frequency-map"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 40,
+      "recommendedOrder": 10,
+      "prerequisites": [
+        "longest-substring-without-repeating-characters",
+        "find-all-anagrams-in-a-string"
+      ],
+      "conceptsTested": [
+        "expand to satisfy, then contract to minimize",
+        "counting satisfied characters rather than total characters",
+        "duplicate requirements in the pattern"
+      ],
+      "commonMistakes": [
+        "Contracting the window before it is valid",
+        "Comparing whole maps instead of maintaining a satisfied counter",
+        "Overwriting the best window with a later, longer valid one"
+      ],
+      "interviewSignals": [
+        "States the expand/contract invariant precisely before coding",
+        "Handles patterns with repeated characters correctly"
+      ],
+      "followUpPrompts": [
+        "What if the pattern contains duplicate characters?",
+        "Return every minimum-length window.",
+        "How does it change if the characters must appear in order?"
+      ],
+      "promptSummary": "Find the shortest substring of one string containing all characters of another, respecting duplicates.",
+      "highLevelApproach": "Grow the right edge until every required character is covered, then shrink the left edge while the window stays valid, recording the shortest valid window seen.",
+      "complexity": {
+        "time": "O(n + m)",
+        "space": "O(alphabet)"
+      },
+      "problemStatement": "Find the shortest substring of one string containing all characters of another, respecting duplicates. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n + m) time and O(alphabet) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around expand to satisfy, then contract to minimize. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the sliding window structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Contracting the window before it is valid.",
+        "The intended path is: Grow the right edge until every required character is covered, then shrink the left edge while the window stays valid, recording the shortest valid window seen."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — sliding window",
+          "idea": "Grow the right edge until every required character is covered, then shrink the left edge while the window stays valid, recording the shortest valid window seen.",
+          "steps": [
+            "Track the state needed for expand to satisfy, then contract to minimize.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n + m)",
+            "space": "O(alphabet)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Contracting the window before it is valid"
+      ],
+      "relatedQuestions": [
+        "longest-substring-without-repeating-characters",
+        "find-all-anagrams-in-a-string",
+        "permutation-in-string",
+        "longest-palindromic-substring"
+      ]
+    },
+    {
+      "title": "Longest Palindromic Substring",
+      "slug": "longest-palindromic-substring",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/longest-palindromic-substring/",
+      "primaryPattern": "two-pointers",
+      "subPatterns": ["expand-around-center", "two-dimensional-dp"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 11,
+      "prerequisites": ["valid-palindrome"],
+      "conceptsTested": [
+        "the 2n-1 possible centers",
+        "expanding outward while characters match",
+        "DP and Manacher as alternatives"
+      ],
+      "commonMistakes": [
+        "Checking only odd-length centers and missing even palindromes",
+        "Slicing and comparing substrings, making it cubic",
+        "Off-by-one converting a center and radius back to boundaries"
+      ],
+      "interviewSignals": [
+        "Handles odd and even centers with one shared routine",
+        "Knows a linear Manacher solution exists even without coding it"
+      ],
+      "followUpPrompts": [
+        "Count all palindromic substrings instead.",
+        "Explain how Manacher's algorithm reaches linear time.",
+        "Find the longest palindromic subsequence."
+      ],
+      "promptSummary": "Return the longest substring of a string that is a palindrome.",
+      "highLevelApproach": "Expand outward from every center — each character and each gap between characters — keeping the longest match; interval DP or Manacher's algorithm are the alternatives.",
+      "complexity": {
+        "time": "O(n^2)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Return the longest substring of a string that is a palindrome. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n^2) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around the 2n-1 possible centers. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the two-pointer scan structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Checking only odd-length centers and missing even palindromes.",
+        "The intended path is: Expand outward from every center — each character and each gap between characters — keeping the longest match; interval DP or Manacher's algorithm are the alternatives."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — two-pointer scan",
+          "idea": "Expand outward from every center — each character and each gap between characters — keeping the longest match; interval DP or Manacher's algorithm are the alternatives.",
+          "steps": [
+            "Track the state needed for the 2n-1 possible centers.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n^2)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Checking only odd-length centers and missing even palindromes"
+      ],
+      "relatedQuestions": [
+        "valid-palindrome",
+        "longest-common-prefix",
+        "reverse-words-in-a-string",
+        "string-compression",
+        "minimum-window-substring"
+      ]
+    },
+    {
+      "title": "Roman to Integer",
+      "slug": "roman-to-integer",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/roman-to-integer/",
+      "primaryPattern": "math",
+      "subPatterns": ["digit-arithmetic", "boundary-scan"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 12,
+      "prerequisites": [],
+      "conceptsTested": [
+        "symbol-to-value lookup table",
+        "the subtractive rule behind IV, IX, XL",
+        "single-pass accumulation"
+      ],
+      "commonMistakes": [
+        "Hardcoding all six subtractive pairs instead of comparing neighbours",
+        "Reading past the end when peeking at the next symbol",
+        "Assuming well-formed input without saying so"
+      ],
+      "interviewSignals": [
+        "Derives the rule that a smaller value before a larger one is subtracted",
+        "Asks whether the numeral is guaranteed valid"
+      ],
+      "followUpPrompts": [
+        "Validate that the numeral is well-formed.",
+        "Convert in the opposite direction.",
+        "How would you represent values above 3999?"
+      ],
+      "promptSummary": "Convert a Roman numeral string into its integer value.",
+      "highLevelApproach": "Map symbols to values and scan left to right, subtracting any value smaller than the one that follows it and adding the rest.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Convert a Roman numeral string into its integer value. Identify the input, required output, and constraints, then explain which math or bit cancellation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the math or bit cancellation pattern and maintain the right invariant around symbol-to-value lookup table. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the math or bit cancellation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Hardcoding all six subtractive pairs instead of comparing neighbours.",
+        "The intended path is: Map symbols to values and scan left to right, subtracting any value smaller than the one that follows it and adding the rest."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — math or bit cancellation",
+          "idea": "Map symbols to values and scan left to right, subtracting any value smaller than the one that follows it and adding the rest.",
+          "steps": [
+            "Track the state needed for symbol-to-value lookup table.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Hardcoding all six subtractive pairs instead of comparing neighbours"
+      ],
+      "relatedQuestions": ["multiply-strings", "longest-palindromic-substring", "integer-to-roman"]
+    },
+    {
+      "title": "Integer to Roman",
+      "slug": "integer-to-roman",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/integer-to-roman/",
+      "primaryPattern": "greedy",
+      "subPatterns": ["digit-arithmetic", "greedy-choice"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 13,
+      "prerequisites": ["roman-to-integer"],
+      "conceptsTested": [
+        "greedy largest-first subtraction",
+        "encoding the subtractive forms as table entries",
+        "why greedy is optimal for this value set"
+      ],
+      "commonMistakes": [
+        "Leaving CM, CD, XC, XL, IX and IV out of the table and special-casing them",
+        "Walking the value table in ascending order",
+        "Looping without subtracting, causing an infinite loop"
+      ],
+      "interviewSignals": [
+        "Puts the subtractive forms into the value table so the loop stays trivial",
+        "Argues why the greedy choice is safe for these specific values"
+      ],
+      "followUpPrompts": [
+        "Why is greedy optimal for this symbol set but not for arbitrary coin systems?",
+        "Support values above 3999.",
+        "Show your output round-trips back through the parser."
+      ],
+      "promptSummary": "Convert an integer into its Roman numeral representation.",
+      "highLevelApproach": "Walk a descending table of values that already includes the subtractive forms, appending each symbol and subtracting its value while it still fits.",
+      "complexity": {
+        "time": "O(1)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Convert an integer into its Roman numeral representation. Identify the input, required output, and constraints, then explain which greedy invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(1) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the greedy invariant pattern and maintain the right invariant around greedy largest-first subtraction. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the greedy invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Leaving CM, CD, XC, XL, IX and IV out of the table and special-casing them.",
+        "The intended path is: Walk a descending table of values that already includes the subtractive forms, appending each symbol and subtracting its value while it still fits."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — greedy invariant",
+          "idea": "Walk a descending table of values that already includes the subtractive forms, appending each symbol and subtracting its value while it still fits.",
+          "steps": [
+            "Track the state needed for greedy largest-first subtraction.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Leaving CM, CD, XC, XL, IX and IV out of the table and special-casing them"
+      ],
+      "relatedQuestions": ["roman-to-integer", "text-justification", "compare-version-numbers"]
+    },
+    {
+      "title": "Compare Version Numbers",
+      "slug": "compare-version-numbers",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/compare-version-numbers/",
+      "primaryPattern": "two-pointers",
+      "subPatterns": ["two-pointer-same-direction", "tokenization", "interval-sweep"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 14,
+      "prerequisites": ["longest-common-prefix"],
+      "conceptsTested": [
+        "segment-wise numeric comparison",
+        "treating missing trailing segments as zero",
+        "ignoring leading zeros inside a segment"
+      ],
+      "commonMistakes": [
+        "Comparing the strings lexicographically",
+        "Not padding the shorter version with implicit zeros",
+        "Mishandling segments written as 01 or 000"
+      ],
+      "interviewSignals": [
+        "Parses each segment on the fly instead of allocating split arrays",
+        "Handles versions with different segment counts explicitly"
+      ],
+      "followUpPrompts": [
+        "Parse without allocating any intermediate arrays.",
+        "Support pre-release suffixes like 1.2.0-rc1.",
+        "Sort a whole list of version strings."
+      ],
+      "promptSummary": "Compare two dot-separated version strings and report which one is greater.",
+      "highLevelApproach": "Walk both strings with independent indices, parsing one numeric segment at a time and treating an exhausted string as supplying zeros.",
+      "complexity": {
+        "time": "O(n + m)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Compare two dot-separated version strings and report which one is greater. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n + m) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around segment-wise numeric comparison. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the two-pointer scan structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Comparing the strings lexicographically.",
+        "The intended path is: Walk both strings with independent indices, parsing one numeric segment at a time and treating an exhausted string as supplying zeros."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — two-pointer scan",
+          "idea": "Walk both strings with independent indices, parsing one numeric segment at a time and treating an exhausted string as supplying zeros.",
+          "steps": [
+            "Track the state needed for segment-wise numeric comparison.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n + m)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Comparing the strings lexicographically"
+      ],
+      "relatedQuestions": [
+        "longest-common-prefix",
+        "valid-palindrome",
+        "reverse-words-in-a-string",
+        "string-compression",
+        "integer-to-roman"
+      ]
+    },
+    {
+      "title": "Count and Say",
+      "slug": "count-and-say",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/count-and-say/",
+      "primaryPattern": "simulation",
+      "subPatterns": ["run-length-encoding", "digit-arithmetic"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 15,
+      "prerequisites": ["string-compression"],
+      "conceptsTested": [
+        "run-length encoding applied repeatedly",
+        "building each term from the previous one",
+        "using a string builder to avoid quadratic concatenation"
+      ],
+      "commonMistakes": [
+        "Concatenating immutable strings inside the loop",
+        "Dropping the final run at the end of a term",
+        "Hunting for a closed form that does not exist"
+      ],
+      "interviewSignals": [
+        "Separates the run-length step from the outer iteration",
+        "Notes that term length grows exponentially"
+      ],
+      "followUpPrompts": [
+        "How fast does the term length grow?",
+        "Generate the nth term without keeping all earlier terms.",
+        "Given a term, recover its index."
+      ],
+      "promptSummary": "Generate the nth term of a sequence where each term reads off the runs of digits in the previous term.",
+      "highLevelApproach": "Start from \"1\" and repeatedly run-length encode the current term, appending each run's length followed by its digit.",
+      "complexity": {
+        "time": "O(n * length of result)",
+        "space": "O(length of result)"
+      },
+      "problemStatement": "Generate the nth term of a sequence where each term reads off the runs of digits in the previous term. Identify the input, required output, and constraints, then explain which careful simulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n * length of result) time and O(length of result) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the careful simulation pattern and maintain the right invariant around run-length encoding applied repeatedly. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the careful simulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Concatenating immutable strings inside the loop.",
+        "The intended path is: Start from \"1\" and repeatedly run-length encode the current term, appending each run's length followed by its digit."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — careful simulation",
+          "idea": "Start from \"1\" and repeatedly run-length encode the current term, appending each run's length followed by its digit.",
+          "steps": [
+            "Track the state needed for run-length encoding applied repeatedly.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n * length of result)",
+            "space": "O(length of result)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Concatenating immutable strings inside the loop"
+      ],
+      "relatedQuestions": ["string-compression", "zigzag-conversion", "compare-version-numbers"]
+    },
+    {
+      "title": "Zigzag Conversion",
+      "slug": "zigzag-conversion",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/zigzag-conversion/",
+      "primaryPattern": "simulation",
+      "subPatterns": ["matrix-transform", "bfs-level-order", "modulo-indexing"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 16,
+      "prerequisites": [],
+      "conceptsTested": [
+        "walking rows with a direction flag",
+        "the 2*rows-2 period of the pattern",
+        "direct index formula as the O(1)-space alternative"
+      ],
+      "commonMistakes": [
+        "Not special-casing a single row, which bounces forever",
+        "Flipping the direction one step too late",
+        "Getting the diagonal characters wrong in the formula version"
+      ],
+      "interviewSignals": [
+        "Picks row buckets for clarity and can still describe the formula",
+        "Tests one row and a row count larger than the string"
+      ],
+      "followUpPrompts": [
+        "Solve it without per-row buffers.",
+        "Read a zigzag string back into the original order.",
+        "Generalize to a different traversal shape."
+      ],
+      "promptSummary": "Write a string in a zigzag across a number of rows, then read it back row by row.",
+      "highLevelApproach": "Append each character to a per-row buffer while moving down and back up with a direction toggle, then join the rows; alternatively derive each row's indices from the 2*rows-2 period.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Write a string in a zigzag across a number of rows, then read it back row by row. Identify the input, required output, and constraints, then explain which careful simulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the careful simulation pattern and maintain the right invariant around walking rows with a direction flag. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the careful simulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Not special-casing a single row, which bounces forever.",
+        "The intended path is: Append each character to a per-row buffer while moving down and back up with a direction toggle, then join the rows; alternatively derive each row's indices from the 2*rows-2 period."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — careful simulation",
+          "idea": "Append each character to a per-row buffer while moving down and back up with a direction toggle, then join the rows; alternatively derive each row's indices from the 2*rows-2 period.",
+          "steps": [
+            "Track the state needed for walking rows with a direction flag.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Not special-casing a single row, which bounces forever"
+      ],
+      "relatedQuestions": ["count-and-say", "decode-string"]
+    },
+    {
+      "title": "Decode String",
+      "slug": "decode-string",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/decode-string/",
+      "primaryPattern": "stack",
+      "subPatterns": ["stack-simulation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 17,
+      "prerequisites": [],
+      "conceptsTested": [
+        "a stack to hold enclosing context",
+        "separate stacks for repeat counts and partial strings",
+        "multi-digit repeat counts"
+      ],
+      "commonMistakes": [
+        "Assuming repeat counts are a single digit",
+        "Appending the repeated segment in the wrong nesting order",
+        "Trying to share one stack for counts and strings"
+      ],
+      "interviewSignals": [
+        "Pushes context on the opening bracket and restores it on the closing one",
+        "Handles nesting deeper than two levels"
+      ],
+      "followUpPrompts": [
+        "Write the recursive version instead.",
+        "Reject malformed input.",
+        "What if the decoded output is enormous — can you stream it?"
+      ],
+      "promptSummary": "Expand a string written with nested k[substring] repetition syntax into its decoded form.",
+      "highLevelApproach": "Scan once with a stack: push the current partial string and count at an opening bracket, and on the closing bracket pop them and append the segment repeated that many times.",
+      "complexity": {
+        "time": "O(length of output)",
+        "space": "O(length of output)"
+      },
+      "problemStatement": "Expand a string written with nested k[substring] repetition syntax into its decoded form. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(length of output) time and O(length of output) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around a stack to hold enclosing context. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the stack invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Assuming repeat counts are a single digit.",
+        "The intended path is: Scan once with a stack: push the current partial string and count at an opening bracket, and on the closing bracket pop them and append the segment repeated that many times."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — stack invariant",
+          "idea": "Scan once with a stack: push the current partial string and count at an opening bracket, and on the closing bracket pop them and append the segment repeated that many times.",
+          "steps": [
+            "Track the state needed for a stack to hold enclosing context.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(length of output)",
+            "space": "O(length of output)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Assuming repeat counts are a single digit"
+      ],
+      "relatedQuestions": ["zigzag-conversion", "multiply-strings"]
+    },
+    {
+      "title": "Multiply Strings",
+      "slug": "multiply-strings",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/multiply-strings/",
+      "primaryPattern": "math",
+      "subPatterns": ["digit-arithmetic"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 18,
+      "prerequisites": ["compare-version-numbers"],
+      "conceptsTested": [
+        "digit arrays instead of native integers",
+        "placing a partial product at index i+j+1",
+        "carry propagation and leading-zero trimming"
+      ],
+      "commonMistakes": [
+        "Parsing to a native integer and overflowing",
+        "Misplacing the partial product's index",
+        "Leaving leading zeros or mishandling a zero operand"
+      ],
+      "interviewSignals": [
+        "Derives the index mapping for partial products rather than guessing",
+        "Handles the all-zero result as an explicit case"
+      ],
+      "followUpPrompts": [
+        "Implement string addition as well.",
+        "When would Karatsuba beat the grade-school method?",
+        "Support negative numbers and decimal points."
+      ],
+      "promptSummary": "Multiply two non-negative integers given as strings without converting them to native numbers.",
+      "highLevelApproach": "Allocate a digit buffer of the combined length, add each pairwise digit product at index i+j+1, propagate carries, then strip leading zeros.",
+      "complexity": {
+        "time": "O(m*n)",
+        "space": "O(m+n)"
+      },
+      "problemStatement": "Multiply two non-negative integers given as strings without converting them to native numbers. Identify the input, required output, and constraints, then explain which math or bit cancellation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n) time and O(m+n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the math or bit cancellation pattern and maintain the right invariant around digit arrays instead of native integers. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the math or bit cancellation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Parsing to a native integer and overflowing.",
+        "The intended path is: Allocate a digit buffer of the combined length, add each pairwise digit product at index i+j+1, propagate carries, then strip leading zeros."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — math or bit cancellation",
+          "idea": "Allocate a digit buffer of the combined length, add each pairwise digit product at index i+j+1, propagate carries, then strip leading zeros.",
+          "steps": [
+            "Track the state needed for digit arrays instead of native integers.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n)",
+            "space": "O(m+n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Parsing to a native integer and overflowing"
+      ],
+      "relatedQuestions": [
+        "compare-version-numbers",
+        "roman-to-integer",
+        "decode-string",
+        "find-the-index-of-the-first-occurrence-in-a-string"
+      ]
+    },
+    {
+      "title": "Find the Index of the First Occurrence in a String",
+      "slug": "find-the-index-of-the-first-occurrence-in-a-string",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/",
+      "primaryPattern": "string-matching",
+      "subPatterns": ["string-matching", "two-pointer-same-direction"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 19,
+      "prerequisites": ["longest-common-prefix"],
+      "conceptsTested": [
+        "naive window comparison and its worst case",
+        "the longest proper prefix-suffix table",
+        "why KMP never backtracks in the text"
+      ],
+      "commonMistakes": [
+        "Off-by-one in the naive loop's upper bound",
+        "Building the LPS table with the wrong fallback index",
+        "Guessing at the empty-needle convention instead of asking"
+      ],
+      "interviewSignals": [
+        "States the naive O(n*m) worst case before optimizing",
+        "Can explain what the LPS table means even without coding KMP"
+      ],
+      "followUpPrompts": [
+        "Build and explain the KMP prefix table.",
+        "Compare this with Rabin-Karp rolling hashes.",
+        "Return all occurrences rather than the first."
+      ],
+      "promptSummary": "Return the index of the first occurrence of one string inside another, or -1 when absent. Formerly titled Implement strStr().",
+      "highLevelApproach": "Compare the pattern at each start position naively, or precompute the pattern's longest prefix-suffix table so KMP can shift on a mismatch without re-reading the text.",
+      "complexity": {
+        "time": "O(n + m) with KMP",
+        "space": "O(m)"
+      },
+      "problemStatement": "Return the index of the first occurrence of one string inside another, or -1 when absent. Formerly titled Implement strStr(). Identify the input, required output, and constraints, then explain which string matching idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n + m) with KMP time and O(m) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the string matching pattern and maintain the right invariant around naive window comparison and its worst case. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the string matching structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Off-by-one in the naive loop's upper bound.",
+        "The intended path is: Compare the pattern at each start position naively, or precompute the pattern's longest prefix-suffix table so KMP can shift on a mismatch without re-reading the text."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — string matching",
+          "idea": "Compare the pattern at each start position naively, or precompute the pattern's longest prefix-suffix table so KMP can shift on a mismatch without re-reading the text.",
+          "steps": [
+            "Track the state needed for naive window comparison and its worst case.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n + m) with KMP",
+            "space": "O(m)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Off-by-one in the naive loop's upper bound"
+      ],
+      "relatedQuestions": ["longest-common-prefix", "multiply-strings", "text-justification"]
+    },
+    {
+      "title": "Text Justification",
+      "slug": "text-justification",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/text-justification/",
+      "primaryPattern": "greedy",
+      "subPatterns": ["greedy-choice"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 45,
+      "recommendedOrder": 20,
+      "prerequisites": ["reverse-words-in-a-string"],
+      "conceptsTested": [
+        "greedy line packing",
+        "distributing remainder spaces to the leftmost gaps",
+        "left-justifying the last line and single-word lines"
+      ],
+      "commonMistakes": [
+        "Spreading spaces evenly and dropping the remainder",
+        "Fully justifying the last line",
+        "Off-by-one when counting the spaces implied between packed words"
+      ],
+      "interviewSignals": [
+        "Separates packing, space distribution and the special cases",
+        "Enumerates the edge cases out loud before writing code"
+      ],
+      "followUpPrompts": [
+        "Right-justify or center the text instead.",
+        "Handle a word longer than the line width.",
+        "How would this change for variable-width fonts?"
+      ],
+      "promptSummary": "Format a list of words into fully justified lines of a fixed width, padding with spaces.",
+      "highLevelApproach": "Greedily pack as many words as fit per line, then spread the leftover spaces across the gaps with the extras going to the leftmost ones; the last line and any single-word line is left-justified.",
+      "complexity": {
+        "time": "O(total characters)",
+        "space": "O(1) excluding output"
+      },
+      "problemStatement": "Format a list of words into fully justified lines of a fixed width, padding with spaces. Identify the input, required output, and constraints, then explain which greedy invariant idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(total characters) time and O(1) excluding output space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the greedy invariant pattern and maintain the right invariant around greedy line packing. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the greedy invariant structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Spreading spaces evenly and dropping the remainder.",
+        "The intended path is: Greedily pack as many words as fit per line, then spread the leftover spaces across the gaps with the extras going to the leftmost ones; the last line and any single-word line is left-justified."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — greedy invariant",
+          "idea": "Greedily pack as many words as fit per line, then spread the leftover spaces across the gaps with the extras going to the leftmost ones; the last line and any single-word line is left-justified.",
+          "steps": [
+            "Track the state needed for greedy line packing.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(total characters)",
+            "space": "O(1) excluding output"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Spreading spaces evenly and dropping the remainder"
+      ],
+      "relatedQuestions": [
+        "reverse-words-in-a-string",
+        "integer-to-roman",
+        "find-the-index-of-the-first-occurrence-in-a-string"
+      ]
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
-  "name": "helix",
+  "name": "trailgrad",
   "version": "0.1.0",
-  "description": "Helix system design workspace.",
+  "description": "Trailgrad system design workspace.",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {

@@ -36,7 +36,7 @@ const MAX_FILE_SIZE = 6 * 1024 * 1024;
  */
 const ROUTE_BUDGET_MS = 52_000;
 const VISUAL_EXTRACT_BUDGET_MS = 20_000;
-const RESERVED_FOR_PERSISTENCE_MS = 4_000;
+const RESERVED_FOR_PERSISTENCE_MS = 12_000;
 
 /**
  * Two model calls and a multi-megabyte upload per request make this the most
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
         throw new ApiRouteError(
           503,
           "RESUME_VISUAL_EXTRACTION_UNAVAILABLE",
-          "Helix could not read this visual PDF right now. Your file was not saved."
+          "Trailgrad could not read this visual PDF right now. Your file was not saved."
         );
       }
     }
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
         reason.code === "AI_TIMEOUT" ? "RESUME_ANALYSIS_TIMEOUT" : "RESUME_ANALYSIS_UNAVAILABLE",
         reason.code === "AI_TIMEOUT"
           ? "Reading this resume took too long. Try again in a moment — your file was not saved."
-          : "Helix could not analyze the resume right now. Your file was not saved."
+          : "Trailgrad could not analyze the resume right now. Your file was not saved."
       );
     }
 
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
       throw new ApiRouteError(
         422,
         "RESUME_EVIDENCE_UNVERIFIED",
-        "Helix could not trace any experience, project, or education entry back to this document. Try the original export rather than a scan or screenshot."
+        "Trailgrad could not trace any experience, project, or education entry back to this document. Try the original export rather than a scan or screenshot."
       );
     }
 
@@ -267,7 +267,8 @@ export async function POST(request: NextRequest) {
       educationEntries: documentEvidence.educationEntries
     };
     const fullName = documentEvidence.identity.name || analysis.fullName;
-    const profile = await getAppContainer().profileService.completeOnboarding(ownerId, {
+    const app = getAppContainer();
+    const profile = await app.profileService.completeOnboarding(ownerId, {
       targetRole: selection.data.targetRole,
       level: selection.data.level,
       headline: analysis.headline,
@@ -291,6 +292,10 @@ export async function POST(request: NextRequest) {
         evidence: evidenceSummary
       }
     });
+    const frontendRoadmap =
+      selection.data.targetRole === "frontend"
+        ? await app.frontendRoadmapService.ensureFrontendRoadmap(ownerId)
+        : null;
 
     logger.log(
       JSON.stringify({
@@ -302,7 +307,8 @@ export async function POST(request: NextRequest) {
         experience: experience.length,
         projects: projects.length,
         education: education.length,
-        practiceQuestions: practiceQuestions.length
+        practiceQuestions: practiceQuestions.length,
+        frontendRoadmapId: frontendRoadmap?.roadmapId ?? null
       })
     );
 
@@ -324,7 +330,8 @@ export async function POST(request: NextRequest) {
         warnings,
         document: documentSummary,
         evidence: evidenceSummary
-      }
+      },
+      frontendRoadmap
     });
   } catch (error) {
     if (error instanceof ResumeDocumentError) {

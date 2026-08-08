@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Check, Loader2, Map, Mic, Sparkles, Volume2, VolumeX, X } from "lucide-react";
 import { useMayaVoice, voiceUrl, type VoiceState } from "@/lib/use-maya-voice";
+import { FRONTEND_SESSIONS, type FrontendDsaPlan } from "@/lib/frontend-plan";
+import type { FrontendRoadmapHome } from "@/lib/roadmap";
 import type { CandidateProfile, Role } from "@/lib/types";
 
 const AvatarStage = dynamic(
@@ -16,9 +18,16 @@ const AvatarStage = dynamic(
 interface MayaWelcomeProps {
   profile: CandidateProfile;
   practiceHref: string;
+  frontendRoadmap?: FrontendRoadmapHome | null;
+  frontendPlan?: FrontendDsaPlan | null;
 }
 
-export function MayaWelcome({ profile, practiceHref }: MayaWelcomeProps) {
+export function MayaWelcome({
+  profile,
+  practiceHref,
+  frontendRoadmap = null,
+  frontendPlan = null
+}: MayaWelcomeProps) {
   const router = useRouter();
   // Maya introduces herself out loud by default; muting her turns this off for
   // the rest of the walkthrough.
@@ -39,35 +48,73 @@ export function MayaWelcome({ profile, practiceHref }: MayaWelcomeProps) {
   const resume = profile.resume;
   const firstName = resume?.fullName.trim().split(/\s+/)[0] || "there";
   const role = profile.targetRole ? roleLabel(profile.targetRole) : "your target role";
+  const isFrontend = profile.targetRole === "frontend";
   const topEvidence = resume?.experience[0]
     ? `${resume.experience[0].role || "your work"} at ${resume.experience[0].organization}`
     : resume?.projects[0]?.name || profile.headline || "your resume evidence";
   const firstRoadmapStep = resume?.roadmap[0]?.title || profile.focusAreas[0] || "Build a baseline";
+  const frontendStats = {
+    sessions: frontendRoadmap?.totalSessions ?? FRONTEND_SESSIONS.length,
+    chapters: frontendRoadmap?.totalChapters ?? frontendPlan?.chapters.length ?? 12,
+    questions: frontendRoadmap?.totalQuestions ?? frontendPlan?.totalQuestions ?? 123,
+    hours: frontendRoadmap
+      ? Math.round(frontendRoadmap.totalMinutes / 60)
+      : frontendPlan
+        ? Math.round(frontendPlan.totalMinutes / 60)
+        : 49
+  };
 
   const slides = useMemo(
-    () => [
-      {
-        eyebrow: "Profile understood",
-        title: `Hi ${firstName}, I’m Maya.`,
-        body: `I reviewed your profile for ${role} interviews. I found ${topEvidence} and ${resume?.skills.length ?? 0} supported skills, so our practice can start from your real experience instead of generic prompts.`,
-        icon: Check
-      },
-      {
-        eyebrow: "Your preparation plan",
-        title: "I prepared a roadmap for you.",
-        body: `Your first focus is “${firstRoadmapStep}.” The roadmap connects your resume evidence to the areas interviewers are most likely to probe, and it will adapt as your reports reveal stronger or weaker signals.`,
-        icon: Map
-      },
-      {
-        eyebrow: "Ready when you are",
-        title: "Practice, then pressure-test it live.",
-        body: `I created ${resume?.practiceQuestions.length ?? 0} evidence-backed practice questions. Work through them at your pace, then start a mock interview with me when you want realistic follow-ups and a scored report.`,
-        icon: Mic
-      }
-    ],
+    () =>
+      isFrontend
+        ? [
+            {
+              eyebrow: "Roadmap ready",
+              title: `Hi ${firstName}, I’m Maya.`,
+              body: `I prepared your frontend interview roadmap: ${frontendStats.sessions} focused sessions, starting with DSA and ending in a full frontend mock. I used your target role and resume evidence so this feels like your path, not a generic checklist.`,
+              icon: Check
+            },
+            {
+              eyebrow: "Six-session path",
+              title: "Here is the loop I built for you.",
+              body: "We will move through Frontend DSA, JavaScript and React Core, real UI feature builds, production UI quality, resume and behavioral defense, then the final frontend mock. Each session is scoped so one step makes the next one sharper.",
+              icon: Map
+            },
+            {
+              eyebrow: "Start here",
+              title: "Begin with Frontend DSA.",
+              body: `The first session is ready with ${frontendStats.chapters} chapters, ${frontendStats.questions} questions, and about ${frontendStats.hours} hours of guided practice. I will warm you up pattern by pattern, then press on the signals frontend interviewers actually look for.`,
+              icon: Mic
+            }
+          ]
+        : [
+            {
+              eyebrow: "Profile understood",
+              title: `Hi ${firstName}, I’m Maya.`,
+              body: `I reviewed your profile for ${role} interviews. I found ${topEvidence} and ${resume?.skills.length ?? 0} supported skills, so our practice can start from your real experience instead of generic prompts.`,
+              icon: Check
+            },
+            {
+              eyebrow: "Your preparation plan",
+              title: "I prepared a roadmap for you.",
+              body: `Your first focus is “${firstRoadmapStep}.” The roadmap connects your resume evidence to the areas interviewers are most likely to probe, and it will adapt as your reports reveal stronger or weaker signals.`,
+              icon: Map
+            },
+            {
+              eyebrow: "Ready when you are",
+              title: "Practice, then pressure-test it live.",
+              body: `I created ${resume?.practiceQuestions.length ?? 0} evidence-backed practice questions. Work through them at your pace, then start a mock interview with me when you want realistic follow-ups and a scored report.`,
+              icon: Mic
+            }
+          ],
     [
       firstName,
       firstRoadmapStep,
+      frontendStats.chapters,
+      frontendStats.hours,
+      frontendStats.questions,
+      frontendStats.sessions,
+      isFrontend,
       resume?.practiceQuestions.length,
       resume?.skills.length,
       role,
@@ -274,7 +321,7 @@ export function MayaWelcome({ profile, practiceHref }: MayaWelcomeProps) {
             onWheel={() => {
               userControlledScroll.current = true;
             }}
-            className="thin-scroll -mx-1 min-h-0 flex-1 overflow-y-auto px-1"
+            className="no-scrollbar -mx-1 min-h-0 flex-1 overflow-y-auto px-1"
           >
             <div
               key={step}
@@ -296,7 +343,30 @@ export function MayaWelcome({ profile, practiceHref }: MayaWelcomeProps) {
                 {current.body}
               </p>
 
-              {step === 1 && resume?.roadmap.length ? (
+              {isFrontend && step === 1 ? (
+                <div className="mt-5 grid gap-2 sm:mt-7 sm:grid-cols-2">
+                  {FRONTEND_SESSIONS.map((session) => (
+                    <div
+                      key={session.id}
+                      className="grid grid-cols-[2.25rem_minmax(0,1fr)] gap-3 rounded-2xl bg-white/[0.06] p-3.5 shadow-soft-inset"
+                    >
+                      <span className="grid h-9 w-9 place-items-center rounded-xl bg-cream text-xs font-semibold text-[#24459a]">
+                        {String(session.order).padStart(2, "0")}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold leading-5 text-cream/82">
+                          {session.title}
+                        </p>
+                        <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-cream/42">
+                          {session.purpose}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {!isFrontend && step === 1 && resume?.roadmap.length ? (
                 <div className="mt-5 grid gap-2 sm:mt-7 sm:grid-cols-3">
                   {resume.roadmap.slice(0, 3).map((item, index) => (
                     <div
@@ -352,11 +422,11 @@ export function MayaWelcome({ profile, practiceHref }: MayaWelcomeProps) {
                     onClick={() => {
                       stopVoice();
                       setVisible(false);
-                      router.replace(practiceHref);
+                      router.replace(isFrontend ? "/" : practiceHref);
                     }}
                     className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-cream px-5 text-sm font-semibold text-[#173178] shadow-[0_18px_44px_-26px_rgba(239,232,214,0.75)] transition hover:bg-white"
                   >
-                    Start a mock <ArrowRight size={15} />
+                    {isFrontend ? "Start Frontend DSA" : "Start a mock"} <ArrowRight size={15} />
                   </button>
                 </div>
               )}

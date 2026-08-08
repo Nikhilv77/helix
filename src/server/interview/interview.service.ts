@@ -6,6 +6,8 @@ import { InterviewDecider, normaliseMissing } from "./decider";
 import { InterviewPlanner } from "./planner";
 import { SessionStore } from "./session-store";
 import { createHistoryItem, createInterviewReport, createWorkspaceInsights } from "./report";
+import { createReportsOverview } from "./reports-overview";
+import type { ReportsOverview } from "@/lib/reports";
 import type { InterviewHistoryItem, InterviewReport, WorkspaceInsights } from "@/lib/types";
 import {
   advance,
@@ -102,6 +104,20 @@ export class InterviewService {
   async insights(ownerId: string, limit = 30, now = Date.now()): Promise<WorkspaceInsights> {
     const boundedLimit = Math.max(1, Math.min(limit, 50));
     return createWorkspaceInsights(await this.store.listByOwner(ownerId, boundedLimit), now);
+  }
+
+  /**
+   * Every round this user has run, folded into the cross-round view. One store
+   * read: the reports are built from the same sessions the history list uses,
+   * so the index never disagrees with the rows it links to.
+   */
+  async reportsOverview(ownerId: string, limit = 50, now = Date.now()): Promise<ReportsOverview> {
+    const boundedLimit = Math.max(1, Math.min(limit, 50));
+    const sessions = await this.store.listByOwner(ownerId, boundedLimit);
+    return createReportsOverview(
+      sessions.map((session) => createInterviewReport(session, now)),
+      now
+    );
   }
 
   async report(ownerId: string, sessionId: string, now = Date.now()): Promise<InterviewReport> {
@@ -326,7 +342,7 @@ function joinSpoken(bridge: string, sentence: string): string {
 function introUtterance(state: InterviewState): string {
   const first = state.plan[0];
   const minutes = Math.round(HARD_CAP_MS / 60000);
-  const intro = `Hi, I'm Maya, your Helix interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
+  const intro = `Hi, I'm Maya, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
 
   return first ? `${intro} Ready? Let's begin. ${first.text}` : intro;
 }

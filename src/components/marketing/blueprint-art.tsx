@@ -143,7 +143,7 @@ export function ExchangeCard({ exchange, className }: { exchange: Exchange; clas
       <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.18em] text-cream/40">
         <span className="flex items-center gap-2">
           <span className={`h-2 w-2 rounded-full ${meta.dot}`} />
-          Helix
+          Trailgrad
         </span>
         <span>{exchange.elapsed}</span>
       </div>
@@ -172,4 +172,4 @@ export function ExchangeCard({ exchange, className }: { exchange: Exchange; clas
   );
 }
 
-export { HelixMark } from "../helix-mark";
+export { TrailgradMark } from "../trailgrad-mark";

@@ -56,7 +56,7 @@ Constraints:
 - Banned openers: "tell me about yourself", "what is your greatest weakness", "why do you want this job".
 - Ban trivia, definitions, hypotheticals detached from their experience, and requests to recite a technology stack.
 - If the context is too thin to ground a question, ask about a decision they must have faced in this role at this level. Never ask trivia.
-- Do not include Markdown or code. Helix attaches a practical role-specific code exercise separately for technical engineering rounds.
+- Do not include Markdown or code. Trailgrad attaches a practical role-specific code exercise separately for technical engineering rounds.
 - ${levelFocus(setup.level)}
 
 For each question return:

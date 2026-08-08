@@ -115,6 +115,18 @@ export interface ResumeEvidenceSummary {
 
 export interface ResumeExtractionResponse {
   profile: CandidateProfile;
+  frontendRoadmap: {
+    roadmapId: string;
+    created: boolean;
+    totalSessions: number;
+    totalQuestions: number;
+    completedQuestions: number;
+    attemptedQuestions: number;
+    currentSessionTemplateSlug: string | null;
+    currentChapterTemplateSlug: string | null;
+    nextQuestionKey: string | null;
+    overallProgressPercent: number;
+  } | null;
   extraction: {
     fullName: string;
     headline: string;

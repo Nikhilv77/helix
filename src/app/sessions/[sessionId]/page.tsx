@@ -9,7 +9,7 @@ import { authenticatedOwnerId } from "@/server/interview/owner";
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
   "Interview Report",
-  "Review your Helix interview transcript, scoring, and improvement notes."
+  "Review your Trailgrad interview transcript, scoring, and improvement notes."
 );
 
 export default async function SessionReportPage({

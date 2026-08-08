@@ -1,5 +1,5 @@
-import { ReportSkeleton } from "@/components/workspace/skeletons";
+import { WorkspaceLoading } from "@/components/workspace/skeletons";
 
-export default function ReportLoading() {
-  return <ReportSkeleton />;
+export default function Loading() {
+  return <WorkspaceLoading />;
 }

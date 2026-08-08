@@ -12,6 +12,14 @@ import {
   Target,
   TrendingUp
 } from "lucide-react";
+import {
+  formatClock,
+  formatDate,
+  formatDuration,
+  levelLabel,
+  roleLabel,
+  roundLabel
+} from "@/lib/labels";
 import type { InterviewReport as InterviewReportData } from "@/lib/types";
 
 export function InterviewReport({ report }: { report: InterviewReportData }) {
@@ -261,49 +269,6 @@ function Behavior({ label, value }: { label: string; value: number }) {
       <p className="mt-1 text-xs text-cream/38">{label}</p>
     </div>
   );
-}
-
-function roleLabel(role: InterviewReportData["setup"]["role"]): string {
-  return {
-    backend: "Backend",
-    frontend: "Frontend",
-    fullstack: "Full-stack",
-    data: "Data",
-    "ai-ml": "AI / ML",
-    pm: "Product"
-  }[role];
-}
-
-function roundLabel(round: InterviewReportData["setup"]["roundType"]): string {
-  return round === "technical"
-    ? "Technical deep-dive"
-    : round === "hiring-manager"
-      ? "Hiring manager"
-      : "Behavioral";
-}
-
-function levelLabel(level: InterviewReportData["setup"]["level"]): string {
-  return { fresher: "Fresher", "0-2": "0–2 years", "3-5": "3–5 years", "5-plus": "5+ years" }[
-    level
-  ];
-}
-
-function formatDate(value: number): string {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(
-    value
-  );
-}
-
-function formatDuration(value: number): string {
-  const minutes = Math.floor(value / 60_000);
-  const seconds = Math.floor((value % 60_000) / 1000);
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
-function formatClock(value: number): string {
-  const minutes = Math.floor(value / 60_000);
-  const seconds = Math.floor((value % 60_000) / 1000);
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 function retryHref(report: InterviewReportData): string {

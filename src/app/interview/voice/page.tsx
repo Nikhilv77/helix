@@ -29,7 +29,7 @@ import {
   WifiOff,
   X
 } from "lucide-react";
-import { HelixMark } from "@/components/helix-mark";
+import { TrailgradMark } from "@/components/trailgrad-mark";
 import { PathRail } from "@/components/interview/path-rail";
 import { MicMeter } from "@/components/interview/mic-meter";
 import { InterviewerPresence } from "@/components/interview/interviewer-presence";
@@ -45,8 +45,8 @@ const POLL_MS = 1500;
 const AGENT_STATE_ATTRIBUTE = "lk.agent.state";
 const AGENT_JOIN_TIMEOUT_MS = 15_000;
 const MIC_SILENCE_WARNING_MS = 6_000;
-const MIC_DEVICE_STORAGE_KEY = "helix.preferredMicrophone";
-const TYPED_ANSWER_TOPIC = "helix.typed-answer";
+const MIC_DEVICE_STORAGE_KEY = "trailgrad.preferredMicrophone";
+const TYPED_ANSWER_TOPIC = "trailgrad.typed-answer";
 
 type Status = "connecting" | "waiting" | "live" | "reconnecting" | "ended" | "error";
 type AgentState = "initializing" | "idle" | "listening" | "thinking" | "speaking";
@@ -681,15 +681,15 @@ function VoiceInterview() {
 
       <header className="relative flex flex-wrap items-center gap-4 pb-5">
         <Link href="/" className="flex items-center gap-2.5 text-cream">
-          <HelixMark className="h-7 w-7" />
-          <span className="text-base font-semibold tracking-tight">Helix</span>
+          <TrailgradMark className="h-7 w-7" />
+          <span className="text-base font-semibold tracking-tight">Trailgrad</span>
         </Link>
 
         <div className="hidden items-center gap-3 border-l border-cream/15 pl-4 sm:flex">
           <div>
             <p className="text-sm font-semibold text-cream">Maya</p>
             <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-cream/35">
-              Helix interviewer
+              Trailgrad interviewer
             </p>
           </div>
         </div>
@@ -830,7 +830,7 @@ function VoiceInterview() {
             <div className="rounded-xl border border-[#e0a13c]/55 bg-[#e0a13c]/10 px-4 py-3">
               <p className="text-sm font-medium text-cream">No microphone signal detected</p>
               <p className="mt-1 text-xs leading-5 text-cream/60">
-                Helix connected to {selectedInputLabel}, but no audible sound is arriving. Choose
+                Trailgrad connected to {selectedInputLabel}, but no audible sound is arriving. Choose
                 the microphone you are speaking into.
               </p>
               <MicrophonePicker
@@ -1315,7 +1315,7 @@ function SessionStateScreen({
               href="/"
               className="inline-flex min-h-11 items-center rounded-lg border border-cream/15 px-5 text-sm font-semibold text-cream/60 transition hover:border-cream/35 hover:text-cream"
             >
-              Return to Helix
+              Return to Trailgrad
             </Link>
           </div>
         </div>
@@ -1337,8 +1337,8 @@ function StateHeader() {
   return (
     <header className="flex items-center border-b border-cream/10 pb-5">
       <Link href="/" className="flex items-center gap-2.5 text-cream">
-        <HelixMark className="h-7 w-7" />
-        <span className="text-base font-semibold tracking-tight">Helix</span>
+        <TrailgradMark className="h-7 w-7" />
+        <span className="text-base font-semibold tracking-tight">Trailgrad</span>
       </Link>
       <span className="ml-auto font-mono text-[9px] uppercase tracking-[0.18em] text-cream/30">
         Interview studio
@@ -1453,8 +1453,8 @@ function describeVoiceState(
   if (status === "connecting") return "Connecting securely";
   if (status === "waiting") return "Interviewer is joining";
   if (agentState === "initializing") return "Interviewer is getting ready";
-  if (agentState === "thinking") return "Helix is thinking";
-  if (agentState === "speaking" || activeSpeakerFallback) return "Helix is speaking";
+  if (agentState === "thinking") return "Trailgrad is thinking";
+  if (agentState === "speaking" || activeSpeakerFallback) return "Trailgrad is speaking";
   if (!micOn) return "Microphone muted";
   if (micSignal) return "Hearing you";
   if (micSilent) return "No microphone signal";

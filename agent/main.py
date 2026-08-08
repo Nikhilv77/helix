@@ -1,4 +1,4 @@
-"""Helix voice agent.
+"""Trailgrad voice agent.
 
 Architecture note: this service has no LLM and no interview state. It converts
 speech to text, hands the text to /api/interview/decide, and speaks whatever
@@ -38,14 +38,14 @@ from livekit.agents import (
 )
 from livekit.plugins import deepgram, silero
 
-from config import HELIX, SPEECH
-from helix import HelixApiError, HelixClient
+from config import TRAILGRAD, SPEECH
+from trailgrad import TrailgradApiError, TrailgradClient
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("helix.agent")
+logger = logging.getLogger("trailgrad.agent")
 
 ROOM_PREFIX = "interview-"
-TYPED_ANSWER_TOPIC = "helix.typed-answer"
+TYPED_ANSWER_TOPIC = "trailgrad.typed-answer"
 _worker_lock: IO[str] | None = None
 
 
@@ -53,9 +53,9 @@ def acquire_worker_lock() -> Path:
     """Allow one worker for this LiveKit project and agent name per host."""
     global _worker_lock
 
-    scope = f"{os.getenv('LIVEKIT_URL', '')}:{HELIX.agent_name}"
+    scope = f"{os.getenv('LIVEKIT_URL', '')}:{TRAILGRAD.agent_name}"
     digest = hashlib.sha256(scope.encode()).hexdigest()[:12]
-    path = Path(tempfile.gettempdir()) / f"helix-voice-worker-{digest}.lock"
+    path = Path(tempfile.gettempdir()) / f"trailgrad-voice-worker-{digest}.lock"
     handle = path.open("w", encoding="utf-8")
 
     try:
@@ -63,8 +63,8 @@ def acquire_worker_lock() -> Path:
     except BlockingIOError:
         handle.close()
         raise SystemExit(
-            f"Another Helix voice worker is already running for "
-            f"{HELIX.agent_name!r}. Stop it before starting another."
+            f"Another Trailgrad voice worker is already running for "
+            f"{TRAILGRAD.agent_name!r}. Stop it before starting another."
         ) from None
 
     handle.write(str(os.getpid()))
@@ -81,14 +81,14 @@ def _log_config() -> None:
     """
     logger.info(
         "config agent=%s stt=%s/%s eot=%dms turn_delay=%.2f-%.1fs tts=%s api=%s",
-        HELIX.agent_name,
+        TRAILGRAD.agent_name,
         SPEECH.stt_model,
         SPEECH.stt_language,
         SPEECH.stt_eot_timeout_ms,
         SPEECH.turn_min_delay_s,
         SPEECH.turn_max_delay_s,
         SPEECH.tts_model,
-        HELIX.api_base_url,
+        TRAILGRAD.api_base_url,
     )
 
 
@@ -163,7 +163,7 @@ def session_id_from_room(room_name: str) -> str:
     return session_id
 
 
-@server.rtc_session(agent_name=HELIX.agent_name)
+@server.rtc_session(agent_name=TRAILGRAD.agent_name)
 async def interview_session(ctx: agents.JobContext) -> None:
     try:
         session_id = session_id_from_room(ctx.room.name)
@@ -182,9 +182,9 @@ async def interview_session(ctx: agents.JobContext) -> None:
 
     ctx.add_shutdown_callback(close_http)
 
-    helix = HelixClient(http)
+    trailgrad = TrailgradClient(http)
     try:
-        snapshot = await helix.get_session(session_id)
+        snapshot = await trailgrad.get_session(session_id)
     except Exception:
         logger.exception("could not load interview %s", session_id)
         return
@@ -259,7 +259,7 @@ async def interview_session(ctx: agents.JobContext) -> None:
             state.mark_speech_start()
 
     async def on_turn(text: str) -> None:
-        await handle_turn(session, helix, session_id, state, text)
+        await handle_turn(session, trailgrad, session_id, state, text)
 
     @ctx.room.on("data_received")
     def _on_data(packet: object) -> None:
@@ -282,7 +282,7 @@ async def interview_session(ctx: agents.JobContext) -> None:
         asyncio.create_task(
             handle_turn(
                 session,
-                helix,
+                trailgrad,
                 session_id,
                 state,
                 text,
@@ -373,7 +373,7 @@ class TurnState:
 
 async def handle_turn(
     session: AgentSession,
-    helix: HelixClient,
+    trailgrad: TrailgradClient,
     session_id: str,
     state: TurnState,
     text: str,
@@ -392,8 +392,8 @@ async def handle_turn(
 
     decision_started = time.monotonic()
     try:
-        decision = await helix.decide(session_id, answer, start_ms, end_ms)
-    except HelixApiError as error:
+        decision = await trailgrad.decide(session_id, answer, start_ms, end_ms)
+    except TrailgradApiError as error:
         logger.error("decide failed: %s", error)
         state.end_dispatch()
         await say_recovery(session)

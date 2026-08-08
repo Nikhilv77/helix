@@ -1,0 +1,1860 @@
+{
+  "phase": "Phase 5 — Linked List",
+  "questions": [
+    {
+      "title": "Reverse Linked List",
+      "slug": "reverse-linked-list",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/reverse-linked-list/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["sublist-reversal"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 1,
+      "prerequisites": [],
+      "conceptsTested": [
+        "the previous, current and next three-pointer walk",
+        "saving the next pointer before rewiring",
+        "recursive formulation and its stack cost"
+      ],
+      "commonMistakes": [
+        "Rewiring before saving next and losing the rest of the list",
+        "Returning the old head instead of the new one",
+        "Skipping the empty and single-node cases"
+      ],
+      "interviewSignals": [
+        "Writes the iterative version fluently and can name the recursive one",
+        "Returns the previous pointer, not the current one, at the end"
+      ],
+      "followUpPrompts": [
+        "Write it recursively and compare the space cost.",
+        "Reverse only the first k nodes.",
+        "Reverse a doubly linked list instead."
+      ],
+      "promptSummary": "Reverse a singly linked list and return the new head.",
+      "highLevelApproach": "Walk the list with previous, current and next pointers, redirecting each node's link to its predecessor; the final previous pointer is the new head.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Reverse a singly linked list and return the new head. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around the previous, current and next three-pointer walk. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Rewiring before saving next and losing the rest of the list.",
+        "The intended path is: Walk the list with previous, current and next pointers, redirecting each node's link to its predecessor; the final previous pointer is the new head."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Walk the list with previous, current and next pointers, redirecting each node's link to its predecessor; the final previous pointer is the new head.",
+          "steps": [
+            "Track the state needed for the previous, current and next three-pointer walk.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Rewiring before saving next and losing the rest of the list"
+      ],
+      "relatedQuestions": [
+        "merge-two-sorted-lists",
+        "linked-list-cycle",
+        "intersection-of-two-linked-lists",
+        "remove-nth-node-from-end-of-list"
+      ]
+    },
+    {
+      "title": "Merge Two Sorted Lists",
+      "slug": "merge-two-sorted-lists",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/merge-two-sorted-lists/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["dummy-head", "pointer-rewiring", "in-place-mutation"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 2,
+      "prerequisites": [],
+      "conceptsTested": [
+        "a dummy head to avoid special-casing the first node",
+        "splicing existing nodes rather than allocating new ones",
+        "attaching the remaining tail in constant time"
+      ],
+      "commonMistakes": [
+        "Allocating fresh nodes when splicing is expected",
+        "Forgetting to attach the leftover tail once one list runs out",
+        "Losing the head because no dummy node was used"
+      ],
+      "interviewSignals": [
+        "Reaches for a dummy head immediately",
+        "Handles unequal lengths by appending the remainder in one step"
+      ],
+      "followUpPrompts": [
+        "Merge k lists instead of two.",
+        "Write it recursively.",
+        "What changes if the lists are doubly linked?"
+      ],
+      "promptSummary": "Merge two sorted linked lists into one sorted list by relinking the existing nodes.",
+      "highLevelApproach": "Keep a tail pointer behind a dummy head, repeatedly splice on whichever front node is smaller, then attach whatever remains of the other list.",
+      "complexity": {
+        "time": "O(n + m)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Merge two sorted linked lists into one sorted list by relinking the existing nodes. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n + m) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around a dummy head to avoid special-casing the first node. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Allocating fresh nodes when splicing is expected.",
+        "The intended path is: Keep a tail pointer behind a dummy head, repeatedly splice on whichever front node is smaller, then attach whatever remains of the other list."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Keep a tail pointer behind a dummy head, repeatedly splice on whichever front node is smaller, then attach whatever remains of the other list.",
+          "steps": [
+            "Track the state needed for a dummy head to avoid special-casing the first node.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n + m)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Allocating fresh nodes when splicing is expected"
+      ],
+      "relatedQuestions": [
+        "reverse-linked-list",
+        "linked-list-cycle",
+        "intersection-of-two-linked-lists",
+        "remove-nth-node-from-end-of-list"
+      ]
+    },
+    {
+      "title": "Linked List Cycle",
+      "slug": "linked-list-cycle",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/linked-list-cycle/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["fast-slow-pointer", "cycle-detection"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 15,
+      "recommendedOrder": 3,
+      "prerequisites": [],
+      "conceptsTested": [
+        "Floyd's tortoise and hare",
+        "why the fast pointer must eventually catch the slow one",
+        "null checks before a two-step advance"
+      ],
+      "commonMistakes": [
+        "Dereferencing two links ahead without null-checking both",
+        "Using a visited set when O(1) space is required",
+        "Advancing both pointers at the same rate"
+      ],
+      "interviewSignals": [
+        "Argues the gap closes by exactly one node per step",
+        "Guards the double step correctly against null"
+      ],
+      "followUpPrompts": [
+        "Return the node where the cycle begins.",
+        "Find the cycle's length.",
+        "What if the list is doubly linked?"
+      ],
+      "promptSummary": "Detect whether a linked list contains a cycle.",
+      "highLevelApproach": "Advance one pointer one node at a time and another two at a time; they meet if and only if a cycle exists.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Detect whether a linked list contains a cycle. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around Floyd's tortoise and hare. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Dereferencing two links ahead without null-checking both.",
+        "The intended path is: Advance one pointer one node at a time and another two at a time; they meet if and only if a cycle exists."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Advance one pointer one node at a time and another two at a time; they meet if and only if a cycle exists.",
+          "steps": [
+            "Track the state needed for Floyd's tortoise and hare.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Dereferencing two links ahead without null-checking both"
+      ],
+      "relatedQuestions": [
+        "reverse-linked-list",
+        "merge-two-sorted-lists",
+        "intersection-of-two-linked-lists",
+        "remove-nth-node-from-end-of-list"
+      ]
+    },
+    {
+      "title": "Intersection of Two Linked Lists",
+      "slug": "intersection-of-two-linked-lists",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/intersection-of-two-linked-lists/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["two-pointer-opposite-ends"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 4,
+      "prerequisites": ["linked-list-cycle"],
+      "conceptsTested": [
+        "equalizing the distance each pointer travels",
+        "switching to the other head so both walk m plus n",
+        "comparing node identity rather than value"
+      ],
+      "commonMistakes": [
+        "Comparing node values instead of references",
+        "Looping forever when the lists never intersect",
+        "Computing lengths but misaligning the starting offset"
+      ],
+      "interviewSignals": [
+        "Explains why the head switch equalizes both path lengths",
+        "Shows the no-intersection case terminates at null"
+      ],
+      "followUpPrompts": [
+        "Solve it by measuring both lengths first.",
+        "What if one of the lists contains a cycle?",
+        "Return the length of the shared tail as well."
+      ],
+      "promptSummary": "Find the node where two singly linked lists merge, or null when they never do.",
+      "highLevelApproach": "Walk both lists and, on hitting the end, continue from the other list's head; both pointers then cover the same total distance and meet at the intersection or at null.",
+      "complexity": {
+        "time": "O(n + m)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Find the node where two singly linked lists merge, or null when they never do. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n + m) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around equalizing the distance each pointer travels. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Comparing node values instead of references.",
+        "The intended path is: Walk both lists and, on hitting the end, continue from the other list's head; both pointers then cover the same total distance and meet at the intersection or at null."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Walk both lists and, on hitting the end, continue from the other list's head; both pointers then cover the same total distance and meet at the intersection or at null.",
+          "steps": [
+            "Track the state needed for equalizing the distance each pointer travels.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n + m)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Comparing node values instead of references"
+      ],
+      "relatedQuestions": [
+        "linked-list-cycle",
+        "reverse-linked-list",
+        "merge-two-sorted-lists",
+        "remove-nth-node-from-end-of-list"
+      ]
+    },
+    {
+      "title": "Remove Nth Node From End of List",
+      "slug": "remove-nth-node-from-end-of-list",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/remove-nth-node-from-end-of-list/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["dummy-head", "two-pointer-same-direction"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 5,
+      "prerequisites": ["merge-two-sorted-lists"],
+      "conceptsTested": [
+        "maintaining a fixed gap between two pointers",
+        "a dummy head so removing the first node needs no special case",
+        "single-pass removal"
+      ],
+      "commonMistakes": [
+        "Taking two passes when one is requested",
+        "Off-by-one leaving the gap a node short",
+        "Crashing when the node to remove is the head"
+      ],
+      "interviewSignals": [
+        "Uses a dummy head to unify head removal with the general case",
+        "States the required gap size before writing the loop"
+      ],
+      "followUpPrompts": [
+        "Do it in a single pass.",
+        "Remove the nth node from the start instead.",
+        "What should happen if n exceeds the list length?"
+      ],
+      "promptSummary": "Remove the nth node counted from the end of a linked list and return the head.",
+      "highLevelApproach": "Move a lead pointer n nodes ahead of a trailing pointer that starts on a dummy head, advance both until the lead reaches the end, then unlink the trailing pointer's successor.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Remove the nth node counted from the end of a linked list and return the head. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around maintaining a fixed gap between two pointers. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Taking two passes when one is requested.",
+        "The intended path is: Move a lead pointer n nodes ahead of a trailing pointer that starts on a dummy head, advance both until the lead reaches the end, then unlink the trailing pointer's successor."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Move a lead pointer n nodes ahead of a trailing pointer that starts on a dummy head, advance both until the lead reaches the end, then unlink the trailing pointer's successor.",
+          "steps": [
+            "Track the state needed for maintaining a fixed gap between two pointers.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Taking two passes when one is requested"
+      ],
+      "relatedQuestions": [
+        "merge-two-sorted-lists",
+        "reverse-linked-list",
+        "linked-list-cycle",
+        "intersection-of-two-linked-lists",
+        "linked-list-cycle-ii"
+      ]
+    },
+    {
+      "title": "Linked List Cycle II",
+      "slug": "linked-list-cycle-ii",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/linked-list-cycle-ii/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["fast-slow-pointer", "cycle-detection"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 6,
+      "prerequisites": ["linked-list-cycle"],
+      "conceptsTested": [
+        "the second phase of Floyd's algorithm",
+        "the distance identity that places the entry at the meeting point",
+        "resetting one pointer to the head"
+      ],
+      "commonMistakes": [
+        "Returning the meeting node as the cycle entrance",
+        "Keeping the double speed during the second phase",
+        "Memorizing the reset step without knowing why it works"
+      ],
+      "interviewSignals": [
+        "Derives the distance relation instead of reciting it",
+        "Separates detection from locating the entrance cleanly"
+      ],
+      "followUpPrompts": [
+        "Prove the distance identity behind the second phase.",
+        "Return the cycle's length as well.",
+        "Remove the cycle in place."
+      ],
+      "promptSummary": "Return the node where a linked list's cycle begins, or null when there is no cycle.",
+      "highLevelApproach": "Find the fast-slow meeting point, then reset one pointer to the head and advance both one node at a time; they meet exactly at the cycle's entrance.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Return the node where a linked list's cycle begins, or null when there is no cycle. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around the second phase of Floyd's algorithm. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Returning the meeting node as the cycle entrance.",
+        "The intended path is: Find the fast-slow meeting point, then reset one pointer to the head and advance both one node at a time; they meet exactly at the cycle's entrance."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Find the fast-slow meeting point, then reset one pointer to the head and advance both one node at a time; they meet exactly at the cycle's entrance.",
+          "steps": [
+            "Track the state needed for the second phase of Floyd's algorithm.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Returning the meeting node as the cycle entrance"
+      ],
+      "relatedQuestions": [
+        "linked-list-cycle",
+        "reverse-linked-list",
+        "merge-two-sorted-lists",
+        "intersection-of-two-linked-lists",
+        "remove-nth-node-from-end-of-list"
+      ]
+    },
+    {
+      "title": "Palindrome Linked List",
+      "slug": "palindrome-linked-list",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/palindrome-linked-list/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["fast-slow-pointer", "array-reversal", "pointer-rewiring"],
+      "difficulty": "easy",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 7,
+      "prerequisites": ["reverse-linked-list", "linked-list-cycle"],
+      "conceptsTested": [
+        "locating the middle with fast and slow pointers",
+        "reversing the second half in place",
+        "restoring the list after the comparison"
+      ],
+      "commonMistakes": [
+        "Copying values into an array when O(1) space is required",
+        "Mishandling the middle node on odd-length lists",
+        "Leaving the list mutated after returning"
+      ],
+      "interviewSignals": [
+        "Composes find-middle and reverse rather than inventing new machinery",
+        "Offers to restore the original list before returning"
+      ],
+      "followUpPrompts": [
+        "Restore the list before returning.",
+        "Solve it recursively.",
+        "What changes for a doubly linked list?"
+      ],
+      "promptSummary": "Decide whether a singly linked list reads the same forwards and backwards.",
+      "highLevelApproach": "Find the middle with fast and slow pointers, reverse the second half in place, compare the two halves node by node, then re-reverse to restore the list.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Decide whether a singly linked list reads the same forwards and backwards. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around locating the middle with fast and slow pointers. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Copying values into an array when O(1) space is required.",
+        "The intended path is: Find the middle with fast and slow pointers, reverse the second half in place, compare the two halves node by node, then re-reverse to restore the list."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Find the middle with fast and slow pointers, reverse the second half in place, compare the two halves node by node, then re-reverse to restore the list.",
+          "steps": [
+            "Track the state needed for locating the middle with fast and slow pointers.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Copying values into an array when O(1) space is required"
+      ],
+      "relatedQuestions": [
+        "reverse-linked-list",
+        "linked-list-cycle",
+        "merge-two-sorted-lists",
+        "intersection-of-two-linked-lists",
+        "linked-list-cycle-ii"
+      ]
+    },
+    {
+      "title": "Add Two Numbers",
+      "slug": "add-two-numbers",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/add-two-numbers/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["dummy-head", "digit-arithmetic"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 8,
+      "prerequisites": ["merge-two-sorted-lists"],
+      "conceptsTested": [
+        "digit-by-digit addition with a carry",
+        "a dummy head to build the result list",
+        "the trailing carry that produces one extra node"
+      ],
+      "commonMistakes": [
+        "Dropping the final carry",
+        "Assuming both lists have the same length",
+        "Converting the lists to integers and overflowing"
+      ],
+      "interviewSignals": [
+        "Writes one loop covering both lists and the carry together",
+        "Handles the trailing carry without a duplicated code path"
+      ],
+      "followUpPrompts": [
+        "What if the digits were stored most-significant first?",
+        "Add three numbers at once.",
+        "Multiply two numbers stored this way."
+      ],
+      "promptSummary": "Add two numbers whose digits are stored in reverse order in linked lists, returning the sum as a list.",
+      "highLevelApproach": "Walk both lists in step, summing whatever digits are available plus the carry into a new node behind a dummy head, and emit one final node if a carry remains.",
+      "complexity": {
+        "time": "O(n + m)",
+        "space": "O(max(n, m)) for the output"
+      },
+      "problemStatement": "Add two numbers whose digits are stored in reverse order in linked lists, returning the sum as a list. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n + m) time and O(max(n, m)) for the output space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around digit-by-digit addition with a carry. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Dropping the final carry.",
+        "The intended path is: Walk both lists in step, summing whatever digits are available plus the carry into a new node behind a dummy head, and emit one final node if a carry remains."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Walk both lists in step, summing whatever digits are available plus the carry into a new node behind a dummy head, and emit one final node if a carry remains.",
+          "steps": [
+            "Track the state needed for digit-by-digit addition with a carry.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n + m)",
+            "space": "O(max(n, m)) for the output"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Dropping the final carry"
+      ],
+      "relatedQuestions": [
+        "merge-two-sorted-lists",
+        "reverse-linked-list",
+        "linked-list-cycle",
+        "intersection-of-two-linked-lists",
+        "palindrome-linked-list"
+      ]
+    },
+    {
+      "title": "Swap Nodes in Pairs",
+      "slug": "swap-nodes-in-pairs",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/swap-nodes-in-pairs/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["dummy-head", "pointer-rewiring"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 9,
+      "prerequisites": ["reverse-linked-list", "merge-two-sorted-lists"],
+      "conceptsTested": [
+        "local pointer surgery across four references",
+        "a dummy head so the first pair is not special",
+        "advancing two nodes per iteration"
+      ],
+      "commonMistakes": [
+        "Swapping stored values when the nodes themselves must move",
+        "Forgetting to reconnect the previous pair's tail",
+        "Mishandling a final odd node"
+      ],
+      "interviewSignals": [
+        "Draws the pointer diagram before writing the rewiring",
+        "Keeps the loop uniform with a dummy head and a previous pointer"
+      ],
+      "followUpPrompts": [
+        "Generalize to reversing every k nodes.",
+        "Write it recursively.",
+        "Do it without a dummy head."
+      ],
+      "promptSummary": "Swap every two adjacent nodes of a linked list by relinking rather than by changing values.",
+      "highLevelApproach": "Behind a dummy head, rewire the previous node, the first and the second of each pair so the pair reverses, then advance the previous pointer two nodes.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Swap every two adjacent nodes of a linked list by relinking rather than by changing values. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around local pointer surgery across four references. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Swapping stored values when the nodes themselves must move.",
+        "The intended path is: Behind a dummy head, rewire the previous node, the first and the second of each pair so the pair reverses, then advance the previous pointer two nodes."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Behind a dummy head, rewire the previous node, the first and the second of each pair so the pair reverses, then advance the previous pointer two nodes.",
+          "steps": [
+            "Track the state needed for local pointer surgery across four references.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Swapping stored values when the nodes themselves must move"
+      ],
+      "relatedQuestions": [
+        "reverse-linked-list",
+        "merge-two-sorted-lists",
+        "linked-list-cycle",
+        "intersection-of-two-linked-lists",
+        "add-two-numbers"
+      ]
+    },
+    {
+      "title": "Odd Even Linked List",
+      "slug": "odd-even-linked-list",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/odd-even-linked-list/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["pointer-rewiring"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 20,
+      "recommendedOrder": 10,
+      "prerequisites": ["swap-nodes-in-pairs"],
+      "conceptsTested": [
+        "splitting into two chains by position",
+        "weaving both chains forward in one pass",
+        "joining the even chain onto the odd tail"
+      ],
+      "commonMistakes": [
+        "Grouping by node value instead of by position",
+        "Losing the head of the even chain before the join",
+        "Dereferencing null on the final pair when the length is odd"
+      ],
+      "interviewSignals": [
+        "Saves the even head aside before the loop begins",
+        "Writes one loop condition that covers both parities"
+      ],
+      "followUpPrompts": [
+        "Group by value parity instead of position.",
+        "Generalize to k interleaved chains.",
+        "Do the same on a doubly linked list."
+      ],
+      "promptSummary": "Reorder a list so every odd-position node precedes every even-position node, preserving relative order within each group.",
+      "highLevelApproach": "Advance an odd tail and an even tail together, relinking alternate nodes onto each chain, then attach the saved even head to the odd chain's tail.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Reorder a list so every odd-position node precedes every even-position node, preserving relative order within each group. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around splitting into two chains by position. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Grouping by node value instead of by position.",
+        "The intended path is: Advance an odd tail and an even tail together, relinking alternate nodes onto each chain, then attach the saved even head to the odd chain's tail."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Advance an odd tail and an even tail together, relinking alternate nodes onto each chain, then attach the saved even head to the odd chain's tail.",
+          "steps": [
+            "Track the state needed for splitting into two chains by position.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Grouping by node value instead of by position"
+      ],
+      "relatedQuestions": [
+        "swap-nodes-in-pairs",
+        "reverse-linked-list",
+        "merge-two-sorted-lists",
+        "linked-list-cycle",
+        "reverse-linked-list-ii"
+      ]
+    },
+    {
+      "title": "Reverse Linked List II",
+      "slug": "reverse-linked-list-ii",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/reverse-linked-list-ii/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["dummy-head", "sublist-reversal", "pointer-rewiring"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 11,
+      "prerequisites": ["reverse-linked-list", "swap-nodes-in-pairs"],
+      "conceptsTested": [
+        "reversing only a sublist",
+        "a dummy head for ranges starting at position one",
+        "reconnecting the prefix, reversed segment and suffix"
+      ],
+      "commonMistakes": [
+        "Orphaning the prefix by losing the node before the range",
+        "Off-by-one on the 1-indexed positions",
+        "Reversing the whole list instead of the range"
+      ],
+      "interviewSignals": [
+        "Anchors on the node before the range and stitches both seams",
+        "Reverses by head insertion in a single pass"
+      ],
+      "followUpPrompts": [
+        "Do it in one pass.",
+        "Reverse every k-sized group instead.",
+        "What should happen when the positions are out of range?"
+      ],
+      "promptSummary": "Reverse the nodes of a list between two 1-indexed positions and return the head.",
+      "highLevelApproach": "Walk to the node before the range, then repeatedly move the following node to the front of the range until it is reversed, and reconnect both seams; a dummy head removes the position-one special case.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Reverse the nodes of a list between two 1-indexed positions and return the head. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around reversing only a sublist. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Orphaning the prefix by losing the node before the range.",
+        "The intended path is: Walk to the node before the range, then repeatedly move the following node to the front of the range until it is reversed, and reconnect both seams; a dummy head removes the position-one special case."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Walk to the node before the range, then repeatedly move the following node to the front of the range until it is reversed, and reconnect both seams; a dummy head removes the position-one special case.",
+          "steps": [
+            "Track the state needed for reversing only a sublist.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Orphaning the prefix by losing the node before the range"
+      ],
+      "relatedQuestions": [
+        "reverse-linked-list",
+        "swap-nodes-in-pairs",
+        "merge-two-sorted-lists",
+        "linked-list-cycle",
+        "odd-even-linked-list"
+      ]
+    },
+    {
+      "title": "Rotate List",
+      "slug": "rotate-list",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/rotate-list/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["modulo-indexing", "two-pointer-same-direction"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 12,
+      "prerequisites": ["remove-nth-node-from-end-of-list"],
+      "conceptsTested": [
+        "reducing k modulo the list length",
+        "closing the list into a ring",
+        "cutting the ring at the new tail"
+      ],
+      "commonMistakes": [
+        "Skipping k modulo length and walking an enormous number of steps",
+        "Cutting one node away from the correct position",
+        "Not handling the empty or single-node list"
+      ],
+      "interviewSignals": [
+        "Measures the length and closes the ring in the same pass",
+        "Derives the cut position as length minus k modulo length"
+      ],
+      "followUpPrompts": [
+        "Rotate left instead of right.",
+        "Do it without forming a ring.",
+        "How does this compare with rotating an array?"
+      ],
+      "promptSummary": "Rotate a linked list to the right by k places.",
+      "highLevelApproach": "Measure the length while walking to the tail, link the tail to the head to form a ring, step to the new tail at length minus k modulo length, and break the ring there.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Rotate a linked list to the right by k places. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around reducing k modulo the list length. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Skipping k modulo length and walking an enormous number of steps.",
+        "The intended path is: Measure the length while walking to the tail, link the tail to the head to form a ring, step to the new tail at length minus k modulo length, and break the ring there."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Measure the length while walking to the tail, link the tail to the head to form a ring, step to the new tail at length minus k modulo length, and break the ring there.",
+          "steps": [
+            "Track the state needed for reducing k modulo the list length.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Skipping k modulo length and walking an enormous number of steps"
+      ],
+      "relatedQuestions": [
+        "remove-nth-node-from-end-of-list",
+        "reverse-linked-list",
+        "merge-two-sorted-lists",
+        "linked-list-cycle",
+        "reverse-linked-list-ii"
+      ]
+    },
+    {
+      "title": "Reorder List",
+      "slug": "reorder-list",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/reorder-list/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["fast-slow-pointer", "array-reversal", "pointer-rewiring"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 13,
+      "prerequisites": ["palindrome-linked-list", "merge-two-sorted-lists"],
+      "conceptsTested": [
+        "composing find-middle, reverse and alternate merge",
+        "severing the list cleanly at the middle",
+        "weaving two lists one node at a time"
+      ],
+      "commonMistakes": [
+        "Not terminating the first half, creating a cycle",
+        "Mishandling the middle node on odd-length lists",
+        "Copying nodes into an array when O(1) space is expected"
+      ],
+      "interviewSignals": [
+        "Names the three primitives this decomposes into",
+        "Null-terminates the first half before merging"
+      ],
+      "followUpPrompts": [
+        "Do it with O(1) extra space.",
+        "Reverse the interleaving order.",
+        "Generalize to interleaving k lists."
+      ],
+      "promptSummary": "Reorder a list to alternate first node, last node, second node, second-to-last, and so on.",
+      "highLevelApproach": "Split at the middle with fast and slow pointers, reverse the second half in place, then merge the two halves by alternating nodes.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Reorder a list to alternate first node, last node, second node, second-to-last, and so on. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around composing find-middle, reverse and alternate merge. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Not terminating the first half, creating a cycle.",
+        "The intended path is: Split at the middle with fast and slow pointers, reverse the second half in place, then merge the two halves by alternating nodes."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Split at the middle with fast and slow pointers, reverse the second half in place, then merge the two halves by alternating nodes.",
+          "steps": [
+            "Track the state needed for composing find-middle, reverse and alternate merge.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Not terminating the first half, creating a cycle"
+      ],
+      "relatedQuestions": [
+        "palindrome-linked-list",
+        "merge-two-sorted-lists",
+        "reverse-linked-list",
+        "linked-list-cycle",
+        "rotate-list"
+      ]
+    },
+    {
+      "title": "Copy List with Random Pointer",
+      "slug": "copy-list-with-random-pointer",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/copy-list-with-random-pointer/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["pointer-rewiring", "canonical-key"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 14,
+      "prerequisites": [],
+      "conceptsTested": [
+        "mapping each original node to its clone",
+        "interleaving clones to avoid a hash map",
+        "assigning random pointers only after every clone exists"
+      ],
+      "commonMistakes": [
+        "Wiring random pointers before all clones have been created",
+        "Mutating the original list and never restoring it",
+        "Producing a shallow copy whose pointers still reference originals"
+      ],
+      "interviewSignals": [
+        "Offers both the hash map version and the O(1)-space interleave",
+        "Restores the original list after splitting the two apart"
+      ],
+      "followUpPrompts": [
+        "Do it with O(1) extra space.",
+        "What if the list is doubly linked?",
+        "Deep-copy an arbitrary graph instead."
+      ],
+      "promptSummary": "Deep copy a linked list whose nodes each carry an extra pointer to an arbitrary node in the same list.",
+      "highLevelApproach": "Either map originals to clones in a hash map, or splice each clone directly after its original so random targets can be read from neighbours, then separate the two lists again.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1) with the interleave"
+      },
+      "problemStatement": "Deep copy a linked list whose nodes each carry an extra pointer to an arbitrary node in the same list. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) with the interleave space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around mapping each original node to its clone. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Wiring random pointers before all clones have been created.",
+        "The intended path is: Either map originals to clones in a hash map, or splice each clone directly after its original so random targets can be read from neighbours, then separate the two lists again."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Either map originals to clones in a hash map, or splice each clone directly after its original so random targets can be read from neighbours, then separate the two lists again.",
+          "steps": [
+            "Track the state needed for mapping each original node to its clone.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1) with the interleave"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Wiring random pointers before all clones have been created"
+      ],
+      "relatedQuestions": [
+        "reverse-linked-list",
+        "merge-two-sorted-lists",
+        "linked-list-cycle",
+        "intersection-of-two-linked-lists",
+        "reorder-list"
+      ]
+    },
+    {
+      "title": "Flatten a Multilevel Doubly Linked List",
+      "slug": "flatten-a-multilevel-doubly-linked-list",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/flatten-a-multilevel-doubly-linked-list/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["pointer-rewiring", "stack-simulation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 15,
+      "prerequisites": [],
+      "conceptsTested": [
+        "depth-first splicing of child lists",
+        "finding a child list's tail to reconnect the successor",
+        "clearing child pointers and repairing previous links"
+      ],
+      "commonMistakes": [
+        "Leaving child pointers set after splicing",
+        "Forgetting the previous pointer on the spliced segment",
+        "Losing the successor of the node that had a child"
+      ],
+      "interviewSignals": [
+        "Saves the successor before splicing anything in",
+        "Maintains both the next and previous invariants throughout"
+      ],
+      "followUpPrompts": [
+        "Solve it iteratively with an explicit stack.",
+        "Restore the original multilevel structure afterwards.",
+        "What if a child list were cyclic?"
+      ],
+      "promptSummary": "Flatten a doubly linked list whose nodes may carry child lists into a single-level doubly linked list.",
+      "highLevelApproach": "Walk the list and, at each node holding a child, splice that child list between the node and its successor, fixing previous pointers and clearing the child link; recursion or an explicit stack handles deeper levels.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(depth)"
+      },
+      "problemStatement": "Flatten a doubly linked list whose nodes may carry child lists into a single-level doubly linked list. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(depth) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around depth-first splicing of child lists. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Leaving child pointers set after splicing.",
+        "The intended path is: Walk the list and, at each node holding a child, splice that child list between the node and its successor, fixing previous pointers and clearing the child link; recursion or an explicit stack handles deeper levels."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Walk the list and, at each node holding a child, splice that child list between the node and its successor, fixing previous pointers and clearing the child link; recursion or an explicit stack handles deeper levels.",
+          "steps": [
+            "Track the state needed for depth-first splicing of child lists.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(depth)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Leaving child pointers set after splicing"
+      ],
+      "relatedQuestions": [
+        "reverse-linked-list",
+        "merge-two-sorted-lists",
+        "linked-list-cycle",
+        "intersection-of-two-linked-lists",
+        "copy-list-with-random-pointer"
+      ]
+    },
+    {
+      "title": "Sort List",
+      "slug": "sort-list",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/sort-list/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["divide-and-conquer", "pointer-rewiring"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 16,
+      "prerequisites": ["merge-two-sorted-lists", "palindrome-linked-list"],
+      "conceptsTested": [
+        "merge sort as the natural sort for linked lists",
+        "splitting at the middle with fast and slow pointers",
+        "bottom-up merging to reach true constant space"
+      ],
+      "commonMistakes": [
+        "Choosing quicksort and degrading to quadratic time",
+        "Not severing the two halves, causing infinite recursion",
+        "Claiming O(1) space for the recursive version"
+      ],
+      "interviewSignals": [
+        "Explains why merge sort suits lists where quicksort does not",
+        "Notes the recursion stack is O(log n) unless done bottom-up"
+      ],
+      "followUpPrompts": [
+        "Reach genuine O(1) space with a bottom-up merge.",
+        "Why is merge sort preferred over quicksort here?",
+        "Sort a doubly linked list."
+      ],
+      "promptSummary": "Sort a linked list in O(n log n) time.",
+      "highLevelApproach": "Split at the middle with fast and slow pointers, sort each half, and merge them; iterating over doubling run lengths bottom-up removes the recursion stack entirely.",
+      "complexity": {
+        "time": "O(n log n)",
+        "space": "O(log n) recursive, O(1) bottom-up"
+      },
+      "problemStatement": "Sort a linked list in O(n log n) time. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log n) time and O(log n) recursive, O(1) bottom-up space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around merge sort as the natural sort for linked lists. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Choosing quicksort and degrading to quadratic time.",
+        "The intended path is: Split at the middle with fast and slow pointers, sort each half, and merge them; iterating over doubling run lengths bottom-up removes the recursion stack entirely."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Split at the middle with fast and slow pointers, sort each half, and merge them; iterating over doubling run lengths bottom-up removes the recursion stack entirely.",
+          "steps": [
+            "Track the state needed for merge sort as the natural sort for linked lists.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log n)",
+            "space": "O(log n) recursive, O(1) bottom-up"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Choosing quicksort and degrading to quadratic time"
+      ],
+      "relatedQuestions": [
+        "merge-two-sorted-lists",
+        "palindrome-linked-list",
+        "reverse-linked-list",
+        "linked-list-cycle",
+        "flatten-a-multilevel-doubly-linked-list"
+      ]
+    },
+    {
+      "title": "Merge k Sorted Lists",
+      "slug": "merge-k-sorted-lists",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/merge-k-sorted-lists/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["bounded-k-heap", "divide-and-conquer", "heap-extraction"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 35,
+      "recommendedOrder": 17,
+      "prerequisites": ["sort-list"],
+      "conceptsTested": [
+        "a min-heap over the k current heads",
+        "divide-and-conquer pairwise merging",
+        "why folding one list at a time is asymptotically worse"
+      ],
+      "commonMistakes": [
+        "Merging sequentially into an accumulator, re-walking the result each round",
+        "Pushing whole lists into the heap rather than one node per list",
+        "Not filtering null lists out of the input"
+      ],
+      "interviewSignals": [
+        "Compares the heap and pairwise approaches and shows they share a bound",
+        "Keeps the heap at size k rather than size n"
+      ],
+      "followUpPrompts": [
+        "Compare the heap and divide-and-conquer versions.",
+        "What if the lists arrive as a stream?",
+        "Merge k sorted arrays instead."
+      ],
+      "promptSummary": "Merge k sorted linked lists into a single sorted list.",
+      "highLevelApproach": "Either keep a min-heap of the k current heads and repeatedly pop the smallest, or merge the lists pairwise in rounds so the count halves each pass.",
+      "complexity": {
+        "time": "O(n log k)",
+        "space": "O(k) with a heap, O(1) with pairwise merging"
+      },
+      "problemStatement": "Merge k sorted linked lists into a single sorted list. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n log k) time and O(k) with a heap, O(1) with pairwise merging space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around a min-heap over the k current heads. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Merging sequentially into an accumulator, re-walking the result each round.",
+        "The intended path is: Either keep a min-heap of the k current heads and repeatedly pop the smallest, or merge the lists pairwise in rounds so the count halves each pass."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Either keep a min-heap of the k current heads and repeatedly pop the smallest, or merge the lists pairwise in rounds so the count halves each pass.",
+          "steps": [
+            "Track the state needed for a min-heap over the k current heads.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n log k)",
+            "space": "O(k) with a heap, O(1) with pairwise merging"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Merging sequentially into an accumulator, re-walking the result each round"
+      ],
+      "relatedQuestions": [
+        "sort-list",
+        "reverse-linked-list",
+        "merge-two-sorted-lists",
+        "linked-list-cycle",
+        "reverse-nodes-in-k-group"
+      ]
+    },
+    {
+      "title": "Reverse Nodes in k-Group",
+      "slug": "reverse-nodes-in-k-group",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/reverse-nodes-in-k-group/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["sublist-reversal", "dummy-head"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 40,
+      "recommendedOrder": 18,
+      "prerequisites": ["reverse-linked-list-ii"],
+      "conceptsTested": [
+        "reversing fixed-size groups in place",
+        "checking a full group exists before touching pointers",
+        "stitching consecutive group boundaries"
+      ],
+      "commonMistakes": [
+        "Reversing a trailing group shorter than k",
+        "Losing the link between consecutive groups",
+        "Re-walking the list to count every group, making it quadratic"
+      ],
+      "interviewSignals": [
+        "Verifies the group size before starting the reversal",
+        "Tracks the previous group's tail to stitch each seam"
+      ],
+      "followUpPrompts": [
+        "Reverse the trailing partial group as well.",
+        "Do it with O(1) space and no recursion.",
+        "Generalize to varying group sizes."
+      ],
+      "promptSummary": "Reverse every consecutive group of k nodes in a list, leaving a trailing group shorter than k untouched.",
+      "highLevelApproach": "For each group, confirm k nodes remain, reverse that segment in place, then attach it between the previous group's tail and the node that follows the group.",
+      "complexity": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "problemStatement": "Reverse every consecutive group of k nodes in a list, leaving a trailing group shorter than k untouched. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time and O(1) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around reversing fixed-size groups in place. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Reversing a trailing group shorter than k.",
+        "The intended path is: For each group, confirm k nodes remain, reverse that segment in place, then attach it between the previous group's tail and the node that follows the group."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "For each group, confirm k nodes remain, reverse that segment in place, then attach it between the previous group's tail and the node that follows the group.",
+          "steps": [
+            "Track the state needed for reversing fixed-size groups in place.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Reversing a trailing group shorter than k"
+      ],
+      "relatedQuestions": [
+        "reverse-linked-list-ii",
+        "reverse-linked-list",
+        "merge-two-sorted-lists",
+        "linked-list-cycle",
+        "merge-k-sorted-lists"
+      ]
+    },
+    {
+      "title": "Design Browser History",
+      "slug": "design-browser-history",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/design-browser-history/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["pointer-rewiring", "design-problem"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 19,
+      "prerequisites": [],
+      "conceptsTested": [
+        "a current pointer with forward truncation on each new visit",
+        "doubly linked nodes versus an array with a cursor",
+        "clamping back and forward steps at the ends"
+      ],
+      "commonMistakes": [
+        "Leaving forward history reachable after visiting a new page",
+        "Clamping the step counts incorrectly at either end",
+        "Using two stacks and rebuilding them on every operation"
+      ],
+      "interviewSignals": [
+        "Truncates the forward chain on visit rather than tracking a separate size",
+        "Compares the linked list and array-with-cursor designs on cost"
+      ],
+      "followUpPrompts": [
+        "Compare a doubly linked list against an array plus cursor.",
+        "Bound the total history size.",
+        "Support jumping directly to an arbitrary earlier entry."
+      ],
+      "promptSummary": "Design a browser history supporting visit, back and forward with a step count.",
+      "highLevelApproach": "Hold a current node in a doubly linked list: visiting appends a node and drops the forward chain, while back and forward walk at most the requested number of steps.",
+      "complexity": {
+        "time": "O(1) visit, O(steps) back and forward",
+        "space": "O(n)"
+      },
+      "problemStatement": "Design a browser history supporting visit, back and forward with a step count. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(1) visit, O(steps) back and forward time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around a current pointer with forward truncation on each new visit. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Leaving forward history reachable after visiting a new page.",
+        "The intended path is: Hold a current node in a doubly linked list: visiting appends a node and drops the forward chain, while back and forward walk at most the requested number of steps."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Hold a current node in a doubly linked list: visiting appends a node and drops the forward chain, while back and forward walk at most the requested number of steps.",
+          "steps": [
+            "Track the state needed for a current pointer with forward truncation on each new visit.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(1) visit, O(steps) back and forward",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Leaving forward history reachable after visiting a new page"
+      ],
+      "relatedQuestions": [
+        "reverse-linked-list",
+        "merge-two-sorted-lists",
+        "linked-list-cycle",
+        "intersection-of-two-linked-lists",
+        "reverse-nodes-in-k-group"
+      ]
+    },
+    {
+      "title": "LRU Cache",
+      "slug": "lru-cache",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/lru-cache/",
+      "primaryPattern": "linked-list",
+      "subPatterns": ["pointer-rewiring", "canonical-key", "design-problem"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 40,
+      "recommendedOrder": 20,
+      "prerequisites": ["design-browser-history"],
+      "conceptsTested": [
+        "a hash map for lookup paired with a doubly linked list for recency",
+        "sentinel head and tail nodes",
+        "moving a node to the front on every access"
+      ],
+      "commonMistakes": [
+        "Using a singly linked list, which makes removal O(n)",
+        "Forgetting that a read also counts as a use",
+        "Evicting the node but leaving its key in the hash map"
+      ],
+      "interviewSignals": [
+        "Explains why both structures are needed to keep every operation O(1)",
+        "Uses sentinels so eviction needs no null checks"
+      ],
+      "followUpPrompts": [
+        "Implement LFU eviction instead.",
+        "Make it thread-safe.",
+        "How would you scale this across machines?"
+      ],
+      "promptSummary": "Design a fixed-capacity cache with constant-time reads and writes that evicts the least recently used entry.",
+      "highLevelApproach": "Pair a key-to-node hash map with a doubly linked list ordered by recency: each access unlinks its node and reinserts it at the front, and eviction removes the node before the tail sentinel.",
+      "complexity": {
+        "time": "O(1) per operation",
+        "space": "O(capacity)"
+      },
+      "problemStatement": "Design a fixed-capacity cache with constant-time reads and writes that evicts the least recently used entry. Identify the input, required output, and constraints, then explain which pointer manipulation idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(1) per operation time and O(capacity) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around a hash map for lookup paired with a doubly linked list for recency. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Using a singly linked list, which makes removal O(n).",
+        "The intended path is: Pair a key-to-node hash map with a doubly linked list ordered by recency: each access unlinks its node and reinserts it at the front, and eviction removes the node before the tail sentinel."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — pointer manipulation",
+          "idea": "Pair a key-to-node hash map with a doubly linked list ordered by recency: each access unlinks its node and reinserts it at the front, and eviction removes the node before the tail sentinel.",
+          "steps": [
+            "Track the state needed for a hash map for lookup paired with a doubly linked list for recency.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(1) per operation",
+            "space": "O(capacity)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Using a singly linked list, which makes removal O(n)"
+      ],
+      "relatedQuestions": [
+        "design-browser-history",
+        "reverse-linked-list",
+        "merge-two-sorted-lists",
+        "linked-list-cycle"
+      ]
+    }
+  ]
+}

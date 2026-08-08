@@ -1,6 +1,6 @@
-# Helix voice worker
+# Trailgrad voice worker
 
-This service is the realtime speech edge for Helix. It joins dispatched
+This service is the realtime speech edge for Trailgrad. It joins dispatched
 LiveKit rooms, transcribes the candidate with Deepgram Flux, sends completed
 turns to the Next.js interview brain, and streams Aura-2 speech back.
 
@@ -21,7 +21,7 @@ LIVEKIT_URL
 LIVEKIT_API_KEY
 LIVEKIT_API_SECRET
 DEEPGRAM_API_KEY
-HELIX_API_BASE_URL=http://localhost:3001
+TRAILGRAD_API_BASE_URL=http://localhost:3001
 ```
 
 The LiveKit values must match the root Next.js environment.
@@ -42,7 +42,7 @@ pnpm agent:start
 
 The first log line prints the resolved STT, end-of-turn, TTS, and API settings.
 For production, deploy this directory to a persistent worker platform and set
-`HELIX_API_BASE_URL` to the public Helix URL.
+`TRAILGRAD_API_BASE_URL` to the public Trailgrad URL.
 
 ## Conversation pipeline
 

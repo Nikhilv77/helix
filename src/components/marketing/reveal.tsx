@@ -5,8 +5,7 @@ import type { ReactNode, RefObject } from "react";
 
 function prefersReducedMotion(): boolean {
   return (
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
 }
 
@@ -150,6 +149,59 @@ export function Counter({ value, suffix = "", duration = 1600, className }: Coun
     <span ref={ref} className={className}>
       {current}
       {suffix}
+    </span>
+  );
+}
+
+/**
+ * Types its text out, one character at a time, the first time it scrolls into
+ * view.
+ *
+ * The full string is rendered on the server and carried on `aria-label`, so
+ * crawlers and screen readers always get the complete sentence — only the
+ * visible span is animated, and it is hidden from the accessibility tree so
+ * nothing announces a half-typed word. Reduced-motion users get the text
+ * immediately with no caret.
+ */
+export function TypeOut({
+  text,
+  className,
+  speed = 14
+}: {
+  text: string;
+  className?: string;
+  speed?: number;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const visible = useInView(ref, "0px 0px -8% 0px");
+  // Starts complete so the server-rendered markup carries the whole sentence;
+  // the effect below rewinds it on the client before anything is painted.
+  const [shown, setShown] = useState(text.length);
+  const [animate, setAnimate] = useState(false);
+
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    setAnimate(true);
+    setShown(0);
+  }, []);
+
+  useEffect(() => {
+    if (!animate || !visible || shown >= text.length) return;
+    const timer = window.setTimeout(() => setShown((count) => count + 1), speed);
+    return () => window.clearTimeout(timer);
+  }, [animate, visible, shown, text.length, speed]);
+
+  const typing = animate && visible && shown < text.length;
+
+  return (
+    <span ref={ref} className={className} aria-label={text}>
+      <span aria-hidden="true">{animate ? text.slice(0, shown) : text}</span>
+      {typing ? (
+        <span
+          aria-hidden="true"
+          className="ml-px inline-block h-[1em] w-[2px] translate-y-[0.15em] animate-pulse bg-current align-baseline"
+        />
+      ) : null}
     </span>
   );
 }

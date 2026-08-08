@@ -8,7 +8,7 @@ import { authenticatedOwnerId } from "@/server/interview/owner";
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
   "Onboarding",
-  "Set your role, experience level, and resume evidence before starting Helix interviews."
+  "Set your role, experience level, and resume evidence before starting Trailgrad interviews."
 );
 
 export default async function OnboardingPage({

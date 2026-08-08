@@ -1,0 +1,605 @@
+{
+  "phase": "Phase 11 — Tries & Backtracking",
+  "questions": [
+    {
+      "title": "Implement Trie",
+      "slug": "implement-trie-prefix-tree",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/implement-trie-prefix-tree/",
+      "primaryPattern": "trie",
+      "subPatterns": ["prefix-tree", "design-problem"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 1,
+      "prerequisites": [],
+      "conceptsTested": [
+        "prefix tree nodes",
+        "word termination markers",
+        "insert/search/prefix APIs"
+      ],
+      "commonMistakes": [
+        "Forgetting to mark the end of a full word",
+        "Treating prefix search and full-word search as the same operation",
+        "Using substring copies that add avoidable overhead"
+      ],
+      "interviewSignals": [
+        "Defines a small node shape before coding operations",
+        "Explains complexity in terms of word length, not number of stored words"
+      ],
+      "followUpPrompts": [
+        "Add delete support.",
+        "Store how many words share each prefix.",
+        "Support characters beyond lowercase English letters."
+      ],
+      "promptSummary": "Design a prefix tree that supports inserting words, full-word lookup, and prefix lookup.",
+      "highLevelApproach": "Represent each character as an edge to a child node and mark nodes that complete a word; each operation walks the characters of the input string once.",
+      "complexity": {
+        "time": "O(L) per operation",
+        "space": "O(total characters stored)"
+      },
+      "problemStatement": "Design a prefix tree that supports inserting words, full-word lookup, and prefix lookup. Identify the input, required output, and constraints, then explain which prefix tree idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(L) per operation time and O(total characters stored) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the prefix tree pattern and maintain the right invariant around prefix tree nodes. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the prefix tree structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Forgetting to mark the end of a full word.",
+        "The intended path is: Represent each character as an edge to a child node and mark nodes that complete a word; each operation walks the characters of the input string once."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — prefix tree",
+          "idea": "Represent each character as an edge to a child node and mark nodes that complete a word; each operation walks the characters of the input string once.",
+          "steps": [
+            "Track the state needed for prefix tree nodes.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(L) per operation",
+            "space": "O(total characters stored)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Forgetting to mark the end of a full word"
+      ],
+      "relatedQuestions": ["design-add-and-search-words-data-structure", "word-search-ii"]
+    },
+    {
+      "title": "Design Add and Search Words Data Structure",
+      "slug": "design-add-and-search-words-data-structure",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/design-add-and-search-words-data-structure/",
+      "primaryPattern": "trie",
+      "subPatterns": ["prefix-tree", "dfs", "wildcard-search", "design-problem"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 2,
+      "prerequisites": ["implement-trie-prefix-tree"],
+      "conceptsTested": ["trie traversal", "wildcard branching", "recursive DFS"],
+      "commonMistakes": [
+        "Trying to handle '.' with a single child lookup",
+        "Returning true for prefixes that are not complete words",
+        "Ignoring worst-case branching when many wildcards appear"
+      ],
+      "interviewSignals": [
+        "Reuses trie design cleanly and adds DFS only for wildcard positions",
+        "Calls out the exponential worst case but efficient normal-case lookup"
+      ],
+      "followUpPrompts": [
+        "Support '*' matching zero or more characters.",
+        "Return all matching words instead of a boolean.",
+        "How would you cache repeated wildcard queries?"
+      ],
+      "promptSummary": "Design a word dictionary that supports adding words and searching with '.' as any one character.",
+      "highLevelApproach": "Insert words into a trie. For search, recurse through exact characters normally and branch over all children when the pattern contains a wildcard.",
+      "complexity": {
+        "time": "O(L) average, O(26^W * L) worst case with W wildcards",
+        "space": "O(total characters stored)"
+      },
+      "problemStatement": "Design a word dictionary that supports adding words and searching with '.' as any one character. Identify the input, required output, and constraints, then explain which prefix tree idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(L) average, O(26^W * L) worst case with W wildcards time and O(total characters stored) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the prefix tree pattern and maintain the right invariant around trie traversal. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the prefix tree structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Trying to handle '.' with a single child lookup.",
+        "The intended path is: Insert words into a trie. For search, recurse through exact characters normally and branch over all children when the pattern contains a wildcard."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — prefix tree",
+          "idea": "Insert words into a trie. For search, recurse through exact characters normally and branch over all children when the pattern contains a wildcard.",
+          "steps": [
+            "Track the state needed for trie traversal.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(L) average, O(26^W * L) worst case with W wildcards",
+            "space": "O(total characters stored)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Trying to handle '.' with a single child lookup"
+      ],
+      "relatedQuestions": ["implement-trie-prefix-tree", "word-search-ii", "subsets"]
+    },
+    {
+      "title": "Subsets",
+      "slug": "subsets",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/subsets/",
+      "primaryPattern": "backtracking",
+      "subPatterns": ["decision-tree", "include-exclude", "combinatorial-generation"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 3,
+      "prerequisites": [],
+      "conceptsTested": ["recursive decision tree", "path mutation", "output size reasoning"],
+      "commonMistakes": [
+        "Appending the same mutable path reference to every result",
+        "Forgetting that the empty subset is valid",
+        "Claiming polynomial time despite exponential output"
+      ],
+      "interviewSignals": [
+        "States that O(2^n) output is unavoidable",
+        "Keeps choose/unchoose state changes balanced"
+      ],
+      "followUpPrompts": [
+        "Handle duplicate numbers.",
+        "Generate subsets iteratively.",
+        "Return only subsets of size k."
+      ],
+      "promptSummary": "Return every subset of a list of distinct integers.",
+      "highLevelApproach": "Backtrack through the array, either including or skipping each value, copying the current path whenever a complete decision path is reached.",
+      "complexity": {
+        "time": "O(n * 2^n)",
+        "space": "O(n) recursion excluding output"
+      },
+      "problemStatement": "Return every subset of a list of distinct integers. Identify the input, required output, and constraints, then explain which recursive search with pruning idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n * 2^n) time and O(n) recursion excluding output space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the recursive search with pruning pattern and maintain the right invariant around recursive decision tree. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the recursive search with pruning structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Appending the same mutable path reference to every result.",
+        "The intended path is: Backtrack through the array, either including or skipping each value, copying the current path whenever a complete decision path is reached."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Exponential",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — recursive search with pruning",
+          "idea": "Backtrack through the array, either including or skipping each value, copying the current path whenever a complete decision path is reached.",
+          "steps": [
+            "Track the state needed for recursive decision tree.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n * 2^n)",
+            "space": "O(n) recursion excluding output"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Appending the same mutable path reference to every result"
+      ],
+      "relatedQuestions": [
+        "combination-sum",
+        "permutations",
+        "n-queens",
+        "design-add-and-search-words-data-structure"
+      ]
+    },
+    {
+      "title": "Combination Sum",
+      "slug": "combination-sum",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/combination-sum/",
+      "primaryPattern": "backtracking",
+      "subPatterns": ["combinatorial-generation", "pruning", "reuse-choice"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
+      "recommendedOrder": 4,
+      "prerequisites": ["subsets"],
+      "conceptsTested": ["candidate reuse", "target reduction", "duplicate combination avoidance"],
+      "commonMistakes": [
+        "Generating the same combination in different orders",
+        "Advancing the start index when reuse of the same number is still allowed",
+        "Missing the overshoot pruning condition"
+      ],
+      "interviewSignals": [
+        "Uses a start index to keep combinations ordered",
+        "Explains when recursion may stay on the same index versus move forward"
+      ],
+      "followUpPrompts": [
+        "Disallow reusing each candidate.",
+        "Handle duplicate candidate values.",
+        "Count combinations without listing them."
+      ],
+      "promptSummary": "Find all unique combinations of candidate numbers that sum to a target, allowing repeated use of each candidate.",
+      "highLevelApproach": "Sort or iterate candidates in a fixed order, backtrack with a remaining target, and pass the current index again when choosing a reusable candidate.",
+      "complexity": {
+        "time": "O(N^(T/M)) in the rough worst case",
+        "space": "O(T/M) recursion excluding output"
+      },
+      "problemStatement": "Find all unique combinations of candidate numbers that sum to a target, allowing repeated use of each candidate. Identify the input, required output, and constraints, then explain which recursive search with pruning idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(N^(T/M)) in the rough worst case time and O(T/M) recursion excluding output space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the recursive search with pruning pattern and maintain the right invariant around candidate reuse. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the recursive search with pruning structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Generating the same combination in different orders.",
+        "The intended path is: Sort or iterate candidates in a fixed order, backtrack with a remaining target, and pass the current index again when choosing a reusable candidate."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Exponential",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — recursive search with pruning",
+          "idea": "Sort or iterate candidates in a fixed order, backtrack with a remaining target, and pass the current index again when choosing a reusable candidate.",
+          "steps": [
+            "Track the state needed for candidate reuse.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(N^(T/M)) in the rough worst case",
+            "space": "O(T/M) recursion excluding output"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Generating the same combination in different orders"
+      ],
+      "relatedQuestions": ["subsets", "permutations", "n-queens"]
+    },
+    {
+      "title": "Permutations",
+      "slug": "permutations",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/permutations/",
+      "primaryPattern": "backtracking",
+      "subPatterns": ["combinatorial-generation", "visited-set", "swap-in-place"],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 25,
+      "recommendedOrder": 5,
+      "prerequisites": ["subsets"],
+      "conceptsTested": ["ordering matters", "used-state tracking", "factorial output"],
+      "commonMistakes": [
+        "Confusing permutations with subsets or combinations",
+        "Reusing an element twice in the same path",
+        "Not copying the path before storing a result"
+      ],
+      "interviewSignals": [
+        "Recognizes n! output size immediately",
+        "Can describe either visited-array recursion or in-place swapping"
+      ],
+      "followUpPrompts": [
+        "Handle duplicate numbers.",
+        "Return the next permutation only.",
+        "Generate permutations lazily as an iterator."
+      ],
+      "promptSummary": "Return every ordering of a list of distinct integers.",
+      "highLevelApproach": "Build a path one position at a time, choosing among unused values; alternatively swap each candidate into the current position and recurse.",
+      "complexity": {
+        "time": "O(n * n!)",
+        "space": "O(n) recursion excluding output"
+      },
+      "problemStatement": "Return every ordering of a list of distinct integers. Identify the input, required output, and constraints, then explain which recursive search with pruning idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n * n!) time and O(n) recursion excluding output space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the recursive search with pruning pattern and maintain the right invariant around ordering matters. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the recursive search with pruning structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Confusing permutations with subsets or combinations.",
+        "The intended path is: Build a path one position at a time, choosing among unused values; alternatively swap each candidate into the current position and recurse."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Exponential",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — recursive search with pruning",
+          "idea": "Build a path one position at a time, choosing among unused values; alternatively swap each candidate into the current position and recurse.",
+          "steps": [
+            "Track the state needed for ordering matters.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n * n!)",
+            "space": "O(n) recursion excluding output"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Confusing permutations with subsets or combinations"
+      ],
+      "relatedQuestions": ["subsets", "combination-sum", "n-queens", "word-search-ii"]
+    },
+    {
+      "title": "Word Search II",
+      "slug": "word-search-ii",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/word-search-ii/",
+      "primaryPattern": "trie",
+      "subPatterns": ["prefix-tree", "backtracking", "grid-dfs", "pruning"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 45,
+      "recommendedOrder": 6,
+      "prerequisites": ["design-add-and-search-words-data-structure", "combination-sum"],
+      "conceptsTested": ["trie-guided DFS", "grid backtracking", "prefix pruning"],
+      "commonMistakes": [
+        "Searching each word independently and timing out",
+        "Not marking cells as visited within the current path",
+        "Returning duplicate words when multiple paths find the same entry"
+      ],
+      "interviewSignals": [
+        "Builds a trie from all words before touching the board",
+        "Prunes DFS as soon as the current prefix is absent"
+      ],
+      "followUpPrompts": [
+        "Remove found words from the trie to prune future searches.",
+        "Support diagonal movement.",
+        "How would you parallelize search across a large board?"
+      ],
+      "promptSummary": "Find all dictionary words that can be formed by walking adjacent cells on a character board.",
+      "highLevelApproach": "Insert all words into a trie, then start DFS from each board cell while following trie edges; mark cells visited for the active path and record words when terminal nodes are reached.",
+      "complexity": {
+        "time": "O(m*n*4^L) worst case, heavily pruned by trie prefixes",
+        "space": "O(total dictionary characters + L)"
+      },
+      "problemStatement": "Find all dictionary words that can be formed by walking adjacent cells on a character board. Identify the input, required output, and constraints, then explain which prefix tree idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(m*n*4^L) worst case, heavily pruned by trie prefixes time and O(total dictionary characters + L) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the prefix tree pattern and maintain the right invariant around trie-guided DFS. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the prefix tree structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Searching each word independently and timing out.",
+        "The intended path is: Insert all words into a trie, then start DFS from each board cell while following trie edges; mark cells visited for the active path and record words when terminal nodes are reached."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — prefix tree",
+          "idea": "Insert all words into a trie, then start DFS from each board cell while following trie edges; mark cells visited for the active path and record words when terminal nodes are reached.",
+          "steps": [
+            "Track the state needed for trie-guided DFS.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(m*n*4^L) worst case, heavily pruned by trie prefixes",
+            "space": "O(total dictionary characters + L)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Searching each word independently and timing out"
+      ],
+      "relatedQuestions": [
+        "design-add-and-search-words-data-structure",
+        "combination-sum",
+        "implement-trie-prefix-tree",
+        "permutations",
+        "n-queens"
+      ]
+    },
+    {
+      "title": "N-Queens",
+      "slug": "n-queens",
+      "source": "leetcode",
+      "externalUrl": "https://leetcode.com/problems/n-queens/",
+      "primaryPattern": "backtracking",
+      "subPatterns": ["constraint-tracking", "combinatorial-generation", "pruning"],
+      "difficulty": "hard",
+      "expectedTimeMinutes": 45,
+      "recommendedOrder": 7,
+      "prerequisites": ["permutations", "combination-sum"],
+      "conceptsTested": [
+        "row-by-row placement",
+        "column and diagonal constraints",
+        "state rollback"
+      ],
+      "commonMistakes": [
+        "Checking the full board for conflicts every time without using constraint sets",
+        "Computing diagonal identifiers incorrectly",
+        "Forgetting to remove column or diagonal state during backtracking"
+      ],
+      "interviewSignals": [
+        "Uses columns and both diagonal sets for O(1) conflict checks",
+        "Explains why placing one queen per row reduces the search space"
+      ],
+      "followUpPrompts": [
+        "Return only the number of valid boards.",
+        "Optimize memory for large n.",
+        "Explain the diagonal encodings row-col and row+col."
+      ],
+      "promptSummary": "Place n queens on an n x n board so no two attack each other, returning all valid boards.",
+      "highLevelApproach": "Place queens one row at a time, skipping columns or diagonals already occupied, and roll back those constraint sets after each recursive branch.",
+      "complexity": {
+        "time": "O(n!)",
+        "space": "O(n)"
+      },
+      "problemStatement": "Place n queens on an n x n board so no two attack each other, returning all valid boards. Identify the input, required output, and constraints, then explain which recursive search with pruning idea makes the brute-force search unnecessary.",
+      "constraints": [
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n!) time and O(n) space target.",
+        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      ],
+      "keyInsight": "The key is to recognize the recursive search with pruning pattern and maintain the right invariant around row-by-row placement. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "hints": [
+        "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
+        "Look for the recursive search with pruning structure: what state can be carried forward instead of recomputed?",
+        "Be careful about this common trap: Checking the full board for conflicts every time without using constraint sets.",
+        "The intended path is: Place queens one row at a time, skipping columns or diagonals already occupied, and roll back those constraint sets after each recursive branch."
+      ],
+      "approaches": [
+        {
+          "name": "Baseline — direct search or simulation",
+          "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
+          "steps": [
+            "Restate what each candidate answer would need to check.",
+            "Try every relevant candidate or simulate the process directly.",
+            "Compare the result with the required output and identify repeated work."
+          ],
+          "complexity": {
+            "time": "Exponential",
+            "space": "O(depth)"
+          },
+          "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
+        },
+        {
+          "name": "Intended — recursive search with pruning",
+          "idea": "Place queens one row at a time, skipping columns or diagonals already occupied, and roll back those constraint sets after each recursive branch.",
+          "steps": [
+            "Track the state needed for row-by-row placement.",
+            "Update that state in a single disciplined pass, traversal, or recursive branch.",
+            "Preserve the invariant after every update and return the value the prompt asks for."
+          ],
+          "complexity": {
+            "time": "O(n!)",
+            "space": "O(n)"
+          },
+          "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
+        }
+      ],
+      "edgeCases": [
+        "Empty or minimum-size input if the problem allows it",
+        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
+        "Negative values, zeros, or boundary values when arithmetic is involved",
+        "Checking the full board for conflicts every time without using constraint sets"
+      ],
+      "relatedQuestions": ["permutations", "combination-sum", "subsets", "word-search-ii"]
+    }
+  ]
+}

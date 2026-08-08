@@ -45,7 +45,7 @@ describe("InterviewService conversation", () => {
     const { service } = harness();
     const result = await service.start(setup, "user-1", 1_000);
 
-    expect(result.utterance).toContain("I'm Maya, your Helix interviewer");
+    expect(result.utterance).toContain("I'm Maya, your Trailgrad interviewer");
     expect(result.utterance).toContain(questions[0]?.text);
     expect(result.utterance).toContain("pause to think");
   });
