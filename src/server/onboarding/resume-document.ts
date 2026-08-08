@@ -1,5 +1,4 @@
 import mammoth from "mammoth";
-import { PDFParse } from "pdf-parse";
 import type { Level } from "@/lib/types";
 
 const MAX_EXTRACTED_CHARACTERS = 24_000;
@@ -40,6 +39,8 @@ const JOB_DESCRIPTION_LANGUAGE =
   /\b(?:we are looking for|the ideal candidate|responsibilities include|job description|minimum qualifications|required qualifications|equal opportunity employer|apply now|salary range)\b/i;
 const DEGREE_LANGUAGE =
   /\b(?:bachelor|master|b\.?(?:tech|e|sc|a)\b|m\.?(?:tech|e|sc|a|ba)\b|ph\.?d|diploma|university|college|institute|school)\b/i;
+
+type PdfParseModule = typeof import("pdf-parse");
 
 export interface ParsedResumeDocument {
   text: string;
@@ -105,6 +106,7 @@ export async function extractResumeDocument(input: {
         "This file is named like a PDF, but its contents are not a valid PDF."
       );
     }
+    const { PDFParse } = await loadPdfParser();
     const parser = new PDFParse({ data: new Uint8Array(input.buffer) });
     try {
       const parsed = await parser.getText();
@@ -154,6 +156,94 @@ export async function extractResumeDocument(input: {
     pageCount,
     pageCountEstimated
   };
+}
+
+async function loadPdfParser(): Promise<PdfParseModule> {
+  installPdfNodePolyfills();
+  return import("pdf-parse");
+}
+
+/**
+ * `pdfjs-dist` normally gets these classes from `@napi-rs/canvas`, but Vercel's
+ * serverless bundle can omit that nested native package. Text extraction only
+ * needs the classes to exist during module initialization; rendering paths are
+ * never used by the onboarding parser.
+ */
+function installPdfNodePolyfills(): void {
+  if (typeof globalThis.DOMMatrix === "undefined") {
+    globalThis.DOMMatrix = MinimalDOMMatrix as unknown as typeof DOMMatrix;
+  }
+
+  if (typeof globalThis.ImageData === "undefined") {
+    globalThis.ImageData = MinimalImageData as unknown as typeof ImageData;
+  }
+
+  if (typeof globalThis.Path2D === "undefined") {
+    globalThis.Path2D = MinimalPath2D as unknown as typeof Path2D;
+  }
+}
+
+class MinimalDOMMatrix {
+  a = 1;
+  b = 0;
+  c = 0;
+  d = 1;
+  e = 0;
+  f = 0;
+
+  constructor(init?: string | number[]) {
+    if (Array.isArray(init)) {
+      [this.a, this.b, this.c, this.d, this.e, this.f] = [
+        init[0] ?? 1,
+        init[1] ?? 0,
+        init[2] ?? 0,
+        init[3] ?? 1,
+        init[4] ?? 0,
+        init[5] ?? 0
+      ];
+    }
+  }
+
+  multiplySelf(): this {
+    return this;
+  }
+
+  preMultiplySelf(): this {
+    return this;
+  }
+
+  translate(): this {
+    return this;
+  }
+
+  scale(): this {
+    return this;
+  }
+
+  invertSelf(): this {
+    return this;
+  }
+}
+
+class MinimalImageData {
+  readonly data: Uint8ClampedArray;
+
+  constructor(
+    dataOrWidth: Uint8ClampedArray | number,
+    readonly width: number,
+    readonly height = typeof dataOrWidth === "number" ? width : 0
+  ) {
+    this.data =
+      dataOrWidth instanceof Uint8ClampedArray
+        ? dataOrWidth
+        : new Uint8ClampedArray(dataOrWidth * width * 4);
+  }
+}
+
+class MinimalPath2D {
+  addPath(): void {
+    // Rendering is not used during resume text extraction.
+  }
 }
 
 export function withVisualResumeText(
