@@ -66,7 +66,7 @@ function SetupScreen({ action }: { action?: ReactNode }) {
         <p className="blueprint-label text-cream/45">Step 5 of 5</p>
         <p className="font-mono text-[11px] text-cream/45">00:52 elapsed</p>
       </div>
-      <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/10">
+      <div className="mt-3 h-1 overflow-hidden rounded-full bg-cream/10">
         <div className="h-full w-full rounded-full bg-cream/70" />
       </div>
 
@@ -87,7 +87,7 @@ function SetupScreen({ action }: { action?: ReactNode }) {
         ))}
       </div>
 
-      <div className="mt-6 rounded-xl border border-cream/25 bg-white/5 p-4">
+      <div className="mt-6 rounded-xl border border-cream/25 bg-cream/5 p-4">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-cream/45">
           What have you actually worked on?
         </p>
@@ -122,7 +122,7 @@ function LiveScreen() {
         <span className="font-mono text-[11px] text-cream/45">Question 3 of 4</span>
         <span className="font-mono text-[11px] text-cream/70">08:03 / 15:00</span>
       </div>
-      <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/10">
+      <div className="mt-3 h-1 overflow-hidden rounded-full bg-cream/10">
         <div className="h-full w-[54%] rounded-full bg-cream/70" />
       </div>
 
@@ -137,7 +137,7 @@ function LiveScreen() {
           <span className="text-[#ff9a9a]">Interrupting</span>
           <span className="text-[#ff9a9a]">94s · no point reached</span>
         </div>
-        <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+        <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-cream/10">
           <div className="h-full w-[94%] rounded-full bg-[#dd5f5f]" />
         </div>
         <p className="mt-3 text-sm font-semibold text-cream">
@@ -165,7 +165,7 @@ function LiveScreen() {
       </div>
 
       <div className="mt-6 flex items-center justify-center gap-3">
-        <span className="inline-flex items-center gap-2 rounded-full border border-cream/25 bg-white/5 px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-cream/70">
+        <span className="inline-flex items-center gap-2 rounded-full border border-cream/25 bg-cream/5 px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-cream/70">
           <Mic size={14} aria-hidden="true" />
           Listening
         </span>
@@ -200,7 +200,7 @@ function ReportScreen() {
               <span className="text-sm font-semibold text-cream">{row.name}</span>
               <span className="font-mono text-xs text-cream/60">{row.score}</span>
             </div>
-            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-cream/10">
               <div className="h-full rounded-full bg-cream/80" style={{ width: `${row.score}%` }} />
             </div>
             <p className="mt-1.5 font-mono text-[11px] leading-5 text-cream/45">{row.line}</p>

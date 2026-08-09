@@ -12,13 +12,13 @@ const config: Config = {
         brand: "#e8edf6",
         accent: "#c9d3df",
         blueprint: {
-          DEFAULT: "#22409b",
-          deep: "#1b3480",
+          DEFAULT: "#3657b4",
+          deep: "#27469a",
           dark: "#152864",
-          light: "#2e4fb4"
+          light: "#4a6ac4"
         },
         cream: {
-          DEFAULT: "#efe8d6",
+          DEFAULT: "#f1ead8",
           soft: "#f7f2e5",
           dim: "#bcb7a8"
         },
@@ -32,11 +32,12 @@ const config: Config = {
       fontFamily: {
         display: ["var(--font-display)", "ui-sans-serif", "system-ui", "sans-serif"],
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
-        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"]
+        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
+        card: ["var(--font-card)", "Josefin Sans", "ui-sans-serif", "system-ui", "sans-serif"]
       },
       boxShadow: {
         soft: "0 18px 70px rgba(0, 0, 0, 0.34)",
-        glow: "0 0 34px rgba(255, 255, 255, 0.1)",
+        glow: "0 0 34px rgba(241, 234, 216, 0.1)",
         note: "0 18px 40px rgba(9, 21, 60, 0.32)",
         "note-lift": "0 30px 70px rgba(9, 21, 60, 0.42)"
       }

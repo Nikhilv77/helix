@@ -15,10 +15,12 @@ const AVATAR_URL = process.env.NEXT_PUBLIC_AVATAR_URL || "/avatars/interviewer.g
 
 export function MarketingAvatar({
   className,
-  priority = false
+  priority = false,
+  framing = "default"
 }: {
   className?: string;
   priority?: boolean;
+  framing?: "default" | "marketing";
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const visible = useInView(ref, "200px 0px 200px 0px");
@@ -26,7 +28,7 @@ export function MarketingAvatar({
   return (
     <div ref={ref} className={className}>
       {priority || visible ? (
-        <AvatarStage agentTrack={null} state="listening" url={AVATAR_URL} />
+        <AvatarStage agentTrack={null} state="listening" url={AVATAR_URL} framing={framing} />
       ) : null}
     </div>
   );

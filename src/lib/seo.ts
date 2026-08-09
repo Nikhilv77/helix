@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const siteName = "Trailgrad";
-export const defaultTitle = "Trailgrad | Learn the Patterns, Then Defend Them";
+export const defaultTitle = "Trailgrad | AI Interview Practice Built From Your Resume";
 export const defaultDescription =
-  "A guided path through the 123 questions and 12 patterns interviews actually ask, plus AI voice mock interviews that press on your resume evidence and score what you can defend.";
+  "Turn your resume into a focused interview prep path, practice live AI mock interviews with Maya, and get reports that show what you can defend.";
 export const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://trailgrad.com";
 
 export function pageTitle(title: string): string {

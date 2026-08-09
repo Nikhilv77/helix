@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Josefin_Sans } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
@@ -23,6 +23,9 @@ export const metadata: Metadata = {
     "mock interview software",
     "resume interview preparation",
     "AI interview coach",
+    "AI resume interview practice",
+    "voice mock interview",
+    "interview preparation app",
     "behavioral interview practice",
     "technical interview practice"
   ],
@@ -46,13 +49,20 @@ export const metadata: Metadata = {
     siteName,
     title: defaultTitle,
     description: defaultDescription,
-    images: [{ url: "/brand/trailgrad-logo.png", width: 1200, height: 630, alt: "Trailgrad" }]
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Trailgrad AI interview practice"
+      }
+    ]
   },
   twitter: {
     card: "summary_large_image",
     title: defaultTitle,
     description: defaultDescription,
-    images: ["/brand/trailgrad-logo.png"]
+    images: ["/opengraph-image"]
   },
   robots: {
     index: true,
@@ -94,7 +104,14 @@ const monoFont = Geist_Mono({
   display: "swap"
 });
 
-const fontVariables = `${displayFont.variable} ${sansFont.variable} ${monoFont.variable}`;
+const cardFont = Josefin_Sans({
+  subsets: ["latin"],
+  variable: "--font-card",
+  weight: ["400", "500", "600", "700"],
+  display: "swap"
+});
+
+const fontVariables = `${displayFont.variable} ${sansFont.variable} ${monoFont.variable} ${cardFont.variable}`;
 
 const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 

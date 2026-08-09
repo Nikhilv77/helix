@@ -19,6 +19,10 @@ export const metadata: Metadata = {
     title: defaultTitle,
     description: defaultDescription,
     url: "/"
+  },
+  twitter: {
+    title: defaultTitle,
+    description: defaultDescription
   }
 };
 

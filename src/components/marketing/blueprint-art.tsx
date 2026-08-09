@@ -25,7 +25,7 @@ export function InterviewSignal({ className }: { className?: string }) {
       role="presentation"
       aria-hidden="true"
       fill="none"
-      stroke="#efe8d6"
+      stroke="#f1ead8"
     >
       <g strokeWidth="1.2" opacity="0.25" strokeDasharray="5 8">
         <path d="M188 121H238C266 121 276 151 294 181" />
@@ -42,19 +42,19 @@ export function InterviewSignal({ className }: { className?: string }) {
 
       <g strokeWidth="1.25" opacity="0.42">
         <rect x="42" y="88" width="146" height="66" rx="12" />
-        <circle cx="65" cy="111" r="5" fill="#efe8d6" stroke="none" />
+        <circle cx="65" cy="111" r="5" fill="#f1ead8" stroke="none" />
         <path d="M82 108H153M64 130H165" strokeLinecap="round" />
 
         <rect x="452" y="104" width="146" height="66" rx="12" />
-        <circle cx="475" cy="127" r="5" fill="#efe8d6" stroke="none" />
+        <circle cx="475" cy="127" r="5" fill="#f1ead8" stroke="none" />
         <path d="M492 124H563M474 146H575" strokeLinecap="round" />
 
         <rect x="57" y="364" width="146" height="66" rx="12" />
-        <circle cx="80" cy="387" r="5" fill="#efe8d6" stroke="none" />
+        <circle cx="80" cy="387" r="5" fill="#f1ead8" stroke="none" />
         <path d="M97 384H168M79 406H180" strokeLinecap="round" />
 
         <rect x="449" y="349" width="146" height="66" rx="12" />
-        <circle cx="472" cy="372" r="5" fill="#efe8d6" stroke="none" />
+        <circle cx="472" cy="372" r="5" fill="#f1ead8" stroke="none" />
         <path d="M489 369H560M471 391H572" strokeLinecap="round" />
       </g>
 
@@ -87,7 +87,7 @@ export function WaveStrip({ className, flip = false }: { className?: string; fli
       role="presentation"
       aria-hidden="true"
       fill="none"
-      stroke="#efe8d6"
+      stroke="#f1ead8"
       style={flip ? { transform: "scaleX(-1)" } : undefined}
     >
       <g strokeWidth="3" strokeLinecap="round" opacity="0.45">
@@ -152,7 +152,7 @@ export function ExchangeCard({ exchange, className }: { exchange: Exchange; clas
         &ldquo;{exchange.question}&rdquo;
       </p>
 
-      <div className="mt-4 rounded-xl border-l-2 border-cream/25 bg-white/5 px-4 py-3">
+      <div className="mt-4 rounded-xl border-l-2 border-cream/25 bg-cream/5 px-4 py-3">
         <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-cream/40">You</p>
         <p className="mt-1.5 text-sm leading-6 text-cream/70">{exchange.answer}</p>
       </div>

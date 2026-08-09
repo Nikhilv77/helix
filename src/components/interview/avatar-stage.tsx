@@ -21,6 +21,7 @@ interface AvatarStageProps {
    * looks morph targets up by name.
    */
   url: string;
+  framing?: "default" | "marketing";
 }
 
 /**
@@ -33,7 +34,7 @@ interface AvatarStageProps {
  */
 const SILENT_VOICE: VoiceBands = { level: 0, low: 0, mid: 0, high: 0, silent: true };
 
-export function AvatarStage({ agentTrack, state, url }: AvatarStageProps) {
+export function AvatarStage({ agentTrack, state, url, framing = "default" }: AvatarStageProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
   // A LiveKit track feeds the shared bus; elsewhere Maya's <audio> element has
@@ -151,15 +152,16 @@ export function AvatarStage({ agentTrack, state, url }: AvatarStageProps) {
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
         const centre = box.getCenter(new THREE.Vector3());
-        const headY = box.max.y - size.y * 0.075;
-        const framedHeight = size.y * 0.36;
+        const marketingFrame = framing === "marketing";
+        const focusY = box.max.y - size.y * 0.075;
+        const framedHeight = size.y * (marketingFrame ? 0.34 : 0.36);
 
         model.position.x -= centre.x;
         model.position.z -= centre.z;
 
         const distance = framedHeight / 2 / Math.tan((camera.fov / 2) * THREE.MathUtils.DEG2RAD);
-        camera.position.set(0, headY, distance);
-        camera.lookAt(0, headY - size.y * 0.02, 0);
+        camera.position.set(0, focusY, distance);
+        camera.lookAt(0, focusY - size.y * 0.02, 0);
 
         resize();
         setStatus("ready");
@@ -312,7 +314,7 @@ export function AvatarStage({ agentTrack, state, url }: AvatarStageProps) {
       renderer.dispose();
       if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
     };
-  }, [url]);
+  }, [framing, url]);
 
   return (
     <div className="relative h-full w-full">

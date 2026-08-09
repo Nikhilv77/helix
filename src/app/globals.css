@@ -49,7 +49,7 @@ body {
    next to the blue chrome. Matching the shell's own base makes any uncovered
    region invisible instead. */
 body.workspace {
-  background: #22409b;
+  background: #3657b4;
 }
 
 body.workspace::before {
@@ -62,8 +62,8 @@ body::before {
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(circle at 52% 0%, rgba(255, 255, 255, 0.08), transparent 34rem),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 30%);
+    radial-gradient(circle at 52% 0%, rgba(241, 234, 216, 0.08), transparent 34rem),
+    linear-gradient(180deg, rgba(241, 234, 216, 0.045), transparent 30%);
   content: "";
   opacity: 0.65;
 }
@@ -75,7 +75,7 @@ a {
 
 ::selection {
   background: rgba(226, 232, 240, 0.26);
-  color: #ffffff;
+  color: #f1ead8;
 }
 
 input,
@@ -123,7 +123,7 @@ select {
 .surface-card {
   background: #2a4aa0;
   border-radius: 1rem;
-  box-shadow: inset 0 0 0 1px rgba(239, 232, 214, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(241, 234, 216, 0.07);
 }
 
 .interactive-card {
@@ -136,16 +136,16 @@ select {
 
 .interactive-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.26);
+  border-color: rgba(241, 234, 216, 0.26);
   box-shadow:
     0 24px 90px rgba(0, 0, 0, 0.42),
-    0 0 34px rgba(255, 255, 255, 0.08);
+    0 0 34px rgba(241, 234, 216, 0.08);
 }
 
 .field {
-  border: 1px solid rgba(239, 232, 214, 0.1);
+  border: 1px solid rgba(241, 234, 216, 0.1);
   background: #24439b;
-  color: var(--bp-cream, #efe8d6);
+  color: var(--bp-cream, #f1ead8);
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease,
@@ -154,8 +154,8 @@ select {
 
 .field:focus,
 .field:focus-within {
-  border-color: rgba(255, 255, 255, 0.34);
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08);
+  border-color: rgba(241, 234, 216, 0.34);
+  box-shadow: 0 0 0 4px rgba(241, 234, 216, 0.08);
 }
 
 .field::placeholder {
@@ -169,7 +169,7 @@ select {
 
 .shimmer::after {
   animation: shimmer 1.45s infinite;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+  background: linear-gradient(90deg, transparent, rgba(241, 234, 216, 0.12), transparent);
   content: "";
   inset: 0;
   position: absolute;
@@ -180,9 +180,9 @@ select {
    --------------------------------------------------------------------------- */
 
 .blueprint {
-  --bp-blue: #22409b;
-  --bp-blue-deep: #1b3480;
-  --bp-cream: #efe8d6;
+  --bp-blue: #3657b4;
+  --bp-blue-deep: #27469a;
+  --bp-cream: #f1ead8;
   position: relative;
   isolation: isolate;
   background-color: var(--bp-blue);
@@ -191,22 +191,18 @@ select {
   overflow-x: clip;
 }
 
-/* Fine + coarse blueprint grid, plus a soft top vignette. */
+/* Sparse blueprint grid. Keep the hero clean; the product sections carry the detail. */
 .blueprint-grid {
   pointer-events: none;
   position: absolute;
   inset: 0;
   z-index: 0;
   background-image:
-    linear-gradient(90deg, rgba(239, 232, 214, 0.1) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(239, 232, 214, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(239, 232, 214, 0.045) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(239, 232, 214, 0.045) 1px, transparent 1px);
+    linear-gradient(90deg, rgba(241, 234, 216, 0.055) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(241, 234, 216, 0.055) 1px, transparent 1px);
   background-size:
-    112px 112px,
-    112px 112px,
-    28px 28px,
-    28px 28px;
+    176px 176px,
+    176px 176px;
   background-position: center top;
 }
 
@@ -250,14 +246,14 @@ select {
 .surface {
   background: #2a4aa0;
   border-radius: 1rem;
-  box-shadow: inset 0 0 0 1px rgba(239, 232, 214, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(241, 234, 216, 0.07);
 }
 
 /* The page-level slab, one step lighter than the cards that sit on it. */
 .surface-raised {
   background: #3557b4;
   border-radius: 1.25rem;
-  box-shadow: inset 0 0 0 1px rgba(239, 232, 214, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(241, 234, 216, 0.08);
 }
 
 /* Interactive tiles: lift slightly instead of brightening a border. */
@@ -271,17 +267,17 @@ select {
 .surface-interactive:hover {
   transform: translateY(-2px);
   background: #2f52ab;
-  box-shadow: inset 0 0 0 1px rgba(239, 232, 214, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(241, 234, 216, 0.14);
 }
 
 /* Soft filled pill, used for chips and tags. */
 .pill {
-  background: rgba(239, 232, 214, 0.1);
+  background: rgba(241, 234, 216, 0.1);
   border-radius: 9999px;
 }
 
 .shadow-soft-inset {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(241, 234, 216, 0.08);
 }
 
 @keyframes profile-motion {
@@ -307,7 +303,7 @@ select {
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.055);
+  background: rgba(241, 234, 216, 0.055);
   border-radius: 0.65rem;
 }
 
@@ -317,8 +313,8 @@ select {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.11) 45%,
-    rgba(255, 255, 255, 0.14) 55%,
+    rgba(241, 234, 216, 0.11) 45%,
+    rgba(241, 234, 216, 0.14) 55%,
     transparent
   );
   animation: skeleton-sheen 1.6s ease-in-out infinite;
@@ -378,9 +374,9 @@ select {
    not from the page's own surface. Left dark it reads as a black gash beside the
    blueprint blue. */
 html {
-  background-color: #22409b;
+  background-color: #3657b4;
   scrollbar-width: thin;
-  scrollbar-color: rgba(239, 232, 214, 0.24) transparent;
+  scrollbar-color: rgba(241, 234, 216, 0.24) transparent;
   scrollbar-gutter: stable;
   /* In-page anchors glided only from the very top of the document before this,
      because nothing declared smooth scrolling — the browser was jumping. The
@@ -415,13 +411,13 @@ html {
 *::-webkit-scrollbar-thumb {
   border: 3px solid transparent;
   border-radius: 9999px;
-  background: rgba(239, 232, 214, 0.2);
+  background: rgba(241, 234, 216, 0.2);
   background-clip: content-box;
   transition: background 160ms ease;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(239, 232, 214, 0.42);
+  background: rgba(241, 234, 216, 0.42);
   background-clip: content-box;
 }
 
@@ -437,7 +433,7 @@ html {
 
 .thin-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(239, 232, 214, 0.22) transparent;
+  scrollbar-color: rgba(241, 234, 216, 0.22) transparent;
 }
 
 .thin-scroll::-webkit-scrollbar {
@@ -446,7 +442,7 @@ html {
 
 .thin-scroll::-webkit-scrollbar-thumb {
   border-width: 2.5px;
-  background: rgba(239, 232, 214, 0.18);
+  background: rgba(241, 234, 216, 0.18);
   background-clip: content-box;
 }
 
@@ -534,7 +530,7 @@ html {
   top: 0;
   bottom: 0;
   width: 1px;
-  background: rgba(239, 232, 214, 0.14);
+  background: rgba(241, 234, 216, 0.14);
   content: "";
 }
 
@@ -560,14 +556,12 @@ html {
   font-weight: 700;
   letter-spacing: -0.045em;
   line-height: 0.86;
-  text-shadow: 0.055em 0.07em 0 rgba(13, 28, 78, 0.55);
 }
 
 .display-heading {
   font-weight: 700;
   letter-spacing: -0.035em;
   line-height: 0.94;
-  text-shadow: 0.03em 0.04em 0 rgba(13, 28, 78, 0.42);
 }
 
 /* Hero content reacts to scroll via --p, set by the page in rAF. */
@@ -626,7 +620,7 @@ html {
   border-radius: 9999px;
   background: radial-gradient(
     circle at 32% 28%,
-    rgba(255, 255, 255, 0.92),
+    rgba(241, 234, 216, 0.92),
     var(--pin, #d94f4f) 46%,
     rgba(0, 0, 0, 0.45)
   );
@@ -667,6 +661,103 @@ html {
   animation: ring-pulse 1800ms cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
+@keyframes prep-j-draw {
+  from {
+    stroke-dashoffset: 260;
+    opacity: 0.3;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 0.9;
+  }
+}
+
+.prep-j-curve {
+  animation: prep-j-draw 7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  stroke-dasharray: 260;
+  stroke-dashoffset: 260;
+}
+
+.prep-stack-card {
+  left: 50%;
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%) var(--stack-mobile-transform);
+  transform-origin: center top;
+  will-change: transform, opacity;
+}
+
+@media (min-width: 1024px) {
+  .prep-stack-stage {
+    position: static;
+  }
+
+  .prep-stack-card {
+    left: auto;
+    margin-left: var(--stack-margin-left);
+    position: relative;
+    top: auto;
+    transform: var(--stack-transform);
+  }
+}
+
+@keyframes interview-carousel-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.interview-carousel-progress {
+  animation: interview-carousel-progress 4200ms linear both;
+  transform-origin: left center;
+}
+
+@keyframes report-ring {
+  from {
+    stroke-dashoffset: 82;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes report-grow-y {
+  from {
+    opacity: 0.35;
+    transform: scaleY(0.18);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes report-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.report-score-ring {
+  animation: report-ring 1.4s cubic-bezier(0.16, 1, 0.3, 1) 180ms both;
+}
+
+.report-evidence-bar {
+  animation: report-grow-y 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: bottom;
+}
+
+.report-row-fill {
+  animation: report-grow-x 950ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: left;
+}
+
 .ghost-button {
   transition:
     background 260ms ease,
@@ -676,8 +767,8 @@ html {
 
 .ghost-button:hover {
   transform: translateY(-2px);
-  border-color: rgba(239, 232, 214, 0.85);
-  background: rgba(239, 232, 214, 0.1);
+  border-color: rgba(241, 234, 216, 0.85);
+  background: rgba(241, 234, 216, 0.1);
 }
 
 .ghost-button svg {

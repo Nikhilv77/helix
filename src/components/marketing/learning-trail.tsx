@@ -93,13 +93,13 @@ export function LearningTrail() {
   return (
     <div className="overflow-hidden rounded-[1.75rem] border border-cream/15 bg-[#0f1729] shadow-[0_40px_120px_rgba(9,21,60,0.5)] sm:rounded-[2rem]">
       {/* Console chrome, matching the code blocks on the feature board. */}
-      <div className="flex items-center justify-between gap-4 border-b border-white/[0.07] bg-white/[0.02] px-5 py-3.5 sm:px-7">
+      <div className="flex items-center justify-between gap-4 border-b border-cream/[0.07] bg-cream/[0.02] px-5 py-3.5 sm:px-7">
         <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-cream/35">
           your trail
         </span>
         <span
           className="font-mono text-[10px] uppercase tracking-[0.14em] transition-colors duration-500"
-          style={{ color: animate ? current.accent : "rgba(239,232,214,0.35)" }}
+          style={{ color: animate ? current.accent : "rgba(241,234,216,0.35)" }}
         >
           {String(active + 1).padStart(2, "0")} / 06
         </span>
@@ -122,9 +122,9 @@ export function LearningTrail() {
                         color: current.accent
                       }
                     : {
-                        borderColor: "rgba(239,232,214,0.12)",
-                        backgroundColor: "rgba(255,255,255,0.02)",
-                        color: "rgba(239,232,214,0.5)"
+                        borderColor: "rgba(241,234,216,0.12)",
+                        backgroundColor: "rgba(241,234,216,0.02)",
+                        color: "rgba(241,234,216,0.5)"
                       }
                 }
               >
@@ -154,9 +154,9 @@ export function LearningTrail() {
                             boxShadow: `0 0 0 6px ${stage.accent}0d, 0 18px 40px -18px ${stage.accent}`
                           }
                         : {
-                            borderColor: "rgba(239,232,214,0.1)",
-                            backgroundColor: "rgba(255,255,255,0.03)",
-                            color: "rgba(239,232,214,0.42)"
+                            borderColor: "rgba(241,234,216,0.1)",
+                            backgroundColor: "rgba(241,234,216,0.03)",
+                            color: "rgba(241,234,216,0.42)"
                           }
                     }
                   >
@@ -187,7 +187,7 @@ export function LearningTrail() {
 
                   <span
                     className="mt-6 font-mono text-[10px] uppercase tracking-[0.14em] transition-colors duration-500"
-                    style={{ color: on ? stage.accent : "rgba(239,232,214,0.3)" }}
+                    style={{ color: on ? stage.accent : "rgba(241,234,216,0.3)" }}
                   >
                     {String(index + 1).padStart(2, "0")}
                   </span>
