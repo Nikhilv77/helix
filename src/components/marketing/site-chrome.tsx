@@ -111,13 +111,26 @@ export function SiteNav({
       ? "mt-2 border-t border-cream/[0.12] pt-2 [&>*]:inline-flex [&>*]:h-12 [&>*]:w-full [&>*]:items-center [&>*]:justify-center [&>*]:rounded-lg [&>*]:bg-cream [&>*]:px-4 [&>*]:text-sm [&>*]:font-bold [&>*]:tracking-wide [&>*]:text-[#13234f] [&>*]:shadow-[0_14px_30px_-20px_rgba(3,10,31,0.72),inset_0_-1px_0_rgba(19,35,79,0.12)] [&>*]:outline-none [&>*]:transition [&>*]:duration-200 [&>*]:hover:bg-cream-soft [&>*]:hover:text-[#0d1b44] [&>*]:active:scale-[0.98] [&>*]:focus-visible:ring-2 [&>*]:focus-visible:ring-cream/45"
       : "mt-2 border-t border-cream/[0.12] pt-2 [&>*]:grid [&>*]:h-11 [&>*]:w-full [&>*]:place-items-center [&>*]:rounded-xl [&>*]:p-0 [&>*]:text-cream [&>*]:hover:bg-cream/[0.08]";
   useEffect(() => {
-    function onScroll() {
+    // Coalesced into rAF: touch scrolling fires this far faster than the
+    // compositor paints, and every raw event was reading scrollY — a forced
+    // layout flush — before React could bail out on the unchanged value.
+    let frame = 0;
+
+    function read() {
+      frame = 0;
       setScrolled(window.scrollY > 24);
     }
 
-    onScroll();
+    function onScroll() {
+      if (frame === 0) frame = window.requestAnimationFrame(read);
+    }
+
+    read();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame !== 0) window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   useEffect(() => {

@@ -564,7 +564,21 @@ html {
   line-height: 0.94;
 }
 
-/* Hero content reacts to scroll via --p, set by the page in rAF. */
+/*
+ * Hero content reacts to scroll via --p, set by the page in rAF.
+ *
+ * Registering it matters more than it looks. An unregistered custom property
+ * inherits, so writing --p on the hero once per scroll frame invalidated style
+ * for every descendant — the WebGL canvas, the signal SVG, all of the copy —
+ * and the recalc landed on the main thread mid-scroll. Declared as a typed,
+ * non-inheriting property, the write touches only the element that reads it.
+ */
+@property --p {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
 .hero-parallax {
   opacity: clamp(0, calc(1 - var(--p, 0) * 1.35), 1);
   transform: translateY(calc(var(--p, 0) * -60px)) scale(calc(1 - var(--p, 0) * 0.07));

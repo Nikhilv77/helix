@@ -71,12 +71,30 @@ export function Reveal({ children, delay = 0, className }: RevealProps) {
 /**
  * Writes scroll progress (0 at the top of the page, 1 after one viewport) onto
  * the element as `--p` so the transform stays on the compositor.
+ *
+ * Attach this to the element that *reads* `--p`, not an ancestor: the property
+ * is registered `inherits: false` in globals.css, so a write here invalidates
+ * one element's style rather than recomputing every node in the hero — canvas
+ * and SVG included — on each scroll frame.
+ *
+ * `onProgress` runs inside the same rAF tick. Use it to derive coarse state
+ * (is the hero still on screen?) without adding a second scroll listener.
  */
-export function useScrollProgress<T extends HTMLElement>(ref: RefObject<T | null>) {
+export function useScrollProgress<T extends HTMLElement>(
+  ref: RefObject<T | null>,
+  onProgress?: (progress: number) => void
+) {
+  const report = useRef(onProgress);
+  report.current = onProgress;
+
   useEffect(() => {
     const element = ref.current;
-    if (!element || prefersReducedMotion()) return;
+    if (!element) return;
 
+    // Reduced motion pins the parallax with `transform: none !important`, so
+    // the write is pointless — but callers still need the progress value, and
+    // the work they gate on it (parking a WebGL loop) matters just as much.
+    const parallax = !prefersReducedMotion();
     let frame = 0;
 
     function update() {
@@ -84,7 +102,8 @@ export function useScrollProgress<T extends HTMLElement>(ref: RefObject<T | null
       const target = ref.current;
       if (!target) return;
       const progress = Math.min(1, Math.max(0, window.scrollY / window.innerHeight));
-      target.style.setProperty("--p", progress.toFixed(4));
+      if (parallax) target.style.setProperty("--p", progress.toFixed(4));
+      report.current?.(progress);
     }
 
     function onScroll() {

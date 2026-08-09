@@ -22,6 +22,33 @@ interface AvatarStageProps {
    */
   url: string;
   framing?: "default" | "marketing";
+  /**
+   * Set false to park the render loop while the avatar is still mounted. The
+   * marketing hero is `position: sticky`, so it never leaves the viewport and
+   * an IntersectionObserver alone cannot tell that the page has scrolled over
+   * the top of it.
+   */
+  active?: boolean;
+}
+
+/**
+ * Phones pay for every pixel twice: once in fragment shading and again when the
+ * compositor blends the canvas under its mask and drop shadow. Both savings
+ * here are resolution, not motion — the loop still runs at the display's full
+ * refresh rate everywhere.
+ */
+function mobileProfile() {
+  const dpr = window.devicePixelRatio || 1;
+  const coarse = window.matchMedia("(pointer: coarse)").matches;
+  const small = Math.min(window.innerWidth, window.innerHeight) < 820;
+  const constrained = coarse && small;
+
+  return {
+    // At a device pixel ratio of 2 the buffer is already supersampled, so MSAA
+    // on top costs a slice of every frame for an edge nobody can resolve.
+    antialias: dpr < 2,
+    pixelRatio: Math.min(dpr, constrained ? 1.5 : 2)
+  };
 }
 
 /**
@@ -34,7 +61,16 @@ interface AvatarStageProps {
  */
 const SILENT_VOICE: VoiceBands = { level: 0, low: 0, mid: 0, high: 0, silent: true };
 
-export function AvatarStage({ agentTrack, state, url, framing = "default" }: AvatarStageProps) {
+/** Radians per second through the blink arc — 0.16 per frame at 60Hz. */
+const BLINK_RATE = 9.6;
+
+export function AvatarStage({
+  agentTrack,
+  state,
+  url,
+  framing = "default",
+  active = true
+}: AvatarStageProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
   // A LiveKit track feeds the shared bus; elsewhere Maya's <audio> element has
@@ -46,12 +82,19 @@ export function AvatarStage({ agentTrack, state, url, framing = "default" }: Ava
   }, [agentTrack]);
   const stateRef = useRef(state);
   stateRef.current = state;
+  // Read inside the loop's gate rather than in the dependency list: rebuilding
+  // the scene and re-downloading the model every time the hero scrolls past
+  // would cost far more than the loop it is trying to stop.
+  const activeRef = useRef(active);
+  activeRef.current = active;
+  const syncRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const profile = mobileProfile();
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
@@ -63,13 +106,13 @@ export function AvatarStage({ agentTrack, state, url, framing = "default" }: Ava
     // has an "unavailable" state to fall back to.
     let renderer: THREE.WebGLRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer = new THREE.WebGLRenderer({ antialias: profile.antialias, alpha: true });
     } catch {
       setStatus("failed");
       return;
     }
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(profile.pixelRatio);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     // Filmic tone mapping plus image-based lighting: PBR skin and hair look
     // flat and plastic under direct lights alone.
@@ -96,7 +139,10 @@ export function AvatarStage({ agentTrack, state, url, framing = "default" }: Ava
     const root = new THREE.Group();
     scene.add(root);
 
-    let morphMeshes: THREE.Mesh[] = [];
+    // Resolved once at load. Walking every mesh's morphTargetDictionary for
+    // each of the fourteen shapes below, sixty times a second, was pure
+    // per-frame string hashing on the main thread.
+    let morphSlots = new Map<string, Array<{ influences: number[]; index: number }>>();
     let disposed = false;
     let frame = 0;
 
@@ -140,8 +186,15 @@ export function AvatarStage({ agentTrack, state, url, framing = "default" }: Ava
         root.add(model);
 
         model.traverse((child) => {
-          if (child instanceof THREE.Mesh && child.morphTargetDictionary) {
-            morphMeshes.push(child);
+          if (!(child instanceof THREE.Mesh)) return;
+          const dictionary = child.morphTargetDictionary;
+          const influences = child.morphTargetInfluences;
+          if (!dictionary || !influences) return;
+
+          for (const [name, index] of Object.entries(dictionary)) {
+            const slots = morphSlots.get(name);
+            if (slots) slots.push({ influences, index });
+            else morphSlots.set(name, [{ influences, index }]);
           }
         });
 
@@ -250,15 +303,13 @@ export function AvatarStage({ agentTrack, state, url, framing = "default" }: Ava
     }
 
     function hasMorph(name: string): boolean {
-      return morphMeshes.some((mesh) => mesh.morphTargetDictionary?.[name] !== undefined);
+      return morphSlots.has(name);
     }
 
     function setMorph(name: string, value: number) {
-      for (const mesh of morphMeshes) {
-        const index = mesh.morphTargetDictionary?.[name];
-        if (index === undefined || !mesh.morphTargetInfluences) continue;
-        mesh.morphTargetInfluences[index] = value;
-      }
+      const slots = morphSlots.get(name);
+      if (!slots) return;
+      for (const slot of slots) slot.influences[slot.index] = value;
     }
 
     function render(now: number) {
@@ -271,13 +322,15 @@ export function AvatarStage({ agentTrack, state, url, framing = "default" }: Ava
       const voice = speaking ? readVoice() : SILENT_VOICE;
       shapeMouth(voice, delta, speaking);
 
-      // Blink.      // Blink.
+      // Blink. Advanced by elapsed time, not by frame: at a fixed step per
+      // frame the same blink took half as long on a 120Hz display as on a
+      // 60Hz one. BLINK_RATE reproduces the 60Hz timing exactly.
       if (blinkPhase < 0 && now > blinkAt) {
         blinkPhase = 0;
         blinkAt = now + 2600 + Math.random() * 3800;
       }
       if (blinkPhase >= 0) {
-        blinkPhase += 0.16;
+        blinkPhase += delta * BLINK_RATE;
         const shut = Math.sin(Math.min(Math.PI, blinkPhase));
         setMorph("eyeBlinkLeft", shut);
         setMorph("eyeBlinkRight", shut);
@@ -295,13 +348,69 @@ export function AvatarStage({ agentTrack, state, url, framing = "default" }: Ava
       renderer.render(scene, camera);
     }
 
-    frame = requestAnimationFrame(render);
+    /*
+     * The loop is the single most expensive thing on the marketing page, and
+     * for most of that page nobody can see it: the hero is `position: sticky`,
+     * so the canvas stays pinned in the viewport while the sections scroll
+     * over the top of it, and WebGL happily keeps shading a fully occluded
+     * figure at full rate against the scroll. Three gates park it — the tab is
+     * backgrounded, the canvas is genuinely off-screen, or the owner says it
+     * is covered. Pausing leaves the last frame in the canvas, so resuming is
+     * invisible.
+     */
+    let onScreen = true;
+    let pageVisible = document.visibilityState === "visible";
+    let running = false;
+
+    function startLoop() {
+      if (running || disposed) return;
+      running = true;
+      // Reset the clock so the first delta after a pause is one frame, not the
+      // whole time spent parked.
+      lastFrame = performance.now();
+      frame = requestAnimationFrame(render);
+    }
+
+    function stopLoop() {
+      if (!running) return;
+      running = false;
+      cancelAnimationFrame(frame);
+      frame = 0;
+    }
+
+    function sync() {
+      if (onScreen && pageVisible && activeRef.current) startLoop();
+      else stopLoop();
+    }
+
+    syncRef.current = sync;
+
+    const visibility = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) onScreen = entry.isIntersecting;
+        sync();
+      },
+      { rootMargin: "120px" }
+    );
+    visibility.observe(mount);
+
+    function onPageVisibility() {
+      pageVisible = document.visibilityState === "visible";
+      sync();
+    }
+
+    document.addEventListener("visibilitychange", onPageVisibility);
+    sync();
 
     return () => {
       disposed = true;
+      syncRef.current = null;
+      stopLoop();
       cancelAnimationFrame(frame);
+      document.removeEventListener("visibilitychange", onPageVisibility);
+      visibility.disconnect();
       observer.disconnect();
-      morphMeshes = [];
+      morphSlots = new Map();
       scene.traverse((object) => {
         if (object instanceof THREE.Mesh) {
           object.geometry.dispose();
@@ -315,6 +424,13 @@ export function AvatarStage({ agentTrack, state, url, framing = "default" }: Ava
       if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
     };
   }, [framing, url]);
+
+  // Nudges the gate above. Deliberately separate from the scene effect: `active`
+  // flips on every scroll past the hero, and rebuilding the renderer there
+  // would be far worse than the loop it stops.
+  useEffect(() => {
+    syncRef.current?.();
+  }, [active]);
 
   return (
     <div className="relative h-full w-full">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Reveal, useScrollProgress } from "../reveal";
 import { InterviewSignal, TrailgradMark } from "../blueprint-art";
@@ -8,20 +8,36 @@ import { LiveBars } from "../product-frames";
 import { MarketingAvatar } from "../marketing-avatar";
 import { PrimaryAction } from "./primary-action";
 
+/**
+ * The parallax has already faded the hero out by the time `--p` reaches 0.74,
+ * and the section is sticky, so past this point the avatar is rendering behind
+ * an opaque page nobody can see through. A little margin above the fade-out
+ * keeps the resume invisible on the way back up.
+ */
+const AVATAR_CUTOFF = 0.85;
+
 export function Hero() {
-  const heroRef = useRef<HTMLElement>(null);
-  useScrollProgress(heroRef);
+  const parallaxRef = useRef<HTMLDivElement>(null);
+  const [avatarActive, setAvatarActive] = useState(true);
+
+  // Shares the parallax's rAF tick rather than adding a listener of its own,
+  // and only re-renders on the two frames where the threshold is crossed.
+  useScrollProgress(parallaxRef, (progress) => {
+    const active = progress < AVATAR_CUTOFF;
+    setAvatarActive((current) => (current === active ? current : active));
+  });
 
   return (
-    <section
-      ref={heroRef}
-      className="sticky top-0 z-0 h-[100svh] min-h-[40rem] overflow-hidden px-5 pb-10 pt-24 sm:px-10"
-    >
-      <div className="hero-parallax relative z-10 mx-auto flex h-full w-full max-w-[46rem] flex-col items-center justify-center text-center">
+    <section className="sticky top-0 z-0 h-[100svh] min-h-[40rem] overflow-hidden px-5 pb-10 pt-24 sm:px-10">
+      <div
+        ref={parallaxRef}
+        className="hero-parallax relative z-10 mx-auto flex h-full w-full max-w-[46rem] flex-col items-center justify-center text-center"
+      >
         <div className="relative max-h-[36rem] min-h-[15rem] w-full max-w-[31rem] flex-1 sm:max-h-[30rem] sm:max-w-[28rem]">
           <InterviewSignal className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[23rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 opacity-35 sm:h-[26rem] sm:w-[34rem] sm:opacity-50" />
           <MarketingAvatar
             priority
+            active={avatarActive}
             framing="marketing"
             className="pointer-events-none absolute inset-y-0 -inset-x-10 z-10 -translate-x-10 scale-[1.18] drop-shadow-[0_24px_30px_rgba(4,12,35,0.5)] sm:inset-0 sm:translate-x-0 sm:scale-100"
           />
