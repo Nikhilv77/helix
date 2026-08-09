@@ -6,6 +6,7 @@ import { Delivery } from "./home/delivery-section";
 import { Hero } from "./home/hero";
 import { LearningPath } from "./home/learning-path-section";
 import { PrimaryAction } from "./home/primary-action";
+import { QuestionLab } from "./home/question-lab-section";
 import { TheInterview } from "./home/interview-section";
 
 export function MarketingHome() {
@@ -26,6 +27,7 @@ export function MarketingHome() {
       <main className="relative">
         <Hero />
         <LearningPath />
+        <QuestionLab />
         <TheInterview />
         <Delivery />
       </main>

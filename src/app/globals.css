@@ -388,6 +388,7 @@ html {
    margin the browser aligns a section's top edge with the viewport's, so the
    heading lands behind the bar. */
 [id="learn"],
+[id="questions"],
 [id="interview"],
 [id="product"],
 [id="features"],
