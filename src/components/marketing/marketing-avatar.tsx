@@ -11,7 +11,7 @@ const AvatarStage = dynamic(
   { ssr: false }
 );
 
-const AVATAR_URL = process.env.NEXT_PUBLIC_AVATAR_URL || "/avatars/interviewer.glb";
+const AVATAR_URL = process.env.NEXT_PUBLIC_AVATAR_URL || "/avatars/interviewer-v2.glb";
 
 export function MarketingAvatar({
   className,

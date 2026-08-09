@@ -292,7 +292,7 @@ export function MayaWelcome({
           <AvatarStage
             agentTrack={null}
             state={speaking ? "speaking" : "listening"}
-            url="/avatars/interviewer.glb"
+            url="/avatars/interviewer-v2.glb"
           />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#163988] to-transparent" />
         </div>

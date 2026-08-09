@@ -23,7 +23,7 @@ export function MayaStage({ speaking = false }: { speaking?: boolean }) {
     <AvatarStage
       agentTrack={null}
       state={speaking ? "speaking" : "listening"}
-      url="/avatars/interviewer.glb"
+      url="/avatars/interviewer-v2.glb"
     />
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { attachTrack, detachVoice, readVoice, type VoiceBands } from "@/lib/voice-bus";
 import type { PresenceState } from "./interviewer-presence";
@@ -178,7 +179,11 @@ export function AvatarStage({
     const observer = new ResizeObserver(resize);
     observer.observe(mount);
 
-    new GLTFLoader().load(
+    // The model ships meshopt-compressed: vertex and morph-target data is
+    // quantized and byte-packed, which more than halves the download at the
+    // cost of a decode measured in single-digit milliseconds. The decoder is
+    // pure JS + wasm and rides in this chunk, which is already lazy.
+    new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(
       url,
       (gltf) => {
         if (disposed) return;

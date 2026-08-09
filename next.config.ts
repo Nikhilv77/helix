@@ -4,7 +4,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   devIndicators: false,
   images: {
-    qualities: [72, 75]
+    // Every distinct `quality` an <Image> asks for has to be listed, or the
+    // optimizer refuses it. 72 is the delivery portrait, 76 the question-lab
+    // laptop; 75 is next/image's own default, kept so an unannotated <Image>
+    // keeps working.
+    qualities: [72, 75, 76]
   },
   async headers() {
     return [
