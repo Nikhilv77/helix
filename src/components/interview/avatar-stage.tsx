@@ -33,11 +33,28 @@ interface AvatarStageProps {
 }
 
 /**
- * Phones pay for every pixel twice: once in fragment shading and again when the
- * compositor blends the canvas under its mask and drop shadow. Both savings
- * here are resolution, not motion — the loop still runs at the display's full
- * refresh rate everywhere.
+ * How densely to render, per device.
+ *
+ * The marketing hero puts the canvas inside a `scale-[1.18]` on small screens,
+ * so the compositor resamples whatever we draw before it reaches the glass.
+ * Rendering at the plain device ratio therefore lands *below* one device pixel
+ * per displayed pixel on a phone, which reads as a soft, aliased face — the
+ * hair and the glasses frames give it away first. Phones get headroom above
+ * the desktop cap to absorb that upscale.
+ *
+ * MSAA stays on everywhere. Making it conditional is what broke this the first
+ * time — it was switched off on the grounds that a 2x buffer supersamples it
+ * away, while the very next line capped the buffer at 1.5x and removed the
+ * supersampling it was counting on. Mobile GPUs are tile-based and resolve
+ * multisampling inside tile memory, so it is far cheaper there than the
+ * bandwidth argument against it suggests.
+ *
+ * Raise MOBILE_PIXEL_RATIO_CAP for a sharper phone render at a squarely
+ * quadratic cost in fragment work; lower it if frames start dropping.
  */
+const MOBILE_PIXEL_RATIO_CAP = 2.5;
+const DESKTOP_PIXEL_RATIO_CAP = 2;
+
 function mobileProfile() {
   const dpr = window.devicePixelRatio || 1;
   const coarse = window.matchMedia("(pointer: coarse)").matches;
@@ -45,10 +62,8 @@ function mobileProfile() {
   const constrained = coarse && small;
 
   return {
-    // At a device pixel ratio of 2 the buffer is already supersampled, so MSAA
-    // on top costs a slice of every frame for an edge nobody can resolve.
-    antialias: dpr < 2,
-    pixelRatio: Math.min(dpr, constrained ? 1.5 : 2)
+    antialias: true,
+    pixelRatio: Math.min(dpr, constrained ? MOBILE_PIXEL_RATIO_CAP : DESKTOP_PIXEL_RATIO_CAP)
   };
 }
 
