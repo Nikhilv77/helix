@@ -31,6 +31,7 @@ const footerColumns = [
       { label: "Learn", href: "#learn" },
       { label: "Interview", href: "#interview" },
       { label: "Reports", href: "#report" },
+      { label: "Blog", href: "/blog" },
       { label: "Start", href: "#flow" }
     ]
   },

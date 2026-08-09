@@ -18,6 +18,25 @@ git push
 
 Vercel auto-deploys after the push if the project is connected to the Git repo.
 
+## Vercel Analytics And Google Indexing
+
+Web Analytics is wired into the Next.js root layout with `@vercel/analytics`.
+After deploying, enable Web Analytics for the Vercel project in the Vercel
+dashboard if it is not already enabled.
+
+For Google Search Console:
+
+1. Add `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` in Vercel with the `content`
+   value from Google's HTML meta tag.
+2. Redeploy the web app so the verification meta tag is present on the home
+   page.
+3. Verify the property in Search Console.
+4. Submit `https://trailgrad.com/sitemap.xml` in Search Console.
+
+The app already exposes `robots.txt` with the sitemap URL and allows indexing
+for public pages. Private app routes are marked `noindex` and excluded from the
+sitemap.
+
 ## Deploy The Voice Agent
 
 Use this when you change files in `agent/`, such as:
@@ -67,6 +86,8 @@ Stop the log stream with `Ctrl-C`.
 Vercel needs the root app environment variables, including:
 
 ```env
+NEXT_PUBLIC_APP_URL=https://trailgrad.com
+NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=...
 LIVEKIT_URL=wss://trailgrad-km39wyh7.livekit.cloud
 LIVEKIT_API_KEY=...
 LIVEKIT_API_SECRET=...

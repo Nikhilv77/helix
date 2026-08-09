@@ -3,12 +3,15 @@ import type { ReactNode } from "react";
 import { Geist, Geist_Mono, Josefin_Sans } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
+import { Analytics } from "@vercel/analytics/next";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { AuthSync } from "@/components/workspace/auth-sync";
 import { ScrollRestoration } from "@/components/scroll-restoration";
 import { clerkAppearance } from "@/lib/clerk-theme";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/seo";
 import "./globals.css";
+
+const googleSiteVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
@@ -74,7 +77,14 @@ export const metadata: Metadata = {
       "max-image-preview": "large",
       "max-video-preview": -1
     }
-  }
+  },
+  ...(googleSiteVerification
+    ? {
+        verification: {
+          google: googleSiteVerification
+        }
+      }
+    : {})
 };
 
 /**
@@ -155,6 +165,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         ) : (
           app
         )}
+        <Analytics />
       </body>
     </html>
   );
