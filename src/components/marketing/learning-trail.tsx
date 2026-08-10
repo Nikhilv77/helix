@@ -5,10 +5,8 @@ import type { LucideIcon } from "lucide-react";
 import { Boxes, ClipboardCheck, Gauge, LayoutGrid, SquareCode, Trophy } from "lucide-react";
 
 /**
- * The six stages every trail runs through, whatever role you are preparing
- * for. Deliberately named after what the stage *does* rather than after a
- * stack — an earlier version listed the frontend roadmap's session titles,
- * which read as though the product only served frontend candidates.
+ * The six stages every trail runs through. Deliberately named after what the
+ * stage *does* rather than after a stack.
  *
  * Each carries its own accent so the panel reads as a set of distinct steps
  * rather than one flat blue field. The hues are the note-card and pin colours
@@ -23,7 +21,7 @@ const stages: Array<{ title: string; detail: string; icon: LucideIcon; accent: s
   },
   {
     title: "Core depth",
-    detail: "The language and framework questions your role actually gets.",
+    detail: "The language, framework, and system questions engineers actually get.",
     icon: SquareCode,
     accent: "#8be6bd"
   },
@@ -53,13 +51,13 @@ const stages: Array<{ title: string; detail: string; icon: LucideIcon; accent: s
   }
 ];
 
-const roles = ["Backend", "Frontend", "Full-stack", "Data", "AI / ML", "Product"];
+const tracks = ["DSA", "Frontend", "Backend", "System design", "Projects", "Behavioral"];
 
 const STEP_MS = 2200;
 
 /**
  * A trail you watch walk itself: the stages light in sequence, each in its own
- * accent, and the role chips and header counter follow the same beat. One
+ * accent, and the focus chips and header counter follow the same beat. One
  * interval drives all of it, so nothing drifts out of phase, and it stops
  * entirely for reduced-motion users rather than animating at them.
  *
@@ -106,13 +104,13 @@ export function LearningTrail() {
       </div>
 
       <div className="px-5 py-8 sm:px-8 sm:py-10">
-        {/* Roles the interviewer covers — every role the product sets up. */}
+        {/* Focus areas the interviewer covers. */}
         <div className="flex flex-wrap justify-center gap-2">
-          {roles.map((role, index) => {
+          {tracks.map((track, index) => {
             const on = animate && index === active;
             return (
               <span
-                key={role}
+                key={track}
                 className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-medium transition-colors duration-500"
                 style={
                   on
@@ -128,7 +126,7 @@ export function LearningTrail() {
                       }
                 }
               >
-                {role}
+                {track}
               </span>
             );
           })}

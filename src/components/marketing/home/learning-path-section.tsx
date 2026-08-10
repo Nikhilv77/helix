@@ -19,7 +19,7 @@ const prepSteps = [
   },
   {
     label: "Map",
-    detail: "Trailgrad orders the path around what your role will actually test.",
+    detail: "Trailgrad orders the path around the interviews you are preparing for.",
     visual: "map"
   },
   {
@@ -253,11 +253,11 @@ function SimplePrepPath() {
             <article
               key={step.label}
               className={[
-                "relative w-[min(23rem,calc(100vw-3rem))] overflow-hidden rounded-2xl border text-center shadow-[0_30px_80px_-48px_rgba(3,10,31,0.7)] transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] lg:w-64",
+                "relative w-[min(23rem,calc(100vw-3rem))] overflow-hidden rounded-[2rem] border text-left shadow-[0_30px_80px_-48px_rgba(3,10,31,0.78)] backdrop-blur-sm transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] lg:w-64",
                 "prep-stack-card",
                 revealed
-                  ? "min-h-[19rem] border-cream/85 bg-[#f1ead8] p-5 opacity-100"
-                  : "min-h-[14rem] border-cream/45 bg-[#f1ead8]/80 p-4 opacity-70"
+                  ? "min-h-[18rem] border-cream/85 bg-cream/[0.06] p-5 opacity-100"
+                  : "min-h-[13rem] border-cream/45 bg-cream/[0.025] p-4 opacity-65"
               ].join(" ")}
               style={{
                 "--stack-margin-left": index === 0 ? "0rem" : revealed ? "1rem" : "-7.5rem",
@@ -272,39 +272,50 @@ function SimplePrepPath() {
               } as CSSProperties}
             >
               <span
+                aria-hidden="true"
                 className={[
-                  "absolute inset-x-0 top-0 h-1 origin-left bg-[#3657b4]/75 transition-transform duration-1000 ease-out",
+                  "absolute inset-x-0 top-0 h-px origin-left bg-cream/70 transition-transform duration-1000 ease-out",
                   revealed ? "scale-x-100" : "scale-x-0"
                 ].join(" ")}
               />
-              <span className="absolute left-5 top-4 h-2 w-2 rounded-full bg-[#3657b4]/15 shadow-[168px_0_0_rgba(54,87,180,0.12)]" />
               <span
                 aria-hidden="true"
                 className={[
                   "absolute inset-0 transition-opacity duration-700",
-                  revealed ? "opacity-100" : "opacity-25"
+                  revealed ? "opacity-100" : "opacity-40"
                 ].join(" ")}
                 style={{
                   backgroundImage:
-                    "linear-gradient(180deg, transparent 0 31px, rgba(54,87,180,0.115) 32px, transparent 33px), radial-gradient(circle at 18% 22%, rgba(54,87,180,0.08), transparent 5rem), linear-gradient(135deg, rgba(241,234,216,0.55), transparent 42%)",
-                  backgroundSize: "100% 2rem, 100% 100%, 100% 100%"
+                    "linear-gradient(90deg, rgba(241,234,216,0.08) 1px, transparent 1px), linear-gradient(180deg, rgba(241,234,216,0.08) 1px, transparent 1px), linear-gradient(135deg, rgba(241,234,216,0.08), transparent 46%)",
+                  backgroundSize: "4rem 4rem, 4rem 4rem, 100% 100%"
                 }}
+              />
+              <span
+                aria-hidden="true"
+                className="absolute -right-8 -top-8 h-28 w-28 rounded-full border border-cream/12"
+              />
+              <span
+                aria-hidden="true"
+                className="absolute bottom-5 left-5 h-1.5 w-1.5 rounded-full bg-cream/35 shadow-[7.5rem_0_0_rgba(241,234,216,0.18),14rem_0_0_rgba(241,234,216,0.12)]"
               />
               <BackgroundVisual
                 kind={step.visual}
                 className={[
-                  "pointer-events-none absolute right-4 top-5 h-24 w-28 text-[#2f3a4a] transition-[opacity,transform] duration-700",
-                  revealed ? "rotate-[-5deg] scale-100 opacity-[0.12]" : "rotate-[-2deg] scale-90 opacity-[0.05]"
+                  "pointer-events-none absolute right-5 top-5 h-24 w-28 text-cream transition-[opacity,transform] duration-700",
+                  revealed ? "rotate-[-5deg] scale-100 opacity-[0.18]" : "rotate-[-2deg] scale-90 opacity-[0.08]"
                 ].join(" ")}
               />
 
               <div
                 className={[
-                  "relative z-10 flex min-h-[15rem] flex-col items-start justify-center px-2 pt-12 text-left transition-all duration-700",
-                  revealed ? "opacity-100" : "opacity-55"
+                  "relative z-10 flex min-h-[14.5rem] flex-col items-start justify-center px-2 py-6 transition-all duration-700",
+                  revealed ? "opacity-100" : "opacity-60"
                 ].join(" ")}
               >
-                <h3 className="min-h-[3.05rem] font-card text-[2.55rem] font-bold leading-none text-[#202227]">
+                <span className="blueprint-label mb-5 text-cream/42">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <h3 className="display-heading min-h-[3.05rem] text-[2.7rem] text-cream sm:text-[3.05rem]">
                   {revealed ? (
                     <TypeOut key={`${step.label}-title`} text={step.label} speed={80} />
                   ) : (
@@ -313,7 +324,7 @@ function SimplePrepPath() {
                 </h3>
                 <p
                   className={[
-                    "relative mt-5 min-h-[6.25rem] w-full max-w-[13.75rem] font-card text-[1.2rem] font-semibold leading-7 text-[#25272d]/95 transition duration-500",
+                    "relative mt-5 min-h-[6.25rem] w-full max-w-[14.75rem] text-[1.05rem] font-medium leading-7 text-cream/70 transition duration-500 sm:text-[1.1rem]",
                     revealed ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
                   ].join(" ")}
                 >
@@ -329,7 +340,7 @@ function SimplePrepPath() {
               </div>
 
               {!revealed ? (
-                <span className="absolute left-1/2 top-5 h-1.5 w-16 -translate-x-1/2 rounded-full bg-cream/25" />
+                <span className="absolute left-1/2 top-5 h-1.5 w-16 -translate-x-1/2 rounded-full bg-cream/18" />
               ) : null}
             </article>
           );

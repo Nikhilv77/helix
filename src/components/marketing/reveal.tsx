@@ -185,11 +185,13 @@ export function Counter({ value, suffix = "", duration = 1600, className }: Coun
 export function TypeOut({
   text,
   className,
-  speed = 14
+  speed = 14,
+  delay = 0
 }: {
   text: string;
   className?: string;
   speed?: number;
+  delay?: number;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
   const visible = useInView(ref, "0px 0px -8% 0px");
@@ -206,9 +208,12 @@ export function TypeOut({
 
   useEffect(() => {
     if (!animate || !visible || shown >= text.length) return;
-    const timer = window.setTimeout(() => setShown((count) => count + 1), speed);
+    const timer = window.setTimeout(
+      () => setShown((count) => count + 1),
+      shown === 0 ? delay : speed
+    );
     return () => window.clearTimeout(timer);
-  }, [animate, visible, shown, text.length, speed]);
+  }, [animate, delay, visible, shown, text.length, speed]);
 
   const typing = animate && visible && shown < text.length;
 

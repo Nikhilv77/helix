@@ -500,6 +500,22 @@ html {
   animation: dot-bounce 1.2s ease-in-out infinite;
 }
 
+.typing-caret {
+  display: inline-block;
+  margin-left: 0.08em;
+  height: 0.95em;
+  width: 2px;
+  transform: translateY(0.12em);
+  background: rgba(241, 234, 216, 0.72);
+  animation: caret-blink 1.05s steps(2, start) infinite;
+}
+
+@keyframes caret-blink {
+  to {
+    opacity: 0;
+  }
+}
+
 /* Step transitions for the guided setup. */
 @keyframes step-in {
   from {
@@ -515,6 +531,231 @@ html {
 .step-in {
   animation: step-in 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: var(--step-delay, 0ms);
+}
+
+@keyframes onboarding-word-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.7em) rotate(1.5deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes onboarding-card-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(28px) rotate(var(--card-tilt, 0deg)) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(var(--card-tilt, 0deg)) scale(1);
+  }
+}
+
+@keyframes onboarding-type-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.onboarding-word {
+  display: inline-block;
+  opacity: 0;
+  animation: onboarding-word-rise 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--word-delay, 0ms);
+}
+
+.trail-word {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.38em);
+  filter: blur(6px);
+  transition:
+    opacity 520ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 620ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 620ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.trail-word-visible {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+}
+
+.onboarding-card-reveal {
+  opacity: 0;
+  animation: onboarding-card-reveal 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--card-delay, 0ms);
+  transform-origin: 50% 70%;
+}
+
+.onboarding-type-visible {
+  clip-path: inset(0 100% 0 0);
+  animation: onboarding-type-reveal var(--type-duration, 900ms) linear both;
+  animation-delay: var(--type-delay, 0ms);
+  will-change: clip-path;
+}
+
+@keyframes upload-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(1deg);
+  }
+}
+
+@keyframes upload-scan {
+  0% {
+    opacity: 0;
+    transform: translateX(-120%);
+  }
+  22%,
+  64% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(340%);
+  }
+}
+
+@keyframes browse-nudge {
+  0%,
+  62%,
+  100% {
+    transform: translateX(0);
+    box-shadow: none;
+  }
+  70% {
+    transform: translateX(-3px);
+  }
+  78% {
+    transform: translateX(4px);
+    box-shadow: 0 0 0 5px rgba(241, 234, 216, 0.06);
+  }
+  86% {
+    transform: translateX(-2px);
+  }
+  94% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes identity-stage-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes identity-text-shine {
+  from {
+    background-position: 130% 50%;
+  }
+  to {
+    background-position: -30% 50%;
+  }
+}
+
+@keyframes identity-progress-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes thinking-shimmer {
+  0% {
+    background-position: 120% 50%;
+  }
+  100% {
+    background-position: -20% 50%;
+  }
+}
+
+.upload-float {
+  animation: upload-float 3.4s ease-in-out infinite;
+}
+
+.upload-scan-line {
+  animation: upload-scan 4.6s ease-in-out infinite;
+}
+
+.browse-nudge {
+  animation: browse-nudge 2s ease-in-out infinite;
+}
+
+.identity-stage-in {
+  animation: identity-stage-in 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.identity-text-shine {
+  color: transparent;
+  background-image: linear-gradient(
+    105deg,
+    rgba(241, 234, 216, 0.86) 0%,
+    rgba(241, 234, 216, 0.86) 38%,
+    #ffffff 48%,
+    rgba(241, 234, 216, 0.92) 58%,
+    rgba(241, 234, 216, 0.86) 100%
+  );
+  background-size: 230% 100%;
+  background-clip: text;
+  animation: identity-text-shine 2.35s ease-out both;
+}
+
+.thinking-shimmer {
+  color: transparent;
+  background-image: linear-gradient(
+    100deg,
+    rgba(241, 234, 216, 0.46) 0%,
+    rgba(241, 234, 216, 0.62) 38%,
+    #ffffff 50%,
+    rgba(241, 234, 216, 0.78) 62%,
+    rgba(241, 234, 216, 0.46) 100%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  animation: thinking-shimmer 1.85s ease-in-out infinite;
+}
+
+.identity-progress-line {
+  animation: identity-progress-fill var(--identity-progress-duration, 4200ms) linear both;
+  animation-delay: var(--identity-progress-delay, 0ms);
+  transform-origin: left center;
+}
+
+@media (max-width: 640px) {
+  .onboarding-card-reveal {
+    animation-duration: 560ms;
+  }
+
+  .upload-float,
+  .upload-scan-line {
+    animation: none;
+  }
+
+  .upload-scan-line {
+    display: none;
+  }
+
+  .browse-nudge {
+    animation-duration: 2.8s;
+  }
 }
 
 /* The two brighter rules that frame the content column. */
@@ -856,6 +1097,30 @@ html {
   .step-in {
     opacity: 1 !important;
     transform: none !important;
+  }
+
+  .onboarding-word,
+  .trail-word,
+  .onboarding-card-reveal,
+  .onboarding-type-visible,
+  .upload-float,
+  .upload-scan-line,
+    .browse-nudge,
+    .identity-stage-in,
+    .identity-text-shine,
+    .thinking-shimmer,
+    .identity-progress-line {
+    opacity: 1 !important;
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+    clip-path: none !important;
+  }
+
+  .identity-text-shine,
+  .thinking-shimmer {
+    color: inherit !important;
+    background: none !important;
   }
 
   .reveal {

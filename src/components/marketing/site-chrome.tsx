@@ -105,12 +105,12 @@ export function SiteNav({
   const activeSection = useActiveSection(navSectionIds);
   const desktopActionClass =
     actionKind === "button"
-      ? "hidden sm:flex [&>*]:inline-flex [&>*]:h-11 [&>*]:min-w-24 [&>*]:items-center [&>*]:justify-center [&>*]:rounded-lg [&>*]:bg-cream [&>*]:px-6 [&>*]:text-sm [&>*]:font-bold [&>*]:tracking-wide [&>*]:text-[#13234f] [&>*]:shadow-[0_16px_34px_-20px_rgba(3,10,31,0.72),inset_0_-1px_0_rgba(19,35,79,0.12)] [&>*]:outline-none [&>*]:transition [&>*]:duration-200 [&>*]:hover:-translate-y-0.5 [&>*]:hover:bg-cream-soft [&>*]:hover:text-[#0d1b44] [&>*]:hover:shadow-[0_18px_40px_-18px_rgba(3,10,31,0.78),inset_0_-1px_0_rgba(19,35,79,0.14)] [&>*]:active:translate-y-0 [&>*]:active:scale-[0.98] [&>*]:focus-visible:ring-2 [&>*]:focus-visible:ring-cream/45"
+      ? "hidden sm:flex [&>*]:inline-flex [&>*]:h-12 [&>*]:min-w-28 [&>*]:items-center [&>*]:justify-center [&>*]:rounded-[1.1rem] [&>*]:border [&>*]:border-cream/75 [&>*]:bg-cream [&>*]:px-7 [&>*]:text-base [&>*]:font-semibold [&>*]:tracking-wide [&>*]:text-[#13234f] [&>*]:shadow-[0_18px_44px_-26px_rgba(3,10,31,0.78),inset_0_-1px_0_rgba(19,35,79,0.12)] [&>*]:outline-none [&>*]:transition [&>*]:duration-300 [&>*]:ease-[cubic-bezier(0.16,1,0.3,1)] [&>*]:hover:-translate-y-0.5 [&>*]:hover:bg-cream-soft [&>*]:hover:text-[#0d1b44] [&>*]:hover:shadow-[0_22px_52px_-24px_rgba(3,10,31,0.8),inset_0_-1px_0_rgba(19,35,79,0.14)] [&>*]:active:translate-y-0 [&>*]:active:scale-[0.98] [&>*]:focus-visible:ring-2 [&>*]:focus-visible:ring-cream/65"
       : "hidden sm:block [&>*]:grid [&>*]:h-11 [&>*]:w-12 [&>*]:place-items-center [&>*]:rounded-xl [&>*]:p-0 [&>*]:text-cream [&>*]:hover:bg-cream/[0.08]";
   const mobileActionClass =
     actionKind === "button"
-      ? "mt-2 border-t border-cream/[0.12] pt-2 [&>*]:inline-flex [&>*]:h-12 [&>*]:w-full [&>*]:items-center [&>*]:justify-center [&>*]:rounded-lg [&>*]:bg-cream [&>*]:px-4 [&>*]:text-sm [&>*]:font-bold [&>*]:tracking-wide [&>*]:text-[#13234f] [&>*]:shadow-[0_14px_30px_-20px_rgba(3,10,31,0.72),inset_0_-1px_0_rgba(19,35,79,0.12)] [&>*]:outline-none [&>*]:transition [&>*]:duration-200 [&>*]:hover:bg-cream-soft [&>*]:hover:text-[#0d1b44] [&>*]:active:scale-[0.98] [&>*]:focus-visible:ring-2 [&>*]:focus-visible:ring-cream/45"
-      : "mt-2 border-t border-cream/[0.12] pt-2 [&>*]:grid [&>*]:h-11 [&>*]:w-full [&>*]:place-items-center [&>*]:rounded-xl [&>*]:p-0 [&>*]:text-cream [&>*]:hover:bg-cream/[0.08]";
+      ? "mt-2 border-t border-cream/[0.06] pt-2 [&>*]:inline-flex [&>*]:h-12 [&>*]:w-full [&>*]:items-center [&>*]:justify-center [&>*]:rounded-[1rem] [&>*]:border [&>*]:border-transparent [&>*]:bg-cream/[0.9] [&>*]:px-4 [&>*]:text-sm [&>*]:font-semibold [&>*]:tracking-wide [&>*]:text-[#13234f] [&>*]:shadow-none [&>*]:outline-none [&>*]:transition [&>*]:duration-200 [&>*]:hover:bg-cream [&>*]:hover:text-[#0d1b44] [&>*]:active:scale-[0.98] [&>*]:focus-visible:ring-2 [&>*]:focus-visible:ring-cream/35"
+      : "mt-2 border-t border-cream/[0.08] pt-2 [&>*]:grid [&>*]:h-11 [&>*]:w-full [&>*]:place-items-center [&>*]:rounded-xl [&>*]:p-0 [&>*]:text-cream [&>*]:hover:bg-cream/[0.05]";
   useEffect(() => {
     // Coalesced into rAF: touch scrolling fires this far faster than the
     // compositor paints, and every raw event was reading scrollY — a forced
@@ -148,20 +148,20 @@ export function SiteNav({
       <div className="pointer-events-auto relative w-full max-w-[58rem]">
         <nav
           className={[
-            "grid grid-cols-[auto_1fr_auto] items-center overflow-hidden rounded-lg bg-[#2b499f] px-2 py-2 shadow-[0_18px_44px_-30px_rgba(3,10,31,0.42)] transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
-            scrolled ? "shadow-[0_22px_56px_-32px_rgba(3,10,31,0.52)]" : ""
+            "grid grid-cols-[auto_1fr_auto] items-center overflow-hidden rounded-[1.35rem] border border-transparent bg-cream/[0.035] px-2.5 py-2.5 shadow-[0_20px_54px_-40px_rgba(3,10,31,0.5)] backdrop-blur-md transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:border-cream/10",
+            scrolled ? "bg-cream/[0.048] shadow-[0_24px_64px_-42px_rgba(3,10,31,0.58)] sm:border-cream/16" : ""
           ].join(" ")}
         >
           <Link
             href="/"
             aria-label="Trailgrad home"
             title="Home"
-            className="grid h-11 w-12 shrink-0 place-items-center justify-self-start rounded-xl bg-transparent text-cream outline-none"
+            className="grid h-12 w-12 shrink-0 place-items-center justify-self-start rounded-[1rem] text-cream outline-none transition duration-300 hover:bg-cream/[0.08] focus-visible:ring-2 focus-visible:ring-cream/50"
           >
             <TrailgradMark className="h-[2rem] w-[2rem]" />
           </Link>
 
-          <div className="hidden min-w-0 items-center justify-center gap-1 px-2 sm:flex">
+          <div className="hidden min-w-0 items-center justify-center gap-1.5 px-2 sm:flex">
             {navLinks.map((link) => {
               const id = link.href.slice(1);
               const active = activeSection === id;
@@ -174,8 +174,10 @@ export function SiteNav({
                   aria-current={active ? "true" : undefined}
                   title={link.label}
                   className={[
-                    "group relative flex h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-cream/35 md:px-5",
-                    active ? "text-cream" : "text-cream/[0.68] hover:text-cream"
+                    "group relative flex h-12 min-w-0 items-center justify-center gap-2.5 rounded-[1rem] border px-4 text-[15px] font-semibold outline-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] focus-visible:ring-2 focus-visible:ring-cream/50 md:px-5",
+                    active
+                      ? "border-transparent bg-cream/[0.04] text-cream shadow-none"
+                      : "border-transparent text-cream/[0.66] hover:bg-cream/[0.04] hover:text-cream"
                   ].join(" ")}
                 >
                   <Icon
@@ -197,7 +199,7 @@ export function SiteNav({
               onClick={() => setMenuOpen((open) => !open)}
               aria-label={menuOpen ? "Close menu" : "Open menu"}
               aria-expanded={menuOpen}
-              className="grid h-11 w-11 place-items-center rounded-xl text-cream outline-none transition hover:bg-cream/[0.08] focus-visible:ring-2 focus-visible:ring-cream/35 sm:hidden"
+              className="grid h-12 w-12 place-items-center rounded-[1rem] border border-transparent bg-cream/[0.035] text-cream outline-none transition hover:bg-cream/[0.06] focus-visible:ring-2 focus-visible:ring-cream/40 sm:hidden"
             >
               {menuOpen ? (
                 <X size={20} aria-hidden="true" />
@@ -212,7 +214,7 @@ export function SiteNav({
           aria-hidden={!menuOpen}
           inert={menuOpen ? undefined : true}
           className={[
-            "overflow-hidden rounded-2xl bg-[#2b499f] text-cream shadow-[0_18px_44px_-28px_rgba(3,10,31,0.42)] transition-[max-height,opacity,transform,filter,margin-top,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[max-height,opacity,transform] sm:hidden",
+            "overflow-hidden rounded-[1.35rem] border border-transparent bg-cream/[0.045] text-cream shadow-[0_18px_44px_-32px_rgba(3,10,31,0.46)] backdrop-blur-md transition-[max-height,opacity,transform,filter,margin-top,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[max-height,opacity,transform] sm:hidden",
             menuOpen
               ? "mt-2 max-h-[26rem] translate-y-0 p-2 opacity-100 blur-0"
               : "mt-0 max-h-0 -translate-y-2 p-0 opacity-0 blur-sm"
@@ -245,11 +247,11 @@ export function SiteNav({
                   aria-current={active ? "true" : undefined}
                   title={link.label}
                   className={[
-                    "relative flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-[background-color,color,opacity,transform] duration-300",
+                    "relative flex min-h-12 items-center gap-3 rounded-[1rem] border px-3 text-sm font-semibold transition-[background-color,border-color,color,opacity,transform] duration-300",
                     menuOpen ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0",
                     active
-                      ? "text-cream"
-                      : "text-cream/[0.68] hover:bg-cream/[0.08] hover:text-cream"
+                      ? "border-transparent bg-cream/[0.045] text-cream"
+                      : "border-transparent text-cream/[0.68] hover:bg-cream/[0.045] hover:text-cream"
                   ].join(" ")}
                   style={{ transitionDelay: menuOpen ? `${70 + index * 38}ms` : "0ms" }}
                 >

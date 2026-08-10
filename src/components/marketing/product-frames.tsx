@@ -50,7 +50,7 @@ function Chip({ children, selected = false }: { children: ReactNode; selected?: 
 
 function SetupScreen({ action }: { action?: ReactNode }) {
   const rows = [
-    { label: "Role", options: ["Backend", "Frontend", "Data", "PM"], selected: "Backend" },
+    { label: "Track", options: ["Engineering"], selected: "Engineering" },
     { label: "Level", options: ["Fresher", "0–2 yrs", "3–5 yrs", "5+ yrs"], selected: "3–5 yrs" },
     {
       label: "Round",
@@ -92,8 +92,8 @@ function SetupScreen({ action }: { action?: ReactNode }) {
           What have you actually worked on?
         </p>
         <p className="mt-2.5 text-sm leading-6 text-cream/90">
-          Rebuilt the payments retry pipeline at a fintech — idempotency keys, dead-letter queues,
-          cut p99 by 40%.
+          Rebuilt the payments retry pipeline — idempotency keys, dead-letter queues, cut p99 by
+          40%.
         </p>
         <span className="mt-3 inline-block h-4 w-px animate-pulse bg-cream/70" />
       </div>
@@ -187,7 +187,7 @@ function ReportScreen() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-base font-semibold text-cream">Session report</p>
         <div className="flex flex-wrap gap-2">
-          <Chip>Backend</Chip>
+          <Chip>Engineering</Chip>
           <Chip>Behavioral</Chip>
           <Chip>Brutal</Chip>
         </div>

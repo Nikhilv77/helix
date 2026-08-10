@@ -9,19 +9,19 @@ export const metadata = privatePageMetadata(
   "Internal Trailgrad onboarding preview for design review."
 );
 
-const steps = ["role", "level", "resume", "identity", "evidence", "readiness"] as const;
+const steps = ["level", "resume", "identity", "evidence", "readiness"] as const;
 type PreviewStep = (typeof steps)[number];
 
 /** Stand-in extraction, so the post-upload steps can be reviewed without one. */
 const sampleResult: ResumeExtractionResponse = {
   profile: {
-    targetRole: "frontend",
+    targetRole: "fullstack",
     level: "3-5",
     targetCompany: "",
     targetDate: null,
-    headline: "Senior Frontend Engineer",
+    headline: "Senior Software Engineer",
     context: "",
-    focusAreas: ["Performance", "Design systems", "Ownership"],
+    focusAreas: ["System design", "Product engineering", "Ownership"],
     stories: [],
     updatedAt: Date.now(),
     completeness: 82,
@@ -32,19 +32,19 @@ const sampleResult: ResumeExtractionResponse = {
   extraction: {
     fullName: "Nikhil Verma",
     headline:
-      "Frontend engineer with five years building dashboards, design systems and data-heavy interfaces.",
-    skills: ["React", "TypeScript", "Next.js", "GraphQL", "Testing Library"],
-    focusAreas: ["Performance", "Design systems", "Ownership"],
+      "Software engineer with five years building product systems across React, Node.js, and cloud infrastructure.",
+    skills: ["React", "TypeScript", "Next.js", "Node.js", "PostgreSQL"],
+    focusAreas: ["System design", "Product engineering", "Ownership"],
     stories: [],
     experience: [
       {
         organization: "FlashAid",
-        role: "Senior Frontend Engineer",
+        role: "Senior Software Engineer",
         period: "2022 — Present",
         location: "Remote",
-        summary: "Owned the analytics dashboard and its data-fetching layer.",
+        summary: "Owned the analytics workspace and its data-fetching layer.",
         achievements: ["Cut dashboard p95 render from 400ms to 120ms."],
-        skills: ["React", "TypeScript"]
+        skills: ["React", "TypeScript", "Node.js"]
       }
     ],
     education: [
@@ -98,7 +98,7 @@ export default async function OnboardingPreview({
   if (process.env.NODE_ENV === "production") notFound();
 
   const requested = (await searchParams).step;
-  const step = (steps.find((value) => value === requested) ?? "role") as PreviewStep;
+  const step = (steps.find((value) => value === requested) ?? "level") as PreviewStep;
 
   return <OnboardingFlow initialStep={step} initialResult={sampleResult} />;
 }

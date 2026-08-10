@@ -1,45 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { ExchangeAction } from "../blueprint-art";
 import { InterviewSignal, TrailgradMark } from "../blueprint-art";
 import { Counter, Reveal, TypeOut } from "../reveal";
 import { exchanges } from "./data";
-
-const decisionMeta: Record<
-  ExchangeAction,
-  { label: string; eyebrow: string; border: string; ink: string; wash: string }
-> = {
-  probe: {
-    label: "Probe",
-    eyebrow: "Needs evidence",
-    border: "border-[#3657b4]/35",
-    ink: "text-[#27469a]",
-    wash: "bg-[#3657b4]/[0.075]"
-  },
-  challenge: {
-    label: "Challenge",
-    eyebrow: "Claim check",
-    border: "border-[#a65c20]/35",
-    ink: "text-[#7a4218]",
-    wash: "bg-[#a65c20]/[0.075]"
-  },
-  interrupt: {
-    label: "Interrupt",
-    eyebrow: "Too vague",
-    border: "border-[#9d3434]/35",
-    ink: "text-[#7a2424]",
-    wash: "bg-[#9d3434]/[0.075]"
-  },
-  move_on: {
-    label: "Move on",
-    eyebrow: "Proof landed",
-    border: "border-[#227350]/35",
-    ink: "text-[#1d5d43]",
-    wash: "bg-[#227350]/[0.075]"
-  }
-};
 
 const roundRules = [
   ["Probe", "A vague answer gets one specific follow-up."],
@@ -131,7 +97,7 @@ export function TheInterview() {
             onMouseLeave={() => setPaused(false)}
           >
             <Reveal delay={260}>
-              <div className="relative min-h-[29rem]">
+              <div className="relative min-h-[33rem] sm:min-h-[29rem]">
                 {exchanges.map((exchange, exchangeIndex) => {
                   const showing = exchangeIndex === index;
                   return (
@@ -223,71 +189,80 @@ function InterviewNote({
   exchange: (typeof exchanges)[number];
   active: boolean;
 }) {
-  const meta = decisionMeta[exchange.action];
+  const answerText = `“${exchange.answer}”`;
+  const answerDelay = Math.min(4200, exchange.question.length * 64 + 650);
 
   return (
-    <article className="relative mx-auto max-w-2xl overflow-hidden rounded-[1.6rem] border border-cream/85 bg-[#f1ead8] p-5 text-left text-[#202227] shadow-[0_34px_90px_-48px_rgba(3,10,31,0.78)] sm:p-7">
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 opacity-80"
-        style={{
-          backgroundImage:
-            "linear-gradient(180deg, transparent 0 31px, rgba(54,87,180,0.1) 32px, transparent 33px), linear-gradient(135deg, rgba(241,234,216,0.62), transparent 45%)",
-          backgroundSize: "100% 2rem, 100% 100%"
-        }}
-      />
-      <div className="relative z-10">
-        <div className="flex items-center justify-between gap-4 border-b border-[#17234b]/10 pb-4">
-          <span className="blueprint-label text-[#17234b]/45">Maya interview</span>
-          <span className="font-mono text-xs font-semibold text-[#17234b]/45">
+    <article className="relative mx-auto w-full max-w-2xl text-left text-cream">
+      <div className="relative overflow-hidden rounded-[1.55rem] bg-cream/[0.035] p-4 shadow-[0_34px_90px_-52px_rgba(3,10,31,0.9)] sm:rounded-[2rem] sm:p-7 sm:backdrop-blur-sm">
+        <div
+          aria-hidden="true"
+          className="absolute bottom-0 left-0 h-56 w-56 rounded-full bg-cream/[0.06] blur-2xl"
+        />
+
+        <div className="relative z-10 flex items-center justify-between gap-4">
+          <span className="inline-flex items-center gap-2 rounded-full bg-cream/[0.07] px-3 py-1.5">
+            <span className="h-2 w-2 rounded-full bg-[#7ee0bd] shadow-[0_0_18px_rgba(126,224,189,0.78)]" />
+            <span className="blueprint-label text-cream/54">Live with Maya</span>
+          </span>
+          <span className="font-mono text-xs font-semibold text-cream/48">
             {exchange.elapsed}
           </span>
         </div>
 
-        <p className="relative mt-6 min-h-[4rem] font-card text-2xl font-bold leading-8 text-[#202227] sm:min-h-[4.5rem] sm:text-3xl sm:leading-9">
-          <span className="invisible block" aria-hidden="true">
-            {exchange.question}
-          </span>
-          <span className="absolute inset-0 block">
-            {active ? (
-              <TypeOut key={`${exchange.question}-q`} text={exchange.question} speed={22} />
-            ) : (
-              exchange.question
-            )}
-          </span>
-        </p>
+        <div className="relative z-10 mt-6 grid gap-4 sm:mt-8 sm:grid-cols-[7.25rem_1fr] sm:items-center sm:gap-5">
+          <div className="relative mx-auto h-24 w-24 overflow-hidden rounded-full border border-cream/35 bg-[linear-gradient(145deg,rgba(241,234,216,0.14),rgba(255,255,255,0.035))] shadow-[0_22px_54px_-34px_rgba(3,10,31,0.95),inset_0_1px_0_rgba(241,234,216,0.18)] sm:h-32 sm:w-32">
+            <div
+              aria-hidden="true"
+              className="absolute inset-2 rounded-full bg-blueprint/20"
+            />
+            <Image
+              src="/images/marketing/maya-face-interviewer.png"
+              alt="Maya"
+              fill
+              sizes="128px"
+              className="object-contain drop-shadow-[0_16px_24px_rgba(3,10,31,0.24)]"
+              priority={false}
+            />
+          </div>
 
-        <div className="mt-6 rounded-2xl border-l-4 border-[#3657b4]/35 bg-cream/45 px-4 py-3">
-          <p className="blueprint-label text-[#17234b]/40">You said</p>
-          <p className="mt-2 text-base font-medium leading-7 text-[#30333b]/75">
-            &ldquo;{exchange.answer}&rdquo;
+          <div className="rounded-[1.35rem] border border-cream/18 bg-cream/[0.035] px-4 py-4 sm:rounded-[1.65rem] sm:px-6 sm:py-6 sm:backdrop-blur-md">
+            <p className="blueprint-label text-cream/50">Maya asks</p>
+            <p className="relative mt-2 min-h-[6.25rem] overflow-hidden text-[1.32rem] font-semibold leading-[1.16] sm:mt-3 sm:min-h-[4.5rem] sm:text-[2rem] sm:leading-tight">
+              <span className="invisible block" aria-hidden="true">
+                {exchange.question}
+              </span>
+              <span className="absolute inset-0 block">
+                {active ? (
+                  <TypeOut key={`${exchange.question}-q`} text={exchange.question} speed={64} />
+                ) : (
+                  exchange.question
+                )}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <div className="relative z-10 mt-4 rounded-[1.25rem] bg-cream/[0.075] px-4 py-4 sm:mt-5 sm:rounded-[1.5rem] sm:px-5">
+          <p className="blueprint-label text-cream/42">Your answer</p>
+          <p className="relative mt-2 min-h-[5.75rem] overflow-hidden text-[14px] font-medium leading-6 text-cream/76 sm:min-h-[3.5rem] sm:text-base sm:leading-7">
+            <span className="invisible block" aria-hidden="true">
+              {answerText}
+            </span>
+            <span className="absolute inset-0 block">
+              {active ? (
+                <TypeOut
+                  key={`${exchange.answer}-a`}
+                  text={answerText}
+                  speed={40}
+                  delay={answerDelay}
+                />
+              ) : (
+                answerText
+              )}
+            </span>
           </p>
         </div>
-
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <span
-            className={`inline-flex rounded-full border px-3.5 py-1.5 font-card text-sm font-bold ${meta.border} ${meta.ink} ${meta.wash}`}
-          >
-            {meta.label}
-          </span>
-          <span className="blueprint-label text-[#17234b]/42">{meta.eyebrow}</span>
-          <span className="ml-auto hidden font-mono text-xs font-semibold text-[#17234b]/38 sm:inline">
-            {exchange.note}
-          </span>
-        </div>
-
-        <p className="relative mt-5 min-h-[4rem] font-card text-xl font-bold leading-8 text-[#202227] sm:min-h-[4rem] sm:text-2xl">
-          <span className="invisible block" aria-hidden="true">
-            {exchange.reply}
-          </span>
-          <span className="absolute inset-0 block">
-            {active ? (
-              <TypeOut key={`${exchange.reply}-r`} text={exchange.reply} speed={28} />
-            ) : (
-              exchange.reply
-            )}
-          </span>
-        </p>
       </div>
     </article>
   );
