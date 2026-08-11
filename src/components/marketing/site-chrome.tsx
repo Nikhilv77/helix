@@ -148,8 +148,10 @@ export function SiteNav({
       <div className="pointer-events-auto relative w-full max-w-[58rem]">
         <nav
           className={[
-            "grid grid-cols-[auto_1fr_auto] items-center overflow-hidden rounded-[1.35rem] border border-transparent bg-cream/[0.035] px-2.5 py-2.5 shadow-[0_20px_54px_-40px_rgba(3,10,31,0.5)] backdrop-blur-[2px] transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:border-cream/10 sm:backdrop-blur-md",
-            scrolled ? "bg-cream/[0.048] shadow-[0_24px_64px_-42px_rgba(3,10,31,0.58)] sm:border-cream/16" : ""
+            "grid grid-cols-[auto_1fr_auto] items-center overflow-hidden rounded-[1.35rem] border border-transparent bg-[#4565bd] px-2.5 py-2.5 shadow-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:border-cream/10 sm:bg-cream/[0.035] sm:shadow-[0_20px_54px_-40px_rgba(3,10,31,0.5)] sm:backdrop-blur-md",
+            scrolled
+              ? "bg-[#4565bd] sm:border-cream/16 sm:bg-cream/[0.048] sm:shadow-[0_24px_64px_-42px_rgba(3,10,31,0.58)]"
+              : ""
           ].join(" ")}
         >
           <Link
@@ -214,7 +216,7 @@ export function SiteNav({
           aria-hidden={!menuOpen}
           inert={menuOpen ? undefined : true}
           className={[
-            "overflow-hidden rounded-[1.35rem] border border-transparent bg-cream/[0.045] text-cream shadow-[0_18px_44px_-32px_rgba(3,10,31,0.46)] backdrop-blur-[2px] transition-[max-height,opacity,transform,margin-top,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[max-height,opacity,transform] sm:hidden",
+            "overflow-hidden rounded-[1.35rem] border border-transparent bg-[#4565bd] text-cream shadow-none transition-[max-height,opacity,transform,margin-top,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[max-height,opacity,transform] sm:hidden",
             menuOpen
               ? "mt-2 max-h-[26rem] translate-y-0 p-2 opacity-100"
               : "mt-0 max-h-0 -translate-y-2 p-0 opacity-0"
