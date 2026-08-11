@@ -1,10 +1,9 @@
 "use client";
 
-import { ArrowRight, FileCheck2, FileUp, Loader2, X } from "lucide-react";
+import { FileCheck2, FileUp, Loader2, X } from "lucide-react";
 import type { CSSProperties, RefObject } from "react";
 import {
-  formatBytes,
-  PRIMARY_BUTTON
+  formatBytes
 } from "@/components/onboarding/onboarding-data";
 import { BackButton } from "@/components/onboarding/onboarding-ui";
 
@@ -66,7 +65,6 @@ export function ResumeStep({
   onFile,
   onDragging,
   onBack,
-  onAnalyze
 }: {
   file: File | null;
   dragging: boolean;
@@ -77,7 +75,6 @@ export function ResumeStep({
   onFile: (file: File | null) => void;
   onDragging: (dragging: boolean) => void;
   onBack: () => void;
-  onAnalyze: () => void;
 }) {
   const selectedFileName = file ? compactFileName(file.name) : "";
 
@@ -235,34 +232,6 @@ export function ResumeStep({
             {error}
           </div>
         ) : null}
-
-        <div
-          className="onboarding-card-reveal mt-8 flex justify-center"
-          style={
-            {
-              "--card-delay": "520ms",
-              "--card-tilt": "0deg"
-            } as CSSProperties
-          }
-        >
-          <button
-            type="button"
-            disabled={!file || uploading}
-            onClick={onAnalyze}
-            className={`${PRIMARY_BUTTON} disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0`}
-          >
-            {uploading ? "Verifying resume" : "Verify resume"}
-            {uploading ? (
-              <Loader2 size={15} className="animate-spin" aria-hidden="true" />
-            ) : (
-              <ArrowRight
-                size={15}
-                aria-hidden="true"
-                className="transition-transform duration-300 group-hover:translate-x-0.5"
-              />
-            )}
-          </button>
-        </div>
 
         <div className="mt-5 min-h-5">
           {uploading ? <ResumeVerificationProgress activeStage={activeStage} /> : null}

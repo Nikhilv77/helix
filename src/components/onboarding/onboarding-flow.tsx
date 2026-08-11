@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   analysisStages,
   MAX_FILE_BYTES,
@@ -94,7 +94,7 @@ export function OnboardingFlow({
     setFile(next);
   }
 
-  async function analyze() {
+  const analyze = useCallback(async () => {
     if (!file || !role || !level || uploading) return;
     const controller = new AbortController();
     // Without this a stalled request leaves the progress screen spinning forever.
@@ -131,7 +131,17 @@ export function OnboardingFlow({
       window.clearTimeout(timeout);
       setUploading(false);
     }
-  }
+  }, [file, level, role, uploading]);
+
+  useEffect(() => {
+    if (step !== "resume" || !file || uploading || result || error) return;
+
+    const timer = window.setTimeout(() => {
+      void analyze();
+    }, 220);
+
+    return () => window.clearTimeout(timer);
+  }, [analyze, error, file, result, step, uploading]);
 
   return (
     <main className="blueprint relative min-h-screen min-h-[100svh] overflow-hidden">
@@ -167,8 +177,10 @@ export function OnboardingFlow({
             {step === "level" ? (
               <LevelStep
                 selected={level}
-                onSelect={setLevel}
-                onContinue={() => setStep("resume")}
+                onSelect={(selectedLevel) => {
+                  setLevel(selectedLevel);
+                  setStep("resume");
+                }}
               />
             ) : null}
             {step === "resume" ? (
@@ -181,8 +193,13 @@ export function OnboardingFlow({
                 activeStage={analysisStage}
                 onFile={acceptFile}
                 onDragging={setDragging}
-                onBack={() => setStep("level")}
-                onAnalyze={() => void analyze()}
+                onBack={() => {
+                  setFile(null);
+                  setResult(null);
+                  setError(null);
+                  if (fileInput.current) fileInput.current.value = "";
+                  setStep("level");
+                }}
               />
             ) : null}
             {step === "identity" && result ? (
@@ -201,6 +218,9 @@ export function OnboardingFlow({
                 result={result}
                 onBack={() => {
                   setResult(null);
+                  setFile(null);
+                  setError(null);
+                  if (fileInput.current) fileInput.current.value = "";
                   setStep("resume");
                 }}
                 onReplace={() => {

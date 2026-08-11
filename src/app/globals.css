@@ -72,6 +72,55 @@ select {
   color-scheme: dark;
 }
 
+.trailgrad-auth-backdrop {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 24%, rgba(241, 234, 216, 0.08), transparent 18rem),
+    radial-gradient(circle at 82% 78%, rgba(241, 234, 216, 0.08), transparent 20rem),
+    linear-gradient(180deg, #3657b4 0%, #3151aa 100%) !important;
+}
+
+.trailgrad-auth-backdrop::before,
+.trailgrad-auth-backdrop::after {
+  pointer-events: none;
+  position: fixed;
+  content: "";
+}
+
+.trailgrad-auth-backdrop::before {
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(241, 234, 216, 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(241, 234, 216, 0.045) 1px, transparent 1px),
+    radial-gradient(circle at 13% 36%, transparent 0 10rem, rgba(241, 234, 216, 0.12) 10.08rem, transparent 10.18rem),
+    radial-gradient(circle at 88% 68%, transparent 0 13rem, rgba(241, 234, 216, 0.11) 13.08rem, transparent 13.18rem);
+  background-size:
+    10rem 10rem,
+    10rem 10rem,
+    100% 100%,
+    100% 100%;
+  opacity: 0.72;
+}
+
+.trailgrad-auth-backdrop::after {
+  left: 50%;
+  top: 48%;
+  height: 8rem;
+  width: min(42rem, 88vw);
+  transform: translate(-50%, -50%);
+  background:
+    linear-gradient(90deg, transparent, rgba(241, 234, 216, 0.18), transparent),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 0.75rem,
+      rgba(241, 234, 216, 0.24) 0.75rem 0.88rem,
+      transparent 0.88rem 1.45rem
+    );
+  mask-image: radial-gradient(ellipse at center, #000 0 46%, transparent 72%);
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 0 46%, transparent 72%);
+  opacity: 0.22;
+}
+
 @keyframes float-in {
   from {
     opacity: 0;

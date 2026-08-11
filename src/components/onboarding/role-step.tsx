@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Check } from "lucide-react";
 import { ACCENT, CARD, INK, roles } from "@/components/onboarding/onboarding-data";
-import { ContinueBar, StepHeader } from "@/components/onboarding/onboarding-ui";
+import { StepHeader } from "@/components/onboarding/onboarding-ui";
 import type { Role } from "@/lib/types";
 
 export function RoleStep({
@@ -27,7 +27,10 @@ export function RoleStep({
               key={option.value}
               type="button"
               aria-pressed={active}
-              onClick={() => onSelect(option.value)}
+              onClick={() => {
+                onSelect(option.value);
+                onContinue();
+              }}
               className={[
                 "group relative flex min-h-[15rem] min-w-0 flex-col p-5 text-left outline-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-cream/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#3657b4]",
                 CARD,
@@ -74,7 +77,6 @@ export function RoleStep({
         })}
       </div>
 
-      <ContinueBar visible={Boolean(selected)} onContinue={onContinue} />
     </>
   );
 }

@@ -1,9 +1,7 @@
 /** Shared Clerk styling so every auth surface belongs to the Trailgrad product. */
 export const clerkAppearance = {
   options: {
-    // The tiled version: Clerk's card can be light, where the white-on-
-    // transparent icon would disappear.
-    logoImageUrl: "/brand/trailgrad-favicon.svg",
+    logoImageUrl: "/brand/trailgrad-wave-mark.svg",
     logoLinkUrl: "/",
     logoPlacement: "inside" as const,
     socialButtonsVariant: "blockButton" as const,
@@ -15,14 +13,14 @@ export const clerkAppearance = {
     colorForeground: "#efe8d6",
     colorMuted: "#121f46",
     colorMutedForeground: "#bcb7a8",
-    colorBackground: "#101b3e",
-    colorInput: "#0c1738",
+    colorBackground: "#3657b4",
+    colorInput: "rgba(241, 234, 216, 0.08)",
     colorInputForeground: "#efe8d6",
     colorNeutral: "#efe8d6",
     colorBorder: "rgba(239, 232, 214, 0.2)",
     colorRing: "#efe8d6",
     colorShadow: "#050d26",
-    colorModalBackdrop: "#061233",
+    colorModalBackdrop: "#3657b4",
     fontFamily: "var(--font-sans)",
     fontFamilyButtons: "var(--font-sans)",
     fontFamilyMono: "var(--font-mono)",
@@ -33,15 +31,15 @@ export const clerkAppearance = {
   elements: {
     rootBox: "w-full",
     cardBox:
-      "!w-[min(28rem,calc(100vw-2rem))] !overflow-hidden !rounded-2xl !border !border-cream/20 !bg-[#101b3e]/94 !shadow-[0_30px_90px_rgba(4,12,42,0.75),inset_0_1px_0_rgba(54,87,180,0.18)] !backdrop-blur-none",
+      "!w-[min(28rem,calc(100vw-2rem))] !overflow-hidden !rounded-2xl !border !border-cream/10 !bg-[#3f5fba] !shadow-[0_24px_74px_-52px_rgba(3,10,31,0.64)] !backdrop-blur-none",
     card:
-      "!border-none !bg-[radial-gradient(circle_at_50%_0%,rgba(54,87,180,0.14),transparent_36%)] !shadow-none",
-    modalBackdrop: "!bg-[#061233]/82 !backdrop-blur-md",
+      "!border-none !bg-[radial-gradient(circle_at_50%_0%,rgba(241,234,216,0.045),transparent_38%)] !shadow-none",
+    modalBackdrop: "trailgrad-auth-backdrop !bg-[#3657b4] !backdrop-blur-none",
     modalContent: "!px-4",
     modalCloseButton:
       "!text-cream/55 transition hover:!bg-cream/10 hover:!text-cream focus-visible:!ring-2 focus-visible:!ring-cream/40",
-    logoBox: "!mb-4",
-    logoImage: "!h-10 !w-10",
+    logoBox: "!mb-4 !bg-transparent",
+    logoImage: "!h-10 !w-10 !rounded-none !bg-transparent !shadow-none",
     header: "!gap-2",
     headerTitle: "!font-display !text-2xl !font-semibold !tracking-tight !text-cream",
     headerSubtitle: "!text-sm !leading-6 !text-cream/55",
@@ -52,7 +50,7 @@ export const clerkAppearance = {
     dividerText: "!font-mono !text-[10px] !uppercase !tracking-[0.16em] !text-cream/35",
     formFieldLabel: "!mb-2 !font-medium !text-cream/80",
     formFieldInput:
-      "!min-h-12 !border !border-cream/20 !bg-[#0c1738]/76 !px-4 !text-cream !shadow-none placeholder:!text-cream/30 focus:!border-cream/50 focus:!bg-[#11225a]/70 focus:!ring-2 focus:!ring-cream/10",
+      "!min-h-12 !rounded-xl !border !border-cream/18 !bg-cream/[0.08] !px-4 !text-cream !shadow-none placeholder:!text-cream/38 focus:!border-cream/45 focus:!bg-cream/[0.11] focus:!ring-2 focus:!ring-cream/10",
     footer: "!border-none !bg-transparent !shadow-none",
     footerActionText: "!text-cream/45",
     footerActionLink: "!font-semibold !text-cream hover:!text-white",
@@ -70,10 +68,10 @@ export const userProfileAppearance = {
   elements: {
     rootBox: "!w-full",
     cardBox:
-      "!w-[min(62rem,calc(100vw-2rem))] !max-w-none !overflow-hidden !rounded-2xl !border !border-cream/20 !bg-[#101b3e]/94 !shadow-[0_32px_100px_rgba(4,12,42,0.8),inset_0_1px_0_rgba(54,87,180,0.18)] !backdrop-blur-none",
+      "!w-[min(62rem,calc(100vw-2rem))] !max-w-none !overflow-hidden !rounded-2xl !border !border-cream/10 !bg-[#3f5fba] !shadow-[0_28px_86px_-52px_rgba(3,10,31,0.68)] !backdrop-blur-none",
     card:
-      "!min-h-[min(42rem,calc(100vh-3rem))] !w-full !border-none !bg-[radial-gradient(circle_at_50%_0%,rgba(54,87,180,0.12),transparent_36%)] !shadow-none",
-    modalBackdrop: "!bg-[#061233]/85 !backdrop-blur-md",
+      "!min-h-[min(42rem,calc(100vh-3rem))] !w-full !border-none !bg-[radial-gradient(circle_at_50%_0%,rgba(241,234,216,0.045),transparent_38%)] !shadow-none",
+    modalBackdrop: "trailgrad-auth-backdrop !bg-[#3657b4] !backdrop-blur-none",
     modalContent: "!p-4",
     modalCloseButton:
       "!right-5 !top-5 !text-cream/55 transition hover:!bg-cream/10 hover:!text-cream focus-visible:!ring-2 focus-visible:!ring-cream/40",
@@ -95,7 +93,7 @@ export const userProfileAppearance = {
     avatarBox: "!h-16 !w-16 !border !border-cream/20",
     formFieldLabel: "!font-medium !text-cream/75",
     formFieldInput:
-      "!min-h-11 !border !border-cream/18 !bg-[#0c1738]/76 !text-cream !shadow-none focus:!border-cream/45 focus:!bg-[#11225a]/70 focus:!ring-2 focus:!ring-cream/10",
+      "!min-h-11 !rounded-xl !border !border-cream/18 !bg-cream/[0.08] !text-cream !shadow-none placeholder:!text-cream/38 focus:!border-cream/45 focus:!bg-cream/[0.11] focus:!ring-2 focus:!ring-cream/10",
     badge: "!border !border-cream/15 !bg-cream/[0.06] !text-cream/65",
     footer: "!border-none !bg-transparent !shadow-none",
     footerPagesLink: "!text-cream/40 hover:!text-cream"

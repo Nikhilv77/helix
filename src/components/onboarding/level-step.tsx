@@ -3,7 +3,6 @@
 import { Check } from "lucide-react";
 import type { CSSProperties } from "react";
 import { levels } from "@/components/onboarding/onboarding-data";
-import { ContinueBar } from "@/components/onboarding/onboarding-ui";
 import type { Level } from "@/lib/types";
 
 const headingWords = ["Where", "are", "you", "starting", "from?"];
@@ -65,12 +64,10 @@ function TypingText({
 
 export function LevelStep({
   selected,
-  onSelect,
-  onContinue
+  onSelect
 }: {
   selected: Level | null;
   onSelect: (level: Level) => void;
-  onContinue: () => void;
 }) {
   return (
     <>
@@ -164,8 +161,6 @@ export function LevelStep({
           );
         })}
       </div>
-
-      <ContinueBar visible={Boolean(selected)} onContinue={onContinue} />
     </>
   );
 }
