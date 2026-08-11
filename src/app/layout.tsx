@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Geist, Geist_Mono, Josefin_Sans } from "next/font/google";
+import { Geist_Mono, Josefin_Sans, Raleway } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { Analytics } from "@vercel/analytics/next";
@@ -88,21 +88,19 @@ export const metadata: Metadata = {
 };
 
 /**
- * One typeface across the product. Geist is a neutral modern grotesque — it
- * reads as product UI rather than as a brand font, which is what we want for
- * a tool people work inside. Space Grotesk's distinctive letterforms were
- * doing the opposite.
+ * One typeface across the product. Raleway gives Trailgrad a little more
+ * warmth than the previous neutral UI face while keeping the interface clean.
  *
  * Headings and body share the family and separate on weight and size instead,
  * with Geist Mono for numerals, slugs and code.
  */
-const displayFont = Geist({
+const displayFont = Raleway({
   subsets: ["latin"],
   variable: "--font-display",
   display: "swap"
 });
 
-const sansFont = Geist({
+const sansFont = Raleway({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap"

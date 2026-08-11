@@ -23,7 +23,7 @@ const waveHeights = Array.from(
 export function Waveform({ className }: { className?: string }) {
   return (
     <div
-      className={["flex h-16 items-center justify-center gap-[5px]", className ?? ""]
+      className={["flex h-10 items-center justify-center gap-1", className ?? ""]
         .join(" ")
         .trim()}
       aria-hidden="true"
@@ -31,7 +31,7 @@ export function Waveform({ className }: { className?: string }) {
       {waveHeights.map((height, index) => (
         <span
           key={index}
-          className="wave-bar w-1.5 rounded-full bg-cream/55"
+          className="wave-bar w-1 rounded-full bg-cream/55"
           style={{ height: `${height}%`, animationDelay: `${index * 62}ms` }}
         />
       ))}

@@ -23,6 +23,7 @@ interface AvatarStageProps {
    */
   url: string;
   framing?: "default" | "marketing";
+  performanceProfile?: "default" | "marketing";
   /**
    * Set false to park the render loop while the avatar is still mounted. The
    * marketing hero is `position: sticky`, so it never leaves the viewport and
@@ -53,17 +54,23 @@ interface AvatarStageProps {
  * quadratic cost in fragment work; lower it if frames start dropping.
  */
 const MOBILE_PIXEL_RATIO_CAP = 2.5;
+const MARKETING_MOBILE_PIXEL_RATIO_CAP = 1.75;
 const DESKTOP_PIXEL_RATIO_CAP = 2;
 
-function mobileProfile() {
+function mobileProfile(performanceProfile: "default" | "marketing") {
   const dpr = window.devicePixelRatio || 1;
   const coarse = window.matchMedia("(pointer: coarse)").matches;
   const small = Math.min(window.innerWidth, window.innerHeight) < 820;
   const constrained = coarse && small;
+  const marketingMobile = constrained && performanceProfile === "marketing";
 
   return {
     antialias: true,
-    pixelRatio: Math.min(dpr, constrained ? MOBILE_PIXEL_RATIO_CAP : DESKTOP_PIXEL_RATIO_CAP)
+    pixelRatio: Math.min(
+      dpr,
+      marketingMobile ? MARKETING_MOBILE_PIXEL_RATIO_CAP : constrained ? MOBILE_PIXEL_RATIO_CAP : DESKTOP_PIXEL_RATIO_CAP
+    ),
+    frameInterval: marketingMobile ? 1000 / 30 : 0
   };
 }
 
@@ -85,7 +92,8 @@ export function AvatarStage({
   state,
   url,
   framing = "default",
-  active = true
+  active = true,
+  performanceProfile = "default"
 }: AvatarStageProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
@@ -110,7 +118,7 @@ export function AvatarStage({
     if (!mount) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const profile = mobileProfile();
+    const profile = mobileProfile(performanceProfile);
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
@@ -165,6 +173,7 @@ export function AvatarStage({
     let blinkAt = performance.now() + 2500;
     let blinkPhase = -1;
     let lastFrame = 0;
+    let lastRenderedFrame = 0;
     // One value per shape, each eased separately: mouths open fast and close
     // slowly, and a single shared scalar could not express that.
     const shapes = {
@@ -334,6 +343,9 @@ export function AvatarStage({
 
     function render(now: number) {
       frame = requestAnimationFrame(render);
+      if (profile.frameInterval > 0 && now - lastRenderedFrame < profile.frameInterval) return;
+      lastRenderedFrame = now;
+
       const delta = Math.min(0.05, (now - lastFrame) / 1000 || 0.016);
       lastFrame = now;
       clock += delta;
@@ -388,6 +400,7 @@ export function AvatarStage({
       // Reset the clock so the first delta after a pause is one frame, not the
       // whole time spent parked.
       lastFrame = performance.now();
+      lastRenderedFrame = 0;
       frame = requestAnimationFrame(render);
     }
 
@@ -443,7 +456,7 @@ export function AvatarStage({
       renderer.dispose();
       if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
     };
-  }, [framing, url]);
+  }, [framing, performanceProfile, url]);
 
   // Nudges the gate above. Deliberately separate from the scene effect: `active`
   // flips on every scroll past the hero, and rebuilding the renderer there

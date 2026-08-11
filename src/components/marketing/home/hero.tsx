@@ -39,7 +39,7 @@ export function Hero() {
             priority
             active={avatarActive}
             framing="marketing"
-            className="pointer-events-none absolute inset-y-0 -inset-x-10 z-10 -translate-x-10 scale-[1.18] drop-shadow-[0_24px_30px_rgba(4,12,35,0.5)] sm:inset-0 sm:translate-x-0 sm:scale-100"
+            className="pointer-events-none absolute inset-y-0 -inset-x-10 z-10 -translate-x-10 scale-[1.18] sm:inset-0 sm:translate-x-0 sm:scale-100 sm:drop-shadow-[0_24px_30px_rgba(4,12,35,0.5)]"
           />
           <div className="pointer-events-none absolute -bottom-1 left-1/2 h-px w-48 -translate-x-1/2 bg-cream/25 shadow-[0_0_24px_rgba(241,234,216,0.35)] sm:w-64" />
         </div>

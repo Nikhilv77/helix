@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { InterviewSignal, TrailgradMark } from "../blueprint-art";
-import { Counter, Reveal, TypeOut, useInView } from "../reveal";
+import { Counter, Reveal, useInView } from "../reveal";
 
 const proofStats = [
   { value: 100, label: "Ready" },
@@ -68,15 +68,10 @@ export function LearningPath() {
 
         <Reveal delay={80}>
           <h2
-            className="display-heading relative mt-6 w-full max-w-4xl text-center text-cream"
+            className="display-heading mt-6 w-full max-w-4xl text-center text-cream"
             style={{ fontSize: "clamp(2.4rem, 5.6vw, 5rem)" }}
           >
-            <span className="invisible block" aria-hidden="true">
-              Preparation, but with pressure.
-            </span>
-            <span className="absolute inset-0 block">
-              <TypeOut text="Preparation, but with pressure." speed={58} />
-            </span>
+            <span className="marketing-text-reveal">Preparation, but with pressure.</span>
           </h2>
         </Reveal>
 
@@ -113,10 +108,22 @@ export function LearningPath() {
 }
 
 function ProjectSidePatterns() {
-  const percent = useCountUp(100);
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, "0px 0px -10% 0px");
+  const [desktop, setDesktop] = useState(false);
+  const active = desktop && inView;
+  const percent = useCountUp(100, active);
+
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 640px)");
+    const update = () => setDesktop(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
 
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 block">
+    <div ref={ref} aria-hidden="true" className="pointer-events-none absolute inset-0 hidden sm:block">
       <svg
         className="absolute left-4 top-[46%] h-28 w-28 text-cream opacity-45 sm:left-[8%] sm:h-36 sm:w-36 lg:top-[43%] xl:h-48 xl:w-48 xl:opacity-60"
         viewBox="0 0 160 160"
@@ -166,29 +173,36 @@ function ProjectSidePatterns() {
           />
         ))}
         <path
-          className="prep-j-curve"
+          className={active ? "prep-j-curve" : ""}
           d="M32 136C72 138 95 130 116 111C138 91 146 60 168 52C189 44 202 32 218 18"
           stroke="currentColor"
           strokeWidth="5"
           strokeLinecap="round"
         />
-        <circle className="prep-j-dot" r="5" fill="currentColor">
-          <animateMotion
-            dur="7s"
-            fill="freeze"
-            repeatCount="1"
-            path="M32 136C72 138 95 130 116 111C138 91 146 60 168 52C189 44 202 32 218 18"
-          />
-        </circle>
+        {active ? (
+          <circle className="prep-j-dot" r="5" fill="currentColor">
+            <animateMotion
+              dur="7s"
+              fill="freeze"
+              repeatCount="1"
+              path="M32 136C72 138 95 130 116 111C138 91 146 60 168 52C189 44 202 32 218 18"
+            />
+          </circle>
+        ) : null}
       </svg>
     </div>
   );
 }
 
-function useCountUp(target: number) {
+function useCountUp(target: number, active: boolean) {
   const [value, setValue] = useState(0);
 
   useEffect(() => {
+    if (!active) {
+      setValue(0);
+      return;
+    }
+
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
     if (query.matches) {
       setValue(target);
@@ -210,7 +224,7 @@ function useCountUp(target: number) {
     }, 90);
 
     return () => window.clearInterval(timer);
-  }, [target]);
+  }, [active, target]);
 
   return value;
 }
@@ -218,57 +232,38 @@ function useCountUp(target: number) {
 function SimplePrepPath() {
   const stageRef = useRef<HTMLDivElement>(null);
   const inView = useInView(stageRef, "0px 0px -18% 0px");
-  const [revealedCount, setRevealedCount] = useState(0);
-
-  useEffect(() => {
-    if (!inView) return;
-
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (query.matches) {
-      setRevealedCount(prepSteps.length);
-      return;
-    }
-
-    const timers = prepSteps.map((_, index) =>
-      window.setTimeout(() => setRevealedCount(index + 1), 40 + index * 420)
-    );
-
-    return () => {
-      for (const timer of timers) window.clearTimeout(timer);
-    };
-  }, [inView]);
 
   return (
     <div className="mt-12 w-full max-w-6xl">
       <div
         ref={stageRef}
-        className="prep-stack-stage relative mx-auto min-h-[63rem] lg:flex lg:min-h-[24rem] lg:items-center lg:justify-center"
+        className="prep-stack-stage relative mx-auto grid gap-4 lg:flex lg:min-h-[24rem] lg:items-center lg:justify-center lg:gap-0"
       >
         {prepSteps.map((step, index) => {
-          const revealed = revealedCount > index;
-          const waitingOffset = index * 2.35;
+          const revealed = inView;
           const revealedTilt = [-0.9, 0.65, -0.55, 0.85][index];
+          const mobileTilt = [-0.45, 0.35, -0.3, 0.4][index];
+          const entryX = [-26, 22, -18, 24][index];
 
           return (
             <article
               key={step.label}
               className={[
-                "relative w-[min(23rem,calc(100vw-3rem))] overflow-hidden rounded-[2rem] border text-left shadow-[0_30px_80px_-48px_rgba(3,10,31,0.78)] backdrop-blur-sm transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] lg:w-64",
+                "relative min-h-[18rem] w-[min(23rem,calc(100vw-3rem))] overflow-hidden rounded-[2rem] border p-5 text-left transition-[transform,opacity,border-color,background-color] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] sm:backdrop-blur-sm lg:w-64",
                 "prep-stack-card",
                 revealed
-                  ? "min-h-[18rem] border-cream/85 bg-cream/[0.06] p-5 opacity-100"
-                  : "min-h-[13rem] border-cream/45 bg-cream/[0.025] p-4 opacity-65"
+                  ? "border-cream/80 bg-cream/[0.055] opacity-100"
+                  : "border-cream/34 bg-cream/[0.018] opacity-45"
               ].join(" ")}
               style={{
                 "--stack-margin-left": index === 0 ? "0rem" : revealed ? "1rem" : "-7.5rem",
                 "--stack-transform": revealed
                   ? `translateY(0) rotate(${revealedTilt}deg) scale(1)`
-                  : `translateY(${waitingOffset}px) rotate(${index % 2 === 0 ? "-" : ""}${3 + index * 1.2}deg) scale(${1 - index * 0.035})`,
+                  : `translate(${entryX}px, ${index * 1.35}rem) rotate(${index % 2 === 0 ? "-" : ""}${4 + index * 0.9}deg) scale(${0.94 - index * 0.012})`,
                 "--stack-mobile-transform": revealed
-                  ? `translateY(${index * 14.4}rem) rotate(${revealedTilt}deg) scale(1)`
-                  : `translateY(${index * 0.8}rem) rotate(${index % 2 === 0 ? "-" : ""}${2.2 + index * 0.65}deg) scale(${1 - index * 0.035})`,
-                zIndex: revealed ? prepSteps.length + index : prepSteps.length - index,
-                transitionDelay: `${index * 120}ms`
+                  ? `translateY(0) rotate(${mobileTilt}deg) scale(1)`
+                  : `translate(${entryX}px, 1.2rem) rotate(${index % 2 === 0 ? "-" : ""}${2.2 + index * 0.3}deg) scale(0.975)`,
+                zIndex: revealed ? prepSteps.length + index : prepSteps.length - index
               } as CSSProperties}
             >
               <span
@@ -281,60 +276,44 @@ function SimplePrepPath() {
               <span
                 aria-hidden="true"
                 className={[
-                  "absolute inset-0 transition-opacity duration-700",
-                  revealed ? "opacity-100" : "opacity-40"
+                  "absolute -right-10 -top-10 h-28 w-28 rounded-full border border-cream/10 transition-[opacity,transform] duration-700",
+                  revealed ? "scale-100 opacity-100" : "scale-75 opacity-0"
                 ].join(" ")}
-                style={{
-                  backgroundImage:
-                    "linear-gradient(90deg, rgba(241,234,216,0.08) 1px, transparent 1px), linear-gradient(180deg, rgba(241,234,216,0.08) 1px, transparent 1px), linear-gradient(135deg, rgba(241,234,216,0.08), transparent 46%)",
-                  backgroundSize: "4rem 4rem, 4rem 4rem, 100% 100%"
-                }}
-              />
-              <span
-                aria-hidden="true"
-                className="absolute -right-8 -top-8 h-28 w-28 rounded-full border border-cream/12"
-              />
-              <span
-                aria-hidden="true"
-                className="absolute bottom-5 left-5 h-1.5 w-1.5 rounded-full bg-cream/35 shadow-[7.5rem_0_0_rgba(241,234,216,0.18),14rem_0_0_rgba(241,234,216,0.12)]"
               />
               <BackgroundVisual
                 kind={step.visual}
                 className={[
                   "pointer-events-none absolute right-5 top-5 h-24 w-28 text-cream transition-[opacity,transform] duration-700",
-                  revealed ? "rotate-[-5deg] scale-100 opacity-[0.18]" : "rotate-[-2deg] scale-90 opacity-[0.08]"
+                  revealed
+                    ? "rotate-[-5deg] scale-100 opacity-[0.2]"
+                    : "rotate-[8deg] scale-75 opacity-0"
                 ].join(" ")}
               />
 
               <div
                 className={[
-                  "relative z-10 flex min-h-[14.5rem] flex-col items-start justify-center px-2 py-6 transition-all duration-700",
-                  revealed ? "opacity-100" : "opacity-60"
+                  "relative z-10 flex min-h-[14.5rem] flex-col items-start justify-center px-2 py-6 transition-[opacity,transform] duration-700",
+                  revealed ? "translate-y-0 opacity-100" : "translate-y-3 opacity-55"
                 ].join(" ")}
               >
                 <span className="blueprint-label mb-5 text-cream/42">
                   {String(index + 1).padStart(2, "0")}
                 </span>
                 <h3 className="display-heading min-h-[3.05rem] text-[2.7rem] text-cream sm:text-[3.05rem]">
-                  {revealed ? (
-                    <TypeOut key={`${step.label}-title`} text={step.label} speed={80} />
-                  ) : (
-                    step.label
-                  )}
+                  <span className={revealed ? "marketing-text-reveal" : "opacity-0"}>
+                    {step.label}
+                  </span>
                 </h3>
                 <p
                   className={[
-                    "relative mt-5 min-h-[6.25rem] w-full max-w-[14.75rem] text-[1.05rem] font-medium leading-7 text-cream/70 transition duration-500 sm:text-[1.1rem]",
+                    "mt-5 min-h-[6.25rem] w-full max-w-[14.75rem] text-[1.05rem] font-medium leading-7 text-cream/70 transition-[opacity,transform] duration-500 sm:text-[1.1rem]",
                     revealed ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
                   ].join(" ")}
                 >
-                  <span className="invisible block" aria-hidden="true">
+                  <span
+                    className={revealed ? "marketing-text-reveal marketing-text-reveal-delayed" : ""}
+                  >
                     {step.detail}
-                  </span>
-                  <span className="absolute inset-0 block">
-                    {revealed ? (
-                      <TypeOut key={`${step.label}-detail`} text={step.detail} speed={58} />
-                    ) : null}
                   </span>
                 </p>
               </div>

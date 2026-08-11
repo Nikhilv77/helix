@@ -9,7 +9,7 @@ import {
   Tags,
   Target
 } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   PRIMARY_BUTTON,
   SECONDARY_BUTTON
@@ -84,82 +84,6 @@ function WordRevealLine({
   );
 }
 
-function useSlowFollow(ref: RefObject<HTMLElement | null>, signal: unknown) {
-  const frameRef = useRef(0);
-  const targetYRef = useRef(0);
-  const cancelledRef = useRef(false);
-
-  useEffect(() => {
-    return () => {
-      if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    const target = ref.current;
-    if (!target || window.innerWidth >= 640) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    if (cancelledRef.current) return;
-
-    const timer = window.setTimeout(() => {
-      if (cancelledRef.current) return;
-      const rect = target.getBoundingClientRect();
-      const maxScroll =
-        document.documentElement.scrollHeight - document.documentElement.clientHeight;
-      const targetTop = Math.min(
-        maxScroll,
-        Math.max(window.scrollY, window.scrollY + rect.bottom - window.innerHeight + 48)
-      );
-      targetYRef.current = Math.max(targetYRef.current, targetTop);
-      if (targetYRef.current - window.scrollY <= 2) return;
-
-      if (frameRef.current) return;
-
-      function tick() {
-        if (cancelledRef.current) {
-          frameRef.current = 0;
-          return;
-        }
-
-        const delta = targetYRef.current - window.scrollY;
-        if (delta <= 1) {
-          frameRef.current = 0;
-          return;
-        }
-
-        window.scrollTo({ top: window.scrollY + delta * 0.045 });
-        frameRef.current = window.requestAnimationFrame(tick);
-      }
-
-      frameRef.current = window.requestAnimationFrame(tick);
-    }, 140);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [ref, signal]);
-
-  useEffect(() => {
-    function cancelFollow() {
-      cancelledRef.current = true;
-      if (frameRef.current) {
-        window.cancelAnimationFrame(frameRef.current);
-        frameRef.current = 0;
-      }
-    }
-
-    window.addEventListener("wheel", cancelFollow, { passive: true });
-    window.addEventListener("touchstart", cancelFollow, { passive: true });
-    window.addEventListener("keydown", cancelFollow);
-
-    return () => {
-      window.removeEventListener("wheel", cancelFollow);
-      window.removeEventListener("touchstart", cancelFollow);
-      window.removeEventListener("keydown", cancelFollow);
-    };
-  }, []);
-}
-
 export function ResumeIdentityStep({
   result,
   onReplace,
@@ -214,7 +138,18 @@ export function ResumeIdentityStep({
     if (phase !== 2) return;
 
     let frame = 0;
+    let cancelled = false;
+    function cancelScroll() {
+      cancelled = true;
+      if (frame) window.cancelAnimationFrame(frame);
+    }
+
+    window.addEventListener("wheel", cancelScroll, { passive: true });
+    window.addEventListener("touchstart", cancelScroll, { passive: true });
+    window.addEventListener("keydown", cancelScroll);
+
     const timer = window.setTimeout(() => {
+      if (cancelled) return;
       const progress = progressRef.current;
       if (!progress || window.innerWidth >= 640) return;
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -234,6 +169,7 @@ export function ResumeIdentityStep({
       const duration = Math.max(1400, Math.min(2400, distance * 7));
 
       function tick(now: number) {
+        if (cancelled) return;
         const progressValue = Math.min(1, (now - startedAt) / duration);
         const eased =
           progressValue < 0.5
@@ -249,6 +185,9 @@ export function ResumeIdentityStep({
     return () => {
       window.clearTimeout(timer);
       if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("wheel", cancelScroll);
+      window.removeEventListener("touchstart", cancelScroll);
+      window.removeEventListener("keydown", cancelScroll);
     };
   }, [phase]);
 
@@ -420,7 +359,18 @@ export function ResumeEvidenceStep({
 
   useEffect(() => {
     let frame = 0;
+    let cancelled = false;
+    function cancelScroll() {
+      cancelled = true;
+      if (frame) window.cancelAnimationFrame(frame);
+    }
+
+    window.addEventListener("wheel", cancelScroll, { passive: true });
+    window.addEventListener("touchstart", cancelScroll, { passive: true });
+    window.addEventListener("keydown", cancelScroll);
+
     const timer = window.setTimeout(() => {
+      if (cancelled) return;
       const cta = ctaRef.current;
       if (!cta || window.innerWidth >= 640) return;
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -437,24 +387,25 @@ export function ResumeEvidenceStep({
 
       const startY = window.scrollY;
       const startedAt = window.performance.now();
-      const duration = Math.max(1700, Math.min(3000, distance * 7));
+      const duration = Math.max(950, Math.min(1700, distance * 4.5));
 
       function tick(now: number) {
+        if (cancelled) return;
         const progress = Math.min(1, (now - startedAt) / duration);
-        const eased =
-          progress < 0.5
-            ? 2 * progress * progress
-            : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        const eased = 1 - Math.pow(1 - progress, 3);
         window.scrollTo({ top: startY + distance * eased });
         if (progress < 1) frame = window.requestAnimationFrame(tick);
       }
 
       frame = window.requestAnimationFrame(tick);
-    }, 900);
+    }, 120);
 
     return () => {
       window.clearTimeout(timer);
       if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("wheel", cancelScroll);
+      window.removeEventListener("touchstart", cancelScroll);
+      window.removeEventListener("keydown", cancelScroll);
     };
   }, []);
 
@@ -547,6 +498,7 @@ export function ResumeReadinessStep({
   const visibleSkills = extraction.skills.slice(0, 14);
   const visibleFocusAreas = extraction.focusAreas.slice(0, 6);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const userStoppedAutoScrollRef = useRef(false);
   const [visibleSkillCount, setVisibleSkillCount] = useState(0);
   const [visibleFocusCount, setVisibleFocusCount] = useState(0);
   const skillsTitle = useWordReveal("Good, your skills are in great shape.", true, 180);
@@ -594,10 +546,43 @@ export function ResumeReadinessStep({
     return () => window.clearInterval(timer);
   }, [routeTitle.done, visibleFocusAreas.length]);
 
-  useSlowFollow(
-    bottomRef,
-    `${skillsTitle.visibleCount}-${visibleSkillCount}-${routeTitle.visibleCount}-${visibleFocusCount}-${showCta}`
-  );
+  useEffect(() => {
+    function stopAutoScroll() {
+      userStoppedAutoScrollRef.current = true;
+    }
+
+    window.addEventListener("wheel", stopAutoScroll, { passive: true });
+    window.addEventListener("touchstart", stopAutoScroll, { passive: true });
+    window.addEventListener("keydown", stopAutoScroll);
+
+    return () => {
+      window.removeEventListener("wheel", stopAutoScroll);
+      window.removeEventListener("touchstart", stopAutoScroll);
+      window.removeEventListener("keydown", stopAutoScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (userStoppedAutoScrollRef.current) return;
+    if (window.innerWidth >= 640) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const timer = window.setTimeout(() => {
+      bottomRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end"
+      });
+    }, 70);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    skillsTitle.visibleCount,
+    visibleSkillCount,
+    showRouteTitle,
+    routeTitle.visibleCount,
+    visibleFocusCount,
+    showCta
+  ]);
 
   return (
     <div className="relative w-full">

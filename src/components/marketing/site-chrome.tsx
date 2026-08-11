@@ -8,7 +8,7 @@ import {
   GraduationCap,
   Mic,
   Menu,
-  Sparkles,
+  PlayCircle,
   X
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -21,7 +21,7 @@ const navLinks: Array<{ label: string; href: string; icon: LucideIcon }> = [
   { label: "Learn", href: "#learn", icon: GraduationCap },
   { label: "Interview", href: "#interview", icon: Mic },
   { label: "Reports", href: "#report", icon: ChartNoAxesCombined },
-  { label: "Start", href: "#flow", icon: Sparkles }
+  { label: "Begin", href: "#flow", icon: PlayCircle }
 ];
 
 const footerColumns = [
@@ -32,7 +32,7 @@ const footerColumns = [
       { label: "Interview", href: "#interview" },
       { label: "Reports", href: "#report" },
       { label: "Blog", href: "/blog" },
-      { label: "Start", href: "#flow" }
+      { label: "Begin", href: "#flow" }
     ]
   },
   {
@@ -148,7 +148,7 @@ export function SiteNav({
       <div className="pointer-events-auto relative w-full max-w-[58rem]">
         <nav
           className={[
-            "grid grid-cols-[auto_1fr_auto] items-center overflow-hidden rounded-[1.35rem] border border-transparent bg-cream/[0.035] px-2.5 py-2.5 shadow-[0_20px_54px_-40px_rgba(3,10,31,0.5)] backdrop-blur-md transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:border-cream/10",
+            "grid grid-cols-[auto_1fr_auto] items-center overflow-hidden rounded-[1.35rem] border border-transparent bg-cream/[0.035] px-2.5 py-2.5 shadow-[0_20px_54px_-40px_rgba(3,10,31,0.5)] backdrop-blur-[2px] transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:border-cream/10 sm:backdrop-blur-md",
             scrolled ? "bg-cream/[0.048] shadow-[0_24px_64px_-42px_rgba(3,10,31,0.58)] sm:border-cream/16" : ""
           ].join(" ")}
         >
@@ -214,10 +214,10 @@ export function SiteNav({
           aria-hidden={!menuOpen}
           inert={menuOpen ? undefined : true}
           className={[
-            "overflow-hidden rounded-[1.35rem] border border-transparent bg-cream/[0.045] text-cream shadow-[0_18px_44px_-32px_rgba(3,10,31,0.46)] backdrop-blur-md transition-[max-height,opacity,transform,filter,margin-top,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[max-height,opacity,transform] sm:hidden",
+            "overflow-hidden rounded-[1.35rem] border border-transparent bg-cream/[0.045] text-cream shadow-[0_18px_44px_-32px_rgba(3,10,31,0.46)] backdrop-blur-[2px] transition-[max-height,opacity,transform,margin-top,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[max-height,opacity,transform] sm:hidden",
             menuOpen
-              ? "mt-2 max-h-[26rem] translate-y-0 p-2 opacity-100 blur-0"
-              : "mt-0 max-h-0 -translate-y-2 p-0 opacity-0 blur-sm"
+              ? "mt-2 max-h-[26rem] translate-y-0 p-2 opacity-100"
+              : "mt-0 max-h-0 -translate-y-2 p-0 opacity-0"
           ].join(" ")}
         >
           <div className="flex items-center justify-between px-3 py-2">
@@ -277,22 +277,24 @@ export function SiteFooter({
   sectionHrefPrefix?: string;
 }) {
   return (
-    <footer className="relative z-10 rounded-t-[2.5rem] bg-[#2b499f] px-6 py-10 text-cream sm:rounded-t-[3.5rem] sm:px-10">
+    <footer className="relative z-10 rounded-t-[2.5rem] bg-cream/[0.04] px-6 py-10 text-cream backdrop-blur-[2px] sm:rounded-t-[3.5rem] sm:px-10 sm:backdrop-blur-md">
       <div className="mx-auto w-full max-w-[78rem]">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-sm">
             <Link
               href="/"
               aria-label="Trailgrad home"
-              className="inline-flex items-center gap-1.5 rounded-xl text-cream outline-none focus-visible:ring-2 focus-visible:ring-cream/35"
+              className="inline-flex items-center gap-2 rounded-xl text-cream outline-none focus-visible:ring-2 focus-visible:ring-cream/35"
             >
-              <TrailgradMark className="h-10 w-10" />
-              <span className="text-3xl font-semibold tracking-tight text-cream">Trailgrad</span>
+              <span className="grid h-11 w-11 place-items-center rounded-[1rem] bg-cream/[0.05]">
+                <TrailgradMark className="h-8 w-8" />
+              </span>
+              <span className="text-2xl font-semibold tracking-tight text-cream">Trailgrad</span>
             </Link>
             <p className="mt-4 text-base leading-7 text-cream/62">
               AI interview practice for learning, mock rounds, and reports that help you improve.
             </p>
-            <div className="mt-5 [&>*]:inline-flex [&>*]:items-center [&>*]:gap-2 [&>*]:rounded-lg [&>*]:bg-cream [&>*]:px-5 [&>*]:py-2.5 [&>*]:text-base [&>*]:font-bold [&>*]:text-[#13234f] [&>*]:shadow-[0_16px_34px_-22px_rgba(3,10,31,0.72)] [&>*]:transition [&>*]:hover:-translate-y-0.5 [&>*]:hover:bg-cream-soft [&>*]:hover:text-[#0d1b44]">
+            <div className="mt-5 [&>*]:inline-flex [&>*]:items-center [&>*]:gap-2 [&>*]:rounded-lg [&>*]:border [&>*]:border-cream/75 [&>*]:bg-cream [&>*]:px-5 [&>*]:py-2.5 [&>*]:text-base [&>*]:font-semibold [&>*]:text-[#13234f] [&>*]:shadow-[0_16px_34px_-24px_rgba(3,10,31,0.72),inset_0_-1px_0_rgba(19,35,79,0.12)] [&>*]:transition [&>*]:hover:-translate-y-0.5 [&>*]:hover:bg-cream-soft [&>*]:hover:text-[#0d1b44]">
               {action}
             </div>
           </div>
@@ -318,7 +320,7 @@ export function SiteFooter({
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t border-cream/14 pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-10 flex flex-col gap-3 border-t border-cream/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="blueprint-label text-sm text-cream/42">
             © {new Date().getFullYear()} Trailgrad · AI interview practice
           </p>

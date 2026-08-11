@@ -37,6 +37,7 @@ export function MarketingAvatar({
           url={AVATAR_URL}
           framing={framing}
           active={active}
+          performanceProfile={framing === "marketing" ? "marketing" : "default"}
         />
       ) : null}
     </div>

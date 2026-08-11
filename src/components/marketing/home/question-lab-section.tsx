@@ -32,7 +32,7 @@ export function QuestionLab() {
       <InterviewSignal className="pointer-events-none absolute left-1/2 top-16 h-[26rem] w-[34rem] -translate-x-1/2 opacity-10 sm:h-[34rem] sm:w-[44rem]" />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-32"
+        className="pointer-events-none absolute inset-0 opacity-20 sm:opacity-32"
         style={{
           backgroundImage:
             "linear-gradient(90deg, rgba(241,234,216,0.08) 1px, transparent 1px), linear-gradient(180deg, rgba(241,234,216,0.08) 1px, transparent 1px)",
@@ -45,10 +45,10 @@ export function QuestionLab() {
       <div className="pointer-events-none absolute -right-28 bottom-24 h-80 w-80 rounded-full border border-cream/10" />
       <QuestionPatterns />
 
-      <div className="relative mx-auto grid w-full max-w-[78rem] gap-12 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
-        <div className="max-w-2xl">
+      <div className="relative mx-auto grid w-full max-w-[78rem] gap-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
+        <div className="max-w-2xl lg:order-2 lg:ml-auto">
           <Reveal>
-            <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 backdrop-blur-sm">
+            <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 sm:backdrop-blur-sm">
               <TrailgradMark className="h-3.5 w-3.5 text-cream" />
               <span className="blueprint-label whitespace-nowrap text-cream/80">
                 Maya question lab
@@ -78,11 +78,13 @@ export function QuestionLab() {
               return (
                 <Reveal key={signal.label} delay={230 + index * 80}>
                   <div className="border-t border-cream/16 pt-5">
-                    <span className="grid h-11 w-11 place-items-center rounded-xl bg-cream/10 text-cream">
-                      <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
+                    <span className="block text-cream">
+                      <Icon size={32} strokeWidth={1.8} aria-hidden="true" />
                     </span>
-                    <p className="blueprint-label mt-4 text-cream/42">{signal.label}</p>
-                    <p className="mt-2 text-sm font-semibold leading-6 text-cream">
+                    <p className="mt-4 font-mono text-[0.9rem] font-semibold uppercase tracking-[0.13em] text-cream/58">
+                      {signal.label}
+                    </p>
+                    <p className="mt-2 text-base font-semibold leading-6 text-cream">
                       {signal.value}
                     </p>
                   </div>
@@ -92,27 +94,25 @@ export function QuestionLab() {
           </div>
         </div>
 
-        <Reveal delay={170}>
-          <div className="relative mx-auto h-[17.5rem] w-full max-w-[46rem] sm:h-[31rem] lg:h-[36rem]">
-            <div className="pointer-events-none absolute bottom-12 left-1/2 h-32 w-[19rem] -translate-x-1/2 rounded-full bg-[#5b7cdc] opacity-16 blur-2xl sm:bottom-6 sm:h-[26rem] sm:w-[38rem] sm:opacity-24 sm:blur-3xl" />
-            <div className="pointer-events-none absolute bottom-20 left-1/2 hidden h-[20rem] w-[30rem] -translate-x-1/2 rounded-full bg-cream/10 blur-3xl sm:block" />
-            <div className="pointer-events-none absolute left-4 top-12 h-24 w-36 rounded-2xl border border-cream/14 opacity-60" />
-            <div className="pointer-events-none absolute right-6 top-20 h-20 w-32 rounded-2xl border border-cream/12 opacity-55" />
-            <div className="pointer-events-none absolute bottom-14 left-1/2 h-px w-[82%] -translate-x-1/2 bg-cream/18" />
+        <Reveal delay={170} className="lg:order-1">
+          <div className="relative mx-auto h-[21rem] w-[calc(100%-1.5rem)] max-w-[44rem] sm:h-[29rem] sm:w-full lg:h-[32rem] lg:max-w-[42rem]">
+            <div className="pointer-events-none absolute left-2 top-10 h-20 w-32 rounded-2xl border border-cream/18 opacity-70 sm:left-4 sm:h-24 sm:w-36" />
+            <div className="pointer-events-none absolute right-4 top-16 h-16 w-28 rounded-2xl border border-cream/14 opacity-60 sm:right-6 sm:h-20 sm:w-32" />
+            <div className="pointer-events-none absolute bottom-12 left-1/2 h-px w-[74%] -translate-x-1/2 bg-cream/16" />
             <Image
-              src="/images/marketing/maya-practice-laptop.webp"
+              src="/images/marketing/maya-question-laptop-optimized.webp"
               alt="Maya guiding interview practice questions on a laptop"
               fill
-              sizes="(min-width: 1024px) 46rem, 92vw"
+              sizes="(max-width: 640px) 96vw, (max-width: 1024px) 56vw, 42rem"
               quality={76}
               loading="lazy"
               decoding="async"
-              className="origin-bottom scale-[1.38] object-contain object-bottom sm:scale-100"
+              className="relative z-10 origin-bottom scale-[1.08] object-contain object-bottom sm:scale-100"
               style={{
-                filter: "drop-shadow(0 0 22px rgba(91,124,220,0.46))",
-                maskImage: "linear-gradient(to bottom, black 0%, black 88%, transparent 100%)",
+                maskImage:
+                  "linear-gradient(to bottom, black 0%, black 78%, rgba(0,0,0,0.86) 88%, transparent 100%)",
                 WebkitMaskImage:
-                  "linear-gradient(to bottom, black 0%, black 88%, transparent 100%)"
+                  "linear-gradient(to bottom, black 0%, black 78%, rgba(0,0,0,0.86) 88%, transparent 100%)"
               }}
             />
           </div>
@@ -124,7 +124,7 @@ export function QuestionLab() {
 
 function QuestionPatterns() {
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 text-cream">
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden text-cream sm:block">
       <svg
         className="absolute left-[7%] top-[18%] h-28 w-44 opacity-24 sm:h-36 sm:w-56"
         viewBox="0 0 230 150"

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { InterviewSignal, TrailgradMark } from "../blueprint-art";
 import { Counter, Reveal, TypeOut } from "../reveal";
@@ -17,6 +17,11 @@ export function TheInterview() {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const active = exchanges[index] ?? exchanges[0];
+  const renderedExchangeIndexes = useMemo(() => {
+    const previous = (index - 1 + exchanges.length) % exchanges.length;
+    const next = (index + 1) % exchanges.length;
+    return Array.from(new Set([previous, index, next]));
+  }, [index]);
 
   useEffect(() => {
     if (paused) return;
@@ -40,7 +45,7 @@ export function TheInterview() {
       <InterviewSignal className="pointer-events-none absolute left-1/2 top-14 h-[26rem] w-[34rem] -translate-x-1/2 opacity-10 sm:h-[34rem] sm:w-[44rem]" />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-30"
+        className="pointer-events-none absolute inset-0 opacity-[0.18] sm:opacity-30"
         style={{
           backgroundImage:
             "linear-gradient(90deg, rgba(241,234,216,0.08) 1px, transparent 1px), linear-gradient(180deg, rgba(241,234,216,0.08) 1px, transparent 1px)",
@@ -53,7 +58,7 @@ export function TheInterview() {
 
       <div className="relative mx-auto flex w-full max-w-[76rem] flex-col items-center">
         <Reveal>
-          <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 backdrop-blur-sm">
+          <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 sm:backdrop-blur-sm">
             <TrailgradMark className="h-3.5 w-3.5 text-cream" />
             <span className="blueprint-label whitespace-nowrap text-cream/80">Live round</span>
           </span>
@@ -81,7 +86,7 @@ export function TheInterview() {
               {roundRules.map(([label, detail], ruleIndex) => (
                 <div
                   key={label}
-                  className="rounded-2xl border border-cream/18 bg-cream/[0.065] p-5 shadow-[0_22px_70px_-48px_rgba(3,10,31,0.72)]"
+                  className="rounded-2xl border border-cream/18 bg-cream/[0.065] p-5 sm:shadow-[0_22px_70px_-48px_rgba(3,10,31,0.72)]"
                   style={{ transform: `rotate(${[-1.2, 0.8, -0.5][ruleIndex]}deg)` }}
                 >
                   <p className="font-card text-2xl font-bold text-cream">{label}</p>
@@ -98,7 +103,9 @@ export function TheInterview() {
           >
             <Reveal delay={260}>
               <div className="relative min-h-[33rem] sm:min-h-[29rem]">
-                {exchanges.map((exchange, exchangeIndex) => {
+                {renderedExchangeIndexes.map((exchangeIndex) => {
+                  const exchange = exchanges[exchangeIndex];
+                  if (!exchange) return null;
                   const showing = exchangeIndex === index;
                   return (
                     <div
@@ -194,10 +201,10 @@ function InterviewNote({
 
   return (
     <article className="relative mx-auto w-full max-w-2xl text-left text-cream">
-      <div className="relative overflow-hidden rounded-[1.55rem] bg-cream/[0.035] p-4 shadow-[0_34px_90px_-52px_rgba(3,10,31,0.9)] sm:rounded-[2rem] sm:p-7 sm:backdrop-blur-sm">
+      <div className="relative overflow-hidden rounded-[1.55rem] bg-cream/[0.035] p-4  sm:rounded-[2rem] sm:p-7 sm:backdrop-blur-sm">
         <div
           aria-hidden="true"
-          className="absolute bottom-0 left-0 h-56 w-56 rounded-full bg-cream/[0.06] blur-2xl"
+          className="absolute bottom-0 left-0 hidden h-56 w-56 rounded-full bg-cream/[0.06] blur-2xl sm:block"
         />
 
         <div className="relative z-10 flex items-center justify-between gap-4">

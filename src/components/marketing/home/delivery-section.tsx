@@ -6,15 +6,16 @@ import { InterviewSignal, TrailgradMark } from "../blueprint-art";
 import { Reveal } from "../reveal";
 import { PrimaryAction } from "./primary-action";
 
-export function Delivery() {
-  const reportRows = [
-    { label: "Specificity", score: 82, note: "Numbers, scope, and tradeoffs are clear." },
-    { label: "Ownership", score: 76, note: "Your role is visible, but can land faster." },
-    { label: "Outcome", score: 68, note: "Good finish. Needs one sharper metric." },
-    { label: "Structure", score: 91, note: "Answer flow is easy to follow." }
-  ];
-  const evidenceBars = [38, 54, 46, 72, 64, 86, 78, 92, 88, 96];
+const reportRows = [
+  { label: "Specificity", score: 82, note: "Numbers, scope, and tradeoffs are clear." },
+  { label: "Ownership", score: 76, note: "Your role is visible, but can land faster." },
+  { label: "Outcome", score: 68, note: "Good finish. Needs one sharper metric." },
+  { label: "Structure", score: 91, note: "Answer flow is easy to follow." }
+] as const;
 
+const evidenceBars = [38, 54, 46, 72, 64, 86, 78, 92, 88, 96] as const;
+
+export function Delivery() {
   return (
     <section
       id="report"
@@ -23,7 +24,7 @@ export function Delivery() {
       <InterviewSignal className="pointer-events-none absolute left-1/2 top-16 h-[26rem] w-[34rem] -translate-x-1/2 opacity-10 sm:h-[34rem] sm:w-[44rem]" />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-30"
+        className="pointer-events-none absolute inset-0 opacity-[0.18] sm:opacity-30"
         style={{
           backgroundImage:
             "linear-gradient(90deg, rgba(241,234,216,0.08) 1px, transparent 1px), linear-gradient(180deg, rgba(241,234,216,0.08) 1px, transparent 1px)",
@@ -31,15 +32,15 @@ export function Delivery() {
           backgroundSize: "11rem 11rem"
         }}
       />
-      <div className="pointer-events-none absolute -left-28 top-28 h-72 w-72 rounded-full border border-cream/10" />
-      <div className="pointer-events-none absolute -right-24 bottom-28 h-80 w-80 rounded-full border border-cream/10" />
+      <div className="pointer-events-none absolute -left-28 top-28 hidden h-72 w-72 rounded-full border border-cream/10 sm:block" />
+      <div className="pointer-events-none absolute -right-24 bottom-28 hidden h-80 w-80 rounded-full border border-cream/10 sm:block" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#3657b4] to-transparent" />
 
       <div className="relative mx-auto w-full max-w-[78rem]">
-        <div className="grid gap-14 lg:grid-cols-2 lg:items-center">
-          <div>
+        <div className="grid gap-14 lg:grid-cols-[1.06fr_0.94fr] lg:items-center">
+          <div className="lg:order-2 lg:ml-auto">
             <Reveal>
-              <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 backdrop-blur-sm">
+              <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 sm:backdrop-blur-sm">
                 <TrailgradMark className="h-3.5 w-3.5 text-cream" />
                 <span className="blueprint-label whitespace-nowrap text-cream/80">
                   After the round
@@ -68,8 +69,8 @@ export function Delivery() {
             </Reveal>
           </div>
 
-          <Reveal delay={120}>
-            <div className="relative min-h-[34rem]">
+          <Reveal delay={120} className="lg:order-1">
+            <div className="relative min-h-[34rem] [contain:layout_paint]">
               <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-px bg-cream/14" />
               <div className="pointer-events-none absolute bottom-8 left-10 top-8 w-px bg-cream/14" />
               <div className="pointer-events-none absolute right-6 top-0 h-40 w-40 rounded-full border border-cream/10" />
@@ -175,12 +176,12 @@ export function Delivery() {
                   return (
                     <Reveal key={item.label} delay={820 + index * 90}>
                       <div className="flex items-center gap-3">
-                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cream/10 text-cream">
-                          <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
+                        <span className="shrink-0 text-cream">
+                          <Icon size={34} strokeWidth={1.8} aria-hidden="true" />
                         </span>
                         <div>
-                          <p className="blueprint-label text-cream/40">{item.label}</p>
-                          <p className="text-sm font-semibold text-cream">{item.value}</p>
+                          <p className="blueprint-label text-[0.74rem] text-cream/40">{item.label}</p>
+                          <p className="text-base font-semibold text-cream">{item.value}</p>
                         </div>
                       </div>
                     </Reveal>
@@ -210,7 +211,7 @@ function FinalCta() {
       <div className="relative grid min-h-[34rem] items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="relative z-10 max-w-2xl">
           <Reveal>
-            <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 backdrop-blur-sm">
+            <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 sm:backdrop-blur-sm">
               <TrailgradMark className="h-3.5 w-3.5 text-cream" />
               <span className="blueprint-label whitespace-nowrap text-cream/80">
                 Ready when you are
@@ -249,24 +250,23 @@ function FinalCta() {
 
         <Reveal delay={180}>
           <div className="relative mx-auto h-[30rem] w-full max-w-[32rem] lg:h-[38rem] lg:max-w-[40rem]">
-            <div className="pointer-events-none absolute bottom-8 left-1/2 h-[26rem] w-[25rem] -translate-x-1/2 rounded-full bg-[#4f70d1] opacity-35 blur-3xl lg:h-[34rem] lg:w-[31rem]" />
-            <div className="pointer-events-none absolute bottom-20 left-1/2 h-[18rem] w-[20rem] -translate-x-1/2 rounded-full bg-[#4568ce] opacity-42 blur-2xl lg:h-[26rem] lg:w-[28rem]" />
-            <div className="pointer-events-none absolute left-1/2 top-16 h-48 w-64 -translate-x-1/2 rounded-full bg-cream/12 blur-3xl" />
+            <div className="pointer-events-none absolute bottom-8 left-1/2 hidden h-[26rem] w-[25rem] -translate-x-1/2 rounded-full bg-[#4f70d1] opacity-35 blur-3xl sm:block lg:h-[34rem] lg:w-[31rem]" />
+            <div className="pointer-events-none absolute bottom-20 left-1/2 hidden h-[18rem] w-[20rem] -translate-x-1/2 rounded-full bg-[#4568ce] opacity-42 blur-2xl sm:block lg:h-[26rem] lg:w-[28rem]" />
+            <div className="pointer-events-none absolute left-1/2 top-16 hidden h-48 w-64 -translate-x-1/2 rounded-full bg-cream/12 blur-3xl sm:block" />
             <div className="pointer-events-none absolute left-6 top-20 h-24 w-36 rounded-2xl border border-cream/16 opacity-60" />
             <div className="pointer-events-none absolute right-4 top-36 h-20 w-32 rounded-2xl border border-cream/14 opacity-50" />
             <div className="pointer-events-none absolute bottom-16 left-0 h-20 w-40 rounded-2xl border border-cream/12 opacity-45" />
             <InterviewSignal className="pointer-events-none absolute left-1/2 top-1/2 h-[24rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 opacity-18" />
             <Image
-              src="/images/marketing/maya-professional.png"
+              src="/images/marketing/maya-professional-optimized.webp"
               alt="Maya, a professional AI interview coach"
               fill
               sizes="(min-width: 1024px) 40rem, 90vw"
               quality={72}
               loading="lazy"
               decoding="async"
-              className="object-contain object-bottom"
+              className="object-contain object-bottom sm:drop-shadow-[0_0_18px_rgba(91,124,220,0.42)]"
               style={{
-                filter: "drop-shadow(0 0 18px rgba(91,124,220,0.42))",
                 maskImage: "linear-gradient(to bottom, black 0%, black 82%, transparent 100%)",
                 WebkitMaskImage:
                   "linear-gradient(to bottom, black 0%, black 82%, transparent 100%)"
