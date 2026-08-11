@@ -38,7 +38,7 @@ export function LearningPath() {
   return (
     <section
       id="learn"
-      className="relative z-10 min-h-screen overflow-hidden bg-blueprint px-5 py-16 sm:px-10 sm:py-24"
+      className="relative z-10 min-h-screen overflow-hidden bg-blueprint px-5 py-20 sm:px-10 sm:py-28"
     >
       <InterviewSignal className="pointer-events-none absolute left-1/2 top-20 h-[26rem] w-[32rem] -translate-x-1/2 opacity-10 sm:h-[30rem] sm:w-[40rem]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#3657b4] to-transparent" />

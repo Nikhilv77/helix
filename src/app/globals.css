@@ -4,7 +4,7 @@
 
 :root {
   color-scheme: dark;
-  --background: #07080c;
+  --background: #3657b4;
   --panel: rgba(17, 19, 29, 0.82);
   --panel-strong: rgba(24, 27, 39, 0.92);
   --line: rgba(148, 163, 184, 0.18);
@@ -25,15 +25,7 @@ body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
-  background:
-    radial-gradient(circle at 18% 10%, rgba(226, 232, 240, 0.1), transparent 27rem),
-    radial-gradient(circle at 82% 14%, rgba(148, 163, 184, 0.075), transparent 25rem),
-    linear-gradient(145deg, #08090d 0%, #11141b 48%, #08090e 100%);
-  background-size:
-    100% 100%,
-    100% 100%,
-    100% 100%,
-    100% 100%;
+  background: #3657b4;
   background-attachment: fixed;
   color: var(--ink);
   font-feature-settings:
@@ -43,11 +35,7 @@ body {
 }
 
 /* Signed in, the whole page is workspace, so the canvas under it has to be the
-   workspace colour. The near-black above belongs to the marketing page; when it
-   showed through anywhere the shell did not paint — past the last section, or
-   beside content narrower than the viewport — it read as a broken black band
-   next to the blue chrome. Matching the shell's own base makes any uncovered
-   region invisible instead. */
+   workspace colour too. */
 body.workspace {
   background: #3657b4;
 }

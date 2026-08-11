@@ -19,7 +19,7 @@ export function Delivery() {
   return (
     <section
       id="report"
-      className="relative z-10 overflow-hidden bg-blueprint px-5 py-16 sm:px-10 sm:py-24"
+      className="relative z-10 overflow-hidden bg-blueprint px-5 py-20 sm:px-10 sm:py-28"
     >
       <InterviewSignal className="pointer-events-none absolute left-1/2 top-16 h-[26rem] w-[34rem] -translate-x-1/2 opacity-10 sm:h-[34rem] sm:w-[44rem]" />
       <div
@@ -199,7 +199,7 @@ export function Delivery() {
 
 function FinalCta() {
   return (
-    <div id="flow" className="relative scroll-mt-28 pt-20 sm:pt-28">
+    <div id="flow" className="relative scroll-mt-28 pt-24 sm:pt-32">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-12 h-px bg-gradient-to-r from-transparent via-cream/35 to-transparent"

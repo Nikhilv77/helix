@@ -27,7 +27,7 @@ export function QuestionLab() {
   return (
     <section
       id="questions"
-      className="relative z-10 overflow-hidden bg-blueprint px-5 pb-8 pt-16 sm:px-10 sm:py-24"
+      className="relative z-10 overflow-hidden bg-blueprint px-5 pb-10 pt-20 sm:px-10 sm:py-28"
     >
       <InterviewSignal className="pointer-events-none absolute left-1/2 top-16 h-[26rem] w-[34rem] -translate-x-1/2 opacity-10 sm:h-[34rem] sm:w-[44rem]" />
       <div
@@ -45,7 +45,7 @@ export function QuestionLab() {
       <div className="pointer-events-none absolute -right-28 bottom-24 h-80 w-80 rounded-full border border-cream/10" />
       <QuestionPatterns />
 
-      <div className="relative mx-auto grid w-full max-w-[78rem] gap-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
+      <div className="relative mx-auto grid w-full max-w-[78rem] gap-5 sm:gap-8 lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:gap-12">
         <div className="max-w-2xl lg:order-2 lg:ml-auto">
           <Reveal>
             <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 sm:backdrop-blur-sm">
@@ -72,7 +72,7 @@ export function QuestionLab() {
             </p>
           </Reveal>
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-3 lg:max-w-xl">
+          <div className="mt-8 grid gap-4 sm:mt-10 sm:grid-cols-3 lg:max-w-xl">
             {questionSignals.map((signal, index) => {
               const Icon = signal.icon;
               return (
@@ -94,8 +94,8 @@ export function QuestionLab() {
           </div>
         </div>
 
-        <Reveal delay={170} className="lg:order-1">
-          <div className="relative mx-auto h-[21rem] w-[calc(100%-1.5rem)] max-w-[44rem] sm:h-[29rem] sm:w-full lg:h-[32rem] lg:max-w-[42rem]">
+        <Reveal delay={170} className="-mt-5 sm:mt-0 lg:order-1">
+          <div className="relative mx-auto h-[18rem] w-[calc(100%-1.5rem)] max-w-[44rem] sm:h-[29rem] sm:w-full lg:h-[32rem] lg:max-w-[42rem]">
             <div className="pointer-events-none absolute left-2 top-10 h-20 w-32 rounded-2xl border border-cream/18 opacity-70 sm:left-4 sm:h-24 sm:w-36" />
             <div className="pointer-events-none absolute right-4 top-16 h-16 w-28 rounded-2xl border border-cream/14 opacity-60 sm:right-6 sm:h-20 sm:w-32" />
             <div className="pointer-events-none absolute bottom-12 left-1/2 h-px w-[74%] -translate-x-1/2 bg-cream/16" />

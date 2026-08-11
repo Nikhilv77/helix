@@ -40,7 +40,7 @@ export function TheInterview() {
   return (
     <section
       id="interview"
-      className="relative z-10 overflow-hidden bg-blueprint px-5 py-16 sm:px-10 sm:py-24"
+      className="relative z-10 overflow-hidden bg-blueprint px-5 py-20 sm:px-10 sm:py-28"
     >
       <InterviewSignal className="pointer-events-none absolute left-1/2 top-14 h-[26rem] w-[34rem] -translate-x-1/2 opacity-10 sm:h-[34rem] sm:w-[44rem]" />
       <div
