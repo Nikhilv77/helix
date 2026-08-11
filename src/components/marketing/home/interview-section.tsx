@@ -9,8 +9,8 @@ import { exchanges } from "./data";
 
 const roundRules = [
   ["Probe", "A vague answer gets one specific follow-up."],
-  ["Challenge", "Unsupported claims are tested against the details."],
-  ["Move", "Once the signal is clear, the round keeps moving."]
+  ["Clarify", "Loose answers get checked with real details."],
+  ["Move", "Once the answer is clear, the round keeps moving."]
 ] as const;
 
 export function TheInterview() {
@@ -40,7 +40,7 @@ export function TheInterview() {
   return (
     <section
       id="interview"
-      className="relative z-10 overflow-hidden bg-blueprint px-5 py-20 sm:px-10 sm:py-28"
+      className="relative z-10 overflow-hidden bg-blueprint px-5 py-16 sm:px-10 sm:py-24"
     >
       <InterviewSignal className="pointer-events-none absolute left-1/2 top-14 h-[26rem] w-[34rem] -translate-x-1/2 opacity-10 sm:h-[34rem] sm:w-[44rem]" />
       <div
@@ -69,14 +69,14 @@ export function TheInterview() {
             className="display-heading mt-6 max-w-4xl text-center text-cream"
             style={{ fontSize: "clamp(2.4rem, 5.6vw, 5rem)" }}
           >
-            Then prove you know it.
+            Then say it out loud.
           </h2>
         </Reveal>
 
         <Reveal delay={160}>
           <p className="mx-auto mt-7 max-w-2xl text-center text-lg leading-relaxed text-cream/76 sm:text-xl">
-            The interview uses your finished chapters and resume evidence. Vague answers get
-            probed, loose claims get challenged, and strong proof moves forward.
+            The interview uses your finished chapters and resume details. Vague answers get
+            follow-ups, loose points get clarified, and good answers move on.
           </p>
         </Reveal>
 
@@ -168,8 +168,8 @@ export function TheInterview() {
 
         <div className="mt-20 grid w-full max-w-3xl grid-cols-3 gap-6 border-t border-cream/15 pt-8 text-center">
           {[
-            { value: 15, suffix: "", label: "Minutes, hard cap" },
-            { value: 2, suffix: "", label: "Follow-ups, max" },
+            { value: 15, suffix: "", label: "Focused minutes" },
+            { value: 2, suffix: "", label: "Follow-ups" },
             { value: 1, suffix: "", label: "Thing to fix" }
           ].map((stat, statIndex) => (
             <Reveal key={stat.label} delay={statIndex * 110}>

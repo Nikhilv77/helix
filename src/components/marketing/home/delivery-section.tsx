@@ -7,10 +7,10 @@ import { Reveal } from "../reveal";
 import { PrimaryAction } from "./primary-action";
 
 const reportRows = [
-  { label: "Specificity", score: 82, note: "Numbers, scope, and tradeoffs are clear." },
-  { label: "Ownership", score: 76, note: "Your role is visible, but can land faster." },
-  { label: "Outcome", score: 68, note: "Good finish. Needs one sharper metric." },
-  { label: "Structure", score: 91, note: "Answer flow is easy to follow." }
+  { label: "Details", score: 82, note: "Numbers, scope, and tradeoffs are clear." },
+  { label: "Your role", score: 76, note: "Your role is clear, but say it sooner." },
+  { label: "Result", score: 68, note: "Good finish. Add one clearer metric." },
+  { label: "Flow", score: 91, note: "Answer flow is easy to follow." }
 ] as const;
 
 const evidenceBars = [38, 54, 46, 72, 64, 86, 78, 92, 88, 96] as const;
@@ -19,7 +19,7 @@ export function Delivery() {
   return (
     <section
       id="report"
-      className="relative z-10 overflow-hidden bg-blueprint px-5 py-20 sm:px-10 sm:py-28"
+      className="relative z-10 overflow-hidden bg-blueprint px-5 py-16 sm:px-10 sm:py-24"
     >
       <InterviewSignal className="pointer-events-none absolute left-1/2 top-16 h-[26rem] w-[34rem] -translate-x-1/2 opacity-10 sm:h-[34rem] sm:w-[44rem]" />
       <div
@@ -57,14 +57,13 @@ export function Delivery() {
             </Reveal>
             <Reveal delay={140}>
               <p className="mt-8 max-w-xl text-lg leading-relaxed text-cream/80">
-                Every round turns into a clean signal: what you proved, where your answer drifted,
-                and the one skill to sharpen before the next interview.
+                Every round turns into a clean recap: what went well, where your answer got fuzzy,
+                and the one thing to work on before the next interview.
               </p>
             </Reveal>
             <Reveal delay={200}>
               <p className="mt-8 border-l-2 border-cream/25 pl-5 text-base leading-relaxed text-cream/60">
-                No heavy dashboard. Just a readable verdict that makes the next practice round
-                obvious.
+                No heavy screens. Just a readable note that makes the next practice round obvious.
               </p>
             </Reveal>
           </div>
@@ -106,7 +105,7 @@ export function Delivery() {
                     </svg>
                     <div className="text-center">
                       <p className="wordmark text-6xl text-cream">82</p>
-                      <p className="blueprint-label mt-1 text-cream/45">Evidence</p>
+                      <p className="blueprint-label mt-1 text-cream/45">Clarity</p>
                     </div>
                   </div>
                 </Reveal>
@@ -114,7 +113,7 @@ export function Delivery() {
                 <div className="relative pt-3">
                   <Reveal delay={260}>
                     <div className="flex items-center justify-between gap-4 border-b border-cream/18 pb-4">
-                      <span className="blueprint-label text-cream/55">Round verdict</span>
+                      <span className="blueprint-label text-cream/55">Round recap</span>
                       <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-cream/70">
                         <span className="h-2 w-2 rounded-full bg-[#7ee0bd] shadow-[0_0_16px_rgba(126,224,189,0.72)]" />
                         Improved
@@ -170,7 +169,7 @@ export function Delivery() {
                 {[
                   { icon: TrendingUp, label: "Trend", value: "+14%" },
                   { icon: Target, label: "Next focus", value: "Outcome" },
-                  { icon: CheckCircle2, label: "Ready", value: "Mock loop" }
+                  { icon: CheckCircle2, label: "Ready", value: "Next round" }
                 ].map((item, index) => {
                   const Icon = item.icon;
                   return (
@@ -200,7 +199,7 @@ export function Delivery() {
 
 function FinalCta() {
   return (
-    <div id="flow" className="relative scroll-mt-28 pt-24 sm:pt-32">
+    <div id="flow" className="relative scroll-mt-28 pt-20 sm:pt-28">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-12 h-px bg-gradient-to-r from-transparent via-cream/35 to-transparent"
@@ -224,14 +223,14 @@ function FinalCta() {
               className="display-heading mt-6 max-w-3xl text-cream"
               style={{ fontSize: "clamp(2.5rem, 6vw, 5.2rem)" }}
             >
-              Walk in with proof, not hope.
+              Walk in ready, not guessing.
             </h2>
           </Reveal>
 
           <Reveal delay={160}>
             <p className="mt-7 max-w-xl text-lg leading-relaxed text-cream/76 sm:text-xl">
-              Upload your resume, build the trail, and let Maya pressure-test the answers before
-              the real interview does.
+              Upload your resume, build the trail, and practice the answers before the real
+              interview asks.
             </p>
           </Reveal>
 

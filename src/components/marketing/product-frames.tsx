@@ -57,7 +57,7 @@ function SetupScreen({ action }: { action?: ReactNode }) {
       options: ["Behavioral", "Technical", "Hiring manager"],
       selected: "Behavioral"
     },
-    { label: "Intensity", options: ["Friendly", "Realistic", "Brutal"], selected: "Brutal" }
+    { label: "Intensity", options: ["Friendly", "Realistic", "Direct"], selected: "Direct" }
   ];
 
   return (
@@ -189,7 +189,7 @@ function ReportScreen() {
         <div className="flex flex-wrap gap-2">
           <Chip>Engineering</Chip>
           <Chip>Behavioral</Chip>
-          <Chip>Brutal</Chip>
+          <Chip>Direct</Chip>
         </div>
       </div>
 
@@ -222,7 +222,7 @@ function ReportScreen() {
 const tabs = [
   { id: "setup", label: "Setup", caption: "Under a minute" },
   { id: "live", label: "Interview", caption: "Ten to fifteen minutes" },
-  { id: "report", label: "Report", caption: "Scored on evidence" }
+  { id: "report", label: "Report", caption: "Clear next step" }
 ];
 
 /** Faithful mock of the three product screens, with a tab switcher. */
@@ -263,7 +263,7 @@ export function ProductShowcase({ action }: { action?: ReactNode }) {
             className="display-heading mt-5 text-center text-cream"
             style={{ fontSize: "clamp(2.25rem, 5.4vw, 4.5rem)" }}
           >
-            Setup. Interview. Verdict.
+            Setup. Interview. Recap.
           </h2>
         </Reveal>
 

@@ -8,13 +8,13 @@ import { Counter, Reveal, useInView } from "../reveal";
 const proofStats = [
   { value: 100, label: "Ready" },
   { value: 4, label: "Steps" },
-  { value: 1, label: "Clear path" }
+  { value: 1, label: "Next move" }
 ];
 
 const prepSteps = [
   {
     label: "Upload",
-    detail: "Your resume becomes the source. Projects, tools, and claims are pulled into view.",
+    detail: "Your resume becomes the source. Projects, tools, and key points come into view.",
     visual: "upload"
   },
   {
@@ -28,8 +28,8 @@ const prepSteps = [
     visual: "learn"
   },
   {
-    label: "Defend",
-    detail: "When the prep is ready, Maya turns it into questions you have to defend.",
+    label: "Answer",
+    detail: "When you are ready, Maya turns the prep into questions you can answer.",
     visual: "defend"
   }
 ] as const;
@@ -38,7 +38,7 @@ export function LearningPath() {
   return (
     <section
       id="learn"
-      className="relative z-10 min-h-screen overflow-hidden bg-blueprint px-5 py-20 sm:px-10 sm:py-28"
+      className="relative z-10 min-h-screen overflow-hidden bg-blueprint px-5 py-16 sm:px-10 sm:py-24"
     >
       <InterviewSignal className="pointer-events-none absolute left-1/2 top-20 h-[26rem] w-[32rem] -translate-x-1/2 opacity-10 sm:h-[30rem] sm:w-[40rem]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#3657b4] to-transparent" />
@@ -71,14 +71,14 @@ export function LearningPath() {
             className="display-heading mt-6 w-full max-w-4xl text-center text-cream"
             style={{ fontSize: "clamp(2.4rem, 5.6vw, 5rem)" }}
           >
-            <span className="marketing-text-reveal">Preparation, but with pressure.</span>
+            <span className="marketing-text-reveal">Prep that feels like practice.</span>
           </h2>
         </Reveal>
 
         <Reveal delay={170}>
           <p className="mx-auto mt-7 max-w-2xl text-center text-lg leading-relaxed text-cream/76 sm:text-xl">
-            A simple path from resume to live interview. No noisy dashboard, no endless list of
-            random questions.
+            A simple path from resume to live interview. No clutter, no endless list of random
+            prompts.
           </p>
         </Reveal>
 

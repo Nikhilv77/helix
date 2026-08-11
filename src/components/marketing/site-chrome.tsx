@@ -292,7 +292,7 @@ export function SiteFooter({
               <span className="text-2xl font-semibold tracking-tight text-cream">Trailgrad</span>
             </Link>
             <p className="mt-4 text-base leading-7 text-cream/62">
-              AI interview practice for learning, mock rounds, and reports that help you improve.
+              Practice with Maya, follow a simple trail, and see what to improve next.
             </p>
             <div className="mt-5 [&>*]:inline-flex [&>*]:items-center [&>*]:gap-2 [&>*]:rounded-lg [&>*]:border [&>*]:border-cream/75 [&>*]:bg-cream [&>*]:px-5 [&>*]:py-2.5 [&>*]:text-base [&>*]:font-semibold [&>*]:text-[#13234f] [&>*]:shadow-[0_16px_34px_-24px_rgba(3,10,31,0.72),inset_0_-1px_0_rgba(19,35,79,0.12)] [&>*]:transition [&>*]:hover:-translate-y-0.5 [&>*]:hover:bg-cream-soft [&>*]:hover:text-[#0d1b44]">
               {action}

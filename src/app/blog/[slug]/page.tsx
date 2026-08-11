@@ -2,14 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import {
-  ArrowLeft,
-  ArrowRight,
-  CalendarDays,
-  CheckCircle2,
-  Clock,
-  ListChecks
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, Clock, ListChecks } from "lucide-react";
 import { SiteFooter, SiteNav } from "@/components/marketing/site-chrome";
 import { TrailgradMark } from "@/components/marketing/blueprint-art";
 import { blogPosts, getBlogPost } from "@/lib/blog";
@@ -80,24 +73,13 @@ export default async function BlogPostPage({
 
   return (
     <div className="blueprint min-h-screen overflow-x-clip">
-      <div className="blueprint-grid" />
       <div className="blueprint-rails" />
       <SiteNav action={navAction} sectionHrefPrefix="/" />
 
-      <main className="relative z-10 px-5 pb-16 pt-32 sm:px-10 sm:pb-24 sm:pt-36">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-30"
-          style={{
-            backgroundImage:
-              "linear-gradient(90deg, rgba(241,234,216,0.08) 1px, transparent 1px), linear-gradient(180deg, rgba(241,234,216,0.08) 1px, transparent 1px)",
-            backgroundPosition: "center top",
-            backgroundSize: "11rem 11rem"
-          }}
-        />
-        <div className="pointer-events-none absolute left-1/2 top-16 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full border border-cream/10" />
-        <div className="pointer-events-none absolute -left-28 top-[34rem] h-80 w-80 rounded-full border border-cream/10" />
-        <div className="pointer-events-none absolute -right-28 bottom-40 h-80 w-80 rounded-full border border-cream/10" />
+      <main className="relative z-10 px-5 pb-14 pt-32 sm:px-10 sm:pb-20 sm:pt-36">
+        <div className="pointer-events-none absolute left-1/2 top-20 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full border border-cream/10" />
+        <div className="pointer-events-none absolute -left-28 top-[34rem] hidden h-80 w-80 rounded-full border border-cream/10 sm:block" />
+        <div className="pointer-events-none absolute -right-28 bottom-40 hidden h-80 w-80 rounded-full border border-cream/10 sm:block" />
 
         <article className="relative mx-auto w-full max-w-[78rem]">
           <nav className="flex flex-wrap items-center gap-2 text-sm font-semibold text-cream/48">
@@ -112,9 +94,9 @@ export default async function BlogPostPage({
             <span className="text-cream/72">{post.category}</span>
           </nav>
 
-          <header className="mt-10 grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
-            <div>
-              <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 backdrop-blur-sm">
+          <header className="mt-9 grid gap-9 lg:grid-cols-[0.86fr_1.14fr] lg:items-center">
+            <div className="blog-rise">
+              <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 sm:backdrop-blur-sm">
                 <TrailgradMark className="h-3.5 w-3.5 text-cream" />
                 <span className="blueprint-label whitespace-nowrap text-cream/80">
                   {post.category}
@@ -122,7 +104,7 @@ export default async function BlogPostPage({
               </span>
               <h1
                 className="display-heading mt-6 max-w-4xl text-cream"
-                style={{ fontSize: "clamp(2.8rem, 6.8vw, 6rem)" }}
+                style={{ fontSize: "clamp(2.8rem, 6.8vw, 5.8rem)" }}
               >
                 {post.title}
               </h1>
@@ -141,42 +123,26 @@ export default async function BlogPostPage({
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-lg border border-cream/16 bg-cream/[0.06] shadow-[0_30px_90px_-56px_rgba(3,10,31,0.78)]">
-              <div className="relative aspect-[3/2] bg-[#2b499f]">
-                <Image
-                  src={post.coverImage}
-                  alt={post.coverAlt}
-                  fill
-                  priority
-                  sizes="(min-width: 1024px) 43rem, 92vw"
-                  className="object-cover"
-                />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#13234f]/25 via-transparent to-transparent" />
-              </div>
+            <div className="blog-rise relative min-h-[19rem] rounded-[1.4rem] border border-cream/[0.045] sm:min-h-[27rem] lg:min-h-[31rem]">
+              <Image
+                src={post.coverImage}
+                alt={post.coverAlt}
+                fill
+                priority
+                sizes="(min-width: 1024px) 43rem, 92vw"
+                className="object-contain p-2 sm:p-4"
+              />
             </div>
           </header>
 
           <div className="mt-12 grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-            <div className="overflow-hidden rounded-lg bg-[#f1ead8] text-[#151923] shadow-[0_34px_90px_-54px_rgba(3,10,31,0.78)]">
-              <div
-                aria-hidden="true"
-                className="h-2 bg-[#3657b4]"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(90deg, rgba(241,234,216,0.34) 1px, transparent 1px)",
-                  backgroundSize: "2rem 100%"
-                }}
-              />
+            <div className="overflow-hidden rounded-[1.65rem] bg-[#f1ead8] text-[#151923]">
               <div className="px-5 py-8 sm:px-9 sm:py-11 lg:px-12">
-                <div className="grid gap-4 border-b border-[#17234b]/10 pb-8 sm:grid-cols-3">
+                <div className="grid gap-4 rounded-[1.25rem] bg-[#3657b4]/[0.045] p-5 sm:grid-cols-3">
                   {post.summary.map((item) => (
                     <div key={item} className="flex gap-3">
-                      <CheckCircle2
-                        size={18}
-                        className="mt-1 shrink-0 text-[#227350]"
-                        aria-hidden="true"
-                      />
-                      <p className="text-sm font-semibold leading-6 text-[#1f2937]/78">{item}</p>
+                      <span className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-[#3657b4]" />
+                      <p className="text-base font-semibold leading-7 text-[#1f2937]/78">{item}</p>
                     </div>
                   ))}
                 </div>
@@ -203,7 +169,7 @@ export default async function BlogPostPage({
                           {section.bullets.map((bullet) => (
                             <li
                               key={bullet}
-                              className="rounded-lg border border-[#3657b4]/12 bg-[#3657b4]/[0.055] px-4 py-3 text-base font-semibold leading-7 text-[#17234b]/76"
+                              className="rounded-xl bg-[#3657b4]/[0.055] px-4 py-3 text-base font-semibold leading-7 text-[#17234b]/76"
                             >
                               {bullet}
                             </li>
@@ -217,11 +183,14 @@ export default async function BlogPostPage({
             </div>
 
             <aside className="lg:sticky lg:top-28">
-              <div className="rounded-lg border border-cream/16 bg-cream/[0.065] p-5">
-                <div className="flex items-center gap-3 border-b border-cream/14 pb-5">
-                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-cream/10 text-cream">
-                    <ListChecks size={19} aria-hidden="true" />
-                  </span>
+              <div className="rounded-[1.35rem] border border-cream/14 bg-cream/[0.045] p-5">
+                <div className="flex items-center gap-3 pb-5">
+                  <ListChecks
+                    size={31}
+                    strokeWidth={1.75}
+                    className="text-cream"
+                    aria-hidden="true"
+                  />
                   <div>
                     <p className="blueprint-label text-cream/42">{post.metricLabel}</p>
                     <p className="font-mono text-3xl font-semibold text-cream">{post.metric}</p>
@@ -242,12 +211,12 @@ export default async function BlogPostPage({
             </aside>
           </div>
 
-          <section className="mt-14 border-t border-cream/16 pt-10">
+          <section className="mt-14">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="blueprint-label text-cream/42">Read next</p>
                 <h2 className="mt-3 text-3xl font-semibold tracking-tight text-cream">
-                  Keep the prep loop moving.
+                  Keep the loop moving.
                 </h2>
               </div>
               <Link
@@ -263,18 +232,18 @@ export default async function BlogPostPage({
                 <Link
                   key={related.slug}
                   href={`/blog/${related.slug}`}
-                  className="group grid overflow-hidden rounded-lg border border-cream/15 bg-cream/[0.055] transition hover:-translate-y-1 hover:border-cream/28 hover:bg-cream/[0.08] sm:grid-cols-[11rem_1fr]"
+                  className="group grid gap-5 rounded-[1.2rem] bg-cream/[0.035] p-4 transition sm:grid-cols-[11rem_1fr]"
                 >
-                  <div className="relative min-h-[13rem] bg-[#2b499f] sm:min-h-full">
+                  <div className="relative min-h-[12rem] rounded-[1rem] border border-cream/[0.04] sm:min-h-full">
                     <Image
                       src={related.coverImage}
                       alt={related.coverAlt}
                       fill
                       sizes="(min-width: 1024px) 11rem, 92vw"
-                      className="object-cover"
+                      className="object-contain p-2 transition duration-700 group-hover:scale-[1.035]"
                     />
                   </div>
-                  <div className="p-5">
+                  <div>
                     <p className="blueprint-label text-cream/42">{related.category}</p>
                     <h3 className="mt-3 text-xl font-semibold tracking-tight text-cream">
                       {related.title}

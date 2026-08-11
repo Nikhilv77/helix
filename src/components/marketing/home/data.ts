@@ -22,7 +22,7 @@ export const exchanges: Exchange[] = [
     answer: "We added idempotency keys, so double charges became impossible.",
     reply: "Where did those keys live, and what happened when that store went down?",
     elapsed: "05:41",
-    note: "Unsupported claim"
+    note: "Needs detail"
   },
   {
     action: "interrupt",
@@ -31,7 +31,7 @@ export const exchanges: Exchange[] = [
       "So originally the team had this legacy setup, and there was a lot of history there, and I think around that time we were also…",
     reply: "Let me stop you there — what was the outcome?",
     elapsed: "08:03",
-    note: "94s, no point reached"
+    note: "Needs a point"
   },
   {
     action: "move_on",
@@ -39,7 +39,7 @@ export const exchanges: Exchange[] = [
     answer: "A retry storm took the queue down. I added jitter and capped depth — p99 fell 40%.",
     reply: "Good. Next — tell me about a design decision you argued against.",
     elapsed: "11:27",
-    note: "Criteria met"
+    note: "Good answer"
   }
 ];
 
@@ -63,7 +63,7 @@ export const flowSteps: Array<{ label: string; detail: string; icon: LucideIcon 
   },
   {
     label: "Report",
-    detail: "Scored evidence, and one thing to fix next.",
+    detail: "Clear notes, and one thing to fix next.",
     icon: ClipboardCheck
   }
 ];

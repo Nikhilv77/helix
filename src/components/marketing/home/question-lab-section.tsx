@@ -8,13 +8,13 @@ import { Reveal } from "../reveal";
 const questionSignals = [
   {
     icon: MessageSquareText,
-    label: "Question fit",
+    label: "Question match",
     value: "From your resume"
   },
   {
     icon: Brain,
-    label: "Follow-up depth",
-    value: "Evidence first"
+    label: "Better follow-ups",
+    value: "Details first"
   },
   {
     icon: TimerReset,
@@ -27,7 +27,7 @@ export function QuestionLab() {
   return (
     <section
       id="questions"
-      className="relative z-10 overflow-hidden bg-blueprint px-5 pb-10 pt-20 sm:px-10 sm:py-28"
+      className="relative z-10 overflow-hidden bg-blueprint px-5 pb-8 pt-16 sm:px-10 sm:py-24"
     >
       <InterviewSignal className="pointer-events-none absolute left-1/2 top-16 h-[26rem] w-[34rem] -translate-x-1/2 opacity-10 sm:h-[34rem] sm:w-[44rem]" />
       <div

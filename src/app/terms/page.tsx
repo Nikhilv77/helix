@@ -87,8 +87,8 @@ export default function TermsPage() {
                   key={section.title}
                   className="grid gap-4 rounded-2xl p-4 transition hover:bg-[#22409b]/[0.04] sm:grid-cols-[3rem_1fr]"
                 >
-                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#22409b]/[0.08] text-[#22409b]">
-                    <Icon size={20} strokeWidth={1.8} aria-hidden="true" />
+                  <span className="pt-0.5 text-[#22409b]">
+                    <Icon size={30} strokeWidth={1.75} aria-hidden="true" />
                   </span>
                   <div>
                     <h2 className="text-xl font-semibold tracking-tight text-[#111827]">

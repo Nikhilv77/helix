@@ -38,14 +38,14 @@ const stages: Array<{ title: string; detail: string; icon: LucideIcon; accent: s
     accent: "#f0a3a3"
   },
   {
-    title: "Your evidence",
-    detail: "Deep dives on what you shipped, with pushback.",
+    title: "Your work",
+    detail: "Deep dives on what you shipped, with follow-up.",
     icon: ClipboardCheck,
     accent: "#c3b1f0"
   },
   {
-    title: "The full loop",
-    detail: "One continuous mock, scored end to end.",
+    title: "Full practice",
+    detail: "One complete round, with a clear recap.",
     icon: Trophy,
     accent: "#7dd3c0"
   }

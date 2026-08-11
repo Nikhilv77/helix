@@ -49,7 +49,7 @@ export function Hero() {
             <span className="mt-8 inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 backdrop-blur-sm">
               <TrailgradMark className="h-3.5 w-3.5 text-cream" />
               <span className="blueprint-label whitespace-nowrap text-cream/80">
-                Learn it, then defend it
+                Learn it, then say it
               </span>
             </span>
           </Reveal>
@@ -67,8 +67,8 @@ export function Hero() {
 
           <Reveal delay={170}>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-cream/78 sm:text-xl">
-              Upload your resume, get a focused prep path, and practice with Maya until every claim
-              can survive a real interview.
+              Upload your resume, get a focused prep path, and practice with Maya until every answer
+              can hold up in a real interview.
             </p>
           </Reveal>
 
