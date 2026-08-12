@@ -1,9 +1,7 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import { DsaTopics } from "@/components/workspace/dsa-topics";
 import { privatePageMetadata } from "@/lib/seo";
 import { getAppContainer } from "@/server/app-container";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
@@ -13,13 +11,9 @@ export const metadata = privatePageMetadata(
 
 /** Session one's content: the DSA pattern chapters, opened from Home. */
 export default async function PracticePage() {
-  const { userId } = await auth();
-  if (!userId) redirect("/");
-
-  const ownerId = authenticatedOwnerId(userId);
+  const { ownerId, profile } = await requireOnboardedProfile();
   const container = getAppContainer();
-  const [profile, plan, roadmap, questionStatuses] = await Promise.all([
-    container.profileService.get(ownerId),
+  const [plan, roadmap, questionStatuses] = await Promise.all([
     container.dsaService.frontendPlan().catch(() => null),
     // Practice shows this user's own position in the session, so it reads the
     // persisted roadmap rather than the shared curation alone.

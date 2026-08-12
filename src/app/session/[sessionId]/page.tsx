@@ -1,9 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { SessionDetail } from "@/components/workspace/session-detail";
 import { privatePageMetadata } from "@/lib/seo";
 import { getAppContainer } from "@/server/app-container";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
@@ -12,13 +11,9 @@ export const metadata = privatePageMetadata(
 );
 
 export default async function SessionPage({ params }: { params: Promise<{ sessionId: string }> }) {
-  const { userId } = await auth();
-  if (!userId) redirect("/");
-
+  const { ownerId } = await requireOnboardedProfile();
   const { sessionId } = await params;
-  const curriculum = await getAppContainer().profileService.curriculum(
-    authenticatedOwnerId(userId)
-  );
+  const curriculum = await getAppContainer().profileService.curriculum(ownerId);
   const session = curriculum?.sessions.find((item) => item.id === sessionId);
   if (!session) notFound();
 

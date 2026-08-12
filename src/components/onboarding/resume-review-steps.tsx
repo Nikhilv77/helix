@@ -26,6 +26,7 @@ const IDENTITY_CONTINUE_MS =
 const TRAIL_WORD_STAGGER_MS = 180;
 const TRAIL_SKILL_STAGGER_MS = 150;
 const TRAIL_FOCUS_STAGGER_MS = 280;
+const IDENTITY_DETAIL_WAVE = [34, 58, 82, 48, 92, 56, 78, 44, 64];
 
 function useWordReveal(text: string, active: boolean, delay = 0, stagger = TRAIL_WORD_STAGGER_MS) {
   const words = text.split(" ");
@@ -276,6 +277,18 @@ export function ResumeIdentityStep({
                 } as CSSProperties
               }
             >
+              <div
+                className="mx-auto mb-4 flex h-7 items-center justify-center gap-1.5"
+                aria-hidden="true"
+              >
+                {IDENTITY_DETAIL_WAVE.map((height, index) => (
+                  <span
+                    key={`${height}-${index}`}
+                    className="wave-bar w-1 rounded-full bg-cream/80"
+                    style={{ height: `${height}%`, animationDelay: `${index * 68}ms` }}
+                  />
+                ))}
+              </div>
               <p className="thinking-shimmer blueprint-label text-cream/45">
                 Moving to resume details
               </p>
@@ -487,12 +500,16 @@ export function ResumeEvidenceStep({
 export function ResumeReadinessStep({
   result,
   onBack,
-  onContinue
+  onContinue,
+  continuing = false,
+  error = null
 }: {
   result: ResumeExtractionResponse;
   replacingResume: boolean;
   onBack: () => void;
   onContinue: () => void;
+  continuing?: boolean;
+  error?: string | null;
 }) {
   const { extraction } = result;
   const visibleSkills = extraction.skills.slice(0, 14);
@@ -665,9 +682,21 @@ export function ResumeReadinessStep({
 
         <div ref={bottomRef} className="mt-9 flex min-h-12 justify-center">
           {showCta ? (
-            <button type="button" onClick={onContinue} className={`browse-nudge ${PRIMARY_BUTTON}`}>
-              Open trail <ArrowRight size={15} />
-            </button>
+            <div className="flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={onContinue}
+                disabled={continuing}
+                className={`browse-nudge ${PRIMARY_BUTTON} disabled:pointer-events-none disabled:opacity-70`}
+              >
+                {continuing ? "Entering..." : "Enter"} <ArrowRight size={15} />
+              </button>
+              {error ? (
+                <p className="max-w-sm text-center text-sm font-semibold leading-6 text-cream/68">
+                  {error}
+                </p>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </section>

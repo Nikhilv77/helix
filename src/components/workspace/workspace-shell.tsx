@@ -78,7 +78,10 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
   // sidebar, while every other page kept one. Match the room exactly, or a
   // path below it, and never the sibling route that merely shares a prefix.
   const isBareRoute = (path: string) =>
-    path === "/interview" || path.startsWith("/interview/") || path.startsWith("/onboarding");
+    path === "/interview" ||
+    path.startsWith("/interview/") ||
+    path.startsWith("/onboarding") ||
+    path.startsWith("/auth/continue");
   const bare = pathname ? isBareRoute(pathname) : false;
 
   useEffect(() => {

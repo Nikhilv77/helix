@@ -61,7 +61,7 @@ export function QuestionLab() {
               className="display-heading mt-6 max-w-3xl text-cream"
               style={{ fontSize: "clamp(2.4rem, 5.6vw, 5rem)" }}
             >
-              Practice the questions hiding in your resume.
+              Practice resume interview questions.
             </h2>
           </Reveal>
 

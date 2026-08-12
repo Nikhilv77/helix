@@ -1,7 +1,18 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
+function nextWithPathname(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-trailgrad-pathname", request.nextUrl.pathname);
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders
+    }
+  });
+}
 
 /**
  * Nothing is gated at the edge: interviews run logged out by design, and the
@@ -12,9 +23,9 @@ const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
  * no longer exist.
  */
 const proxy = clerkEnabled
-  ? clerkMiddleware()
-  : function localMarketingProxy() {
-      return NextResponse.next();
+  ? clerkMiddleware((_auth, request) => nextWithPathname(request))
+  : function localMarketingProxy(request: NextRequest) {
+      return nextWithPathname(request);
     };
 
 export default proxy;

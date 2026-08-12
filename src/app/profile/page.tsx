@@ -1,9 +1,6 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import { CandidateProfileEditor } from "@/components/workspace/candidate-profile-editor";
 import { privatePageMetadata } from "@/lib/seo";
-import { getAppContainer } from "@/server/app-container";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
@@ -12,9 +9,6 @@ export const metadata = privatePageMetadata(
 );
 
 export default async function ProfilePage() {
-  const { userId } = await auth();
-  if (!userId) redirect("/");
-
-  const profile = await getAppContainer().profileService.get(authenticatedOwnerId(userId));
+  const { profile } = await requireOnboardedProfile();
   return <CandidateProfileEditor initialProfile={profile} />;
 }

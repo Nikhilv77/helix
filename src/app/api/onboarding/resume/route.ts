@@ -3,6 +3,7 @@ import { basename } from "node:path";
 import { auth } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
+import type { CandidateProfile } from "@/lib/types";
 import { getAppContainer } from "@/server/app-container";
 import { Logger } from "@/server/common/logger";
 import { apiError, apiSuccess } from "@/server/http/api-response";
@@ -36,7 +37,7 @@ const MAX_FILE_SIZE = 6 * 1024 * 1024;
  */
 const ROUTE_BUDGET_MS = 52_000;
 const VISUAL_EXTRACT_BUDGET_MS = 20_000;
-const RESERVED_FOR_PERSISTENCE_MS = 12_000;
+const RESERVED_FOR_RESPONSE_MS = 3_000;
 
 /**
  * Two model calls and a multi-megabyte upload per request make this the most
@@ -129,7 +130,7 @@ export async function POST(request: NextRequest) {
     }
     const documentEvidence = inspectResumeDocument(document, selection.data.level);
 
-    const analysisBudget = remainingMs() - RESERVED_FOR_PERSISTENCE_MS;
+    const analysisBudget = remainingMs() - RESERVED_FOR_RESPONSE_MS;
     if (analysisBudget < 5_000) {
       logger.warn(
         JSON.stringify({
@@ -267,20 +268,55 @@ export async function POST(request: NextRequest) {
       educationEntries: documentEvidence.educationEntries
     };
     const fullName = documentEvidence.identity.name || analysis.fullName;
-    const app = getAppContainer();
-    const profile = await app.profileService.completeOnboarding(ownerId, {
-      targetRole: selection.data.targetRole,
-      level: selection.data.level,
+    const resumeFile = {
+      fileName: safeName || "resume",
+      mimeType: file.type || inferMimeType(safeName)
+    };
+    const extraction = {
+      fullName,
       headline: analysis.headline,
       context: analysis.summary,
+      skills: analysis.skills,
       focusAreas: analysis.focusAreas,
       stories,
+      experience,
+      education,
+      projects,
+      achievements,
+      practiceQuestions,
+      roadmap,
+      confidence,
+      warnings,
+      document: documentSummary,
+      evidence: evidenceSummary
+    };
+    const previewProfile: CandidateProfile = {
+      targetRole: selection.data.targetRole,
+      level: selection.data.level,
+      targetCompany: "",
+      targetDate: null,
+      headline: extraction.headline,
+      context: extraction.context,
+      focusAreas: extraction.focusAreas,
+      stories,
+      updatedAt: null,
+      completeness: Math.round(
+        ([
+          selection.data.targetRole,
+          selection.data.level,
+          extraction.headline,
+          extraction.context
+        ].filter(Boolean).length /
+          4) *
+          100
+      ),
+      onboardingCompletedAt: null,
       resume: {
-        fileName: safeName || "resume",
-        mimeType: file.type || inferMimeType(safeName),
+        fileName: resumeFile.fileName,
+        uploadedAt: Date.now(),
         confidence,
         fullName,
-        skills: analysis.skills,
+        skills: extraction.skills,
         warnings,
         experience,
         education,
@@ -291,15 +327,11 @@ export async function POST(request: NextRequest) {
         document: documentSummary,
         evidence: evidenceSummary
       }
-    });
-    const frontendRoadmap =
-      selection.data.targetRole === "frontend"
-        ? await app.frontendRoadmapService.ensureFrontendRoadmap(ownerId)
-        : null;
+    };
 
     logger.log(
       JSON.stringify({
-        event: "resume.accepted",
+        event: "resume.preview.accepted",
         ownerId,
         durationMs: Date.now() - startedAt,
         format: document.format,
@@ -307,31 +339,15 @@ export async function POST(request: NextRequest) {
         experience: experience.length,
         projects: projects.length,
         education: education.length,
-        practiceQuestions: practiceQuestions.length,
-        frontendRoadmapId: frontendRoadmap?.roadmapId ?? null
+        practiceQuestions: practiceQuestions.length
       })
     );
 
     return apiSuccess({
-      profile,
-      extraction: {
-        fullName,
-        headline: analysis.headline,
-        skills: analysis.skills,
-        focusAreas: analysis.focusAreas,
-        stories,
-        experience,
-        education,
-        projects,
-        achievements,
-        practiceQuestions,
-        roadmap,
-        confidence,
-        warnings,
-        document: documentSummary,
-        evidence: evidenceSummary
-      },
-      frontendRoadmap
+      profile: previewProfile,
+      resumeFile,
+      extraction,
+      frontendRoadmap: null
     });
   } catch (error) {
     if (error instanceof ResumeDocumentError) {

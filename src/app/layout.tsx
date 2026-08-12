@@ -4,11 +4,15 @@ import { Geist_Mono, Josefin_Sans, Raleway } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { Analytics } from "@vercel/analytics/next";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { AuthSync } from "@/components/workspace/auth-sync";
 import { ScrollRestoration } from "@/components/scroll-restoration";
 import { clerkAppearance } from "@/lib/clerk-theme";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/seo";
+import { getAppContainer } from "@/server/app-container";
+import { authenticatedOwnerId } from "@/server/interview/owner";
 import "./globals.css";
 
 const googleSiteVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
@@ -123,6 +127,20 @@ const fontVariables = `${displayFont.variable} ${sansFont.variable} ${monoFont.v
 
 const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
+function isWorkspaceChromeRoute(pathname: string): boolean {
+  return (
+    pathname === "/" ||
+    pathname === "/practice" ||
+    pathname.startsWith("/practice/") ||
+    pathname === "/interviews" ||
+    pathname === "/progress" ||
+    pathname === "/reports" ||
+    pathname === "/profile" ||
+    pathname.startsWith("/sessions/") ||
+    pathname.startsWith("/session/")
+  );
+}
+
 /**
  * Never prerendered or reused across auth states.
  *
@@ -138,12 +156,28 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // Resolved on the server so the workspace chrome is never wrong on first
   // paint, and signed-in users never see the marketing page flash through.
   const { userId } = clerkPublishableKey ? await auth() : { userId: null };
+  const requestHeaders = await headers();
+  const pathname = requestHeaders.get("x-trailgrad-pathname") ?? "";
+  const workspaceRoute = isWorkspaceChromeRoute(pathname);
+
+  if (workspaceRoute && pathname !== "/" && !userId) redirect("/");
+
+  let showWorkspaceShell = false;
+  if (userId && workspaceRoute) {
+    const profile = await getAppContainer()
+      .profileService.get(authenticatedOwnerId(userId))
+      .catch(() => null);
+    if (!profile?.onboardingCompletedAt) redirect("/onboarding");
+    showWorkspaceShell = true;
+  }
 
   const app = (
     <>
       <ScrollRestoration />
-      {userId ? (
+      {showWorkspaceShell ? (
         <WorkspaceShell>{children}</WorkspaceShell>
+      ) : userId ? (
+        children
       ) : (
         <>
           <AuthSync />

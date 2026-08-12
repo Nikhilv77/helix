@@ -25,6 +25,11 @@ export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
+    const ownerId = authenticatedOwnerId(userId);
+    const profile = await getAppContainer().profileService.get(ownerId);
+    if (!profile.onboardingCompletedAt) {
+      throw new ApiRouteError(409, "ONBOARDING_REQUIRED", "Finish onboarding first.");
+    }
 
     const parsed = attemptSchema.safeParse(await readJson(request));
     if (!parsed.success) {
@@ -37,7 +42,7 @@ export async function POST(request: NextRequest) {
     // the roadmap echoed back — skipping that read is a third of the response
     // time on every "mark complete" click.
     const result = await getAppContainer().frontendRoadmapService.recordQuestionAttempt(
-      authenticatedOwnerId(userId),
+      ownerId,
       parsed.data,
       { includeHome: false }
     );

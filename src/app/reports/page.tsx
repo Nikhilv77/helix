@@ -1,10 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import { ReportsView } from "@/components/workspace/reports-view";
 import type { ReportsOverview } from "@/lib/reports";
 import { privatePageMetadata } from "@/lib/seo";
 import { getAppContainer } from "@/server/app-container";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
@@ -41,14 +39,10 @@ function emptyOverview(now: number): ReportsOverview {
 
 /** Every round, scored and compared — the cross-round view of your reports. */
 export default async function ReportsPage() {
-  const { userId } = await auth();
-  if (!userId) redirect("/");
-
-  const ownerId = authenticatedOwnerId(userId);
+  const { ownerId, profile } = await requireOnboardedProfile();
   const container = getAppContainer();
 
-  const [profile, overview, quota] = await Promise.all([
-    container.profileService.get(ownerId),
+  const [overview, quota] = await Promise.all([
     // History lives in the session store; if it cannot be read the page still
     // renders its empty state rather than failing the whole route.
     container.interviewService.reportsOverview(ownerId).catch(() => null),

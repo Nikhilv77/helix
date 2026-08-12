@@ -14,13 +14,14 @@ export default async function ContinueAfterAuthentication() {
   const { userId } = await auth();
   if (!userId) redirect("/");
 
-  let destination = "/";
+  let destination = "/onboarding";
   try {
     const ownerId = authenticatedOwnerId(userId);
     const profile = await getAppContainer().profileService.get(ownerId);
     destination = profile.onboardingCompletedAt ? "/" : "/onboarding";
   } catch {
-    // A database hiccup should land the user somewhere recoverable, not loop auth.
+    // If we cannot prove onboarding is complete, keep the user in the setup path
+    // instead of briefly landing them on the workspace.
   }
 
   redirect(destination);

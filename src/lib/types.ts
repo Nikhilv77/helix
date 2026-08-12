@@ -115,6 +115,10 @@ export interface ResumeEvidenceSummary {
 
 export interface ResumeExtractionResponse {
   profile: CandidateProfile;
+  resumeFile: {
+    fileName: string;
+    mimeType: string;
+  };
   frontendRoadmap: {
     roadmapId: string;
     created: boolean;
@@ -130,6 +134,7 @@ export interface ResumeExtractionResponse {
   extraction: {
     fullName: string;
     headline: string;
+    context: string;
     skills: string[];
     focusAreas: string[];
     stories: CandidateStory[];

@@ -103,26 +103,7 @@ async function WorkspaceHome({
         : [null, null];
     dashboardData = { profile, frontendRoadmap, frontendPlan };
   } catch {
-    return (
-      <Dashboard
-        profile={{
-          targetRole: null,
-          level: null,
-          targetCompany: "",
-          targetDate: null,
-          headline: "",
-          context: "",
-          focusAreas: [],
-          stories: [],
-          onboardingCompletedAt: null,
-          resume: null,
-          updatedAt: null,
-          completeness: 0
-        }}
-        frontendRoadmap={null}
-        frontendPlan={null}
-      />
-    );
+    redirect("/onboarding");
   }
 
   if (!dashboardData.profile.onboardingCompletedAt) redirect("/onboarding");

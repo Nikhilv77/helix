@@ -1,11 +1,10 @@
-import { auth } from "@clerk/nextjs/server";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { ChapterSession } from "@/components/workspace/chapter-session";
 import { briefBeats, buildChapterBrief } from "@/lib/chapter-brief";
 import { findQuestion } from "@/lib/dsa";
 import { privatePageMetadata } from "@/lib/seo";
 import { getAppContainer } from "@/server/app-container";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +30,7 @@ export default async function ChapterSessionPage({
 }: {
   params: Promise<{ chapter: string }>;
 }) {
-  const { userId } = await auth();
-  if (!userId) redirect("/");
-
-  const ownerId = authenticatedOwnerId(userId);
+  const { ownerId } = await requireOnboardedProfile();
   const container = getAppContainer();
 
   const { chapter } = await params;

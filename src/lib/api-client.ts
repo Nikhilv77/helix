@@ -146,3 +146,25 @@ export async function uploadResume(input: {
 
   return payload.data as ResumeExtractionResponse;
 }
+
+export function completeOnboarding(
+  result: ResumeExtractionResponse
+): Promise<ResumeExtractionResponse> {
+  if (!result.profile.targetRole || !result.profile.level) {
+    throw new ApiClientError({
+      code: "ONBOARDING_SELECTION_MISSING",
+      message: "Choose your role and experience level again.",
+      status: 400
+    });
+  }
+
+  return request<ResumeExtractionResponse>("/api/onboarding/complete", {
+    method: "POST",
+    body: {
+      targetRole: result.profile.targetRole,
+      level: result.profile.level,
+      resumeFile: result.resumeFile,
+      extraction: result.extraction
+    }
+  });
+}

@@ -28,10 +28,16 @@ const sampleResult: ResumeExtractionResponse = {
     onboardingCompletedAt: null,
     resume: null
   },
+  resumeFile: {
+    fileName: "nikhil-resume.pdf",
+    mimeType: "application/pdf"
+  },
   frontendRoadmap: null,
   extraction: {
     fullName: "Nikhil Verma",
     headline:
+      "Software engineer with five years building product systems across React, Node.js, and cloud infrastructure.",
+    context:
       "Software engineer with five years building product systems across React, Node.js, and cloud infrastructure.",
     skills: ["React", "TypeScript", "Next.js", "Node.js", "PostgreSQL"],
     focusAreas: ["System design", "Product engineering", "Ownership"],

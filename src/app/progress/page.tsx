@@ -1,10 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import { ProgressView } from "@/components/workspace/progress-view";
 import type { ProgressInterview } from "@/lib/progress";
 import { privatePageMetadata } from "@/lib/seo";
 import { getAppContainer } from "@/server/app-container";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
@@ -24,18 +22,10 @@ const EMPTY_INTERVIEW: ProgressInterview = {
 
 /** Practice progress and interview evidence, on one page. */
 export default async function ProgressPage() {
-  const { userId } = await auth();
-  if (!userId) redirect("/");
-
-  const ownerId = authenticatedOwnerId(userId);
+  const { ownerId, profile } = await requireOnboardedProfile();
   const container = getAppContainer();
 
-  const [profile, insights] = await Promise.all([
-    container.profileService.get(ownerId),
-    // Interview evidence is a bonus panel here, not the point of the page — a
-    // failure to read it should not cost the user their practice numbers.
-    container.interviewService.insights(ownerId).catch(() => null)
-  ]);
+  const insights = await container.interviewService.insights(ownerId).catch(() => null);
 
   const interview: ProgressInterview = insights
     ? {

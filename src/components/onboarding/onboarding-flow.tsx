@@ -1,5 +1,6 @@
 "use client";
 
+import { SignOutButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -20,9 +21,11 @@ import {
   ResumeIdentityStep,
   ResumeReadinessStep
 } from "@/components/onboarding/resume-review-steps";
-import { ApiClientError, uploadResume } from "@/lib/api-client";
+import { ApiClientError, completeOnboarding, uploadResume } from "@/lib/api-client";
 import { pageTitle } from "@/lib/seo";
 import type { Level, ResumeExtractionResponse, Role } from "@/lib/types";
+
+const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
 export function OnboardingFlow({
   replacingResume = false,
@@ -45,6 +48,7 @@ export function OnboardingFlow({
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [completing, setCompleting] = useState(false);
   const [analysisStage, setAnalysisStage] = useState(0);
   const [result, setResult] = useState<ResumeExtractionResponse | null>(initialResult);
   const [error, setError] = useState<string | null>(null);
@@ -133,6 +137,27 @@ export function OnboardingFlow({
     }
   }, [file, level, role, uploading]);
 
+  const finishOnboarding = useCallback(async () => {
+    if (!result || completing) return;
+
+    setCompleting(true);
+    setError(null);
+
+    try {
+      await completeOnboarding(result);
+      router.push(replacingResume ? "/profile" : "/?welcome=maya");
+      router.refresh();
+    } catch (caught) {
+      setError(
+        caught instanceof ApiClientError
+          ? caught.message
+          : "Trailgrad could not finish onboarding. Try to Enter again."
+      );
+    } finally {
+      setCompleting(false);
+    }
+  }, [completing, replacingResume, result, router]);
+
   useEffect(() => {
     if (step !== "resume" || !file || uploading || result || error) return;
 
@@ -151,10 +176,20 @@ export function OnboardingFlow({
           {replacingResume ? (
             <a
               href="/profile"
-              className="absolute right-0 text-xs font-medium text-cream/55 transition hover:text-cream"
+              className="absolute left-0 text-xs font-medium text-cream/55 transition hover:text-cream"
             >
               Keep my current resume
             </a>
+          ) : null}
+          {clerkEnabled ? (
+            <SignOutButton redirectUrl="/">
+              <button
+                type="button"
+                className="absolute right-0 inline-flex min-h-10 rotate-1 items-center justify-center rounded-lg border border-cream/55 bg-cream/[0.035] px-4 text-md font-bold text-cream/72 outline-none backdrop-blur-sm transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:rotate-0 hover:border-cream/75 hover:bg-cream/[0.075] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#3657b4] sm:px-5"
+              >
+                Exit
+              </button>
+            </SignOutButton>
           ) : null}
           <div
             className="grid w-32 grid-cols-5 gap-1.5 sm:w-52 sm:gap-2"
@@ -236,10 +271,9 @@ export function OnboardingFlow({
                 result={result}
                 onBack={() => setStep("evidence")}
                 replacingResume={replacingResume}
-                onContinue={() => {
-                  router.push(replacingResume ? "/profile" : "/?welcome=maya");
-                  router.refresh();
-                }}
+                continuing={completing}
+                error={error}
+                onContinue={finishOnboarding}
               />
             ) : null}
           </section>
