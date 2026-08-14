@@ -342,6 +342,118 @@ select {
   animation: profile-motion 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+@keyframes profile-cover-reveal {
+  from {
+    opacity: 0;
+    transform: scale(1.055);
+    filter: saturate(0.85) blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: saturate(1) blur(0);
+  }
+}
+
+@keyframes profile-avatar-orbit {
+  0% {
+    opacity: 0;
+    transform: scale(0.88);
+    filter: blur(7px);
+  }
+  62% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  82% {
+    transform: scale(1.035);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes profile-avatar-ring {
+  0% {
+    opacity: 0;
+    transform: rotate(-34deg) scale(0.78);
+  }
+  35% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(165deg) scale(1.26);
+  }
+}
+
+@keyframes profile-badge-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.6) rotate(-18deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes profile-soft-reveal {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+    scale: 0.992;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+
+.profile-cover-stage {
+  animation: profile-cover-reveal 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.profile-cover-image {
+  transform-origin: center;
+}
+
+.profile-avatar-orbit {
+  animation: profile-avatar-orbit 620ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
+  will-change: transform, opacity, filter;
+}
+
+.profile-avatar-ring {
+  background:
+    conic-gradient(from 90deg, transparent 0 54%, rgba(241, 234, 216, 0.88) 60%, transparent 70%),
+    radial-gradient(circle, transparent 61%, rgba(241, 234, 216, 0.34) 63%, transparent 67%);
+  animation: profile-avatar-ring 1120ms cubic-bezier(0.16, 1, 0.3, 1) 540ms both;
+}
+
+.profile-copy-word {
+  color: rgba(241, 234, 216, 0.68);
+}
+
+.profile-badge-pop {
+  animation: profile-badge-pop 420ms cubic-bezier(0.16, 1, 0.3, 1) 1260ms both;
+}
+
+.profile-soft-reveal {
+  opacity: 0;
+  animation: profile-soft-reveal 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--profile-reveal-delay, 0ms);
+  will-change: opacity, translate, scale;
+}
+
+@media (max-width: 640px) {
+  .profile-soft-reveal {
+    animation-duration: 340ms;
+  }
+}
+
 /* ---------------------------------------------------------------------------
    Loading skeletons. Same glass as the real cards, with a sheen travelling
    across so a slow route reads as loading rather than broken.
@@ -447,13 +559,52 @@ select {
   }
 }
 
+@keyframes image-picker-panel-slow {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.94);
+  }
+  58% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes image-picker-choice {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .image-picker-backdrop {
   animation: image-picker-backdrop 180ms ease-out both;
+}
+
+.image-picker-backdrop-slow {
+  animation: image-picker-backdrop 280ms ease-out both;
 }
 
 .image-picker-panel {
   animation: image-picker-panel 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
   transform-origin: center;
+}
+
+.image-picker-panel-slow {
+  animation: image-picker-panel-slow 440ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: center;
+}
+
+.image-picker-choice {
+  animation: image-picker-choice 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--choice-delay, 0ms);
 }
 
 /* ---------------------------------------------------------------------------
@@ -693,6 +844,248 @@ html {
   background-size: 220% 100%;
   background-clip: text;
   animation: thinking-shimmer 2.25s ease-in-out infinite;
+}
+
+.manage-copy-word {
+  color: rgba(241, 234, 216, 0.76);
+}
+
+@keyframes manage-avatar-arrive {
+  0% {
+    opacity: 0;
+    transform: translate3d(var(--avatar-from-x, -190px), var(--avatar-from-y, 310px), 0)
+      scale(0.28) rotate(-8deg);
+    filter: blur(8px);
+  }
+  58% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  76% {
+    transform: translate3d(0, -8px, 0) scale(1.035) rotate(1.2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    filter: blur(0);
+  }
+}
+
+@keyframes manage-avatar-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.74);
+  }
+  40% {
+    opacity: 0.68;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.36);
+  }
+}
+
+@keyframes manage-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+@keyframes manage-link-shine {
+  from {
+    background-position: 160% 50%;
+  }
+  to {
+    background-position: -60% 50%;
+  }
+}
+
+.manage-avatar-arrive {
+  animation: manage-avatar-arrive 920ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity, filter;
+}
+
+.manage-avatar-pulse {
+  animation: manage-avatar-pulse 1150ms cubic-bezier(0.16, 1, 0.3, 1) 620ms both;
+}
+
+.manage-sequence-line,
+.manage-action-line {
+  opacity: 0;
+  animation: manage-line-in 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--line-delay, 520ms);
+}
+
+.manage-shine-link,
+.manage-soft-link {
+  border-radius: 9999px;
+  color: var(--bp-cream, #f1ead8);
+  font-weight: 650;
+  outline: none;
+  text-decoration-line: underline;
+  text-decoration-color: rgba(241, 234, 216, 0.42);
+  text-underline-offset: 0.2em;
+  transition:
+    color 180ms ease,
+    text-decoration-color 180ms ease,
+    transform 180ms ease;
+}
+
+.manage-shine-link {
+  color: transparent;
+  background-image: linear-gradient(
+    105deg,
+    rgba(241, 234, 216, 0.76) 0%,
+    #ffffff 44%,
+    rgba(241, 234, 216, 0.78) 58%,
+    rgba(241, 234, 216, 0.76) 100%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  animation: manage-link-shine 2.1s ease-in-out infinite;
+}
+
+.manage-shine-link:hover,
+.manage-soft-link:hover,
+.manage-shine-link:focus-visible,
+.manage-soft-link:focus-visible {
+  color: var(--bp-cream, #f1ead8);
+  text-decoration-color: rgba(241, 234, 216, 0.9);
+  transform: translateY(-1px);
+}
+
+.manage-soft-link {
+  color: rgba(241, 234, 216, 0.72);
+}
+
+@keyframes report-signal-core {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes report-maya-portrait {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.88) rotate(-3deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes report-signal-ring {
+  0% {
+    opacity: 0;
+    transform: scale(0.72) rotate(-28deg);
+  }
+  42% {
+    opacity: 0.72;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.34) rotate(140deg);
+  }
+}
+
+@keyframes report-briefing-line {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes report-scan-line {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes report-action-panel {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes report-link-shine {
+  from {
+    background-position: 150% 50%;
+  }
+  to {
+    background-position: -60% 50%;
+  }
+}
+
+.report-signal-core {
+  animation: report-signal-core 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.report-maya-portrait {
+  opacity: 0;
+  animation: report-maya-portrait 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--report-delay, 0ms);
+}
+
+.report-signal-ring {
+  background:
+    conic-gradient(from 90deg, transparent 0 54%, rgba(241, 234, 216, 0.86) 60%, transparent 70%),
+    radial-gradient(circle, transparent 60%, rgba(241, 234, 216, 0.28) 62%, transparent 67%);
+  animation: report-signal-ring 1250ms cubic-bezier(0.16, 1, 0.3, 1) 420ms both;
+}
+
+.report-briefing-line {
+  opacity: 0;
+  animation: report-briefing-line 520ms cubic-bezier(0.16, 1, 0.3, 1) 1660ms both;
+}
+
+.report-scan-line,
+.report-action-panel,
+.report-latest-strip {
+  opacity: 0;
+  animation: report-action-panel 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--report-delay, 0ms);
+}
+
+.report-scan-line {
+  animation-name: report-scan-line;
+}
+
+.report-copy-word {
+  color: rgba(241, 234, 216, 0.66);
+}
+
+.report-primary-action {
+  background-image: linear-gradient(105deg, #f1ead8 0%, #ffffff 46%, #efe6d0 62%, #f1ead8 100%);
+  background-size: 220% 100%;
+  animation: report-link-shine 2.35s ease-in-out infinite;
 }
 
 .onboarding-card-reveal {
@@ -1231,6 +1624,12 @@ html {
   .onboarding-type-visible,
   .upload-float,
   .upload-scan-line,
+  .report-maya-portrait,
+  .report-brief-sheet,
+  .report-briefing-line,
+  .report-scan-line,
+  .report-action-panel,
+  .report-latest-strip,
   .browse-nudge,
   .identity-stage-in,
   .identity-text-shine,

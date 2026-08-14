@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { attachElement, detachVoice } from "./voice-bus";
 
 export type VoiceState = "idle" | "loading" | "speaking" | "unavailable";
+export type SpeakResult = "started" | "blocked" | "unavailable";
 
 export function voiceUrl(line: string): string {
   return `/api/voice/speak?text=${encodeURIComponent(line)}`;
@@ -39,7 +40,7 @@ export function useMayaVoice() {
   }, []);
 
   const speak = useCallback(
-    async (line: string) => {
+    async (line: string): Promise<SpeakResult> => {
       stop();
       setState("loading");
 
@@ -55,6 +56,7 @@ export function useMayaVoice() {
         attachElement(element);
         await element.play();
         setState("speaking");
+        return "started";
       } catch (error) {
         stop();
         // Arriving without a click of your own means autoplay was refused, not
@@ -62,9 +64,10 @@ export function useMayaVoice() {
         if (isAutoplayBlocked(error)) {
           setState("idle");
           setAwaitingGesture(true);
-          return;
+          return "blocked";
         }
         setState("unavailable");
+        return "unavailable";
       }
     },
     [stop]

@@ -469,7 +469,10 @@ function AvatarMenu({
         >
           <Link
             href="/manage"
-            onClick={() => setOpen(false)}
+            onClick={(event) => {
+              rememberManageOrigin(event.currentTarget);
+              setOpen(false);
+            }}
             className="group flex items-center gap-2.5 rounded-md px-3 py-2.5 text-[0.9rem] font-medium text-cream/86 outline-none transition-[background,color,transform] duration-200 ease-out hover:translate-x-0.5 hover:bg-cream/[0.09] hover:text-cream focus-visible:bg-cream/[0.09]"
           >
             <Settings
@@ -541,4 +544,14 @@ function initialsOf(name: string): string {
       .map((part) => part[0]?.toUpperCase() ?? "")
       .join("") || "TG"
   );
+}
+
+function rememberManageOrigin(element: HTMLElement): void {
+  const rect = element.getBoundingClientRect();
+  const origin = {
+    x: Math.round(rect.left + rect.width / 2),
+    y: Math.round(rect.top + rect.height / 2)
+  };
+
+  window.sessionStorage.setItem("trailgrad:manage-origin", JSON.stringify(origin));
 }

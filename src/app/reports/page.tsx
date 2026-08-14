@@ -1,4 +1,5 @@
 import { ReportsView } from "@/components/workspace/reports-view";
+import { disciplineLabel } from "@/lib/labels";
 import type { ReportsOverview } from "@/lib/reports";
 import { privatePageMetadata } from "@/lib/seo";
 import { getAppContainer } from "@/server/app-container";
@@ -49,11 +50,17 @@ export default async function ReportsPage() {
     container.interviewService.quota(ownerId).catch(() => ({ used: 0, limit: 2 }))
   ]);
 
+  const fullName = profile.resume?.fullName?.trim() ?? "";
+
   return (
     <ReportsView
       overview={overview ?? emptyOverview(Date.now())}
       quota={quota}
-      firstName={profile.resume?.fullName?.trim().split(/\s+/)[0] ?? ""}
+      firstName={fullName.split(/\s+/)[0] ?? ""}
+      candidate={{
+        name: fullName,
+        discipline: profile.targetRole ? disciplineLabel(profile.targetRole) : ""
+      }}
     />
   );
 }

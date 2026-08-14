@@ -81,7 +81,6 @@ function isWorkspaceLoadingRoute(pathname: string): boolean {
     pathname.startsWith("/practice/") ||
     pathname === "/interviews" ||
     pathname === "/progress" ||
-    pathname === "/reports" ||
     pathname === "/profile" ||
     pathname.startsWith("/sessions/") ||
     pathname.startsWith("/session/")

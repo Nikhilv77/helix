@@ -9,6 +9,6 @@ export const metadata = privatePageMetadata(
 );
 
 export default async function ManagePage() {
-  await requireOnboardedProfile();
-  return <ManageAccount />;
+  const { profile } = await requireOnboardedProfile();
+  return <ManageAccount profile={profile} />;
 }

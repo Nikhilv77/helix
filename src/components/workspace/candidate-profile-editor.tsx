@@ -202,6 +202,13 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
     document.title = pageTitle(title);
   }, [mode]);
 
+  useEffect(() => {
+    if (mode !== "view" || saved.profileImage || saving || imagePicker) return;
+
+    const timer = window.setTimeout(() => setImagePicker("avatar"), 520);
+    return () => window.clearTimeout(timer);
+  }, [imagePicker, mode, saved.profileImage, saving]);
+
   async function submit() {
     setSaving(true);
     setError(null);
@@ -298,6 +305,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
           open={imagePicker}
           profile={profile}
           error={error}
+          requireAvatar={!saved.profileImage && imagePicker === "avatar"}
           onClose={() => {
             setImagePicker(null);
             setError(null);
@@ -812,6 +820,7 @@ function ImagePickerOverlay({
   open,
   profile,
   error,
+  requireAvatar = false,
   onClose,
   onCoverChange,
   onAvatarChange
@@ -819,6 +828,7 @@ function ImagePickerOverlay({
   open: "cover" | "avatar" | null;
   profile: CandidateProfileInput;
   error: string | null;
+  requireAvatar?: boolean;
   onClose: () => void;
   onCoverChange: (value: string) => void;
   onAvatarChange: (value: string) => void;
@@ -834,33 +844,50 @@ function ImagePickerOverlay({
   const choosingCover = open === "cover";
 
   return createPortal(
-    <div className="image-picker-backdrop fixed inset-0 z-[1000] flex min-h-dvh items-center justify-center bg-[#01030a]/64 px-4 py-6 backdrop-blur-sm">
-      <button
-        type="button"
-        aria-label="Close image picker"
-        onClick={onClose}
-        className="absolute inset-0 cursor-default"
-      />
+    <div
+      className={[
+        "image-picker-backdrop-slow",
+        "fixed inset-0 z-[1000] flex min-h-dvh items-center justify-center bg-[#01030a]/64 px-4 py-6 backdrop-blur-sm"
+      ].join(" ")}
+    >
+      {requireAvatar ? null : (
+        <button
+          type="button"
+          aria-label="Close image picker"
+          onClick={onClose}
+          className="absolute inset-0 cursor-default"
+        />
+      )}
       <section
         className={[
-          "image-picker-panel relative w-full overflow-hidden rounded-2xl border border-cream/10 bg-[#3657b4]/95 text-cream shadow-[0_24px_80px_-58px_rgba(0,0,0,0.62)] backdrop-blur-xl",
+          "image-picker-panel-slow",
+          "relative w-full overflow-hidden rounded-2xl border border-cream/10 bg-[#3657b4]/95 text-cream shadow-[0_24px_80px_-58px_rgba(0,0,0,0.62)] backdrop-blur-xl",
           choosingCover
             ? "max-h-[min(50rem,calc(100dvh-2rem))] max-w-6xl"
             : "max-h-[min(36rem,calc(100dvh-2rem))] max-w-3xl"
         ].join(" ")}
       >
         <div className="relative flex items-center justify-center px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
-          <h2 className="text-center text-2xl font-medium text-cream sm:text-3xl">
-            {choosingCover ? "Pick your cover" : "Pick your avatar"}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute right-4 top-4 grid h-9 w-9 shrink-0 place-items-center rounded-full text-cream/60 transition hover:bg-cream/[0.08] hover:text-cream"
-            aria-label="Close image picker"
-          >
-            <X size={18} />
-          </button>
+          <div className="max-w-xl text-center">
+            <h2 className="text-2xl font-medium text-cream sm:text-3xl">
+              {choosingCover ? "Pick your cover" : "Pick your avatar"}
+            </h2>
+            {requireAvatar ? (
+              <p className="mt-2 text-sm leading-6 text-cream/58">
+                Choose the profile image you want Trailgrad to use across your workspace.
+              </p>
+            ) : null}
+          </div>
+          {requireAvatar ? null : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-4 top-4 grid h-9 w-9 shrink-0 place-items-center rounded-full text-cream/60 transition hover:bg-cream/[0.08] hover:text-cream"
+              aria-label="Close image picker"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
 
         <div
@@ -882,7 +909,9 @@ function ImagePickerOverlay({
                     aria-label={`Choose cover ${index + 1}`}
                     aria-pressed={selected}
                     onClick={() => onCoverChange(cover.src)}
+                    style={{ "--choice-delay": `${70 + index * 34}ms` } as CSSProperties}
                     className={[
+                      "image-picker-choice",
                       "group relative overflow-hidden rounded-2xl bg-cream/[0.035] p-1.5 outline-none transition duration-300 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-cream/45",
                       selected ? "ring-1 ring-cream/42" : "ring-1 ring-cream/8 hover:ring-cream/20"
                     ].join(" ")}
@@ -920,7 +949,9 @@ function ImagePickerOverlay({
                     aria-label={`Choose avatar ${index + 1}`}
                     aria-pressed={selected}
                     onClick={() => onAvatarChange(avatar.src)}
+                    style={{ "--choice-delay": `${90 + index * 38}ms` } as CSSProperties}
                     className={[
+                      "image-picker-choice",
                       "group relative grid h-[5.5rem] w-[5.5rem] place-items-center overflow-hidden rounded-full bg-cream p-0.5 outline-none transition duration-300 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-cream/45 sm:h-[6.5rem] sm:w-[6.5rem]",
                       selected ? "ring-1 ring-cream/46" : "ring-1 ring-cream/10 hover:ring-cream/24"
                     ].join(" ")}
@@ -1203,7 +1234,7 @@ function ProfileHero({
   return (
     <header className="profile-motion relative overflow-hidden rounded-[1.75rem] bg-[#3557b4]">
       <div
-        className="relative min-h-36 overflow-hidden bg-[#24439b] sm:min-h-44"
+        className="profile-cover-stage relative min-h-36 overflow-hidden bg-[#24439b] sm:min-h-44"
         style={{ aspectRatio: `${cover.width} / ${cover.height}` }}
       >
         <img
@@ -1211,7 +1242,7 @@ function ProfileHero({
           alt=""
           width={cover.width}
           height={cover.height}
-          className="absolute inset-0 h-full w-full object-cover object-center"
+          className="profile-cover-image absolute inset-0 h-full w-full object-cover object-center"
         />
         <svg
           aria-hidden="true"
@@ -1258,9 +1289,10 @@ function ProfileHero({
             type="button"
             aria-label="Change profile image"
             onClick={onAvatarEdit}
-            className="group relative z-20 grid h-28 w-28 shrink-0 place-items-center overflow-hidden rounded-full bg-cream p-0.5 outline-none transition focus-visible:ring-2 focus-visible:ring-cream/70 sm:h-32 sm:w-32"
+            className="profile-avatar-orbit group relative z-20 grid h-28 w-28 shrink-0 place-items-center overflow-hidden rounded-full bg-cream p-0.5 outline-none transition focus-visible:ring-2 focus-visible:ring-cream/70 sm:h-32 sm:w-32"
           >
             <span aria-hidden className="absolute -inset-2 rounded-full bg-cream/10" />
+            <span aria-hidden className="profile-avatar-ring absolute -inset-1 rounded-full" />
             <img
               src={avatar.displaySrc}
               alt=""
@@ -1283,36 +1315,64 @@ function ProfileHero({
 
           <div className="mt-3 flex w-full flex-col items-center">
             <p className="border-b border-cream/31 pb-1 text-base font-medium text-cream/72">
-              Interview profile
+              <AnimatedProfileWords text="Interview profile" delay={720} />
             </p>
             <h1 className="mt-1.5 flex max-w-full items-center justify-center gap-2.5 text-center text-3xl font-semibold tracking-tight text-cream sm:text-[2.25rem]">
-              <span className="min-w-0 truncate">{name}</span>
+              <span className="min-w-0 truncate">
+                <AnimatedProfileWords text={name} delay={900} />
+              </span>
               {resume ? (
-                <BadgeCheck size={23} className="shrink-0 text-[#9be8c1]" aria-label="Verified" />
+                <BadgeCheck
+                  size={23}
+                  className="profile-badge-pop shrink-0 text-[#9be8c1]"
+                  aria-label="Verified"
+                />
               ) : null}
             </h1>
             <p className="mt-2 max-w-3xl text-center text-sm leading-6 text-cream/58 sm:text-[15px]">
-              {profile.headline || "Add a headline so Trailgrad can frame your rounds."}
+              <AnimatedProfileWords
+                text={profile.headline || "Add a headline so Trailgrad can frame your rounds."}
+                delay={1240}
+                copy
+              />
             </p>
 
-            <div className="mt-3.5 flex flex-wrap justify-center gap-2.5">
+            <div
+              className="step-in mt-3.5 flex flex-wrap justify-center gap-2.5"
+              style={{ "--step-delay": "1540ms" } as CSSProperties}
+            >
               <HeroChip icon={Target} label={role?.label ?? "No role set"} muted={!role} />
               <HeroChip icon={BarChart3} label={level?.label ?? "No level set"} muted={!level} />
             </div>
 
-            <div className="mt-8 h-px w-full max-w-5xl bg-gradient-to-r from-transparent via-cream/22 to-transparent" />
+            <div
+              className="profile-soft-reveal mt-8 h-px w-full max-w-5xl bg-gradient-to-r from-transparent via-cream/22 to-transparent"
+              style={{ "--profile-reveal-delay": "1660ms" } as CSSProperties}
+            />
 
             <div className="mt-7 max-w-4xl">
               <p className="text-base leading-8 text-cream/66 sm:text-lg">
-                {profile.context ||
-                  "Add a short profile summary so Maya can shape interviews around your real work."}
+                <AnimatedProfileWords
+                  text={
+                    profile.context ||
+                    "Add a short profile summary so Maya can shape interviews around your real work."
+                  }
+                  delay={1760}
+                  copy
+                />
               </p>
             </div>
 
             {profile.focusAreas.length ? (
               <div className="mt-8 w-full max-w-[82rem]">
-                <div className="mx-auto mb-8 h-px w-[calc(100%-2rem)] max-w-6xl bg-gradient-to-r from-transparent via-cream/30 to-transparent" />
-                <p className="inline-flex border-b border-cream/42 pb-1 text-base font-medium text-cream/72">
+                <div
+                  className="profile-soft-reveal mx-auto mb-8 h-px w-[calc(100%-2rem)] max-w-6xl bg-gradient-to-r from-transparent via-cream/30 to-transparent"
+                  style={{ "--profile-reveal-delay": "2100ms" } as CSSProperties}
+                />
+                <p
+                  className="profile-soft-reveal inline-flex border-b border-cream/42 pb-1 text-base font-medium text-cream/72"
+                  style={{ "--profile-reveal-delay": "2180ms" } as CSSProperties}
+                >
                   Core focus areas
                 </p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -1320,10 +1380,10 @@ function ProfileHero({
                     <article
                       key={area}
                       className={[
-                        "step-in relative min-h-28 overflow-hidden rounded-2xl border border-cream/20 bg-cream/[0.025] px-5 py-4 text-left backdrop-blur-sm",
+                        "profile-soft-reveal relative min-h-28 overflow-hidden rounded-2xl border border-cream/20 bg-cream/[0.025] px-5 py-4 text-left backdrop-blur-sm",
                         index % 2 === 0 ? "-rotate-1" : "rotate-1"
                       ].join(" ")}
-                      style={{ "--step-delay": `${index * 65}ms` } as CSSProperties}
+                      style={{ "--profile-reveal-delay": `${2280 + index * 65}ms` } as CSSProperties}
                     >
                       <SectionUiTexture variant={index % 3} />
                       <h3 className="relative text-xl font-medium leading-none text-cream sm:text-2xl">
@@ -1338,7 +1398,14 @@ function ProfileHero({
               </div>
             ) : null}
 
-            <div className="step-in relative mt-7 max-w-4xl rotate-1 overflow-hidden rounded-2xl border border-cream/20 bg-cream/[0.025] px-6 py-5 text-center backdrop-blur-sm sm:px-8">
+            <div
+              className="profile-soft-reveal relative mt-7 max-w-4xl rotate-1 overflow-hidden rounded-2xl border border-cream/20 bg-cream/[0.025] px-6 py-5 text-center backdrop-blur-sm sm:px-8"
+              style={
+                {
+                  "--profile-reveal-delay": `${profile.focusAreas.length ? 2360 + profile.focusAreas.length * 65 : 2180}ms`
+                } as CSSProperties
+              }
+            >
               <SectionUiTexture variant={2} />
               <p className="relative text-xl font-medium leading-tight text-cream sm:text-2xl">
                 You are preparing for {role?.label ?? "your target role"} and you have{" "}
@@ -1351,6 +1418,32 @@ function ProfileHero({
         </div>
       </div>
     </header>
+  );
+}
+
+function AnimatedProfileWords({
+  text,
+  delay,
+  copy = false
+}: {
+  text: string;
+  delay: number;
+  copy?: boolean;
+}) {
+  const words = text.split(" ");
+  return (
+    <>
+      {words.map((word, index) => (
+        <span
+          key={`${word}-${index}`}
+          className={copy ? "onboarding-word profile-copy-word" : "onboarding-word"}
+          style={{ "--word-delay": `${delay + index * 46}ms` } as CSSProperties}
+        >
+          {word}
+          {index < words.length - 1 ? "\u00A0" : ""}
+        </span>
+      ))}
+    </>
   );
 }
 
@@ -1434,7 +1527,10 @@ function ProfileResumeAnchors({ resume }: { resume: CandidateProfile["resume"] }
   ];
 
   return (
-    <section className="mt-10 w-full max-w-[82rem] text-left">
+    <section
+      className="profile-soft-reveal mt-10 w-full max-w-[82rem] text-left"
+      style={{ "--profile-reveal-delay": "2580ms" } as CSSProperties}
+    >
       <div className="mx-auto h-px w-[calc(100%-2rem)] max-w-6xl bg-gradient-to-r from-transparent via-cream/30 to-transparent" />
 
       <div className="mt-7 flex flex-col items-center text-center">
@@ -1482,10 +1578,10 @@ function ResumeSummaryTile({
   return (
     <article
       className={[
-        "step-in relative flex min-h-44 flex-col items-center justify-center overflow-hidden rounded-[1.45rem] border border-cream/20 bg-cream/[0.025] px-6 py-7 text-center backdrop-blur-sm",
+        "profile-soft-reveal relative flex min-h-44 flex-col items-center justify-center overflow-hidden rounded-[1.45rem] border border-cream/20 bg-cream/[0.025] px-6 py-7 text-center backdrop-blur-sm",
         index === 1 ? "sm:rotate-1" : index === 2 ? "sm:-rotate-1" : ""
       ].join(" ")}
-      style={{ "--step-delay": `${index * 70}ms` } as CSSProperties}
+      style={{ "--profile-reveal-delay": `${2700 + index * 70}ms` } as CSSProperties}
     >
       <SectionUiTexture variant={index} />
       <Icon size={42} strokeWidth={1.65} className="relative text-cream/82" />
@@ -1509,9 +1605,13 @@ function ResumeAnchorGroup({
   columns?: "two" | "three";
 }) {
   if (!cards.length) return null;
+  const groupDelay = 2860 + ["Work", "Projects", "Education", "Proof"].indexOf(title) * 130;
 
   return (
-    <section className="relative overflow-hidden rounded-[1.35rem] p-2 sm:p-3">
+    <section
+      className="profile-soft-reveal relative overflow-hidden rounded-[1.35rem] p-2 sm:p-3"
+      style={{ "--profile-reveal-delay": `${groupDelay}ms` } as CSSProperties}
+    >
       <SectionUiTexture variant={title.length % 3} />
       <div className="relative mb-4 flex items-center gap-4">
         <h3 className="text-lg font-medium text-cream/82">{title}</h3>
@@ -1525,23 +1625,35 @@ function ResumeAnchorGroup({
         ].join(" ")}
       >
         {cards.map((card, index) => (
-          <ProfileResumeAnchorCard key={card.id} card={card} index={index} />
+          <ProfileResumeAnchorCard key={card.id} card={card} index={index} groupDelay={groupDelay} />
         ))}
       </div>
     </section>
   );
 }
 
-function ProfileResumeAnchorCard({ card, index }: { card: ProfileResumeAnchor; index: number }) {
+function ProfileResumeAnchorCard({
+  card,
+  index,
+  groupDelay
+}: {
+  card: ProfileResumeAnchor;
+  index: number;
+  groupDelay: number;
+}) {
   const Icon = card.icon;
 
   return (
     <article
       className={[
-        "step-in relative flex min-h-[18rem] flex-col overflow-hidden rounded-[1.35rem] border border-cream/20 bg-cream/[0.025] p-5 text-left backdrop-blur-sm sm:p-6",
+        "profile-soft-reveal relative flex min-h-[18rem] flex-col overflow-hidden rounded-[1.35rem] border border-cream/20 bg-cream/[0.025] p-5 text-left backdrop-blur-sm sm:p-6",
         index % 2 === 1 ? "sm:rotate-1" : ""
       ].join(" ")}
-      style={{ "--step-delay": `${index * 70}ms` } as CSSProperties}
+      style={
+        {
+          "--profile-reveal-delay": `${groupDelay + 90 + Math.min(index, 4) * 65}ms`
+        } as CSSProperties
+      }
     >
       <SectionUiTexture variant={index % 3} />
       <div className="relative flex items-start justify-between gap-4">

@@ -166,6 +166,7 @@ export default function ReportsPreview() {
         overview={createReportsOverview(mockReports(now), now)}
         quota={{ used: 1, limit: 2 }}
         firstName="Nikhil"
+        candidate={{ name: "Nikhil Verma", discipline: "Full Stack Engineering" }}
       />
     </WorkspaceShell>
   );

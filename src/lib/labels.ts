@@ -17,6 +17,18 @@ export function roleLabel(role: Role): string {
   }[role];
 }
 
+/** The role written out as a discipline, for covers and formal headings. */
+export function disciplineLabel(role: Role): string {
+  return {
+    backend: "Backend Engineering",
+    frontend: "Frontend Engineering",
+    fullstack: "Full Stack Engineering",
+    data: "Data Engineering",
+    "ai-ml": "AI / ML Engineering",
+    pm: "Product Management"
+  }[role];
+}
+
 export function roleInitials(role: Role): string {
   return { backend: "BE", frontend: "FE", fullstack: "FS", data: "DA", "ai-ml": "AI", pm: "PM" }[
     role

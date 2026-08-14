@@ -51,19 +51,19 @@ export const clerkAppearance = {
     formFieldLabel: "!mb-2 !font-medium !text-cream/80",
     formFieldInput:
       "!min-h-12 !rounded-xl !border !border-cream/18 !bg-cream/[0.08] !px-4 !text-cream !shadow-none placeholder:!text-cream/38 focus:!border-cream/45 focus:!bg-cream/[0.11] focus:!ring-2 focus:!ring-cream/10 max-sm:!min-h-11",
-    otpCodeField: "!mt-7 !w-full",
-    otpCodeFieldInputs: "!justify-center !gap-2.5 max-sm:!gap-1.5",
-    otpCodeFieldInputContainer:
-      "!h-14 !w-14 !rounded-2xl !border !border-cream/42 !bg-cream/[0.055] !shadow-none transition focus-within:!border-cream/80 focus-within:!bg-cream/[0.085] focus-within:!ring-1 focus-within:!ring-cream/18 max-sm:!h-11 max-sm:!w-11",
+    otpCodeFieldInputs: "!border-0 !bg-transparent !shadow-none",
+
     otpCodeFieldInput:
-      "!h-full !w-full !rounded-2xl !border-0 !bg-transparent !text-center !text-2xl !font-medium !text-cream !shadow-none !outline-none focus:!ring-0 max-sm:!text-lg",
+      "!border !border-cream/35 !bg-cream/18 !text-cream !shadow-none !ring-0 focus:!border-cream focus:!bg-cream/24 focus:!ring-2 focus:!ring-cream/28 data-[active=true]:!border-cream data-[active=true]:!bg-cream/90 data-[active=true]:!text-[#152864]",
     formButtonPrimary: "!min-h-12 !rounded-xl !font-semibold max-sm:!min-h-11",
     footer: "!border-none !bg-transparent !shadow-none",
     footerActionText: "!text-cream/45",
     footerActionLink: "!font-semibold !text-cream hover:!text-white",
     footerPagesLink: "!text-cream/40 hover:!text-cream",
-    identityPreview: "!border !border-cream/15 !bg-white/[0.04]",
-    identityPreviewText: "!text-cream",
+    identityPreview:
+      "!mx-auto !mt-3 !min-h-10 !w-full !max-w-[23rem] !justify-center !gap-2 !rounded-xl !border !border-cream/20 !bg-cream/[0.075] !px-4 !py-2 !shadow-none [&_*]:!min-w-0",
+    identityPreviewText:
+      "!block !w-full !truncate !text-center !text-[0.95rem] !font-medium !leading-6 !text-cream",
     formFieldAction: "!text-cream/65 hover:!text-cream",
     formFieldErrorText: "!text-[#ffb6b6]"
   }
@@ -100,6 +100,10 @@ export const userProfileAppearance = {
     formFieldLabel: "!font-medium !text-cream/75",
     formFieldInput:
       "!min-h-11 !rounded-xl !border !border-cream/18 !bg-cream/[0.08] !text-cream !shadow-none placeholder:!text-cream/38 focus:!border-cream/45 focus:!bg-cream/[0.11] focus:!ring-2 focus:!ring-cream/10",
+    otpCodeFieldInputs: "!border-0 !bg-transparent !shadow-none",
+
+    otpCodeFieldInput:
+      "!border !border-cream/35 !bg-cream/18 !text-cream !shadow-none !ring-0 focus:!border-cream focus:!bg-cream/24 focus:!ring-2 focus:!ring-cream/28 data-[active=true]:!border-cream data-[active=true]:!bg-cream/90 data-[active=true]:!text-[#152864]",
     badge: "!border !border-cream/15 !bg-cream/[0.06] !text-cream/65",
     footer: "!border-none !bg-transparent !shadow-none",
     footerPagesLink: "!text-cream/40 hover:!text-cream"

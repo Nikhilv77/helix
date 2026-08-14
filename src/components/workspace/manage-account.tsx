@@ -2,25 +2,53 @@
 
 import { SignOutButton, useReverification, useUser } from "@clerk/nextjs";
 import { isReverificationCancelledError } from "@clerk/nextjs/errors";
-import { Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { LogOut, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { ApiClientError, deleteAccount } from "@/lib/api-client";
+import type { CandidateProfile } from "@/lib/types";
 
-export function ManageAccount() {
+const MANAGE_ORIGIN_KEY = "trailgrad:manage-origin";
+
+export function ManageAccount({ profile }: { profile: CandidateProfile }) {
   const { user } = useUser();
-  const [confirmation, setConfirmation] = useState("");
+  const avatarRef = useRef<HTMLDivElement>(null);
+  const [avatarDelta, setAvatarDelta] = useState({ x: -190, y: 310 });
   const [deleting, setDeleting] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const canDelete = confirmation.trim().toUpperCase() === "DELETE";
   const name =
-    user?.fullName ?? user?.firstName ?? user?.primaryEmailAddress?.emailAddress ?? "Your account";
-  const email = user?.primaryEmailAddress?.emailAddress ?? "";
+    profile.resume?.fullName?.trim() ||
+    user?.fullName ||
+    user?.firstName ||
+    user?.primaryEmailAddress?.emailAddress ||
+    "Your account";
+  const avatarImage = profile.profileImage || user?.imageUrl || null;
   const deleteAccountWithReverification = useReverification(deleteAccount);
 
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const target = avatarRef.current?.getBoundingClientRect();
+      if (!target) return;
+
+      const stored = window.sessionStorage.getItem(MANAGE_ORIGIN_KEY);
+      window.sessionStorage.removeItem(MANAGE_ORIGIN_KEY);
+      const origin = stored ? parseOrigin(stored) : null;
+      const fallback = window.innerWidth < 768 ? { x: window.innerWidth - 36, y: 32 } : null;
+      const from = origin ?? fallback;
+      if (!from) return;
+
+      setAvatarDelta({
+        x: Math.round(from.x - (target.left + target.width / 2)),
+        y: Math.round(from.y - (target.top + target.height / 2))
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
   const onDelete = async () => {
-    if (!canDelete || deleting) return;
+    if (deleting) return;
 
     setDeleting(true);
     setError(null);
@@ -40,80 +68,99 @@ export function ManageAccount() {
   };
 
   return (
-    <section className="relative mx-auto flex min-h-screen w-full max-w-[92rem] flex-col px-5 py-8 text-cream sm:px-8 lg:px-10">
+    <section className="relative mx-auto flex min-h-screen w-full max-w-[95rem] flex-col px-5 py-6 pb-16 text-cream sm:px-8 lg:px-10 lg:py-8">
       <ManageBackdrop />
 
-      <div className="relative z-10 mx-auto w-full max-w-5xl pt-8 sm:pt-12">
-        <p className="mx-auto w-fit border-b border-cream/56 px-3 pb-2 text-center text-[1rem] text-cream/86">
-          Manage account
-        </p>
-        <h1 className="mx-auto mt-6 max-w-3xl text-center text-[clamp(2rem,4vw,3.6rem)] font-medium leading-[1.04] text-cream">
-          Account access and control.
-        </h1>
-        <p className="mx-auto mt-5 max-w-2xl text-center text-[1rem] leading-7 text-cream/68 sm:text-[1.08rem]">
-          Keep your session simple, or permanently remove your Trailgrad account when you are sure.
-        </p>
-      </div>
-
-      <div className="relative z-10 mx-auto mt-10 w-full max-w-4xl text-center">
-        <p className="mx-auto max-w-3xl text-[1.15rem] leading-8 text-cream/78 sm:text-[1.28rem] sm:leading-9">
-          You are signed in as{" "}
-          <span className="rounded-lg bg-cream/[0.08] px-2.5 py-0.5 text-cream">{name}</span>
-          {email ? (
-            <>
-              {" "}
-              with{" "}
-              <span className="rounded-lg bg-cream/[0.08] px-2.5 py-0.5 text-cream">{email}</span>.
-            </>
-          ) : (
-            "."
-          )}{" "}
-          Trailgrad uses this account for your profile, roadmap progress, interview history, and
-          account recovery.
-        </p>
-
-        <SignOutButton redirectUrl="/">
-          <button
-            type="button"
-            className="mt-8 inline-flex min-h-12 rotate-1 items-center justify-center rounded-lg border border-cream/28 bg-cream/[0.035] px-8 text-[1rem] font-medium text-cream/84 outline-none backdrop-blur-sm transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:rotate-0 hover:border-cream/44 hover:bg-cream/[0.07] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#3657b4]"
-          >
-            Logout
-          </button>
-        </SignOutButton>
-      </div>
-
-      <div className="relative z-10 mx-auto mt-12 w-full max-w-4xl rounded-2xl border border-cream/20 bg-[#ffebe0]/[0.038] p-5 backdrop-blur-sm sm:p-7">
-        <h2 className="mt-5 text-[1.35rem] font-medium text-cream">Delete account</h2>
-        <p className="mt-2 max-w-2xl text-[0.98rem] leading-7 text-cream/64">
-          Permanently removes your Trailgrad profile, roadmap progress, interviews, and Clerk
-          account. This cannot be undone.
-        </p>
-        <p className="mt-3 max-w-2xl text-[0.95rem] leading-7 text-cream/52">
-          Type DELETE below only when you are sure you do not need your saved practice history or
-          interview profile again.
-        </p>
-
-        <div className="mt-6 w-full max-w-md">
-          <label className="block text-[0.86rem] text-cream/58 " htmlFor="delete-confirmation">
-            Type DELETE to confirm
-          </label>
-          <input
-            id="delete-confirmation"
-            value={confirmation}
-            onChange={(event) => setConfirmation(event.target.value)}
-            className="mt-2 h-11 w-full rounded-lg border border-cream/20 bg-cream/[0.045] px-3 text-cream outline-none transition focus:border-cream/44"
-            autoComplete="off"
+      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-5rem)] w-full max-w-4xl flex-col items-center justify-center py-10 text-center">
+        <div
+          ref={avatarRef}
+          className="manage-avatar-arrive relative grid h-28 w-28 place-items-center rounded-full bg-cream p-1 shadow-[0_24px_80px_rgba(4,12,42,0.32)] sm:h-32 sm:w-32"
+          style={
+            {
+              "--avatar-from-x": `${avatarDelta.x}px`,
+              "--avatar-from-y": `${avatarDelta.y}px`
+            } as CSSProperties
+          }
+        >
+          <span
+            aria-hidden
+            className="manage-avatar-pulse absolute -inset-4 rounded-full border border-cream/20"
           />
-          {error ? <p className="mt-2 text-[0.86rem] text-[#ffd0a6]">{error}</p> : null}
-          <button
-            type="button"
-            onClick={() => setShowDeleteWarning(true)}
-            disabled={!canDelete || deleting}
-            className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#ffe3d0] px-5 text-[0.95rem] font-medium text-[#251815] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
-          >
-            <Trash2 className="h-4 w-4" strokeWidth={1.8} />
-            {deleting ? "Deleting" : "Delete account"}
-          </button>
+          {avatarImage ? (
+            <img
+              src={avatarImage}
+              alt={`${name} profile avatar`}
+              className="relative h-full w-full rounded-full object-cover object-center"
+            />
+          ) : (
+            <span className="relative grid h-full w-full place-items-center rounded-full bg-cream/[0.12] text-3xl font-semibold text-[#253f90]">
+              {initialsOf(name)}
+            </span>
+          )}
+        </div>
+
+        <div className="mt-8 w-full">
+          <p className="blueprint-label manage-sequence-line text-cream/42">Manage account</p>
+          <h1 className="mt-4 text-[clamp(2.45rem,7vw,5rem)] font-semibold leading-[0.98] tracking-tight text-cream">
+            <AnimatedWords text="So far, so good." delay={680} />
+          </h1>
+
+          <p className="mx-auto mt-5 max-w-2xl text-[clamp(1.1rem,2.4vw,1.55rem)] font-medium leading-8 text-cream/78">
+            <AnimatedWords text="Hope you are enjoying Trailgrad." delay={1280} copy />
+          </p>
+
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-cream/62 sm:text-lg sm:leading-8">
+            <AnimatedWords
+              text="Keep your session simple, or permanently remove your account when you are sure."
+              delay={2020}
+              copy
+            />
+          </p>
+
+          <div className="mx-auto mt-10 grid max-w-2xl gap-3 text-left sm:grid-cols-2">
+            <div
+              className="manage-action-line rounded-2xl border border-cream/20 bg-cream/[0.035] p-4"
+              style={{ "--line-delay": "3200ms" } as CSSProperties}
+            >
+              <p className="blueprint-label text-cream/35">Logout</p>
+              <p className="mt-2 text-sm leading-6 text-cream/56">
+                End this session. Your profile, reports, and progress stay saved.
+              </p>
+              <SignOutButton redirectUrl="/">
+                <button
+                  type="button"
+                  className="manage-shine-link mt-3 inline-flex items-center gap-1.5 text-[0.98rem]"
+                >
+                  Logout
+                  <LogOut size={17} strokeWidth={1.85} aria-hidden="true" />
+                </button>
+              </SignOutButton>
+            </div>
+
+            <div
+              className="manage-action-line rounded-2xl border border-cream/20 bg-cream/[0.035] p-4"
+              style={{ "--line-delay": "3480ms" } as CSSProperties}
+            >
+              <p className="blueprint-label text-cream/35">Delete account</p>
+              <p className="mt-2 text-sm leading-6 text-cream/50">
+                Remove your profile, roadmap progress, interviews, and account access.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowDeleteWarning(true)}
+                className="manage-soft-link mt-3 inline-flex items-center gap-1.5 text-[0.98rem]"
+              >
+                Delete account
+                <Trash2 size={16} strokeWidth={1.8} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+
+          {error ? (
+            <p className="manage-action-line mx-auto mt-5 max-w-xl text-[0.9rem] leading-6 text-cream/72">
+              {error}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -125,6 +172,53 @@ export function ManageAccount() {
         />
       ) : null}
     </section>
+  );
+}
+
+function AnimatedWords({
+  text,
+  delay,
+  copy = false
+}: {
+  text: string;
+  delay: number;
+  copy?: boolean;
+}) {
+  const words = text.split(" ");
+  return (
+    <>
+      {words.map((word, index) => (
+        <span
+          key={`${word}-${index}`}
+          className={copy ? "onboarding-word manage-copy-word" : "onboarding-word"}
+          style={{ "--word-delay": `${delay + index * 58}ms` } as CSSProperties}
+        >
+          {word}
+          {index < words.length - 1 ? "\u00A0" : ""}
+        </span>
+      ))}
+    </>
+  );
+}
+
+function parseOrigin(value: string): { x: number; y: number } | null {
+  try {
+    const parsed = JSON.parse(value) as { x?: unknown; y?: unknown };
+    if (typeof parsed.x !== "number" || typeof parsed.y !== "number") return null;
+    return { x: parsed.x, y: parsed.y };
+  } catch {
+    return null;
+  }
+}
+
+function initialsOf(name: string): string {
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "TG"
   );
 }
 
