@@ -1238,11 +1238,17 @@ function ProfileHero({
         style={{ aspectRatio: `${cover.width} / ${cover.height}` }}
       >
         <img
+          key={cover.src}
           src={cover.displaySrc}
           alt=""
           width={cover.width}
           height={cover.height}
-          className="profile-cover-image absolute inset-0 h-full w-full object-cover object-center"
+          className="profile-cover-image profile-cover-image-change absolute inset-0 h-full w-full object-cover object-center"
+        />
+        <span
+          key={`${cover.src}-sweep`}
+          aria-hidden="true"
+          className="profile-cover-change-sweep pointer-events-none absolute inset-0"
         />
         <svg
           aria-hidden="true"
@@ -1294,11 +1300,17 @@ function ProfileHero({
             <span aria-hidden className="absolute -inset-2 rounded-full bg-cream/10" />
             <span aria-hidden className="profile-avatar-ring absolute -inset-1 rounded-full" />
             <img
+              key={avatar.src}
               src={avatar.displaySrc}
               alt=""
               width={avatar.width}
               height={avatar.height}
-              className="relative h-full w-full rounded-full object-cover object-center shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)]"
+              className="profile-avatar-image-change relative h-full w-full rounded-full object-cover object-center shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)]"
+            />
+            <span
+              key={`${avatar.src}-pulse`}
+              aria-hidden="true"
+              className="profile-avatar-change-pulse pointer-events-none absolute -inset-2 rounded-full"
             />
             <span
               aria-hidden="true"

@@ -389,6 +389,69 @@ select {
   }
 }
 
+@keyframes profile-cover-image-change {
+  0% {
+    opacity: 0.72;
+    transform: scale(1.035);
+    filter: saturate(0.9) brightness(1.1);
+  }
+  58% {
+    opacity: 1;
+    filter: saturate(1.05) brightness(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: none;
+  }
+}
+
+@keyframes profile-cover-change-sweep {
+  0% {
+    opacity: 0;
+    transform: translateX(-56%) skewX(-10deg);
+  }
+  22% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(58%) skewX(-10deg);
+  }
+}
+
+@keyframes profile-avatar-image-change {
+  0% {
+    opacity: 0.62;
+    transform: scale(0.9) rotate(-2deg);
+    filter: saturate(0.88) brightness(1.12);
+  }
+  64% {
+    opacity: 1;
+    transform: scale(1.045) rotate(1deg);
+    filter: saturate(1.05) brightness(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+    filter: none;
+  }
+}
+
+@keyframes profile-avatar-change-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  28% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.32);
+  }
+}
+
 @keyframes profile-badge-pop {
   from {
     opacity: 0;
@@ -421,6 +484,23 @@ select {
   transform-origin: center;
 }
 
+.profile-cover-image-change {
+  animation: profile-cover-image-change 580ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity, filter;
+}
+
+.profile-cover-change-sweep {
+  background: linear-gradient(
+    105deg,
+    transparent 28%,
+    rgba(241, 234, 216, 0.22) 44%,
+    rgba(241, 234, 216, 0.36) 50%,
+    transparent 66%
+  );
+  animation: profile-cover-change-sweep 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  mix-blend-mode: screen;
+}
+
 .profile-avatar-orbit {
   animation: profile-avatar-orbit 620ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
   will-change: transform, opacity, filter;
@@ -431,6 +511,18 @@ select {
     conic-gradient(from 90deg, transparent 0 54%, rgba(241, 234, 216, 0.88) 60%, transparent 70%),
     radial-gradient(circle, transparent 61%, rgba(241, 234, 216, 0.34) 63%, transparent 67%);
   animation: profile-avatar-ring 1120ms cubic-bezier(0.16, 1, 0.3, 1) 540ms both;
+}
+
+.profile-avatar-image-change {
+  animation: profile-avatar-image-change 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: center;
+  will-change: transform, opacity, filter;
+}
+
+.profile-avatar-change-pulse {
+  border: 1px solid rgba(241, 234, 216, 0.52);
+  background: radial-gradient(circle, rgba(241, 234, 216, 0.2), transparent 64%);
+  animation: profile-avatar-change-pulse 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .profile-copy-word {
@@ -474,6 +566,26 @@ select {
     transparent,
     rgba(241, 234, 216, 0.11) 45%,
     rgba(241, 234, 216, 0.14) 55%,
+    transparent
+  );
+  animation: skeleton-sheen 1.6s ease-in-out infinite;
+  content: "";
+}
+
+.profile-image-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+}
+
+.profile-image-skeleton::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.28) 45%,
+    rgba(255, 255, 255, 0.38) 55%,
     transparent
   );
   animation: skeleton-sheen 1.6s ease-in-out infinite;

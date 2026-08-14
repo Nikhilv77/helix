@@ -328,34 +328,10 @@ export function ProfileSkeleton() {
       <RouteProgress />
 
       <header className="profile-motion relative overflow-hidden rounded-[1.75rem] bg-[#3557b4]">
-        <div className="relative h-44 overflow-hidden bg-[#24439b] sm:h-56 lg:h-auto lg:aspect-[1600/420]">
-          <div className="absolute inset-0 bg-gradient-to-r from-cream/[0.08] via-cream/[0.18] to-cream/[0.08]" />
-          <div className="absolute left-10 top-10 hidden h-20 w-64 rounded-2xl border border-cream/10 sm:block" />
-          <div className="absolute right-16 top-12 hidden h-24 w-80 rounded-2xl border border-cream/10 lg:block" />
-          <div className="skeleton absolute right-4 top-4 h-10 w-32 !rounded-xl sm:right-6 sm:top-6" />
-          <svg
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-[-1px] h-12 w-full text-[#3657b4] sm:h-16"
-            viewBox="0 0 1440 92"
-            preserveAspectRatio="none"
-          >
-            <path
-              d="M0 36 C 168 76, 314 18, 486 42 C 642 64, 806 78, 976 38 C 1158 -5, 1294 40, 1440 24 L1440 92 L0 92 Z"
-              fill="currentColor"
-            />
-            <path
-              d="M0 34 C 168 74, 314 16, 486 40 C 642 62, 806 76, 976 36 C 1158 -7, 1294 38, 1440 22"
-              fill="none"
-              stroke="rgba(241,234,216,0.35)"
-              strokeWidth="1.4"
-            />
-          </svg>
-        </div>
-
-        <div className="relative px-5 pb-4 sm:px-7 sm:pb-5 lg:px-8">
-          <div className="-mt-14 flex flex-col items-center text-center sm:-mt-16">
+        <div className="relative px-5 py-6 sm:px-7 sm:py-7 lg:px-8">
+          <div className="flex flex-col items-center text-center">
             <span className="relative grid h-28 w-28 shrink-0 place-items-center overflow-hidden rounded-full bg-cream p-0.5 sm:h-32 sm:w-32">
-              <div className="skeleton h-full w-full !rounded-full" />
+              <div className="profile-image-skeleton h-full w-full rounded-full" />
             </span>
 
             <div className="mt-3 flex w-full flex-col items-center">
@@ -385,7 +361,7 @@ export function ProfileSkeleton() {
                     <div
                       key={index}
                       className={[
-                        "step-in min-h-28 rounded-2xl border border-cream/14 bg-cream/[0.025] px-5 py-4 text-left",
+                        "step-in min-h-28 rounded-2xl border border-cream/20 bg-cream/[0.025] px-5 py-4 text-left",
                         index % 2 === 0 ? "-rotate-1" : "rotate-1"
                       ].join(" ")}
                     >
@@ -397,7 +373,7 @@ export function ProfileSkeleton() {
                 </div>
               </section>
 
-              <div className="mt-7 w-full max-w-4xl rotate-1 rounded-2xl border border-cream/14 bg-cream/[0.025] px-6 py-5 sm:px-8">
+              <div className="mt-7 w-full max-w-4xl rotate-1 rounded-2xl border border-cream/20 bg-cream/[0.025] px-6 py-5 sm:px-8">
                 <div className="skeleton mx-auto h-8 w-full max-w-2xl" />
                 <div className="skeleton mx-auto mt-2 h-8 w-2/3 max-w-lg" />
               </div>
@@ -415,7 +391,7 @@ export function ProfileSkeleton() {
                     <div
                       key={index}
                       className={[
-                        "step-in flex min-h-44 flex-col items-center justify-center rounded-[1.45rem] border border-cream/14 bg-cream/[0.025] px-6 py-7 text-center",
+                        "step-in flex min-h-44 flex-col items-center justify-center rounded-[1.45rem] border border-cream/20 bg-cream/[0.025] px-6 py-7 text-center",
                         index === 1 ? "sm:rotate-1" : index === 2 ? "sm:-rotate-1" : ""
                       ].join(" ")}
                     >
@@ -469,7 +445,7 @@ function ProfileSkeletonGroup({
         {Array.from({ length: count }, (_, index) => (
           <div
             key={index}
-            className="min-h-[18rem] rounded-[1.35rem] border border-cream/14 bg-cream/[0.025] p-5 sm:p-6"
+            className="min-h-[18rem] rounded-[1.35rem] border border-cream/20 bg-cream/[0.025] p-5 sm:p-6"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="skeleton h-8 w-8 !rounded-lg" />
