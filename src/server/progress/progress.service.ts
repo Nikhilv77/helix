@@ -16,7 +16,7 @@ import {
 } from "@/lib/progress";
 import type { PrismaService } from "../database/prisma.service";
 
-const FRONTEND_ROADMAP_ROLE = "frontend";
+const FRONTEND_ROADMAP_ROLE = "fullstack";
 const DAY_MS = 86_400_000;
 /** 18 weeks of heatmap: wide enough to show a habit, short enough to stay dense. */
 const WINDOW_DAYS = 126;

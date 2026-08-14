@@ -21,6 +21,8 @@ const sampleResult: ResumeExtractionResponse = {
     targetDate: null,
     headline: "Senior Software Engineer",
     context: "",
+    coverImage: null,
+    profileImage: null,
     focusAreas: ["System design", "Product engineering", "Ownership"],
     stories: [],
     updatedAt: Date.now(),

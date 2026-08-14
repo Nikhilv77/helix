@@ -136,6 +136,7 @@ function isWorkspaceChromeRoute(pathname: string): boolean {
     pathname === "/progress" ||
     pathname === "/reports" ||
     pathname === "/profile" ||
+    pathname === "/manage" ||
     pathname.startsWith("/sessions/") ||
     pathname.startsWith("/session/")
   );
@@ -158,12 +159,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const { userId } = clerkPublishableKey ? await auth() : { userId: null };
   const requestHeaders = await headers();
   const pathname = requestHeaders.get("x-trailgrad-pathname") ?? "";
+  const search = requestHeaders.get("x-trailgrad-search") ?? "";
   const workspaceRoute = isWorkspaceChromeRoute(pathname);
+  const welcomeHome = pathname === "/" && new URLSearchParams(search).get("welcome") === "maya";
 
   if (workspaceRoute && pathname !== "/" && !userId) redirect("/");
 
   let showWorkspaceShell = false;
-  if (userId && workspaceRoute) {
+  if (userId && workspaceRoute && !welcomeHome) {
     const profile = await getAppContainer()
       .profileService.get(authenticatedOwnerId(userId))
       .catch(() => null);

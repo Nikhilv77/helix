@@ -106,6 +106,34 @@ export function saveProfile(profile: CandidateProfileInput): Promise<CandidatePr
   return request<CandidateProfile>("/api/profile", { method: "PUT", body: profile });
 }
 
+export async function deleteAccount(): Promise<{ deleted: boolean }> {
+  const response = await fetch("/api/account", {
+    method: "DELETE",
+    cache: "no-store"
+  });
+
+  const payload: unknown = await response.json().catch(() => null);
+
+  if (isRecord(payload) && "clerk_error" in payload) {
+    return payload as never;
+  }
+
+  if (!response.ok || !isSuccess(payload)) {
+    const error = isErrorEnvelope(payload)
+      ? payload.error
+      : { code: "REQUEST_FAILED", message: "Request failed", details: {} };
+
+    throw new ApiClientError({
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      status: response.status
+    });
+  }
+
+  return payload.data as { deleted: boolean };
+}
+
 export async function uploadResume(input: {
   file: File;
   targetRole: Role;

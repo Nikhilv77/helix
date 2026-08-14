@@ -1,5 +1,6 @@
 import { DocumentTitle } from "@/components/document-title";
 import { MayaWelcome } from "@/components/workspace/maya-welcome";
+import { MayaWelcomeLoading } from "@/components/workspace/skeletons";
 import type { FrontendDsaPlan } from "@/lib/frontend-plan";
 import type { CandidateProfile, Role } from "@/lib/types";
 import type { FrontendRoadmapHome } from "@/lib/roadmap";
@@ -8,7 +9,7 @@ import { SessionCards } from "./session-cards";
 interface DashboardProps {
   profile: CandidateProfile;
   showMayaWelcome?: boolean;
-  /** User-specific frontend roadmap loaded from persisted progress state. */
+  /** User-specific roadmap loaded from persisted progress state. */
   frontendRoadmap?: FrontendRoadmapHome | null;
   /** Seeded DSA plan fallback used only if the user roadmap cannot load. */
   frontendPlan?: FrontendDsaPlan | null;
@@ -35,18 +36,24 @@ export function Dashboard({
     profile.focusAreas[0] ?? null
   );
 
-  return (
-    <div className="pb-10">
-      <DocumentTitle title="Home" />
-      {showMayaWelcome ? (
+  if (showMayaWelcome) {
+    return (
+      <>
+        <DocumentTitle title="Home" />
         <MayaWelcome
           profile={profile}
           practiceHref={practiceHref}
           frontendRoadmap={frontendRoadmap}
           frontendPlan={frontendPlan}
         />
-      ) : null}
+        <MayaWelcomeLoading />
+      </>
+    );
+  }
 
+  return (
+    <div className="pb-10">
+      <DocumentTitle title="Home" />
       <SessionCards
         roadmap={frontendRoadmap}
         fallbackPlan={frontendPlan}

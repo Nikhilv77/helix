@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       { includeHome: false }
     );
     if (!result.recorded) {
-      throw new ApiRouteError(409, "FRONTEND_ROADMAP_REQUIRED", "Frontend roadmap is not active.");
+      throw new ApiRouteError(409, "ROADMAP_REQUIRED", "Roadmap is not active.");
     }
 
     return apiSuccess({ recorded: true });

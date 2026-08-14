@@ -51,6 +51,8 @@ export class ProfileService {
       targetDate: stored.targetDate?.toISOString().slice(0, 10) ?? null,
       headline: stored.headline ?? "",
       context: stored.context ?? "",
+      coverImage: stored.coverImage ?? null,
+      profileImage: stored.profileImage ?? null,
       focusAreas: stringArray(stored.focusAreas),
       stories: storyArray(stored.stories),
       updatedAt: stored.updatedAt.getTime(),
@@ -78,6 +80,8 @@ export class ProfileService {
         targetDate,
         headline: clean(input.headline),
         context: clean(input.context),
+        coverImage: cleanNullable(input.coverImage),
+        profileImage: cleanNullable(input.profileImage),
         focusAreas: toJson(input.focusAreas),
         stories: toJson(input.stories)
       },
@@ -88,12 +92,22 @@ export class ProfileService {
         targetDate,
         headline: clean(input.headline),
         context: clean(input.context),
+        coverImage: cleanNullable(input.coverImage),
+        profileImage: cleanNullable(input.profileImage),
         focusAreas: toJson(input.focusAreas),
         stories: toJson(input.stories)
       }
     });
 
     return withCompleteness(await this.get(ownerId));
+  }
+
+  async deleteAccountData(ownerId: string): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.interviewSession.deleteMany({ where: { ownerId } }),
+      this.prisma.project.deleteMany({ where: { ownerId } }),
+      this.prisma.candidateProfile.deleteMany({ where: { ownerId } })
+    ]);
   }
 
   async completeOnboarding(
@@ -146,6 +160,8 @@ export class ProfileService {
         level: input.level,
         headline: clean(input.headline),
         context: clean(input.context),
+        coverImage: null,
+        profileImage: null,
         focusAreas: toJson(input.focusAreas),
         stories: toJson(input.stories),
         resumeFileName: input.resume.fileName,
@@ -161,6 +177,8 @@ export class ProfileService {
         level: input.level,
         headline: clean(input.headline),
         context: clean(input.context),
+        coverImage: null,
+        profileImage: null,
         focusAreas: toJson(input.focusAreas),
         stories: toJson(input.stories),
         resumeFileName: input.resume.fileName,
@@ -204,6 +222,8 @@ function emptyProfile(): CandidateProfile {
     targetDate: null,
     headline: "",
     context: "",
+    coverImage: null,
+    profileImage: null,
     focusAreas: [],
     stories: [],
     updatedAt: null,
@@ -216,6 +236,10 @@ function emptyProfile(): CandidateProfile {
 function clean(value: string): string | null {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function cleanNullable(value: string | null): string | null {
+  return value ? clean(value) : null;
 }
 
 function isRole(value: string | null): value is Role {

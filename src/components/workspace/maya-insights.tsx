@@ -1,5 +1,15 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Flame, Sparkles, Target, Waypoints } from "lucide-react";
+import type { CSSProperties } from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  BadgeCheck,
+  Flame,
+  Lightbulb,
+  Target,
+  Waypoints
+} from "lucide-react";
 import type { FrontendRoadmapInsight } from "@/lib/roadmap";
 
 /**
@@ -9,129 +19,146 @@ import type { FrontendRoadmapInsight } from "@/lib/roadmap";
 export function MayaInsights({ insights }: { insights: FrontendRoadmapInsight[] }) {
   if (insights.length === 0) return null;
 
-  const primaryCta =
-    insights.find((insight) => insight.ctaHref && insight.ctaLabel) ??
-    insights.find((insight) => insight.ctaHref);
-
   return (
-    <aside className="relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-[#2a4aa0] p-5">
+    <section className="identity-stage-in relative min-w-0 overflow-hidden rounded-2xl bg-gradient-to-b from-[#fff8e8] to-[#e5dcc3] p-4 text-[#171a16] sm:p-5">
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -right-16 -top-20 h-44 w-44 rounded-full bg-[#8be6bd]/[0.07] blur-3xl"
+        className="pointer-events-none absolute -right-20 -top-24 h-44 w-44 rounded-full bg-[#3657b4]/[0.06] blur-3xl"
+      />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-24 left-8 h-44 w-44 rounded-full bg-white/40 blur-3xl"
       />
 
-      <header className="relative flex items-center gap-3 border-b border-cream/[0.09] pb-4">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cream text-[#254294]">
-          <Sparkles size={17} aria-hidden="true" />
-        </span>
+      <header className="relative z-10 mb-4">
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-semibold tracking-tight text-cream">
+          <p className="text-[1.14rem] font-medium leading-tight tracking-tight text-[#171a16]">
             Maya&apos;s insights
           </p>
-          <p className="mt-0.5 text-[12px] font-medium text-cream/45">
+          <p className="mt-1 text-[0.92rem] font-normal leading-5 text-[#6f716a]">
             Tuned to your roadmap progress
           </p>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#8be6bd]/12 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#a9f0d0]">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#8be6bd]" />
-          Live
-        </span>
       </header>
 
-      <div className="relative mt-4 grid gap-2.5">
-        {insights.map((insight) => {
+      <div className="relative z-10 grid min-w-0 gap-3">
+        {insights.map((insight, index) => {
           const visual = insightVisual(insight.kind);
-          return (
-            <InsightRow
-              key={insight.id}
-              icon={visual.icon}
-              accent={visual.accent}
-              label={insight.title}
-            >
-              <p className="text-[14px] font-medium leading-[1.45] text-cream/80">{insight.body}</p>
-              {insight.evidenceLabel ? (
-                <span className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-md bg-cream/[0.07] px-2 py-1 text-[12px] font-medium text-cream/50">
-                  <Waypoints size={11} aria-hidden="true" className="shrink-0" />
-                  <span className="truncate">{insight.evidenceLabel}</span>
-                </span>
-              ) : null}
-            </InsightRow>
-          );
+          return <InsightCard key={insight.id} insight={insight} visual={visual} index={index} />;
         })}
       </div>
-
-      {primaryCta?.ctaHref ? (
-        <div className="relative mt-auto pt-5">
-          <Link
-            href={primaryCta.ctaHref}
-            className="group flex h-11 w-full items-center justify-between gap-3 rounded-xl bg-gradient-to-b from-[#f7f2e5] to-[#e4dcc6] px-4 text-[14px] font-semibold text-[#1d3a86] transition hover:from-white hover:to-[#efe8d6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-          >
-            <span className="min-w-0 truncate">{primaryCta.ctaLabel ?? "Start practice"}</span>
-            <ArrowRight
-              size={16}
-              aria-hidden="true"
-              className="shrink-0 transition-transform duration-200 group-hover:translate-x-0.5"
-            />
-          </Link>
-        </div>
-      ) : null}
-    </aside>
+    </section>
   );
 }
 
 function insightVisual(kind: FrontendRoadmapInsight["kind"]): {
-  icon: React.ReactNode;
+  Icon: LucideIcon;
   accent: string;
+  glow: string;
 } {
   if (kind === "NEXT_PRIORITY") {
     return {
-      icon: <Target size={15} aria-hidden="true" />,
-      accent: "bg-[#a9d5ff]/14 text-[#a9d5ff]"
+      Icon: Target,
+      accent: "text-[#171a16]/76",
+      glow: "bg-[#8be6bd]/16"
     };
   }
 
   if (kind === "COMMON_TRAP") {
     return {
-      icon: <AlertTriangle size={15} aria-hidden="true" />,
-      accent: "bg-[#f4d58b]/14 text-[#f4d58b]"
+      Icon: AlertTriangle,
+      accent: "text-[#171a16]/76",
+      glow: "bg-[#8be6bd]/16"
     };
   }
 
-  if (kind === "STRONG_SIGNAL" || kind === "RECOMMENDED_ACTION") {
+  if (kind === "STRONG_SIGNAL") {
     return {
-      icon: <Sparkles size={15} aria-hidden="true" />,
-      accent: "bg-[#8be6bd]/14 text-[#8be6bd]"
+      Icon: BadgeCheck,
+      accent: "text-[#171a16]/76",
+      glow: "bg-[#8be6bd]/16"
+    };
+  }
+
+  if (kind === "RECOMMENDED_ACTION") {
+    return {
+      Icon: Lightbulb,
+      accent: "text-[#171a16]/76",
+      glow: "bg-[#8be6bd]/16"
     };
   }
 
   return {
-    icon: <Flame size={15} aria-hidden="true" />,
-    accent: "bg-cream/[0.08] text-cream/45"
+    Icon: Flame,
+    accent: "text-[#171a16]/76",
+    glow: "bg-[#8be6bd]/16"
   };
 }
 
-function InsightRow({
-  icon,
-  accent,
-  label,
-  children
+function InsightCard({
+  insight,
+  visual,
+  index
 }: {
-  icon: React.ReactNode;
-  accent: string;
-  label: string;
-  children: React.ReactNode;
+  insight: FrontendRoadmapInsight;
+  visual: ReturnType<typeof insightVisual>;
+  index: number;
 }) {
+  const Icon = visual.Icon;
+
   return (
-    <div className="flex gap-3 rounded-xl bg-[#24439b] p-3.5 transition hover:bg-[#27479f]">
-      <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-md ${accent}`}>
-        {icon}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-cream/42">
-          {label}
-        </p>
-        <div className="mt-1.5">{children}</div>
+    <article
+      className="onboarding-card-reveal group relative min-h-[6.75rem] overflow-hidden rounded-[1rem] border border-[#171a16]/[0.07] bg-[#dcefd7]/72 p-3.5 transition-[border-color,transform,filter] duration-300 hover:-translate-y-0.5 hover:border-[#171a16]/[0.13] hover:brightness-[1.02]"
+      style={{
+        "--card-delay": `${index * 85}ms`
+      } as CSSProperties}
+    >
+      <span
+        aria-hidden="true"
+        className={`pointer-events-none absolute -right-14 -top-14 h-28 w-28 rounded-full ${visual.glow} blur-2xl`}
+      />
+      <div className="relative z-10 flex h-full min-w-0 gap-3">
+        <Icon
+          size={23}
+          strokeWidth={1.65}
+          className={`mt-0.5 shrink-0 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-105 ${visual.accent}`}
+          aria-hidden="true"
+        />
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="min-w-0 pr-2">
+            <p className="text-[0.82rem] font-medium leading-4 text-[#171a16]/82 transition-transform duration-300 group-hover:translate-x-0.5">
+              {insight.title}
+            </p>
+            <p className="mt-1 text-[0.82rem] font-normal leading-[1.35] tracking-normal text-[#6f716a] transition-transform duration-300 group-hover:translate-x-0.5">
+              {insight.body}
+            </p>
+          </div>
+
+          <div className="mt-auto flex min-w-0 flex-wrap items-center gap-2 pt-3">
+            {insight.evidenceLabel ? (
+              <span className="inline-flex max-w-full items-center gap-1.5 rounded-md bg-[#171a16]/[0.055] px-2.5 py-1 text-[11px] font-normal text-[#6f716a]">
+                <Waypoints size={10} aria-hidden="true" className="shrink-0 text-[#171a16]/58" />
+                <span className="truncate">{insight.evidenceLabel}</span>
+              </span>
+            ) : null}
+
+            {insight.ctaHref ? (
+              <Link
+                href={insight.ctaHref}
+                className="browse-nudge group/link ml-auto inline-flex items-center gap-1.5 rounded-md bg-[#171a16]/[0.055] px-2.5 py-1 text-[11px] font-normal text-[#171a16]/70 transition hover:bg-[#171a16] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#171a16]/25"
+              >
+                <span>{insight.ctaLabel ?? "Start practice"}</span>
+                <ArrowRight
+                  size={11}
+                  aria-hidden="true"
+                  className="transition-transform duration-200 group-hover/link:translate-x-0.5"
+                />
+              </Link>
+            ) : null}
+          </div>
+        </div>
       </div>
-    </div>
+    </article>
   );
 }

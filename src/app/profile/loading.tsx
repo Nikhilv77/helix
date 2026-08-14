@@ -1,5 +1,5 @@
-import { WorkspaceLoading } from "@/components/workspace/skeletons";
+import { ProfileSkeleton } from "@/components/workspace/skeletons";
 
 export default function Loading() {
-  return <WorkspaceLoading />;
+  return <ProfileSkeleton />;
 }

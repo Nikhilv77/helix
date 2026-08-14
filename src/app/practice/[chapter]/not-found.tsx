@@ -13,7 +13,7 @@ export default function ChapterNotFound() {
             That session isn&apos;t in your path.
           </h1>
           <p className="mt-3 text-[15px] leading-7 text-cream/65">
-            The chapter you followed does not exist in the frontend roadmap. It may have been
+            The chapter you followed does not exist in the roadmap. It may have been
             renamed, or the link may be out of date.
           </p>
           <Link

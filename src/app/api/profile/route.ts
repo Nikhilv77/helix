@@ -29,7 +29,28 @@ const profileSchema = z.object({
   headline: z.string().trim().max(140),
   context: z.string().trim().max(1600),
   focusAreas: z.array(z.string().trim().min(1).max(40)).max(8),
-  stories: z.array(storySchema).max(8)
+  stories: z.array(storySchema).max(8),
+  coverImage: z
+    .enum([
+      "/images/profile/covers/cover-1.png",
+      "/images/profile/covers/cover-2.png",
+      "/images/profile/covers/cover-3.png",
+      "/images/profile/covers/cover-4.png",
+      "/images/profile/covers/cover-5.png",
+      "/images/profile/covers/cover-6.png",
+      "/images/profile/covers/cover-7.png",
+      "/images/profile/covers/cover-8.png"
+    ])
+    .nullable(),
+  profileImage: z
+    .enum([
+      "/images/profile/avatars/avatar-01.jpg",
+      "/images/profile/avatars/avatar-02.jpg",
+      "/images/profile/avatars/avatar-03.jpg",
+      "/images/profile/avatars/avatar-04.jpg",
+      "/images/profile/avatars/avatar-05.jpg"
+    ])
+    .nullable()
 });
 
 export async function GET(request: NextRequest) {

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -17,21 +18,18 @@ import {
   Eye,
   FileText,
   GraduationCap,
-  Mic,
   PackageCheck,
   Pencil,
   Plus,
   Quote,
   Save,
-  ShieldCheck,
   Sparkles,
   Target,
   Trash2,
   TriangleAlert,
-  UserRound,
-  Upload
+  Upload,
+  X
 } from "lucide-react";
-import { LevelArtwork } from "@/components/workspace/level-artwork";
 import { ProfileAvatar } from "@/components/workspace/profile-avatar";
 import { ApiClientError, saveProfile } from "@/lib/api-client";
 import { pageTitle } from "@/lib/seo";
@@ -75,9 +73,113 @@ const focusOptions = [
   "Behavioral stories"
 ];
 
+const focusAreaDetails: Record<string, string> = {
+  "Technical depth": "Explain tradeoffs, internals, and why your approach works.",
+  "System design": "Turn vague requirements into practical architecture decisions.",
+  Coding: "Solve cleanly, reason out loud, and keep edge cases visible.",
+  Communication: "Make your thinking easy to follow under interview pressure.",
+  Ownership: "Show scope, accountability, and how you moved work forward.",
+  Impact: "Connect your work to outcomes, metrics, and product value.",
+  Leadership: "Show judgment, leverage, and how you raised the team bar.",
+  "Behavioral stories": "Defend real examples with situation, action, and result."
+};
+
 /** One input treatment for the page, so nothing drifts field to field. */
 const fieldClass =
   "w-full rounded-xl bg-[#24439b] text-cream outline-none ring-1 ring-inset ring-cream/10 transition placeholder:text-cream/35 hover:bg-[#27479f] focus:bg-[#27479f] focus:ring-2 focus:ring-cream/35";
+
+const profileAvatars = [
+  {
+    src: "/images/profile/avatars/avatar-01.jpg",
+    displaySrc: "/images/profile/avatars/avatar-01.jpg?v=7bc1f6d0",
+    width: 1024,
+    height: 1024
+  },
+  {
+    src: "/images/profile/avatars/avatar-02.jpg",
+    displaySrc: "/images/profile/avatars/avatar-02.jpg?v=8f147db2",
+    width: 1024,
+    height: 1024
+  },
+  {
+    src: "/images/profile/avatars/avatar-03.jpg",
+    displaySrc: "/images/profile/avatars/avatar-03.jpg?v=54f51d79",
+    width: 1024,
+    height: 1024
+  },
+  {
+    src: "/images/profile/avatars/avatar-04.jpg",
+    displaySrc: "/images/profile/avatars/avatar-04.jpg?v=62bce4f4",
+    width: 1024,
+    height: 1024
+  },
+  {
+    src: "/images/profile/avatars/avatar-05.jpg",
+    displaySrc: "/images/profile/avatars/avatar-05.jpg?v=bf8776bd",
+    width: 1024,
+    height: 1024
+  }
+] as const;
+
+const profileCovers = [
+  {
+    src: "/images/profile/covers/cover-1.png",
+    displaySrc: "/images/profile/covers/cover-1.png?v=2441142822",
+    width: 1809,
+    height: 293
+  },
+  {
+    src: "/images/profile/covers/cover-2.png",
+    displaySrc: "/images/profile/covers/cover-2.png?v=1093722193",
+    width: 1809,
+    height: 256
+  },
+  {
+    src: "/images/profile/covers/cover-3.png",
+    displaySrc: "/images/profile/covers/cover-3.png?v=778074622",
+    width: 1808,
+    height: 264
+  },
+  {
+    src: "/images/profile/covers/cover-4.png",
+    displaySrc: "/images/profile/covers/cover-4.png?v=2319454375",
+    width: 1809,
+    height: 292
+  },
+  {
+    src: "/images/profile/covers/cover-5.png",
+    displaySrc: "/images/profile/covers/cover-5.png?v=3937398326",
+    width: 1806,
+    height: 266
+  },
+  {
+    src: "/images/profile/covers/cover-6.png",
+    displaySrc: "/images/profile/covers/cover-6.png?v=3544170912",
+    width: 1803,
+    height: 293
+  },
+  {
+    src: "/images/profile/covers/cover-7.png",
+    displaySrc: "/images/profile/covers/cover-7.png?v=1044505713",
+    width: 1805,
+    height: 273
+  },
+  {
+    src: "/images/profile/covers/cover-8.png",
+    displaySrc: "/images/profile/covers/cover-8.png?v=1232424449",
+    width: 1806,
+    height: 268
+  }
+] as const;
+
+function hashProfileSeed(seed: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
 
 export function CandidateProfileEditor({ initialProfile }: { initialProfile: CandidateProfile }) {
   const [profile, setProfile] = useState<CandidateProfileInput>(toInput(initialProfile));
@@ -85,6 +187,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"view" | "edit" | "resume">("view");
+  const [imagePicker, setImagePicker] = useState<"cover" | "avatar" | null>(null);
   const [openStory, setOpenStory] = useState<string | null>(null);
 
   const dirty = useMemo(
@@ -119,6 +222,28 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
 
   function update(patch: Partial<CandidateProfileInput>) {
     setProfile((current) => ({ ...current, ...patch }));
+  }
+
+  async function saveImagePatch(patch: Partial<CandidateProfileInput>) {
+    const nextInput = { ...profile, ...patch };
+    setProfile(nextInput);
+    setImagePicker(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setSaving(true);
+    setError(null);
+
+    try {
+      const next = await saveProfile(nextInput);
+      setSaved(next);
+      setProfile(toInput(next));
+    } catch (caught) {
+      setProfile(toInput(saved));
+      setError(
+        caught instanceof ApiClientError ? caught.message : "Your profile image could not be saved."
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   function toggleFocus(area: string) {
@@ -161,21 +286,27 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
   // be a form, which buried the handful of facts that actually matter.
   if (mode === "view") {
     return (
-      <div className="mx-auto w-full max-w-[110rem] px-5 py-6 sm:px-8 lg:px-10 lg:py-8">
-        <ProfileHero profile={profile} saved={saved} onEdit={() => setMode("edit")} />
-        <ProfileSignalDeck profile={profile} saved={saved} />
+      <div className="mx-auto w-full max-w-[110rem] px-5 py-6 pb-16 sm:px-8 lg:px-10 lg:py-8">
+        <ProfileHero
+          profile={profile}
+          saved={saved}
+          onCoverEdit={() => setImagePicker("cover")}
+          onAvatarEdit={() => setImagePicker("avatar")}
+        />
 
-        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.42fr)_minmax(0,1fr)] lg:items-stretch">
-          <div className="grid gap-5">
-            <AboutCard profile={profile} />
-            <VerifiedResumeCard resume={resume} onOpen={() => setMode("resume")} />
-          </div>
-          <TargetRoleCard profile={profile} />
-        </div>
+        <ImagePickerOverlay
+          open={imagePicker}
+          profile={profile}
+          error={error}
+          onClose={() => {
+            setImagePicker(null);
+            setError(null);
+          }}
+          onCoverChange={(coverImage) => void saveImagePatch({ coverImage })}
+          onAvatarChange={(profileImage) => void saveImagePatch({ profileImage })}
+        />
 
         <SignatureStoryCard story={profile.stories[0]} />
-
-        {dirty ? <SaveBar saving={saving} error={error} onSave={() => void submit()} /> : null}
       </div>
     );
   }
@@ -280,6 +411,28 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
         </aside>
 
         <div className="grid gap-6">
+          <EditSection
+            id="appearance"
+            icon={Eye}
+            tone="mint"
+            title="Appearance"
+            hint="Choose the cover image for your profile."
+          >
+            <FieldBlock label="Cover image" hint="This appears at the top of your profile.">
+              <CoverPicker
+                value={profile.coverImage}
+                onChange={(coverImage) => update({ coverImage })}
+              />
+            </FieldBlock>
+
+            <FieldBlock label="Profile image" hint="This appears as your profile avatar.">
+              <AvatarPicker
+                value={profile.profileImage}
+                onChange={(profileImage) => update({ profileImage })}
+              />
+            </FieldBlock>
+          </EditSection>
+
           <EditSection
             id="target"
             icon={Target}
@@ -451,6 +604,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
 }
 
 const EDIT_SECTIONS = [
+  { id: "appearance", label: "Appearance", icon: Eye },
   { id: "target", label: "Target", icon: Target },
   { id: "signal", label: "What you have done", icon: Sparkles },
   { id: "stories", label: "Story bank", icon: BriefcaseBusiness }
@@ -539,6 +693,265 @@ function FieldBlock({
       </div>
       <div className="min-w-0">{children}</div>
     </div>
+  );
+}
+
+function CoverPicker({
+  value,
+  onChange
+}: {
+  value: string | null;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {profileCovers.map((cover, index) => {
+        const selected = value === cover.src;
+
+        return (
+          <button
+            key={cover.src}
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onChange(cover.src)}
+            className={[
+              "group relative overflow-hidden rounded-2xl bg-white/[0.055] p-1.5 text-left outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-cream/60",
+              selected
+                ? "ring-2 ring-cream/82"
+                : "ring-1 ring-cream/10 hover:-translate-y-0.5 hover:bg-white/[0.09] hover:ring-cream/28"
+            ].join(" ")}
+          >
+            <span
+              className="relative block overflow-hidden rounded-xl bg-[#24439b]"
+              style={{ aspectRatio: `${cover.width} / ${cover.height}` }}
+            >
+              <img
+                src={cover.displaySrc}
+                alt=""
+                width={cover.width}
+                height={cover.height}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <span
+                aria-hidden
+                className={[
+                  "absolute inset-0 transition",
+                  selected ? "bg-[#17234a]/8" : "bg-[#17234a]/18 group-hover:bg-[#17234a]/8"
+                ].join(" ")}
+              />
+              {selected ? (
+                <span className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-cream text-blueprint">
+                  <Check size={14} />
+                </span>
+              ) : null}
+            </span>
+            <span
+              className={[
+                "mt-2 flex items-center justify-between px-1 text-xs font-semibold",
+                selected ? "text-cream" : "text-cream/46"
+              ].join(" ")}
+            >
+              <span>Cover {index + 1}</span>
+              <span className="font-mono text-[10px] text-cream/35">
+                {cover.width}x{cover.height}
+              </span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function AvatarPicker({
+  value,
+  onChange
+}: {
+  value: string | null;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-3">
+      {profileAvatars.map((avatar, index) => {
+        const selected = value === avatar.src;
+
+        return (
+          <button
+            key={avatar.src}
+            type="button"
+            aria-label={`Choose profile image ${index + 1}`}
+            aria-pressed={selected}
+            onClick={() => onChange(avatar.src)}
+            className={[
+              "group relative grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full bg-cream p-0.5 outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-cream/60 sm:h-24 sm:w-24",
+              selected
+                ? "ring-2 ring-cream/82"
+                : "ring-1 ring-cream/10 hover:-translate-y-0.5 hover:bg-white/[0.09] hover:ring-cream/28"
+            ].join(" ")}
+          >
+            <img
+              src={avatar.displaySrc}
+              alt=""
+              width={avatar.width}
+              height={avatar.height}
+              className="h-full w-full rounded-full object-cover object-center"
+            />
+            {selected ? (
+              <span className="absolute -right-1 top-1 grid h-7 w-7 place-items-center rounded-full bg-cream text-blueprint">
+                <Check size={14} />
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ImagePickerOverlay({
+  open,
+  profile,
+  error,
+  onClose,
+  onCoverChange,
+  onAvatarChange
+}: {
+  open: "cover" | "avatar" | null;
+  profile: CandidateProfileInput;
+  error: string | null;
+  onClose: () => void;
+  onCoverChange: (value: string) => void;
+  onAvatarChange: (value: string) => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!open || !mounted) return null;
+
+  const choosingCover = open === "cover";
+
+  return createPortal(
+    <div className="image-picker-backdrop fixed inset-0 z-[1000] flex min-h-dvh items-center justify-center bg-[#01030a]/64 px-4 py-6 backdrop-blur-sm">
+      <button
+        type="button"
+        aria-label="Close image picker"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default"
+      />
+      <section
+        className={[
+          "image-picker-panel relative w-full overflow-hidden rounded-2xl border border-cream/10 bg-[#3657b4]/95 text-cream shadow-[0_24px_80px_-58px_rgba(0,0,0,0.62)] backdrop-blur-xl",
+          choosingCover
+            ? "max-h-[min(50rem,calc(100dvh-2rem))] max-w-6xl"
+            : "max-h-[min(36rem,calc(100dvh-2rem))] max-w-3xl"
+        ].join(" ")}
+      >
+        <div className="relative flex items-center justify-center px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
+          <h2 className="text-center text-2xl font-medium text-cream sm:text-3xl">
+            {choosingCover ? "Pick your cover" : "Pick your avatar"}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-4 top-4 grid h-9 w-9 shrink-0 place-items-center rounded-full text-cream/60 transition hover:bg-cream/[0.08] hover:text-cream"
+            aria-label="Close image picker"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div
+          className={[
+            "thin-scroll overflow-y-auto px-5 pb-6 pt-4 sm:px-6",
+            choosingCover
+              ? "max-h-[calc(min(50rem,100dvh-2rem)-5.25rem)]"
+              : "max-h-[calc(min(36rem,100dvh-2rem)-5.25rem)]"
+          ].join(" ")}
+        >
+          {choosingCover ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {profileCovers.map((cover, index) => {
+                const selected = profile.coverImage === cover.src;
+                return (
+                  <button
+                    key={cover.src}
+                    type="button"
+                    aria-label={`Choose cover ${index + 1}`}
+                    aria-pressed={selected}
+                    onClick={() => onCoverChange(cover.src)}
+                    className={[
+                      "group relative overflow-hidden rounded-2xl bg-cream/[0.035] p-1.5 outline-none transition duration-300 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-cream/45",
+                      selected ? "ring-1 ring-cream/42" : "ring-1 ring-cream/8 hover:ring-cream/20"
+                    ].join(" ")}
+                  >
+                    <span className="relative block aspect-[3.2/1] overflow-hidden rounded-xl bg-[#24439b] sm:aspect-[4/1]">
+                      <img
+                        src={cover.displaySrc}
+                        alt=""
+                        width={cover.width}
+                        height={cover.height}
+                        className="absolute inset-0 h-full w-full object-cover object-center"
+                      />
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-0 bg-[#030712]/0 transition group-hover:bg-[#030712]/28"
+                      />
+                      {selected ? (
+                        <span className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-cream text-blueprint">
+                          <Check size={14} />
+                        </span>
+                      ) : null}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+              {profileAvatars.map((avatar, index) => {
+                const selected = profile.profileImage === avatar.src;
+                return (
+                  <button
+                    key={avatar.src}
+                    type="button"
+                    aria-label={`Choose avatar ${index + 1}`}
+                    aria-pressed={selected}
+                    onClick={() => onAvatarChange(avatar.src)}
+                    className={[
+                      "group relative grid h-[5.5rem] w-[5.5rem] place-items-center overflow-hidden rounded-full bg-cream p-0.5 outline-none transition duration-300 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-cream/45 sm:h-[6.5rem] sm:w-[6.5rem]",
+                      selected ? "ring-1 ring-cream/46" : "ring-1 ring-cream/10 hover:ring-cream/24"
+                    ].join(" ")}
+                  >
+                    <img
+                      src={avatar.displaySrc}
+                      alt=""
+                      width={avatar.width}
+                      height={avatar.height}
+                      className="h-full w-full rounded-full object-cover object-center"
+                    />
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-0 rounded-full bg-[#030712]/0 transition group-hover:bg-[#030712]/26"
+                    />
+                    {selected ? (
+                      <span className="absolute right-3 top-3 grid h-5 w-5 place-items-center rounded-full bg-cream text-blueprint">
+                        <Check size={12} />
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {error ? <p className="mt-4 text-sm text-[#ffb2b2]">{error}</p> : null}
+        </div>
+      </section>
+    </div>,
+    document.body
   );
 }
 
@@ -761,148 +1174,773 @@ function StoryRow({
 function ProfileHero({
   profile,
   saved,
-  onEdit
+  onCoverEdit,
+  onAvatarEdit
 }: {
   profile: CandidateProfileInput;
   saved: CandidateProfile;
-  onEdit: () => void;
+  onCoverEdit: () => void;
+  onAvatarEdit: () => void;
 }) {
   const resume = saved.resume;
   const name = resume?.fullName?.trim() || "Your interview profile";
   const role = roleOptions.find((option) => option.value === profile.targetRole);
   const level = levelOptions.find((option) => option.value === profile.level);
+  const profileSeed = hashProfileSeed(
+    [name, profile.headline, profile.targetRole, profile.level, resume?.fileName]
+      .filter(Boolean)
+      .join("|") || "trailgrad-profile"
+  );
+  const selectedAvatar = profileAvatars.find((avatar) => avatar.src === profile.profileImage);
+  const avatar =
+    selectedAvatar ?? profileAvatars[profileSeed % profileAvatars.length] ?? profileAvatars[0];
+  const selectedCover = profileCovers.find((cover) => cover.src === profile.coverImage);
+  const cover =
+    selectedCover ??
+    profileCovers[Math.floor(profileSeed / profileAvatars.length) % profileCovers.length] ??
+    profileCovers[0];
 
   return (
-    <header className="surface-raised relative overflow-hidden">
+    <header className="profile-motion relative overflow-hidden rounded-[1.75rem] bg-[#3557b4]">
       <div
-        aria-hidden
-        className="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 opacity-30"
-        style={{
-          backgroundImage: "radial-gradient(rgba(239,232,214,0.45) 1px, transparent 1px)",
-          backgroundSize: "16px 16px"
-        }}
-      />
-
-      <button
-        type="button"
-        onClick={onEdit}
-        className="pill absolute right-5 top-5 z-10 inline-flex h-10 items-center gap-2 !rounded-xl px-4 text-xs font-semibold text-cream/80 backdrop-blur-sm transition hover:bg-white/[0.14] hover:text-cream sm:right-7 sm:top-7"
+        className="relative min-h-36 overflow-hidden bg-[#24439b] sm:min-h-44"
+        style={{ aspectRatio: `${cover.width} / ${cover.height}` }}
       >
-        <Pencil size={13} /> Edit profile
-      </button>
-
-      <div className="relative grid items-center gap-6 p-6 sm:p-8 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:gap-8">
-        <span className="relative grid h-32 w-32 shrink-0 place-items-center rounded-full sm:h-[10.5rem] sm:w-[10.5rem]">
+        <img
+          src={cover.displaySrc}
+          alt=""
+          width={cover.width}
+          height={cover.height}
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+        <svg
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-[-1px] h-10 w-full text-[#3657b4] sm:h-14"
+          viewBox="0 0 1440 72"
+          preserveAspectRatio="none"
+        >
+          <path
+            d="M0 36 C 126 58, 238 16, 360 36 C 488 57, 590 28, 710 40 C 842 54, 934 18, 1068 34 C 1210 52, 1320 30, 1440 42 L1440 72 L0 72 Z"
+            fill="currentColor"
+          />
+          <path
+            d="M0 35 C 126 57, 238 15, 360 35 C 488 56, 590 27, 710 39 C 842 53, 934 17, 1068 33 C 1210 51, 1320 29, 1440 41"
+            fill="none"
+            stroke="rgba(241,234,216,0.28)"
+            strokeWidth="1.05"
+          />
+        </svg>
+        <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[#3657b4]/0" />
+        <button
+          type="button"
+          aria-label="Change cover image"
+          onClick={onCoverEdit}
+          className="group absolute inset-0 z-10 flex items-center justify-center overflow-hidden outline-none"
+        >
           <span
-            aria-hidden
-            className="absolute -inset-1 rounded-full bg-[radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.35),transparent_60%)] blur-md"
+            aria-hidden="true"
+            className="absolute inset-0 bg-[#030712]/0 backdrop-blur-0 transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:bg-[#030712]/42 group-hover:backdrop-blur-[2px] group-focus-visible:bg-[#030712]/42 group-focus-visible:backdrop-blur-[2px]"
           />
-          <ProfileAvatar
-            name={name}
-            className="relative h-full w-full rounded-full shadow-[0_18px_40px_-12px_rgba(5,14,45,0.9),inset_0_0_0_1px_rgba(255,255,255,0.14)]"
-          />
-        </span>
+          <span className="relative grid h-14 w-14 scale-75 place-items-center text-cream opacity-0 transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-100 group-hover:opacity-100 group-focus-visible:scale-100 group-focus-visible:opacity-100">
+            <Pencil
+              size={34}
+              strokeWidth={1.65}
+              className="drop-shadow-[0_8px_16px_rgba(0,0,0,0.45)]"
+            />
+          </span>
+        </button>
+      </div>
 
-        <div className="min-w-0 pr-0 lg:pr-6">
-          <p className="blueprint-label text-cream/38">Profile</p>
-          <h1 className="mt-2.5 flex items-center gap-2.5 text-3xl font-semibold tracking-tight text-cream sm:text-[2.35rem]">
-            <span className="truncate">{name}</span>
-            {resume ? (
-              <BadgeCheck size={22} className="shrink-0 text-[#9be8c1]" aria-label="Verified" />
+      <div className="relative px-5 pb-4 sm:px-7 sm:pb-5 lg:px-8">
+        <ProfileHeroSidePatterns />
+        <div className="-mt-14 flex flex-col items-center text-center sm:-mt-16">
+          <button
+            type="button"
+            aria-label="Change profile image"
+            onClick={onAvatarEdit}
+            className="group relative z-20 grid h-28 w-28 shrink-0 place-items-center overflow-hidden rounded-full bg-cream p-0.5 outline-none transition focus-visible:ring-2 focus-visible:ring-cream/70 sm:h-32 sm:w-32"
+          >
+            <span aria-hidden className="absolute -inset-2 rounded-full bg-cream/10" />
+            <img
+              src={avatar.displaySrc}
+              alt=""
+              width={avatar.width}
+              height={avatar.height}
+              className="relative h-full w-full rounded-full object-cover object-center shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)]"
+            />
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 rounded-full bg-[#030712]/0 shadow-[inset_0_0_0_2px_rgba(3,7,18,0)] backdrop-blur-0 transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:bg-[#030712]/48 group-hover:shadow-[inset_0_0_0_2px_rgba(3,7,18,0.48)] group-hover:backdrop-blur-[1.5px] group-focus-visible:bg-[#030712]/48 group-focus-visible:shadow-[inset_0_0_0_2px_rgba(3,7,18,0.48)] group-focus-visible:backdrop-blur-[1.5px]"
+            />
+            <span className="absolute grid h-12 w-12 scale-75 place-items-center text-cream opacity-0 transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-100 group-hover:opacity-100 group-focus-visible:scale-100 group-focus-visible:opacity-100">
+              <Pencil
+                size={30}
+                strokeWidth={1.65}
+                className="drop-shadow-[0_8px_14px_rgba(0,0,0,0.5)]"
+              />
+            </span>
+          </button>
+
+          <div className="mt-3 flex w-full flex-col items-center">
+            <p className="border-b border-cream/31 pb-1 text-base font-medium text-cream/72">
+              Interview profile
+            </p>
+            <h1 className="mt-1.5 flex max-w-full items-center justify-center gap-2.5 text-center text-3xl font-semibold tracking-tight text-cream sm:text-[2.25rem]">
+              <span className="min-w-0 truncate">{name}</span>
+              {resume ? (
+                <BadgeCheck size={23} className="shrink-0 text-[#9be8c1]" aria-label="Verified" />
+              ) : null}
+            </h1>
+            <p className="mt-2 max-w-3xl text-center text-sm leading-6 text-cream/58 sm:text-[15px]">
+              {profile.headline || "Add a headline so Trailgrad can frame your rounds."}
+            </p>
+
+            <div className="mt-3.5 flex flex-wrap justify-center gap-2.5">
+              <HeroChip icon={Target} label={role?.label ?? "No role set"} muted={!role} />
+              <HeroChip icon={BarChart3} label={level?.label ?? "No level set"} muted={!level} />
+            </div>
+
+            <div className="mt-8 h-px w-full max-w-5xl bg-gradient-to-r from-transparent via-cream/22 to-transparent" />
+
+            <div className="mt-7 max-w-4xl">
+              <p className="text-base leading-8 text-cream/66 sm:text-lg">
+                {profile.context ||
+                  "Add a short profile summary so Maya can shape interviews around your real work."}
+              </p>
+            </div>
+
+            {profile.focusAreas.length ? (
+              <div className="mt-8 w-full max-w-[82rem]">
+                <div className="mx-auto mb-8 h-px w-[calc(100%-2rem)] max-w-6xl bg-gradient-to-r from-transparent via-cream/30 to-transparent" />
+                <p className="inline-flex border-b border-cream/42 pb-1 text-base font-medium text-cream/72">
+                  Core focus areas
+                </p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {profile.focusAreas.map((area, index) => (
+                    <article
+                      key={area}
+                      className={[
+                        "step-in relative min-h-28 overflow-hidden rounded-2xl border border-cream/20 bg-cream/[0.025] px-5 py-4 text-left backdrop-blur-sm",
+                        index % 2 === 0 ? "-rotate-1" : "rotate-1"
+                      ].join(" ")}
+                      style={{ "--step-delay": `${index * 65}ms` } as CSSProperties}
+                    >
+                      <SectionUiTexture variant={index % 3} />
+                      <h3 className="relative text-xl font-medium leading-none text-cream sm:text-2xl">
+                        {area}
+                      </h3>
+                      <p className="relative mt-3 max-w-[28rem] text-[15px] leading-6 text-cream/70 sm:text-base">
+                        {focusAreaDetails[area] ?? "Maya will press this signal during practice."}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </div>
             ) : null}
-          </h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-cream/55 sm:text-[15px]">
-            {profile.headline || "Add a headline so Trailgrad can frame your rounds."}
-          </p>
 
-          <div className="mt-5 flex flex-wrap items-center gap-2.5">
-            <HeroChip icon={Target} label={role?.label ?? "No role set"} muted={!role} />
-            <HeroChip icon={BarChart3} label={level?.label ?? "No level set"} muted={!level} />
+            <div className="step-in relative mt-7 max-w-4xl rotate-1 overflow-hidden rounded-2xl border border-cream/20 bg-cream/[0.025] px-6 py-5 text-center backdrop-blur-sm sm:px-8">
+              <SectionUiTexture variant={2} />
+              <p className="relative text-xl font-medium leading-tight text-cream sm:text-2xl">
+                You are preparing for {role?.label ?? "your target role"} and you have{" "}
+                {level?.label ?? "your"} experience.
+              </p>
+            </div>
+
+            <ProfileResumeAnchors resume={resume} />
           </div>
         </div>
-
-        {/* One illustration per experience level, so the header says something
-            about the candidate rather than being decoration. */}
-        <LevelArtwork level={profile.level} className="mx-auto hidden h-60 w-[19rem] lg:block" />
       </div>
     </header>
   );
 }
 
-function AboutCard({ profile }: { profile: CandidateProfileInput }) {
-  return (
-    <ViewCard icon={UserRound} tone="sky" title="About me" pattern="grid">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
-        <div>
-          <p className="max-w-[64ch] text-base leading-8 text-cream/72">
-            {profile.context ||
-              "Nothing here yet. Describe the systems you built and what you owned."}
-          </p>
+type ProfileResumeAnchor = {
+  id: string;
+  badge: string;
+  title: string;
+  meta?: string;
+  body?: string;
+  bullets?: string[];
+  tags?: string[];
+  icon: typeof BriefcaseBusiness;
+};
 
-          {profile.focusAreas.length ? (
-            <>
-              <p className="mt-6 text-sm font-semibold text-cream/82">Core focus areas</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {profile.focusAreas.map((area) => (
-                  <span key={area} className="pill px-3.5 py-1.5 text-xs text-cream/72">
-                    {area}
-                  </span>
-                ))}
-              </div>
-            </>
-          ) : null}
-        </div>
+function ProfileResumeAnchors({ resume }: { resume: CandidateProfile["resume"] }) {
+  if (!resume) return null;
+
+  const workCount = resume.experience.length;
+  const projectCount = resume.projects.length;
+  const educationCount = resume.education.length;
+
+  const workCards: ProfileResumeAnchor[] = resume.experience.map((entry, index) => ({
+    id: `work-${index}`,
+    badge: cleanText(entry.period) || "Experience",
+    icon: BriefcaseBusiness,
+    title: cleanText(entry.role) || cleanText(entry.organization) || "Work experience",
+    meta: joinResumeMeta([entry.organization, entry.period, entry.location]),
+    body: cleanText(entry.summary),
+    bullets: entry.achievements.map(cleanText).filter(Boolean).slice(0, 3),
+    tags: entry.skills.map(cleanText).filter(Boolean).slice(0, 5)
+  }));
+  const projectCards: ProfileResumeAnchor[] = resume.projects.map((entry, index) => ({
+    id: `project-${index}`,
+    badge: cleanText(entry.skills[0]) || "Project proof",
+    icon: Blocks,
+    title: cleanText(entry.name) || "Project",
+    meta: cleanText(entry.outcome),
+    body: cleanText(entry.summary),
+    tags: entry.skills.map(cleanText).filter(Boolean).slice(0, 5)
+  }));
+  const educationCards: ProfileResumeAnchor[] = resume.education.map((entry, index) => ({
+    id: `education-${index}`,
+    badge: getEducationBadge(entry.credential),
+    icon: GraduationCap,
+    title: cleanText(entry.credential) || cleanText(entry.field) || "Education",
+    meta: joinResumeMeta([entry.institution, entry.period]),
+    body: cleanText(entry.field)
+  }));
+  const proofCards: ProfileResumeAnchor[] = resume.achievements.length
+    ? [
+        {
+          id: "achievements",
+          badge: "Evidence",
+          icon: Sparkles,
+          title: "Resume highlights",
+          body: "Evidence Maya can turn into follow-up questions.",
+          bullets: resume.achievements.map(cleanText).filter(Boolean).slice(0, 5)
+        }
+      ]
+    : [];
+  const totalCards = [...workCards, ...projectCards, ...educationCards, ...proofCards];
+
+  if (!totalCards.length) return null;
+
+  const summaryCards = [
+    {
+      label: "Work",
+      count: `${workCount} ${workCount === 1 ? "role" : "roles"}`,
+      icon: BriefcaseBusiness
+    },
+    {
+      label: "Projects",
+      count: `${projectCount} ${projectCount === 1 ? "project" : "projects"}`,
+      icon: Blocks
+    },
+    {
+      label: "Education",
+      count: `${educationCount} ${educationCount === 1 ? "entry" : "entries"}`,
+      icon: GraduationCap
+    }
+  ];
+
+  return (
+    <section className="mt-10 w-full max-w-[82rem] text-left">
+      <div className="mx-auto h-px w-[calc(100%-2rem)] max-w-6xl bg-gradient-to-r from-transparent via-cream/30 to-transparent" />
+
+      <div className="mt-7 flex flex-col items-center text-center">
+        <p className="inline-flex border-b border-cream/42 pb-1 text-base font-medium text-cream/74">
+          Resume anchors
+        </p>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-cream/58 sm:text-[15px]">
+          Maya found the parts of your resume that can become interview questions.
+        </p>
       </div>
-    </ViewCard>
+
+      <div className="mx-auto mt-6 grid w-full max-w-[74rem] gap-4 md:grid-cols-3">
+        {summaryCards.map((card, index) => (
+          <ResumeSummaryTile
+            key={card.label}
+            label={card.label}
+            count={card.count}
+            icon={card.icon}
+            index={index}
+          />
+        ))}
+      </div>
+
+      <div className="mt-9 space-y-9">
+        <ResumeAnchorGroup title="Work" cards={workCards} />
+        <ResumeAnchorGroup title="Projects" cards={projectCards} />
+        <ResumeAnchorGroup title="Education" cards={educationCards} columns="three" />
+        <ResumeAnchorGroup title="Proof" cards={proofCards} />
+      </div>
+    </section>
   );
 }
 
-function ProfileSignalDeck({
-  profile,
-  saved
+function ResumeSummaryTile({
+  label,
+  count,
+  icon: Icon,
+  index
 }: {
-  profile: CandidateProfileInput;
-  saved: CandidateProfile;
+  label: string;
+  count: string;
+  icon: typeof BriefcaseBusiness;
+  index: number;
 }) {
-  // Only the resume has a genuine percentage — the parser's own confidence.
-  // Stories and focus areas are counts; the previous tiles divided them by an
-  // invented target (4 and 6) to manufacture a ring, which implied goals this
-  // product never sets.
-  const confidence = saved.resume ? Math.max(0, Math.min(100, saved.resume.confidence)) : null;
+  return (
+    <article
+      className={[
+        "step-in relative flex min-h-44 flex-col items-center justify-center overflow-hidden rounded-[1.45rem] border border-cream/20 bg-cream/[0.025] px-6 py-7 text-center backdrop-blur-sm",
+        index === 1 ? "sm:rotate-1" : index === 2 ? "sm:-rotate-1" : ""
+      ].join(" ")}
+      style={{ "--step-delay": `${index * 70}ms` } as CSSProperties}
+    >
+      <SectionUiTexture variant={index} />
+      <Icon size={42} strokeWidth={1.65} className="relative text-cream/82" />
+      <h3 className="relative mt-6 text-xl font-medium leading-none text-cream sm:text-2xl">
+        {label}
+      </h3>
+      <p className="relative mt-4 font-mono text-[13px] uppercase tracking-[0.2em] text-cream/76">
+        {count}
+      </p>
+    </article>
+  );
+}
+
+function ResumeAnchorGroup({
+  title,
+  cards,
+  columns = "two"
+}: {
+  title: string;
+  cards: ProfileResumeAnchor[];
+  columns?: "two" | "three";
+}) {
+  if (!cards.length) return null;
 
   return (
-    <section className="profile-motion mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      <article className="surface flex items-start justify-between gap-4 p-5">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[#a9f0cd]">
-            <ShieldCheck size={15} aria-hidden="true" />
-            <p className="blueprint-label">Resume</p>
-          </div>
-          <p className="mt-3 text-[2rem] font-semibold leading-none tracking-tight text-cream">
-            {saved.resume ? "Verified" : "Missing"}
-          </p>
-          <p className="mt-2 text-[13px] text-cream/45">
-            {confidence === null ? "Upload to ground your answers" : "Parser confidence"}
-          </p>
-        </div>
-        <PercentRing value={confidence} color="#9be8c1" />
-      </article>
+    <section className="relative overflow-hidden rounded-[1.35rem] p-2 sm:p-3">
+      <SectionUiTexture variant={title.length % 3} />
+      <div className="relative mb-4 flex items-center gap-4">
+        <h3 className="text-lg font-medium text-cream/82">{title}</h3>
+        <span className="h-px flex-1 bg-gradient-to-r from-cream/28 to-transparent" />
+      </div>
 
-      <CountTile
-        icon={BriefcaseBusiness}
-        tone="amber"
-        label="Stories"
-        value={profile.stories.length}
-        helper="banked examples"
-      />
-      <CountTile
-        icon={Sparkles}
-        tone="sky"
-        label="Focus areas"
-        value={profile.focusAreas.length}
-        helper="what Maya presses on"
-      />
+      <div
+        className={[
+          "relative grid gap-4",
+          columns === "three" ? "xl:grid-cols-3" : "xl:grid-cols-2"
+        ].join(" ")}
+      >
+        {cards.map((card, index) => (
+          <ProfileResumeAnchorCard key={card.id} card={card} index={index} />
+        ))}
+      </div>
     </section>
+  );
+}
+
+function ProfileResumeAnchorCard({ card, index }: { card: ProfileResumeAnchor; index: number }) {
+  const Icon = card.icon;
+
+  return (
+    <article
+      className={[
+        "step-in relative flex min-h-[18rem] flex-col overflow-hidden rounded-[1.35rem] border border-cream/20 bg-cream/[0.025] p-5 text-left backdrop-blur-sm sm:p-6",
+        index % 2 === 1 ? "sm:rotate-1" : ""
+      ].join(" ")}
+      style={{ "--step-delay": `${index * 70}ms` } as CSSProperties}
+    >
+      <SectionUiTexture variant={index % 3} />
+      <div className="relative flex items-start justify-between gap-4">
+        <Icon size={31} strokeWidth={1.8} className="shrink-0 text-cream/78" />
+        <span className="rounded-full border border-cream/22 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-cream/72">
+          {card.badge}
+        </span>
+      </div>
+
+      <div className="relative mt-8">
+        <h3 className="text-xl font-medium leading-tight text-cream sm:text-2xl">{card.title}</h3>
+        {card.meta ? (
+          <p className="mt-3 text-[15px] font-medium leading-6 text-cream/78">{card.meta}</p>
+        ) : null}
+      </div>
+
+      {card.body ? (
+        <p className="relative mt-5 text-[15px] leading-7 text-cream/70 sm:text-base">
+          {card.body}
+        </p>
+      ) : null}
+
+      {card.bullets?.length ? (
+        <ul className="relative mt-5 space-y-2.5 text-[15px] leading-6 text-cream/68">
+          {card.bullets.map((bullet) => (
+            <li key={bullet} className="flex gap-2.5">
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#9be8c1]/85" />
+              <span>{bullet}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {card.tags?.length ? (
+        <div className="relative mt-auto flex flex-wrap gap-2 pt-6">
+          {card.tags.map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full bg-cream/[0.075] px-3 py-1 text-[13px] font-medium text-cream/70"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function cleanText(value?: string | null) {
+  return value?.trim() ?? "";
+}
+
+function joinResumeMeta(parts: Array<string | null | undefined>) {
+  return parts.map(cleanText).filter(Boolean).join(" · ");
+}
+
+function getEducationBadge(credential?: string | null) {
+  const value = cleanText(credential);
+  if (!value) return "Credential";
+
+  const parenthesized = value.match(/\(([^)]+)\)/)?.[1]?.trim();
+  if (parenthesized && parenthesized.length <= 12) return parenthesized;
+
+  const classMatch = value.match(/class\s*\d+/i)?.[0];
+  if (classMatch) return classMatch;
+
+  const firstWord = value.split(/\s+/)[0];
+  return firstWord || "Credential";
+}
+
+function SectionUiTexture({ variant = 0 }: { variant?: number }) {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 overflow-hidden text-cream opacity-80"
+    >
+      <svg
+        className={[
+          "absolute h-24 w-44 opacity-[0.06]",
+          variant % 3 === 0
+            ? "-left-8 top-4"
+            : variant % 3 === 1
+              ? "right-5 top-4"
+              : "left-1/2 top-2 -translate-x-1/2"
+        ].join(" ")}
+        viewBox="0 0 180 120"
+        fill="none"
+      >
+        <rect x="18" y="18" width="132" height="52" rx="13" stroke="currentColor" />
+        <circle cx="40" cy="42" r="4" fill="currentColor" fillOpacity="0.38" />
+        <path d="M58 40h72M58 54h88" stroke="currentColor" strokeLinecap="round" />
+        <path d="M36 94h112" stroke="currentColor" strokeDasharray="6 10" />
+      </svg>
+
+      <svg
+        className={[
+          "absolute h-24 w-56 opacity-[0.055]",
+          variant % 3 === 0
+            ? "right-2 bottom-2"
+            : variant % 3 === 1
+              ? "-left-8 bottom-1"
+              : "right-8 bottom-3"
+        ].join(" ")}
+        viewBox="0 0 240 100"
+        fill="none"
+      >
+        <path d="M12 58h40m148 0h28" stroke="currentColor" strokeLinecap="round" />
+        {Array.from({ length: 12 }, (_, item) => (
+          <line
+            key={item}
+            x1={66 + item * 10}
+            x2={66 + item * 10}
+            y1={58 - ((item % 5) + 2) * 4}
+            y2={58 + ((item % 5) + 2) * 4}
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeWidth="2"
+          />
+        ))}
+      </svg>
+
+      <svg
+        className={[
+          "absolute h-24 w-40 opacity-[0.05]",
+          variant % 2 === 0 ? "right-8 top-1/2 -translate-y-1/2" : "left-8 top-1/2 -translate-y-1/2"
+        ].join(" ")}
+        viewBox="0 0 160 110"
+        fill="none"
+      >
+        <path d="M22 30h116M22 52h84M22 74h102" stroke="currentColor" />
+        <rect x="12" y="14" width="136" height="78" rx="14" stroke="currentColor" />
+      </svg>
+
+      <svg
+        className={[
+          "absolute h-20 w-32 opacity-[0.05]",
+          variant % 2 === 0 ? "left-6 bottom-5" : "right-10 bottom-7"
+        ].join(" ")}
+        viewBox="0 0 130 90"
+        fill="none"
+      >
+        <path d="M18 18h92v54H18z" stroke="currentColor" />
+        <path d="M48 18v54M80 18v54M18 45h92" stroke="currentColor" strokeOpacity="0.56" />
+        <circle cx="32" cy="32" r="4" fill="currentColor" fillOpacity="0.36" />
+        <circle cx="64" cy="60" r="4" fill="#9be8c1" fillOpacity="0.42" />
+        <circle cx="96" cy="32" r="4" fill="currentColor" fillOpacity="0.3" />
+      </svg>
+
+      <svg
+        className={[
+          "absolute h-20 w-52 opacity-[0.045]",
+          variant % 3 === 0
+            ? "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+            : variant % 3 === 1
+              ? "right-1/4 top-12"
+              : "left-1/4 bottom-10"
+        ].join(" ")}
+        viewBox="0 0 220 90"
+        fill="none"
+      >
+        <path
+          d="M14 56 C 46 22, 78 26, 108 50 S 168 84, 206 30"
+          stroke="#9be8c1"
+          strokeOpacity="0.48"
+          strokeDasharray="5 9"
+        />
+        <circle cx="108" cy="50" r="5" fill="currentColor" fillOpacity="0.28" />
+        <circle cx="168" cy="56" r="5" fill="currentColor" fillOpacity="0.22" />
+      </svg>
+
+      <svg
+        className={[
+          "absolute h-16 w-48 opacity-[0.04]",
+          variant % 2 === 0 ? "right-2 top-1/3" : "left-2 top-1/3"
+        ].join(" ")}
+        viewBox="0 0 190 70"
+        fill="none"
+      >
+        {Array.from({ length: 24 }, (_, item) => (
+          <circle
+            key={item}
+            cx={16 + (item % 8) * 20}
+            cy={14 + Math.floor(item / 8) * 18}
+            r="2.4"
+            fill="currentColor"
+            fillOpacity={item % 5 === 0 ? "0.42" : "0.2"}
+          />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function ProfileHeroSidePatterns() {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 hidden overflow-hidden text-cream sm:block"
+    >
+      <svg
+        className="absolute left-8 top-20 h-36 w-56 opacity-[0.085]"
+        viewBox="0 0 230 150"
+        fill="none"
+      >
+        <rect x="18" y="24" width="160" height="68" rx="14" stroke="currentColor" />
+        <circle cx="42" cy="48" r="5" fill="currentColor" fillOpacity="0.42" />
+        <path d="M61 45h78M61 64h104" stroke="currentColor" strokeLinecap="round" />
+        <path d="M28 116h178" stroke="currentColor" strokeLinecap="round" strokeDasharray="7 12" />
+      </svg>
+      <svg
+        className="absolute left-14 top-72 h-44 w-64 opacity-[0.07]"
+        viewBox="0 0 260 180"
+        fill="none"
+      >
+        <rect x="22" y="22" width="176" height="62" rx="15" stroke="currentColor" />
+        <rect x="58" y="106" width="172" height="52" rx="13" stroke="currentColor" />
+        <circle cx="48" cy="48" r="5" fill="currentColor" fillOpacity="0.42" />
+        <circle cx="84" cy="130" r="5" fill="#9be8c1" fillOpacity="0.46" />
+        <path d="M68 45h88M68 61h112M104 128h78M104 143h52" stroke="currentColor" />
+        <path d="M198 53h28v78H230" stroke="currentColor" strokeDasharray="5 9" />
+      </svg>
+      <svg
+        className="absolute left-[5%] top-[31rem] h-28 w-72 opacity-[0.055]"
+        viewBox="0 0 300 120"
+        fill="none"
+      >
+        <path d="M18 86h50m178 0h36" stroke="currentColor" strokeLinecap="round" />
+        {Array.from({ length: 14 }, (_, item) => (
+          <line
+            key={item}
+            x1={84 + item * 10}
+            x2={84 + item * 10}
+            y1={86 - ((item % 6) + 2) * 5}
+            y2={86 + ((item % 6) + 2) * 5}
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeWidth="2.2"
+          />
+        ))}
+        <path d="M72 24h150M72 42h96M72 60h122" stroke="currentColor" strokeOpacity="0.72" />
+        <rect x="50" y="8" width="190" height="64" rx="14" stroke="currentColor" />
+      </svg>
+      <svg
+        className="absolute right-8 top-[7.5rem] h-40 w-64 opacity-[0.09]"
+        viewBox="0 0 280 180"
+        fill="none"
+      >
+        <path d="M18 92h24m196 0h24" stroke="currentColor" />
+        {Array.from({ length: 12 }, (_, item) => (
+          <line
+            key={item}
+            x1={52 + item * 15}
+            x2={52 + item * 15}
+            y1={92 - ((item % 5) + 2) * 7}
+            y2={92 + ((item % 5) + 2) * 7}
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeWidth="2.4"
+          />
+        ))}
+        <circle cx="140" cy="92" r="74" stroke="currentColor" />
+      </svg>
+      <svg
+        className="absolute right-14 top-80 h-48 w-72 opacity-[0.07]"
+        viewBox="0 0 300 200"
+        fill="none"
+      >
+        <rect x="56" y="18" width="176" height="58" rx="14" stroke="currentColor" />
+        <rect x="32" y="112" width="142" height="54" rx="14" stroke="currentColor" />
+        <circle cx="82" cy="47" r="5" fill="#9be8c1" fillOpacity="0.5" />
+        <circle cx="58" cy="138" r="5" fill="currentColor" fillOpacity="0.4" />
+        <path d="M104 44h76M104 58h96M80 136h68M80 151h42" stroke="currentColor" />
+        <path d="M146 76v36M146 94h92" stroke="currentColor" strokeDasharray="5 9" />
+        <path d="M236 94l12-10M236 94l12 10" stroke="currentColor" strokeLinecap="round" />
+      </svg>
+      <svg
+        className="absolute right-[5%] top-[32rem] h-36 w-72 opacity-[0.055]"
+        viewBox="0 0 300 150"
+        fill="none"
+      >
+        <path d="M72 32h156M72 52h104M72 72h132" stroke="currentColor" />
+        <rect x="48" y="14" width="204" height="78" rx="16" stroke="currentColor" />
+        <path
+          d="M34 124 C 74 88, 108 88, 148 116 S 218 146, 266 92"
+          stroke="#9be8c1"
+          strokeOpacity="0.55"
+          strokeDasharray="5 9"
+        />
+        <circle cx="148" cy="116" r="6" fill="currentColor" fillOpacity="0.35" />
+        <circle cx="218" cy="122" r="6" fill="currentColor" fillOpacity="0.26" />
+      </svg>
+      <svg
+        className="absolute left-[13%] top-[41rem] h-24 w-44 opacity-[0.055]"
+        viewBox="0 0 180 120"
+        fill="none"
+      >
+        {Array.from({ length: 18 }, (_, item) => (
+          <circle
+            key={item}
+            cx={24 + (item % 6) * 24}
+            cy={26 + Math.floor(item / 6) * 28}
+            r="3"
+            fill="currentColor"
+            fillOpacity={item % 4 === 0 ? "0.48" : "0.24"}
+          />
+        ))}
+        <path d="M28 96h124" stroke="currentColor" strokeDasharray="6 10" />
+      </svg>
+      <svg
+        className="absolute right-[15%] top-[42rem] h-24 w-52 opacity-[0.055]"
+        viewBox="0 0 210 110"
+        fill="none"
+      >
+        <path d="M28 34h154M28 56h112M28 78h132" stroke="currentColor" />
+        <path d="M16 20h178v76H16z" stroke="currentColor" />
+        <path d="M54 20v76M118 20v76" stroke="currentColor" strokeOpacity="0.55" />
+      </svg>
+      <svg
+        className="absolute right-8 top-[52rem] h-36 w-64 opacity-[0.055]"
+        viewBox="0 0 270 150"
+        fill="none"
+      >
+        <rect x="42" y="18" width="176" height="58" rx="14" stroke="currentColor" />
+        <path d="M68 44h96M68 58h124" stroke="currentColor" />
+        <path
+          d="M30 120 C 70 82, 110 86, 146 110 S 214 144, 246 78"
+          stroke="#9be8c1"
+          strokeOpacity="0.48"
+          strokeDasharray="5 9"
+        />
+        <circle cx="146" cy="110" r="6" fill="currentColor" fillOpacity="0.32" />
+        <circle cx="214" cy="116" r="6" fill="currentColor" fillOpacity="0.24" />
+      </svg>
+      <svg
+        className="absolute right-[6%] top-[66rem] h-40 w-64 opacity-[0.052]"
+        viewBox="0 0 270 170"
+        fill="none"
+      >
+        <path d="M30 76h38m166 0h22" stroke="currentColor" />
+        <circle cx="136" cy="76" r="56" stroke="currentColor" />
+        <circle cx="136" cy="76" r="30" stroke="currentColor" strokeOpacity="0.58" />
+        <circle cx="136" cy="76" r="8" fill="currentColor" fillOpacity="0.38" />
+        <path d="M136 18v28M136 106v28M78 76h28M166 76h28" stroke="currentColor" />
+      </svg>
+      <svg
+        className="absolute right-[13%] top-[80rem] h-32 w-56 opacity-[0.05]"
+        viewBox="0 0 230 140"
+        fill="none"
+      >
+        <path d="M28 34h160M28 54h122M28 74h142" stroke="currentColor" />
+        <rect x="16" y="16" width="194" height="80" rx="15" stroke="currentColor" />
+        <path d="M60 116h98" stroke="currentColor" strokeDasharray="6 10" />
+        <circle cx="174" cy="116" r="6" fill="#9be8c1" fillOpacity="0.4" />
+      </svg>
+      <svg
+        className="absolute right-[4%] top-[96rem] h-36 w-80 opacity-[0.05]"
+        viewBox="0 0 330 150"
+        fill="none"
+      >
+        <path d="M24 76h52m178 0h54" stroke="currentColor" strokeLinecap="round" />
+        {Array.from({ length: 16 }, (_, item) => (
+          <line
+            key={item}
+            x1={92 + item * 10}
+            x2={92 + item * 10}
+            y1={76 - ((item % 6) + 2) * 5}
+            y2={76 + ((item % 6) + 2) * 5}
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeWidth="2"
+          />
+        ))}
+        <path d="M72 28h140M72 46h98" stroke="currentColor" strokeOpacity="0.62" />
+        <rect x="54" y="12" width="180" height="60" rx="14" stroke="currentColor" />
+      </svg>
+      <svg
+        className="absolute right-[16%] top-[114rem] h-40 w-64 opacity-[0.047]"
+        viewBox="0 0 270 170"
+        fill="none"
+      >
+        <path d="M32 84h34m162 0h24" stroke="currentColor" />
+        <circle cx="136" cy="84" r="58" stroke="currentColor" />
+        <circle cx="136" cy="84" r="34" stroke="currentColor" strokeOpacity="0.54" />
+        <circle cx="136" cy="84" r="10" fill="currentColor" fillOpacity="0.32" />
+        <path d="M136 20v30M136 118v30M72 84h30M170 84h30" stroke="currentColor" />
+      </svg>
+      <svg
+        className="absolute bottom-8 right-[10%] h-24 w-44 opacity-[0.075]"
+        viewBox="0 0 180 120"
+        fill="none"
+      >
+        <path d="M24 28h132v64H24z" stroke="currentColor" />
+        <path d="M56 28v64M100 28v64M24 58h132" stroke="currentColor" strokeOpacity="0.58" />
+        <circle cx="42" cy="44" r="5" fill="currentColor" fillOpacity="0.46" />
+        <circle cx="80" cy="76" r="5" fill="#9be8c1" fillOpacity="0.52" />
+        <circle cx="124" cy="44" r="5" fill="currentColor" fillOpacity="0.34" />
+      </svg>
+    </div>
   );
 }
 
@@ -974,290 +2012,23 @@ function EditMemoryPreview({
   );
 }
 
-/** A real ring: one track, one arc — no conic-gradient approximation. */
-function PercentRing({ value, color }: { value: number | null; color: string }) {
-  const radius = 26;
-  const circumference = 2 * Math.PI * radius;
-  const pct = value ?? 0;
-
-  return (
-    <span className="relative grid h-[4.5rem] w-[4.5rem] shrink-0 place-items-center">
-      <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90" aria-hidden="true">
-        <circle
-          cx="32"
-          cy="32"
-          r={radius}
-          fill="none"
-          stroke="rgba(239,232,214,0.12)"
-          strokeWidth="5"
-        />
-        {value === null ? null : (
-          <circle
-            cx="32"
-            cy="32"
-            r={radius}
-            fill="none"
-            stroke={color}
-            strokeWidth="5"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={circumference - (circumference * pct) / 100}
-          />
-        )}
-      </svg>
-      <span className="absolute text-[15px] font-semibold tabular-nums text-cream">
-        {value === null ? "\u2014" : `${value}%`}
-      </span>
-    </span>
-  );
-}
-
-/** Counts get their colour on the icon, not a slab around it. */
-function CountTile({
-  icon: Icon,
-  tone,
-  label,
-  value,
-  helper
-}: {
-  icon: typeof Target;
-  tone: "mint" | "amber" | "sky";
-  label: string;
-  value: number;
-  helper: string;
-}) {
-  const ink =
-    tone === "mint" ? "text-[#a9f0cd]" : tone === "amber" ? "text-[#f7e3ae]" : "text-[#cfdcff]";
-  return (
-    <article className="surface p-5">
-      <div className={`flex items-center gap-2 ${ink}`}>
-        <Icon size={15} aria-hidden="true" />
-        <p className="blueprint-label">{label}</p>
-      </div>
-      <p className="mt-3 text-[2rem] font-semibold leading-none tracking-tight text-cream">
-        {value}
-      </p>
-      <p className="mt-2 text-[13px] text-cream/45">{helper}</p>
-    </article>
-  );
-}
-
-function RoleEmblem({
-  role,
-  level
-}: {
-  role?: (typeof roleOptions)[number];
-  level?: (typeof levelOptions)[number];
-}) {
-  const Icon = role?.icon ?? Target;
-  const levelIndex = Math.max(
-    0,
-    levelOptions.findIndex((option) => option.value === level?.value)
-  );
-
-  return (
-    <div className="relative mb-6 overflow-hidden rounded-3xl bg-white/[0.045] p-5 shadow-soft-inset">
-      <CardPattern variant="dots" />
-      <div className="relative flex items-center gap-4">
-        <span className="grid h-20 w-20 shrink-0 place-items-center rounded-3xl bg-cream text-blueprint shadow-[0_20px_42px_-24px_rgba(239,232,214,0.7)]">
-          <Icon size={30} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cream/35">Target</p>
-          <p className="mt-2 truncate text-2xl font-semibold tracking-tight text-cream">
-            {role?.label ?? "Choose role"}
-          </p>
-          <div className="mt-4 grid grid-cols-4 gap-1.5">
-            {levelOptions.map((option, index) => (
-              <span
-                key={option.value}
-                className={[
-                  "h-2 rounded-full transition",
-                  index <= levelIndex && level ? "bg-[#9be8c1]" : "bg-white/[0.09]"
-                ].join(" ")}
-              />
-            ))}
-          </div>
-          <p className="mt-2 text-xs text-cream/42">
-            {level?.detail ?? "Set your experience level"}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function VerifiedResumeCard({
-  resume,
-  onOpen
-}: {
-  resume: CandidateProfile["resume"];
-  onOpen: () => void;
-}) {
-  return (
-    <ViewCard
-      icon={ShieldCheck}
-      tone="mint"
-      pattern="rings"
-      title={resume ? "Verified resume" : "No resume yet"}
-      action={
-        resume ? (
-          <button
-            type="button"
-            onClick={onOpen}
-            className="pill inline-flex h-10 shrink-0 items-center gap-2 !rounded-xl px-4 text-xs font-semibold text-cream/80 transition hover:bg-white/[0.13] hover:text-cream"
-          >
-            <Eye size={14} /> View resume
-          </button>
-        ) : undefined
-      }
-    >
-      {resume ? (
-        <>
-          <div className="flex items-center gap-3">
-            <span className="pill grid h-10 w-10 shrink-0 place-items-center !rounded-xl text-cream/70">
-              <FileText size={17} />
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-cream">{resume.fileName}</p>
-              <p className="mt-0.5 text-xs text-cream/40">
-                {resume.confidence}% confidence · {formatTimestamp(resume.uploadedAt)}
-              </p>
-            </div>
-          </div>
-          <p className="mt-5 flex items-center gap-2.5 rounded-xl bg-[#71d6a5]/[0.13] px-4 py-3 text-xs text-[#b5efd2] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-            <CircleCheck size={15} className="shrink-0" />
-            Your resume is verified and up to date.
-          </p>
-        </>
-      ) : (
-        <>
-          <p className="text-sm leading-6 text-cream/50">
-            Trailgrad asks sharper questions when it can quote your resume.
-          </p>
-          <Link
-            href="/onboarding?replace=resume"
-            className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl bg-cream px-4 text-xs font-semibold text-blueprint transition hover:bg-white"
-          >
-            <Upload size={14} /> Upload resume
-          </Link>
-        </>
-      )}
-    </ViewCard>
-  );
-}
-
-function TargetRoleCard({ profile }: { profile: CandidateProfileInput }) {
-  const role = roleOptions.find((option) => option.value === profile.targetRole);
-  const level = levelOptions.find((option) => option.value === profile.level);
-  const days = daysUntil(profile.targetDate);
-
-  return (
-    <ViewCard
-      icon={Target}
-      tone="sky"
-      title="Target role"
-      pattern="waves"
-      className="relative flex h-full flex-col overflow-hidden"
-    >
-      <RoleEmblem role={role} level={level} />
-
-      <dl>
-        <ViewRow label="Role" value={role ? `${role.label} Developer` : undefined} />
-        <ViewRow label="Experience level" value={level?.label} />
-        <ViewRow label="Company" value={profile.targetCompany || undefined} />
-        <ViewRow
-          label="Interview date"
-          value={profile.targetDate ? formatDate(profile.targetDate) : undefined}
-        />
-        <ViewRow
-          label="Interview timeline"
-          value={days === null ? undefined : days <= 0 ? "This week" : `In ${days} days`}
-        />
-      </dl>
-
-      <div className="mt-auto pt-6">
-        <Link
-          href="/interview"
-          className="pill relative z-10 inline-flex h-11 w-full items-center justify-center gap-2 !rounded-xl text-xs font-semibold text-cream/80 transition hover:bg-white/[0.13] hover:text-cream"
-        >
-          <Mic size={14} /> Practice for this role
-        </Link>
-      </div>
-
-      {/* Signal-wave flourish, matching the audio motif used across the app. */}
-      <svg
-        aria-hidden
-        viewBox="0 0 220 60"
-        className="pointer-events-none absolute -bottom-1 right-6 h-16 w-52 opacity-40"
-      >
-        <path
-          d="M0 40 C 40 5, 70 5, 110 34 S 180 60, 220 18"
-          fill="none"
-          stroke="#7ea0ff"
-          strokeOpacity="0.6"
-          strokeDasharray="4 6"
-        />
-      </svg>
-      <span className="pointer-events-none absolute bottom-5 right-8 grid h-9 w-9 place-items-center rounded-full bg-[#7ea0ff]/15 shadow-soft-inset">
-        <span className="h-2 w-2 rounded-full bg-[#cfdcff]" />
-      </span>
-    </ViewCard>
-  );
-}
-
 function SignatureStoryCard({ story }: { story?: CandidateStory }) {
   if (!story?.title) return null;
 
   return (
-    <section className="surface relative mt-5 overflow-hidden p-6 sm:p-7">
+    <section className="relative mt-5 overflow-hidden rounded-[1.35rem] bg-cream/[0.025] p-6 backdrop-blur-sm sm:p-7">
       <CardPattern variant="quote" />
-      <Quote size={20} className="absolute left-6 top-6 text-cream/25" aria-hidden />
-      <div className="px-9">
-        <p className="max-w-3xl text-[15px] leading-7 text-cream/78">
+      <SectionUiTexture variant={1} />
+      <Quote size={20} className="absolute left-6 top-6 text-cream/42" aria-hidden />
+      <div className="relative px-9">
+        <p className="max-w-5xl text-[15px] leading-7 text-cream/72">
           {story.outcome || story.situation}
         </p>
-        <p className="mt-2.5 text-xs font-medium text-cream/40">{story.title}</p>
+        <p className="mt-2.5 text-xs font-medium text-cream/56">{story.title}</p>
       </div>
-      <span className="pill absolute bottom-6 right-6 grid h-10 w-10 place-items-center text-cream/45">
+      <span className="absolute bottom-6 right-6 grid h-10 w-10 place-items-center rounded-full border border-cream/18 bg-cream/[0.035] text-cream/48">
         <Quote size={16} />
       </span>
-    </section>
-  );
-}
-
-function ViewCard({
-  icon: Icon,
-  tone,
-  title,
-  action,
-  className,
-  pattern = "dots",
-  children
-}: {
-  icon: typeof Target;
-  tone: keyof typeof statTones;
-  title: string;
-  action?: React.ReactNode;
-  className?: string;
-  pattern?: PatternVariant;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className={["surface relative overflow-hidden p-6 sm:p-7", className ?? ""].join(" ")}>
-      <CardPattern variant={pattern} />
-      <div className="relative flex items-center gap-3.5">
-        <span
-          className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${statTones[tone]}`}
-        >
-          <Icon size={17} />
-        </span>
-        <h2 className="min-w-0 flex-1 truncate text-base font-semibold tracking-tight text-cream">
-          {title}
-        </h2>
-        {action}
-      </div>
-      <div className="relative mt-6 flex-1">{children}</div>
     </section>
   );
 }
@@ -1332,22 +2103,6 @@ function CardPattern({ variant }: { variant: PatternVariant }) {
         WebkitMaskImage: "radial-gradient(120% 100% at 100% 0%, #000 30%, transparent 72%)"
       }}
     />
-  );
-}
-
-function ViewRow({ label, value }: { label: string; value?: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4 py-[1.1rem] shadow-[0_1px_0_rgba(255,255,255,0.055)] last:shadow-none">
-      <dt className="text-sm text-cream/45">{label}</dt>
-      <dd
-        className={[
-          "min-w-0 truncate text-right text-sm",
-          value ? "font-medium text-cream" : "text-cream/30"
-        ].join(" ")}
-      >
-        {value ?? "Not set"}
-      </dd>
-    </div>
   );
 }
 
@@ -1903,23 +2658,30 @@ function SavedFooter() {
 /* ----------------------------------------------------------------- helpers */
 
 function toInput(profile: CandidateProfile): CandidateProfileInput {
-  const { targetRole, level, targetCompany, targetDate, headline, context, focusAreas, stories } =
-    profile;
-  return { targetRole, level, targetCompany, targetDate, headline, context, focusAreas, stories };
-}
-
-function daysUntil(date: string | null): number | null {
-  if (!date) return null;
-  const target = new Date(`${date}T12:00:00.000Z`).getTime();
-  if (Number.isNaN(target)) return null;
-  return Math.ceil((target - Date.now()) / (24 * 60 * 60 * 1000));
-}
-
-function formatDate(date: string | null): string {
-  if (!date) return "Not set";
-  const parsed = new Date(`${date}T12:00:00.000Z`);
-  if (Number.isNaN(parsed.getTime())) return "Not set";
-  return parsed.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const {
+    targetRole,
+    level,
+    targetCompany,
+    targetDate,
+    headline,
+    context,
+    focusAreas,
+    stories,
+    coverImage,
+    profileImage
+  } = profile;
+  return {
+    targetRole,
+    level,
+    targetCompany,
+    targetDate,
+    headline,
+    context,
+    focusAreas,
+    stories,
+    coverImage,
+    profileImage
+  };
 }
 
 function formatTimestamp(value: number): string {

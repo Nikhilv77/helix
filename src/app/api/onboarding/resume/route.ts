@@ -297,6 +297,8 @@ export async function POST(request: NextRequest) {
       targetDate: null,
       headline: extraction.headline,
       context: extraction.context,
+      coverImage: null,
+      profileImage: null,
       focusAreas: extraction.focusAreas,
       stories,
       updatedAt: null,

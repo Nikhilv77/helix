@@ -13,7 +13,6 @@ import { PracticeIntro } from "@/components/workspace/practice-intro";
 import type { DsaChapter, FrontendDsaPlan, PlanQuestion } from "@/lib/frontend-plan";
 import { FRONTEND_SESSIONS } from "@/lib/frontend-plan";
 import type { FrontendRoadmapChapter, FrontendRoadmapHome } from "@/lib/roadmap";
-import type { Role } from "@/lib/types";
 
 /**
  * The DSA session's actual content, shown on Practice.
@@ -28,16 +27,13 @@ import type { Role } from "@/lib/types";
 export function DsaTopics({
   plan,
   roadmap = null,
-  questionStatuses,
-  targetRole = null
+  questionStatuses
 }: {
   plan: FrontendDsaPlan;
   roadmap?: FrontendRoadmapHome | null;
   questionStatuses?: Record<string, string>;
-  targetRole?: Role | null;
 }) {
   const statusBySlug = questionStatuses ? new Map(Object.entries(questionStatuses)) : null;
-  const isFrontendTrack = targetRole === "frontend";
   // Prefer the persisted session title; fall back to the template only when
   // there is no roadmap to read.
   const activeSession =
@@ -45,7 +41,7 @@ export function DsaTopics({
     roadmap?.sessions[0] ??
     null;
   const fallback = FRONTEND_SESSIONS.find((session) => session.status === "active");
-  const title = activeSession?.title ?? fallback?.title ?? "Frontend DSA";
+  const title = activeSession?.title ?? fallback?.title ?? "Full-stack DSA";
   const purpose = activeSession?.purpose ?? fallback?.purpose ?? "";
 
   const hours = roadmap ? Math.round(roadmap.totalMinutes / 60) : Math.round(plan.totalMinutes / 60);
@@ -63,7 +59,7 @@ export function DsaTopics({
         className="mt-8 inline-flex items-center gap-2 text-xs font-medium text-cream/45 transition hover:text-cream"
       >
         <ArrowLeft size={13} />
-        {isFrontendTrack ? "Frontend preparation path" : "Preparation path"}
+        Full-stack preparation path
       </Link>
 
       <PracticeIntro

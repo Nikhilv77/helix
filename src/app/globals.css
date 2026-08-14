@@ -92,8 +92,18 @@ select {
   background:
     linear-gradient(90deg, rgba(241, 234, 216, 0.045) 1px, transparent 1px),
     linear-gradient(180deg, rgba(241, 234, 216, 0.045) 1px, transparent 1px),
-    radial-gradient(circle at 13% 36%, transparent 0 10rem, rgba(241, 234, 216, 0.12) 10.08rem, transparent 10.18rem),
-    radial-gradient(circle at 88% 68%, transparent 0 13rem, rgba(241, 234, 216, 0.11) 13.08rem, transparent 13.18rem);
+    radial-gradient(
+      circle at 13% 36%,
+      transparent 0 10rem,
+      rgba(241, 234, 216, 0.12) 10.08rem,
+      transparent 10.18rem
+    ),
+    radial-gradient(
+      circle at 88% 68%,
+      transparent 0 13rem,
+      rgba(241, 234, 216, 0.11) 13.08rem,
+      transparent 13.18rem
+    );
   background-size:
     10rem 10rem,
     10rem 10rem,
@@ -401,6 +411,51 @@ select {
   transform-origin: left;
 }
 
+@keyframes account-menu-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) rotate(1deg) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(1deg) scale(1);
+  }
+}
+
+.account-menu-pop {
+  animation: account-menu-pop 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: left bottom;
+}
+
+@keyframes image-picker-backdrop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes image-picker-panel {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.image-picker-backdrop {
+  animation: image-picker-backdrop 180ms ease-out both;
+}
+
+.image-picker-panel {
+  animation: image-picker-panel 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: center;
+}
+
 /* ---------------------------------------------------------------------------
    Scrollbars. The OS default reads as a grey gash against the blueprint blue,
    so every scrollable surface — page, panels, textareas — gets the same slim
@@ -623,6 +678,21 @@ html {
   opacity: 1;
   transform: translateY(0);
   filter: blur(0);
+}
+
+.maya-welcome-copy-word.trail-word-visible {
+  color: transparent;
+  background-image: linear-gradient(
+    100deg,
+    rgba(241, 234, 216, 0.68) 0%,
+    rgba(241, 234, 216, 0.78) 38%,
+    #ffffff 50%,
+    rgba(241, 234, 216, 0.86) 62%,
+    rgba(241, 234, 216, 0.68) 100%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  animation: thinking-shimmer 2.25s ease-in-out infinite;
 }
 
 .onboarding-card-reveal {
@@ -1161,12 +1231,12 @@ html {
   .onboarding-type-visible,
   .upload-float,
   .upload-scan-line,
-    .browse-nudge,
-    .identity-stage-in,
-    .identity-text-shine,
-    .thinking-shimmer,
-    .identity-progress-line,
-    .marketing-text-reveal {
+  .browse-nudge,
+  .identity-stage-in,
+  .identity-text-shine,
+  .thinking-shimmer,
+  .identity-progress-line,
+  .marketing-text-reveal {
     opacity: 1 !important;
     animation: none !important;
     transform: none !important;

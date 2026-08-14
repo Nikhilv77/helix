@@ -2,7 +2,11 @@ node_modules
 dist
 coverage
 .next
+.next.stale*
 frontend/.next
+frontend/.next.stale*
+.tmp
+tmp
 .env
 .env.*
 !.env.example

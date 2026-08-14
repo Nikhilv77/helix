@@ -31,26 +31,33 @@ export const clerkAppearance = {
   elements: {
     rootBox: "w-full",
     cardBox:
-      "!w-[min(28rem,calc(100vw-2rem))] !overflow-hidden !rounded-2xl !border !border-cream/10 !bg-[#3f5fba] !shadow-[0_24px_74px_-52px_rgba(3,10,31,0.64)] !backdrop-blur-none",
-    card:
-      "!border-none !bg-[radial-gradient(circle_at_50%_0%,rgba(241,234,216,0.045),transparent_38%)] !shadow-none",
+      "!w-[min(28rem,calc(100vw-2rem))] !max-h-[calc(100svh-1rem)] !overflow-y-auto !overflow-x-hidden !rounded-2xl !border !border-cream/10 !bg-[#3f5fba] !shadow-[0_24px_74px_-52px_rgba(3,10,31,0.64)] !backdrop-blur-none max-sm:!w-[min(28rem,calc(100vw-1.25rem))]",
+    card: "!border-none !bg-[radial-gradient(circle_at_50%_0%,rgba(241,234,216,0.045),transparent_38%)] !shadow-none max-sm:!p-5",
     modalBackdrop: "trailgrad-auth-backdrop !bg-[#3657b4] !backdrop-blur-none",
-    modalContent: "!px-4",
+    modalContent: "!max-h-[100svh] !overflow-y-auto !px-4 !py-4 max-sm:!px-2 max-sm:!py-2",
     modalCloseButton:
       "!text-cream/55 transition hover:!bg-cream/10 hover:!text-cream focus-visible:!ring-2 focus-visible:!ring-cream/40",
-    logoBox: "!mb-4 !bg-transparent",
-    logoImage: "!h-10 !w-10 !rounded-none !bg-transparent !shadow-none",
-    header: "!gap-2",
-    headerTitle: "!font-display !text-2xl !font-semibold !tracking-tight !text-cream",
-    headerSubtitle: "!text-sm !leading-6 !text-cream/55",
+    logoBox: "!mb-4 !bg-transparent max-sm:!mb-2",
+    logoImage: "!h-10 !w-10 !rounded-none !bg-transparent !shadow-none max-sm:!h-8 max-sm:!w-8",
+    header: "!gap-2 max-sm:!gap-1",
+    headerTitle:
+      "!font-display !text-2xl !font-semibold !tracking-tight !text-cream max-sm:!text-[1.65rem]",
+    headerSubtitle: "!text-sm !leading-6 !text-cream/55 max-sm:!text-[0.95rem] max-sm:!leading-5",
     socialButtonsBlockButton:
-      "!min-h-12 !border !border-cream/20 !bg-cream/[0.06] !font-semibold !text-cream transition hover:!border-cream/35 hover:!bg-cream/10",
+      "!min-h-12 !border !border-cream/20 !bg-cream/[0.06] !font-semibold !text-cream transition hover:!border-cream/35 hover:!bg-cream/10 max-sm:!min-h-11",
     socialButtonsBlockButtonText: "!font-semibold !text-cream",
     dividerLine: "!bg-cream/15",
     dividerText: "!font-mono !text-[10px] !uppercase !tracking-[0.16em] !text-cream/35",
     formFieldLabel: "!mb-2 !font-medium !text-cream/80",
     formFieldInput:
-      "!min-h-12 !rounded-xl !border !border-cream/18 !bg-cream/[0.08] !px-4 !text-cream !shadow-none placeholder:!text-cream/38 focus:!border-cream/45 focus:!bg-cream/[0.11] focus:!ring-2 focus:!ring-cream/10",
+      "!min-h-12 !rounded-xl !border !border-cream/18 !bg-cream/[0.08] !px-4 !text-cream !shadow-none placeholder:!text-cream/38 focus:!border-cream/45 focus:!bg-cream/[0.11] focus:!ring-2 focus:!ring-cream/10 max-sm:!min-h-11",
+    otpCodeField: "!mt-7 !w-full",
+    otpCodeFieldInputs: "!justify-center !gap-2.5 max-sm:!gap-1.5",
+    otpCodeFieldInputContainer:
+      "!h-14 !w-14 !rounded-2xl !border !border-cream/42 !bg-cream/[0.055] !shadow-none transition focus-within:!border-cream/80 focus-within:!bg-cream/[0.085] focus-within:!ring-1 focus-within:!ring-cream/18 max-sm:!h-11 max-sm:!w-11",
+    otpCodeFieldInput:
+      "!h-full !w-full !rounded-2xl !border-0 !bg-transparent !text-center !text-2xl !font-medium !text-cream !shadow-none !outline-none focus:!ring-0 max-sm:!text-lg",
+    formButtonPrimary: "!min-h-12 !rounded-xl !font-semibold max-sm:!min-h-11",
     footer: "!border-none !bg-transparent !shadow-none",
     footerActionText: "!text-cream/45",
     footerActionLink: "!font-semibold !text-cream hover:!text-white",
@@ -69,8 +76,7 @@ export const userProfileAppearance = {
     rootBox: "!w-full",
     cardBox:
       "!w-[min(62rem,calc(100vw-2rem))] !max-w-none !overflow-hidden !rounded-2xl !border !border-cream/10 !bg-[#3f5fba] !shadow-[0_28px_86px_-52px_rgba(3,10,31,0.68)] !backdrop-blur-none",
-    card:
-      "!min-h-[min(42rem,calc(100vh-3rem))] !w-full !border-none !bg-[radial-gradient(circle_at_50%_0%,rgba(241,234,216,0.045),transparent_38%)] !shadow-none",
+    card: "!min-h-[min(42rem,calc(100vh-3rem))] !w-full !border-none !bg-[radial-gradient(circle_at_50%_0%,rgba(241,234,216,0.045),transparent_38%)] !shadow-none",
     modalBackdrop: "trailgrad-auth-backdrop !bg-[#3657b4] !backdrop-blur-none",
     modalContent: "!p-4",
     modalCloseButton:

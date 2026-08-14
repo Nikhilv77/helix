@@ -433,10 +433,10 @@ async function seedFrontendRoadmapTemplates(): Promise<void> {
   const frontendTemplate = await prisma.roadmapTemplate.upsert({
     where: { slug: "frontend-roadmap" },
     update: {
-      role: "frontend",
-      title: "Frontend Interview Roadmap",
+      role: "fullstack",
+      title: "Full-stack Interview Roadmap",
       description:
-        "A six-session frontend interview preparation path personalized per user after onboarding.",
+        "A six-session full-stack interview preparation path personalized per user after onboarding.",
       version: 1,
       status: RoadmapTemplateStatus.ACTIVE,
       metadata: {
@@ -445,11 +445,11 @@ async function seedFrontendRoadmapTemplates(): Promise<void> {
       }
     },
     create: {
-      role: "frontend",
+      role: "fullstack",
       slug: "frontend-roadmap",
-      title: "Frontend Interview Roadmap",
+      title: "Full-stack Interview Roadmap",
       description:
-        "A six-session frontend interview preparation path personalized per user after onboarding.",
+        "A six-session full-stack interview preparation path personalized per user after onboarding.",
       version: 1,
       status: RoadmapTemplateStatus.ACTIVE,
       metadata: {
@@ -650,7 +650,7 @@ async function seedFrontendRoadmapTemplates(): Promise<void> {
   });
 
   console.log(
-    `Seeded frontend roadmap template with ${FRONTEND_SESSIONS.length} sessions, ${plan.chapters.length} DSA chapters, and ${plan.totalQuestions} DSA question mappings.`
+    `Seeded full-stack roadmap template with ${FRONTEND_SESSIONS.length} sessions, ${plan.chapters.length} DSA chapters, and ${plan.totalQuestions} DSA question mappings.`
   );
 }
 

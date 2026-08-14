@@ -1,19 +1,67 @@
-import { RouteProgress, Waveform } from "@/components/workspace/skeletons";
+import { auth } from "@clerk/nextjs/server";
+import { headers } from "next/headers";
+import {
+  DashboardSkeleton,
+  MayaWelcomeLoading,
+  ManageSkeleton,
+  ProfileSkeleton,
+  RouteProgress,
+  Waveform
+} from "@/components/workspace/skeletons";
+import { getAppContainer } from "@/server/app-container";
+import { authenticatedOwnerId } from "@/server/interview/owner";
+
+const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 /**
- * The fallback for `/` and every route below it without its own.
- *
- * Deliberately neutral. This renders before `auth()` resolves, so it cannot
- * know whether the marketing page, the workspace, the onboarding flow or the
- * bare interview room is on the way — it used to render the workspace
- * dashboard skeleton, which meant a signed-out visitor refreshing the landing
- * page got a flash of cards from a product they had not signed into.
- *
- * It paints its own blueprint surface rather than inheriting from <body>:
- * `body` is the near-black default until the layout resolves auth and adds
- * `.workspace`, so anything transparent here flashes black first.
+ * Root fallback. `/` is both marketing and dashboard, so route alone is not
+ * enough: signed-out users should never see dashboard cards while the marketing
+ * home resolves.
  */
-export default function RootLoading() {
+export default async function RootLoading() {
+  const requestHeaders = await headers();
+  const pathname = requestHeaders.get("x-trailgrad-pathname") ?? "";
+  const search = requestHeaders.get("x-trailgrad-search") ?? "";
+  const manageRoute = pathname === "/manage";
+  const profileRoute = pathname === "/profile";
+  const workspaceRoute = isWorkspaceLoadingRoute(pathname);
+  const welcomeHome = pathname === "/" && new URLSearchParams(search).get("welcome") === "maya";
+  const dashboardHome = pathname === "/" && (await shouldShowDashboardSkeleton());
+
+  if (manageRoute) {
+    return (
+      <div className="blueprint relative min-h-[100svh]" aria-busy="true" aria-label="Loading">
+        <div className="relative z-10">
+          <ManageSkeleton />
+        </div>
+      </div>
+    );
+  }
+
+  if (profileRoute) {
+    return (
+      <div className="blueprint relative min-h-[100svh]" aria-busy="true" aria-label="Loading">
+        <div className="blueprint-glow" />
+        <div className="relative z-10">
+          <ProfileSkeleton />
+        </div>
+      </div>
+    );
+  }
+
+  if (workspaceRoute || dashboardHome) {
+    if (welcomeHome) return <MayaWelcomeLoading />;
+
+    return (
+      <div className="blueprint relative min-h-[100svh]" aria-busy="true" aria-label="Loading">
+        <div className="blueprint-glow" />
+        <div className="relative z-10">
+          <DashboardSkeleton />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="blueprint relative grid min-h-[100svh] place-items-center"
@@ -25,4 +73,30 @@ export default function RootLoading() {
       <Waveform className="relative z-10" />
     </div>
   );
+}
+
+function isWorkspaceLoadingRoute(pathname: string): boolean {
+  return (
+    pathname === "/practice" ||
+    pathname.startsWith("/practice/") ||
+    pathname === "/interviews" ||
+    pathname === "/progress" ||
+    pathname === "/reports" ||
+    pathname === "/profile" ||
+    pathname.startsWith("/sessions/") ||
+    pathname.startsWith("/session/")
+  );
+}
+
+async function shouldShowDashboardSkeleton() {
+  if (!clerkPublishableKey) return false;
+
+  const { userId } = await auth();
+  if (!userId) return false;
+
+  const profile = await getAppContainer()
+    .profileService.get(authenticatedOwnerId(userId))
+    .catch(() => null);
+
+  return Boolean(profile?.onboardingCompletedAt);
 }

@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
       }
     });
     const frontendRoadmap =
-      targetRole === "frontend"
+      targetRole === "fullstack"
         ? await app.frontendRoadmapService.ensureFrontendRoadmap(ownerId)
         : null;
 

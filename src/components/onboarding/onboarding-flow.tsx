@@ -1,6 +1,5 @@
 "use client";
 
-import { SignOutButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -25,8 +24,6 @@ import { ApiClientError, completeOnboarding, uploadResume } from "@/lib/api-clie
 import { pageTitle } from "@/lib/seo";
 import type { Level, ResumeExtractionResponse, Role } from "@/lib/types";
 
-const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
-
 export function OnboardingFlow({
   replacingResume = false,
   // Let the dev preview harness open a step directly, with a stand-in
@@ -42,6 +39,8 @@ export function OnboardingFlow({
 }) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
+  const uploadAbortRef = useRef<AbortController | null>(null);
+  const uploadRunRef = useRef(0);
   const [step, setStep] = useState<Step>(initialStep);
   const [role] = useState<Role>("fullstack");
   const [level, setLevel] = useState<Level | null>(null);
@@ -52,6 +51,19 @@ export function OnboardingFlow({
   const [analysisStage, setAnalysisStage] = useState(0);
   const [result, setResult] = useState<ResumeExtractionResponse | null>(initialResult);
   const [error, setError] = useState<string | null>(null);
+
+  const chooseAnotherResume = useCallback(() => {
+    uploadRunRef.current += 1;
+    uploadAbortRef.current?.abort("replace");
+    uploadAbortRef.current = null;
+    setUploading(false);
+    setAnalysisStage(0);
+    setFile(null);
+    setResult(null);
+    setError(null);
+    if (fileInput.current) fileInput.current.value = "";
+    window.setTimeout(() => fileInput.current?.click(), 0);
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -100,7 +112,10 @@ export function OnboardingFlow({
 
   const analyze = useCallback(async () => {
     if (!file || !role || !level || uploading) return;
+    const runId = uploadRunRef.current + 1;
+    uploadRunRef.current = runId;
     const controller = new AbortController();
+    uploadAbortRef.current = controller;
     // Without this a stalled request leaves the progress screen spinning forever.
     const timeout = window.setTimeout(() => controller.abort("timeout"), UPLOAD_TIMEOUT_MS);
     setUploading(true);
@@ -114,9 +129,11 @@ export function OnboardingFlow({
         level,
         signal: controller.signal
       });
+      if (uploadRunRef.current !== runId) return;
       setResult(extracted);
       setStep("identity");
     } catch (caught) {
+      if (uploadRunRef.current !== runId) return;
       if (controller.signal.aborted) {
         // A manual cancel already wrote its own message.
         if (controller.signal.reason === "timeout") {
@@ -133,7 +150,8 @@ export function OnboardingFlow({
       }
     } finally {
       window.clearTimeout(timeout);
-      setUploading(false);
+      if (uploadAbortRef.current === controller) uploadAbortRef.current = null;
+      if (uploadRunRef.current === runId) setUploading(false);
     }
   }, [file, level, role, uploading]);
 
@@ -181,16 +199,6 @@ export function OnboardingFlow({
               Keep my current resume
             </a>
           ) : null}
-          {clerkEnabled ? (
-            <SignOutButton redirectUrl="/">
-              <button
-                type="button"
-                className="absolute right-0 inline-flex min-h-10 rotate-1 items-center justify-center rounded-lg border border-cream/55 bg-cream/[0.035] px-4 text-md font-bold text-cream/72 outline-none backdrop-blur-sm transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:rotate-0 hover:border-cream/75 hover:bg-cream/[0.075] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#3657b4] sm:px-5"
-              >
-                Exit
-              </button>
-            </SignOutButton>
-          ) : null}
           <div
             className="grid w-32 grid-cols-5 gap-1.5 sm:w-52 sm:gap-2"
             aria-label={`Onboarding step ${stepIndex(step) + 1} of ${onboardingSteps.length}: ${onboardingSteps[stepIndex(step)]?.label}`}
@@ -227,11 +235,17 @@ export function OnboardingFlow({
                 uploading={uploading}
                 activeStage={analysisStage}
                 onFile={acceptFile}
+                onChooseAnother={chooseAnotherResume}
                 onDragging={setDragging}
                 onBack={() => {
+                  uploadRunRef.current += 1;
+                  uploadAbortRef.current?.abort("back");
+                  uploadAbortRef.current = null;
                   setFile(null);
                   setResult(null);
                   setError(null);
+                  setUploading(false);
+                  setAnalysisStage(0);
                   if (fileInput.current) fileInput.current.value = "";
                   setStep("level");
                 }}
@@ -241,8 +255,7 @@ export function OnboardingFlow({
               <ResumeIdentityStep
                 result={result}
                 onReplace={() => {
-                  setResult(null);
-                  setFile(null);
+                  chooseAnotherResume();
                   setStep("resume");
                 }}
                 onContinue={() => setStep("evidence")}
@@ -255,12 +268,13 @@ export function OnboardingFlow({
                   setResult(null);
                   setFile(null);
                   setError(null);
+                  setUploading(false);
+                  setAnalysisStage(0);
                   if (fileInput.current) fileInput.current.value = "";
                   setStep("resume");
                 }}
                 onReplace={() => {
-                  setResult(null);
-                  setFile(null);
+                  chooseAnotherResume();
                   setStep("resume");
                 }}
                 onContinue={() => setStep("readiness")}

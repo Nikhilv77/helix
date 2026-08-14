@@ -23,9 +23,7 @@ const waveHeights = Array.from(
 export function Waveform({ className }: { className?: string }) {
   return (
     <div
-      className={["flex h-9 items-center justify-center gap-1", className ?? ""]
-        .join(" ")
-        .trim()}
+      className={["flex h-9 items-center justify-center gap-1", className ?? ""].join(" ").trim()}
       aria-hidden="true"
     >
       {waveHeights.map((height, index) => (
@@ -45,12 +43,7 @@ export function Waveform({ className }: { className?: string }) {
  * sidebar — no page-level background of its own.
  */
 export function WorkspaceLoading() {
-  return (
-    <div className="grid min-h-[70svh] place-items-center" aria-busy="true" aria-label="Loading">
-      <RouteProgress />
-      <Waveform />
-    </div>
-  );
+  return <DashboardSkeleton />;
 }
 
 /** A hairline bar across the top of the page while a route resolves. */
@@ -61,6 +54,79 @@ export function RouteProgress() {
       className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-0.5 overflow-hidden"
     >
       <div className="route-progress h-full w-full bg-gradient-to-r from-transparent via-cream to-transparent" />
+    </div>
+  );
+}
+
+export function MayaWelcomeLoading() {
+  return (
+    <div
+      className="blueprint relative grid min-h-[100svh] place-items-center overflow-hidden"
+      aria-busy="true"
+      aria-label="Loading Maya introduction"
+    >
+      <div className="blueprint-glow" />
+      <RouteProgress />
+      <Waveform className="relative z-10" />
+    </div>
+  );
+}
+
+export function MayaWelcomeSkeleton() {
+  return (
+    <div
+      className="grid min-h-[100svh] w-full place-items-center p-3 sm:p-6"
+      aria-busy="true"
+      aria-label="Loading Maya introduction"
+    >
+      <RouteProgress />
+
+      <section className="route-enter relative grid h-[min(46rem,calc(100svh-1.5rem))] w-full max-w-6xl grid-rows-[minmax(12rem,30svh)_minmax(0,1fr)] overflow-hidden rounded-[1.35rem] bg-[#3657b4] sm:grid-rows-[minmax(16rem,34svh)_minmax(0,1fr)] md:h-[min(43rem,calc(100svh-2rem))] md:grid-cols-[minmax(17rem,0.72fr)_minmax(0,1.28fr)] md:grid-rows-1">
+        <div className="relative min-h-0 overflow-hidden bg-[#4565bd]">
+          <div className="absolute left-[8%] top-[8%] h-2 w-2 rounded-full bg-[#9be8c1]/80" />
+          <div className="absolute left-[14%] top-[16%] h-14 w-36 rounded-xl border border-cream/[0.1]" />
+          <div className="absolute right-[10%] top-[18%] h-14 w-36 rounded-xl border border-cream/[0.1]" />
+          <div className="absolute left-[16%] top-[48%] h-16 w-48 rounded-xl border border-cream/[0.1]" />
+          <div className="absolute right-[8%] top-[58%] h-16 w-48 rounded-xl border border-cream/[0.1]" />
+          <div className="absolute inset-x-[12%] top-[42%] flex h-20 items-center justify-center gap-2 opacity-35">
+            {Array.from({ length: 21 }, (_, index) => (
+              <span
+                key={index}
+                className="w-px rounded-full bg-cream"
+                style={{ height: `${18 + Math.abs(Math.sin(index * 0.7)) * 46}px` }}
+              />
+            ))}
+          </div>
+          <div className="absolute inset-x-[16%] bottom-0 h-[78%] rounded-t-full bg-[#2a4aa0]/35" />
+          <div className="absolute bottom-0 left-1/2 h-[68%] w-[48%] -translate-x-1/2 rounded-t-full bg-cream/[0.08]" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#4565bd] to-transparent" />
+        </div>
+
+        <div className="relative flex min-h-0 flex-col overflow-hidden bg-[#3657b4] px-5 pb-5 pt-5 sm:px-10 sm:pb-8 sm:pt-8 lg:px-14 lg:pb-9 lg:pt-10">
+          <div className="flex shrink-0 items-center gap-2.5 pr-12">
+            <div className="skeleton h-1.5 w-12 !rounded-full" />
+            <div className="skeleton h-1.5 w-6 !rounded-full" />
+            <div className="skeleton h-1.5 w-6 !rounded-full" />
+          </div>
+
+          <div className="flex min-h-0 flex-1 flex-col justify-center py-4 sm:py-8 lg:py-12">
+            <div className="skeleton h-12 w-12 !rounded-lg sm:h-14 sm:w-14" />
+            <div className="skeleton mt-6 h-4 w-32 !rounded-md" />
+            <div className="skeleton mt-4 h-10 w-full max-w-xl sm:h-12" />
+            <div className="skeleton mt-3 h-10 w-3/4 max-w-lg sm:h-12" />
+            <div className="mt-6 space-y-3">
+              <Line className="w-full max-w-2xl" />
+              <Line className="w-5/6 max-w-xl" />
+              <Line className="w-2/3 max-w-lg" />
+            </div>
+          </div>
+
+          <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-cream/[0.1] pt-4 sm:flex-row sm:items-center sm:justify-between sm:pt-5">
+            <div className="skeleton h-11 w-32 !rounded-xl" />
+            <div className="skeleton h-12 w-36 !rounded-xl" />
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
@@ -90,8 +156,8 @@ export function DashboardSkeleton() {
     >
       <RouteProgress />
 
-      {/* Hero: three equal-height cards on the blue slab. */}
-      <section className="max-w-full overflow-hidden rounded-[1.5rem] bg-[#3557b4] p-4 shadow-[inset_0_0_0_1px_rgba(239,232,214,0.07)] sm:p-5">
+      {/* Hero: three equal-height cards. */}
+      <section className="max-w-full">
         <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,0.78fr)_minmax(17rem,0.92fr)_minmax(0,1.1fr)] lg:items-stretch lg:gap-5 xl:grid-cols-[minmax(0,0.8fr)_minmax(19rem,0.9fr)_minmax(0,1.15fr)] xl:gap-6">
           {/* Maya */}
           <div className="min-h-[17rem] rounded-2xl bg-[#2a4aa0] sm:min-h-[20rem] lg:min-h-[23rem]" />
@@ -150,48 +216,63 @@ export function DashboardSkeleton() {
 
       {/* Session cards beside Maya's insights. */}
       <section className="mt-4">
-        <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,64rem)_minmax(18rem,1fr)]">
+        <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(17rem,25rem)]">
           <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 6 }, (_, index) => (
-              <div key={index} className="min-h-[17rem] rounded-2xl bg-[#2a4aa0] p-5">
-                <div className="flex items-start justify-between">
-                  <div className="skeleton h-11 w-11 !rounded-xl" />
-                  <div className="skeleton h-6 w-20 !rounded-full" />
+              <div
+                key={index}
+                className="min-h-[8.75rem] rounded-2xl border border-cream/[0.075] bg-cream/[0.055] p-3.5 sm:min-h-[9.25rem] sm:p-4"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="skeleton h-10 w-10 !rounded-xl" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="skeleton h-4 w-28" />
+                      <div className="skeleton h-5 w-10 !rounded-full" />
+                    </div>
+                    <Line className="mt-2 w-full" />
+                    <Line className="mt-1.5 w-2/3" />
+                  </div>
                 </div>
-                <div className="skeleton mt-5 h-5 w-3/4" />
-                <Line className="mt-3 w-full" />
-                <Line className="mt-2 w-5/6" />
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <div className="skeleton h-7 w-20 !rounded-full" />
-                  <div className="skeleton h-7 w-24 !rounded-full" />
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  <div className="skeleton h-6 w-20 !rounded-md" />
+                  <div className="skeleton h-6 w-24 !rounded-md" />
                 </div>
-                <div className="skeleton mt-5 h-10 w-full !rounded-xl" />
+                <div className="skeleton mt-2 h-8 w-full !rounded-lg" />
               </div>
             ))}
           </div>
 
-          <div className="rounded-2xl bg-[#2a4aa0] p-5">
-            <div className="flex items-center gap-3 border-b border-cream/[0.09] pb-4">
-              <div className="skeleton h-9 w-9 !rounded-lg" />
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#fff8e8] to-[#e5dcc3] p-4 sm:p-5">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="skeleton h-8 w-8 !rounded-full" />
               <div className="min-w-0 flex-1">
                 <Line className="w-28" />
-                <Line className="mt-2 w-20" />
+                <Line className="mt-2 w-40" />
               </div>
               <div className="skeleton h-6 w-14 !rounded-full" />
             </div>
-            <div className="mt-4 grid gap-2.5">
+            <div className="grid min-w-0 gap-3">
               {Array.from({ length: 4 }, (_, index) => (
-                <div key={index} className="flex gap-3 rounded-xl bg-[#24439b] p-3.5">
-                  <div className="skeleton h-7 w-7 !rounded-md" />
-                  <div className="min-w-0 flex-1">
-                    <Line className="w-24" />
-                    <Line className="mt-2 w-full" />
-                    <Line className="mt-2 w-2/3" />
+                <div
+                  key={index}
+                  className="min-h-[6.75rem] rounded-[1rem] border border-[#171a16]/[0.07] bg-[#dcefd7]/72 p-3.5"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="skeleton h-6 w-6 !rounded-full" />
+                    <div className="min-w-0 flex-1">
+                      <Line className="w-20" />
+                      <div className="skeleton mt-2 h-4 w-full" />
+                      <div className="skeleton mt-1.5 h-4 w-3/5" />
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <div className="skeleton h-5 w-24 !rounded-md" />
+                        <div className="skeleton h-5 w-20 !rounded-md" />
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="skeleton mt-5 h-11 w-full !rounded-xl" />
           </div>
         </div>
       </section>
@@ -199,39 +280,215 @@ export function DashboardSkeleton() {
   );
 }
 
+export function ManageSkeleton() {
+  return (
+    <div
+      className="relative mx-auto flex min-h-screen w-full max-w-[92rem] flex-col overflow-hidden px-5 py-8 text-cream sm:px-8 lg:px-10"
+      aria-busy="true"
+      aria-label="Loading manage account"
+    >
+      <RouteProgress />
+
+      <div className="relative z-10 mx-auto w-full max-w-5xl pt-8 sm:pt-12">
+        <div className="skeleton mx-auto h-7 w-40 !rounded-md" />
+        <div className="skeleton mx-auto mt-7 h-14 w-full max-w-3xl" />
+        <Line className="mx-auto mt-6 w-full max-w-xl" />
+      </div>
+
+      <div className="relative z-10 mx-auto mt-10 w-full max-w-4xl text-center">
+        <Line className="mx-auto w-full max-w-3xl" />
+        <Line className="mx-auto mt-2 w-5/6 max-w-2xl" />
+        <Line className="mx-auto mt-2 w-2/3 max-w-xl" />
+        <div className="skeleton mx-auto mt-8 h-12 w-32 rotate-1 !rounded-lg" />
+      </div>
+
+      <div className="relative z-10 mx-auto mt-12 w-full max-w-4xl rounded-2xl border border-[#ffd7b8]/20 bg-[#ffebe0]/[0.038] p-5 sm:p-7">
+        <div className="skeleton h-7 w-7 !rounded-lg" />
+        <div className="skeleton mt-5 h-6 w-44" />
+        <Line className="mt-3 w-full max-w-2xl" />
+        <Line className="mt-2 w-5/6 max-w-xl" />
+        <Line className="mt-2 w-2/3 max-w-lg" />
+        <div className="mt-6 w-full max-w-md">
+          <Line className="w-40" />
+          <div className="skeleton mt-2 h-11 w-full !rounded-lg" />
+          <div className="skeleton mt-4 h-11 w-full !rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ProfileSkeleton() {
   return (
     <div
-      className="mx-auto w-full max-w-[110rem] px-5 py-6 sm:px-8 lg:px-10 lg:py-8"
+      className="mx-auto w-full max-w-[110rem] px-5 py-6 pb-16 sm:px-8 lg:px-10 lg:py-8"
       aria-busy="true"
       aria-label="Loading profile"
     >
       <RouteProgress />
 
-      <header className="surface-raised relative overflow-hidden p-6 sm:p-8">
-        <div className="flex flex-wrap items-center gap-6">
-          <div className="skeleton h-32 w-32 !rounded-full sm:h-[10.5rem] sm:w-[10.5rem]" />
-          <div className="min-w-0 flex-1">
-            <Line className="w-24" />
-            <div className="skeleton mt-3 h-9 w-64" />
-            <Line className="mt-4 w-full max-w-md" />
-            <div className="mt-5 flex gap-2.5">
-              <div className="skeleton h-8 w-28 !rounded-full" />
-              <div className="skeleton h-8 w-24 !rounded-full" />
+      <header className="profile-motion relative overflow-hidden rounded-[1.75rem] bg-[#3557b4]">
+        <div className="relative h-44 overflow-hidden bg-[#24439b] sm:h-56 lg:h-auto lg:aspect-[1600/420]">
+          <div className="absolute inset-0 bg-gradient-to-r from-cream/[0.08] via-cream/[0.18] to-cream/[0.08]" />
+          <div className="absolute left-10 top-10 hidden h-20 w-64 rounded-2xl border border-cream/10 sm:block" />
+          <div className="absolute right-16 top-12 hidden h-24 w-80 rounded-2xl border border-cream/10 lg:block" />
+          <div className="skeleton absolute right-4 top-4 h-10 w-32 !rounded-xl sm:right-6 sm:top-6" />
+          <svg
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-[-1px] h-12 w-full text-[#3657b4] sm:h-16"
+            viewBox="0 0 1440 92"
+            preserveAspectRatio="none"
+          >
+            <path
+              d="M0 36 C 168 76, 314 18, 486 42 C 642 64, 806 78, 976 38 C 1158 -5, 1294 40, 1440 24 L1440 92 L0 92 Z"
+              fill="currentColor"
+            />
+            <path
+              d="M0 34 C 168 74, 314 16, 486 40 C 642 62, 806 76, 976 36 C 1158 -7, 1294 38, 1440 22"
+              fill="none"
+              stroke="rgba(241,234,216,0.35)"
+              strokeWidth="1.4"
+            />
+          </svg>
+        </div>
+
+        <div className="relative px-5 pb-4 sm:px-7 sm:pb-5 lg:px-8">
+          <div className="-mt-14 flex flex-col items-center text-center sm:-mt-16">
+            <span className="relative grid h-28 w-28 shrink-0 place-items-center overflow-hidden rounded-full bg-cream p-0.5 sm:h-32 sm:w-32">
+              <div className="skeleton h-full w-full !rounded-full" />
+            </span>
+
+            <div className="mt-3 flex w-full flex-col items-center">
+              <div className="skeleton h-7 w-44 !rounded-md" />
+              <div className="skeleton mt-3 h-10 w-80 max-w-full" />
+              <Line className="mt-4 w-full max-w-3xl" />
+              <Line className="mt-2 w-2/3 max-w-xl" />
+
+              <div className="mt-4 flex flex-wrap justify-center gap-2.5">
+                <div className="skeleton h-9 w-28 !rounded-full" />
+                <div className="skeleton h-9 w-28 !rounded-full" />
+              </div>
+
+              <div className="mt-8 h-px w-full max-w-5xl bg-gradient-to-r from-transparent via-cream/18 to-transparent" />
+
+              <div className="mt-7 w-full max-w-4xl space-y-3">
+                <Line className="mx-auto w-full" />
+                <Line className="mx-auto w-11/12" />
+                <Line className="mx-auto w-4/5" />
+              </div>
+
+              <section className="mt-8 w-full max-w-[82rem]">
+                <div className="mx-auto mb-8 h-px w-[calc(100%-2rem)] max-w-6xl bg-gradient-to-r from-transparent via-cream/24 to-transparent" />
+                <div className="skeleton mx-auto h-7 w-40 !rounded-md" />
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {Array.from({ length: 5 }, (_, index) => (
+                    <div
+                      key={index}
+                      className={[
+                        "step-in min-h-28 rounded-2xl border border-cream/14 bg-cream/[0.025] px-5 py-4 text-left",
+                        index % 2 === 0 ? "-rotate-1" : "rotate-1"
+                      ].join(" ")}
+                    >
+                      <div className="skeleton h-7 w-40" />
+                      <Line className="mt-4 w-full" />
+                      <Line className="mt-2 w-2/3" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <div className="mt-7 w-full max-w-4xl rotate-1 rounded-2xl border border-cream/14 bg-cream/[0.025] px-6 py-5 sm:px-8">
+                <div className="skeleton mx-auto h-8 w-full max-w-2xl" />
+                <div className="skeleton mx-auto mt-2 h-8 w-2/3 max-w-lg" />
+              </div>
+
+              <section className="mt-10 w-full max-w-[82rem] text-left">
+                <div className="mx-auto h-px w-[calc(100%-2rem)] max-w-6xl bg-gradient-to-r from-transparent via-cream/24 to-transparent" />
+
+                <div className="mt-7 flex flex-col items-center text-center">
+                  <div className="skeleton h-7 w-36 !rounded-md" />
+                  <Line className="mt-4 w-full max-w-xl" />
+                </div>
+
+                <div className="mx-auto mt-6 grid w-full max-w-[74rem] gap-4 md:grid-cols-3">
+                  {Array.from({ length: 3 }, (_, index) => (
+                    <div
+                      key={index}
+                      className={[
+                        "step-in flex min-h-44 flex-col items-center justify-center rounded-[1.45rem] border border-cream/14 bg-cream/[0.025] px-6 py-7 text-center",
+                        index === 1 ? "sm:rotate-1" : index === 2 ? "sm:-rotate-1" : ""
+                      ].join(" ")}
+                    >
+                      <div className="skeleton h-11 w-11 !rounded-xl" />
+                      <div className="skeleton mt-6 h-7 w-32" />
+                      <div className="skeleton mt-4 h-4 w-24" />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-9 space-y-9">
+                  <ProfileSkeletonGroup titleWidth="w-16" count={1} />
+                  <ProfileSkeletonGroup titleWidth="w-24" count={1} />
+                  <ProfileSkeletonGroup titleWidth="w-24" count={3} columns="three" />
+                </div>
+              </section>
             </div>
           </div>
-          <div className="skeleton hidden h-52 w-64 !rounded-2xl lg:block" />
         </div>
       </header>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.42fr)_minmax(0,1fr)] lg:items-stretch">
-        <div className="grid gap-5">
-          <CardSkeleton lines={4} />
-          <CardSkeleton lines={2} />
-        </div>
-        <CardSkeleton lines={5} />
-      </div>
+      <section className="relative mt-5 overflow-hidden rounded-[1.35rem] bg-cream/[0.025] p-6 sm:p-7">
+        <div className="skeleton h-5 w-full max-w-4xl" />
+        <div className="skeleton mt-3 h-4 w-48" />
+      </section>
     </div>
+  );
+}
+
+function ProfileSkeletonGroup({
+  titleWidth,
+  count,
+  columns = "two"
+}: {
+  titleWidth: string;
+  count: number;
+  columns?: "two" | "three";
+}) {
+  return (
+    <section className="relative overflow-hidden rounded-[1.35rem] p-2 sm:p-3">
+      <div className="mb-4 flex items-center gap-4">
+        <div className={`skeleton h-6 ${titleWidth}`} />
+        <span className="h-px flex-1 bg-gradient-to-r from-cream/18 to-transparent" />
+      </div>
+
+      <div
+        className={["grid gap-4", columns === "three" ? "xl:grid-cols-3" : "xl:grid-cols-2"].join(
+          " "
+        )}
+      >
+        {Array.from({ length: count }, (_, index) => (
+          <div
+            key={index}
+            className="min-h-[18rem] rounded-[1.35rem] border border-cream/14 bg-cream/[0.025] p-5 sm:p-6"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="skeleton h-8 w-8 !rounded-lg" />
+              <div className="skeleton h-7 w-28 !rounded-full" />
+            </div>
+            <div className="skeleton mt-8 h-8 w-3/4" />
+            <Line className="mt-4 w-full" />
+            <Line className="mt-2 w-4/5" />
+            <Line className="mt-6 w-full" />
+            <Line className="mt-2 w-2/3" />
+            <div className="mt-6 flex flex-wrap gap-2">
+              <div className="skeleton h-7 w-24 !rounded-full" />
+              <div className="skeleton h-7 w-20 !rounded-full" />
+              <div className="skeleton h-7 w-24 !rounded-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

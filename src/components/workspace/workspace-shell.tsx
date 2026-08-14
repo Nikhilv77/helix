@@ -2,29 +2,29 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { useLinkStatus } from "next/link";
-import { SignOutButton, UserButton, useUser } from "@clerk/nextjs";
+import { SignOutButton, useUser } from "@clerk/nextjs";
 import {
   Braces,
   ChartNoAxesCombined,
-  ChevronRight,
   ClipboardList,
-  CircleUser,
+  ChevronsRightLeft,
   House,
   LogOut,
+  MessageCircle,
   Menu,
   Mic,
-  PanelLeft,
   Search,
+  Settings,
+  UserRound,
   X
 } from "lucide-react";
 import { TrailgradMark } from "@/components/trailgrad-mark";
-import { userProfileAppearance } from "@/lib/clerk-theme";
 
 const navGroups = [
   {
-    label: "Workspace",
+    label: "Practice",
     items: [
       { label: "Home", href: "/", icon: House },
       { label: "Practice", href: "/practice", icon: Braces },
@@ -35,7 +35,7 @@ const navGroups = [
   },
   {
     label: "Account",
-    items: [{ label: "My profile", href: "/profile", icon: CircleUser }]
+    items: [{ label: "My profile", href: "/profile", icon: UserRound }]
   }
 ];
 
@@ -68,6 +68,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const userName =
     user?.fullName ?? user?.firstName ?? user?.primaryEmailAddress?.emailAddress ?? "";
+  const userImage = user?.imageUrl;
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState("");
@@ -129,16 +130,13 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         // overflow-x-clip, not overflow-hidden: `hidden` makes this a scroll
         // container, which silently kills the sticky mobile header inside it.
         //
-        // No bg override: `.blueprint` already defines the workspace blue
-        // (#22409b). Painting #0b1740 over it left a near-black base that only
-        // looked blue where the glow gradient happened to be strong, so the
-        // edges of every page read as black.
+        // No bg override: `.blueprint` defines the same #3657b4 base used by
+        // the marketing home page. The grid/rails below make the signed-in
+        // shell read as the same product surface.
         "blueprint relative min-h-screen overflow-x-clip transition-[padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
-        collapsed ? "md:pl-[5.5rem]" : "md:pl-[17rem]"
+        collapsed ? "md:pl-[6rem]" : "md:pl-[17rem]"
       ].join(" ")}
     >
-      <div className="blueprint-glow" />
-
       {menuOpen ? (
         <button
           type="button"
@@ -153,9 +151,9 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           // Rail + panel, the way dense product consoles are built: a narrow
           // always-visible icon column, and a wider labelled panel that is what
           // actually collapses.
-          "fixed inset-y-0 left-0 z-50 flex w-[min(16rem,calc(100vw-1rem))] overflow-hidden bg-[#2a4aa0] shadow-[0_24px_70px_-40px_rgba(4,12,45,0.9)] transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:inset-y-2 md:left-2 md:rounded-2xl",
+          "fixed inset-y-0 left-0 z-50 flex w-[min(16rem,calc(100vw-1rem))] bg-[#3657b4] transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:inset-y-2 md:left-2 md:rounded-2xl",
           menuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-          collapsed ? "md:w-[4.5rem]" : "md:w-[16rem]"
+          collapsed ? "md:w-[5rem]" : "md:w-[16rem]"
         ].join(" ")}
       >
         {/* Icon rail */}
@@ -164,22 +162,20 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
             // Expanded, the rail is the darker of two columns. Collapsed, it is
             // the whole sidebar, so it takes the lighter panel blue instead of
             // leaving a dark sliver against the page.
-            "flex w-[3.5rem] shrink-0 flex-col items-center gap-1 py-3 transition-colors duration-300",
-            collapsed ? "md:w-[4.5rem] md:gap-1.5 md:py-4" : "",
-            collapsed ? "md:bg-[#3557b4]" : "",
-            "bg-[#254294]"
+            "flex w-16 shrink-0 flex-col items-center gap-1.5 rounded-l-2xl bg-cream/[0.055] py-3 text-cream shadow-[inset_-1px_0_0_rgba(241,234,216,0.08)] backdrop-blur-xl transition-colors duration-300",
+            collapsed ? "md:w-20 md:gap-2 md:py-4" : ""
           ].join(" ")}
         >
           <Link
             href="/"
             aria-label="Trailgrad home"
             className={[
-              "mb-2 grid h-9 w-9 shrink-0 place-items-center rounded-[0.5rem] bg-[#1E3A8F] transition hover:bg-[#254294]",
-              collapsed ? "md:h-11 md:w-11" : ""
+              "mb-2 grid h-10 w-10 shrink-0 place-items-center rounded-[0.5rem] text-cream transition-colors duration-300 ease-out hover:bg-cream/[0.08]",
+              collapsed ? "md:h-12 md:w-12" : ""
             ].join(" ")}
           >
             <TrailgradMark
-              className={collapsed ? "h-[1.4rem] w-[1.4rem]" : "h-[1.15rem] w-[1.15rem]"}
+              className={collapsed ? "h-[1.75rem] w-[1.75rem]" : "h-[1.45rem] w-[1.45rem]"}
             />
           </Link>
 
@@ -197,15 +193,19 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
                   aria-current={active ? "page" : undefined}
                   onClick={() => setMenuOpen(false)}
                   className={[
-                    "grid h-9 w-9 shrink-0 place-items-center rounded-lg outline-none transition focus-visible:ring-2 focus-visible:ring-cream/50",
-                    collapsed ? "md:h-11 md:w-11" : "",
-                    active
-                      ? "bg-cream/[0.18] text-cream"
-                      : "text-cream/50 hover:bg-cream/[0.09] hover:text-cream"
+                    "group relative grid h-10 w-10 shrink-0 place-items-center rounded-lg outline-none transition-[background,color,transform] duration-200 ease-out hover:translate-x-0.5 hover:bg-cream/[0.09] focus-visible:ring-2 focus-visible:ring-cream/50",
+                    collapsed ? "md:h-12 md:w-12" : "",
+                    active ? "text-cream" : "text-cream/58 hover:text-cream"
                   ].join(" ")}
                 >
+                  {active ? (
+                    <span
+                      aria-hidden="true"
+                      className="absolute right-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-cream/78"
+                    />
+                  ) : null}
                   <Icon
-                    size={collapsed ? 20 : 17}
+                    size={collapsed ? 23 : 20}
                     strokeWidth={active ? 2.1 : 1.7}
                     aria-hidden="true"
                   />
@@ -221,51 +221,24 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className={[
-              "hidden h-9 w-9 shrink-0 place-items-center rounded-lg text-cream/45 outline-none transition hover:bg-cream/[0.09] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/40 md:grid",
-              collapsed ? "md:h-11 md:w-11" : ""
+              "hidden h-10 w-10 shrink-0 place-items-center rounded-lg text-cream/62 outline-none transition-colors duration-300 ease-out hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/40 md:grid",
+              collapsed ? "md:h-12 md:w-12" : ""
             ].join(" ")}
           >
-            <PanelLeft size={collapsed ? 18 : 16} aria-hidden="true" />
+            <ChevronsRightLeft size={collapsed ? 24 : 21} aria-hidden="true" />
           </button>
-
-          <SignOutButton redirectUrl="/">
-            <button
-              type="button"
-              title="Log out"
-              aria-label="Log out"
-              className={[
-                "grid h-9 w-9 shrink-0 place-items-center rounded-lg text-cream/45 outline-none transition hover:bg-cream/[0.09] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/40",
-                collapsed ? "md:h-11 md:w-11" : ""
-              ].join(" ")}
-            >
-              <LogOut size={collapsed ? 18 : 16} aria-hidden="true" />
-            </button>
-          </SignOutButton>
 
           <div
             className={[
-              "mt-1 grid h-9 w-9 shrink-0 place-items-center",
-              collapsed ? "md:h-11 md:w-11" : ""
+              "relative mt-1 grid h-10 w-10 shrink-0 place-items-center",
+              collapsed ? "md:h-12 md:w-12" : ""
             ].join(" ")}
           >
-            <UserButton
-              userProfileProps={{ appearance: userProfileAppearance }}
-              appearance={{
-                elements: {
-                  // Clerk sizes its avatar in fixed classes, so it has to be
-                  // told about the collapsed rail too or it stays small beside
-                  // the larger icons.
-                  rootBox: collapsed
-                    ? "!h-9 !w-9 !shrink-0 !grow-0"
-                    : "!h-8 !w-8 !shrink-0 !grow-0",
-                  userButtonBox: collapsed ? "!h-9 !w-9" : "!h-8 !w-8",
-                  userButtonTrigger:
-                    "!rounded-full focus:!shadow-none focus-visible:!ring-2 focus-visible:!ring-cream/40",
-                  avatarBox: collapsed
-                    ? "!h-9 !w-9 !shadow-[inset_0_0_0_1px_rgba(239,232,214,0.2)]"
-                    : "!h-8 !w-8 !shadow-[inset_0_0_0_1px_rgba(239,232,214,0.2)]"
-                }
-              }}
+            <AvatarMenu
+              imageUrl={userImage}
+              name={userName}
+              size={collapsed ? "large" : "small"}
+              placement="rail"
             />
           </div>
         </div>
@@ -273,28 +246,25 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         {/* Labelled panel — this is what collapses away. */}
         <div
           className={[
-            "flex min-w-0 flex-1 flex-col bg-[#3557b4] px-3 py-3.5",
+            "flex min-w-0 flex-1 flex-col overflow-x-hidden rounded-r-2xl bg-[#3657b4] px-3.5 py-3.5",
             collapsed ? "md:hidden" : ""
           ].join(" ")}
         >
-          <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-[15px] font-semibold tracking-tight text-cream">
-              Workspace
-            </p>
+          <div className="flex justify-end md:hidden">
             <button
               type="button"
               aria-label="Close navigation"
               onClick={() => setMenuOpen(false)}
-              className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-cream/55 transition hover:bg-cream/[0.09] hover:text-cream md:hidden"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-cream/55 transition hover:bg-cream/[0.09] hover:text-cream"
             >
-              <X size={16} aria-hidden="true" />
+              <X size={18} aria-hidden="true" />
             </button>
           </div>
 
-          <label className="relative mt-3 block">
+          <label className="relative block md:mt-0">
             <span className="sr-only">Filter navigation</span>
             <Search
-              size={14}
+              size={15}
               aria-hidden="true"
               className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-cream/45"
             />
@@ -302,22 +272,27 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search"
-              className="h-8 w-full rounded-lg bg-[#2a4aa0]/70 pl-8 pr-2.5 text-[13px] text-cream placeholder:text-cream/40 outline-none transition focus:bg-[#2a4aa0] focus-visible:ring-2 focus-visible:ring-cream/30"
+              className="h-9 w-full rounded-lg bg-cream/[0.065] pl-8 pr-2.5 text-[0.88rem] text-cream placeholder:text-cream/42 outline-none transition focus:bg-cream/[0.095] focus-visible:ring-2 focus-visible:ring-cream/30"
             />
           </label>
 
           <Link
             href="/interview"
             onClick={() => setMenuOpen(false)}
-            className="mt-3 flex h-9 shrink-0 items-center gap-2.5 rounded-lg bg-cream px-3 text-[13px] font-semibold text-[#254294] transition hover:bg-white focus-visible:ring-2 focus-visible:ring-white/70"
+            className="group mt-3 flex h-11 shrink-0 items-center gap-2.5 rounded-lg bg-cream px-3.5 text-[0.86rem] font-medium text-[#171a16] outline-none transition-colors duration-200 ease-out hover:bg-white focus-visible:ring-2 focus-visible:ring-white/70"
           >
-            <Mic size={15} aria-hidden="true" />
+            <MessageCircle
+              size={18}
+              strokeWidth={1.8}
+              className="shrink-0 transition-transform duration-200 ease-out group-hover:translate-x-0.5"
+              aria-hidden="true"
+            />
             Start interview
           </Link>
 
           <nav
-            aria-label="Workspace navigation"
-            className="thin-scroll mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto"
+            aria-label="Trail navigation"
+            className="thin-scroll mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden"
           >
             {navGroups.map((group) => {
               const items = group.items.filter((item) =>
@@ -327,7 +302,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
 
               return (
                 <div key={group.label}>
-                  <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.13em] text-cream/45">
+                  <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-cream/42">
                     {group.label}
                   </p>
 
@@ -345,17 +320,23 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
                           // effect never fires and the drawer would stay open.
                           onClick={() => setMenuOpen(false)}
                           className={[
-                            "group relative flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium outline-none transition",
+                            "group relative flex h-10 items-center gap-2.5 rounded-lg px-3 text-[0.9rem] font-medium outline-none transition-colors duration-200 ease-out hover:bg-cream/[0.09]",
                             active
-                              ? "bg-cream/[0.18] text-cream"
-                              : "text-cream/62 hover:bg-cream/[0.09] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/40"
+                              ? "text-cream"
+                              : "text-cream/62 hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/40"
                           ].join(" ")}
                         >
+                          {active ? (
+                            <span
+                              aria-hidden="true"
+                              className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-cream/70"
+                            />
+                          ) : null}
                           <NavPending />
                           <Icon
-                            size={16}
+                            size={17}
                             strokeWidth={active ? 2.1 : 1.7}
-                            className="shrink-0"
+                            className="shrink-0 transition-transform duration-200 ease-out group-hover:translate-x-0.5"
                             aria-hidden="true"
                           />
                           <span className="truncate">{item.label}</span>
@@ -371,18 +352,26 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           <Link
             href="/profile"
             onClick={() => setMenuOpen(false)}
-            className="mt-3 flex shrink-0 items-center gap-2 rounded-lg px-2 py-2 text-[13px] outline-none transition hover:bg-cream/[0.07] focus-visible:ring-2 focus-visible:ring-cream/40"
+            className="group mt-3 flex shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[0.9rem] outline-none transition-colors duration-200 ease-out hover:bg-cream/[0.09] focus-visible:ring-2 focus-visible:ring-cream/40"
           >
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold text-cream/90">
+              <span className="block truncate font-medium text-cream/88 transition-colors group-hover:text-cream">
                 {userName || "Your account"}
               </span>
-              <span className="block truncate text-[11px] text-cream/45">View profile</span>
+              <span className="block truncate text-[0.8rem] text-cream/45 transition-colors group-hover:text-cream/62">
+                View profile
+              </span>
             </span>
-            <ChevronRight size={14} aria-hidden="true" className="shrink-0 text-cream/30" />
           </Link>
         </div>
       </aside>
+
+      {!collapsed ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-y-8 left-[17rem] z-40 hidden w-px bg-gradient-to-b from-transparent via-cream/50 to-transparent opacity-90 md:block"
+        />
+      ) : null}
 
       {/* Stays put while the page scrolls, so the drawer is always one tap away. */}
       <header className="sticky top-0 z-30 flex h-14 items-center gap-3 bg-[#4968b8]/88 px-3 shadow-[inset_0_-1px_0_rgba(239,232,214,0.08)] backdrop-blur-xl md:hidden">
@@ -390,9 +379,9 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           type="button"
           aria-label="Open navigation"
           onClick={() => setMenuOpen(true)}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cream/[0.08] text-cream shadow-[inset_0_1px_0_rgba(239,232,214,0.12)] transition hover:bg-cream/12 focus-visible:ring-2 focus-visible:ring-cream/50"
+          className="flex h-11 w-11 shrink-0 items-center justify-center text-cream/80 outline-none transition-colors hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/50"
         >
-          <Menu size={18} aria-hidden="true" />
+          <Menu size={25} strokeWidth={1.7} aria-hidden="true" />
         </button>
         <span className="flex-1" />
         {/*
@@ -401,17 +390,8 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
          * and packing the controls to one side. The wrapper reserves exactly the
          * avatar's footprint, so nothing shifts when it loads.
          */}
-        <div className="h-9 w-9 shrink-0">
-          <UserButton
-            userProfileProps={{ appearance: userProfileAppearance }}
-            appearance={{
-              elements: {
-                rootBox: "!h-9 !w-9 !shrink-0",
-                userButtonTrigger: "!h-9 !w-9",
-                avatarBox: "!h-7 !w-7 !shadow-[inset_0_0_0_1px_rgba(239,232,214,0.16)]"
-              }
-            }}
-          />
+        <div className="relative h-9 w-9 shrink-0">
+          <AvatarMenu imageUrl={userImage} name={userName} size="small" placement="mobile" />
         </div>
       </header>
 
@@ -428,5 +408,137 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         {children}
       </main>
     </div>
+  );
+}
+
+function AvatarMenu({
+  imageUrl,
+  name,
+  size,
+  placement
+}: {
+  imageUrl?: string;
+  name: string;
+  size: "small" | "large";
+  placement: "rail" | "mobile";
+}) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuPosition =
+    placement === "rail" ? "bottom-0 left-[calc(100%+0.6rem)]" : "right-0 top-[calc(100%+0.6rem)]";
+
+  useEffect(() => {
+    if (!open) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (!menuRef.current?.contains(target)) setOpen(false);
+    };
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  return (
+    <div ref={menuRef} className="relative">
+      <button
+        type="button"
+        aria-label="Open account menu"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className="relative z-[60] rounded-full outline-none transition hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-cream/50"
+      >
+        <PlainAvatar imageUrl={imageUrl} name={name} size={size} />
+      </button>
+
+      {open ? (
+        <div
+          className={[
+            "account-menu-pop absolute z-[60] w-44 rotate-1 overflow-hidden rounded-lg border border-cream/35 bg-[#4968b8]/95 p-1.5 text-cream shadow-[0_22px_54px_-34px_rgba(4,12,45,0.9)] backdrop-blur-xl",
+            menuPosition
+          ].join(" ")}
+        >
+          <Link
+            href="/manage"
+            onClick={() => setOpen(false)}
+            className="group flex items-center gap-2.5 rounded-md px-3 py-2.5 text-[0.9rem] font-medium text-cream/86 outline-none transition-[background,color,transform] duration-200 ease-out hover:translate-x-0.5 hover:bg-cream/[0.09] hover:text-cream focus-visible:bg-cream/[0.09]"
+          >
+            <Settings
+              size={16}
+              strokeWidth={1.8}
+              className="shrink-0 transition-transform duration-200 ease-out group-hover:rotate-[-8deg]"
+              aria-hidden="true"
+            />
+            Manage
+          </Link>
+          <SignOutButton redirectUrl="/">
+            <button
+              type="button"
+              className="group flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-[0.9rem] font-medium text-cream/86 outline-none transition-[background,color,transform] duration-200 ease-out hover:translate-x-0.5 hover:bg-cream/[0.09] hover:text-cream focus-visible:bg-cream/[0.09]"
+            >
+              <LogOut
+                size={16}
+                strokeWidth={1.8}
+                className="shrink-0 transition-transform duration-200 ease-out group-hover:translate-x-0.5"
+                aria-hidden="true"
+              />
+              Logout
+            </button>
+          </SignOutButton>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function PlainAvatar({
+  imageUrl,
+  name,
+  size
+}: {
+  imageUrl?: string;
+  name: string;
+  size: "small" | "large";
+}) {
+  const dimension = size === "large" ? "h-11 w-11" : "h-9 w-9";
+  const initials = initialsOf(name);
+
+  if (imageUrl) {
+    return (
+      <img
+        src={imageUrl}
+        alt={name ? `${name} avatar` : "Account avatar"}
+        className={`${dimension} rounded-full object-cover`}
+      />
+    );
+  }
+
+  return (
+    <span
+      aria-label={name ? `${name} avatar` : "Account avatar"}
+      className={`${dimension} grid place-items-center rounded-full bg-cream/[0.12] text-sm font-semibold text-cream`}
+    >
+      {initials}
+    </span>
+  );
+}
+
+function initialsOf(name: string): string {
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "TG"
   );
 }

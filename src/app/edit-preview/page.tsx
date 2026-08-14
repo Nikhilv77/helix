@@ -18,6 +18,8 @@ const profile: CandidateProfile = {
   headline: "Software Developer at FlashAid | Full-Stack & AI Engineer",
   context:
     "Software Developer with full-stack and founding engineering experience across fintech, health-tech, and AI products. Proven track record of scaling high-impact platforms using React, TypeScript, Node.js, and PostgreSQL, processing thousands of monthly payments, contributing to ₹2Cr+ in annual revenue, and winning the Emerging Star Award.",
+  coverImage: null,
+  profileImage: null,
   focusAreas: ["Technical depth", "System design", "Ownership", "Impact", "Behavioral stories"],
   stories: [
     {

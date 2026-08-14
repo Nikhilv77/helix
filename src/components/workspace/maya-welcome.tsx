@@ -2,9 +2,27 @@
 
 import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Check, Loader2, Map, Mic, Sparkles, Volume2, VolumeX, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  ArrowRight,
+  Blocks,
+  BrainCircuit,
+  Braces,
+  Check,
+  Code2,
+  Database,
+  FileText,
+  Gauge,
+  Loader2,
+  Map,
+  Mic,
+  ShieldCheck,
+  Target,
+  Volume2,
+  VolumeX,
+  X,
+  type LucideIcon
+} from "lucide-react";
 import { useMayaVoice, voiceUrl, type VoiceState } from "@/lib/use-maya-voice";
 import { FRONTEND_SESSIONS, type FrontendDsaPlan } from "@/lib/frontend-plan";
 import type { FrontendRoadmapHome } from "@/lib/roadmap";
@@ -14,6 +32,264 @@ const AvatarStage = dynamic(
   () => import("@/components/interview/avatar-stage").then((module) => module.AvatarStage),
   { ssr: false }
 );
+
+const WELCOME_TITLE_STAGGER_MS = 92;
+const WELCOME_BODY_STAGGER_MS = 26;
+const FALLBACK_WELCOME_SLIDE = {
+  eyebrow: "Roadmap ready",
+  title: "Hi, I’m Maya.",
+  body: "I prepared your interview roadmap and I am ready to walk you through the first step.",
+  icon: Check
+};
+const SESSION_CARD_META: Record<string, { label: string; detail: string }> = {
+  "frontend-dsa": {
+    label: "Pattern practice",
+    detail: "Warmups, traps, and solve rhythm."
+  },
+  "javascript-react-core": {
+    label: "Core depth",
+    detail: "JS behaviour, React timing, and rendering."
+  },
+  "build-real-ui-features": {
+    label: "Product build",
+    detail: "Real feature rounds with tradeoff pressure."
+  },
+  "production-ui-quality": {
+    label: "Ship quality",
+    detail: "Performance, accessibility, and reliability."
+  },
+  "resume-behavioral-defense": {
+    label: "Evidence defense",
+    detail: "Turn resume claims into strong answers."
+  },
+  "final-frontend-mock": {
+    label: "Full loop",
+    detail: "A complete mock across the interview path."
+  }
+};
+
+const SESSION_ICON_RULES: Array<{ keywords: string[]; icon: LucideIcon }> = [
+  { keywords: ["dsa", "pattern", "algorithm", "data-structure"], icon: Braces },
+  { keywords: ["javascript", "react", "frontend", "ui", "component", "render"], icon: Code2 },
+  { keywords: ["build", "feature", "product", "project"], icon: Blocks },
+  { keywords: ["quality", "performance", "reliability", "accessibility", "testing"], icon: Gauge },
+  { keywords: ["resume", "behavioral", "story", "evidence"], icon: FileText },
+  { keywords: ["mock", "final", "interview", "round"], icon: Target },
+  { keywords: ["backend", "api", "database", "data"], icon: Database },
+  { keywords: ["system", "architecture", "design"], icon: BrainCircuit },
+  { keywords: ["security", "auth", "safe"], icon: ShieldCheck }
+];
+
+function sessionIcon(session: { id: string; title: string; purpose: string; covers: string[] }) {
+  const haystack = [session.id, session.title, session.purpose, ...session.covers]
+    .join(" ")
+    .toLowerCase();
+  return (
+    SESSION_ICON_RULES.find((rule) => rule.keywords.some((keyword) => haystack.includes(keyword)))
+      ?.icon ?? Blocks
+  );
+}
+
+function useWordReveal(
+  text: string,
+  active: boolean,
+  delay = 0,
+  stagger = WELCOME_TITLE_STAGGER_MS
+) {
+  const words = text.split(" ");
+  const [visibleCount, setVisibleCount] = useState(0);
+
+  useEffect(() => {
+    setVisibleCount(0);
+    if (!active) return;
+
+    let interval = 0;
+    const timer = window.setTimeout(() => {
+      let index = 0;
+      interval = window.setInterval(() => {
+        index += 1;
+        setVisibleCount(Math.min(index, words.length));
+        if (index >= words.length) window.clearInterval(interval);
+      }, stagger);
+    }, delay);
+
+    return () => {
+      window.clearTimeout(timer);
+      if (interval) window.clearInterval(interval);
+    };
+  }, [active, delay, stagger, words.length]);
+
+  return { words, visibleCount };
+}
+
+function WordRevealLine({
+  words,
+  visibleCount,
+  className,
+  wordClassName = ""
+}: {
+  words: string[];
+  visibleCount: number;
+  className?: string;
+  wordClassName?: string;
+}) {
+  return (
+    <span className={className}>
+      {words.map((word, index) => (
+        <span
+          key={`${word}-${index}`}
+          className={[
+            "trail-word mr-[0.24em] last:mr-0",
+            index < visibleCount ? "trail-word-visible" : "",
+            wordClassName
+          ].join(" ")}
+        >
+          {word}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function TechInterviewMotifs({ side }: { side: "maya" | "copy" }) {
+  const gridOpacity = side === "maya" ? "opacity-[0.14]" : "opacity-[0.13]";
+
+  return (
+    <>
+      <span
+        aria-hidden
+        className={`pointer-events-none absolute inset-0 z-0 ${gridOpacity}`}
+        style={{
+          backgroundImage:
+            "linear-gradient(90deg, rgba(241,234,216,0.18) 1px, transparent 1px), linear-gradient(180deg, rgba(241,234,216,0.18) 1px, transparent 1px)",
+          backgroundSize: "6.5rem 6.5rem"
+        }}
+      />
+      {side === "maya" ? (
+        <>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -left-24 top-16 z-0 h-72 w-72 rounded-full border border-cream/[0.09]"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-8 top-14 z-0 h-24 w-56 rounded-full bg-cream/[0.06] blur-3xl"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-6 top-14 z-0 h-16 w-40 rounded-xl border border-cream/[0.13] bg-cream/[0.018]"
+          >
+            <span className="absolute left-4 top-4 h-2.5 w-2.5 rounded-full bg-cream/[0.16]" />
+            <span className="absolute left-9 top-4 h-px w-20 bg-cream/[0.14]" />
+            <span className="absolute left-9 top-8 h-px w-24 bg-cream/[0.1]" />
+          </span>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -right-5 top-24 z-0 h-20 w-36 rounded-xl border border-cream/[0.1] bg-cream/[0.014]"
+          >
+            <span className="absolute left-4 top-5 h-px w-24 bg-cream/[0.12]" />
+            <span className="absolute left-4 top-9 h-px w-16 bg-cream/[0.09]" />
+            <span className="absolute bottom-4 left-4 h-2 w-2 rounded-full bg-cream/[0.13]" />
+          </span>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-10 top-[45%] z-0 h-px w-48 bg-[linear-gradient(90deg,rgba(241,234,216,0.08)_0_35%,transparent_35%_52%,rgba(241,234,216,0.08)_52%_72%,transparent_72%_100%)]"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute bottom-24 left-7 z-0 flex h-14 items-end gap-1.5 text-cream/[0.16]"
+          >
+            {[28, 54, 38, 72, 46, 60, 34].map((height, index) => (
+              <span
+                key={`${height}-${index}`}
+                className="w-1 rounded-full bg-current"
+                style={{ height: `${height}%` }}
+              />
+            ))}
+          </span>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute bottom-20 right-10 z-0 grid grid-cols-[auto_1.75rem_auto_1.75rem_auto] items-center text-cream/[0.11]"
+          >
+            <span className="h-2.5 w-2.5 rounded-full bg-current" />
+            <span className="h-px bg-current" />
+            <span className="h-2.5 w-2.5 rounded-full bg-current" />
+            <span className="h-px bg-current" />
+            <span className="h-2.5 w-2.5 rounded-full bg-current" />
+          </span>
+          <span aria-hidden className="pointer-events-none absolute bottom-44 left-9 z-0 h-20 w-28">
+            <span className="absolute left-0 top-0 h-6 w-6 border-l border-t border-cream/[0.1]" />
+            <span className="absolute right-0 top-0 h-6 w-6 border-r border-t border-cream/[0.08]" />
+            <span className="absolute bottom-0 left-0 h-6 w-6 border-b border-l border-cream/[0.08]" />
+            <span className="absolute bottom-0 right-0 h-6 w-6 border-b border-r border-cream/[0.1]" />
+          </span>
+        </>
+      ) : (
+        <>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -right-28 bottom-12 z-0 h-72 w-72 rounded-full border border-cream/[0.08]"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-[58%] top-[22%] z-0 h-24 w-52 rounded-full bg-cream/[0.05] blur-3xl"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-8 top-20 z-0 h-20 w-40 rounded-xl border border-cream/[0.1] bg-cream/[0.012]"
+          >
+            <span className="absolute left-4 top-4 h-2.5 w-2.5 rounded-full bg-cream/[0.13]" />
+            <span className="absolute left-9 top-4 h-px w-20 bg-cream/[0.11]" />
+            <span className="absolute left-4 top-9 h-px w-28 bg-cream/[0.08]" />
+            <span className="absolute left-4 top-13 h-px w-16 bg-cream/[0.07]" />
+          </span>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute right-8 top-[30%] z-0 h-28 w-28 rounded-full border border-cream/[0.12]"
+          >
+            <span className="absolute inset-5 flex items-center justify-center gap-1 text-cream/[0.14]">
+              {[38, 64, 50, 82, 45, 72, 56].map((height, index) => (
+                <span
+                  key={`${height}-${index}`}
+                  className="w-1 rounded-full bg-current"
+                  style={{ height: `${height}%` }}
+                />
+              ))}
+            </span>
+          </span>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute bottom-28 right-12 z-0 h-px w-56 bg-gradient-to-r from-transparent via-cream/[0.12] to-transparent"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute bottom-36 left-8 z-0 flex gap-4 text-cream/[0.12]"
+          >
+            <span className="h-12 w-24 rounded-lg border border-current bg-cream/[0.01]" />
+            <span className="h-12 w-16 rounded-lg border border-current bg-cream/[0.01]" />
+            <span className="h-12 w-20 rounded-lg border border-current bg-cream/[0.01]" />
+          </span>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute bottom-20 left-[44%] z-0 grid grid-cols-[auto_2rem_auto_2rem_auto] items-center text-cream/[0.1]"
+          >
+            <span className="h-2 w-2 rounded-full bg-current" />
+            <span className="h-px bg-current" />
+            <span className="h-2 w-2 rounded-full bg-current" />
+            <span className="h-px bg-current" />
+            <span className="h-2 w-2 rounded-full bg-current" />
+          </span>
+          <span aria-hidden className="pointer-events-none absolute right-28 top-20 z-0 h-16 w-36">
+            <span className="absolute left-0 top-0 h-5 w-5 border-l border-t border-cream/[0.09]" />
+            <span className="absolute right-0 top-0 h-5 w-5 border-r border-t border-cream/[0.09]" />
+            <span className="absolute bottom-0 left-0 h-5 w-5 border-b border-l border-cream/[0.07]" />
+            <span className="absolute bottom-0 right-0 h-5 w-5 border-b border-r border-cream/[0.07]" />
+          </span>
+        </>
+      )}
+    </>
+  );
+}
 
 interface MayaWelcomeProps {
   profile: CandidateProfile;
@@ -28,14 +304,13 @@ export function MayaWelcome({
   frontendRoadmap = null,
   frontendPlan = null
 }: MayaWelcomeProps) {
-  const router = useRouter();
   // Maya introduces herself out loud by default; muting her turns this off for
   // the rest of the walkthrough.
   const voiceEnabled = useRef(true);
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const userControlledScroll = useRef(false);
   const [step, setStep] = useState(0);
-  const [visible, setVisible] = useState(true);
+  const visible = true;
   const {
     state: voiceState,
     speak: speakLine,
@@ -48,7 +323,7 @@ export function MayaWelcome({
   const resume = profile.resume;
   const firstName = resume?.fullName.trim().split(/\s+/)[0] || "there";
   const role = profile.targetRole ? roleLabel(profile.targetRole) : "your target role";
-  const isFrontend = profile.targetRole === "frontend";
+  const hasRoadmapTrack = profile.targetRole === "fullstack";
   const topEvidence = resume?.experience[0]
     ? `${resume.experience[0].role || "your work"} at ${resume.experience[0].organization}`
     : resume?.projects[0]?.name || profile.headline || "your resume evidence";
@@ -66,24 +341,24 @@ export function MayaWelcome({
 
   const slides = useMemo(
     () =>
-      isFrontend
+      hasRoadmapTrack
         ? [
             {
               eyebrow: "Roadmap ready",
               title: `Hi ${firstName}, I’m Maya.`,
-              body: `I prepared your frontend interview roadmap: ${frontendStats.sessions} focused sessions, starting with DSA and ending in a full frontend mock. I used your target role and resume evidence so this feels like your path, not a generic checklist.`,
+              body: `I prepared your full-stack interview roadmap: ${frontendStats.sessions} focused sessions, starting with DSA and ending in a full mock. I used your target role and resume evidence so this feels like your path, not a generic checklist.`,
               icon: Check
             },
             {
               eyebrow: "Six-session path",
               title: "Here is the loop I built for you.",
-              body: "We will move through Frontend DSA, JavaScript and React Core, real UI feature builds, production UI quality, resume and behavioral defense, then the final frontend mock. Each session is scoped so one step makes the next one sharper.",
+              body: "We will move through DSA, JavaScript and React Core, real product feature builds, production quality, resume and behavioral defense, then the final full-stack mock. Each session is scoped so one step makes the next one sharper.",
               icon: Map
             },
             {
               eyebrow: "Start here",
-              title: "Begin with Frontend DSA.",
-              body: `The first session is ready with ${frontendStats.chapters} chapters, ${frontendStats.questions} questions, and about ${frontendStats.hours} hours of guided practice. I will warm you up pattern by pattern, then press on the signals frontend interviewers actually look for.`,
+              title: "Begin with DSA.",
+              body: `The first session is ready with ${frontendStats.chapters} chapters, ${frontendStats.questions} questions, and about ${frontendStats.hours} hours of guided practice. I will warm you up pattern by pattern, then press on the signals full-stack interviewers actually look for.`,
               icon: Mic
             }
           ]
@@ -114,7 +389,7 @@ export function MayaWelcome({
       frontendStats.hours,
       frontendStats.questions,
       frontendStats.sessions,
-      isFrontend,
+      hasRoadmapTrack,
       resume?.practiceQuestions.length,
       resume?.skills.length,
       role,
@@ -122,15 +397,16 @@ export function MayaWelcome({
     ]
   );
 
-  const current = slides[step] ?? slides[0];
+  const current = slides[step] ?? slides[0] ?? FALLBACK_WELCOME_SLIDE;
+  const titleReveal = useWordReveal(current.title, visible, 160);
+  const bodyReveal = useWordReveal(current.body, visible, 640, WELCOME_BODY_STAGGER_MS);
 
   const dismiss = useCallback(
     (destination = "/") => {
       stopVoice();
-      setVisible(false);
-      router.replace(destination);
+      window.location.replace(destination);
     },
-    [router, stopVoice]
+    [stopVoice]
   );
 
   useEffect(() => setMounted(true), []);
@@ -237,80 +513,44 @@ export function MayaWelcome({
       role="dialog"
       aria-modal="true"
       aria-labelledby="maya-welcome-title"
-      className="fixed inset-0 z-[90] grid place-items-center bg-[#07123a]/58 p-3 backdrop-blur-2xl sm:p-6"
+      className="fixed inset-0 z-[90] grid place-items-center bg-[#3657b4] p-3 sm:p-6"
     >
       {/* Rows on small screens: the avatar takes a capped share and the copy
           scrolls, so a short phone never clips the slide or its buttons. */}
-      <section className="route-enter relative grid h-[min(48rem,calc(100svh-1.5rem))] w-full max-w-6xl grid-rows-[minmax(17.5rem,36svh)_minmax(0,1fr)] overflow-hidden rounded-[2rem] bg-[radial-gradient(40rem_24rem_at_80%_8%,rgba(156,199,255,0.28),transparent_72%),linear-gradient(135deg,rgba(72,104,188,0.96),rgba(31,62,151,0.96)_45%,rgba(20,43,114,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_0_0_1px_rgba(255,255,255,0.06),0_44px_130px_rgba(4,12,42,0.72)] backdrop-blur-2xl sm:grid-rows-[minmax(19rem,38svh)_minmax(0,1fr)] md:h-[min(45rem,calc(100svh-1.5rem))] md:grid-cols-[minmax(18rem,0.78fr)_minmax(0,1.22fr)] md:grid-rows-1">
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cream/42 to-transparent"
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#9fc4ff]/22 blur-3xl"
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute bottom-0 right-0 h-72 w-72 opacity-[0.08]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(220,230,255,0.7) 1px, transparent 1px), linear-gradient(90deg, rgba(220,230,255,0.7) 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
-            maskImage: "radial-gradient(100% 100% at 100% 100%, #000 18%, transparent 72%)",
-            WebkitMaskImage: "radial-gradient(100% 100% at 100% 100%, #000 18%, transparent 72%)"
-          }}
-        />
+      <section className="route-enter relative grid h-[min(46rem,calc(100svh-1.5rem))] w-full max-w-6xl grid-rows-[minmax(12rem,30svh)_minmax(0,1fr)] overflow-hidden rounded-[1.35rem] bg-[#3657b4] shadow-[0_38px_120px_rgba(4,12,42,0.46)] sm:grid-rows-[minmax(16rem,34svh)_minmax(0,1fr)] md:h-[min(43rem,calc(100svh-2rem))] md:grid-cols-[minmax(17rem,0.72fr)_minmax(0,1.28fr)] md:grid-rows-1">
         <button
           type="button"
           onClick={() => dismiss()}
           aria-label="Close Maya introduction"
-          className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/[0.075] text-cream/60 shadow-soft-inset transition hover:bg-white/[0.13] hover:text-cream sm:right-5 sm:top-5"
+          className="absolute right-3 top-3 z-20 flex h-11 w-11 items-center justify-center text-cream/55 transition hover:text-cream sm:right-5 sm:top-5"
         >
-          <X size={16} />
+          <X size={26} strokeWidth={1.35} />
         </button>
 
-        <div className="relative min-h-0 overflow-hidden bg-[radial-gradient(24rem_22rem_at_50%_30%,rgba(154,184,255,0.22),transparent_70%),linear-gradient(180deg,rgba(36,72,158,0.92),rgba(16,38,100,0.94))] shadow-[inset_-1px_0_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(255,255,255,0.08)]">
-          {/* Stacked layouts put the close button over this row, so the status
-              keeps clear of it until the two-column layout separates them. */}
-          <div className="absolute inset-x-4 top-4 z-10 flex items-center justify-between pr-11 sm:inset-x-5 sm:top-5 md:pr-0">
-            <div className="flex items-center gap-2 text-cream">
-              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/[0.08] text-cream shadow-soft-inset">
-                <Sparkles size={14} />
-              </span>
-              <div>
-                <p className="text-sm font-semibold">Maya</p>
-                <p className="hidden font-mono text-[9px] uppercase tracking-[0.15em] text-cream/38 sm:block">
-                  Your interview coach
-                </p>
-              </div>
-            </div>
-            <span className="flex items-center gap-2 text-[10px] text-[#9be8c1]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#71d6a5]" /> Ready
-            </span>
-          </div>
+        <div className="relative z-10 min-h-0 overflow-hidden bg-[#4565bd]">
+          <TechInterviewMotifs side="maya" />
           <AvatarStage
             agentTrack={null}
             state={speaking ? "speaking" : "listening"}
             url="/avatars/interviewer-v2.glb"
           />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#163988] to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#4565bd] to-transparent" />
         </div>
 
-        <div className="relative flex min-h-0 flex-col px-5 pb-5 pt-4 sm:px-10 sm:pb-8 sm:pt-7 lg:px-14 lg:pb-9 lg:pt-10">
-          <div className="flex shrink-0 items-center gap-2 pr-12">
+        <div className="relative z-10 flex min-h-0 flex-col overflow-hidden bg-[#3657b4] px-5 pb-5 pt-5 sm:px-10 sm:pb-8 sm:pt-8 lg:px-14 lg:pb-9 lg:pt-10">
+          <TechInterviewMotifs side="copy" />
+          <div className="relative z-10 flex shrink-0 items-center gap-2.5 pr-12">
             {slides.map((slide, index) => (
               <span
                 key={slide.eyebrow}
                 className={[
                   "h-1.5 rounded-full transition-all duration-300",
-                  index === step ? "w-11 bg-cream" : "w-5 bg-white/[0.18]"
+                  index === step
+                    ? "w-12 bg-cream shadow-[0_0_18px_rgba(241,234,216,0.42)]"
+                    : "w-6 bg-cream/40"
                 ].join(" ")}
               />
             ))}
-            <span className="ml-auto font-mono text-[10px] tracking-[0.14em] text-cream/42">
-              0{step + 1} / 0{slides.length}
-            </span>
           </div>
 
           <div
@@ -321,57 +561,80 @@ export function MayaWelcome({
             onWheel={() => {
               userControlledScroll.current = true;
             }}
-            className="no-scrollbar -mx-1 min-h-0 flex-1 overflow-y-auto px-1"
+            className="no-scrollbar relative z-10 -mx-1 min-h-0 flex-1 overflow-y-auto px-1"
           >
             <div
               key={step}
               className="step-in flex min-h-full flex-col justify-center py-4 sm:py-8 lg:py-12"
             >
-              <span className="hidden h-11 w-11 items-center justify-center rounded-2xl bg-white/[0.075] text-cream shadow-soft-inset min-[360px]:flex sm:h-12 sm:w-12">
-                <Icon size={19} />
-              </span>
-              <p className="blueprint-label text-cream/38 min-[360px]:mt-4 sm:mt-5 lg:mt-7">
+              <Icon
+                size={64}
+                strokeWidth={1.25}
+                className="hidden text-cream/82 min-[360px]:block sm:size-16"
+                aria-hidden="true"
+              />
+              <p className="blueprint-label text-cream/45 min-[360px]:mt-4 sm:mt-5 lg:mt-7">
                 {current.eyebrow}
               </p>
               <h1
                 id="maya-welcome-title"
-                className="mt-2 max-w-2xl text-[2rem] font-semibold leading-[1.06] tracking-tight text-cream sm:mt-3 sm:text-4xl"
+                className="display-heading mt-3 max-w-2xl text-[2.15rem] leading-[1.03] text-cream sm:mt-4 sm:text-[3rem]"
               >
-                {current.title}
+                <WordRevealLine words={titleReveal.words} visibleCount={titleReveal.visibleCount} />
               </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-cream/62 sm:mt-4 sm:text-base sm:leading-7">
-                {current.body}
+              <p className="mt-5 max-w-2xl text-[15px] font-medium leading-7 text-cream/78 sm:text-lg sm:leading-8">
+                <WordRevealLine
+                  words={bodyReveal.words}
+                  visibleCount={bodyReveal.visibleCount}
+                  wordClassName="maya-welcome-copy-word"
+                />
               </p>
 
-              {isFrontend && step === 1 ? (
+              {hasRoadmapTrack && step === 1 ? (
                 <div className="mt-5 grid gap-2 sm:mt-7 sm:grid-cols-2">
-                  {FRONTEND_SESSIONS.map((session) => (
-                    <div
-                      key={session.id}
-                      className="grid grid-cols-[2.25rem_minmax(0,1fr)] gap-3 rounded-2xl bg-white/[0.06] p-3.5 shadow-soft-inset"
-                    >
-                      <span className="grid h-9 w-9 place-items-center rounded-xl bg-cream text-xs font-semibold text-[#24459a]">
-                        {String(session.order).padStart(2, "0")}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold leading-5 text-cream/82">
-                          {session.title}
-                        </p>
-                        <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-cream/42">
-                          {session.purpose}
-                        </p>
+                  {FRONTEND_SESSIONS.map((session, index) => {
+                    const meta = SESSION_CARD_META[session.id] ?? {
+                      label: "Guided practice",
+                      detail: session.covers[0] ?? "Focused interview prep."
+                    };
+                    const SessionIcon = sessionIcon(session);
+                    return (
+                      <div
+                        key={session.id}
+                        className="onboarding-card-reveal flex min-h-[5.4rem] items-start gap-3 rounded-lg bg-cream px-4 py-3.5 text-[#13234f]"
+                        style={
+                          {
+                            "--card-delay": `${240 + index * 70}ms`,
+                            "--card-tilt": `${[-0.4, 0.25, -0.15, 0.35, -0.25, 0.2][index] ?? 0}deg`
+                          } as CSSProperties
+                        }
+                      >
+                        <SessionIcon
+                          size={25}
+                          strokeWidth={1.55}
+                          className="mt-0.5 shrink-0 text-[#13234f]/72"
+                          aria-hidden="true"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[1.05rem] font-medium leading-5 text-[#13234f]">
+                            {session.title}
+                          </p>
+                          <p className="mt-2 line-clamp-2 text-[0.92rem] font-normal leading-5 text-[#13234f]/62">
+                            {meta.label}. {meta.detail}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : null}
 
-              {!isFrontend && step === 1 && resume?.roadmap.length ? (
+              {!hasRoadmapTrack && step === 1 && resume?.roadmap.length ? (
                 <div className="mt-5 grid gap-2 sm:mt-7 sm:grid-cols-3">
                   {resume.roadmap.slice(0, 3).map((item, index) => (
                     <div
                       key={item.id}
-                      className="rounded-2xl bg-white/[0.06] p-4 shadow-soft-inset"
+                      className="rounded-lg border border-cream/18 bg-cream/[0.035] p-4 shadow-soft-inset"
                     >
                       <span className="font-mono text-[10px] text-cream/38">0{index + 1}</span>
                       <p className="mt-2 text-sm font-semibold leading-5 text-cream/78">
@@ -384,11 +647,11 @@ export function MayaWelcome({
             </div>
           </div>
 
-          <div className="flex shrink-0 flex-col-reverse gap-3 pt-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.09)] sm:flex-row sm:items-center sm:pt-5">
+          <div className="relative z-10 flex shrink-0 flex-col-reverse gap-3 border-t border-cream/[0.1] pt-4 sm:flex-row sm:items-center sm:pt-5">
             <button
               type="button"
               onClick={toggleVoice}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white/[0.07] px-4 text-xs font-semibold text-cream/72 shadow-soft-inset transition hover:bg-white/[0.12] hover:text-cream disabled:cursor-not-allowed disabled:opacity-45"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-cream/12 bg-cream/[0.04] px-4 text-[0.95rem] font-medium text-cream/72 shadow-soft-inset transition hover:bg-cream/[0.08] hover:text-cream disabled:cursor-not-allowed disabled:opacity-45"
             >
               {voiceState === "loading" ? (
                 <Loader2 size={15} className="animate-spin" />
@@ -404,7 +667,7 @@ export function MayaWelcome({
                 <button
                   type="button"
                   onClick={() => setStep((currentStep) => currentStep + 1)}
-                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-cream px-5 text-sm font-semibold text-[#173178] shadow-[0_18px_44px_-26px_rgba(239,232,214,0.75)] transition hover:bg-white sm:w-auto"
+                  className="browse-nudge inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-cream px-5 text-sm font-semibold text-[#173178] shadow-[0_18px_44px_-26px_rgba(239,232,214,0.75)] transition hover:bg-white sm:w-auto"
                 >
                   Continue <ArrowRight size={15} />
                 </button>
@@ -413,7 +676,7 @@ export function MayaWelcome({
                   <button
                     type="button"
                     onClick={() => dismiss("/#plan")}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white/[0.07] px-5 text-sm font-semibold text-cream/85 shadow-soft-inset transition hover:bg-white/[0.12] hover:text-cream"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-cream/12 bg-cream/[0.04] px-5 text-sm font-semibold text-cream/85 shadow-soft-inset transition hover:bg-cream/[0.08] hover:text-cream"
                   >
                     View my plan
                   </button>
@@ -421,12 +684,11 @@ export function MayaWelcome({
                     type="button"
                     onClick={() => {
                       stopVoice();
-                      setVisible(false);
-                      router.replace(isFrontend ? "/" : practiceHref);
+                      window.location.replace(hasRoadmapTrack ? "/" : practiceHref);
                     }}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-cream px-5 text-sm font-semibold text-[#173178] shadow-[0_18px_44px_-26px_rgba(239,232,214,0.75)] transition hover:bg-white"
+                    className="browse-nudge inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-cream px-5 text-sm font-semibold text-[#173178] shadow-[0_18px_44px_-26px_rgba(239,232,214,0.75)] transition hover:bg-white"
                   >
-                    {isFrontend ? "Start Frontend DSA" : "Start a mock"} <ArrowRight size={15} />
+                    {hasRoadmapTrack ? "Start DSA" : "Start a mock"} <ArrowRight size={15} />
                   </button>
                 </div>
               )}

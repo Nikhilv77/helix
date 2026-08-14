@@ -15,7 +15,7 @@ import type {
 } from "@/lib/roadmap";
 import type { PrismaService } from "../database/prisma.service";
 
-const FRONTEND_ROADMAP_ROLE = "frontend";
+const FRONTEND_ROADMAP_ROLE = "fullstack";
 const FRONTEND_ROADMAP_SLUG = "frontend-roadmap";
 
 type RoadmapTransaction = Prisma.TransactionClient;
@@ -63,7 +63,7 @@ export class FrontendRoadmapService {
 
     if (!existing) {
       const ensured = await this.ensureFrontendRoadmap(ownerId);
-      // Not a frontend user: nothing to record against.
+      // Not a full-stack roadmap user: nothing to record against.
       if (!ensured) return { recorded: false, home: null };
     }
 
@@ -103,7 +103,7 @@ export class FrontendRoadmapService {
         });
 
         if (!progress) {
-          throw new Error(`Question is not in the frontend roadmap: ${input.dsaQuestionSlug}`);
+          throw new Error(`Question is not in the full-stack roadmap: ${input.dsaQuestionSlug}`);
         }
 
         const now = new Date();
@@ -202,7 +202,7 @@ export class FrontendRoadmapService {
   /**
    * One chapter with this user's per-question state, for the session page.
    * Read-only: unlike `home`, it never creates a roadmap, so opening a chapter
-   * URL directly cannot seed one for a non-frontend user.
+   * URL directly cannot seed one for a user outside this roadmap track.
    */
   async chapterDetail(
     ownerId: string,
@@ -298,7 +298,9 @@ export class FrontendRoadmapService {
         });
 
         if (!profile) {
-          throw new Error(`Cannot create frontend roadmap without a candidate profile: ${ownerId}`);
+          throw new Error(
+            `Cannot create full-stack roadmap without a candidate profile: ${ownerId}`
+          );
         }
 
         if (profile.targetRole !== FRONTEND_ROADMAP_ROLE) {
@@ -333,7 +335,7 @@ export class FrontendRoadmapService {
         });
 
         if (!template) {
-          throw new Error("Active frontend roadmap template is missing. Run `pnpm prisma:seed`.");
+          throw new Error("Active roadmap template is missing. Run `pnpm prisma:seed`.");
         }
 
         const existingRoadmap = await tx.userRoadmap.findUnique({
@@ -1311,7 +1313,7 @@ async function replaceActiveMayaInsights(
         title: "Recommended action",
         body:
           input.nextQuestion === undefined
-            ? "Review your completed frontend roadmap and run the final mock."
+            ? "Review your completed full-stack roadmap and run the final mock."
             : weakPattern
               ? `Open ${questionTitle}, write the brute-force idea first, then state the pattern upgrade clearly.`
               : `Open ${questionTitle} and explain the pattern before writing code.`,
@@ -1516,7 +1518,7 @@ function buildPersonalization(profile: {
     level: profile.level,
     levelStrategy: levelStrategy(profile.level),
     resumeSignal:
-      matchedFrontendEvidence.length > 0 ? "frontend-evidence-found" : "evidence-building-needed",
+      matchedFrontendEvidence.length > 0 ? "fullstack-evidence-found" : "evidence-building-needed",
     matchedFrontendEvidence,
     focusAreas,
     storyCount: Array.isArray(profile.stories) ? profile.stories.length : 0,
@@ -1537,7 +1539,7 @@ function levelStrategy(level: string | null): string {
   if (level === "5-plus") {
     return "ambiguity-architecture-quality-strategy-and-leadership";
   }
-  return "balanced-frontend-interview-readiness";
+  return "balanced-fullstack-interview-readiness";
 }
 
 function collectResumeTerms(value: Prisma.JsonValue | null): string[] {

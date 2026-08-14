@@ -7,6 +7,7 @@ const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 function nextWithPathname(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-trailgrad-pathname", request.nextUrl.pathname);
+  requestHeaders.set("x-trailgrad-search", request.nextUrl.search);
   return NextResponse.next({
     request: {
       headers: requestHeaders

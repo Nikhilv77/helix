@@ -10,7 +10,6 @@ import {
   FileText,
   Timer,
   ListChecks,
-  MonitorSmartphone,
   Sparkles,
   Target
 } from "lucide-react";
@@ -142,15 +141,14 @@ export function SessionCards({
       }));
   const insights = roadmap?.insights.length ? roadmap.insights : fallbackInsights(fallbackPlan);
   const heading =
-    targetRole === "frontend"
-      ? "Your frontend interview roadmap."
+    targetRole === "fullstack"
+      ? "Your full-stack interview roadmap."
       : "Your interview roadmap starts here.";
 
   return (
     <div className="w-full min-w-0 max-w-[calc(100vw-1rem)] overflow-x-clip px-2 pb-6 pt-2 sm:max-w-full sm:px-3 lg:px-3">
-      <section className="relative isolate max-w-full overflow-hidden rounded-[1.5rem] bg-[#3557b4] shadow-[inset_0_0_0_1px_rgba(239,232,214,0.07)]">
-        <BlueprintPattern className="opacity-[0.16]" />
-        <div className="relative z-10 grid min-w-0 gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,0.78fr)_minmax(17rem,0.92fr)_minmax(0,1.1fr)] lg:items-stretch lg:gap-5 xl:grid-cols-[minmax(0,0.8fr)_minmax(19rem,0.9fr)_minmax(0,1.15fr)] xl:gap-6">
+      <section className="relative isolate max-w-full">
+        <div className="relative z-10 grid min-w-0 gap-4 lg:grid-cols-[minmax(0,0.78fr)_minmax(17rem,0.92fr)_minmax(0,1.1fr)] lg:items-stretch lg:gap-5 xl:grid-cols-[minmax(0,0.8fr)_minmax(19rem,0.9fr)_minmax(0,1.15fr)] xl:gap-6">
           <div className="order-2 flex h-full min-w-0 flex-col justify-center rounded-2xl bg-[#2a4aa0] p-5 lg:order-3">
             <div className="inline-flex w-fit items-center gap-2 rounded-full bg-cream/[0.1] px-3 py-1.5 text-[13px] font-medium text-cream/80">
               <span className="h-2 w-2 rounded-full bg-[#8be6bd] shadow-[0_0_14px_rgba(139,230,189,0.8)]" />
@@ -207,7 +205,7 @@ export function SessionCards({
           </div>
 
           {activeSession ? (
-            <div className="relative order-1 h-full min-h-[17rem] overflow-hidden rounded-2xl bg-[#2a4aa0] sm:min-h-[20rem] lg:min-h-[23rem]">
+            <div className="relative order-1 h-full min-h-[17rem] overflow-hidden rounded-2xl bg-cream/[0.055] backdrop-blur-xl sm:min-h-[20rem] lg:min-h-[23rem]">
               <span className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 text-[12px] font-semibold text-cream/65">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#8be6bd]" />
                 Maya is ready
@@ -238,7 +236,7 @@ export function SessionCards({
       </section>
 
       <section className="mt-4">
-        <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,64rem)_minmax(18rem,1fr)]">
+        <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(17rem,25rem)]">
           <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {sessions.map((session) => (
               <SessionCard
@@ -359,89 +357,65 @@ function SessionCard({ session, isCurrent }: { session: DisplaySession; isCurren
       aria-label={`Open ${session.title}`}
       className="block h-full min-w-0 max-w-full"
     >
-      <article className="group relative flex h-full min-h-[22.5rem] w-full min-w-0 max-w-full flex-col overflow-hidden rounded-[1.45rem] bg-[#385fb8] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_0_0_0_1px_rgba(239,232,214,0.07),0_24px_62px_-42px_rgba(4,12,45,0.9)] transition duration-300 hover:-translate-y-1 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_0_0_1px_rgba(239,232,214,0.11),0_32px_74px_-44px_rgba(4,12,45,1)] sm:min-h-[23rem] sm:p-4">
+      <article className="group relative flex min-h-[8.75rem] w-full min-w-0 max-w-full flex-col overflow-hidden rounded-2xl border border-cream/[0.075] bg-cream/[0.055] p-3.5 shadow-[inset_0_1px_0_rgba(241,234,216,0.055)] transition-[border-color,transform,filter] duration-300 hover:-translate-y-0.5 hover:border-cream/[0.14] hover:brightness-[1.035] sm:min-h-[9.25rem] sm:p-4">
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-cover bg-center opacity-80 saturate-[0.95] transition-transform duration-700 group-hover:scale-[1.045]"
-          style={{ backgroundImage: `url(${meta.background})` }}
+          className="pointer-events-none absolute -right-12 -top-14 h-32 w-32 rounded-full bg-[#bfe2ff]/[0.055] blur-2xl transition-opacity duration-300 group-hover:opacity-80"
         />
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-[linear-gradient(180deg,rgba(191,226,255,0.2)_0%,rgba(75,113,197,0.3)_36%,rgba(42,78,162,0.58)_62%,rgba(14,35,97,0.92)_100%)]"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-[radial-gradient(22rem_14rem_at_18%_4%,rgba(235,246,255,0.22),transparent_70%),linear-gradient(180deg,rgba(255,255,255,0.045),transparent_42%)]"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute inset-x-0 bottom-0 h-32 bg-[linear-gradient(180deg,transparent,rgba(239,232,214,0.08))]"
+          className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-cream/16 to-transparent"
         />
 
-        <div className="relative z-10 flex items-start justify-between gap-4">
+        <div className="relative z-10 flex min-w-0 items-start gap-3">
           <span
-            className={`grid h-11 w-11 place-items-center rounded-2xl ${meta.accent} text-[#244aa3] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_18px_32px_-22px_rgba(4,12,45,0.82)] transition duration-300 group-hover:scale-105`}
+            className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${meta.accent} text-[#244aa3] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] transition-transform duration-300 group-hover:scale-105`}
           >
-            <Icon size={20} aria-hidden="true" />
+            <Icon size={19} aria-hidden="true" />
           </span>
-          <span className="rounded-full bg-cream/[0.14] px-2.5 py-1 text-[11px] font-semibold text-cream/75">
-            {isCurrent
-              ? "Active"
-              : progressPercent > 0
-                ? `${progressPercent}%`
-                : String(session.order).padStart(2, "0")}
-          </span>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-start justify-between gap-2">
+              <h3 className="min-w-0 truncate text-[0.96rem] font-semibold leading-5 tracking-tight text-cream">
+                {session.title}
+              </h3>
+              <span className="shrink-0 rounded-full bg-cream/[0.08] px-2 py-0.5 text-[10px] font-semibold text-cream/54">
+                {isCurrent
+                  ? "Active"
+                  : progressPercent > 0
+                    ? `${progressPercent}%`
+                    : String(session.order).padStart(2, "0")}
+              </span>
+            </div>
+            <p className="mt-1 line-clamp-2 text-[0.76rem] font-medium leading-[1.35] text-[#aeb7d4]">
+              {session.purpose}
+            </p>
+          </div>
         </div>
 
-        <div className="relative z-10 mt-auto">
-          <h3 className="break-words text-[1.35rem] font-semibold leading-6 tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.35)]">
-            {session.title}
-          </h3>
-          <p className="mt-2 line-clamp-3 min-h-[3.75rem] text-[13px] font-medium leading-5 text-white/74">
-            {session.purpose}
-          </p>
-
-          <div className="mt-4 flex max-w-full flex-wrap gap-2 overflow-hidden">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/[0.12] px-2.5 py-1.5 text-[11px] font-semibold text-cream/80">
-              <MonitorSmartphone size={13} aria-hidden="true" />
-              {meta.tag}
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/[0.12] px-2.5 py-1.5 text-[11px] font-semibold text-cream/80">
-              <Timer size={13} aria-hidden="true" />
+        <div className="relative z-10 mt-auto pt-3">
+          <div className="mb-2 flex max-w-full flex-wrap gap-1.5 overflow-hidden">
+            <span className="inline-flex items-center gap-1 rounded-md bg-cream/[0.07] px-2 py-1 text-[10px] font-medium text-cream/58">
+              <Timer size={11} aria-hidden="true" />
               {metric}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/[0.12] px-2.5 py-1.5 text-[11px] font-semibold text-cream/80">
-              <CheckCircle2 size={13} aria-hidden="true" />
-              {shortCover(coverHints[0] ?? "Guided practice")}
+            <span className="inline-flex min-w-0 items-center gap-1 rounded-md bg-cream/[0.07] px-2 py-1 text-[10px] font-medium text-cream/58">
+              <CheckCircle2 size={11} aria-hidden="true" />
+              <span className="truncate">{shortCover(coverHints[0] ?? meta.tag)}</span>
             </span>
           </div>
 
-          <span className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-white px-4 text-[13px] font-semibold text-[#171a16] shadow-[0_16px_30px_-20px_rgba(255,255,255,0.78)] transition group-hover:bg-cream">
+          <span className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg bg-cream/[0.12] px-3 text-[12px] font-semibold text-cream/82 transition group-hover:bg-cream group-hover:text-[#24459a]">
             Start session
             <ArrowRight
-              size={16}
+              size={14}
               aria-hidden="true"
-              className="transition-transform duration-300 group-hover:translate-x-1"
+              className="transition-transform duration-300 group-hover:translate-x-0.5"
             />
           </span>
         </div>
       </article>
     </Link>
-  );
-}
-
-function BlueprintPattern({ className = "" }: { className?: string }) {
-  return (
-    <span
-      aria-hidden
-      className={`pointer-events-none absolute inset-0 z-0 ${className}`}
-      style={{
-        backgroundImage:
-          "linear-gradient(90deg, rgba(239,232,214,0.16) 1px, transparent 1px), linear-gradient(180deg, rgba(239,232,214,0.16) 1px, transparent 1px), linear-gradient(90deg, rgba(239,232,214,0.07) 1px, transparent 1px), linear-gradient(180deg, rgba(239,232,214,0.07) 1px, transparent 1px)",
-        backgroundSize: "112px 112px, 112px 112px, 28px 28px, 28px 28px",
-        backgroundPosition: "center top"
-      }}
-    />
   );
 }
 

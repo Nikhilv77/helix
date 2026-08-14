@@ -63,6 +63,7 @@ export function ResumeStep({
   uploading,
   activeStage,
   onFile,
+  onChooseAnother,
   onDragging,
   onBack,
 }: {
@@ -73,6 +74,7 @@ export function ResumeStep({
   uploading: boolean;
   activeStage: number;
   onFile: (file: File | null) => void;
+  onChooseAnother: () => void;
   onDragging: (dragging: boolean) => void;
   onBack: () => void;
 }) {
@@ -136,7 +138,7 @@ export function ResumeStep({
               : file
                 ? "border-cream/62 bg-cream/[0.06]"
                 : "border-cream/55 bg-cream/[0.032] hover:border-cream/72 hover:bg-cream/[0.052]",
-            uploading ? "pointer-events-none opacity-80" : ""
+            uploading ? "opacity-80" : ""
           ].join(" ")}
           style={
             {
@@ -178,11 +180,8 @@ export function ResumeStep({
                 </p>
                 <button
                   type="button"
-                  disabled={uploading}
                   onClick={() => {
-                    onFile(null);
-                    if (inputRef.current) inputRef.current.value = "";
-                    inputRef.current?.click();
+                    onChooseAnother();
                   }}
                   className="mt-5 inline-flex min-h-9 items-center gap-2 rounded-lg border border-cream/20 px-3 text-sm font-medium text-cream/62 transition hover:bg-cream/[0.08] hover:text-cream disabled:cursor-not-allowed disabled:opacity-45"
                 >

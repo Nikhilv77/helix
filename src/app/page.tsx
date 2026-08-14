@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { MarketingHome } from "@/components/marketing/marketing-home";
 import { Dashboard } from "@/components/workspace/dashboard";
-import { WorkspaceLoading } from "@/components/workspace/skeletons";
+import { DashboardSkeleton, MayaWelcomeLoading } from "@/components/workspace/skeletons";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/seo";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
@@ -65,9 +65,12 @@ export default async function HomePage({
     );
   }
 
+  const query = await searchParams;
+  const showMayaWelcome = query.welcome === "maya";
+
   return (
-    <Suspense fallback={<WorkspaceLoading />}>
-      <WorkspaceHome userId={userId} searchParams={searchParams} />
+    <Suspense fallback={showMayaWelcome ? <MayaWelcomeLoading /> : <DashboardSkeleton />}>
+      <WorkspaceHome userId={userId} showMayaWelcome={showMayaWelcome} />
     </Suspense>
   );
 }
@@ -75,14 +78,11 @@ export default async function HomePage({
 /** The signed-in half: everything that needs a database read. */
 async function WorkspaceHome({
   userId,
-  searchParams
+  showMayaWelcome
 }: {
   userId: string;
-  searchParams: Promise<{ welcome?: string | string[] }>;
+  showMayaWelcome: boolean;
 }) {
-  const query = await searchParams;
-  const showMayaWelcome = query.welcome === "maya";
-
   let dashboardData;
   try {
     const ownerId = authenticatedOwnerId(userId);
@@ -91,7 +91,7 @@ async function WorkspaceHome({
     // the generated curriculum still power Practice, Progress and Reports.
     const profile = await getAppContainer().profileService.get(ownerId);
     const [frontendRoadmap, frontendPlan] =
-      profile.targetRole === "frontend"
+      profile.targetRole === "fullstack"
         ? await Promise.all([
             getAppContainer()
               .frontendRoadmapService.home(ownerId)

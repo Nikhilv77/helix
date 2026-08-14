@@ -33,6 +33,8 @@ export interface CandidateProfileInput {
   context: string;
   focusAreas: string[];
   stories: CandidateStory[];
+  coverImage: string | null;
+  profileImage: string | null;
 }
 
 export interface CandidateProfile extends CandidateProfileInput {

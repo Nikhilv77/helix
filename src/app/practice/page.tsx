@@ -11,7 +11,7 @@ export const metadata = privatePageMetadata(
 
 /** Session one's content: the DSA pattern chapters, opened from Home. */
 export default async function PracticePage() {
-  const { ownerId, profile } = await requireOnboardedProfile();
+  const { ownerId } = await requireOnboardedProfile();
   const container = getAppContainer();
   const [plan, roadmap, questionStatuses] = await Promise.all([
     container.dsaService.frontendPlan().catch(() => null),
@@ -29,7 +29,6 @@ export default async function PracticePage() {
             plan={plan}
             roadmap={roadmap}
             questionStatuses={questionStatuses}
-            targetRole={profile.targetRole}
           />
         ) : (
           <p className="mt-10 text-sm text-cream/45">
