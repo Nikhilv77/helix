@@ -61,7 +61,7 @@ export function SessionPlan({ initial, completedIds, locked = false }: SessionPl
         </div>
 
         <Link
-          href={locked ? "#" : "/interview?scope=overall"}
+          href={locked ? "#" : "/interview?resume=1"}
           aria-disabled={locked}
           className={[
             "inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-2xl bg-white/[0.07] px-5 text-sm font-semibold text-cream shadow-soft-inset transition",

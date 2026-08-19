@@ -37,7 +37,8 @@ export function createState(params: {
     questionIndex: 0,
     followUpCount: 0,
     startedAt: params.startedAt,
-    turns: []
+    turns: [],
+    evidence: {}
   };
 }
 
@@ -49,11 +50,7 @@ export function elapsedMs(state: InterviewState, now: number): number {
   return Math.max(0, now - state.startedAt);
 }
 
-export function advance(
-  state: InterviewState,
-  requested: DecisionAction,
-  now: number
-): Advance {
+export function advance(state: InterviewState, requested: DecisionAction, now: number): Advance {
   const elapsed = elapsedMs(state, now);
 
   if (elapsed >= HARD_CAP_MS) {

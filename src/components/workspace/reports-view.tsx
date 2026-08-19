@@ -1,10 +1,6 @@
 import type { ReactNode } from "react";
 import { DocumentTitle } from "@/components/document-title";
-import {
-  ReportBriefingStage,
-  ReportEmptyStage,
-  type ReportCandidate
-} from "@/components/workspace/report-briefing-stage";
+import { ReportBriefingStage, type ReportCandidate } from "@/components/workspace/report-briefing-stage";
 import type { ReportsOverview } from "@/lib/reports";
 
 /**
@@ -16,8 +12,6 @@ import type { ReportsOverview } from "@/lib/reports";
  */
 export function ReportsView({
   overview,
-  quota,
-  firstName,
   candidate
 }: {
   overview: ReportsOverview;
@@ -26,26 +20,18 @@ export function ReportsView({
   /** Named on the downloadable report's cover page. */
   candidate: ReportCandidate;
 }) {
-  const remaining = Math.max(0, quota.limit - quota.used);
-  const hasReport = overview.scoredRounds > 0;
-
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[95rem] flex-col px-5 pb-12 pt-4 text-cream sm:px-8 lg:px-10 lg:pt-6">
       <DocumentTitle title="Reports" />
       {/*
-        Phase 1 note:
+        UI build note:
         Reports is being rebuilt as a premium briefing experience, not a
-        dashboard. For now the "report ready" path still uses the current
-        overview data with a designed briefing layer; the empty path is real
-        and appears whenever there are no scored rounds yet.
+        dashboard. While the visual direction is being finalized, always render
+        the report-ready briefing path so the screen can be designed even when
+        the account has no scored rounds yet. Re-enable the empty-state branch
+        when the real report phases are wired back in.
       */}
-      {!hasReport ? (
-        <ReportShell>
-          <ReportEmptyStage firstName={firstName} exhausted={remaining === 0} />
-        </ReportShell>
-      ) : (
-        <ReportBriefing overview={overview} candidate={candidate} />
-      )}
+      <ReportBriefing overview={overview} candidate={candidate} />
     </div>
   );
 }

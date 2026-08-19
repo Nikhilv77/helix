@@ -1,13 +1,20 @@
 import { z } from "zod";
 import { AiService } from "../ai/ai.service";
 import { Logger } from "../common/logger";
-import { describeLevel, describeRole, describeRound, levelFocus } from "./prompt-context";
+import {
+  describeLevel,
+  describeRole,
+  describeRound,
+  isResumeRound,
+  levelFocus
+} from "./prompt-context";
 import { InterviewSetup, PlannedQuestion, QUESTION_COUNT } from "./types";
 
 const DEFAULT_PLANNING_BUDGET_MS = 8_000;
 
 const plannedQuestionSchema = z.object({
   text: z.string().min(1).max(180),
+  evidenceAnchor: z.string().min(2).max(180),
   competency: z.string().min(2).max(48),
   intent: z.string().min(8).max(160),
   mustHit: z.array(z.string().min(1)).min(2).max(3),
@@ -15,24 +22,30 @@ const plannedQuestionSchema = z.object({
 });
 
 const planSchema = z.object({
-  questions: z.array(plannedQuestionSchema).length(QUESTION_COUNT)
+  questions: z.array(plannedQuestionSchema).min(3).max(QUESTION_COUNT)
 });
 
 const SYSTEM_INSTRUCTION = `You are a senior interviewer designing a coherent, evidence-led interview. Return only JSON matching the requested schema.
 
-Write questions a skilled human interviewer would naturally ask aloud. The set must feel like one conversation, not a list generated from a resume. Every question must reveal evidence that cannot be faked with generic interview advice.`;
+Write questions a skilled human interviewer would naturally ask aloud. The set must feel like one conversation, not a list generated from a resume. Every question must reveal evidence that cannot be faked with generic interview advice.
+
+Use relaxed spoken English, with simple wording and a clear reason for asking. Do not sound like a questionnaire, rubric, or resume parser.`;
 
 function buildPrompt(setup: InterviewSetup): string {
+  const questionCount = setup.questionCount ?? QUESTION_COUNT;
   const agenda = setup.agenda?.filter((item) => item.trim().length > 0) ?? [];
+  const resumeGuidance = isResumeRound(setup)
+    ? "This is a resume-defense round. Start from the candidate's actual evidence and let the conversation deepen around one or two strongest stories. Ask what happened, what they personally did, why they chose it, what changed, and what they would do differently now. Treat resume claims as starting points, not facts to praise. Every evidenceAnchor must copy or tightly paraphrase a named role, project, technology, achievement, or metric from the candidate context. Never invent a company, project, technology, or number."
+    : "";
 
   // A chosen template replaces the default arc. Anything outside it is off
   // limits, otherwise "Defend your projects" drifts into a general round.
   const arc = agenda.length
-    ? `The candidate chose a focused round${setup.templateTitle ? `: "${setup.templateTitle}"` : ""}. Produce exactly ${QUESTION_COUNT} questions that serve this agenda in order, and nothing outside it:
+    ? `The candidate chose a focused round${setup.templateTitle ? `: "${setup.templateTitle}"` : ""}. Produce exactly ${questionCount} questions that serve this agenda in order, and nothing outside it:
 ${agenda.map((item, index) => `${index + 1}. ${item}`).join("\n")}
 
-Where the agenda has fewer entries than ${QUESTION_COUNT} questions, split the richest objective into two questions rather than introducing a new topic.`
-    : `Produce exactly ${QUESTION_COUNT} questions as one deliberate arc:
+Where the agenda has fewer entries than ${questionCount} questions, split the richest objective into two questions rather than introducing a new topic.`
+    : `Produce exactly ${questionCount} questions as one deliberate arc:
 1. Establish the candidate's personal ownership and the real context.
 2. Deep-dive into one consequential decision and its trade-off.
 3. Examine a failure, constraint, disagreement, or difficult debugging moment.
@@ -47,7 +60,10 @@ ${setup.context.trim()}
 
 ${arc}
 
+${resumeGuidance}
+
 Constraints:
+- Use relaxed spoken English, with simple wording and a clear reason for asking.
 - At least 3 questions must anchor to a concrete system, product, technology, number, or problem in the candidate's context.
 - Question 1 is a focused warm-up, answerable in about 60 seconds.
 - Each question asks exactly one thing. Never combine two questions with "and".
@@ -58,9 +74,11 @@ Constraints:
 - If the context is too thin to ground a question, ask about a decision they must have faced in this role at this level. Never ask trivia.
 - Do not include Markdown or code. Trailgrad attaches a practical role-specific code exercise separately for technical engineering rounds.
 - ${levelFocus(setup.level)}
+- Avoid stiff phrases such as "please elaborate", "can you explain further", and "what was your role". Ask the natural version instead.
 
 For each question return:
 - text: the exact words spoken. One natural sentence, at most 20 words.
+- evidenceAnchor: the exact short claim, project, role, technology, achievement, or metric that motivated the question.
 - competency: a short label such as Ownership, Technical judgement, Incident response, Collaboration, or Impact.
 - intent: one sentence explaining what strong evidence this question should uncover.
 - mustHit: 2-3 observable pieces of evidence, written concretely rather than as abstract qualities.
@@ -89,6 +107,10 @@ export class InterviewPlanner {
         this.planningBudgetMs
       );
 
+      const expectedCount = setup.questionCount ?? QUESTION_COUNT;
+      if (result.questions.length !== expectedCount) {
+        throw new Error(`Expected ${expectedCount} questions, received ${result.questions.length}`);
+      }
       return applyQuestionFormats(setup, result.questions);
     } catch (error) {
       this.logger.warn(
@@ -104,6 +126,7 @@ export class InterviewPlanner {
 }
 
 export function createFallbackPlan(setup: InterviewSetup): PlannedQuestion[] {
+  const evidenceAnchor = fallbackEvidenceAnchor(setup);
   const decisionQuestion: Record<InterviewSetup["role"], string> = {
     backend: "Which reliability or data-flow decision created the hardest trade-off in that work?",
     frontend:
@@ -115,52 +138,58 @@ export function createFallbackPlan(setup: InterviewSetup): PlannedQuestion[] {
   };
   const coding = fallbackCodingQuestion(setup);
 
-  return [
-    {
-      text: "What did you personally own end to end in the experience you shared?",
-      kind: "conversation",
-      language: "",
-      codeTask: "",
-      codeSnippet: "",
-      competency: "Ownership",
-      intent: "Establish the candidate's scope, boundaries, and direct contribution.",
-      mustHit: ["personal responsibility", "project context"],
-      probeIfMissing: "Which part would not have happened without your contribution?"
-    },
-    {
-      text: decisionQuestion[setup.role],
-      kind: "conversation",
-      language: "",
-      codeTask: "",
-      codeSnippet: "",
-      competency: "Technical judgement",
-      intent: "Reveal a consequential decision and the evidence used to make it.",
-      mustHit: ["alternatives considered", "reason for the choice"],
-      probeIfMissing: "What alternative did you reject, and why?"
-    },
-    coding ?? {
-      text: "What failure or constraint most changed your approach during that work?",
-      kind: "conversation",
-      language: "",
-      codeTask: "",
-      codeSnippet: "",
-      competency: "Adaptability",
-      intent: "Test how the candidate responds when the original approach stops working.",
-      mustHit: ["specific constraint", "change in approach"],
-      probeIfMissing: "What did you change after discovering it?"
-    },
-    {
-      text: "What measurable outcome changed because of your work?",
-      kind: "conversation",
-      language: "",
-      codeTask: "",
-      codeSnippet: "",
-      competency: "Impact",
-      intent: "Connect the candidate's decisions to a concrete result and reflection.",
-      mustHit: ["measurable result", "personal contribution"],
-      probeIfMissing: "How did you know the change was successful?"
-    }
-  ];
+  return (
+    [
+      {
+        text: "What did you personally own end to end in the experience you shared?",
+        evidenceAnchor,
+        kind: "conversation",
+        language: "",
+        codeTask: "",
+        codeSnippet: "",
+        competency: "Ownership",
+        intent: "Establish the candidate's scope, boundaries, and direct contribution.",
+        mustHit: ["personal responsibility", "project context"],
+        probeIfMissing: "Which part would not have happened without your contribution?"
+      },
+      {
+        text: decisionQuestion[setup.role],
+        evidenceAnchor,
+        kind: "conversation",
+        language: "",
+        codeTask: "",
+        codeSnippet: "",
+        competency: "Technical judgement",
+        intent: "Reveal a consequential decision and the evidence used to make it.",
+        mustHit: ["alternatives considered", "reason for the choice"],
+        probeIfMissing: "What alternative did you reject, and why?"
+      },
+      coding ?? {
+        text: "What failure or constraint most changed your approach during that work?",
+        evidenceAnchor,
+        kind: "conversation",
+        language: "",
+        codeTask: "",
+        codeSnippet: "",
+        competency: "Adaptability",
+        intent: "Test how the candidate responds when the original approach stops working.",
+        mustHit: ["specific constraint", "change in approach"],
+        probeIfMissing: "What did you change after discovering it?"
+      },
+      {
+        text: "What measurable outcome changed because of your work?",
+        evidenceAnchor,
+        kind: "conversation",
+        language: "",
+        codeTask: "",
+        codeSnippet: "",
+        competency: "Impact",
+        intent: "Connect the candidate's decisions to a concrete result and reflection.",
+        mustHit: ["measurable result", "personal contribution"],
+        probeIfMissing: "How did you know the change was successful?"
+      }
+    ] as PlannedQuestion[]
+  ).slice(0, setup.questionCount ?? QUESTION_COUNT);
 }
 
 function applyQuestionFormats(
@@ -276,6 +305,7 @@ print(evaluate(model, test, data.labels))`
 
   return {
     text: "Review the code on screen and walk me through the change you would ship.",
+    evidenceAnchor: `Production ${setup.role} scenario aligned with the candidate's target role`,
     kind: "code",
     ...task,
     competency: "Practical engineering",
@@ -284,6 +314,12 @@ print(evaluate(model, test, data.labels))`
     mustHit: ["root cause", "corrected implementation", "trade-off or verification"],
     probeIfMissing: "How would you prove your change is correct under failure?"
   };
+}
+
+function fallbackEvidenceAnchor(setup: InterviewSetup): string {
+  const normalized = setup.context.replace(/\s+/g, " ").trim();
+  if (!normalized) return `${setup.role} experience shared by the candidate`;
+  return normalized.length > 160 ? `${normalized.slice(0, 159).trimEnd()}…` : normalized;
 }
 
 async function withDeadline<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {

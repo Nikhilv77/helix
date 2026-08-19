@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
 import { TrailgradMark } from "@/components/trailgrad-mark";
 import { ApiClientError, getProfile, startInterview } from "@/lib/api-client";
 import type { Curriculum, CurriculumSession } from "@/lib/curriculum";
+import { FRONTEND_SESSIONS, type FrontendSession } from "@/lib/frontend-plan";
 import { findTemplate, type InterviewTemplate } from "@/lib/interview-templates";
 import { pageTitle } from "@/lib/seo";
 import type { Intensity, InterviewSetup, Level, Role, RoundType } from "@/lib/types";
@@ -41,8 +42,9 @@ const intensityOptions: Array<{ value: Intensity; label: string; hint: string }>
 
 const MIN_CONTEXT = 10;
 
-const startingLabels = ["Reading your experience", "Writing your questions", "Setting the room"];
+const startingLabels = ["Reading your resume", "Writing your questions", "Setting the room"];
 const setupStepTitles = ["Role", "Experience", "Round", "Intensity", "Context"];
+const RESUME_SESSION_ID = "resume-behavioral-defense";
 
 export default function InterviewSetupPage() {
   const router = useRouter();
@@ -57,14 +59,20 @@ export default function InterviewSetupPage() {
   const [error, setError] = useState<string | null>(null);
   const [template, setTemplate] = useState<InterviewTemplate | null>(null);
   const [plannedSession, setPlannedSession] = useState<CurriculumSession | null>(null);
+  const [plannedSessionTitle, setPlannedSessionTitle] = useState<string | null>(null);
   const [scope, setScope] = useState<"session" | "overall" | null>(null);
   const [planAgenda, setPlanAgenda] = useState<string[] | null>(null);
+  const [autoStart, setAutoStart] = useState(false);
+  const [profileReady, setProfileReady] = useState(false);
+  const autoStartedRef = useRef(false);
 
   useEffect(() => {
     document.title = pageTitle(
-      starting ? "Starting Interview" : `Interview Setup - ${setupStepTitles[step] ?? "Context"}`
+      starting || autoStart
+        ? "Starting Interview"
+        : `Interview Setup - ${setupStepTitles[step] ?? "Context"}`
     );
-  }, [starting, step]);
+  }, [autoStart, starting, step]);
 
   // Signed-in candidates should not have to retype their role and project
   // context for every round. Query params win so dashboard drills can narrow
@@ -75,28 +83,60 @@ export default function InterviewSetupPage() {
     const roleParam = params.get("role");
     const levelParam = params.get("level");
     const focus = params.get("focus")?.trim();
+    const resumeLaunch = params.get("resume") === "1";
+    const requestedRoadmapSession = findRoadmapSession(params.get("roadmapSession"));
+    const roadmapSession =
+      requestedRoadmapSession ?? (resumeLaunch ? findRoadmapSession(RESUME_SESSION_ID) : null);
+    const sessionId = params.get("session");
+    const overall = params.get("scope") === "overall";
+    const chosenTemplate = findTemplate(params.get("template"));
+    const shouldAutoStart =
+      params.get("autostart") === "1" ||
+      resumeLaunch ||
+      Boolean(roadmapSession) ||
+      Boolean(sessionId) ||
+      overall ||
+      Boolean(params.get("focus")) ||
+      Boolean(chosenTemplate);
+
+    if (!shouldAutoStart) {
+      router.replace("/interviews");
+      return () => {
+        cancelled = true;
+      };
+    }
 
     const queryRole = roleOptions.find((option) => option.value === roleParam)?.value ?? null;
     const queryLevel = levelOptions.find((option) => option.value === levelParam)?.value ?? null;
 
+    setProfileReady(false);
+    setAutoStart(shouldAutoStart);
     if (queryRole) setRole(queryRole);
     if (queryLevel) setLevel(queryLevel);
-    if (params.get("session") || params.get("scope") === "overall") setStep(4);
+    if (params.get("session") || params.get("scope") === "overall" || roadmapSession) setStep(4);
 
-    // A template picked on the home page fixes the round and its agenda, so the
-    // setup only still needs the candidate's role, level, and context.
-    const chosen = findTemplate(params.get("template"));
+    // A template picked on the interviews page fixes the round and its agenda.
+    const chosen = chosenTemplate;
     if (chosen) {
       setTemplate(chosen);
       setRoundType(chosen.roundType);
       setIntensity(chosen.intensity);
+    } else if (!roadmapSession && !sessionId && !overall) {
+      setRoundType("behavioral");
+      setIntensity("realistic");
+    }
+
+    if (roadmapSession) {
+      setScope("session");
+      setIntensity("realistic");
+      setRoundType(roundTypeForRoadmapSession(roadmapSession.id));
+      setPlannedSessionTitle(roadmapSession.title);
+      setPlanAgenda(agendaForRoadmapSession(roadmapSession));
     }
 
     // Rounds launched from the plan already know their subject. Onboarding
     // captured the role and level, so nothing is asked again here.
-    const sessionId = params.get("session");
-    const overall = params.get("scope") === "overall";
-    if (sessionId || overall) {
+    if ((sessionId || overall) && !roadmapSession) {
       setScope(overall ? "overall" : "session");
       setIntensity("realistic");
       void fetch("/api/curriculum", { cache: "no-store" })
@@ -128,20 +168,39 @@ export default function InterviewSetupPage() {
     void getProfile()
       .then((profile) => {
         if (cancelled) return;
-        if (!queryRole && profile.targetRole) setRole(profile.targetRole);
-        if (!queryLevel && profile.level) setLevel(profile.level);
+        if (!queryRole && (profile.targetRole || shouldAutoStart)) {
+          setRole(profile.targetRole ?? "frontend");
+        }
+        if (!queryLevel && (profile.level || shouldAutoStart)) setLevel(profile.level ?? "0-2");
 
         const strongestStory = profile.stories[0];
-        const verifiedExperience = profile.resume?.experience[0];
+        const resumeEvidence = [
+          ...(profile.resume?.experience
+            .slice(0, 2)
+            .map(
+              (experience) =>
+                `Experience — ${experience.role} at ${experience.organization}${experience.period ? ` (${experience.period})` : ""}: ${experience.summary} ${experience.achievements.join(" ")}`
+            ) ?? []),
+          ...(profile.resume?.projects
+            .slice(0, 2)
+            .map(
+              (project) =>
+                `Project — ${project.name}: ${project.summary} Outcome: ${project.outcome}. Skills: ${project.skills.join(", ")}`
+            ) ?? []),
+          ...(profile.resume?.achievements
+            .slice(0, 3)
+            .map((achievement) => `Achievement — ${achievement}`) ?? [])
+        ].join("\n");
         const preparedQuestion = findPreparedQuestion(
           profile.resume?.practiceQuestions ?? [],
-          focus
+          roadmapSession?.title ?? focus
         );
         const memory = [
           profile.context,
-          verifiedExperience
-            ? `Verified resume evidence — ${verifiedExperience.role} at ${verifiedExperience.organization}${verifiedExperience.period ? ` (${verifiedExperience.period})` : ""}: ${verifiedExperience.summary} ${verifiedExperience.achievements.join(" ")}`
+          roadmapSession
+            ? `Roadmap interview session — ${roadmapSession.title}: ${roadmapSession.purpose} Cover this agenda: ${roadmapSession.covers.join("; ")}. Ask from my real profile and resume evidence, not generic domain trivia.`
             : "",
+          resumeEvidence ? `Verified resume evidence:\n${resumeEvidence}` : "",
           strongestStory
             ? `Project story — ${strongestStory.title}: ${strongestStory.situation} ${strongestStory.action} ${strongestStory.outcome}`
             : "",
@@ -154,7 +213,14 @@ export default function InterviewSetupPage() {
           .join("\n\n")
           .slice(0, 1200);
 
-        if (memory) setContext((current) => current || memory);
+        if (memory || shouldAutoStart) {
+          setContext(
+            (current) =>
+              current ||
+              memory ||
+              "Resume interview based on my saved Trailgrad profile, resume evidence, projects, and impact."
+          );
+        }
       })
       .catch(() => {
         if (focus) {
@@ -163,12 +229,26 @@ export default function InterviewSetupPage() {
               current || `Practice focus: ${focus}. Ask for concrete evidence from my experience.`
           );
         }
+        if (shouldAutoStart) {
+          setRole((current) => current ?? "frontend");
+          setLevel((current) => current ?? "0-2");
+          setRoundType((current) => current ?? "behavioral");
+          setIntensity((current) => current ?? "realistic");
+          setContext(
+            (current) =>
+              current ||
+              "Resume interview based on my saved Trailgrad profile, resume evidence, projects, and impact."
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setProfileReady(true);
       });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [router]);
 
   const answered = useMemo(
     () =>
@@ -206,7 +286,7 @@ export default function InterviewSetupPage() {
             agenda: planAgenda,
             ...(plannedSession
               ? { templateId: plannedSession.id, templateTitle: plannedSession.title }
-              : { templateTitle: "Full interview across your sessions" })
+              : { templateTitle: plannedSessionTitle ?? "Full interview across your sessions" })
           }
         : template
           ? { agenda: template.agenda, templateId: template.id, templateTitle: template.title }
@@ -225,9 +305,37 @@ export default function InterviewSetupPage() {
           ? caught.message
           : "The interview could not be started. Try again."
       );
+      setAutoStart(false);
+      autoStartedRef.current = false;
       setStarting(false);
     }
-  }, [context, intensity, level, planAgenda, plannedSession, role, roundType, router, template]);
+  }, [
+    context,
+    intensity,
+    level,
+    planAgenda,
+    plannedSession,
+    plannedSessionTitle,
+    role,
+    roundType,
+    router,
+    template
+  ]);
+
+  useEffect(() => {
+    if (!autoStart || autoStartedRef.current || starting || !profileReady) return;
+    if (!role || !level || !roundType || !intensity) return;
+
+    if (context.trim().length < MIN_CONTEXT) {
+      setContext(
+        "Resume interview based on my saved Trailgrad profile, resume evidence, projects, and impact."
+      );
+      return;
+    }
+
+    autoStartedRef.current = true;
+    void begin();
+  }, [autoStart, begin, context, intensity, level, profileReady, role, roundType, starting]);
 
   // A template already fixes the round and the intensity, so those two steps
   // drop out of the wizard rather than asking a question with one answer.
@@ -334,7 +442,7 @@ export default function InterviewSetupPage() {
 
       <div className="relative z-10 flex flex-1 items-center justify-center px-6 py-10">
         <div className="w-full max-w-3xl">
-          {starting ? (
+          {starting || autoStart ? (
             <StartingState label={startingLabels[startingLabel] ?? startingLabels[0] ?? ""} />
           ) : (
             <div key={step} className="step-in">
@@ -343,10 +451,11 @@ export default function InterviewSetupPage() {
                   {String(position + 1).padStart(2, "0")} /{" "}
                   {String(activeSteps.length).padStart(2, "0")}
                 </p>
-                {plannedSession || template || scope === "overall" ? (
+                {plannedSession || plannedSessionTitle || template || scope === "overall" ? (
                   <span className="pill inline-flex items-center gap-2 px-3 py-1 text-[11px] font-medium text-cream/75">
                     <Check size={12} />{" "}
                     {plannedSession?.title ??
+                      plannedSessionTitle ??
                       template?.title ??
                       "Full interview across all sessions"}
                   </span>
@@ -472,7 +581,7 @@ export default function InterviewSetupPage() {
       </div>
 
       <footer className="relative z-10 mx-auto flex w-full max-w-3xl flex-wrap items-center gap-3 px-6 pb-8">
-        {answered.length > 0 && !starting ? (
+        {answered.length > 0 && !starting && !autoStart ? (
           <div className="flex flex-wrap items-center gap-2">
             {answered.map((item) => (
               <span
@@ -487,7 +596,11 @@ export default function InterviewSetupPage() {
         ) : null}
 
         <p className="ml-auto font-mono text-[10px] uppercase tracking-[0.16em] text-cream/25">
-          {step < 4 ? "Press 1–6 to choose · Enter to continue" : "⌘ + Enter to start"}
+          {autoStart
+            ? ""
+            : step < 4
+              ? "Press 1–6 to choose · Enter to continue"
+              : "⌘ + Enter to start"}
         </p>
       </footer>
     </main>
@@ -506,6 +619,24 @@ function findPreparedQuestion(
     questions[0] ??
     null
   );
+}
+
+function findRoadmapSession(id: string | null): FrontendSession | null {
+  if (!id) return null;
+  return FRONTEND_SESSIONS.find((session) => session.id === id) ?? null;
+}
+
+function agendaForRoadmapSession(session: FrontendSession): string[] {
+  return [
+    `${session.title}: ${session.purpose}`,
+    ...session.covers.map((item) => `${session.title}: ${item}`)
+  ];
+}
+
+function roundTypeForRoadmapSession(id: string): RoundType {
+  if (id === "resume-behavioral-defense") return "behavioral";
+  if (id === "final-frontend-mock") return "hiring-manager";
+  return "technical";
 }
 
 function StartingState({ label }: { label: string }) {

@@ -8,6 +8,7 @@ import {
   RouteProgress,
   Waveform
 } from "@/components/workspace/skeletons";
+import { InterviewsSkeleton } from "@/components/workspace/interviews-skeleton";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
 
@@ -22,11 +23,17 @@ export default async function RootLoading() {
   const requestHeaders = await headers();
   const pathname = requestHeaders.get("x-trailgrad-pathname") ?? "";
   const search = requestHeaders.get("x-trailgrad-search") ?? "";
+  const interviewRoute = pathname === "/interview" || pathname.startsWith("/interview/");
+  const progressRoute = pathname === "/progress";
   const manageRoute = pathname === "/manage";
   const profileRoute = pathname === "/profile";
   const workspaceRoute = isWorkspaceLoadingRoute(pathname);
   const welcomeHome = pathname === "/" && new URLSearchParams(search).get("welcome") === "maya";
   const dashboardHome = pathname === "/" && (await shouldShowDashboardSkeleton());
+
+  if (interviewRoute || progressRoute) return null;
+
+  if (pathname === "/interviews") return <InterviewsSkeleton />;
 
   if (manageRoute) {
     return (
@@ -80,7 +87,6 @@ function isWorkspaceLoadingRoute(pathname: string): boolean {
     pathname === "/practice" ||
     pathname.startsWith("/practice/") ||
     pathname === "/interviews" ||
-    pathname === "/progress" ||
     pathname === "/profile" ||
     pathname.startsWith("/sessions/") ||
     pathname.startsWith("/session/")

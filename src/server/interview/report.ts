@@ -54,6 +54,7 @@ export function createInterviewReport(
     return {
       label: question.competency?.trim() || `Question ${index + 1}`,
       question: question.text,
+      evidenceAnchor: question.evidenceAnchor ?? null,
       answered: Boolean(answer),
       answerPreview: answer ? compact(answers.map((turn) => turn.text).join(" "), 180) : null,
       ...assessment
@@ -189,7 +190,7 @@ function assessAnswer(
   interviewerActions: Array<string | undefined>
 ): Pick<
   InterviewCompetencyReport,
-  "evidenceScore" | "evidenceLevel" | "signals" | "gap" | "nextStep"
+  "evidenceScore" | "evidenceLevel" | "evidenceBreakdown" | "signals" | "gap" | "nextStep"
 > {
   const text = answers.join(" ").replace(/\s+/g, " ").trim();
   if (!text) {
@@ -239,7 +240,22 @@ function assessAnswer(
   const followUps = interviewerActions.filter((action) =>
     ["probe", "challenge", "clarify"].includes(action ?? "")
   ).length;
-  score = Math.max(20, Math.min(100, score - Math.min(8, followUps * 2)));
+  const evidenceBreakdown = {
+    ownership: hasOwnership ? 88 : 28,
+    decision: hasDecision ? 86 : 30,
+    specificity: hasSpecifics ? 84 : Math.min(72, 30 + Math.round(words / 5)),
+    outcome: hasOutcome ? 86 : 26
+  };
+  score = Math.max(
+    20,
+    Math.min(
+      100,
+      Math.round(
+        Object.values(evidenceBreakdown).reduce((total, value) => total + value, 0) /
+          Object.values(evidenceBreakdown).length
+      ) - Math.min(8, followUps * 2)
+    )
+  );
 
   const missing = [
     !hasOwnership ? "Make your personal contribution explicit." : null,
@@ -251,6 +267,7 @@ function assessAnswer(
   return {
     evidenceScore: score,
     evidenceLevel: score >= 75 ? "strong" : "developing",
+    evidenceBreakdown,
     signals,
     gap: missing[0] ?? "The answer contains a complete evidence chain.",
     nextStep: missing[0] ?? "Practice delivering the same evidence in a tighter 60-second response."

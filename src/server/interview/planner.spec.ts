@@ -33,6 +33,7 @@ describe("InterviewPlanner", () => {
     });
     expect(plan[2]?.codeSnippet).toContain("capturePayment");
     expect(plan.every((question) => question.mustHit.length >= 2)).toBe(true);
+    expect(plan.every((question) => question.evidenceAnchor)).toBe(true);
   });
 
   it("does not inject code into a behavioral interview", () => {
@@ -40,6 +41,17 @@ describe("InterviewPlanner", () => {
 
     expect(plan.every((question) => question.kind === "conversation")).toBe(true);
     expect(plan.every((question) => !question.codeSnippet)).toBe(true);
+  });
+
+  it("keeps a DSA round to three questions", () => {
+    const plan = createFallbackPlan({
+      ...setup,
+      questionCount: 3,
+      templateTitle: "DSA practice interview",
+      agenda: ["Two Sum: explain the approach", "Binary Search: prove the invariant"]
+    });
+
+    expect(plan).toHaveLength(3);
   });
 
   it("falls back quickly when the provider does not respond", async () => {
@@ -91,5 +103,26 @@ describe("InterviewPlanner", () => {
     await new InterviewPlanner(ai, 5).plan(setup);
 
     expect(prompts[0]).toContain("Examine a failure, constraint, disagreement");
+  });
+
+  it("adds conversational resume-defense guidance", async () => {
+    const prompts: string[] = [];
+    const ai = {
+      generateStructured: jest.fn((request: { prompt: string }) => {
+        prompts.push(request.prompt);
+        return new Promise(() => undefined);
+      })
+    } as unknown as AiService;
+
+    await new InterviewPlanner(ai, 5).plan({
+      ...setup,
+      roundType: "behavioral",
+      templateId: "resume-behavioral-defense",
+      templateTitle: "Resume and Behavioral Defense"
+    });
+
+    expect(prompts[0]).toContain("resume-defense round");
+    expect(prompts[0]).toContain("relaxed spoken English");
+    expect(prompts[0]).toContain("one or two strongest stories");
   });
 });

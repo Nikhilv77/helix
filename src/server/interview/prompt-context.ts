@@ -61,6 +61,13 @@ export function levelFocus(level: Level): string {
   return LEVEL_FOCUS[level];
 }
 
+export function isResumeRound(setup: InterviewSetup): boolean {
+  return (
+    setup.templateId === "resume-behavioral-defense" ||
+    setup.templateTitle?.toLowerCase().includes("resume") === true
+  );
+}
+
 export function describeSetup(setup: InterviewSetup): string {
   return `${describeRound(setup.roundType)} interview for a ${describeLevel(setup.level)} interviewing as a ${describeRole(setup.role)}`;
 }

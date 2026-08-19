@@ -37,11 +37,19 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Count the distinct ways to climb a staircase taking one or two steps at a time. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "You are climbing a staircase with n steps. Each move can climb either one or two steps. Return the number of distinct ways to reach the top.",
+      "constraints": ["1 <= n <= 45."],
+      "examples": [
+        {
+          "input": "n = 2",
+          "output": "2",
+          "explanation": "The two ways are 1 + 1 steps or one 2-step move."
+        },
+        {
+          "input": "n = 3",
+          "output": "3",
+          "explanation": "The three ways are 1+1+1, 1+2, and 2+1."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around ways to reach a step being the sum of the two steps below. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -124,11 +132,19 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Choose non-adjacent houses to rob so the total taken is as large as possible. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "You are given a row of houses where nums[i] is the money in house i. Adjacent houses have connected security systems, so you cannot rob two adjacent houses. Return the maximum amount you can rob without alerting the police.",
+      "constraints": ["1 <= nums.length <= 100.", "0 <= nums[i] <= 400."],
+      "examples": [
+        {
+          "input": "nums = [1,2,3,1]",
+          "output": "4",
+          "explanation": "Rob houses 0 and 2 for a total of 1 + 3 = 4."
+        },
+        {
+          "input": "nums = [2,7,9,3,1]",
+          "output": "12",
+          "explanation": "Rob houses with values 2, 9, and 1 for a total of 12."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around choosing between taking the current value plus two back, or skipping it. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -211,11 +227,24 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Rob non-adjacent houses arranged in a circle, where the first and last houses are neighbours. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "The houses are arranged in a circle, so the first and last houses are adjacent. Given the money in each house, return the maximum amount you can rob without robbing two adjacent houses.",
+      "constraints": ["1 <= nums.length <= 100.", "0 <= nums[i] <= 1000."],
+      "examples": [
+        {
+          "input": "nums = [2,3,2]",
+          "output": "3",
+          "explanation": "The first and last houses cannot both be robbed, so the middle house is optimal."
+        },
+        {
+          "input": "nums = [1,2,3,1]",
+          "output": "4",
+          "explanation": "Rob the houses with values 1 and 3; they are not adjacent in the circle."
+        },
+        {
+          "input": "nums = [1,2,3]",
+          "output": "3",
+          "explanation": "The best choice is the single house containing 3."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around a circular constraint reducing to two linear runs. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -298,11 +327,27 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Count the ways a digit string can be decoded into letters, where one maps to A and twenty-six maps to Z. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "problemStatement": "A message is encoded using '1' through '26' for 'A' through 'Z'. Given a string s containing only digits, return the number of ways to decode it. A group with a leading zero is invalid.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= s.length <= 100.",
+        "s contains only digits and may contain leading zeros."
+      ],
+      "examples": [
+        {
+          "input": "s = \"12\"",
+          "output": "2",
+          "explanation": "The string can decode as AB using 1 and 2, or as L using 12."
+        },
+        {
+          "input": "s = \"226\"",
+          "output": "3",
+          "explanation": "The valid decodings are BZ, VF, and BBF."
+        },
+        {
+          "input": "s = \"06\"",
+          "output": "0",
+          "explanation": "A code cannot start with zero, so the string has no valid decoding."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around the same two-step recurrence gated by validity rules. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -385,11 +430,19 @@
         "time": "O(m*n)",
         "space": "O(n)"
       },
-      "problemStatement": "Count the paths from the top-left to the bottom-right of a grid moving only right or down. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(m*n) time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "A robot starts at the top-left corner of an m x n grid and can move only right or down. Return the number of distinct paths to the bottom-right corner.",
+      "constraints": ["1 <= m, n <= 100.", "The answer is guaranteed to be at most 2 * 10^9."],
+      "examples": [
+        {
+          "input": "m = 3, n = 7",
+          "output": "28",
+          "explanation": "There are 28 distinct sequences of right and down moves from the top-left to the bottom-right."
+        },
+        {
+          "input": "m = 3, n = 2",
+          "output": "3",
+          "explanation": "The paths are right-down-down, down-right-down, and down-down-right."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around each cell's count as the sum of the cell above and the cell to the left. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -478,11 +531,19 @@
         "time": "O(m*n)",
         "space": "O(n)"
       },
-      "problemStatement": "Count the paths across a grid moving right or down while avoiding blocked cells. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(m*n) time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "A robot starts at the top-left of a grid and can move only right or down. Cells with value 1 are obstacles and cells with value 0 are open. Return the number of distinct paths to the bottom-right without entering an obstacle.",
+      "constraints": ["1 <= m, n <= 100.", "obstacleGrid[i][j] is 0 or 1."],
+      "examples": [
+        {
+          "input": "obstacleGrid = [[0,0,0],[0,1,0],[0,0,0]]",
+          "output": "2",
+          "explanation": "The robot can go around the center obstacle along either the top/right edge or the left/bottom edge."
+        },
+        {
+          "input": "obstacleGrid = [[0,1],[0,0]]",
+          "output": "1",
+          "explanation": "The path moving down and then right is the only valid route."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around an obstacle forcing a cell's count to zero. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -571,11 +632,19 @@
         "time": "O(m*n)",
         "space": "O(1) in place"
       },
-      "problemStatement": "Find the minimum sum of values along a path from the top-left to the bottom-right, moving only right or down. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(m*n) time and O(1) in place space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given an m x n grid of non-negative integers, find a path from the top-left to the bottom-right that minimizes the sum of all values along the path. You may move only right or down.",
+      "constraints": ["1 <= m, n <= 200.", "0 <= grid[i][j] <= 200."],
+      "examples": [
+        {
+          "input": "grid = [[1,3,1],[1,5,1],[4,2,1]]",
+          "output": "7",
+          "explanation": "The path 1 -> 3 -> 1 -> 1 -> 1 has the minimum sum of 7."
+        },
+        {
+          "input": "grid = [[1,2,3],[4,5,6]]",
+          "output": "12",
+          "explanation": "The minimum path is 1 -> 2 -> 3 -> 6, totaling 12."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around swapping the summing recurrence for a minimizing one. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -664,11 +733,28 @@
         "time": "O(amount * coins)",
         "space": "O(amount)"
       },
-      "problemStatement": "Find the fewest coins from given denominations that sum to an amount, or report that it is impossible. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given coin denominations and a target amount, return the fewest coins needed to make exactly that amount. You may use each denomination any number of times. Return -1 if the amount cannot be formed.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(amount * coins) time and O(amount) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= coins.length <= 12.",
+        "1 <= coins[i] <= 2^31 - 1.",
+        "0 <= amount <= 10^4."
+      ],
+      "examples": [
+        {
+          "input": "coins = [1,2,5], amount = 11",
+          "output": "3",
+          "explanation": "The minimum is three coins: 5 + 5 + 1."
+        },
+        {
+          "input": "coins = [2], amount = 3",
+          "output": "-1",
+          "explanation": "No combination of value-2 coins can make an odd amount of 3."
+        },
+        {
+          "input": "coins = [1], amount = 0",
+          "output": "0",
+          "explanation": "No coins are needed to make amount 0."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around amount as the dynamic-programming dimension with coins as reusable items. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -757,11 +843,30 @@
         "time": "O(amount * coins)",
         "space": "O(amount)"
       },
-      "problemStatement": "Count the distinct combinations of coins that add up to a target amount. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an integer amount and distinct coin denominations, return the number of combinations that make up that amount. You may use each coin denomination any number of times, and combinations that differ only in order count once.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(amount * coins) time and O(amount) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= coins.length <= 300.",
+        "1 <= coins[i] <= 5000.",
+        "All coin values are unique.",
+        "0 <= amount <= 5000.",
+        "The answer fits in a signed 32-bit integer."
+      ],
+      "examples": [
+        {
+          "input": "amount = 5, coins = [1,2,5]",
+          "output": "4",
+          "explanation": "The combinations are 5, 2+2+1, 2+1+1+1, and five 1 coins."
+        },
+        {
+          "input": "amount = 3, coins = [2]",
+          "output": "0",
+          "explanation": "No number of value-2 coins can sum to 3."
+        },
+        {
+          "input": "amount = 10, coins = [10]",
+          "output": "1",
+          "explanation": "The only combination uses the value-10 coin once."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around counting combinations rather than ordered permutations. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -850,11 +955,19 @@
         "time": "O(n sqrt n)",
         "space": "O(n)"
       },
-      "problemStatement": "Find the fewest perfect squares that sum to a given number. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n sqrt n) time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given a positive integer n, return the minimum number of perfect square numbers whose sum equals n. A perfect square is an integer such as 1, 4, 9, or 16.",
+      "constraints": ["1 <= n <= 10^4."],
+      "examples": [
+        {
+          "input": "n = 12",
+          "output": "3",
+          "explanation": "12 = 4 + 4 + 4, and it cannot be represented with fewer than three perfect squares."
+        },
+        {
+          "input": "n = 13",
+          "output": "2",
+          "explanation": "13 = 4 + 9, so two perfect squares are sufficient."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around perfect squares as the reusable item set. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -943,11 +1056,19 @@
         "time": "O(n * sum)",
         "space": "O(sum)"
       },
-      "problemStatement": "Decide whether an array can be split into two subsets with equal sums. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n * sum) time and O(sum) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given an array of positive integers, return true if it can be partitioned into two subsets whose sums are equal, or false otherwise.",
+      "constraints": ["1 <= nums.length <= 200.", "1 <= nums[i] <= 100."],
+      "examples": [
+        {
+          "input": "nums = [1,5,11,5]",
+          "output": "true",
+          "explanation": "The array can be split into [1,5,5] and [11], both with sum 11."
+        },
+        {
+          "input": "nums = [1,2,3,5]",
+          "output": "false",
+          "explanation": "No subset has half of the total sum, so an equal partition is impossible."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around halving the total and asking whether that sum is reachable. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1036,11 +1157,24 @@
         "time": "O(n * sum)",
         "space": "O(sum)"
       },
-      "problemStatement": "Count the ways to put a plus or minus in front of each number so the expression evaluates to a target. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an integer array nums and an integer target, assign either a plus or minus sign to every number and return the number of different expressions that evaluate to target.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n * sum) time and O(sum) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= nums.length <= 20.",
+        "0 <= nums[i] <= 1000.",
+        "-1000 <= target <= 1000.",
+        "The sum of nums does not exceed 1000."
+      ],
+      "examples": [
+        {
+          "input": "nums = [1,1,1,1,1], target = 3",
+          "output": "5",
+          "explanation": "Five sign assignments produce a sum of 3: exactly four numbers receive plus signs and one receives a minus sign."
+        },
+        {
+          "input": "nums = [1], target = 1",
+          "output": "1",
+          "explanation": "Assigning a plus sign creates the only expression that reaches 1."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around assigning a plus or minus sign to every number. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1129,11 +1263,29 @@
         "time": "O(n^2 * L)",
         "space": "O(n)"
       },
-      "problemStatement": "Decide whether a string can be segmented into a sequence of dictionary words. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given a string s and a dictionary wordDict, return true if s can be segmented into a sequence of one or more dictionary words. A dictionary word may be used multiple times.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n^2 * L) time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= s.length <= 300.",
+        "1 <= wordDict.length <= 1000.",
+        "1 <= wordDict[i].length <= 20.",
+        "s and wordDict[i] consist of lowercase English letters."
+      ],
+      "examples": [
+        {
+          "input": "s = \"leetcode\", wordDict = [\"leet\",\"code\"]",
+          "output": "true",
+          "explanation": "The string can be segmented as leet + code."
+        },
+        {
+          "input": "s = \"applepenapple\", wordDict = [\"apple\",\"pen\"]",
+          "output": "true",
+          "explanation": "The repeated word apple is allowed, giving apple + pen + apple."
+        },
+        {
+          "input": "s = \"catsandog\", wordDict = [\"cats\",\"dog\",\"sand\",\"and\",\"cat\"]",
+          "output": "false",
+          "explanation": "No sequence of dictionary words covers the entire string."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around reachability over prefix boundaries. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1222,11 +1374,19 @@
         "time": "O(n log n)",
         "space": "O(n)"
       },
-      "problemStatement": "Find the length of the longest strictly increasing subsequence of an array. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n log n) time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given an integer array nums, return the length of the longest strictly increasing subsequence. A subsequence can be formed by deleting elements without changing the order of the remaining elements.",
+      "constraints": ["1 <= nums.length <= 2500.", "-10^4 <= nums[i] <= 10^4."],
+      "examples": [
+        {
+          "input": "nums = [10,9,2,5,3,7,101,18]",
+          "output": "4",
+          "explanation": "One longest increasing subsequence is [2,3,7,101], which has length 4."
+        },
+        {
+          "input": "nums = [0,1,0,3,2,3]",
+          "output": "4",
+          "explanation": "A longest increasing subsequence is [0,1,2,3]."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around the quadratic recurrence over all smaller earlier elements. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1315,11 +1475,27 @@
         "time": "O(m*n)",
         "space": "O(min(m, n))"
       },
-      "problemStatement": "Find the length of the longest subsequence common to two strings. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given two strings text1 and text2, return the length of their longest common subsequence. A subsequence is formed by deleting characters without changing the order of the remaining characters.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(m*n) time and O(min(m, n)) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= text1.length, text2.length <= 1000.",
+        "text1 and text2 consist of only lowercase English characters."
+      ],
+      "examples": [
+        {
+          "input": "text1 = \"abcde\", text2 = \"ace\"",
+          "output": "3",
+          "explanation": "The longest common subsequence is ace."
+        },
+        {
+          "input": "text1 = \"abc\", text2 = \"abc\"",
+          "output": "3",
+          "explanation": "The strings are identical, so the entire string is common."
+        },
+        {
+          "input": "text1 = \"abc\", text2 = \"def\"",
+          "output": "0",
+          "explanation": "The strings share no characters in a common subsequence."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around a table indexed by prefixes of both strings. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1408,11 +1584,19 @@
         "time": "O(n^2)",
         "space": "O(n^2)"
       },
-      "problemStatement": "Find the length of the longest subsequence of a string that reads the same in both directions. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n^2) time and O(n^2) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given a string s, return the length of the longest palindromic subsequence. A subsequence is formed by deleting characters without changing the order of the remaining characters.",
+      "constraints": ["1 <= s.length <= 1000.", "s consists only of lowercase English letters."],
+      "examples": [
+        {
+          "input": "s = \"bbbab\"",
+          "output": "4",
+          "explanation": "The subsequence bbbb is a palindrome of length 4."
+        },
+        {
+          "input": "s = \"cbbd\"",
+          "output": "2",
+          "explanation": "The longest palindromic subsequence is bb."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around the answer equalling the common subsequence with the reversed string. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1501,11 +1685,22 @@
         "time": "O(m*n)",
         "space": "O(min(m, n))"
       },
-      "problemStatement": "Find the minimum number of insertions, deletions and replacements that turn one string into another. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given two strings word1 and word2, return the minimum number of operations required to convert word1 into word2. One operation inserts, deletes, or replaces a single character.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(m*n) time and O(min(m, n)) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "0 <= word1.length, word2.length <= 500.",
+        "word1 and word2 consist of lowercase English letters."
+      ],
+      "examples": [
+        {
+          "input": "word1 = \"horse\", word2 = \"ros\"",
+          "output": "3",
+          "explanation": "Replace h with r, delete the first r, and delete e to transform horse into ros."
+        },
+        {
+          "input": "word1 = \"intention\", word2 = \"execution\"",
+          "output": "5",
+          "explanation": "A minimum sequence uses five insert, delete, or replace operations."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around insert, delete and replace as the three transitions. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1594,11 +1789,24 @@
         "time": "O(m*n)",
         "space": "O(n)"
       },
-      "problemStatement": "Decide whether one string is formed by interleaving two others while preserving the internal order of each. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given strings s1, s2, and s3, return true if s3 is formed by an interleaving of s1 and s2 while preserving the left-to-right order of the characters from each string.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(m*n) time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "0 <= s1.length, s2.length <= 100.",
+        "0 <= s3.length <= 200.",
+        "s1, s2, and s3 consist of lowercase English letters.",
+        "s3.length == s1.length + s2.length."
+      ],
+      "examples": [
+        {
+          "input": "s1 = \"aabcc\", s2 = \"dbbca\", s3 = \"aadbbcbcac\"",
+          "output": "true",
+          "explanation": "s3 can be formed by taking characters from s1 and s2 while preserving each string's internal order."
+        },
+        {
+          "input": "s1 = \"aabcc\", s2 = \"dbbca\", s3 = \"aadbbbaccc\"",
+          "output": "false",
+          "explanation": "No valid interleaving preserves the order of both source strings."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around a table over how much of each source string has been consumed. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1687,11 +1895,19 @@
         "time": "O(n^2)",
         "space": "O(1)"
       },
-      "problemStatement": "Count how many substrings of a string are palindromes. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n^2) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given a string s, return the number of palindromic substrings in s. A substring is a contiguous sequence of characters, and a single character is always a palindrome.",
+      "constraints": ["1 <= s.length <= 1000.", "s consists of lowercase English letters."],
+      "examples": [
+        {
+          "input": "s = \"abc\"",
+          "output": "3",
+          "explanation": "The palindromic substrings are a, b, and c."
+        },
+        {
+          "input": "s = \"aaa\"",
+          "output": "6",
+          "explanation": "The palindromic substrings are three single a characters, two aa substrings, and aaa."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around counting palindromes rather than measuring the longest. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1780,11 +1996,24 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Maximize profit from a price series with unlimited buys and sells, holding at most one share at any time. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given an array prices where prices[i] is the price of a stock on day i, maximize profit with as many transactions as you like. You may hold at most one share at a time, and you must sell before buying again.",
+      "constraints": ["1 <= prices.length <= 3 * 10^4.", "0 <= prices[i] <= 10^4."],
+      "examples": [
+        {
+          "input": "prices = [7,1,5,3,6,4]",
+          "output": "7",
+          "explanation": "Buy at 1 and sell at 5 for 4 profit, then buy at 3 and sell at 6 for 3 more."
+        },
+        {
+          "input": "prices = [1,2,3,4,5]",
+          "output": "4",
+          "explanation": "Buying at 1 and selling at 5 yields the same maximum profit as taking each positive daily increase."
+        },
+        {
+          "input": "prices = [7,6,4,3,1]",
+          "output": "0",
+          "explanation": "Prices only decrease, so no profitable transaction exists."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around holding versus not holding as the two daily states. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1873,11 +2102,19 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Maximize profit with unlimited transactions where every sale is followed by a mandatory one-day cooldown. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given stock prices by day, maximize profit with unlimited buy-and-sell transactions. After selling a stock, you must wait one day before buying again.",
+      "constraints": ["1 <= prices.length <= 5000.", "0 <= prices[i] <= 1000."],
+      "examples": [
+        {
+          "input": "prices = [1,2,3,0,2]",
+          "output": "3",
+          "explanation": "Buy at 1, sell at 3, cooldown on day 3, then buy at 0 and sell at 2 for total profit 3."
+        },
+        {
+          "input": "prices = [1]",
+          "output": "0",
+          "explanation": "With only one day, no buy-and-sell transaction can be completed."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around three states: holding, just sold, and free to buy. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1966,11 +2203,19 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Maximize profit from a price series using at most two buy-and-sell transactions. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given stock prices by day, maximize profit with at most two transactions. A transaction consists of buying one share and later selling it, and you must sell before buying again.",
+      "constraints": ["1 <= prices.length <= 10^5.", "0 <= prices[i] <= 10^5."],
+      "examples": [
+        {
+          "input": "prices = [3,3,5,0,0,3,1,4]",
+          "output": "6",
+          "explanation": "Buy at 0 and sell at 3, then buy at 1 and sell at 4 for total profit 6."
+        },
+        {
+          "input": "prices = [1,2,3,4,5]",
+          "output": "4",
+          "explanation": "One transaction buying at 1 and selling at 5 achieves the maximum profit."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around at most two transactions modelled as four sequential states. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -2059,11 +2304,19 @@
         "time": "O(n^3)",
         "space": "O(n^2)"
       },
-      "problemStatement": "Burst every balloon to maximize the total of each balloon's value times its neighbours at the moment it bursts. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n^3) time and O(n^2) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "You have balloons in a row with nums[i] written on each balloon. When balloon i is burst, you gain nums[left] * nums[i] * nums[right], where left and right are the nearest remaining balloons; missing neighbors have value 1. Return the maximum coins you can collect by bursting all balloons.",
+      "constraints": ["1 <= nums.length <= 300.", "0 <= nums[i] <= 100."],
+      "examples": [
+        {
+          "input": "nums = [3,1,5,8]",
+          "output": "167",
+          "explanation": "An optimal bursting order earns 3*1*5 + 3*5*8 + 1*3*8 + 1*8*1 = 167 coins."
+        },
+        {
+          "input": "nums = [1,5]",
+          "output": "10",
+          "explanation": "Burst 1 first for 5 coins, then 5 for 5 more, totaling 10."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around choosing the last balloon burst in an interval rather than the first. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -2152,11 +2405,30 @@
         "time": "O(m*n)",
         "space": "O(m*n)"
       },
-      "problemStatement": "Match a string against a pattern supporting any-single-character and zero-or-more-of-the-preceding-character. Identify the input, required output, and constraints, then explain which dynamic programming state idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given a string s and a pattern p, implement regular expression matching where '.' matches any single character and '*' matches zero or more occurrences of the preceding element. The entire string must match the entire pattern.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(m*n) time and O(m*n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= s.length <= 20.",
+        "1 <= p.length <= 20.",
+        "s contains only lowercase English letters.",
+        "p contains lowercase English letters, '.', and '*'.",
+        "Every '*' has a valid preceding element."
+      ],
+      "examples": [
+        {
+          "input": "s = \"aa\", p = \"a\"",
+          "output": "false",
+          "explanation": "The pattern a matches exactly one a, not the entire two-character string."
+        },
+        {
+          "input": "s = \"aa\", p = \"a*\"",
+          "output": "true",
+          "explanation": "a* can match two occurrences of a."
+        },
+        {
+          "input": "s = \"ab\", p = \".*\"",
+          "output": "true",
+          "explanation": ". matches a and * allows the pattern to consume the remaining characters."
+        }
       ],
       "keyInsight": "The key is to recognize the dynamic programming state pattern and maintain the right invariant around the star quantifier applying to the character before it. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [

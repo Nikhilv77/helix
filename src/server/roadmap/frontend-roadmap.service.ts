@@ -178,6 +178,33 @@ export class FrontendRoadmapService {
     return statuses;
   }
 
+  /** Solved DSA questions are the eligibility signal for a DSA interview. */
+  async completedDsaQuestions(ownerId: string): Promise<
+    Array<{
+      slug: string;
+      title: string;
+      difficulty: string;
+      primaryPattern: string;
+    }>
+  > {
+    const rows = await this.prisma.userQuestionProgress.findMany({
+      where: {
+        roadmap: { ownerId, role: FRONTEND_ROADMAP_ROLE },
+        sourceType: RoadmapQuestionSourceType.DSA,
+        status: RoadmapProgressStatus.COMPLETED,
+        dsaQuestionSlug: { not: null }
+      },
+      select: {
+        dsaQuestion: {
+          select: { slug: true, title: true, difficulty: true, primaryPattern: true }
+        }
+      },
+      orderBy: { completedAt: "desc" }
+    });
+
+    return rows.flatMap((row) => (row.dsaQuestion ? [row.dsaQuestion] : []));
+  }
+
   /**
    * This user's state for a single question, for the solve page. Returns null
    * when the question is not in their roadmap, so the page can still render

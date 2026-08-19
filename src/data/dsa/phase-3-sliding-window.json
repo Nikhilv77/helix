@@ -37,11 +37,19 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Find the maximum average over all contiguous subarrays of a fixed length k. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "You are given an integer array nums consisting of n elements and an integer k. Find a contiguous subarray whose length is equal to k and that has the maximum average value, then return this value. Answers within 10^-5 of the actual answer are accepted.",
+      "constraints": ["n == nums.length.", "1 <= k <= n <= 10^5.", "-10^4 <= nums[i] <= 10^4."],
+      "examples": [
+        {
+          "input": "nums = [1, 12, -5, -6, 50, 3], k = 4",
+          "output": "12.75",
+          "explanation": "The subarray [12, -5, -6, 50] has sum 51 and average 12.75."
+        },
+        {
+          "input": "nums = [5], k = 1",
+          "output": "5.0",
+          "explanation": "The only length-one subarray has average 5."
+        }
       ],
       "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around fixed-size window sum. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -129,11 +137,24 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Customers arrive each minute and are lost whenever the owner is grumpy; one fixed-length stretch of grumpiness can be suppressed. Maximize satisfied customers. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "problemStatement": "There is a bookstore owner with customers arriving each minute. customers[i] is the number of customers entering during minute i, and grumpy[i] is 1 when the owner is grumpy and 0 otherwise. The owner can use a technique once to remain not grumpy for minutes consecutive minutes. Return the maximum number of satisfied customers.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "n == customers.length == grumpy.length.",
+        "1 <= minutes <= n <= 2 * 10^4.",
+        "0 <= customers[i] <= 1000.",
+        "grumpy[i] is 0 or 1."
+      ],
+      "examples": [
+        {
+          "input": "customers = [1,0,1,2,1,1,7,5], grumpy = [0,1,0,1,0,1,0,1], minutes = 3",
+          "output": "16",
+          "explanation": "Using the technique during minutes 5 through 7 adds the best recoverable customers to those already satisfied."
+        },
+        {
+          "input": "customers = [1], grumpy = [0], minutes = 1",
+          "output": "1",
+          "explanation": "The only customer is already satisfied."
+        }
       ],
       "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around splitting an answer into a fixed baseline plus a recoverable gain. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -221,11 +242,19 @@
         "time": "O(n)",
         "space": "O(n)"
       },
-      "problemStatement": "Return every 10-letter DNA substring that occurs more than once in a sequence. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "A DNA sequence is composed of the letters A, C, G, and T. Given a string s representing a DNA sequence, return all the 10-letter-long sequences that occur more than once in s. You may return the answer in any order.",
+      "constraints": ["1 <= s.length <= 10^5.", "s consists of only A, C, G, and T."],
+      "examples": [
+        {
+          "input": "s = \"AAAAACCCCCAAAAACCCCCCAAAAAGGGTTT\"",
+          "output": "[\"AAAAACCCCC\", \"CCCCCAAAAA\"]",
+          "explanation": "Both listed 10-character sequences occur more than once."
+        },
+        {
+          "input": "s = \"AAAAAAAAAAAAA\"",
+          "output": "[\"AAAAAAAAAA\"]",
+          "explanation": "The same 10-letter sequence repeats at several starting positions but is returned once."
+        }
       ],
       "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around fixed-length window over a string. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -313,11 +342,24 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Find the shortest contiguous subarray whose sum is at least a given target. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given an array of positive integers nums and a positive integer target, return the minimal length of a subarray whose sum is greater than or equal to target. If no such subarray exists, return 0.",
+      "constraints": ["1 <= target <= 10^9.", "1 <= nums.length <= 10^5.", "1 <= nums[i] <= 10^4."],
+      "examples": [
+        {
+          "input": "target = 7, nums = [2, 3, 1, 2, 4, 3]",
+          "output": "2",
+          "explanation": "The subarray [4, 3] reaches the target with the minimum length."
+        },
+        {
+          "input": "target = 4, nums = [1, 4, 4]",
+          "output": "1",
+          "explanation": "Either single value 4 satisfies the target."
+        },
+        {
+          "input": "target = 11, nums = [1, 1, 1, 1, 1, 1, 1, 1]",
+          "output": "0",
+          "explanation": "No subarray has a sum of at least 11."
+        }
       ],
       "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around expand until valid, then shrink while still valid. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -405,11 +447,19 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Find the longest run of ones in a binary array when at most k zeros may be flipped. Some question lists title this one Longest Ones. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given a binary array nums and an integer k, return the maximum number of consecutive 1's in the array if you can flip at most k 0's.",
+      "constraints": ["1 <= nums.length <= 10^5.", "nums[i] is 0 or 1.", "0 <= k <= nums.length."],
+      "examples": [
+        {
+          "input": "nums = [1,1,1,0,0,0,1,1,1,1,0], k = 2",
+          "output": "6",
+          "explanation": "Flipping two zeros creates a window containing six consecutive ones."
+        },
+        {
+          "input": "nums = [0,0,1,1,1,0,0], k = 0",
+          "output": "3",
+          "explanation": "Without flips, the longest existing run contains three ones."
+        }
       ],
       "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around recasting a flip budget as an at-most-k constraint. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -498,11 +548,24 @@
         "time": "O(n)",
         "space": "O(1) for a bounded number of types"
       },
-      "problemStatement": "Walking a row of fruit trees, collect the longest contiguous run containing at most two types of fruit. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) for a bounded number of types space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "You are visiting a row of fruit trees represented by an integer array fruits, where fruits[i] is the type of fruit produced by the ith tree. You have two baskets, and each basket can hold only one type of fruit but any amount of that fruit. Starting from any tree, pick exactly one fruit from each tree while moving right, stopping when a fruit cannot fit in either basket. Return the maximum number of fruits you can pick.",
+      "constraints": ["1 <= fruits.length <= 10^5.", "0 <= fruits[i] < fruits.length."],
+      "examples": [
+        {
+          "input": "fruits = [1, 2, 1]",
+          "output": "3",
+          "explanation": "All three trees contain at most two fruit types."
+        },
+        {
+          "input": "fruits = [0, 1, 2, 2]",
+          "output": "3",
+          "explanation": "The longest valid segment is [1, 2, 2]."
+        },
+        {
+          "input": "fruits = [1, 2, 3, 2, 2]",
+          "output": "4",
+          "explanation": "The segment [2, 3, 2, 2] uses only fruit types 2 and 3."
+        }
       ],
       "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around longest subarray with at most two distinct values. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -591,11 +654,23 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Find the longest substring that can be made from a single repeated character by replacing at most k characters. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "problemStatement": "You are given a string s and an integer k. You can choose any character of the string and change it to any other uppercase English character at most k times. Return the length of the longest substring containing the same letter after performing the operations.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= s.length <= 10^5.",
+        "s consists of only uppercase English letters.",
+        "0 <= k <= s.length."
+      ],
+      "examples": [
+        {
+          "input": "s = \"ABAB\", k = 2",
+          "output": "4",
+          "explanation": "Replace both A characters with B, or both B characters with A."
+        },
+        {
+          "input": "s = \"AABABBA\", k = 1",
+          "output": "4",
+          "explanation": "One replacement can create a length-four substring of the same character."
+        }
       ],
       "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around window valid while length minus the most frequent count is at most k. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -684,11 +759,19 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Count the contiguous subarrays of positive integers whose product is strictly less than k. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given an array of positive integers nums and an integer k, return the number of contiguous subarrays where the product of all elements in the subarray is strictly less than k.",
+      "constraints": ["1 <= nums.length <= 3 * 10^4.", "1 <= nums[i] <= 1000.", "0 <= k <= 10^6."],
+      "examples": [
+        {
+          "input": "nums = [10, 5, 2, 6], k = 100",
+          "output": "8",
+          "explanation": "The valid subarrays are [10], [5], [2], [6], [10,5], [5,2], [2,6], and [5,2,6]."
+        },
+        {
+          "input": "nums = [1, 2, 3], k = 0",
+          "output": "0",
+          "explanation": "All products are positive, so none are less than 0."
+        }
       ],
       "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around counting every subarray ending at the current right index. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -777,11 +860,23 @@
         "time": "O(n)",
         "space": "O(1) with the two-window decomposition"
       },
-      "problemStatement": "Count the contiguous subarrays of a binary array whose sum equals a given goal. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given a binary array nums and an integer goal, return the number of non-empty subarrays with a sum equal to goal.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) with the two-window decomposition space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= nums.length <= 3 * 10^4.",
+        "nums[i] is 0 or 1.",
+        "0 <= goal <= nums.length."
+      ],
+      "examples": [
+        {
+          "input": "nums = [1, 0, 1, 0, 1], goal = 2",
+          "output": "4",
+          "explanation": "Four different contiguous subarrays have a sum of exactly 2."
+        },
+        {
+          "input": "nums = [0, 0, 0, 0, 0], goal = 0",
+          "output": "15",
+          "explanation": "Every non-empty subarray has sum 0."
+        }
       ],
       "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around exactly(k) expressed as atMost(k) minus atMost(k-1). Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -870,11 +965,28 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Count the contiguous subarrays containing exactly k odd numbers. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an array of integers nums and an integer k, return the number of contiguous subarrays containing exactly k odd numbers.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= nums.length <= 5 * 10^4.",
+        "1 <= nums[i] <= 10^5.",
+        "1 <= k <= nums.length."
+      ],
+      "examples": [
+        {
+          "input": "nums = [1, 1, 2, 1, 1], k = 3",
+          "output": "2",
+          "explanation": "Two subarrays contain exactly three odd values."
+        },
+        {
+          "input": "nums = [2, 4, 6], k = 1",
+          "output": "0",
+          "explanation": "The array contains no odd numbers."
+        },
+        {
+          "input": "nums = [2, 2, 2, 1, 2, 2, 1, 2, 2, 2], k = 2",
+          "output": "16",
+          "explanation": "Sixteen choices of boundaries include both odd values and no additional odd value."
+        }
       ],
       "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around mapping odd and even onto one and zero. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -963,11 +1075,24 @@
         "time": "O(n log n)",
         "space": "O(1) beyond the sort"
       },
-      "problemStatement": "Given a budget of k increments of one, maximize how many array elements can be made equal. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n log n) time and O(1) beyond the sort space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "The frequency of an element is the number of times it occurs in an array. You may increment any array element by 1 in one operation. Given an integer array nums and an integer k, return the maximum possible frequency of an element after performing at most k operations.",
+      "constraints": ["1 <= nums.length <= 10^5.", "1 <= nums[i] <= 10^5.", "1 <= k <= 10^5."],
+      "examples": [
+        {
+          "input": "nums = [1, 2, 4], k = 5",
+          "output": "3",
+          "explanation": "Increment 1 three times and 2 twice to make all values equal to 4."
+        },
+        {
+          "input": "nums = [1, 4, 8, 13], k = 5",
+          "output": "2",
+          "explanation": "At most two values can be made equal within five increments."
+        },
+        {
+          "input": "nums = [3, 9, 6], k = 2",
+          "output": "1",
+          "explanation": "No two values can be made equal using only two increments."
+        }
       ],
       "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around sorting so a window's target is always its right edge. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1056,11 +1181,24 @@
         "time": "O(log(n-k) + k)",
         "space": "O(1) excluding output"
       },
-      "problemStatement": "In a sorted array, return the k elements closest to a target value, in ascending order. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given a sorted integer array arr, two integers k and x, return the k closest integers to x in the array. The result must also be sorted in ascending order. An integer a is closer to x than b when |a - x| is smaller, or when the distances are equal and a is smaller.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(log(n-k) + k) time and O(1) excluding output space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= k <= arr.length.",
+        "1 <= arr.length <= 10^4.",
+        "arr is sorted in ascending order.",
+        "-10^4 <= arr[i], x <= 10^4."
+      ],
+      "examples": [
+        {
+          "input": "arr = [1, 2, 3, 4, 5], k = 4, x = 3",
+          "output": "[1, 2, 3, 4]",
+          "explanation": "These are the four closest values, with the smaller value winning the distance tie."
+        },
+        {
+          "input": "arr = [1, 2, 3, 4, 5], k = 4, x = -1",
+          "output": "[1, 2, 3, 4]",
+          "explanation": "The target lies left of the array, so the first four values are closest."
+        }
       ],
       "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around the answer is always a contiguous window in a sorted array. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1143,11 +1281,23 @@
         "time": "O(n)",
         "space": "O(k)"
       },
-      "problemStatement": "Return the maximum of every contiguous window of length k as the window slides across the array. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "problemStatement": "You are given an array of integers nums and a sliding window of size k that moves from the left of the array to the right one position at a time. Return the maximum value in each window.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(k) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= nums.length <= 10^5.",
+        "-10^4 <= nums[i] <= 10^4.",
+        "1 <= k <= nums.length."
+      ],
+      "examples": [
+        {
+          "input": "nums = [1,3,-1,-3,5,3,6,7], k = 3",
+          "output": "[3,3,5,5,6,7]",
+          "explanation": "Each output is the maximum of the corresponding length-three window."
+        },
+        {
+          "input": "nums = [1], k = 1",
+          "output": "[1]",
+          "explanation": "The only window contains the only value."
+        }
       ],
       "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around monotonic decreasing deque. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [

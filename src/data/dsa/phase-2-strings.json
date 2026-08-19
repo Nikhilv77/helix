@@ -37,11 +37,22 @@
         "time": "O(n)",
         "space": "O(1) for a fixed alphabet"
       },
-      "problemStatement": "Decide whether two strings are rearrangements of the same characters. Identify the input, required output, and constraints, then explain which array/hash lookup idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given two strings s and t, return true if t is an anagram of s, and false otherwise. An anagram uses all the original letters exactly once in a different or identical order.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) for a fixed alphabet space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= s.length, t.length <= 5 * 10^4.",
+        "s and t consist of lowercase English letters."
+      ],
+      "examples": [
+        {
+          "input": "s = \"anagram\", t = \"nagaram\"",
+          "output": "true",
+          "explanation": "Both strings contain the same letters with the same frequencies."
+        },
+        {
+          "input": "s = \"rat\", t = \"car\"",
+          "output": "false",
+          "explanation": "The character counts differ."
+        }
       ],
       "keyInsight": "The key is to recognize the array/hash lookup pattern and maintain the right invariant around character frequency counting. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -124,11 +135,28 @@
         "time": "O(n*k) with count keys",
         "space": "O(n*k)"
       },
-      "problemStatement": "Group a list of strings so that anagrams of one another land in the same bucket. Identify the input, required output, and constraints, then explain which array/hash lookup idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an array of strings strs, group the anagrams together. You may return the answer in any order.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n*k) with count keys time and O(n*k) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= strs.length <= 10^4.",
+        "0 <= strs[i].length <= 100.",
+        "strs[i] consists of lowercase English letters."
+      ],
+      "examples": [
+        {
+          "input": "strs = [\"eat\",\"tea\",\"tan\",\"ate\",\"nat\",\"bat\"]",
+          "output": "[[\"bat\"],[\"nat\",\"tan\"],[\"ate\",\"eat\",\"tea\"]]",
+          "explanation": "Strings with identical character counts are placed in the same group."
+        },
+        {
+          "input": "strs = [\"\"]",
+          "output": "[[\"\"]]",
+          "explanation": "The empty string forms its own anagram group."
+        },
+        {
+          "input": "strs = [\"a\"]",
+          "output": "[[\"a\"]]",
+          "explanation": "A single string forms one group."
+        }
       ],
       "keyInsight": "The key is to recognize the array/hash lookup pattern and maintain the right invariant around canonical form as a hash key. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -211,11 +239,27 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Check whether a string reads the same both ways, ignoring case and non-alphanumeric characters. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "problemStatement": "A phrase is a palindrome if, after converting all uppercase letters into lowercase letters and removing all non-alphanumeric characters, it reads the same forward and backward. Given a string s, return true if it is a palindrome, or false otherwise.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= s.length <= 2 * 10^5.",
+        "s consists only of printable ASCII characters."
+      ],
+      "examples": [
+        {
+          "input": "s = \"A man, a plan, a canal: Panama\"",
+          "output": "true",
+          "explanation": "After normalization, the string becomes \"amanaplanacanalpanama\", which is a palindrome."
+        },
+        {
+          "input": "s = \"race a car\"",
+          "output": "false",
+          "explanation": "After normalization, the string differs when read backward."
+        },
+        {
+          "input": "s = \" \"",
+          "output": "true",
+          "explanation": "After removing non-alphanumeric characters, the empty string is a palindrome."
+        }
       ],
       "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around converging pointers. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -304,11 +348,23 @@
         "time": "O(total characters)",
         "space": "O(1)"
       },
-      "problemStatement": "Return the longest prefix shared by every string in a list. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "problemStatement": "Write a function to find the longest common prefix string among an array of strings. If there is no common prefix, return an empty string.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(total characters) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= strs.length <= 200.",
+        "0 <= strs[i].length <= 200.",
+        "strs[i] consists only of lowercase English letters when it is non-empty."
+      ],
+      "examples": [
+        {
+          "input": "strs = [\"flower\",\"flow\",\"flight\"]",
+          "output": "\"fl\"",
+          "explanation": "All three strings begin with \"fl\"."
+        },
+        {
+          "input": "strs = [\"dog\",\"racecar\",\"car\"]",
+          "output": "\"\"",
+          "explanation": "There is no common prefix among all strings."
+        }
       ],
       "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around column-wise scanning across many strings. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -396,11 +452,28 @@
         "time": "O(n)",
         "space": "O(1) on a mutable buffer"
       },
-      "problemStatement": "Reverse the order of the words in a string, trimming and collapsing whitespace. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an input string s, reverse the order of the words. A word is a sequence of non-space characters. Return a string of the words in reverse order joined by a single space. The result must not contain leading, trailing, or repeated spaces.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) on a mutable buffer space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= s.length <= 10^4.",
+        "s contains English letters, digits, and spaces.",
+        "There is at least one word in s."
+      ],
+      "examples": [
+        {
+          "input": "s = \"the sky is blue\"",
+          "output": "\"blue is sky the\"",
+          "explanation": "The four words are returned in reverse order."
+        },
+        {
+          "input": "s = \"  hello world  \"",
+          "output": "\"world hello\"",
+          "explanation": "Leading and trailing spaces are removed."
+        },
+        {
+          "input": "s = \"a good   example\"",
+          "output": "\"example good a\"",
+          "explanation": "Multiple spaces between words are reduced to one."
+        }
       ],
       "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around reverse the whole buffer then reverse each word. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -488,11 +561,27 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Compress a character array in place using run lengths and return the new length. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an array of characters chars, compress it using the following algorithm: begin with an empty string s. For each group of consecutive repeating characters in chars, append the character followed by the group's length if the length is greater than 1. The compressed string must be stored in chars in place. Return the new length of the array.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= chars.length <= 2000.",
+        "chars[i] is a lowercase English letter, uppercase English letter, or digit."
+      ],
+      "examples": [
+        {
+          "input": "chars = [\"a\",\"a\",\"b\",\"b\",\"c\",\"c\",\"c\"]",
+          "output": "6, chars = [\"a\",\"2\",\"b\",\"2\",\"c\",\"3\"]",
+          "explanation": "The runs aa, bb, and ccc become a2, b2, and c3."
+        },
+        {
+          "input": "chars = [\"a\"]",
+          "output": "1, chars = [\"a\"]",
+          "explanation": "A single character remains unchanged."
+        },
+        {
+          "input": "chars = [\"a\",\"b\",\"b\",\"b\",\"b\",\"b\",\"b\",\"b\",\"b\",\"b\",\"b\",\"b\",\"b\"]",
+          "output": "4, chars = [\"a\",\"b\",\"1\",\"2\"]",
+          "explanation": "The count 12 is written as two characters, 1 and 2."
+        }
       ],
       "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around run-length encoding. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -581,11 +670,27 @@
         "time": "O(n)",
         "space": "O(min(n, alphabet))"
       },
-      "problemStatement": "Find the length of the longest substring with no repeated character. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given a string s, find the length of the longest substring without repeating characters.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(min(n, alphabet)) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "0 <= s.length <= 5 * 10^4.",
+        "s consists of English letters, digits, symbols, and spaces."
+      ],
+      "examples": [
+        {
+          "input": "s = \"abcabcbb\"",
+          "output": "3",
+          "explanation": "The answer is \"abc\", with length 3."
+        },
+        {
+          "input": "s = \"bbbbb\"",
+          "output": "1",
+          "explanation": "The longest substring without repeated characters is any single \"b\"."
+        },
+        {
+          "input": "s = \"pwwkew\"",
+          "output": "3",
+          "explanation": "The answer is \"wke\", with length 3."
+        }
       ],
       "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around variable-size window. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -674,11 +779,22 @@
         "time": "O(n)",
         "space": "O(1) for a fixed alphabet"
       },
-      "problemStatement": "Return every start index where a substring is an anagram of a given pattern. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given two strings s and p, return an array of all the start indices of p's anagrams in s. You may return the answer in any order.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) for a fixed alphabet space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= s.length, p.length <= 3 * 10^4.",
+        "s and p consist of lowercase English letters."
+      ],
+      "examples": [
+        {
+          "input": "s = \"cbaebabacd\", p = \"abc\"",
+          "output": "[0, 6]",
+          "explanation": "The substrings starting at 0 and 6 are anagrams of \"abc\"."
+        },
+        {
+          "input": "s = \"abab\", p = \"ab\"",
+          "output": "[0, 1, 2]",
+          "explanation": "Each length-two substring is an anagram of \"ab\"."
+        }
       ],
       "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around fixed-size sliding window. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -766,11 +882,22 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Decide whether one string contains any permutation of another as a contiguous substring. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given two strings s1 and s2, return true if s2 contains a permutation of s1, or false otherwise. In other words, return true if one of s1's permutations is the substring of s2.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= s1.length, s2.length <= 10^4.",
+        "s1 and s2 consist of lowercase English letters."
+      ],
+      "examples": [
+        {
+          "input": "s1 = \"ab\", s2 = \"eidbaooo\"",
+          "output": "true",
+          "explanation": "The substring \"ba\" is a permutation of \"ab\"."
+        },
+        {
+          "input": "s1 = \"ab\", s2 = \"eidboaoo\"",
+          "output": "false",
+          "explanation": "No length-two substring contains one a and one b."
+        }
       ],
       "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around boolean variant of the fixed-window anagram scan. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -860,11 +987,29 @@
         "time": "O(n + m)",
         "space": "O(alphabet)"
       },
-      "problemStatement": "Find the shortest substring of one string containing all characters of another, respecting duplicates. Identify the input, required output, and constraints, then explain which sliding window idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given two strings s and t of lengths m and n respectively, return the minimum window substring of s such that every character in t, including duplicates, is included in the window. If there is no such substring, return the empty string.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n + m) time and O(alphabet) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "m == s.length.",
+        "n == t.length.",
+        "1 <= m, n <= 10^5.",
+        "s and t consist of uppercase and lowercase English letters."
+      ],
+      "examples": [
+        {
+          "input": "s = \"ADOBECODEBANC\", t = \"ABC\"",
+          "output": "\"BANC\"",
+          "explanation": "BANC is the shortest substring containing A, B, and C."
+        },
+        {
+          "input": "s = \"a\", t = \"a\"",
+          "output": "\"a\"",
+          "explanation": "The complete string is the only valid window."
+        },
+        {
+          "input": "s = \"a\", t = \"aa\"",
+          "output": "\"\"",
+          "explanation": "s does not contain two copies of a."
+        }
       ],
       "keyInsight": "The key is to recognize the sliding window pattern and maintain the right invariant around expand to satisfy, then contract to minimize. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -952,11 +1097,19 @@
         "time": "O(n^2)",
         "space": "O(1)"
       },
-      "problemStatement": "Return the longest substring of a string that is a palindrome. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n^2) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given a string s, return the longest palindromic substring in s.",
+      "constraints": ["1 <= s.length <= 1000.", "s consists of only English letters and digits."],
+      "examples": [
+        {
+          "input": "s = \"babad\"",
+          "output": "\"bab\"",
+          "explanation": "\"aba\" is also valid; \"bab\" is one longest palindromic substring."
+        },
+        {
+          "input": "s = \"cbbd\"",
+          "output": "\"bb\"",
+          "explanation": "The two adjacent b characters form the longest palindrome."
+        }
       ],
       "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around the 2n-1 possible centers. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1045,11 +1198,20 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Convert a Roman numeral string into its integer value. Identify the input, required output, and constraints, then explain which math or bit cancellation idea makes the brute-force search unnecessary.",
+      "problemStatement": "Roman numerals are represented by seven different symbols: I, V, X, L, C, D, and M. Given a Roman numeral, convert it to an integer.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= s.length <= 15.",
+        "s contains only the characters I, V, X, L, C, D, and M.",
+        "It is guaranteed that s is a valid Roman numeral in the range [1, 3999]."
+      ],
+      "examples": [
+        { "input": "s = \"III\"", "output": "3", "explanation": "Three I symbols represent 3." },
+        { "input": "s = \"LVIII\"", "output": "58", "explanation": "L + V + III equals 58." },
+        {
+          "input": "s = \"MCMXCIV\"",
+          "output": "1994",
+          "explanation": "The subtractive pairs CM and XC and IV are handled according to Roman numeral rules."
+        }
       ],
       "keyInsight": "The key is to recognize the math or bit cancellation pattern and maintain the right invariant around symbol-to-value lookup table. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1132,11 +1294,20 @@
         "time": "O(1)",
         "space": "O(1)"
       },
-      "problemStatement": "Convert an integer into its Roman numeral representation. Identify the input, required output, and constraints, then explain which greedy invariant idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(1) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Seven different symbols represent Roman numerals with the following values: I=1, V=5, X=10, L=50, C=100, D=500, and M=1000. Given an integer, convert it to a Roman numeral.",
+      "constraints": ["1 <= num <= 3999."],
+      "examples": [
+        {
+          "input": "num = 3",
+          "output": "\"III\"",
+          "explanation": "Three ones are written as III."
+        },
+        { "input": "num = 58", "output": "\"LVIII\"", "explanation": "58 is 50 + 5 + 3." },
+        {
+          "input": "num = 1994",
+          "output": "\"MCMXCIV\"",
+          "explanation": "1994 uses the subtractive forms CM, XC, and IV."
+        }
       ],
       "keyInsight": "The key is to recognize the greedy invariant pattern and maintain the right invariant around greedy largest-first subtraction. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1219,11 +1390,28 @@
         "time": "O(n + m)",
         "space": "O(1)"
       },
-      "problemStatement": "Compare two dot-separated version strings and report which one is greater. Identify the input, required output, and constraints, then explain which two-pointer scan idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given two version strings, version1 and version2, compare them. A version string consists of revisions separated by dots. Return 1 if version1 is greater, -1 if version2 is greater, or 0 if they are equal.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n + m) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= version1.length, version2.length <= 500.",
+        "version strings consist of digits and dots.",
+        "Revision values fit in a 32-bit integer."
+      ],
+      "examples": [
+        {
+          "input": "version1 = \"1.01\", version2 = \"1.001\"",
+          "output": "0",
+          "explanation": "Leading zeros do not change the numeric value of a revision."
+        },
+        {
+          "input": "version1 = \"1.0\", version2 = \"1.0.0\"",
+          "output": "0",
+          "explanation": "Missing trailing revisions are treated as zero."
+        },
+        {
+          "input": "version1 = \"0.1\", version2 = \"1.1\"",
+          "output": "-1",
+          "explanation": "The first revision of version1 is smaller."
+        }
       ],
       "keyInsight": "The key is to recognize the two-pointer scan pattern and maintain the right invariant around segment-wise numeric comparison. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1312,11 +1500,24 @@
         "time": "O(n * length of result)",
         "space": "O(length of result)"
       },
-      "problemStatement": "Generate the nth term of a sequence where each term reads off the runs of digits in the previous term. Identify the input, required output, and constraints, then explain which careful simulation idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n * length of result) time and O(length of result) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "The count-and-say sequence is a sequence of digit strings defined by the recursive way of reading off the digits of the previous member. Given a positive integer n, return the nth term of the count-and-say sequence.",
+      "constraints": ["1 <= n <= 30.", "The answer can be represented as a string."],
+      "examples": [
+        {
+          "input": "n = 1",
+          "output": "\"1\"",
+          "explanation": "The first term is the starting string 1."
+        },
+        {
+          "input": "n = 4",
+          "output": "\"1211\"",
+          "explanation": "The sequence is 1, 11, 21, 1211."
+        },
+        {
+          "input": "n = 5",
+          "output": "\"111221\"",
+          "explanation": "The previous term 1211 is read as one 1, one 2, and two 1s."
+        }
       ],
       "keyInsight": "The key is to recognize the careful simulation pattern and maintain the right invariant around run-length encoding applied repeatedly. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1399,11 +1600,28 @@
         "time": "O(n)",
         "space": "O(n)"
       },
-      "problemStatement": "Write a string in a zigzag across a number of rows, then read it back row by row. Identify the input, required output, and constraints, then explain which careful simulation idea makes the brute-force search unnecessary.",
+      "problemStatement": "The string \"PAYPALISHIRING\" is written in a zigzag pattern on a given number of rows. Write the converted string by reading line by line.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= s.length <= 1000.",
+        "s consists of English letters, commas, and periods.",
+        "1 <= numRows <= 1000."
+      ],
+      "examples": [
+        {
+          "input": "s = \"PAYPALISHIRING\", numRows = 3",
+          "output": "\"PAHNAPLSIIGYIR\"",
+          "explanation": "Reading the three zigzag rows from top to bottom produces the result."
+        },
+        {
+          "input": "s = \"PAYPALISHIRING\", numRows = 4",
+          "output": "\"PINALSIGYAHRPI\"",
+          "explanation": "The same characters arranged across four rows produce a different row-by-row reading."
+        },
+        {
+          "input": "s = \"A\", numRows = 1",
+          "output": "\"A\"",
+          "explanation": "A single row leaves the string unchanged."
+        }
       ],
       "keyInsight": "The key is to recognize the careful simulation pattern and maintain the right invariant around walking rows with a direction flag. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1486,11 +1704,28 @@
         "time": "O(length of output)",
         "space": "O(length of output)"
       },
-      "problemStatement": "Expand a string written with nested k[substring] repetition syntax into its decoded form. Identify the input, required output, and constraints, then explain which stack invariant idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an encoded string, return its decoded string. The encoding rule is k[encoded_string], where the encoded_string inside the square brackets is being repeated exactly k times. You may assume that the input string is always valid and that there are no extra white spaces.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(length of output) time and O(length of output) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= s.length <= 30.",
+        "s consists of lowercase English letters, digits, and square brackets.",
+        "All integers in s are in the range [1, 300]."
+      ],
+      "examples": [
+        {
+          "input": "s = \"3[a]2[bc]\"",
+          "output": "\"aaabcbc\"",
+          "explanation": "The substring a repeats three times and bc repeats twice."
+        },
+        {
+          "input": "s = \"3[a2[c]]\"",
+          "output": "\"accaccacc\"",
+          "explanation": "The nested expression a2[c] becomes acc, then repeats three times."
+        },
+        {
+          "input": "s = \"2[abc]3[cd]ef\"",
+          "output": "\"abcabccdcdcdef\"",
+          "explanation": "Each bracketed segment is expanded and concatenated in order."
+        }
       ],
       "keyInsight": "The key is to recognize the stack invariant pattern and maintain the right invariant around a stack to hold enclosing context. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1573,11 +1808,23 @@
         "time": "O(m*n)",
         "space": "O(m+n)"
       },
-      "problemStatement": "Multiply two non-negative integers given as strings without converting them to native numbers. Identify the input, required output, and constraints, then explain which math or bit cancellation idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given two non-negative integers num1 and num2 represented as strings, return the product of num1 and num2, also represented as a string. You must not use any built-in BigInteger library or convert the inputs to integers directly.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(m*n) time and O(m+n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= num1.length, num2.length <= 200.",
+        "num1 and num2 consist of digits only.",
+        "Neither num1 nor num2 contains leading zeros unless the number is exactly \"0\"."
+      ],
+      "examples": [
+        {
+          "input": "num1 = \"2\", num2 = \"3\"",
+          "output": "\"6\"",
+          "explanation": "2 multiplied by 3 equals 6."
+        },
+        {
+          "input": "num1 = \"123\", num2 = \"456\"",
+          "output": "\"56088\"",
+          "explanation": "The product of the two represented integers is 56088."
+        }
       ],
       "keyInsight": "The key is to recognize the math or bit cancellation pattern and maintain the right invariant around digit arrays instead of native integers. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1665,11 +1912,27 @@
         "time": "O(n + m) with KMP",
         "space": "O(m)"
       },
-      "problemStatement": "Return the index of the first occurrence of one string inside another, or -1 when absent. Formerly titled Implement strStr(). Identify the input, required output, and constraints, then explain which string matching idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given two strings needle and haystack, return the index of the first occurrence of needle in haystack, or -1 if needle is not part of haystack.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n + m) with KMP time and O(m) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= haystack.length, needle.length <= 10^4.",
+        "haystack and needle consist of only lowercase English characters."
+      ],
+      "examples": [
+        {
+          "input": "haystack = \"sadbutsad\", needle = \"sad\"",
+          "output": "0",
+          "explanation": "needle first appears at index 0."
+        },
+        {
+          "input": "haystack = \"leetcode\", needle = \"leeto\"",
+          "output": "-1",
+          "explanation": "The exact substring needle does not occur in haystack."
+        },
+        {
+          "input": "haystack = \"a\", needle = \"a\"",
+          "output": "0",
+          "explanation": "The one-character needle matches at the first index."
+        }
       ],
       "keyInsight": "The key is to recognize the string matching pattern and maintain the right invariant around naive window comparison and its worst case. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1752,11 +2015,24 @@
         "time": "O(total characters)",
         "space": "O(1) excluding output"
       },
-      "problemStatement": "Format a list of words into fully justified lines of a fixed width, padding with spaces. Identify the input, required output, and constraints, then explain which greedy invariant idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an array of strings words and a width maxWidth, format the text such that each line has exactly maxWidth characters and is fully justified. Pack as many words as possible in each line. Extra spaces are distributed as evenly as possible between words, and the last line is left-justified.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(total characters) time and O(1) excluding output space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= words.length <= 300.",
+        "1 <= words[i].length <= 20.",
+        "1 <= maxWidth <= 100.",
+        "words[i] consists of English letters and symbols."
+      ],
+      "examples": [
+        {
+          "input": "words = [\"This\", \"is\", \"an\", \"example\", \"of\", \"text\", \"justification.\"], maxWidth = 16",
+          "output": "[\"This    is    an\", \"example  of text\", \"justification.  \"]",
+          "explanation": "Each line is exactly 16 characters and distributes spaces according to the rules."
+        },
+        {
+          "input": "words = [\"What\", \"must\", \"be\", \"acknowledgment\", \"shall\", \"be\"], maxWidth = 16",
+          "output": "[\"What   must   be\", \"acknowledgment  \", \"shall be        \"]",
+          "explanation": "A line with one word and the final line are left-justified."
+        }
       ],
       "keyInsight": "The key is to recognize the greedy invariant pattern and maintain the right invariant around greedy line packing. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [

@@ -165,13 +165,16 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 
   if (workspaceRoute && pathname !== "/" && !userId) redirect("/");
 
-  let showWorkspaceShell = false;
+  // Layouts persist across client navigation. Keep the signed-in shell mounted
+  // even on bare routes like /interview so the sidebar can reappear when the
+  // user returns to / without needing a full page reload.
+  const showWorkspaceShell = Boolean(userId && !welcomeHome);
+
   if (userId && workspaceRoute && !welcomeHome) {
     const profile = await getAppContainer()
       .profileService.get(authenticatedOwnerId(userId))
       .catch(() => null);
     if (!profile?.onboardingCompletedAt) redirect("/onboarding");
-    showWorkspaceShell = true;
   }
 
   const app = (

@@ -1,5 +1,5 @@
-import { WorkspaceLoading } from "@/components/workspace/skeletons";
+import { ProgressSkeleton } from "@/components/workspace/progress-skeleton";
 
 export default function Loading() {
-  return <WorkspaceLoading />;
+  return <ProgressSkeleton />;
 }

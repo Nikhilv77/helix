@@ -197,6 +197,10 @@ export function ReportBriefingStage({
         if (result === "unavailable" && targetPhase === 2) {
           setSpokenPhase(targetPhase);
           setReportVoiceFinished(true);
+          return;
+        }
+        if (result === "blocked" && targetPhase === 2) {
+          setReportVoiceFinished(true);
         }
       });
     },

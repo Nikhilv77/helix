@@ -51,11 +51,7 @@ export async function generateMetadata({
   return privatePageMetadata(found.question.title, found.question.promptSummary);
 }
 
-export default async function DsaQuestionPage({
-  params
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function DsaQuestionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const found = findQuestion(slug);
   if (!found) notFound();
@@ -412,7 +408,10 @@ function Approaches({ approaches }: { approaches: DsaApproach[] }) {
           <p className="mt-3 text-[14.5px] leading-7 text-cream/72">{approach.idea}</p>
           <ol className="mt-3.5 space-y-2">
             {approach.steps.map((step, stepIndex) => (
-              <li key={`${stepIndex}-${step}`} className="flex gap-3 text-[13.5px] leading-6 text-cream/60">
+              <li
+                key={`${stepIndex}-${step}`}
+                className="flex gap-3 text-[13.5px] leading-6 text-cream/60"
+              >
                 <span className="font-mono text-cream/30">{stepIndex + 1}.</span>
                 <span className="min-w-0">{step}</span>
               </li>

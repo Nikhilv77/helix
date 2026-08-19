@@ -37,11 +37,19 @@
         "time": "O(n log n)",
         "space": "O(n)"
       },
-      "problemStatement": "Repeatedly smash the two heaviest stones together and return the weight of the last remaining stone, or zero. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n log n) time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "You have stones with positive integer weights. Each turn, choose the two heaviest stones and smash them together: if their weights are equal, both are destroyed; otherwise, the lighter is destroyed and the heavier is reduced by the lighter's weight. Return the weight of the last remaining stone, or 0 if none remain.",
+      "constraints": ["1 <= stones.length <= 30.", "1 <= stones[i] <= 1000."],
+      "examples": [
+        {
+          "input": "stones = [2,7,4,1,8,1]",
+          "output": "1",
+          "explanation": "The smash sequence leaves stones of weights 1 and 1, which destroy each other except for a final stone of weight 1."
+        },
+        {
+          "input": "stones = [1]",
+          "output": "1",
+          "explanation": "The only stone is already the last remaining stone."
+        }
       ],
       "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around a max-heap for repeated largest extraction. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -129,11 +137,19 @@
         "time": "O(n log k)",
         "space": "O(k)"
       },
-      "problemStatement": "Return the kth largest value in an unsorted array. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n log k) time and O(k) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given an integer array nums and an integer k, return the kth largest element in the array. The kth largest element is the kth element in sorted order, not the kth distinct element.",
+      "constraints": ["1 <= k <= nums.length <= 10^5.", "-10^4 <= nums[i] <= 10^4."],
+      "examples": [
+        {
+          "input": "nums = [3,2,1,5,6,4], k = 2",
+          "output": "5",
+          "explanation": "The descending order is [6,5,4,3,2,1], so the second largest value is 5."
+        },
+        {
+          "input": "nums = [3,2,3,1,2,4,5,5,6], k = 4",
+          "output": "4",
+          "explanation": "The fourth largest element, counting duplicate values, is 4."
+        }
       ],
       "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around a size-k min-heap whose root is the answer. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -221,11 +237,23 @@
         "time": "O(n log k)",
         "space": "O(k)"
       },
-      "problemStatement": "Return the k points closest to the origin from a list of coordinates. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an array of points where points[i] = [xi, yi] represents a point on the X-Y plane, return the k points closest to the origin (0, 0). The distance is the Euclidean distance, and the answer may be returned in any order.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n log k) time and O(k) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= k <= points.length <= 10^4.",
+        "-10^4 <= xi, yi <= 10^4.",
+        "All points are unique."
+      ],
+      "examples": [
+        {
+          "input": "points = [[1,3],[-2,2]], k = 1",
+          "output": "[[-2,2]]",
+          "explanation": "The squared distances are 10 and 8, so [-2,2] is closer to the origin."
+        },
+        {
+          "input": "points = [[3,3],[5,-1],[-2,4]], k = 2",
+          "output": "[[3,3],[-2,4]]",
+          "explanation": "Their squared distances are 18, 26, and 20; the first and third points are the two closest."
+        }
       ],
       "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around ordering by a derived key rather than the stored value. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -313,11 +341,23 @@
         "time": "O(n log k), O(n) with buckets",
         "space": "O(n)"
       },
-      "problemStatement": "Return the k most frequent values in an array. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an integer array nums and an integer k, return the k most frequent elements. You may return the answer in any order.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n log k), O(n) with buckets time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= nums.length <= 10^5.",
+        "-10^4 <= nums[i] <= 10^4.",
+        "k is in the range [1, the number of distinct elements]."
+      ],
+      "examples": [
+        {
+          "input": "nums = [1,1,1,2,2,3], k = 2",
+          "output": "[1,2]",
+          "explanation": "1 appears three times and 2 appears twice, making them the two most frequent values."
+        },
+        {
+          "input": "nums = [1], k = 1",
+          "output": "[1]",
+          "explanation": "The only value is also the most frequent value."
+        }
       ],
       "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around counting first, then selecting by count. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -405,11 +445,24 @@
         "time": "O(n log k)",
         "space": "O(n)"
       },
-      "problemStatement": "Return the k most frequent words, breaking ties in lexicographic order. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an array of strings words and an integer k, return the k most frequent strings. Return them ordered from highest frequency to lowest; for equal frequencies, order them lexicographically.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n log k) time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= words.length <= 500.",
+        "1 <= words[i].length <= 10.",
+        "words[i] consists of lowercase English letters.",
+        "1 <= k <= the number of distinct words."
+      ],
+      "examples": [
+        {
+          "input": "words = [\"i\",\"love\",\"leetcode\",\"i\",\"love\",\"coding\"], k = 2",
+          "output": "[\"i\",\"love\"]",
+          "explanation": "i and love each appear twice, and i comes first lexicographically."
+        },
+        {
+          "input": "words = [\"the\",\"day\",\"is\",\"sunny\",\"the\",\"the\",\"sunny\",\"is\",\"is\"], k = 4",
+          "output": "[\"is\",\"the\",\"sunny\",\"day\"]",
+          "explanation": "is appears three times, the appears three times, sunny twice, and day once; ties are lexicographic."
+        }
       ],
       "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around a two-key comparator: frequency descending, then lexicographic ascending. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -498,11 +551,23 @@
         "time": "O(n)",
         "space": "O(1) for a bounded alphabet"
       },
-      "problemStatement": "Given tasks and a fixed cooldown between two runs of the same task, find the minimum time to run them all. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given a CPU that executes one task per unit of time and an array of tasks represented by capital letters, return the least number of units of time needed to complete all tasks. The same task must be separated by at least n idle intervals or other tasks.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) for a bounded alphabet space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= tasks.length <= 10^4.",
+        "tasks[i] is an uppercase English letter.",
+        "0 <= n <= 100."
+      ],
+      "examples": [
+        {
+          "input": "tasks = [\"A\",\"A\",\"A\",\"B\",\"B\",\"B\"], n = 2",
+          "output": "8",
+          "explanation": "One optimal schedule is A B idle A B idle A B, which takes 8 units."
+        },
+        {
+          "input": "tasks = [\"A\",\"A\",\"A\",\"B\",\"B\",\"B\"], n = 0",
+          "output": "6",
+          "explanation": "With no cooldown, all six tasks can run consecutively."
+        }
       ],
       "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around always scheduling the most frequent remaining task. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -591,11 +656,19 @@
         "time": "O(n log a)",
         "space": "O(a)"
       },
-      "problemStatement": "Rearrange a string so no two adjacent characters match, or report that it cannot be done. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n log a) time and O(a) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given a string s, rearrange its characters so that no two adjacent characters are the same. Return any valid rearrangement, or return an empty string if no valid rearrangement exists.",
+      "constraints": ["1 <= s.length <= 500.", "s consists of lowercase English letters."],
+      "examples": [
+        {
+          "input": "s = \"aab\"",
+          "output": "\"aba\"",
+          "explanation": "The characters can be interleaved so the two a characters are separated."
+        },
+        {
+          "input": "s = \"aaab\"",
+          "output": "\"\"",
+          "explanation": "There are too many a characters to place without two becoming adjacent."
+        }
       ],
       "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around placing the most frequent remaining character at each step. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -684,11 +757,23 @@
         "time": "O(log n) add, O(1) median",
         "space": "O(n)"
       },
-      "problemStatement": "Design a structure that accepts a stream of numbers and returns the running median on demand. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
+      "problemStatement": "The median is the middle value in an ordered integer list. Design a MedianFinder class with addNum(int num) to add a number from a data stream and findMedian() to return the median of all numbers added so far.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(log n) add, O(1) median time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "-10^5 <= num <= 10^5.",
+        "There will be at least one element before findMedian is called.",
+        "At most 5 * 10^4 calls will be made to addNum and findMedian."
+      ],
+      "examples": [
+        {
+          "input": "[\"MedianFinder\",\"addNum\",\"addNum\",\"findMedian\",\"addNum\",\"findMedian\"] with values [[],[1],[2],[],[3],[]]",
+          "output": "[null,null,null,1.5,null,2.0]",
+          "explanation": "After adding 1 and 2, the median is 1.5; after adding 3, the median is 2."
+        },
+        {
+          "input": "addNum(5), addNum(5), findMedian()",
+          "output": "5.0",
+          "explanation": "Two equal values have median 5.0."
+        }
       ],
       "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around a max-heap over the lower half and a min-heap over the upper half. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -777,11 +862,26 @@
         "time": "O(n log n)",
         "space": "O(n)"
       },
-      "problemStatement": "With a starting capital and a limit of k projects, choose projects to maximize final capital, where each project requires a minimum capital and yields a profit. Identify the input, required output, and constraints, then explain which priority queue idea makes the brute-force search unnecessary.",
+      "problemStatement": "You have initial capital w and can complete at most k distinct projects. Project i requires at least capital[i] to start and yields profit[i] after completion. Choose projects to maximize your final capital and return that final capital.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n log n) time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= k <= 10^5.",
+        "0 <= w <= 10^9.",
+        "n == profits.length == capital.length.",
+        "1 <= n <= 5 * 10^4.",
+        "0 <= profits[i] <= 10^4.",
+        "0 <= capital[i] <= 10^9."
+      ],
+      "examples": [
+        {
+          "input": "k = 2, w = 0, profits = [1,2,3], capital = [0,1,1]",
+          "output": "4",
+          "explanation": "Start project 0 to reach capital 1, then choose project 2 to reach capital 4."
+        },
+        {
+          "input": "k = 3, w = 0, profits = [1,2,3], capital = [0,1,2]",
+          "output": "6",
+          "explanation": "Complete the projects in order of newly affordable capital, ending with 6."
+        }
       ],
       "keyInsight": "The key is to recognize the priority queue pattern and maintain the right invariant around sorting projects by their capital requirement. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [

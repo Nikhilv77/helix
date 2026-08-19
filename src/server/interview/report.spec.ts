@@ -13,6 +13,7 @@ const state: InterviewState = {
   plan: [
     {
       text: "What did you personally own?",
+      evidenceAnchor: "Collaborative editor conflict resolver",
       competency: "Ownership",
       intent: "Find personal scope.",
       mustHit: ["scope"],
@@ -95,7 +96,9 @@ describe("interview report", () => {
       expect.objectContaining({ label: "Implementation", answered: true })
     ]);
     expect(report.competencies[0]).toMatchObject({
+      evidenceAnchor: "Collaborative editor conflict resolver",
       evidenceLevel: "developing",
+      evidenceBreakdown: expect.objectContaining({ ownership: 88 }),
       signals: expect.arrayContaining(["Personal ownership"])
     });
     expect(report.summary.evidenceScore).toBeGreaterThan(0);

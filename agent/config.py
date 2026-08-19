@@ -25,10 +25,10 @@ class SpeechConfig:
     stt_model: str = os.getenv("TRAILGRAD_STT_MODEL", "flux-general-en")
     stt_language: str = os.getenv("TRAILGRAD_STT_LANGUAGE", "en")
     stt_eager_eot_threshold: float = float(
-        os.getenv("TRAILGRAD_STT_EAGER_EOT_THRESHOLD", "0.5")
+        os.getenv("TRAILGRAD_STT_EAGER_EOT_THRESHOLD", "0")
     )
-    stt_eot_threshold: float = float(os.getenv("TRAILGRAD_STT_EOT_THRESHOLD", "0.7"))
-    stt_eot_timeout_ms: int = int(os.getenv("TRAILGRAD_STT_EOT_TIMEOUT_MS", "1600"))
+    stt_eot_threshold: float = float(os.getenv("TRAILGRAD_STT_EOT_THRESHOLD", "0.8"))
+    stt_eot_timeout_ms: int = int(os.getenv("TRAILGRAD_STT_EOT_TIMEOUT_MS", "2800"))
 
     # Deepgram keeps filler words in the transcript by default, which the
     # Phase 5 filler-rate metric depends on. Do not turn this off.
@@ -40,8 +40,8 @@ class SpeechConfig:
     # --- Turn taking --------------------------------------------------------
     # How long a silence must run before the turn is considered finished.
     # Candidates think mid-answer; cutting in at 0.5s makes it feel twitchy.
-    turn_min_delay_s: float = float(os.getenv("TRAILGRAD_TURN_MIN_DELAY_S", "0.35"))
-    turn_max_delay_s: float = float(os.getenv("TRAILGRAD_TURN_MAX_DELAY_S", "1.8"))
+    turn_min_delay_s: float = float(os.getenv("TRAILGRAD_TURN_MIN_DELAY_S", "0.8"))
+    turn_max_delay_s: float = float(os.getenv("TRAILGRAD_TURN_MAX_DELAY_S", "3.0"))
 
     # --- Text to speech -----------------------------------------------------
     # Deepgram Aura-2. The voice is part of the model id — there is no separate

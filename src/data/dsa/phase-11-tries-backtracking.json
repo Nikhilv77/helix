@@ -37,11 +37,23 @@
         "time": "O(L) per operation",
         "space": "O(total characters stored)"
       },
-      "problemStatement": "Design a prefix tree that supports inserting words, full-word lookup, and prefix lookup. Identify the input, required output, and constraints, then explain which prefix tree idea makes the brute-force search unnecessary.",
+      "problemStatement": "Implement a Trie (prefix tree) with insert, search, and startsWith operations. insert adds a word, search returns whether a complete word was previously inserted, and startsWith returns whether any inserted word begins with a given prefix.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(L) per operation time and O(total characters stored) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= word.length, prefix.length <= 2000.",
+        "word and prefix consist of lowercase English letters.",
+        "At most 3 * 10^4 calls are made to insert, search, and startsWith."
+      ],
+      "examples": [
+        {
+          "input": "Trie trie = new Trie(); trie.insert(\"apple\"); trie.search(\"apple\"); trie.search(\"app\"); trie.startsWith(\"app\"); trie.insert(\"app\"); trie.search(\"app\")",
+          "output": "[null,true,false,true,null,true]",
+          "explanation": "apple is a complete word, app is initially only a prefix, and becomes searchable after it is inserted."
+        },
+        {
+          "input": "trie.insert(\"cat\"); trie.startsWith(\"car\")",
+          "output": "false",
+          "explanation": "No inserted word begins with the prefix car."
+        }
       ],
       "keyInsight": "The key is to recognize the prefix tree pattern and maintain the right invariant around prefix tree nodes. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -120,11 +132,24 @@
         "time": "O(L) average, O(26^W * L) worst case with W wildcards",
         "space": "O(total characters stored)"
       },
-      "problemStatement": "Design a word dictionary that supports adding words and searching with '.' as any one character. Identify the input, required output, and constraints, then explain which prefix tree idea makes the brute-force search unnecessary.",
+      "problemStatement": "Design a WordDictionary that supports addWord and search. The search pattern may contain lowercase letters and '.'; a dot matches any single letter.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(L) average, O(26^W * L) worst case with W wildcards time and O(total characters stored) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= word.length <= 25.",
+        "word consists of lowercase English letters.",
+        "search patterns contain lowercase English letters and '.', with at most 2 dots.",
+        "At most 10^4 calls are made to addWord and search."
+      ],
+      "examples": [
+        {
+          "input": "WordDictionary dict = new WordDictionary(); dict.addWord(\"bad\"); dict.addWord(\"dad\"); dict.addWord(\"mad\"); dict.search(\"pad\"); dict.search(\"bad\"); dict.search(\".ad\"); dict.search(\"b..\")",
+          "output": "[null,null,null,false,true,true,true]",
+          "explanation": "pad was not inserted, while bad matches directly, .ad matches dad or mad, and b.. matches bad."
+        },
+        {
+          "input": "dict.addWord(\"a\"); dict.search(\".\"); dict.search(\"b\")",
+          "output": "[null,true,false]",
+          "explanation": "The wildcard matches the single inserted character a, but b does not."
+        }
       ],
       "keyInsight": "The key is to recognize the prefix tree pattern and maintain the right invariant around trie traversal. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -203,11 +228,23 @@
         "time": "O(n * 2^n)",
         "space": "O(n) recursion excluding output"
       },
-      "problemStatement": "Return every subset of a list of distinct integers. Identify the input, required output, and constraints, then explain which recursive search with pruning idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an array nums of distinct integers, return all possible subsets (the power set). The answer must not contain duplicate subsets, and the order of subsets does not matter.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n * 2^n) time and O(n) recursion excluding output space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= nums.length <= 10.",
+        "-10 <= nums[i] <= 10.",
+        "All values in nums are unique."
+      ],
+      "examples": [
+        {
+          "input": "nums = [1,2,3]",
+          "output": "[[],[1],[2],[1,2],[3],[1,3],[2,3],[1,2,3]]",
+          "explanation": "Each number is independently included or excluded, producing 2^3 = 8 subsets."
+        },
+        {
+          "input": "nums = [0]",
+          "output": "[[],[0]]",
+          "explanation": "The empty subset and the subset containing 0 are the only possibilities."
+        }
       ],
       "keyInsight": "The key is to recognize the recursive search with pruning pattern and maintain the right invariant around recursive decision tree. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -291,11 +328,24 @@
         "time": "O(N^(T/M)) in the rough worst case",
         "space": "O(T/M) recursion excluding output"
       },
-      "problemStatement": "Find all unique combinations of candidate numbers that sum to a target, allowing repeated use of each candidate. Identify the input, required output, and constraints, then explain which recursive search with pruning idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an array of distinct positive integers candidates and a target integer target, return all unique combinations of candidates that sum to target. Each candidate may be chosen unlimited times, and the order of combinations does not matter.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(N^(T/M)) in the rough worst case time and O(T/M) recursion excluding output space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= candidates.length <= 30.",
+        "2 <= candidates[i] <= 40.",
+        "All candidates are distinct.",
+        "1 <= target <= 40."
+      ],
+      "examples": [
+        {
+          "input": "candidates = [2,3,6,7], target = 7",
+          "output": "[[2,2,3],[7]]",
+          "explanation": "The two unique combinations that sum to 7 are 2+2+3 and 7."
+        },
+        {
+          "input": "candidates = [2,3,5], target = 8",
+          "output": "[[2,2,2,2],[2,3,3],[3,5]]",
+          "explanation": "Each listed combination uses candidates repeatedly and totals 8."
+        }
       ],
       "keyInsight": "The key is to recognize the recursive search with pruning pattern and maintain the right invariant around candidate reuse. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -374,11 +424,23 @@
         "time": "O(n * n!)",
         "space": "O(n) recursion excluding output"
       },
-      "problemStatement": "Return every ordering of a list of distinct integers. Identify the input, required output, and constraints, then explain which recursive search with pruning idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an array nums of distinct integers, return all possible permutations. The answer may be returned in any order.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n * n!) time and O(n) recursion excluding output space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= nums.length <= 6.",
+        "-10 <= nums[i] <= 10.",
+        "All values in nums are unique."
+      ],
+      "examples": [
+        {
+          "input": "nums = [1,2,3]",
+          "output": "[[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]",
+          "explanation": "The three distinct values can be arranged in 3! = 6 orders."
+        },
+        {
+          "input": "nums = [0,1]",
+          "output": "[[0,1],[1,0]]",
+          "explanation": "There are two possible orderings of the two values."
+        }
       ],
       "keyInsight": "The key is to recognize the recursive search with pruning pattern and maintain the right invariant around ordering matters. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -457,11 +519,26 @@
         "time": "O(m*n*4^L) worst case, heavily pruned by trie prefixes",
         "space": "O(total dictionary characters + L)"
       },
-      "problemStatement": "Find all dictionary words that can be formed by walking adjacent cells on a character board. Identify the input, required output, and constraints, then explain which prefix tree idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an m x n board of lowercase letters and a list of words, return all words that can be formed by tracing adjacent cells. A word may use horizontal or vertical moves, and no cell may be used more than once in a single word.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(m*n*4^L) worst case, heavily pruned by trie prefixes time and O(total dictionary characters + L) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "m == board.length and n == board[i].length.",
+        "1 <= m, n <= 12.",
+        "1 <= words.length <= 3 * 10^4.",
+        "1 <= words[i].length <= 10.",
+        "board and words[i] consist of lowercase English letters.",
+        "All words are unique."
+      ],
+      "examples": [
+        {
+          "input": "board = [[\"o\",\"a\",\"a\",\"n\"],[\"e\",\"t\",\"a\",\"e\"],[\"i\",\"h\",\"k\",\"r\"],[\"i\",\"f\",\"l\",\"v\"]], words = [\"oath\",\"pea\",\"eat\",\"rain\"]",
+          "output": "[\"eat\",\"oath\"]",
+          "explanation": "eat and oath can be traced through adjacent unused cells; pea and rain cannot."
+        },
+        {
+          "input": "board = [[\"a\",\"b\"],[\"c\",\"d\"]], words = [\"abcb\"]",
+          "output": "[]",
+          "explanation": "The word would require reusing the b cell, which is not allowed."
+        }
       ],
       "keyInsight": "The key is to recognize the prefix tree pattern and maintain the right invariant around trie-guided DFS. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -550,11 +627,19 @@
         "time": "O(n!)",
         "space": "O(n)"
       },
-      "problemStatement": "Place n queens on an n x n board so no two attack each other, returning all valid boards. Identify the input, required output, and constraints, then explain which recursive search with pruning idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n!) time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Place n queens on an n x n chessboard so that no two queens attack each other. Return all distinct valid board configurations, using 'Q' for a queen and '.' for an empty square.",
+      "constraints": ["1 <= n <= 9."],
+      "examples": [
+        {
+          "input": "n = 4",
+          "output": "[[\".Q..\",\"...Q\",\"Q...\",\"..Q.\"],[\"..Q.\",\"Q...\",\"...Q\",\".Q..\"]]",
+          "explanation": "The two listed boards are the only arrangements where no queens share a row, column, or diagonal."
+        },
+        {
+          "input": "n = 1",
+          "output": "[[\"Q\"]]",
+          "explanation": "A one-cell board has one valid placement."
+        }
       ],
       "keyInsight": "The key is to recognize the recursive search with pruning pattern and maintain the right invariant around row-by-row placement. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [

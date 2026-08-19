@@ -46,6 +46,11 @@ logger = logging.getLogger("trailgrad.agent")
 
 ROOM_PREFIX = "interview-"
 TYPED_ANSWER_TOPIC = "trailgrad.typed-answer"
+SILENCE_NUDGE_DELAYS = (8.0, 18.0)
+SILENCE_NUDGES = (
+    "Take your time. You can start with the specific project or experience behind that.",
+    "A simple way in is to walk me through what happened first, then what you personally did.",
+)
 _worker_lock: IO[str] | None = None
 
 
@@ -99,10 +104,11 @@ def build_stt():
     if SPEECH.stt_model.startswith("flux-"):
         options = {
             "model": SPEECH.stt_model,
-            "eager_eot_threshold": SPEECH.stt_eager_eot_threshold,
             "eot_threshold": SPEECH.stt_eot_threshold,
             "eot_timeout_ms": SPEECH.stt_eot_timeout_ms,
         }
+        if SPEECH.stt_eager_eot_threshold > 0:
+            options["eager_eot_threshold"] = SPEECH.stt_eager_eot_threshold
         if SPEECH.stt_model.endswith("-multi"):
             options["language_hint"] = [SPEECH.stt_language]
         return deepgram.STTv2(**options)
@@ -222,6 +228,31 @@ async def interview_session(ctx: agents.JobContext) -> None:
     )
 
     state = TurnState(started_at_ms=snapshot.started_at)
+    silence_task: asyncio.Task[None] | None = None
+
+    def cancel_silence_nudge() -> None:
+        nonlocal silence_task
+        if silence_task is not None:
+            silence_task.cancel()
+            silence_task = None
+
+    def schedule_silence_nudge() -> None:
+        nonlocal silence_task
+        cancel_silence_nudge()
+
+        async def nudge_sequence() -> None:
+            try:
+                for delay, text in zip(SILENCE_NUDGE_DELAYS, SILENCE_NUDGES):
+                    await asyncio.sleep(delay)
+                    if state.busy:
+                        return
+                    await session.say(text, allow_interruptions=True)
+            except asyncio.CancelledError:
+                return
+            except Exception:
+                logger.exception("silence nudge failed")
+
+        silence_task = asyncio.create_task(nudge_sequence())
 
     @session.on("user_input_transcribed")
     def _on_transcript(event: UserInputTranscribedEvent) -> None:
@@ -256,10 +287,18 @@ async def interview_session(ctx: agents.JobContext) -> None:
     def _on_user_state(event: UserStateChangedEvent) -> None:
         logger.info("user state: %s -> %s", event.old_state, event.new_state)
         if event.new_state == "speaking":
+            cancel_silence_nudge()
             state.mark_speech_start()
 
     async def on_turn(text: str) -> None:
-        await handle_turn(session, trailgrad, session_id, state, text)
+        await handle_turn(
+            session,
+            trailgrad,
+            session_id,
+            state,
+            text,
+            on_waiting=schedule_silence_nudge,
+        )
 
     @ctx.room.on("data_received")
     def _on_data(packet: object) -> None:
@@ -287,6 +326,7 @@ async def interview_session(ctx: agents.JobContext) -> None:
                 state,
                 text,
                 timing=(start_ms, end_ms),
+                on_waiting=schedule_silence_nudge,
             )
         )
 
@@ -298,6 +338,7 @@ async def interview_session(ctx: agents.JobContext) -> None:
         logger.info("speaking opening: %s", snapshot.opening_utterance[:80])
         await session.say(snapshot.opening_utterance)
         logger.info("opening delivered")
+        schedule_silence_nudge()
     else:
         logger.warning("no opening utterance on session %s", session_id)
 
@@ -378,6 +419,7 @@ async def handle_turn(
     state: TurnState,
     text: str,
     timing: tuple[int, int] | None = None,
+    on_waiting: Callable[[], None] | None = None,
 ) -> None:
     dispatch = (
         state.begin_typed_dispatch(text, timing[0], timing[1])
@@ -423,6 +465,8 @@ async def handle_turn(
     # Streams to the room as it synthesises; it does not wait for the full clip.
     try:
         await session.say(decision.utterance)
+        if decision.phase != "done" and on_waiting is not None:
+            on_waiting()
     except Exception:
         logger.exception("say failed")
     finally:

@@ -13,6 +13,7 @@ export interface InterviewSetup {
   agenda?: string[];
   templateId?: string;
   templateTitle?: string;
+  dsaQuestionSlugs?: string[];
 }
 
 export interface CandidateStory {
@@ -176,6 +177,7 @@ export interface Turn {
 
 export interface InterviewQuestion {
   text: string;
+  evidenceAnchor: string | null;
   kind: "conversation" | "code";
   competency: string | null;
   language: string | null;
@@ -233,10 +235,17 @@ export interface InterviewHistoryItem {
 export interface InterviewCompetencyReport {
   label: string;
   question: string;
+  evidenceAnchor?: string | null;
   answered: boolean;
   answerPreview: string | null;
   evidenceScore: number;
   evidenceLevel: "strong" | "developing" | "missing";
+  evidenceBreakdown?: {
+    ownership: number;
+    decision: number;
+    specificity: number;
+    outcome: number;
+  };
   signals: string[];
   gap: string;
   nextStep: string;

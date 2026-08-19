@@ -18,7 +18,17 @@ import {
   elapsedMs,
   finish
 } from "./state-machine";
-import { Decision, HARD_CAP_MS, InterviewSetup, InterviewState } from "./types";
+import {
+  Decision,
+  DecisionAction,
+  EvidenceDimension,
+  EvidenceLedger,
+  HARD_CAP_MS,
+  InterviewSetup,
+  InterviewState,
+  MissingDimension
+} from "./types";
+import { isResumeRound } from "./prompt-context";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** A spoken conversation should never wait on the model's full provider timeout. */
@@ -179,6 +189,7 @@ export class InterviewService {
     const raw = await this.decideWithFallback({
       setup: withAnswer.setup,
       questionAsked: question.text,
+      evidenceAnchor: question.evidenceAnchor,
       competency: question.competency,
       intent: question.intent,
       questionKind: question.kind,
@@ -189,6 +200,7 @@ export class InterviewService {
       userAnswer: answer.text,
       followUpCount: withAnswer.followUpCount,
       fallbackProbe: question.probeIfMissing,
+      evidenceLedger: withAnswer.evidence?.[String(withAnswer.questionIndex)],
       conversationHistory: withAnswer.turns
         .slice(0, -1)
         .slice(-8)
@@ -196,14 +208,32 @@ export class InterviewService {
     });
 
     const result = advance(withAnswer, raw.action, now);
-    const utterance = this.composeUtterance(
-      result.state,
+    const questionEvidence = recordEvidence(
+      withAnswer.evidence?.[String(withAnswer.questionIndex)],
+      answer.text,
+      raw.missing
+    );
+    const withEvidence = {
+      ...result.state,
+      evidence: {
+        ...withAnswer.evidence,
+        [String(withAnswer.questionIndex)]: questionEvidence
+      }
+    };
+    const acknowledgement = naturalAcknowledgement(
+      raw.acknowledgement,
       result.action,
-      joinSpoken(raw.acknowledgement.trim(), raw.line.trim())
+      withAnswer.turns,
+      result.state.followUpCount
+    );
+    const utterance = this.composeUtterance(
+      withEvidence,
+      result.action,
+      joinSpoken(acknowledgement, singleQuestion(stripGenericLead(raw.line?.trim() ?? "")))
     );
 
     const spokenAt = elapsedMs(result.state, now);
-    const withReply = appendTurn(result.state, {
+    const withReply = appendTurn(withEvidence, {
       speaker: "agent",
       text: utterance,
       startMs: spokenAt,
@@ -254,6 +284,7 @@ export class InterviewService {
   private async decideWithFallback(input: {
     setup: InterviewSetup;
     questionAsked: string;
+    evidenceAnchor?: string;
     competency?: string;
     intent?: string;
     questionKind?: "conversation" | "code";
@@ -265,6 +296,7 @@ export class InterviewService {
     followUpCount: number;
     fallbackProbe: string;
     conversationHistory: Array<{ speaker: "agent" | "user"; text: string }>;
+    evidenceLedger?: EvidenceLedger;
   }) {
     try {
       return await within(this.decider.decide(input), DECIDER_BUDGET_MS);
@@ -280,7 +312,12 @@ export class InterviewService {
         action: input.followUpCount >= 1 ? ("move_on" as const) : ("probe" as const),
         missing: "specificity",
         reason: "decider unavailable; used planned fallback",
-        acknowledgement: input.followUpCount >= 1 ? "Understood" : "",
+        acknowledgement:
+          input.followUpCount >= 1
+            ? ["That helps", "Right, I see the thread", "That gives me a clearer picture"][
+                input.followUpCount % 3
+              ]
+            : "",
         line: input.followUpCount >= 1 ? "" : input.fallbackProbe
       };
     }
@@ -339,12 +376,160 @@ function joinSpoken(bridge: string, sentence: string): string {
   return /[.!?]$/.test(bridge) ? `${bridge} ${sentence}` : `${bridge}. ${sentence}`;
 }
 
+const NATURAL_BRIDGES: Record<DecisionAction, string[]> = {
+  clarify: ["Let me rephrase that.", "I want to make sure I’m following."],
+  probe: [
+    "That gives me a useful thread.",
+    "I want to stay with that part.",
+    "Let’s unpack that a little.",
+    "That’s the part I want to understand better."
+  ],
+  challenge: [
+    "Let me pressure-test that decision.",
+    "I want to check one thing there.",
+    "That raises one question for me."
+  ],
+  move_on: [
+    "That gives me a clear picture.",
+    "I can place that now.",
+    "That’s enough context for me."
+  ]
+};
+
+const GENERIC_ACKNOWLEDGEMENT =
+  /^(?:got it|gotcha|understood|i understand|makes sense|okay|ok|right|great|excellent|good answer|thanks for sharing)(?:[.!?,\s]|$)/i;
+
+function stripGenericLead(text: string): string {
+  return text
+    .replace(
+      /^(?:got it|gotcha|understood|i understand|makes sense|okay|ok|right|great|excellent|good answer|thanks for sharing)(?:[.!?,\s]+)+/i,
+      ""
+    )
+    .trim();
+}
+
+function singleQuestion(text: string): string {
+  const firstQuestionEnd = text.indexOf("?");
+  return firstQuestionEnd >= 0 ? text.slice(0, firstQuestionEnd + 1).trim() : text;
+}
+
+function naturalAcknowledgement(
+  acknowledgement: string | undefined,
+  action: DecisionAction,
+  turns: InterviewState["turns"],
+  sequence: number
+): string {
+  const candidate = acknowledgement?.trim() ?? "";
+  if (candidate && !GENERIC_ACKNOWLEDGEMENT.test(candidate) && !recentlyUsed(candidate, turns)) {
+    return candidate;
+  }
+
+  if (!candidate) return "";
+
+  const options = NATURAL_BRIDGES[action];
+  for (let offset = 0; offset < options.length; offset += 1) {
+    const option = options[(sequence + offset) % options.length];
+    if (option && !recentlyUsed(option, turns)) return option;
+  }
+
+  return "";
+}
+
+function recentlyUsed(acknowledgement: string, turns: InterviewState["turns"]): boolean {
+  const normalized = acknowledgement
+    .replace(/[.!?]+$/, "")
+    .trim()
+    .toLowerCase();
+  return turns
+    .filter((turn) => turn.speaker === "agent")
+    .slice(-4)
+    .some((turn) => turn.text.split(/[.!?]/, 1)[0]?.trim().toLowerCase() === normalized);
+}
+
+function recordEvidence(
+  current: EvidenceLedger | undefined,
+  answer: string,
+  missing: string
+): EvidenceLedger {
+  const ledger: EvidenceLedger = current
+    ? {
+        ownership: [...current.ownership],
+        decision: [...current.decision],
+        specificity: [...current.specificity],
+        outcome: [...current.outcome],
+        gaps: [...current.gaps]
+      }
+    : {
+        ownership: [],
+        decision: [],
+        specificity: [],
+        outcome: [],
+        gaps: ["ownership", "decision", "specificity", "outcome"]
+      };
+  const snippet = answer.replace(/\s+/g, " ").trim().slice(0, 240);
+  const dimensions: EvidenceDimension[] = [];
+
+  if (/\b(i|i'm|i’ve|i've|my|personally|owned|led|built|implemented|designed)\b/i.test(answer)) {
+    dimensions.push("ownership");
+  }
+  if (/\b(because|chose|decided|trade[- ]?off|alternative|instead|reason)\b/i.test(answer)) {
+    dimensions.push("decision");
+  }
+  if (
+    /\b\d+(?:\.\d+)?(?:%|ms|s|x|k|m|gb|tb)?\b|\b(redis|react|typescript|javascript|api|database|queue|cache|kafka|postgres|sql)\b/i.test(
+      answer
+    )
+  ) {
+    dimensions.push("specificity");
+  }
+  if (
+    /\b(result|impact|improved|reduced|increased|saved|grew|measured|outcome|users?|latency|revenue)\b/i.test(
+      answer
+    )
+  ) {
+    dimensions.push("outcome");
+  }
+
+  for (const dimension of dimensions) {
+    ledger[dimension] = [...ledger[dimension].filter((item) => item !== snippet), snippet].slice(
+      -3
+    );
+  }
+
+  const knownGaps = new Set<EvidenceDimension>(ledger.gaps);
+  for (const dimension of dimensions) knownGaps.delete(dimension);
+  const missingDimension = evidenceDimensionForMissing(missing);
+  if (missingDimension) knownGaps.add(missingDimension);
+  return { ...ledger, gaps: [...knownGaps] };
+}
+
+function evidenceDimensionForMissing(value: string): EvidenceDimension | null {
+  switch (value as MissingDimension) {
+    case "specificity":
+      return "specificity";
+    case "ownership":
+      return "ownership";
+    case "outcome":
+      return "outcome";
+    case "structure":
+    case "clarity":
+      return "decision";
+    default:
+      return null;
+  }
+}
+
 function introUtterance(state: InterviewState): string {
   const first = state.plan[0];
   const minutes = Math.round(HARD_CAP_MS / 60000);
-  const intro = `Hi, I'm Maya, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
+  const intro =
+    state.setup.templateTitle === "DSA practice interview"
+      ? "Hi, I'm Maya. Welcome to your DSA interview. I picked a few problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful."
+      : isResumeRound(state.setup)
+        ? "Hi, I'm Maya. Let's have a relaxed conversation about the work on your resume. I'll pick a few threads and ask about what actually happened, what you did, and what changed. Take your time."
+        : `Hi, I'm Maya, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
 
-  return first ? `${intro} Ready? Let's begin. ${first.text}` : intro;
+  return first ? `${intro} ${first.text}` : intro;
 }
 
 export function closingDecision(): Decision {

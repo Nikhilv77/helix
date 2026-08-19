@@ -41,10 +41,12 @@ function serialise(state: InterviewState) {
     followUpCount: state.followUpCount,
     startedAt: state.startedAt,
     setup: state.setup,
+    evidence: state.evidence ?? null,
     turns: state.turns,
     currentQuestion: question
       ? {
           text: question.text,
+          evidenceAnchor: question.evidenceAnchor?.trim() || null,
           kind: question.kind ?? "conversation",
           competency: question.competency ?? null,
           language: question.language || null,

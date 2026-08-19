@@ -28,7 +28,7 @@ export function PrimaryAction({
   }
 
   return (
-    <Link href="/interview" aria-label={ariaLabel} className={className}>
+    <Link href="/interview?resume=1" aria-label={ariaLabel} className={className}>
       {children}
     </Link>
   );

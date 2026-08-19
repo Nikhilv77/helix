@@ -24,11 +24,17 @@ export interface InterviewSetup {
   /** Which template produced the agenda, for history and reports. */
   templateId?: string;
   templateTitle?: string;
+  /** Slugs selected for the live DSA workspace, in interview order. */
+  dsaQuestionSlugs?: string[];
+  /** DSA rounds use a compact set of practice questions instead of the default four-question arc. */
+  questionCount?: 3 | 4 | 5;
 }
 
 export interface PlannedQuestion {
   /** Spoken verbatim. The decider never rewrites this. */
   text: string;
+  /** Exact resume/project claim that motivated this question. */
+  evidenceAnchor?: string;
   /** Structured presentation metadata. Optional for sessions saved before code rounds existed. */
   kind?: "conversation" | "code";
   language?: string;
@@ -48,6 +54,16 @@ export type Speaker = "agent" | "user";
 export type DecisionAction = "clarify" | "probe" | "challenge" | "move_on";
 export type MissingDimension =
   "clarity" | "structure" | "specificity" | "ownership" | "outcome" | "none";
+
+export type EvidenceDimension = "ownership" | "decision" | "specificity" | "outcome";
+
+export interface EvidenceLedger {
+  ownership: string[];
+  decision: string[];
+  specificity: string[];
+  outcome: string[];
+  gaps: EvidenceDimension[];
+}
 
 /** Timestamps are offsets in milliseconds from the session start. */
 export interface Turn {
@@ -79,6 +95,8 @@ export interface InterviewState {
   /** Epoch milliseconds. */
   startedAt: number;
   turns: Turn[];
+  /** Durable evidence per planned question/resume claim. */
+  evidence?: Record<string, EvidenceLedger>;
 }
 
 export interface Decision {

@@ -277,7 +277,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           </label>
 
           <Link
-            href="/interview"
+            href="/interview?resume=1"
             onClick={() => setMenuOpen(false)}
             className="group mt-3 flex h-11 shrink-0 items-center gap-2.5 rounded-lg bg-cream px-3.5 text-[0.86rem] font-medium text-[#171a16] outline-none transition-colors duration-200 ease-out hover:bg-white focus-visible:ring-2 focus-visible:ring-white/70"
           >

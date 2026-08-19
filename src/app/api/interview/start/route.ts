@@ -17,7 +17,8 @@ const setupSchema = z.object({
   context: z.string().trim().min(10, "Tell me a little about what you've worked on").max(1200),
   agenda: z.array(z.string().trim().min(3).max(200)).max(6).optional(),
   templateId: z.string().trim().max(60).optional(),
-  templateTitle: z.string().trim().max(80).optional()
+  templateTitle: z.string().trim().max(80).optional(),
+  questionCount: z.union([z.literal(3), z.literal(4), z.literal(5)]).optional()
 });
 
 export async function POST(request: NextRequest) {

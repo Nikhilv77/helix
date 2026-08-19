@@ -37,11 +37,19 @@
         "time": "O(m*n)",
         "space": "O(m*n)"
       },
-      "problemStatement": "Count the connected groups of land cells in a grid of land and water. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(m*n) time and O(m*n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given an m x n grid of characters where '1' represents land and '0' represents water, return the number of islands. An island is formed by horizontally or vertically adjacent land cells and is surrounded by water.",
+      "constraints": ["1 <= m, n <= 300.", "grid[i][j] is '0' or '1'."],
+      "examples": [
+        {
+          "input": "grid = [[\"1\",\"1\",\"1\",\"1\",\"0\"],[\"1\",\"1\",\"0\",\"1\",\"0\"],[\"1\",\"1\",\"0\",\"0\",\"0\"],[\"0\",\"0\",\"0\",\"0\",\"0\"]]",
+          "output": "1",
+          "explanation": "All land cells belong to one connected island."
+        },
+        {
+          "input": "grid = [[\"1\",\"1\",\"0\",\"0\",\"0\"],[\"1\",\"1\",\"0\",\"0\",\"0\"],[\"0\",\"0\",\"1\",\"0\",\"0\"],[\"0\",\"0\",\"0\",\"1\",\"1\"]]",
+          "output": "3",
+          "explanation": "The grid contains three separate groups of connected land cells."
+        }
       ],
       "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around treating a grid as an implicit graph. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -129,11 +137,19 @@
         "time": "O(m*n)",
         "space": "O(m*n)"
       },
-      "problemStatement": "Return the size of the largest connected group of land cells in a grid. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(m*n) time and O(m*n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given an m x n binary grid, return the maximum area of an island. An island is a group of horizontally or vertically connected 1 cells, and its area is the number of cells in the group. Return 0 if there is no island.",
+      "constraints": ["1 <= m, n <= 50.", "grid[i][j] is 0 or 1."],
+      "examples": [
+        {
+          "input": "grid = [[0,0,1,0,0],[1,1,1,0,1],[0,1,0,0,1]]",
+          "output": "5",
+          "explanation": "The largest connected island contains five cells."
+        },
+        {
+          "input": "grid = [[0,0,0,0,0]]",
+          "output": "0",
+          "explanation": "There are no land cells, so the maximum island area is 0."
+        }
       ],
       "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around returning a size from the flood fill instead of a count. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -221,11 +237,19 @@
         "time": "O(m*n)",
         "space": "O(m*n)"
       },
-      "problemStatement": "Capture every region of one symbol that is fully surrounded by another, leaving border-touching regions untouched. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(m*n) time and O(m*n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given an m x n board containing 'X' and 'O', capture every region of 'O' cells that is completely surrounded by 'X'. A region is connected horizontally or vertically. Modify the board in place, leaving any region connected to the border unchanged.",
+      "constraints": ["1 <= m, n <= 200.", "board[i][j] is 'X' or 'O'."],
+      "examples": [
+        {
+          "input": "board = [[\"X\",\"X\",\"X\",\"X\"],[\"X\",\"O\",\"O\",\"X\"],[\"X\",\"X\",\"O\",\"X\"],[\"X\",\"O\",\"X\",\"X\"]]",
+          "output": "[[\"X\",\"X\",\"X\",\"X\"],[\"X\",\"X\",\"X\",\"X\"],[\"X\",\"X\",\"X\",\"X\"],[\"X\",\"O\",\"X\",\"X\"]]",
+          "explanation": "The interior O region is captured, while the border O remains unchanged."
+        },
+        {
+          "input": "board = [[\"X\"]]",
+          "output": "[[\"X\"]]",
+          "explanation": "A one-cell board contains no surrounded O region."
+        }
       ],
       "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around inverting the question to find what survives instead of what is captured. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -313,11 +337,24 @@
         "time": "O(m*n)",
         "space": "O(m*n)"
       },
-      "problemStatement": "Rotten cells spread to adjacent fresh cells each minute; return the minutes until none are fresh, or -1 when some never rot. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(m*n) time and O(m*n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given an m x n grid where 0 is empty, 1 is a fresh orange, and 2 is a rotten orange, every fresh orange adjacent horizontally or vertically to a rotten orange becomes rotten each minute. Return the minimum minutes until no fresh orange remains, or -1 if that is impossible.",
+      "constraints": ["1 <= m, n <= 10.", "grid[i][j] is 0, 1, or 2."],
+      "examples": [
+        {
+          "input": "grid = [[2,1,1],[1,1,0],[0,1,1]]",
+          "output": "4",
+          "explanation": "A multi-source breadth-first spread reaches the final fresh orange after four minutes."
+        },
+        {
+          "input": "grid = [[2,1,1],[0,1,1],[1,0,1]]",
+          "output": "-1",
+          "explanation": "The fresh orange in the bottom-left corner cannot be reached by any rotten orange."
+        },
+        {
+          "input": "grid = [[0,2]]",
+          "output": "0",
+          "explanation": "There are no fresh oranges at the start."
+        }
       ],
       "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around seeding BFS with every source at once. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -405,11 +442,19 @@
         "time": "O(m*n)",
         "space": "O(m*n)"
       },
-      "problemStatement": "Find the grid cells from which water can reach both ocean borders, flowing only to neighbours of equal or lower height. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
-      "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(m*n) time and O(m*n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+      "problemStatement": "Given an m x n matrix of heights, water can flow from a cell to a horizontally or vertically adjacent cell of equal or lower height. The Pacific touches the top and left borders, and the Atlantic touches the bottom and right borders. Return all coordinates from which water can flow to both oceans.",
+      "constraints": ["1 <= m, n <= 200.", "0 <= heights[r][c] <= 10^5."],
+      "examples": [
+        {
+          "input": "heights = [[1,2,2,3,5],[3,2,3,4,4],[2,4,5,3,1],[6,7,1,4,5],[5,1,1,2,4]]",
+          "output": "[[0,4],[1,3],[1,4],[2,2],[3,0],[3,1],[4,0]]",
+          "explanation": "Each listed cell has a non-increasing path to both the Pacific and Atlantic borders."
+        },
+        {
+          "input": "heights = [[1]]",
+          "output": "[[0,0]]",
+          "explanation": "The only cell touches both oceans."
+        }
       ],
       "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around reversing the flow so the search starts at the oceans. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -498,11 +543,23 @@
         "time": "O(m*n*4^L)",
         "space": "O(L)"
       },
-      "problemStatement": "Decide whether a word can be spelled by moving between adjacent grid cells without reusing any cell. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an m x n grid of letters and a string word, return true if the word can be formed from sequentially adjacent cells. Adjacent cells share an edge, and the same cell cannot be used more than once in a word path.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(m*n*4^L) time and O(L) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= m, n <= 6.",
+        "1 <= word.length <= 15.",
+        "board and word consist of uppercase and lowercase English letters."
+      ],
+      "examples": [
+        {
+          "input": "board = [[\"A\",\"B\",\"C\",\"E\"],[\"S\",\"F\",\"C\",\"S\"],[\"A\",\"D\",\"E\",\"E\"]], word = \"ABCCED\"",
+          "output": "true",
+          "explanation": "A path through adjacent cells spells A-B-C-C-E-D without reusing a cell."
+        },
+        {
+          "input": "board = [[\"A\",\"B\",\"C\",\"E\"],[\"S\",\"F\",\"C\",\"S\"],[\"A\",\"D\",\"E\",\"E\"]], word = \"ABCB\"",
+          "output": "false",
+          "explanation": "Spelling the word would require reusing the B cell."
+        }
       ],
       "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around backtracking with an in-place visited marker. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -591,11 +648,29 @@
         "time": "O(V + E)",
         "space": "O(V)"
       },
-      "problemStatement": "Deep copy a connected undirected graph given a reference to one of its nodes. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given a reference to a node in a connected undirected graph, return a deep copy of the graph. Each copied node must have the same value and neighbor relationships as the original but must be a distinct object.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(V + E) time and O(V) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes is in the range [0, 100].",
+        "1 <= Node.val <= 100.",
+        "Node values are unique.",
+        "The graph is connected and has no repeated edges or self-loops."
+      ],
+      "examples": [
+        {
+          "input": "adjList = [[2,4],[1,3],[2,4],[1,3]]",
+          "output": "[[2,4],[1,3],[2,4],[1,3]]",
+          "explanation": "The cloned graph has the same four-node cycle and adjacency list, but every node is newly allocated."
+        },
+        {
+          "input": "adjList = [[]]",
+          "output": "[[]]",
+          "explanation": "A single isolated node is cloned as a distinct node with no neighbors."
+        },
+        {
+          "input": "adjList = []",
+          "output": "[]",
+          "explanation": "A null input produces an empty cloned graph."
+        }
       ],
       "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around a map from original nodes to their clones. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -684,11 +759,25 @@
         "time": "O(E * inverse Ackermann)",
         "space": "O(V)"
       },
-      "problemStatement": "Count the connected components of an undirected graph given its node count and edge list. This problem sits behind LeetCode Premium. Identify the input, required output, and constraints, then explain which disjoint set connectivity idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an undirected graph with n nodes labeled from 0 to n - 1 and an edge list, return the number of connected components in the graph.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(E * inverse Ackermann) time and O(V) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= n <= 2000.",
+        "1 <= edges.length <= 5000.",
+        "edges[i].length == 2.",
+        "0 <= edges[i][0], edges[i][1] < n.",
+        "There are no duplicate edges or self-loops."
+      ],
+      "examples": [
+        {
+          "input": "n = 5, edges = [[0,1],[1,2],[3,4]]",
+          "output": "2",
+          "explanation": "Nodes 0, 1, and 2 form one component, while nodes 3 and 4 form the second."
+        },
+        {
+          "input": "n = 5, edges = [[0,1],[1,2],[2,3],[3,4]]",
+          "output": "1",
+          "explanation": "Every node is connected through the edge chain, so the graph has one component."
+        }
       ],
       "keyInsight": "The key is to recognize the disjoint set connectivity pattern and maintain the right invariant around starting with n components and merging on each edge. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -776,11 +865,25 @@
         "time": "O(E * inverse Ackermann)",
         "space": "O(V)"
       },
-      "problemStatement": "Decide whether an undirected graph with n nodes and a given edge list forms a single tree. This problem sits behind LeetCode Premium. Identify the input, required output, and constraints, then explain which disjoint set connectivity idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given n nodes labeled from 0 to n - 1 and a list of undirected edges, return true if the edges form a valid tree. A valid tree must be connected and contain no cycle.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(E * inverse Ackermann) time and O(V) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= n <= 2000.",
+        "0 <= edges.length <= 5000.",
+        "edges[i].length == 2.",
+        "0 <= edges[i][0], edges[i][1] < n.",
+        "There are no duplicate edges or self-loops."
+      ],
+      "examples": [
+        {
+          "input": "n = 5, edges = [[0,1],[0,2],[0,3],[1,4]]",
+          "output": "true",
+          "explanation": "The graph is connected and has exactly n - 1 edges with no cycle."
+        },
+        {
+          "input": "n = 5, edges = [[0,1],[1,2],[2,3],[1,3],[1,4]]",
+          "output": "false",
+          "explanation": "The edges 1-2-3-1 form a cycle, so the graph is not a tree."
+        }
       ],
       "keyInsight": "The key is to recognize the disjoint set connectivity pattern and maintain the right invariant around a tree having exactly n minus one edges and no cycle. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -867,11 +970,25 @@
         "time": "O(E * inverse Ackermann)",
         "space": "O(V)"
       },
-      "problemStatement": "A tree had one extra edge added to it; return the edge that can be removed, choosing the last such edge in the input. Identify the input, required output, and constraints, then explain which disjoint set connectivity idea makes the brute-force search unnecessary.",
+      "problemStatement": "An undirected tree with nodes labeled from 1 to n received one additional edge. Given all n edges, return an edge that can be removed so the graph becomes a tree again. If multiple answers are possible, return the one that appears last in the input.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(E * inverse Ackermann) time and O(V) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "n == edges.length.",
+        "3 <= n <= 1000.",
+        "edges[i].length == 2.",
+        "1 <= edges[i][0] < edges[i][1] <= n.",
+        "There are no repeated edges and the graph is connected."
+      ],
+      "examples": [
+        {
+          "input": "edges = [[1,2],[1,3],[2,3]]",
+          "output": "[2,3]",
+          "explanation": "Removing [2,3] breaks the only cycle and restores a tree."
+        },
+        {
+          "input": "edges = [[1,2],[2,3],[3,4],[1,4],[1,5]]",
+          "output": "[1,4]",
+          "explanation": "The edge [1,4] closes the cycle 1-2-3-4-1 and is the last removable cycle edge in input order."
+        }
       ],
       "keyInsight": "The key is to recognize the disjoint set connectivity pattern and maintain the right invariant around the edge that closes a cycle being the redundant one. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -958,11 +1075,25 @@
         "time": "O(N*K log(N*K))",
         "space": "O(N*K)"
       },
-      "problemStatement": "Merge account records that share any email address, treating same-name accounts with no shared email as different people. Identify the input, required output, and constraints, then explain which disjoint set connectivity idea makes the brute-force search unnecessary.",
+      "problemStatement": "Each account contains a name followed by email addresses. Two accounts belong to the same person if they share at least one email address. Merge all accounts belonging to the same person, sort each merged email list, and return the merged accounts in any order.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(N*K log(N*K)) time and O(N*K) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= accounts.length <= 1000.",
+        "2 <= accounts[i].length <= 10.",
+        "1 <= accounts[i][j].length <= 30.",
+        "accounts[i][0] consists of English letters.",
+        "Each email is a valid address containing lowercase English letters, digits, and selected symbols."
+      ],
+      "examples": [
+        {
+          "input": "accounts = [[\"John\",\"johnsmith@mail.com\",\"john_newyork@mail.com\"],[\"John\",\"johnsmith@mail.com\",\"john00@mail.com\"],[\"Mary\",\"mary@mail.com\"],[\"John\",\"johnnybravo@mail.com\"]]",
+          "output": "[[\"John\",\"john00@mail.com\",\"john_newyork@mail.com\",\"johnsmith@mail.com\"],[\"Mary\",\"mary@mail.com\"],[\"John\",\"johnnybravo@mail.com\"]]",
+          "explanation": "The first two John accounts share johnsmith@mail.com and merge; the other accounts remain separate."
+        },
+        {
+          "input": "accounts = [[\"Gabe\",\"Gabe0@m.co\",\"Gabe3@m.co\",\"Gabe1@m.co\"],[\"Kevin\",\"Kevin3@m.co\",\"Kevin5@m.co\",\"Kevin0@m.co\"]]",
+          "output": "[[\"Gabe\",\"Gabe0@m.co\",\"Gabe1@m.co\",\"Gabe3@m.co\"],[\"Kevin\",\"Kevin0@m.co\",\"Kevin3@m.co\",\"Kevin5@m.co\"]]",
+          "explanation": "The two accounts share no emails, so each remains separate with its emails sorted."
+        }
       ],
       "keyInsight": "The key is to recognize the disjoint set connectivity pattern and maintain the right invariant around unioning accounts that share any email address. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1050,11 +1181,25 @@
         "time": "O(V + E)",
         "space": "O(V + E)"
       },
-      "problemStatement": "Given course prerequisite pairs, decide whether every course can be completed. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "There are numCourses courses labeled from 0 to numCourses - 1. Given prerequisite pairs where [a, b] means course b must be completed before course a, return true if it is possible to finish every course.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(V + E) time and O(V + E) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= numCourses <= 2000.",
+        "0 <= prerequisites.length <= 5000.",
+        "prerequisites[i].length == 2.",
+        "0 <= ai, bi < numCourses.",
+        "All prerequisite pairs are unique."
+      ],
+      "examples": [
+        {
+          "input": "numCourses = 2, prerequisites = [[1,0]]",
+          "output": "true",
+          "explanation": "Take course 0 first, then course 1; the prerequisite graph has no cycle."
+        },
+        {
+          "input": "numCourses = 2, prerequisites = [[1,0],[0,1]]",
+          "output": "false",
+          "explanation": "Each course depends on the other, creating a cycle that prevents completion."
+        }
       ],
       "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around a valid schedule existing exactly when the graph is acyclic. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1143,11 +1288,25 @@
         "time": "O(V + E)",
         "space": "O(V + E)"
       },
-      "problemStatement": "Return an order in which all courses can be taken, or an empty result when no such order exists. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "There are numCourses courses labeled from 0 to numCourses - 1. Given prerequisite pairs where [a, b] means b must be completed before a, return any valid order to finish all courses, or return an empty array if no valid order exists.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(V + E) time and O(V + E) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= numCourses <= 2000.",
+        "0 <= prerequisites.length <= 5000.",
+        "prerequisites[i].length == 2.",
+        "0 <= ai, bi < numCourses.",
+        "All prerequisite pairs are unique."
+      ],
+      "examples": [
+        {
+          "input": "numCourses = 2, prerequisites = [[1,0]]",
+          "output": "[0,1]",
+          "explanation": "Course 0 is taken before course 1, so [0,1] is a valid topological ordering."
+        },
+        {
+          "input": "numCourses = 4, prerequisites = [[1,0],[2,0],[3,1],[3,2]]",
+          "output": "[0,2,1,3]",
+          "explanation": "Course 0 comes first, courses 1 and 2 follow it, and course 3 comes after both."
+        }
       ],
       "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around emitting nodes in the order their in-degree reaches zero. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1236,11 +1395,29 @@
         "time": "O(total characters)",
         "space": "O(1) for a bounded alphabet"
       },
-      "problemStatement": "Infer a possible letter ordering for an alien alphabet from a list of words sorted in that alphabet. This problem sits behind LeetCode Premium. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "A new alien language uses the English alphabet with an unknown letter order. You are given a list of words sorted lexicographically according to that alien order. Derive a valid character ordering, or return an empty string if the ordering is invalid or ambiguous due to a contradiction.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(total characters) time and O(1) for a bounded alphabet space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= words.length <= 100.",
+        "1 <= words[i].length <= 100.",
+        "words[i] consists of lowercase English letters.",
+        "The total length of all words is at most 10^4."
+      ],
+      "examples": [
+        {
+          "input": "words = [\"wrt\",\"wrf\",\"er\",\"ett\",\"rftt\"]",
+          "output": "\"wertf\"",
+          "explanation": "Comparing adjacent words gives w < e, r < t, t < f, and e < r, producing the order wertf."
+        },
+        {
+          "input": "words = [\"z\",\"x\"]",
+          "output": "\"zx\"",
+          "explanation": "The sorted list establishes that z comes before x; this is a valid ordering."
+        },
+        {
+          "input": "words = [\"abc\",\"ab\"]",
+          "output": "\"\"",
+          "explanation": "A longer word cannot appear before its own prefix in lexicographic order, so the input is invalid."
+        }
       ],
       "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around deriving one edge from the first differing character of adjacent words. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1329,11 +1506,24 @@
         "time": "O(V)",
         "space": "O(V)"
       },
-      "problemStatement": "Return every node that, used as the root of a tree, produces the minimum possible height. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an undirected tree with n nodes labeled from 0 to n - 1, find all roots that produce minimum height trees. Return the labels of every possible minimum-height root in any order.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(V) time and O(V) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= n <= 2 * 10^4.",
+        "edges.length == n - 1.",
+        "0 <= ai, bi < n.",
+        "The given edges form a valid tree."
+      ],
+      "examples": [
+        {
+          "input": "n = 4, edges = [[1,0],[1,2],[1,3]]",
+          "output": "[1]",
+          "explanation": "Rooting at node 1 gives height 1, which is the minimum possible height."
+        },
+        {
+          "input": "n = 6, edges = [[3,0],[3,1],[3,2],[3,4],[5,4]]",
+          "output": "[3,4]",
+          "explanation": "The two central nodes 3 and 4 are the possible minimum-height roots."
+        }
       ],
       "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around the answer being the one or two centroids of the tree. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1422,11 +1612,25 @@
         "time": "O(N * L^2)",
         "space": "O(N * L)"
       },
-      "problemStatement": "Find the fewest single-letter changes that turn one word into another, where every intermediate word must exist in a dictionary. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given beginWord, endWord, and a dictionary wordList, return the length of the shortest transformation sequence from beginWord to endWord. Each step changes exactly one letter, and every intermediate word must be in wordList. Return 0 if no sequence exists.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(N * L^2) time and O(N * L) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= beginWord.length <= 10.",
+        "endWord.length == beginWord.length.",
+        "1 <= wordList.length <= 5000.",
+        "All words have the same length and consist of lowercase English letters.",
+        "beginWord and endWord are not equal."
+      ],
+      "examples": [
+        {
+          "input": "beginWord = \"hit\", endWord = \"cog\", wordList = [\"hot\",\"dot\",\"dog\",\"lot\",\"log\",\"cog\"]",
+          "output": "5",
+          "explanation": "One shortest sequence is hit -> hot -> dot -> dog -> cog, which contains five words."
+        },
+        {
+          "input": "beginWord = \"hit\", endWord = \"cog\", wordList = [\"hot\",\"dot\",\"dog\",\"lot\",\"log\"]",
+          "output": "0",
+          "explanation": "The end word is absent from the dictionary, so no valid transformation exists."
+        }
       ],
       "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around words as nodes and single-character edits as edges. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1515,11 +1719,25 @@
         "time": "O(E log V)",
         "space": "O(V + E)"
       },
-      "problemStatement": "A signal spreads along weighted directed edges from one node; return the time for every node to receive it, or -1 if some cannot. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "You are given a directed weighted graph with n nodes labeled 1 through n and travel times times[i] = [ui, vi, wi]. A signal starts at node k and travels along edges. Return the time needed for all nodes to receive the signal, or -1 if some node cannot be reached.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(E log V) time and O(V + E) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= k <= n <= 100.",
+        "1 <= times.length <= 6000.",
+        "times[i].length == 3.",
+        "1 <= ui, vi <= n.",
+        "0 <= wi <= 100."
+      ],
+      "examples": [
+        {
+          "input": "times = [[2,1,1],[2,3,1],[3,4,1]], n = 4, k = 2",
+          "output": "2",
+          "explanation": "Nodes 1 and 3 receive the signal at time 1, and node 4 receives it at time 2."
+        },
+        {
+          "input": "times = [[1,2,1]], n = 2, k = 2",
+          "output": "-1",
+          "explanation": "The signal starts at node 2 and cannot reach node 1."
+        }
       ],
       "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around Dijkstra driven by a min-heap of tentative distances. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1608,11 +1826,26 @@
         "time": "O(K*E)",
         "space": "O(V)"
       },
-      "problemStatement": "Find the cheapest route between two cities using at most k intermediate stops. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "There are n cities connected by directed flights. Given flights[i] = [fromi, toi, pricei], return the cheapest price from src to dst using at most k stops. Return -1 if no such route exists.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(K*E) time and O(V) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= n <= 100.",
+        "0 <= flights.length <= n * (n - 1) / 2.",
+        "flights[i].length == 3.",
+        "0 <= fromi, toi < n and fromi != toi.",
+        "1 <= pricei <= 10^4.",
+        "0 <= src, dst, k < n."
+      ],
+      "examples": [
+        {
+          "input": "n = 4, flights = [[0,1,100],[1,2,100],[2,0,100],[1,3,600],[2,3,200]], src = 0, dst = 3, k = 1",
+          "output": "700",
+          "explanation": "The route 0 -> 1 -> 3 costs 700 and uses one stop; the cheaper-looking route through 2 needs two stops."
+        },
+        {
+          "input": "n = 3, flights = [[0,1,100],[1,2,100],[0,2,500]], src = 0, dst = 2, k = 0",
+          "output": "500",
+          "explanation": "With zero stops, only the direct flight from 0 to 2 is allowed."
+        }
       ],
       "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around the stop limit turning distance into a two-dimensional state. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1701,11 +1934,26 @@
         "time": "O(Q*(V + E))",
         "space": "O(V + E)"
       },
-      "problemStatement": "Given equations stating that one variable divided by another equals some value, answer division queries or report that they cannot be determined. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "You are given equations such as a / b = 2.0 and queries such as a / c. Return the result for each query, or -1.0 if the result cannot be determined from the equations.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(Q*(V + E)) time and O(V + E) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= equations.length <= 20.",
+        "equations[i].length == 2.",
+        "1 <= values.length == equations.length.",
+        "1 <= queries.length <= 20.",
+        "All variables are lowercase English letters.",
+        "The input is consistent and no division by zero is required."
+      ],
+      "examples": [
+        {
+          "input": "equations = [[\"a\",\"b\"],[\"b\",\"c\"]], values = [2.0,3.0], queries = [[\"a\",\"c\"],[\"b\",\"a\"],[\"a\",\"e\"],[\"a\",\"a\"],[\"x\",\"x\"]]",
+          "output": "[6.0,0.5,-1.0,1.0,-1.0]",
+          "explanation": "The graph gives a/c = 2*3, b/a = 1/2, unknown variables are -1, and every variable divided by itself is 1."
+        },
+        {
+          "input": "equations = [[\"a\",\"b\"]], values = [0.5], queries = [[\"a\",\"b\"],[\"b\",\"a\"]]",
+          "output": "[0.5,2.0]",
+          "explanation": "The reverse edge has the reciprocal ratio."
+        }
       ],
       "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around ratios modelled as weighted edges in both directions. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1794,11 +2042,24 @@
         "time": "O(E log E)",
         "space": "O(E)"
       },
-      "problemStatement": "Order a set of one-way tickets into a single itinerary from a fixed starting airport, preferring the lexicographically smallest route. Identify the input, required output, and constraints, then explain which graph traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "You are given airline tickets where tickets[i] = [fromi, toi]. Reconstruct the itinerary in order using all tickets exactly once, starting from JFK. If multiple valid itineraries exist, return the lexicographically smallest one.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(E log E) time and O(E) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= tickets.length <= 300.",
+        "tickets[i].length == 2.",
+        "fromi and toi consist of three uppercase English letters.",
+        "At least one valid itinerary exists."
+      ],
+      "examples": [
+        {
+          "input": "tickets = [[\"MUC\",\"LHR\"],[\"JFK\",\"MUC\"],[\"SFO\",\"SJC\"],[\"LHR\",\"SFO\"]]",
+          "output": "[\"JFK\",\"MUC\",\"LHR\",\"SFO\",\"SJC\"]",
+          "explanation": "Starting at JFK and using every ticket produces the only valid route."
+        },
+        {
+          "input": "tickets = [[\"JFK\",\"SFO\"],[\"JFK\",\"ATL\"],[\"SFO\",\"ATL\"],[\"ATL\",\"JFK\"],[\"ATL\",\"SFO\"]]",
+          "output": "[\"JFK\",\"ATL\",\"JFK\",\"SFO\",\"ATL\",\"SFO\"]",
+          "explanation": "When multiple destinations are available, the itinerary uses all tickets while respecting the lexicographically smallest valid route."
+        }
       ],
       "keyInsight": "The key is to recognize the graph traversal pattern and maintain the right invariant around an Eulerian path using every edge exactly once. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [

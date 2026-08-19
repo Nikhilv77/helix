@@ -11,18 +11,26 @@ export const metadata = privatePageMetadata(
 
 /** Starting rounds, competency evidence and history — moved off Home. */
 export default async function InterviewsPage() {
-  const interviewService = getAppContainer().interviewService;
+  const app = getAppContainer();
+  const interviewService = app.interviewService;
   const { ownerId, profile: candidateProfile } = await requireOnboardedProfile();
 
   try {
-    const [quota, sessions, profile, insights] = await Promise.all([
+    const [quota, sessions, profile, insights, roadmap] = await Promise.all([
       interviewService.quota(ownerId),
       interviewService.history(ownerId),
       Promise.resolve(candidateProfile),
-      interviewService.insights(ownerId)
+      interviewService.insights(ownerId),
+      app.frontendRoadmapService.home(ownerId).catch(() => null)
     ]);
     return (
-      <InterviewsView quota={quota} sessions={sessions} profile={profile} insights={insights} />
+      <InterviewsView
+        quota={quota}
+        sessions={sessions}
+        profile={profile}
+        insights={insights}
+        roadmap={roadmap}
+      />
     );
   } catch {
     return (
@@ -39,6 +47,7 @@ export default async function InterviewsPage() {
           strongest: null,
           recommendedFocus: null
         }}
+        roadmap={null}
         historyAvailable={false}
       />
     );

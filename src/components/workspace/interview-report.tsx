@@ -123,6 +123,12 @@ export function InterviewReport({ report }: { report: InterviewReportData }) {
                 <div className="min-w-0">
                   <h3 className="font-semibold text-cream">{item.label}</h3>
                   <p className="mt-1 text-sm leading-6 text-cream/45">{item.question}</p>
+                  {item.evidenceAnchor ? (
+                    <p className="mt-3 text-xs leading-5 text-cream/42">
+                      <span className="font-semibold text-cream/65">Resume signal:</span>{" "}
+                      {item.evidenceAnchor}
+                    </p>
+                  ) : null}
                   {item.signals.length ? (
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {item.signals.map((signal) => (
@@ -133,6 +139,14 @@ export function InterviewReport({ report }: { report: InterviewReportData }) {
                           {signal}
                         </span>
                       ))}
+                    </div>
+                  ) : null}
+                  {item.evidenceBreakdown ? (
+                    <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+                      <EvidenceBar label="Ownership" value={item.evidenceBreakdown.ownership} />
+                      <EvidenceBar label="Decision" value={item.evidenceBreakdown.decision} />
+                      <EvidenceBar label="Specificity" value={item.evidenceBreakdown.specificity} />
+                      <EvidenceBar label="Outcome" value={item.evidenceBreakdown.outcome} />
                     </div>
                   ) : null}
                   {item.answerPreview ? (
@@ -267,6 +281,23 @@ function Behavior({ label, value }: { label: string; value: number }) {
     <div className="rounded-xl border border-cream/12 bg-blueprint-deep/50 p-3.5">
       <p className="text-2xl font-semibold text-cream">{value}</p>
       <p className="mt-1 text-xs text-cream/38">{label}</p>
+    </div>
+  );
+}
+
+function EvidenceBar({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2 font-mono text-[9px] uppercase tracking-[0.08em] text-cream/35">
+        <span>{label}</span>
+        <span>{value}</span>
+      </div>
+      <div className="mt-1 h-1 overflow-hidden rounded-full bg-cream/10">
+        <div
+          className="h-full rounded-full bg-[#71d6a5]/75"
+          style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
+        />
+      </div>
     </div>
   );
 }

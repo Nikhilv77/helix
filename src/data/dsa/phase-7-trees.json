@@ -37,11 +37,24 @@
         "time": "O(n)",
         "space": "O(h)"
       },
-      "problemStatement": "Return the number of nodes along the longest path from the root down to a leaf. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary tree, return its maximum depth. The maximum depth is the number of nodes along the longest path from the root node down to the farthest leaf node.",
       "constraints": [
         "Use the public problem constraints as the source of truth for bounds.",
         "Aim for the intended O(n) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [0, 10^4].",
+        "-100 <= Node.val <= 100."
+      ],
+      "examples": [
+        {
+          "input": "root = [3,9,20,null,null,15,7]",
+          "output": "3",
+          "explanation": "The longest root-to-leaf path contains three nodes."
+        },
+        {
+          "input": "root = [1,null,2]",
+          "output": "2",
+          "explanation": "The right branch contains two nodes."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around post-order recursion returning a value upward. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -129,11 +142,24 @@
         "time": "O(n)",
         "space": "O(h)"
       },
-      "problemStatement": "Return the number of nodes on the shortest path from the root to any leaf. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given a binary tree, find its minimum depth. The minimum depth is the number of nodes along the shortest path from the root node down to the nearest leaf node.",
       "constraints": [
         "Use the public problem constraints as the source of truth for bounds.",
         "Aim for the intended O(n) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [0, 10^5].",
+        "-1000 <= Node.val <= 1000."
+      ],
+      "examples": [
+        {
+          "input": "root = [3,9,20,null,null,15,7]",
+          "output": "2",
+          "explanation": "The nearest leaf is node 9, reached after two nodes."
+        },
+        {
+          "input": "root = [2,null,3,null,4,null,5,null,6]",
+          "output": "5",
+          "explanation": "The only root-to-leaf path contains five nodes."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around a leaf being a node with no children at all. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -221,11 +247,29 @@
         "time": "O(n)",
         "space": "O(h)"
       },
-      "problemStatement": "Decide whether two binary trees have identical structure and identical values. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the roots of two binary trees p and q, check if they are the same. Two binary trees are considered the same if they are structurally identical and the nodes have the same value.",
       "constraints": [
         "Use the public problem constraints as the source of truth for bounds.",
         "Aim for the intended O(n) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in each tree is in the range [0, 100].",
+        "-10^4 <= Node.val <= 10^4."
+      ],
+      "examples": [
+        {
+          "input": "p = [1,2,3], q = [1,2,3]",
+          "output": "true",
+          "explanation": "Both trees have the same shape and values."
+        },
+        {
+          "input": "p = [1,2], q = [1,null,2]",
+          "output": "false",
+          "explanation": "The trees have different structures."
+        },
+        {
+          "input": "p = [1,2,1], q = [1,1,2]",
+          "output": "false",
+          "explanation": "Corresponding node values differ."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around walking two trees in lockstep. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -313,11 +357,24 @@
         "time": "O(n)",
         "space": "O(h)"
       },
-      "problemStatement": "Decide whether a binary tree is a mirror image of itself about its centre. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary tree, check whether it is a mirror of itself, meaning it is symmetric around its center.",
       "constraints": [
         "Use the public problem constraints as the source of truth for bounds.",
         "Aim for the intended O(n) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [1, 1000].",
+        "-100 <= Node.val <= 100."
+      ],
+      "examples": [
+        {
+          "input": "root = [1,2,2,3,4,4,3]",
+          "output": "true",
+          "explanation": "The left and right subtrees mirror each other."
+        },
+        {
+          "input": "root = [1,2,2,null,3,null,3]",
+          "output": "false",
+          "explanation": "The corresponding child positions do not mirror correctly."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around comparing the left subtree against the right in mirror order. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -405,11 +462,25 @@
         "time": "O(n)",
         "space": "O(h)"
       },
-      "problemStatement": "Mirror a binary tree by swapping every node's left and right children. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary tree, invert the tree, and return its root. Inverting a binary tree means swapping the left and right children of every node.",
       "constraints": [
         "Use the public problem constraints as the source of truth for bounds.",
         "Aim for the intended O(n) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [0, 100].",
+        "-100 <= Node.val <= 100."
+      ],
+      "examples": [
+        {
+          "input": "root = [4,2,7,1,3,6,9]",
+          "output": "[4,7,2,9,6,3,1]",
+          "explanation": "Every node's left and right children are exchanged."
+        },
+        {
+          "input": "root = [2,1,3]",
+          "output": "[2,3,1]",
+          "explanation": "The two children of the root are swapped."
+        },
+        { "input": "root = []", "output": "[]", "explanation": "An empty tree remains empty." }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around swapping children at every node. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -498,11 +569,25 @@
         "time": "O(n*m)",
         "space": "O(h)"
       },
-      "problemStatement": "Decide whether one tree contains a subtree identical in structure and values to another tree. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the roots of two binary trees root and subRoot, return true if there is a subtree of root with the same structure and node values as subRoot, and false otherwise.",
       "constraints": [
         "Use the public problem constraints as the source of truth for bounds.",
         "Aim for the intended O(n*m) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in root is in the range [1, 2000].",
+        "The number of nodes in subRoot is in the range [1, 1000].",
+        "-10^4 <= Node.val <= 10^4."
+      ],
+      "examples": [
+        {
+          "input": "root = [3,4,5,1,2], subRoot = [4,1,2]",
+          "output": "true",
+          "explanation": "The subtree rooted at 4 exactly matches subRoot."
+        },
+        {
+          "input": "root = [3,4,5,1,2,null,null,null,null,0], subRoot = [4,1,2]",
+          "output": "false",
+          "explanation": "The node values or structure do not match exactly."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around reusing the identical-trees check at every candidate root. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -591,11 +676,24 @@
         "time": "O(n)",
         "space": "O(h)"
       },
-      "problemStatement": "Decide whether every node's two subtrees differ in height by at most one. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given a binary tree, determine if it is height-balanced. A height-balanced binary tree is a binary tree in which the depths of the two subtrees of every node never differ by more than one.",
       "constraints": [
         "Use the public problem constraints as the source of truth for bounds.",
         "Aim for the intended O(n) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [0, 5000].",
+        "-10^4 <= Node.val <= 10^4."
+      ],
+      "examples": [
+        {
+          "input": "root = [3,9,20,null,null,15,7]",
+          "output": "true",
+          "explanation": "Every node's left and right subtree heights differ by at most one."
+        },
+        {
+          "input": "root = [1,2,2,3,3,null,null,4,4]",
+          "output": "false",
+          "explanation": "The left side is more than one level deeper than the right at a node."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around computing height and balance in one post-order pass. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -684,11 +782,24 @@
         "time": "O(n)",
         "space": "O(h)"
       },
-      "problemStatement": "Find the length of the longest path between any two nodes of a binary tree. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary tree, return the length of the diameter of the tree. The diameter is the length of the longest path between any two nodes in a tree, and this path may or may not pass through the root.",
       "constraints": [
         "Use the public problem constraints as the source of truth for bounds.",
         "Aim for the intended O(n) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [1, 10^4].",
+        "-100 <= Node.val <= 100."
+      ],
+      "examples": [
+        {
+          "input": "root = [1,2,3,4,5]",
+          "output": "3",
+          "explanation": "The path 4 -> 2 -> 1 -> 3 contains three edges."
+        },
+        {
+          "input": "root = [1,2]",
+          "output": "1",
+          "explanation": "The longest path connects the root and its child."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around the longest path not necessarily passing through the root. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -777,11 +888,25 @@
         "time": "O(n)",
         "space": "O(h)"
       },
-      "problemStatement": "Decide whether some root-to-leaf path's values add up to a target. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary tree and an integer targetSum, return true if the tree has a root-to-leaf path such that adding all values along the path equals targetSum. A leaf is a node with no children.",
       "constraints": [
         "Use the public problem constraints as the source of truth for bounds.",
         "Aim for the intended O(n) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [0, 5000].",
+        "-1000 <= Node.val <= 1000.",
+        "-1000 <= targetSum <= 1000."
+      ],
+      "examples": [
+        {
+          "input": "root = [5,4,8,11,null,13,4,7,2,null,null,null,1], targetSum = 22",
+          "output": "true",
+          "explanation": "The path 5 -> 4 -> 11 -> 2 sums to 22."
+        },
+        {
+          "input": "root = [1,2,3], targetSum = 5",
+          "output": "false",
+          "explanation": "Neither root-to-leaf path sums to 5."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around subtracting on the way down instead of summing on the way up. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -870,11 +995,25 @@
         "time": "O(n)",
         "space": "O(h)"
       },
-      "problemStatement": "Each root-to-leaf path spells a number digit by digit; return the sum of all of them. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "You are given the root of a binary tree containing digits from 0 to 9 only. Each root-to-leaf path represents a number. Return the total sum of all root-to-leaf numbers.",
       "constraints": [
         "Use the public problem constraints as the source of truth for bounds.",
         "Aim for the intended O(n) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [1, 1000].",
+        "0 <= Node.val <= 9.",
+        "The answer fits in a 32-bit integer."
+      ],
+      "examples": [
+        {
+          "input": "root = [1,2,3]",
+          "output": "25",
+          "explanation": "The root-to-leaf numbers are 12 and 13, which sum to 25."
+        },
+        {
+          "input": "root = [4,9,0,5,1]",
+          "output": "1026",
+          "explanation": "The numbers are 495, 491, and 40."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around building a number by multiplying by ten while descending. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -963,11 +1102,23 @@
         "time": "O(n*h) worst case",
         "space": "O(h) excluding output"
       },
-      "problemStatement": "Return every root-to-leaf path whose values add up to a target. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary tree and an integer targetSum, return all root-to-leaf paths where the sum of the node values equals targetSum. A leaf is a node with no children.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n*h) worst case time and O(h) excluding output space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [0, 5000].",
+        "-1000 <= Node.val <= 1000.",
+        "-1000 <= targetSum <= 1000."
+      ],
+      "examples": [
+        {
+          "input": "root = [5,4,8,11,null,13,4,7,2,null,null,5,1], targetSum = 22",
+          "output": "[[5,4,11,2],[5,8,4,5]]",
+          "explanation": "Both listed root-to-leaf paths sum to 22."
+        },
+        {
+          "input": "root = [1,2,3], targetSum = 5",
+          "output": "[]",
+          "explanation": "The two root-to-leaf paths sum to 3 and 4, so no path matches 5."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around backtracking a shared path buffer. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1056,11 +1207,27 @@
         "time": "O(n)",
         "space": "O(width)"
       },
-      "problemStatement": "Return the node values grouped by depth, from the root downward. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary tree, return its level order traversal. Return the node values from left to right, level by level, from the root downward.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(width) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [0, 2000].",
+        "-1000 <= Node.val <= 1000."
+      ],
+      "examples": [
+        {
+          "input": "root = [3,9,20,null,null,15,7]",
+          "output": "[[3],[9,20],[15,7]]",
+          "explanation": "The root is level one, its children are level two, and 15 and 7 are level three."
+        },
+        {
+          "input": "root = [1]",
+          "output": "[[1]]",
+          "explanation": "A single node forms one level."
+        },
+        {
+          "input": "root = []",
+          "output": "[]",
+          "explanation": "An empty tree has no levels."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around a queue driving breadth-first traversal. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1149,11 +1316,27 @@
         "time": "O(n)",
         "space": "O(width)"
       },
-      "problemStatement": "Return level-order values with the direction alternating from level to level. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary tree, return its zigzag level order traversal. The first level is read left to right, the next right to left, and the direction alternates for every level.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(width) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [0, 2000].",
+        "-100 <= Node.val <= 100."
+      ],
+      "examples": [
+        {
+          "input": "root = [3,9,20,null,null,15,7]",
+          "output": "[[3],[20,9],[15,7]]",
+          "explanation": "The second level is reversed, while the third level returns to left-to-right order."
+        },
+        {
+          "input": "root = [1]",
+          "output": "[[1]]",
+          "explanation": "A single level is unchanged by the alternating direction."
+        },
+        {
+          "input": "root = []",
+          "output": "[]",
+          "explanation": "An empty tree produces no levels."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around alternating output direction per level. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1242,11 +1425,27 @@
         "time": "O(n)",
         "space": "O(width)"
       },
-      "problemStatement": "Return the values visible when the tree is viewed from the right side, top to bottom. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary tree, imagine standing on its right side and return the values of the nodes visible from top to bottom.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(width) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [0, 100].",
+        "-100 <= Node.val <= 100."
+      ],
+      "examples": [
+        {
+          "input": "root = [1,2,3,null,5,null,4]",
+          "output": "[1,3,4]",
+          "explanation": "The rightmost visible node at each depth is 1, then 3, then 4."
+        },
+        {
+          "input": "root = [1,null,3]",
+          "output": "[1,3]",
+          "explanation": "The only node visible at depth two is 3."
+        },
+        {
+          "input": "root = []",
+          "output": "[]",
+          "explanation": "There are no visible nodes in an empty tree."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around exactly one node visible per depth. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1335,11 +1534,23 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "In a perfect binary tree, point each node's next pointer at the node immediately to its right on the same level. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given a perfect binary tree, populate each node's next pointer so it points to the next node on the same level. If there is no next node, set next to null.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [0, 2^12 - 1].",
+        "-1000 <= Node.val <= 1000.",
+        "The input tree is perfect."
+      ],
+      "examples": [
+        {
+          "input": "root = [1,2,3,4,5,6,7]",
+          "output": "[1,#,2,3,#,4,5,6,7,#]",
+          "explanation": "Each level is linked from left to right and ends with a null pointer marker."
+        },
+        {
+          "input": "root = []",
+          "output": "[]",
+          "explanation": "An empty tree remains empty."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around using an already-linked level to wire the level below. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1428,11 +1639,22 @@
         "time": "O(n)",
         "space": "O(h)"
       },
-      "problemStatement": "Decide whether a binary tree satisfies the binary search tree ordering invariant. Identify the input, required output, and constraints, then explain which BST ordering idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary tree, determine whether it is a valid binary search tree. Every node in a left subtree must be smaller, and every node in a right subtree must be larger, than the current node.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [1, 10^4].",
+        "-2^31 <= Node.val <= 2^31 - 1."
+      ],
+      "examples": [
+        {
+          "input": "root = [2,1,3]",
+          "output": "true",
+          "explanation": "1 is less than 2 and 3 is greater than 2, so the ordering is valid."
+        },
+        {
+          "input": "root = [5,1,4,null,null,3,6]",
+          "output": "false",
+          "explanation": "The node 3 is in the right subtree of 5 but is smaller than 5."
+        }
       ],
       "keyInsight": "The key is to recognize the BST ordering pattern and maintain the right invariant around the ordering invariant binding whole subtrees, not just children. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1521,11 +1743,23 @@
         "time": "O(h + k)",
         "space": "O(h)"
       },
-      "problemStatement": "Return the kth smallest value in a binary search tree. Identify the input, required output, and constraints, then explain which BST ordering idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary search tree and an integer k, return the kth smallest value among all node values in the tree.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(h + k) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is n, where 1 <= n <= 10^4.",
+        "0 <= Node.val <= 10^4.",
+        "1 <= k <= n."
+      ],
+      "examples": [
+        {
+          "input": "root = [3,1,4,null,2], k = 1",
+          "output": "1",
+          "explanation": "The inorder sequence is [1,2,3,4], so the first smallest value is 1."
+        },
+        {
+          "input": "root = [5,3,6,2,4,null,null,1], k = 3",
+          "output": "3",
+          "explanation": "The inorder sequence is [1,2,3,4,5,6], making 3 the third smallest value."
+        }
       ],
       "keyInsight": "The key is to recognize the BST ordering pattern and maintain the right invariant around inorder traversal visiting values in sorted order. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1612,11 +1846,23 @@
         "time": "O(n)",
         "space": "O(log n)"
       },
-      "problemStatement": "Build a height-balanced binary search tree from a sorted array. Identify the input, required output, and constraints, then explain which BST ordering idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given an integer array nums where the values are sorted in ascending order, convert it into a height-balanced binary search tree. A height-balanced tree has left and right subtree heights differing by at most one at every node.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(log n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= nums.length <= 10^4.",
+        "-10^4 <= nums[i] <= 10^4.",
+        "nums is sorted in strictly increasing order."
+      ],
+      "examples": [
+        {
+          "input": "nums = [-10,-3,0,5,9]",
+          "output": "[0,-3,9,-10,null,5]",
+          "explanation": "Choosing the middle value 0 as the root produces a height-balanced BST. Other valid balanced trees are also accepted."
+        },
+        {
+          "input": "nums = [1,3]",
+          "output": "[3,1]",
+          "explanation": "A valid height-balanced BST can use 3 as the root and 1 as its left child."
+        }
       ],
       "keyInsight": "The key is to recognize the BST ordering pattern and maintain the right invariant around the middle element as root keeping the tree balanced. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1703,11 +1949,23 @@
         "time": "O(n)",
         "space": "O(h), O(1) with Morris"
       },
-      "problemStatement": "Exactly two nodes of a binary search tree were swapped by mistake; restore it without changing the structure. Identify the input, required output, and constraints, then explain which BST ordering idea makes the brute-force search unnecessary.",
+      "problemStatement": "Two nodes of a binary search tree were swapped by mistake. Recover the tree without changing its structure by swapping the two incorrect node values back.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(h), O(1) with Morris space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [2, 1000].",
+        "-2^31 <= Node.val <= 2^31 - 1.",
+        "Exactly two node values were swapped."
+      ],
+      "examples": [
+        {
+          "input": "root = [1,3,null,null,2]",
+          "output": "[3,1,null,null,2]",
+          "explanation": "The values 1 and 3 were swapped; exchanging them restores inorder order [1,2,3]."
+        },
+        {
+          "input": "root = [3,1,4,null,null,2]",
+          "output": "[2,1,4,null,null,3]",
+          "explanation": "The values 2 and 3 were swapped; restoring them makes the tree a valid BST."
+        }
       ],
       "keyInsight": "The key is to recognize the BST ordering pattern and maintain the right invariant around two swapped nodes producing one or two inorder descents. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1795,11 +2053,27 @@
         "time": "O(n)",
         "space": "O(1) when threaded"
       },
-      "problemStatement": "Flatten a binary tree in place into a right-leaning linked list that follows preorder. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary tree, flatten the tree in place into a right-skewed linked list. The linked list must use the same TreeNode objects and follow the preorder traversal of the tree.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(1) when threaded space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [0, 2000].",
+        "-100 <= Node.val <= 100."
+      ],
+      "examples": [
+        {
+          "input": "root = [1,2,5,3,4,null,6]",
+          "output": "[1,null,2,null,3,null,4,null,5,null,6]",
+          "explanation": "The preorder traversal is 1,2,3,4,5,6, so each node becomes the right child of the previous one."
+        },
+        {
+          "input": "root = []",
+          "output": "[]",
+          "explanation": "An empty tree needs no changes."
+        },
+        {
+          "input": "root = [0]",
+          "output": "[0]",
+          "explanation": "A single node is already a valid flattened tree."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around producing a right-leaning list in preorder. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1888,11 +2162,25 @@
         "time": "O(n)",
         "space": "O(n)"
       },
-      "problemStatement": "Reconstruct a binary tree from its preorder and inorder traversal sequences. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given two integer arrays preorder and inorder where preorder is the preorder traversal of a binary tree and inorder is its inorder traversal, construct and return the binary tree.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "1 <= preorder.length <= 3000.",
+        "inorder.length == preorder.length.",
+        "-3000 <= preorder[i], inorder[i] <= 3000.",
+        "All values in preorder and inorder are unique.",
+        "preorder and inorder describe the same tree."
+      ],
+      "examples": [
+        {
+          "input": "preorder = [3,9,20,15,7], inorder = [9,3,15,20,7]",
+          "output": "[3,9,20,null,null,15,7]",
+          "explanation": "3 is the preorder root; its inorder position separates the left subtree [9] from the right subtree [15,20,7]."
+        },
+        {
+          "input": "preorder = [-1], inorder = [-1]",
+          "output": "[-1]",
+          "explanation": "A one-node traversal pair reconstructs a one-node tree."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around preorder supplying the root while inorder splits the subtrees. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1984,11 +2272,23 @@
         "time": "O(n)",
         "space": "O(n)"
       },
-      "problemStatement": "Design a serialization format for a binary tree along with the deserializer that rebuilds it exactly. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Design an algorithm to serialize a binary tree to a string and deserialize that string back into the original tree. The serialized format must preserve both node values and the tree structure.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [0, 10^4].",
+        "-1000 <= Node.val <= 1000.",
+        "The serialized string must be unambiguous for all valid trees."
+      ],
+      "examples": [
+        {
+          "input": "root = [1,2,3,null,null,4,5]",
+          "output": "deserialize(serialize(root)) = [1,2,3,null,null,4,5]",
+          "explanation": "Null markers preserve the missing children, so deserialization rebuilds the same structure."
+        },
+        {
+          "input": "root = []",
+          "output": "deserialize(serialize(root)) = []",
+          "explanation": "The empty tree is represented by the chosen null marker and reconstructs as null."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around null markers making a single traversal sufficient. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -2077,11 +2377,24 @@
         "time": "O(n)",
         "space": "O(h)"
       },
-      "problemStatement": "Find the deepest node having both given nodes as descendants, where a node counts as a descendant of itself. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary tree and two nodes p and q in the tree, return their lowest common ancestor. A node can be an ancestor of itself.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [2, 10^5].",
+        "-10^9 <= Node.val <= 10^9.",
+        "All Node.val values are unique.",
+        "p and q are distinct nodes in the tree."
+      ],
+      "examples": [
+        {
+          "input": "root = [3,5,1,6,2,0,8,null,null,7,4], p = 5, q = 1",
+          "output": "3",
+          "explanation": "5 is in the left subtree of 3 and 1 is in the right subtree, so 3 is their lowest common ancestor."
+        },
+        {
+          "input": "root = [3,5,1,6,2,0,8,null,null,7,4], p = 5, q = 4",
+          "output": "5",
+          "explanation": "Node 5 is an ancestor of node 4 and is the lowest node that contains both targets."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around returning a found node upward and merging the two results. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -2173,11 +2486,25 @@
         "time": "O(n)",
         "space": "O(n)"
       },
-      "problemStatement": "Return every node exactly k edges away from a given target node in a binary tree. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary tree, a target node, and an integer k, return the values of all nodes that have a distance of exactly k edges from the target node. The order of the answer does not matter.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [1, 500].",
+        "0 <= Node.val <= 500.",
+        "All Node.val values are unique.",
+        "target is a node in the tree.",
+        "0 <= k <= 1000."
+      ],
+      "examples": [
+        {
+          "input": "root = [3,5,1,6,2,0,8,null,null,7,4], target = 5, k = 2",
+          "output": "[7,4,1]",
+          "explanation": "Nodes 7 and 4 are two edges below 5, and node 1 is two edges away through 3."
+        },
+        {
+          "input": "root = [1], target = 1, k = 3",
+          "output": "[]",
+          "explanation": "There are no nodes three edges away from the only node."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around treating the tree as an undirected graph. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -2266,11 +2593,23 @@
         "time": "O(n)",
         "space": "O(h)"
       },
-      "problemStatement": "Count downward paths, not necessarily starting at the root, whose values add up to a target. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary tree and an integer targetSum, return the number of paths where the sum of the node values equals targetSum. A path must move down from parent to child, but it does not have to start at the root or end at a leaf.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [0, 1000].",
+        "-10^9 <= Node.val <= 10^9.",
+        "-10^9 <= targetSum <= 10^9."
+      ],
+      "examples": [
+        {
+          "input": "root = [10,5,-3,3,2,null,11,3,-2,null,1], targetSum = 8",
+          "output": "3",
+          "explanation": "The matching paths are 5 -> 3, 5 -> 2 -> 1, and -3 -> 11."
+        },
+        {
+          "input": "root = [5,4,8,11,null,13,4,7,2,null,null,5,1], targetSum = 22",
+          "output": "3",
+          "explanation": "Three downward paths sum to 22, including paths that begin below the root."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around prefix sums along the current root-to-node path. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -2359,11 +2698,22 @@
         "time": "O(n)",
         "space": "O(h)"
       },
-      "problemStatement": "Rob a binary tree of houses for maximum total value without robbing two directly connected nodes. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "The houses form a binary tree. Each house has a money value, but you cannot rob two directly connected houses. Return the maximum amount of money you can rob without alerting the police.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [1, 10^4].",
+        "0 <= Node.val <= 10^4."
+      ],
+      "examples": [
+        {
+          "input": "root = [3,2,3,null,3,null,1]",
+          "output": "7",
+          "explanation": "Rob 3, 3, and 1 for a total of 7; the directly connected 2 and 3 are skipped."
+        },
+        {
+          "input": "root = [3,4,5,1,3,null,1]",
+          "output": "9",
+          "explanation": "Rob the houses with values 4, 5, and 1 for a total of 9."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around returning a pair of results per node: robbed and not robbed. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -2452,11 +2802,22 @@
         "time": "O(n)",
         "space": "O(h)"
       },
-      "problemStatement": "Find the largest sum along any path between two nodes, where the path need not pass through the root. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a non-empty binary tree, return the maximum path sum. A path is a sequence of nodes connected by edges, and it may start and end at any nodes but cannot visit a node more than once.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [1, 3 * 10^4].",
+        "-1000 <= Node.val <= 1000."
+      ],
+      "examples": [
+        {
+          "input": "root = [1,2,3]",
+          "output": "6",
+          "explanation": "The maximum path is 2 -> 1 -> 3, whose sum is 6."
+        },
+        {
+          "input": "root = [-10,9,20,null,null,15,7]",
+          "output": "42",
+          "explanation": "The best path is 15 -> 20 -> 7, whose sum is 42."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around distinguishing the value passed upward from the best path recorded. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -2545,11 +2906,22 @@
         "time": "O(n)",
         "space": "O(h)"
       },
-      "problemStatement": "Place the fewest cameras on tree nodes so every node is watched by a camera on itself, its parent, or one of its children. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary tree, install cameras on nodes so that every node is monitored. A camera monitors its parent, itself, and its immediate children. Return the minimum number of cameras needed.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(h) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [1, 1000].",
+        "Node values do not affect camera placement."
+      ],
+      "examples": [
+        {
+          "input": "root = [0,0,null,0,0]",
+          "output": "1",
+          "explanation": "A camera on the node at depth two monitors itself, its parent, and the root."
+        },
+        {
+          "input": "root = [0,0,null,0,null,0,null,0]",
+          "output": "2",
+          "explanation": "A camera on the second node and another near the bottom are required to cover the chain."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around three node states: uncovered, covered, and holding a camera. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -2638,11 +3010,23 @@
         "time": "O(log^2 n)",
         "space": "O(log n)"
       },
-      "problemStatement": "Count the nodes of a complete binary tree without visiting every one of them. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a complete binary tree, return the number of nodes in the tree. A complete binary tree has every level filled except possibly the last, and nodes on the last level are as far left as possible.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(log^2 n) time and O(log n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes is in the range [0, 5 * 10^4].",
+        "0 <= Node.val <= 5 * 10^4.",
+        "The input tree is complete."
+      ],
+      "examples": [
+        {
+          "input": "root = [1,2,3,4,5,6]",
+          "output": "6",
+          "explanation": "The complete tree contains six nodes."
+        },
+        {
+          "input": "root = []",
+          "output": "0",
+          "explanation": "An empty complete tree has zero nodes."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around matching left and right spine heights revealing a perfect subtree. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -2731,11 +3115,22 @@
         "time": "O(n log n)",
         "space": "O(n)"
       },
-      "problemStatement": "Group node values by horizontal column, ordered top to bottom and, within a shared cell, by value. Identify the input, required output, and constraints, then explain which tree traversal idea makes the brute-force search unnecessary.",
+      "problemStatement": "Given the root of a binary tree, return its vertical order traversal. Assign each node a row and column: the root is at row 0, column 0; left children move one column left and one row down; right children move one column right and one row down. Group values by column from left to right, sorting ties by row and then by value.",
       "constraints": [
-        "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n log n) time and O(n) space target.",
-        "Call out empty, single-item, duplicate, boundary, and invalid-shape cases when they apply."
+        "The number of nodes in the tree is in the range [1, 1000].",
+        "-10^9 <= Node.val <= 10^9."
+      ],
+      "examples": [
+        {
+          "input": "root = [3,9,20,null,null,15,7]",
+          "output": "[[9],[3,15],[20],[7]]",
+          "explanation": "Nodes are grouped by column: 9, then 3 and 15, then 20, then 7."
+        },
+        {
+          "input": "root = [1,2,3,4,5,6,7]",
+          "output": "[[4],[2],[1,5,6],[3],[7]]",
+          "explanation": "Nodes sharing a column are ordered by row and then by value, producing the listed groups."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around assigning column and row coordinates during traversal. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [

@@ -23,7 +23,6 @@ import {
   MicOff,
   RefreshCw,
   Send,
-  ShieldCheck,
   Square,
   Volume2,
   WifiOff,
@@ -36,6 +35,8 @@ import { InterviewerPresence } from "@/components/interview/interviewer-presence
 import { AvatarStage } from "@/components/interview/avatar-stage";
 import type { PresenceState } from "@/components/interview/interviewer-presence";
 import { ApiClientError, endInterview, getSession } from "@/lib/api-client";
+import { findQuestion } from "@/lib/dsa";
+import type { DsaQuestion } from "@/lib/dsa";
 import { pageTitle } from "@/lib/seo";
 import type { InterviewQuestion, InterviewSetup, Phase, Turn } from "@/lib/types";
 
@@ -53,7 +54,7 @@ type AgentState = "initializing" | "idle" | "listening" | "thinking" | "speaking
 
 export default function VoiceInterviewPage() {
   return (
-    <Suspense fallback={<Shell>{null}</Shell>}>
+    <Suspense fallback={null}>
       <VoiceInterview />
     </Suspense>
   );
@@ -76,6 +77,8 @@ function VoiceInterview() {
   const [liveTranscript, setLiveTranscript] = useState("");
   const [micOn, setMicOn] = useState(true);
   const [turns, setTurns] = useState<Turn[]>([]);
+  const [optimisticUserTurn, setOptimisticUserTurn] = useState<Turn | null>(null);
+  const [spokenAgentTurnKeys, setSpokenAgentTurnKeys] = useState<Set<string>>(new Set());
   const [phase, setPhase] = useState<Phase>("questioning");
   const [setup, setSetup] = useState<InterviewSetup | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<InterviewQuestion | null>(null);
@@ -109,8 +112,25 @@ function VoiceInterview() {
   const teardownRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const localTranscriptSegmentsRef = useRef<Map<string, TranscriptionSegment>>(new Map());
+  const turnsRef = useRef<Turn[]>([]);
+  const startedAtRef = useRef<number | null>(null);
   const typedUserTurnsRef = useRef(0);
   const [connectionAttempt, setConnectionAttempt] = useState(0);
+  const dsaQuestionSlug = setup?.dsaQuestionSlugs?.[progress.index] ?? null;
+
+  const revealAgentTurn = useCallback((turn: Turn | null | undefined) => {
+    if (!turn || turn.speaker !== "agent") return;
+    const key = turnKey(turn);
+    setSpokenAgentTurnKeys((current) => {
+      if (current.has(key)) return current;
+      return new Set(current).add(key);
+    });
+  }, []);
+
+  const revealLatestAgentTurn = useCallback(() => {
+    revealAgentTurn([...turnsRef.current].reverse().find((turn) => turn.speaker === "agent"));
+  }, [revealAgentTurn]);
 
   useEffect(() => {
     const title =
@@ -137,7 +157,7 @@ function VoiceInterview() {
     // Do not open a media room until the durable interview state has been
     // verified. This prevents an expired session from flashing a live call
     // underneath its recovery message.
-    if (!sessionChecked || sessionUnavailable || sessionCompleteRef.current) return;
+    if (sessionUnavailable || sessionCompleteRef.current) return;
 
     // React Strict Mode mounts, unmounts, then remounts effects in dev. A
     // naive disconnect in cleanup tears down the WebRTC session mid-negotiation,
@@ -210,6 +230,7 @@ function VoiceInterview() {
       if (isAgentState(next)) {
         setAgentState(next);
         setAgentSpeaking(next === "speaking");
+        if (next === "speaking") revealLatestAgentTurn();
       }
     }
 
@@ -258,7 +279,17 @@ function VoiceInterview() {
         participant,
         room,
         agentIdentityRef.current,
-        setLiveTranscript
+        localTranscriptSegmentsRef.current,
+        setLiveTranscript,
+        (text) => {
+          const now = startedAtRef.current ? Math.max(0, Date.now() - startedAtRef.current) : 0;
+          setOptimisticUserTurn({
+            speaker: "user",
+            text,
+            startMs: now,
+            endMs: now
+          });
+        }
       );
     });
 
@@ -401,11 +432,21 @@ function VoiceInterview() {
     if (!sessionId || stopPollingRef.current) return;
     try {
       const session = await getSession(sessionId);
+      turnsRef.current = session.turns;
       setTurns(session.turns);
+      setOptimisticUserTurn((pending) =>
+        pending &&
+        session.turns.some(
+          (turn) => turn.speaker === "user" && turn.text.trim() === pending.text.trim()
+        )
+          ? null
+          : pending
+      );
       setPhase(session.phase);
       setSetup(session.setup);
       setCurrentQuestion(session.currentQuestion);
       setStartedAt(session.startedAt);
+      startedAtRef.current = session.startedAt;
       setSessionLoadError(null);
       sessionCheckedRef.current = true;
       setSessionChecked(true);
@@ -446,6 +487,10 @@ function VoiceInterview() {
   }, [sessionId]);
 
   useEffect(() => {
+    if (agentState === "speaking") revealLatestAgentTurn();
+  }, [agentState, revealLatestAgentTurn, turns]);
+
+  useEffect(() => {
     void poll();
     const timer = window.setInterval(() => void poll(), POLL_MS);
     return () => window.clearInterval(timer);
@@ -458,11 +503,24 @@ function VoiceInterview() {
     if (userTurns <= typedUserTurnsRef.current) return;
 
     setTypedSending(false);
+    if (setup?.templateTitle === "DSA practice interview") {
+      setTypedStartedAt(Date.now());
+      return;
+    }
     setAnswerPanelOpen(false);
     setTypedDraft("");
     setTypedNotes("");
     setTypedStartedAt(null);
-  }, [turns, typedSending]);
+  }, [setup?.templateTitle, turns, typedSending]);
+
+  useEffect(() => {
+    if (setup?.templateTitle !== "DSA practice interview" || !dsaQuestionSlug) return;
+    const question = findQuestion(dsaQuestionSlug)?.question;
+    setTypedDraft(question ? dsaStarterCode(question) : "");
+    setTypedNotes("");
+    setTypedError(null);
+    setTypedStartedAt(Date.now());
+  }, [dsaQuestionSlug, setup?.templateTitle]);
 
   useEffect(() => {
     if (startedAt === null || sessionUnavailable || status === "ended" || status === "error")
@@ -476,10 +534,13 @@ function VoiceInterview() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [turns]);
+  }, [liveTranscript, turns]);
 
   useEffect(() => {
-    if (agentState === "speaking") setLiveTranscript("");
+    if (agentState === "speaking") {
+      localTranscriptSegmentsRef.current.clear();
+      setLiveTranscript("");
+    }
   }, [agentState]);
 
   useEffect(() => {
@@ -580,6 +641,36 @@ function VoiceInterview() {
     }
   }
 
+  async function submitDsaAnswer() {
+    const room = roomRef.current;
+    const code = typedDraft.trim();
+    if (!room || !sessionId || !startedAt || code.length < 10 || typedSending) return;
+
+    const now = Date.now();
+    const startMs = Math.max(0, (typedStartedAt ?? now) - startedAt);
+    const endMs = Math.max(startMs, now - startedAt);
+    const reasoning = typedNotes.trim();
+    const answer = [
+      `\`\`\`typescript\n${code}\n\`\`\``,
+      reasoning ? `Reasoning and complexity: ${reasoning}` : ""
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    typedUserTurnsRef.current = turns.filter((turn) => turn.speaker === "user").length;
+    setTypedSending(true);
+    setTypedError(null);
+
+    try {
+      await room.localParticipant.publishData(
+        new TextEncoder().encode(JSON.stringify({ text: answer, startMs, endMs })),
+        { reliable: true, topic: TYPED_ANSWER_TOPIC }
+      );
+    } catch (caught) {
+      setTypedSending(false);
+      setTypedError(caught instanceof Error ? caught.message : "The solution could not be sent.");
+    }
+  }
+
   const stop = useCallback(async () => {
     if (!sessionId) return;
     sessionCompleteRef.current = true;
@@ -610,6 +701,7 @@ function VoiceInterview() {
     setAgentSpeaking(false);
     setAgentTrack(null);
     setLocalTrack(null);
+    localTranscriptSegmentsRef.current.clear();
     setLiveTranscript("");
 
     const existing = roomRef.current;
@@ -621,10 +713,14 @@ function VoiceInterview() {
   }
 
   const overCap = elapsed >= HARD_CAP_MS;
-  // The call surface keeps one conversational moment in focus. The complete
-  // transcript belongs in the post-interview report.
   const latestAgentTurn = [...turns].reverse().find((turn) => turn.speaker === "agent") ?? null;
-  const latestUserTurn = [...turns].reverse().find((turn) => turn.speaker === "user") ?? null;
+  const optimisticAlreadyPersisted = optimisticUserTurn
+    ? turns.some(
+        (turn) => turn.speaker === "user" && turn.text.trim() === optimisticUserTurn.text.trim()
+      )
+    : false;
+  const displayTurns =
+    optimisticUserTurn && !optimisticAlreadyPersisted ? [...turns, optimisticUserTurn] : turns;
 
   const presence: PresenceState =
     status === "ended"
@@ -648,6 +744,12 @@ function VoiceInterview() {
   const selectedInputLabel =
     audioInputs.find((device) => device.deviceId === selectedInputId)?.label ||
     "Selected microphone";
+  const isDsaInterview = setup?.templateTitle === "DSA practice interview";
+  const selectedDsaSlug = setup?.dsaQuestionSlugs?.[progress.index];
+  const dsaQuestion =
+    isDsaInterview && selectedDsaSlug
+      ? findQuestion(selectedDsaSlug)?.question ?? null
+      : null;
 
   if (sessionUnavailable) {
     return <SessionStateScreen kind="expired" />;
@@ -713,7 +815,7 @@ function VoiceInterview() {
           <button
             type="button"
             onClick={() => void stop()}
-            className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-cream/15 px-3 text-xs font-semibold text-cream/55 transition hover:border-[#dd5f5f]/55 hover:bg-[#dd5f5f]/10 hover:text-cream"
+            className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-cream/[0.045] px-3 text-xs font-semibold text-cream/55 transition hover:bg-[#dd5f5f]/10 hover:text-cream"
           >
             <Square size={11} aria-hidden="true" />
             End
@@ -728,24 +830,53 @@ function VoiceInterview() {
         </div>
       </header>
 
+      {isDsaInterview ? (
+        <DsaLiveWorkspace
+          question={dsaQuestion}
+          turns={displayTurns}
+          spokenAgentTurnKeys={spokenAgentTurnKeys}
+          liveUserText={liveTranscript}
+          startedAt={startedAt}
+          setup={setup}
+          currentQuestion={currentQuestion}
+          questionIndex={progress.index}
+          questionCount={progress.count}
+          thinking={agentState === "thinking"}
+          bottomRef={bottomRef}
+          agentTrack={agentTrack}
+          localTrack={localTrack}
+          presence={presence}
+          draft={typedDraft}
+          notes={typedNotes}
+          sending={typedSending}
+          error={typedError}
+          onDraftChange={setTypedDraft}
+          onNotesChange={setTypedNotes}
+          onSubmit={() => void submitDsaAnswer()}
+        />
+      ) : (
       <div
-        className={`min-h-0 flex-1 flex-col overflow-hidden ${answerPanelOpen ? "hidden lg:flex" : "flex"}`}
+        className={`min-h-0 flex-1 gap-4 overflow-hidden ${
+          answerPanelOpen ? "hidden lg:grid" : "grid"
+        } lg:grid-cols-[minmax(17rem,0.82fr)_minmax(0,1.18fr)]`}
       >
-        <div className="pointer-events-none relative flex min-h-[15rem] flex-[0.72] items-center justify-center sm:min-h-[18rem]">
-          <div className="h-full max-h-[23rem] w-full max-w-[25rem]">
-            {AVATAR_URL ? (
-              <AvatarStage agentTrack={agentTrack} state={presence} url={AVATAR_URL} />
-            ) : (
-              <InterviewerPresence
-                agentTrack={agentTrack}
-                localTrack={localTrack}
-                state={presence}
-              />
-            )}
+        <section className="relative min-h-[18rem] overflow-hidden sm:min-h-[22rem] lg:min-h-0">
+          <div className="pointer-events-none absolute inset-4 flex items-center justify-center sm:inset-6">
+            <div className="h-full max-h-[28rem] w-full max-w-[29rem]">
+              {AVATAR_URL ? (
+                <AvatarStage agentTrack={agentTrack} state={presence} url={AVATAR_URL} />
+              ) : (
+                <InterviewerPresence
+                  agentTrack={agentTrack}
+                  localTrack={localTrack}
+                  state={presence}
+                />
+              )}
+            </div>
           </div>
 
           {!error ? (
-            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-cream/15 bg-blueprint/80 px-3 py-1.5 shadow-xl backdrop-blur-md">
+            <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-cream/[0.055] px-3 py-1.5">
               <span
                 className={`h-1.5 w-1.5 rounded-full ${
                   status === "live"
@@ -762,9 +893,9 @@ function VoiceInterview() {
               </span>
             </div>
           ) : null}
-        </div>
+        </section>
 
-        <div className="thin-scroll fade-top max-h-[35vh] w-full shrink-0 space-y-4 overflow-y-auto pb-1 pr-1">
+        <section className="thin-scroll fade-top min-h-0 space-y-4 overflow-y-auto p-0 pr-1">
           {status === "connecting" || status === "waiting" || status === "reconnecting" ? (
             <p className="flex items-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-cream/40">
               <Loader2 size={13} className="animate-spin" aria-hidden="true" />
@@ -777,20 +908,20 @@ function VoiceInterview() {
           ) : null}
 
           {error ? (
-            <div className="rounded-xl border border-[#dd5f5f]/45 bg-[#dd5f5f]/10 px-4 py-3">
+            <div className="rounded-xl bg-[#dd5f5f]/10 px-4 py-3">
               <p className="text-sm text-cream">{error}</p>
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 {!sessionUnavailable ? (
                   <button
                     type="button"
                     onClick={() => void reconnect()}
-                    className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-cream/40 px-3 text-xs font-semibold text-cream transition hover:bg-cream/10"
+                    className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-cream/[0.06] px-3 text-xs font-semibold text-cream transition hover:bg-cream/10"
                   >
                     <RefreshCw size={13} aria-hidden="true" />
                     Reconnect
                   </button>
                 ) : null}
-                <Link href="/interview" className="text-xs text-cream/60 underline">
+                <Link href="/interview?resume=1" className="text-xs text-cream/60 underline">
                   Start over
                 </Link>
               </div>
@@ -798,14 +929,14 @@ function VoiceInterview() {
           ) : null}
 
           {playbackBlocked ? (
-            <div className="rounded-xl border border-cream/25 bg-cream/[0.06] px-4 py-3">
+            <div className="rounded-xl bg-cream/[0.06] px-4 py-3">
               <p className="text-sm leading-6 text-cream">
                 Your browser paused call audio. Enable it once and the conversation will continue.
               </p>
               <button
                 type="button"
                 onClick={() => audioRetryRef.current?.()}
-                className="mt-2 inline-flex min-h-9 items-center gap-2 rounded-lg border border-cream/40 px-3 text-xs font-semibold text-cream transition hover:bg-cream/10"
+                className="mt-2 inline-flex min-h-9 items-center gap-2 rounded-lg bg-cream/[0.06] px-3 text-xs font-semibold text-cream transition hover:bg-cream/10"
               >
                 <Volume2 size={14} aria-hidden="true" />
                 Enable audio
@@ -814,12 +945,12 @@ function VoiceInterview() {
           ) : null}
 
           {micError ? (
-            <div className="rounded-xl border border-[#e0a13c]/50 bg-[#e0a13c]/10 px-4 py-3">
+            <div className="rounded-xl bg-[#e0a13c]/10 px-4 py-3">
               <p className="text-sm leading-6 text-cream">{micError}</p>
               <button
                 type="button"
                 onClick={() => micRetryRef.current?.()}
-                className="mt-2 inline-flex min-h-9 items-center rounded-lg border border-cream/40 px-3 text-xs font-semibold text-cream transition hover:bg-cream/10"
+                className="mt-2 inline-flex min-h-9 items-center rounded-lg bg-cream/[0.06] px-3 text-xs font-semibold text-cream transition hover:bg-cream/10"
               >
                 Retry microphone
               </button>
@@ -827,11 +958,11 @@ function VoiceInterview() {
           ) : null}
 
           {micSilent && !micError ? (
-            <div className="rounded-xl border border-[#e0a13c]/55 bg-[#e0a13c]/10 px-4 py-3">
+            <div className="rounded-xl bg-[#e0a13c]/10 px-4 py-3">
               <p className="text-sm font-medium text-cream">No microphone signal detected</p>
               <p className="mt-1 text-xs leading-5 text-cream/60">
-                Trailgrad connected to {selectedInputLabel}, but no audible sound is arriving. Choose
-                the microphone you are speaking into.
+                Trailgrad connected to {selectedInputLabel}, but no audible sound is arriving.
+                Choose the microphone you are speaking into.
               </p>
               <MicrophonePicker
                 devices={audioInputs}
@@ -843,19 +974,19 @@ function VoiceInterview() {
             </div>
           ) : null}
 
-          {latestAgentTurn ? (
-            <ConversationFocus
-              agentTurn={latestAgentTurn}
-              userTurn={latestUserTurn}
-              setup={setup}
-              question={currentQuestion}
-              thinking={agentState === "thinking"}
-            />
-          ) : null}
-
-          <div ref={bottomRef} />
-        </div>
+          <ConversationTranscript
+            turns={displayTurns}
+            spokenAgentTurnKeys={spokenAgentTurnKeys}
+            liveUserText={liveTranscript}
+            startedAt={startedAt}
+            setup={setup}
+            question={currentQuestion}
+            thinking={agentState === "thinking"}
+            bottomRef={bottomRef}
+          />
+        </section>
       </div>
+      )}
 
       {answerPanelOpen ? (
         <TypedAnswerPanel
@@ -876,13 +1007,13 @@ function VoiceInterview() {
         />
       ) : null}
 
-      <div className="flex shrink-0 items-center gap-3 border-t border-cream/15 py-4 sm:gap-4 sm:py-6">
+      <div className="mt-4 flex shrink-0 items-center gap-3 px-1 py-3 sm:gap-4 sm:px-0">
         <button
           type="button"
           onClick={() => void toggleMic()}
           disabled={!micAvailable}
-          className={`flex h-12 w-12 items-center justify-center rounded-full border transition disabled:opacity-30 ${
-            micOn ? "border-cream bg-cream text-blueprint" : "border-cream/30 text-cream/60"
+          className={`flex h-12 w-12 items-center justify-center rounded-full transition disabled:opacity-30 ${
+            micOn ? "bg-cream text-blueprint" : "bg-cream/[0.055] text-cream/60"
           }`}
           aria-label={micOn ? "Mute microphone" : "Unmute microphone"}
         >
@@ -893,9 +1024,6 @@ function VoiceInterview() {
           <p className="text-sm font-medium text-cream">
             {micOn && micSignal && status === "live" ? "Maya can hear you" : statusLabel}
           </p>
-          {liveTranscript ? (
-            <p className="mt-1 max-w-xl truncate text-xs text-cream/45">{liveTranscript}</p>
-          ) : null}
           <div className="mt-1.5">
             <MicMeter
               track={localTrack}
@@ -914,17 +1042,17 @@ function VoiceInterview() {
               onChange={(deviceId) => void switchMicrophone(deviceId)}
             />
           </div>
-          <button
+          {!isDsaInterview ? <button
             type="button"
             onClick={() => void openTypedAnswer()}
             disabled={status !== "live" || agentSpeaking || typedSending || answerPanelOpen}
-            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-cream/25 px-3 text-xs font-semibold text-cream/70 transition hover:border-cream/60 hover:bg-cream/[0.07] hover:text-cream disabled:opacity-30"
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-cream/[0.045] px-3 text-xs font-semibold text-cream/70 transition hover:bg-cream/[0.08] hover:text-cream disabled:opacity-30"
           >
             <Keyboard size={15} aria-hidden="true" />
             <span className="hidden sm:inline">
               {currentQuestion?.kind === "code" ? "Write solution" : "Type answer"}
             </span>
-          </button>
+          </button> : null}
         </div>
       </div>
     </Shell>
@@ -965,9 +1093,9 @@ function TypedAnswerPanel({
   }
 
   return (
-    <section className="msg-in mb-3 shrink-0 overflow-hidden rounded-2xl border border-cream/20 bg-[#14245c]/95 shadow-[0_-18px_60px_rgba(7,16,54,0.5)] backdrop-blur-xl">
-      <div className="flex items-center gap-3 border-b border-cream/12 px-4 py-3 sm:px-5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-cream/20 bg-cream/[0.06] text-cream">
+    <section className="msg-in mb-3 shrink-0 overflow-hidden rounded-2xl bg-cream/[0.045]">
+      <div className="flex items-center gap-3 px-4 py-3 sm:px-5">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cream/[0.06] text-cream">
           {isCode ? (
             <Code2 size={15} aria-hidden="true" />
           ) : (
@@ -995,7 +1123,7 @@ function TypedAnswerPanel({
 
       {isCode ? (
         <div className="grid max-h-[58dvh] min-h-0 lg:max-h-[42dvh] lg:grid-cols-[minmax(0,1.35fr)_minmax(15rem,0.65fr)]">
-          <label className="min-h-0 border-b border-cream/10 lg:border-b-0 lg:border-r">
+          <label className="min-h-0">
             <span className="sr-only">Code solution</span>
             <textarea
               value={draft}
@@ -1018,7 +1146,7 @@ function TypedAnswerPanel({
               rows={4}
               maxLength={1200}
               placeholder="What did you change, why is it correct, and how would you verify it?"
-              className="mt-3 min-h-24 flex-1 resize-none rounded-xl border border-cream/15 bg-black/10 p-3 text-sm leading-6 text-cream outline-none placeholder:text-cream/25 focus:border-cream/40"
+              className="mt-3 min-h-24 flex-1 resize-none rounded-xl bg-black/10 p-3 text-sm leading-6 text-cream outline-none placeholder:text-cream/25 focus:bg-black/15"
             />
           </label>
         </div>
@@ -1033,12 +1161,12 @@ function TypedAnswerPanel({
             autoFocus
             maxLength={6500}
             placeholder="Write your answer here..."
-            className="thin-scroll w-full resize-none rounded-xl border border-cream/15 bg-black/10 p-4 text-[15px] leading-7 text-cream outline-none placeholder:text-cream/25 focus:border-cream/45"
+            className="thin-scroll w-full resize-none rounded-xl bg-black/10 p-4 text-[15px] leading-7 text-cream outline-none placeholder:text-cream/25 focus:bg-black/15"
           />
         </label>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 border-t border-cream/12 px-4 py-3 sm:px-5">
+      <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
         {error ? <p className="text-xs text-[#ffb4b4]">{error}</p> : null}
         <p className="hidden font-mono text-[9px] uppercase tracking-[0.13em] text-cream/28 sm:block">
           Cmd/Ctrl + Enter to submit
@@ -1061,6 +1189,187 @@ function TypedAnswerPanel({
   );
 }
 
+function DsaLiveWorkspace({
+  question,
+  turns,
+  spokenAgentTurnKeys,
+  liveUserText,
+  startedAt,
+  setup,
+  currentQuestion,
+  questionIndex,
+  questionCount,
+  thinking,
+  bottomRef,
+  agentTrack,
+  localTrack,
+  presence,
+  draft,
+  notes,
+  sending,
+  error,
+  onDraftChange,
+  onNotesChange,
+  onSubmit
+}: {
+  question: DsaQuestion | null;
+  turns: Turn[];
+  spokenAgentTurnKeys: ReadonlySet<string>;
+  liveUserText: string;
+  startedAt: number | null;
+  setup: InterviewSetup | null;
+  currentQuestion: InterviewQuestion | null;
+  questionIndex: number;
+  questionCount: number;
+  thinking: boolean;
+  bottomRef: React.RefObject<HTMLDivElement | null>;
+  agentTrack: MediaStreamTrack | null;
+  localTrack: MediaStreamTrack | null;
+  presence: PresenceState;
+  draft: string;
+  notes: string;
+  sending: boolean;
+  error: string | null;
+  onDraftChange: (value: string) => void;
+  onNotesChange: (value: string) => void;
+  onSubmit: () => void;
+}) {
+  const canSubmit = draft.trim().length >= 10 && !sending;
+
+  return (
+    <div className="min-h-0 flex-1 grid gap-4 overflow-hidden lg:grid-cols-[minmax(17rem,0.82fr)_minmax(22rem,1.08fr)_minmax(18rem,0.72fr)]">
+      <section className="thin-scroll min-h-0 overflow-y-auto border-r border-cream/10 pr-4">
+        <div className="flex items-center justify-between gap-3 border-b border-cream/10 pb-4">
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-cream/50">
+            Problem {questionIndex + 1} of {questionCount}
+          </span>
+          {question ? <span className="text-xs capitalize text-cream/45">{question.difficulty}</span> : null}
+        </div>
+        {question ? (
+          <>
+            <h2 className="mt-5 font-display text-2xl font-semibold leading-tight text-cream">
+              {question.title}
+            </h2>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-cream/50">
+              <span>{question.primaryPattern.replace(/-/g, " ")}</span>
+              <span aria-hidden="true">·</span>
+              <span>{question.expectedTimeMinutes} min</span>
+            </div>
+            <DsaCopySection title="Description">
+              <p>{question.problemStatement ?? question.promptSummary}</p>
+            </DsaCopySection>
+            {question.examples?.length ? (
+              <DsaCopySection title="Examples">
+                <div className="space-y-4 font-mono text-xs leading-6 text-cream/70">
+                  {question.examples.map((example, index) => (
+                    <div key={`${example.input}-${example.output}`}>
+                      <p className="mb-1 font-sans font-semibold text-cream/75">Example {index + 1}</p>
+                      <p><span className="text-cream/40">Input:</span> {example.input}</p>
+                      <p><span className="text-cream/40">Output:</span> {example.output}</p>
+                    </div>
+                  ))}
+                </div>
+              </DsaCopySection>
+            ) : null}
+            {question.constraints?.length ? (
+              <DsaCopySection title="Constraints">
+                <ul className="space-y-2 font-mono text-xs leading-6 text-cream/70">
+                  {question.constraints.map((constraint) => <li key={constraint}>• {constraint}</li>)}
+                </ul>
+              </DsaCopySection>
+            ) : null}
+          </>
+        ) : (
+          <p className="mt-6 text-sm leading-6 text-cream/50">Maya is preparing the next problem.</p>
+        )}
+      </section>
+
+      <section className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r border-cream/10">
+        <div className="flex items-center justify-between border-b border-cream/10 pb-3">
+          <div className="flex items-center gap-2 text-sm font-semibold text-cream">
+            <Code2 size={15} aria-hidden="true" className="text-cream/55" />
+            Your solution
+          </div>
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-cream/35">
+            {currentQuestion?.language ?? "code"}
+          </span>
+        </div>
+        <textarea
+          aria-label="DSA solution editor"
+          value={draft}
+          onChange={(event) => onDraftChange(event.target.value)}
+          spellCheck={false}
+          placeholder="Explain your approach, then write the solution here..."
+          className="thin-scroll min-h-64 flex-1 resize-none bg-[#203d8d]/80 p-4 font-mono text-[13px] leading-6 text-[#f2ecdd] outline-none placeholder:text-cream/25 focus:bg-[#213f92]"
+        />
+        <div className="border-t border-cream/10 pt-3">
+          <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-cream/40">
+            Reasoning and complexity
+            <textarea
+              value={notes}
+              onChange={(event) => onNotesChange(event.target.value)}
+              rows={3}
+              placeholder="Why is this correct? What are the time and space costs?"
+              className="mt-2 w-full resize-none bg-cream/[0.035] p-3 font-sans text-sm leading-6 text-cream outline-none placeholder:text-cream/25 focus:bg-cream/[0.06]"
+            />
+          </label>
+          {error ? <p className="mt-2 text-xs text-[#ffb4b4]">{error}</p> : null}
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={!canSubmit}
+            className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 bg-cream px-4 text-sm font-semibold text-blueprint transition hover:bg-white disabled:pointer-events-none disabled:opacity-35"
+          >
+            {sending ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <Send size={14} aria-hidden="true" />}
+            {sending ? "Maya is reviewing" : "Send solution to Maya"}
+          </button>
+        </div>
+      </section>
+
+      <aside className="flex min-h-0 flex-col overflow-hidden">
+        <div className="relative h-44 shrink-0 overflow-hidden border-b border-cream/10 bg-[#294aa2]/70">
+          <div className="absolute inset-x-[-18%] bottom-[-8%] top-0">
+            {AVATAR_URL ? (
+              <AvatarStage agentTrack={agentTrack} state={presence} url={AVATAR_URL} />
+            ) : (
+              <InterviewerPresence agentTrack={agentTrack} localTrack={localTrack} state={presence} />
+            )}
+          </div>
+          <div className="relative z-10 flex items-center gap-2 p-4 text-sm font-semibold text-cream">
+            <Mic size={15} aria-hidden="true" /> Maya
+          </div>
+        </div>
+        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto pt-4">
+          <ConversationTranscript
+            turns={turns}
+            spokenAgentTurnKeys={spokenAgentTurnKeys}
+            liveUserText={liveUserText}
+            startedAt={startedAt}
+            setup={setup}
+            question={currentQuestion}
+            thinking={thinking}
+            bottomRef={bottomRef}
+          />
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function DsaCopySection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mt-7">
+      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-cream/40">{title}</h3>
+      <div className="text-sm leading-6 text-cream/75">{children}</div>
+    </section>
+  );
+}
+
+function dsaStarterCode(question: DsaQuestion): string {
+  const functionName = question.slug.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+  return `function ${functionName}(input: unknown): unknown {\n  // Explain the invariant before implementing.\n  \n}\n`;
+}
+
 function MicrophonePicker({
   devices,
   selectedId,
@@ -1081,7 +1390,7 @@ function MicrophonePicker({
         value={selectedId}
         disabled={disabled || devices.length === 0}
         onChange={(event) => onChange(event.target.value)}
-        className="h-9 w-full truncate rounded-lg border border-cream/20 bg-blueprint px-3 text-xs text-cream outline-none transition focus:border-cream/60 disabled:opacity-40"
+        className="h-9 w-full truncate rounded-lg bg-cream/[0.045] px-3 text-xs text-cream outline-none transition focus:bg-cream/[0.075] disabled:opacity-40"
         aria-label="Microphone input"
       >
         {devices.length === 0 ? <option value="">No microphone found</option> : null}
@@ -1095,35 +1404,67 @@ function MicrophonePicker({
   );
 }
 
-/**
- * One line of the spoken exchange. Only the newest agent line is emphasised —
- * this is a conversation you are listening to, not a chat log to read back.
- */
-function ConversationFocus({
-  agentTurn,
-  userTurn,
+function ConversationTranscript({
+  turns,
+  spokenAgentTurnKeys,
+  liveUserText,
+  startedAt,
   setup,
   question,
-  thinking
+  thinking,
+  bottomRef
 }: {
-  agentTurn: Turn;
-  userTurn: Turn | null;
+  turns: Turn[];
+  spokenAgentTurnKeys: ReadonlySet<string>;
+  liveUserText: string;
+  startedAt: number | null;
   setup: InterviewSetup | null;
   question: InterviewQuestion | null;
   thinking: boolean;
+  bottomRef: React.RefObject<HTMLDivElement | null>;
 }) {
+  const visibleTurns = mergeConsecutiveUserTurns(
+    turns.filter(
+      (turn) =>
+        turn.text.trim().length > 0 &&
+        (turn.speaker === "user" || spokenAgentTurnKeys.has(turnKey(turn)))
+    )
+  );
+  const normalizedLiveUserText = liveUserText.trim();
+  const hasLiveUserTurn = visibleTurns.some(
+    (turn) => turn.speaker === "user" && turn.text.trim() === normalizedLiveUserText
+  );
+  const displayTurns =
+    normalizedLiveUserText && !hasLiveUserTurn
+      ? [
+          ...visibleTurns,
+          {
+            speaker: "user" as const,
+            text: normalizedLiveUserText,
+            startMs: startedAt ? Math.max(0, Date.now() - startedAt) : 0,
+            endMs: startedAt ? Math.max(0, Date.now() - startedAt) : 0
+          }
+        ]
+      : visibleTurns;
   const isCode = question?.kind === "code" && question.codeSnippet;
+  let latestAgentIndex = -1;
+  for (let index = displayTurns.length - 1; index >= 0; index -= 1) {
+    if (displayTurns[index]?.speaker === "agent") {
+      latestAgentIndex = index;
+      break;
+    }
+  }
 
   return (
-    <section className="msg-in overflow-hidden rounded-2xl border border-cream/15 bg-cream/[0.045] shadow-[0_16px_36px_-22px_rgba(7,16,54,0.9)] backdrop-blur-sm">
-      <div className="flex flex-wrap items-center gap-3 border-b border-cream/10 px-5 py-3">
-        <span className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-cream/45">
+    <section className="msg-in flex min-h-0 flex-col">
+      <div className="flex flex-wrap items-center gap-3 px-1 pb-4">
+        <span className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-cream/62">
           {isCode ? (
             <Code2 size={12} aria-hidden="true" />
           ) : (
             <BriefcaseBusiness size={12} aria-hidden="true" />
           )}
-          {isCode ? "Live coding task" : "Current question"}
+          Live exchange
         </span>
 
         {setup ? (
@@ -1134,44 +1475,146 @@ function ConversationFocus({
         ) : null}
       </div>
 
-      {isCode ? (
-        <div className="grid min-h-0 lg:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.28fr)]">
-          <div className="px-5 py-5 sm:px-6 sm:py-6">
-            <p className="text-[clamp(1.05rem,2.1vw,1.35rem)] font-medium leading-8 text-cream">
-              {agentTurn.text}
-            </p>
-            <p className="mt-4 text-sm leading-6 text-cream/58">{question.codeTask}</p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <ContextPill>{question.language ?? "code"}</ContextPill>
-              {question.competency ? <ContextPill>{question.competency}</ContextPill> : null}
-            </div>
-            {thinking ? <ThinkingLine /> : null}
-          </div>
-          <div className="border-t border-cream/10 bg-[#121f52]/65 p-3 lg:border-l lg:border-t-0">
-            <CodeBlock code={question.codeSnippet ?? ""} language={question.language ?? "code"} />
-          </div>
+      {displayTurns.length === 0 ? (
+        <div className="rounded-xl bg-cream/[0.045] px-5 py-5">
+          <p className="text-base leading-7 text-cream sm:text-lg sm:leading-8">
+            {question
+              ? "Maya is getting ready to speak."
+              : "Maya is preparing your first question."}
+          </p>
+          {question?.codeTask ? (
+            <p className="mt-4 text-sm leading-6 text-cream/60">{question.codeTask}</p>
+          ) : null}
         </div>
       ) : (
-        <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_15rem]">
-          <div className="px-5 py-5 sm:px-6 sm:py-6">
-            <p className="text-[clamp(1.05rem,2.1vw,1.35rem)] font-medium leading-8 text-cream">
-              {agentTurn.text}
-            </p>
-            {thinking ? <ThinkingLine /> : null}
-          </div>
+        <div className="space-y-5">
+          {displayTurns.map((turn, index) => {
+            const isAgent = turn.speaker === "agent";
+            const isLatestAgent = isAgent && index === latestAgentIndex;
 
-          <div className="border-t border-cream/10 bg-black/10 px-5 py-4 lg:border-l lg:border-t-0">
-            <p className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-cream/35">
-              <ShieldCheck size={11} aria-hidden="true" />
-              Private session
-            </p>
-            <p className="mt-3 line-clamp-3 text-xs leading-5 text-cream/45">
-              {userTurn?.text ?? "Your answers appear here after each completed response."}
-            </p>
-          </div>
+            return (
+              <article
+                key={`${turn.speaker}-${turn.startMs}-${index}`}
+                className={`flex ${isAgent ? "justify-start" : "justify-end"}`}
+              >
+                <div
+                  className={`max-w-[min(100%,44rem)] ${
+                    isLatestAgent
+                      ? "rounded-xl bg-cream/[0.06] px-4 py-3"
+                      : isAgent
+                        ? "px-1"
+                        : "rounded-xl bg-black/10 px-4 py-3"
+                  }`}
+                >
+                  <div className="mb-2 flex items-center gap-2">
+                    <span
+                      className={`font-mono text-[9px] uppercase tracking-[0.18em] ${
+                        isAgent ? "text-cream/60" : "text-cream/38"
+                      }`}
+                    >
+                      {isAgent ? "Maya" : "You"}
+                    </span>
+                    <span className="font-mono text-[9px] text-cream/25">
+                      {formatClock(turn.startMs)}
+                    </span>
+                  </div>
+
+                  <TypewriterText
+                    active={isLatestAgent}
+                    className={
+                      isLatestAgent
+                        ? "text-base leading-7 text-cream sm:text-lg sm:leading-8"
+                        : isAgent
+                          ? "text-base leading-7 text-cream/82"
+                          : "text-sm leading-6 text-cream/68"
+                    }
+                    text={turn.text}
+                  />
+                </div>
+              </article>
+            );
+          })}
+
+          {isCode ? (
+            <div className="rounded-xl bg-black/10 p-3">
+              <CodeBlock code={question.codeSnippet ?? ""} language={question.language ?? "code"} />
+            </div>
+          ) : null}
+
+          {thinking ? <ThinkingLine /> : null}
+          <div ref={bottomRef} />
         </div>
       )}
     </section>
+  );
+}
+
+function turnKey(turn: Turn): string {
+  return `${turn.speaker}-${turn.startMs}-${turn.endMs}-${turn.text}`;
+}
+
+function mergeConsecutiveUserTurns(turns: Turn[]): Turn[] {
+  return turns.reduce<Turn[]>((merged, turn) => {
+    const previous = merged.at(-1);
+    if (turn.speaker !== "user" || previous?.speaker !== "user") {
+      merged.push({ ...turn });
+      return merged;
+    }
+
+    previous.text = mergeTranscriptText(previous.text, turn.text);
+    previous.endMs = Math.max(previous.endMs, turn.endMs);
+    return merged;
+  }, []);
+}
+
+function mergeTranscriptText(existing: string, incoming: string): string {
+  const current = existing.trim();
+  const next = incoming.trim();
+
+  if (!current || next.startsWith(current)) return next;
+  if (current.startsWith(next)) return current;
+  return `${current} ${next}`;
+}
+
+function TypewriterText({
+  text,
+  active,
+  className
+}: {
+  text: string;
+  active: boolean;
+  className: string;
+}) {
+  const [visibleText, setVisibleText] = useState(active ? "" : text);
+
+  useEffect(() => {
+    if (!active) {
+      setVisibleText(text);
+      return;
+    }
+
+    setVisibleText("");
+    let nextLength = 0;
+    const stepMs = 42;
+    const timer = window.setInterval(() => {
+      nextLength += 1;
+      setVisibleText(text.slice(0, nextLength));
+
+      if (nextLength >= text.length) {
+        window.clearInterval(timer);
+      }
+    }, stepMs);
+
+    return () => window.clearInterval(timer);
+  }, [active, text]);
+
+  return (
+    <p className={className}>
+      {visibleText}
+      {active && visibleText.length < text.length ? (
+        <span className="ml-0.5 animate-pulse text-cream/55">|</span>
+      ) : null}
+    </p>
   );
 }
 
@@ -1186,8 +1629,8 @@ function ThinkingLine() {
 
 function CodeBlock({ code, language }: { code: string; language: string }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-cream/15 bg-[#08143e] shadow-inner">
-      <div className="flex items-center justify-between border-b border-cream/10 px-4 py-2.5">
+    <div className="overflow-hidden rounded-xl bg-black/15">
+      <div className="flex items-center justify-between px-4 py-2.5">
         <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-cream/42">
           {language}
         </span>
@@ -1213,7 +1656,7 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
 
 function ContextPill({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full border border-cream/15 px-2.5 py-1 text-[10px] font-medium text-cream/45">
+    <span className="rounded-full bg-cream/[0.055] px-2.5 py-1 text-[10px] font-medium text-cream/45">
       {children}
     </span>
   );
@@ -1305,7 +1748,7 @@ function SessionStateScreen({
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/interview"
+              href="/interview?resume=1"
               className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-cream px-5 text-sm font-semibold text-[#10131a] transition hover:bg-white"
             >
               {complete ? "Practice another round" : "Start a new interview"}
@@ -1425,18 +1868,27 @@ function updateLiveTranscript(
   participant: Participant | undefined,
   room: Room,
   agentIdentity: string | null,
-  update: (text: string) => void
+  accumulatedSegments: Map<string, TranscriptionSegment>,
+  update: (text: string) => void,
+  onFinal?: (text: string) => void
 ) {
   if (!participant || participant.identity === agentIdentity) return;
   if (participant.identity !== room.localParticipant.identity) return;
 
-  const text = segments
+  for (const segment of segments) {
+    accumulatedSegments.set(segment.id, segment);
+  }
+
+  const text = [...accumulatedSegments.values()]
     .map((segment) => segment.text.trim())
     .filter(Boolean)
     .join(" ")
     .trim();
 
-  if (text) update(text);
+  if (text) {
+    update(text);
+    if (segments.some((segment) => segment.final)) onFinal?.(text);
+  }
 }
 
 function describeVoiceState(
