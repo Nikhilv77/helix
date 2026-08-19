@@ -56,10 +56,10 @@ export function DsaTopics({
     <section id="plan" className="scroll-mt-20 lg:scroll-mt-8">
       <Link
         href="/"
-        className="mt-8 inline-flex items-center gap-2 text-xs font-medium text-cream/45 transition hover:text-cream"
+        className="mt-6 inline-flex items-center gap-2 text-xs font-medium text-cream/45 transition hover:text-cream"
       >
         <ArrowLeft size={13} />
-        Full-stack preparation path
+        Preparation path
       </Link>
 
       <PracticeIntro
@@ -84,7 +84,23 @@ export function DsaTopics({
         ]}
       />
 
-      <div className="mt-4 grid gap-3">
+      <div className="mt-8">
+        <div className="flex flex-col gap-2 border-b border-cream/20 pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-cream/42">
+              Practice plan
+            </p>
+            <p className="mt-1 text-[14.5px] leading-6 text-cream/58">
+              Work through each pattern, then open a question when you are ready to solve.
+            </p>
+          </div>
+          <p className="text-[13px] leading-5 text-cream/38 sm:text-right">
+            {roadmap?.completedQuestions ?? 0} of {roadmap?.totalQuestions ?? plan.totalQuestions} complete
+          </p>
+        </div>
+      </div>
+
+      <div className="divide-y divide-cream/10">
         {plan.chapters.map((chapter, index) => (
           <ChapterBlock
             key={chapter.id}
@@ -117,10 +133,10 @@ function ChapterBlock({
 
   return (
     <details
-      className={`group overflow-hidden rounded-2xl bg-[#2a4aa0] ${current ? "ring-1 ring-inset ring-cream/20" : ""}`}
+      className={`group overflow-hidden ${current ? "bg-cream/[0.025]" : ""}`}
       open={index === 0}
     >
-      <summary className="flex cursor-pointer list-none items-start gap-4 p-5 transition hover:bg-[#2f56b8] [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-start gap-4 py-5 transition hover:bg-cream/[0.035] [&::-webkit-details-marker]:hidden sm:gap-5">
         <span
           className={`mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl text-xs font-semibold ${
             done ? "bg-[#8be6bd]/15 text-[#8be6bd]" : "bg-cream/[0.07] font-mono text-cream/60"
@@ -174,10 +190,10 @@ function ChapterBlock({
         />
       </summary>
 
-      <div className="border-t border-cream/[0.07] p-3">
+      <div className="border-t border-cream/[0.07] py-3 sm:pl-[4.5rem]">
         <Link
           href={`/practice/${chapter.id}`}
-          className="group/session flex items-center gap-3 rounded-xl bg-[#24439b] p-3.5 transition hover:bg-[#2f56b8]"
+          className="group/session flex items-center gap-3 rounded-xl border border-cream/15 bg-cream/[0.035] p-3.5 transition hover:bg-cream/[0.08]"
         >
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-cream text-[#254294]">
             <Sparkles size={16} aria-hidden="true" />
@@ -198,7 +214,7 @@ function ChapterBlock({
         </Link>
       </div>
 
-      <ul className="px-3 pb-3">
+      <ul className="pb-3 sm:pl-[4.5rem]">
         {chapter.questions.map((question, position) => (
           <li key={question.slug}>
             <QuestionRow

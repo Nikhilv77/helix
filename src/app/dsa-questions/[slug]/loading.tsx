@@ -1,5 +1,5 @@
-import { WorkspaceLoading } from "@/components/workspace/skeletons";
+import { DsaQuestionSkeleton } from "@/components/workspace/dsa-question-skeleton";
 
 export default function Loading() {
-  return <WorkspaceLoading />;
+  return <DsaQuestionSkeleton />;
 }

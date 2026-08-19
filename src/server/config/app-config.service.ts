@@ -134,6 +134,18 @@ export class AppConfigService {
     return this.config.deepgramTtsModel ?? "aura-2-asteria-en";
   }
 
+  get judge0Url(): string {
+    return this.config.judge0Url;
+  }
+
+  get rapidApiKey(): string | undefined {
+    return this.config.rapidApiKey;
+  }
+
+  get rapidApiHost(): string {
+    return this.config.rapidApiHost;
+  }
+
   get clerkSecretKey(): string | undefined {
     return this.config.clerkSecretKey;
   }

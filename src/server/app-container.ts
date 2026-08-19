@@ -12,6 +12,7 @@ import { InterviewService } from "./interview/interview.service";
 import { PrismaSessionStore } from "./interview/session-store";
 import { CurriculumService } from "./curriculum/curriculum.service";
 import { DsaService } from "./dsa/dsa.service";
+import { DsaNotesService } from "./dsa/dsa-notes.service";
 import { DsaInterviewEvaluator } from "./dsa/interview-evaluator";
 import { ProfileService } from "./profile/profile.service";
 import { ProgressService } from "./progress/progress.service";
@@ -26,6 +27,7 @@ export interface AppContainer {
   curriculumService: CurriculumService;
   resumeService: ResumeService;
   dsaService: DsaService;
+  dsaNotesService: DsaNotesService;
   dsaInterviewEvaluator: DsaInterviewEvaluator;
   frontendRoadmapService: FrontendRoadmapService;
   progressService: ProgressService;
@@ -55,6 +57,7 @@ export function getAppContainer(): AppContainer {
     profileService: new ProfileService(prisma),
     // Seeded content, identical for every user, so the service caches it.
     dsaService: new DsaService(prisma),
+    dsaNotesService: new DsaNotesService(prisma),
     dsaInterviewEvaluator: new DsaInterviewEvaluator(interviewAi),
     frontendRoadmapService: new FrontendRoadmapService(prisma),
     // Read-only aggregate over roadmap progress and attempt history.

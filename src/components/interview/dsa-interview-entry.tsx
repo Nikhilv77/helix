@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { Loader2, Sparkles, Volume2, VolumeX } from "lucide-react";
+import { Loader2, Volume2, VolumeX } from "lucide-react";
 import { MayaStage } from "@/components/workspace/maya-stage";
 import { useMayaVoice } from "@/lib/use-maya-voice";
 
@@ -25,7 +25,7 @@ export function DsaInterviewEntry({
   const ready = completedCount >= MIN_SOLVED;
   const greeting = firstName ? `Hey ${firstName},` : "Hey there,";
   const script = ready
-    ? `${greeting} let's start. I'll choose three problems you've already solved and turn them into a real interview. I'll ask one at a time, follow up when it matters, and keep the conversation moving.`
+    ? `${greeting} let's start. I'll choose three important function-based problems, prioritizing ones you've already solved. I'll ask one at a time, follow up when it matters, and keep the conversation moving.`
     : `${greeting} you've solved ${completedCount} practice question${completedCount === 1 ? "" : "s"} so far. Solve at least ${MIN_SOLVED} before we start a DSA interview, so the problems Maya asks about are ones you actually know.`;
 
   useEffect(() => {
@@ -127,7 +127,7 @@ export function DsaInterviewEntry({
           </h1>
           <p className="mt-7 max-w-2xl text-[16px] leading-8 text-cream/65">
             {ready
-              ? "I'll choose three problems you've already solved and turn them into a real interview. I'll ask one at a time, follow up when it matters, and keep the conversation moving."
+              ? "I'll choose three important function-based problems, prioritizing ones you've already solved. I'll ask one at a time, follow up when it matters, and keep the conversation moving."
               : `You've solved ${completedCount} question${completedCount === 1 ? "" : "s"} so far. Solve at least ${MIN_SOLVED} practice questions first, then Maya can interview you on problems you actually know.`}
           </p>
           {ready && starting ? (

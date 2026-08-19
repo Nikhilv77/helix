@@ -106,9 +106,9 @@ export function QuestionCoach({
   }
 
   return (
-    <aside className="overflow-hidden rounded-2xl bg-[#2a4aa0]">
+    <aside className="overflow-hidden rounded-[1.25rem] border border-cream/20 bg-cream/[0.035]">
       {/* Maya, mounted over a box with real height so the canvas can size. */}
-      <div className="relative h-[17rem] overflow-hidden border-b border-cream/[0.08] bg-[#26449d]">
+      <div className="relative h-[17rem] overflow-hidden border-b border-cream/[0.08] bg-cream/[0.055]">
         <div
           className="absolute inset-x-[-4%] bottom-0 top-[3rem] z-0"
           style={{
@@ -214,7 +214,7 @@ export function QuestionCoach({
             </p>
 
             {hints.slice(0, revealed).map((hint, index) => (
-              <div key={hint} className="fade-slide flex gap-3 rounded-xl bg-[#24439b] p-3.5">
+              <div key={hint} className="fade-slide flex gap-3 border-l-2 border-[#f4d58b]/40 bg-cream/[0.035] p-3.5">
                 <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-[#f4d58b]/14 text-[11px] font-semibold text-[#f4d58b]">
                   {index + 1}
                 </span>
@@ -249,7 +249,7 @@ export function QuestionCoach({
         {keyInsight ? (
           <div className="mt-4">
             {allHintsOut || hints.length === 0 ? (
-              <div className="overflow-hidden rounded-xl bg-[#24439b]">
+              <div className="overflow-hidden border border-cream/15 bg-cream/[0.035]">
                 <button
                   type="button"
                   onClick={toggleInsight}

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { MayaStage } from "@/components/workspace/maya-stage";
 import type { DsaQuestion } from "@/lib/dsa";
+import { dsaStarterCode } from "@/lib/dsa-code-templates";
 import { useMayaVoice } from "@/lib/use-maya-voice";
 
 type Evaluation = {
@@ -30,7 +31,7 @@ type Evaluation = {
 
 export function DsaInterviewWorkspace({ question }: { question: DsaQuestion }) {
   const [approach, setApproach] = useState("");
-  const [code, setCode] = useState(starterCode(question));
+  const [code, setCode] = useState(dsaStarterCode(question.slug, "javascript"));
   const [timeComplexity, setTimeComplexity] = useState("");
   const [spaceComplexity, setSpaceComplexity] = useState("");
   const [revealedHints, setRevealedHints] = useState(0);
@@ -365,13 +366,6 @@ function ProblemSection({ title, children }: { title: string; children: React.Re
       {children}
     </section>
   );
-}
-
-function starterCode(question: DsaQuestion): string {
-  const functionName = question.slug.replace(/-([a-z])/g, (_, letter: string) =>
-    letter.toUpperCase()
-  );
-  return `function ${functionName}(input: unknown): unknown {\n  // Explain your invariant before implementing.\n  \n}\n`;
 }
 
 async function recordSubmission(slug: string, answer: string, score: number): Promise<void> {

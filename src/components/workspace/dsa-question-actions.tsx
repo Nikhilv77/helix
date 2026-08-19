@@ -70,7 +70,7 @@ export function DsaQuestionActions({
 
   return (
     <div className="mt-6">
-      <div className="flex flex-col gap-3 rounded-2xl bg-[#24439b] p-3.5 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 border-y border-cream/15 py-3.5 sm:flex-row sm:items-center">
         {done || skipped ? (
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <span

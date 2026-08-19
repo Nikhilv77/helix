@@ -89,7 +89,10 @@ export const environmentSchema = z
     DEEPGRAM_API_KEY: z.string().optional(),
     // Maya's voice. Matches TRAILGRAD_TTS_MODEL in the agent so the coach in the
     // workspace and the interviewer in the room sound like the same person.
-    DEEPGRAM_TTS_MODEL: z.string().min(1).default("aura-2-asteria-en")
+    DEEPGRAM_TTS_MODEL: z.string().min(1).default("aura-2-asteria-en"),
+    JUDGE0_URL: z.string().url().default("https://judge0-ce.p.rapidapi.com"),
+    RAPIDAPI_KEY: z.string().optional(),
+    RAPIDAPI_HOST: z.string().min(1).default("judge0-ce.p.rapidapi.com")
   })
   .transform((env) => ({
     nodeEnv: env.NODE_ENV,
@@ -120,7 +123,10 @@ export const environmentSchema = z
     livekitApiSecret: env.LIVEKIT_API_SECRET,
     livekitAgentName: env.LIVEKIT_AGENT_NAME,
     deepgramApiKey: env.DEEPGRAM_API_KEY,
-    deepgramTtsModel: env.DEEPGRAM_TTS_MODEL
+    deepgramTtsModel: env.DEEPGRAM_TTS_MODEL,
+    judge0Url: env.JUDGE0_URL,
+    rapidApiKey: env.RAPIDAPI_KEY,
+    rapidApiHost: env.RAPIDAPI_HOST
   }));
 
 export type EnvironmentConfig = z.infer<typeof environmentSchema>;

@@ -10,6 +10,34 @@ export const maxDuration = 60;
 
 const MIN_SOLVED = 10;
 const QUESTION_COUNT = 3 as const;
+const CLASS_BASED_DSA_SLUGS = new Set([
+  "design-browser-history",
+  "lru-cache",
+  "min-stack",
+  "implement-queue-using-stacks",
+  "implement-stack-using-queues",
+  "design-circular-queue",
+  "online-stock-span",
+  "time-based-key-value-store",
+  "find-median-from-data-stream",
+  "implement-trie-prefix-tree",
+  "design-add-and-search-words-data-structure"
+]);
+const IMPORTANT_FUNCTION_QUESTION_SLUGS = [
+  "two-sum",
+  "longest-substring-without-repeating-characters",
+  "3sum",
+  "merge-intervals",
+  "binary-search",
+  "valid-parentheses",
+  "reverse-linked-list",
+  "maximum-depth-of-binary-tree",
+  "number-of-islands",
+  "course-schedule",
+  "maximum-subarray",
+  "coin-change",
+  "longest-common-subsequence"
+];
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,13 +55,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const selected = shuffle(completed).slice(0, QUESTION_COUNT);
+    const solvedFunctionQuestions = completed.filter((item) => !CLASS_BASED_DSA_SLUGS.has(item.slug));
+    const fallbackQuestions = IMPORTANT_FUNCTION_QUESTION_SLUGS
+      .map((slug) => findQuestion(slug)?.question)
+      .filter((question): question is NonNullable<typeof question> => Boolean(question))
+      .filter((question) => !solvedFunctionQuestions.some((item) => item.slug === question.slug));
+    const selected = shuffle([...solvedFunctionQuestions, ...fallbackQuestions]).slice(0, QUESTION_COUNT);
     const agenda = selected.map((item) => {
       const question = findQuestion(item.slug)?.question;
       return `${item.title}: ${question?.problemStatement ?? "Discuss the solution, trade-offs, and edge cases."}`;
     });
     const context = [
-      "This is a DSA coding interview based only on problems the candidate has already solved in practice.",
+      "This is a DSA coding interview focused on important function-based algorithm problems. Prefer problems the candidate has already solved in practice; use a curated fallback only when needed.",
       `Selected solved problems: ${selected.map((item) => `${item.title} (${item.difficulty}, ${item.primaryPattern})`).join("; ")}.`,
       "Ask the candidate to explain the approach, complexity, correctness, and edge cases. Treat this as a real conversation: ask one question at a time, challenge assumptions when useful, and do not repeat generic acknowledgements.",
       profile.context

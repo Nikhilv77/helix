@@ -21,6 +21,7 @@ import {
   Loader2,
   Mic,
   MicOff,
+  Play,
   RefreshCw,
   Send,
   Square,
@@ -29,6 +30,8 @@ import {
   X
 } from "lucide-react";
 import { TrailgradMark } from "@/components/trailgrad-mark";
+import { DsaCodeEditor } from "@/components/interview/dsa-code-editor";
+import { DsaQuestionNotes } from "@/components/interview/dsa-question-notes";
 import { PathRail } from "@/components/interview/path-rail";
 import { MicMeter } from "@/components/interview/mic-meter";
 import { InterviewerPresence } from "@/components/interview/interviewer-presence";
@@ -37,6 +40,7 @@ import type { PresenceState } from "@/components/interview/interviewer-presence"
 import { ApiClientError, endInterview, getSession } from "@/lib/api-client";
 import { findQuestion } from "@/lib/dsa";
 import type { DsaQuestion } from "@/lib/dsa";
+import { dsaStarterCode } from "@/lib/dsa-code-templates";
 import { pageTitle } from "@/lib/seo";
 import type { InterviewQuestion, InterviewSetup, Phase, Turn } from "@/lib/types";
 
@@ -48,6 +52,24 @@ const AGENT_JOIN_TIMEOUT_MS = 15_000;
 const MIC_SILENCE_WARNING_MS = 6_000;
 const MIC_DEVICE_STORAGE_KEY = "trailgrad.preferredMicrophone";
 const TYPED_ANSWER_TOPIC = "trailgrad.typed-answer";
+type DsaLanguage = "python" | "javascript" | "cpp" | "java";
+type DsaRunResult = {
+  status: string;
+  accepted: boolean;
+  stdout: string;
+  stderr: string;
+  compileOutput: string;
+  time: string | null;
+  memory: number | null;
+  tests: Array<{
+    index: number;
+    input: string;
+    expectedOutput: string;
+    actualOutput: string;
+    passed: boolean;
+    error: string | null;
+  }>;
+};
 
 type Status = "connecting" | "waiting" | "live" | "reconnecting" | "ended" | "error";
 type AgentState = "initializing" | "idle" | "listening" | "thinking" | "speaking";
@@ -98,6 +120,9 @@ function VoiceInterview() {
   const [typedStartedAt, setTypedStartedAt] = useState<number | null>(null);
   const [typedSending, setTypedSending] = useState(false);
   const [typedError, setTypedError] = useState<string | null>(null);
+  const [dsaLanguage, setDsaLanguage] = useState<DsaLanguage>("javascript");
+  const [dsaRunResult, setDsaRunResult] = useState<DsaRunResult | null>(null);
+  const [dsaRunning, setDsaRunning] = useState(false);
 
   const roomRef = useRef<Room | null>(null);
   const agentIdentityRef = useRef<string | null>(null);
@@ -516,11 +541,12 @@ function VoiceInterview() {
   useEffect(() => {
     if (setup?.templateTitle !== "DSA practice interview" || !dsaQuestionSlug) return;
     const question = findQuestion(dsaQuestionSlug)?.question;
-    setTypedDraft(question ? dsaStarterCode(question) : "");
+    setTypedDraft(question ? dsaStarterCode(question.slug, dsaLanguage) : "");
     setTypedNotes("");
     setTypedError(null);
+    setDsaRunResult(null);
     setTypedStartedAt(Date.now());
-  }, [dsaQuestionSlug, setup?.templateTitle]);
+  }, [dsaLanguage, dsaQuestionSlug, setup?.templateTitle]);
 
   useEffect(() => {
     if (startedAt === null || sessionUnavailable || status === "ended" || status === "error")
@@ -651,7 +677,7 @@ function VoiceInterview() {
     const endMs = Math.max(startMs, now - startedAt);
     const reasoning = typedNotes.trim();
     const answer = [
-      `\`\`\`typescript\n${code}\n\`\`\``,
+      `\`\`\`${dsaLanguage}\n${code}\n\`\`\``,
       reasoning ? `Reasoning and complexity: ${reasoning}` : ""
     ]
       .filter(Boolean)
@@ -668,6 +694,38 @@ function VoiceInterview() {
     } catch (caught) {
       setTypedSending(false);
       setTypedError(caught instanceof Error ? caught.message : "The solution could not be sent.");
+    }
+  }
+
+  async function runDsaCode() {
+    if (!typedDraft.trim() || !dsaQuestionSlug || dsaRunning) return;
+    setDsaRunning(true);
+    setDsaRunResult(null);
+    setTypedError(null);
+    try {
+      const response = await fetch("/api/code/run", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          code: typedDraft,
+          language: dsaLanguage,
+          slug: dsaQuestionSlug,
+          stdin: ""
+        })
+      });
+      const payload = (await response.json()) as {
+        success?: boolean;
+        data?: DsaRunResult;
+        error?: { message?: string };
+      };
+      if (!response.ok || !payload.success || !payload.data) {
+        throw new Error(payload.error?.message || "Judge0 could not run this code.");
+      }
+      setDsaRunResult(payload.data);
+    } catch (caught) {
+      setTypedError(caught instanceof Error ? caught.message : "Code execution failed.");
+    } finally {
+      setDsaRunning(false);
     }
   }
 
@@ -833,6 +891,7 @@ function VoiceInterview() {
       {isDsaInterview ? (
         <DsaLiveWorkspace
           question={dsaQuestion}
+          questionSlug={selectedDsaSlug ?? null}
           turns={displayTurns}
           spokenAgentTurnKeys={spokenAgentTurnKeys}
           liveUserText={liveTranscript}
@@ -846,6 +905,11 @@ function VoiceInterview() {
           agentTrack={agentTrack}
           localTrack={localTrack}
           presence={presence}
+          language={dsaLanguage}
+          runResult={dsaRunResult}
+          running={dsaRunning}
+          onLanguageChange={(language) => setDsaLanguage(language)}
+          onRun={() => void runDsaCode()}
           draft={typedDraft}
           notes={typedNotes}
           sending={typedSending}
@@ -1191,6 +1255,7 @@ function TypedAnswerPanel({
 
 function DsaLiveWorkspace({
   question,
+  questionSlug,
   turns,
   spokenAgentTurnKeys,
   liveUserText,
@@ -1204,6 +1269,11 @@ function DsaLiveWorkspace({
   agentTrack,
   localTrack,
   presence,
+  language,
+  runResult,
+  running,
+  onLanguageChange,
+  onRun,
   draft,
   notes,
   sending,
@@ -1213,6 +1283,7 @@ function DsaLiveWorkspace({
   onSubmit
 }: {
   question: DsaQuestion | null;
+  questionSlug: string | null;
   turns: Turn[];
   spokenAgentTurnKeys: ReadonlySet<string>;
   liveUserText: string;
@@ -1226,12 +1297,17 @@ function DsaLiveWorkspace({
   agentTrack: MediaStreamTrack | null;
   localTrack: MediaStreamTrack | null;
   presence: PresenceState;
+  language: DsaLanguage;
+  runResult: DsaRunResult | null;
+  running: boolean;
   draft: string;
   notes: string;
   sending: boolean;
   error: string | null;
   onDraftChange: (value: string) => void;
   onNotesChange: (value: string) => void;
+  onLanguageChange: (language: DsaLanguage) => void;
+  onRun: () => void;
   onSubmit: () => void;
 }) {
   const canSubmit = draft.trim().length >= 10 && !sending;
@@ -1278,6 +1354,7 @@ function DsaLiveWorkspace({
                 </ul>
               </DsaCopySection>
             ) : null}
+            {questionSlug ? <DsaQuestionNotes slug={questionSlug} /> : null}
           </>
         ) : (
           <p className="mt-6 text-sm leading-6 text-cream/50">Maya is preparing the next problem.</p>
@@ -1285,22 +1362,47 @@ function DsaLiveWorkspace({
       </section>
 
       <section className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r border-cream/10">
-        <div className="flex items-center justify-between border-b border-cream/10 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cream/10 pb-3">
           <div className="flex items-center gap-2 text-sm font-semibold text-cream">
             <Code2 size={15} aria-hidden="true" className="text-cream/55" />
             Your solution
           </div>
-          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-cream/35">
-            {currentQuestion?.language ?? "code"}
-          </span>
+          <div className="flex items-center gap-2">
+            <label className="sr-only" htmlFor="dsa-language">Language</label>
+            <select
+              id="dsa-language"
+              value={language}
+              onChange={(event) => onLanguageChange(event.target.value as DsaLanguage)}
+              className="h-8 bg-cream/[0.05] px-2 text-xs text-cream outline-none focus:bg-cream/[0.1]"
+            >
+              <option value="javascript">JavaScript</option>
+              <option value="python">Python</option>
+              <option value="cpp">C++</option>
+              <option value="java">Java</option>
+            </select>
+            <button
+              type="button"
+              onClick={onRun}
+              disabled={running || !draft.trim()}
+              className="inline-flex h-8 items-center gap-1.5 bg-cream px-3 text-xs font-semibold text-blueprint transition hover:bg-white disabled:pointer-events-none disabled:opacity-35"
+            >
+              {running ? <Loader2 size={13} className="animate-spin" aria-hidden="true" /> : <Play size={13} aria-hidden="true" />}
+              {running ? "Running" : "Run code"}
+            </button>
+          </div>
         </div>
-        <textarea
-          aria-label="DSA solution editor"
-          value={draft}
-          onChange={(event) => onDraftChange(event.target.value)}
-          spellCheck={false}
-          placeholder="Explain your approach, then write the solution here..."
-          className="thin-scroll min-h-64 flex-1 resize-none bg-[#203d8d]/80 p-4 font-mono text-[13px] leading-6 text-[#f2ecdd] outline-none placeholder:text-cream/25 focus:bg-[#213f92]"
+        <div className="min-h-64 flex-1 overflow-hidden bg-[#172f78]">
+          <DsaCodeEditor
+            language={language}
+            value={draft}
+            onChange={onDraftChange}
+            onRun={onRun}
+          />
+        </div>
+        <DsaOutputPanel
+          examples={question?.examples ?? []}
+          result={runResult}
+          running={running}
         />
         <div className="border-t border-cream/10 pt-3">
           <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-cream/40">
@@ -1356,6 +1458,80 @@ function DsaLiveWorkspace({
   );
 }
 
+function DsaOutputPanel({
+  examples,
+  result,
+  running
+}: {
+  examples: NonNullable<DsaQuestion["examples"]>;
+  result: DsaRunResult | null;
+  running: boolean;
+}) {
+  return (
+    <section className="max-h-64 shrink-0 overflow-hidden border-t border-cream/10 bg-black/10">
+      <div className="flex items-center justify-between gap-3 border-b border-cream/10 px-3 py-2">
+        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-cream/45">Output</span>
+        {running ? (
+          <span className="flex items-center gap-1.5 text-xs text-cream/45">
+            <Loader2 size={12} className="animate-spin" aria-hidden="true" /> Running tests
+          </span>
+        ) : result ? (
+          <span className={`text-xs font-semibold ${result.accepted ? "text-[#a9f0d0]" : "text-[#ffb4b4]"}`}>
+            {result.status}
+          </span>
+        ) : (
+          <span className="text-xs text-cream/30">Run code to check examples</span>
+        )}
+      </div>
+      <div className="thin-scroll max-h-52 overflow-y-auto px-3 py-3">
+        {result?.compileOutput || result?.stderr ? (
+          <pre className="whitespace-pre-wrap font-mono text-xs leading-5 text-[#ffb4b4]">
+            {result.compileOutput || result.stderr}
+          </pre>
+        ) : result?.tests.length ? (
+          <div className="space-y-3">
+            {result.tests.map((test) => (
+              <div key={test.index} className="border-b border-cream/[0.07] pb-3 last:border-0 last:pb-0">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold text-cream/65">Case {test.index + 1}</span>
+                  <span className={`text-xs font-semibold ${test.passed ? "text-[#a9f0d0]" : "text-[#ffb4b4]"}`}>
+                    {test.passed ? "Passed" : "Failed"}
+                  </span>
+                </div>
+                <dl className="mt-2 grid gap-x-3 gap-y-1 font-mono text-[11px] leading-5 sm:grid-cols-[4.5rem_1fr]">
+                  <dt className="text-cream/35">Input</dt><dd className="break-words text-cream/65">{test.input}</dd>
+                  <dt className="text-cream/35">Expected</dt><dd className="break-words text-cream/65">{test.expectedOutput}</dd>
+                  <dt className="text-cream/35">Output</dt><dd className="break-words text-cream/65">{test.error || test.actualOutput || "No output"}</dd>
+                </dl>
+              </div>
+            ))}
+            {result.stdout ? (
+              <div>
+                <p className="text-xs font-semibold text-cream/50">Console output</p>
+                <pre className="mt-1 whitespace-pre-wrap font-mono text-[11px] leading-5 text-cream/55">{result.stdout}</pre>
+              </div>
+            ) : null}
+          </div>
+        ) : examples.length ? (
+          <div className="space-y-3">
+            {examples.slice(0, 10).map((example, index) => (
+              <div key={`${example.input}-${index}`} className="border-b border-cream/[0.07] pb-3 last:border-0 last:pb-0">
+                <p className="text-xs font-semibold text-cream/55">Case {index + 1}</p>
+                <dl className="mt-2 grid gap-x-3 gap-y-1 font-mono text-[11px] leading-5 sm:grid-cols-[4.5rem_1fr]">
+                  <dt className="text-cream/35">Input</dt><dd className="break-words text-cream/60">{example.input}</dd>
+                  <dt className="text-cream/35">Expected</dt><dd className="break-words text-cream/60">{example.output}</dd>
+                </dl>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs leading-5 text-cream/35">No runnable examples are available for this question yet.</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function DsaCopySection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mt-7">
@@ -1363,11 +1539,6 @@ function DsaCopySection({ title, children }: { title: string; children: React.Re
       <div className="text-sm leading-6 text-cream/75">{children}</div>
     </section>
   );
-}
-
-function dsaStarterCode(question: DsaQuestion): string {
-  const functionName = question.slug.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
-  return `function ${functionName}(input: unknown): unknown {\n  // Explain the invariant before implementing.\n  \n}\n`;
 }
 
 function MicrophonePicker({

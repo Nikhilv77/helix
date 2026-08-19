@@ -1,24 +1,45 @@
-# Trailgrad Frontend Roadmap Requirement
+# Trailgrad Product Requirements
 
-Until this requirement is complete, the product focus is only the frontend interview-prep experience. Do not add new product requirements to this file. Do not expand into backend, full-stack, data, AI/ML, or PM roadmap work until the frontend flow below is working end to end.
+## Project Context
 
-## Goal
+Trailgrad is an AI-powered frontend interview-preparation product. Users onboard with their target role, experience level, resume, and goals. Maya, the AI interviewer and coach, guides them through a personalized preparation roadmap, practice questions, coding exercises, and realistic interviews.
 
-When a user onboards with `targetRole = frontend`, Trailgrad must create and render a personalized frontend preparation roadmap for that specific user.
+The current product focus is only the frontend interview-preparation experience. Do not expand this requirement into backend, full-stack, data, AI/ML, or product-management roadmaps until the frontend flow works end to end.
 
-The roadmap should not be static UI. It must be based on:
+## Important Routes
 
-- the user's target role
-- the user's experience level
-- the user's resume evidence
-- the user's current progress
-- the user's question attempts and performance signals
+- `/`: Personalized home dashboard with the user's roadmap, progress, next action, and Maya insights.
+- `/onboarding`: Resume, target role, experience, and focus-area onboarding.
+- `/?welcome=maya`: Maya's post-onboarding welcome and roadmap introduction.
+- `/interviews`: Interview-mode selection for the five interview rounds.
+- `/interview/dsa`: DSA interview entry screen and readiness check.
+- `/interview/voice?session=:id`: Live Maya interview room for conversational and mixed rounds.
+- `/practice`: Frontend practice overview based on persisted roadmap progress.
+- `/practice/:chapter`: Chapter briefing and guided practice flow.
+- `/dsa-questions/:slug`: Individual DSA question, explanation, hints, notes, editor, and execution results.
+- `/interview/dsa/:slug`: DSA interview workspace for a selected problem.
+- `/reports`: Interview history, evaluations, score breakdowns, and recommendations.
+- `/progress`: Roadmap, practice, pattern, and interview progress trends.
 
-Maya should present the plan after onboarding, explain that she prepared the six frontend sessions, and then Home should render the user's current plan and progress.
+Routes should use persisted user state where applicable. Do not replace database-backed state with static arrays or placeholder progress.
 
-## Frontend Plan
+## Product Goal
 
-The base frontend roadmap has six sessions:
+When a user onboards with `targetRole = frontend`, Trailgrad creates and renders a personalized frontend preparation roadmap for that user.
+
+The roadmap must use:
+
+- Target role
+- Experience level
+- Resume evidence
+- Current progress
+- Question attempts and performance signals
+
+Maya should explain the plan after onboarding, and Home should show the user's current plan and progress.
+
+## Frontend Roadmap
+
+The base roadmap contains six sessions:
 
 1. Frontend DSA
 2. JavaScript and React Core
@@ -27,334 +48,325 @@ The base frontend roadmap has six sessions:
 5. Resume and Behavioral Defense
 6. Final Frontend Mock
 
-These sessions are templates. A user receives their own roadmap instance generated from these templates.
+These are reusable templates. Each user receives a persisted roadmap instance generated from them.
+
+Sessions 2–6 must eventually contain their own chapters, questions, practice flows, and progress tracking. Frontend DSA is the first fully implemented session.
 
 ## Personalization
 
-The content inside the plan must be curated per user.
+### Experience Level
 
-Experience-level rules:
+- Fresher and early-career users receive more fundamentals, guided explanations, warmups, and confidence-building practice.
+- Mid-level users receive more production tradeoffs, architecture, debugging, and feature-ownership questions.
+- Senior users receive more ambiguity, system design, migrations, quality strategy, technical leadership, and cross-team tradeoffs.
 
-- Fresher or early-career users should get more fundamentals, guided explanations, warmups, and confidence-building practice.
-- Mid-level users should get more production tradeoffs, architecture, debugging, and feature ownership questions.
-- Senior users should get more ambiguity, system design, technical leadership, migrations, quality strategy, and cross-team tradeoffs.
+The selected content, order, explanations, and Maya prompts must change based on experience level.
 
-Resume-based rules:
+### Resume Evidence
 
-- If the resume contains React, dashboards, forms, design systems, accessibility, performance, or frontend-heavy project work, Maya should use that evidence in the plan and insights.
-- If the resume has weak frontend evidence, Maya should emphasize evidence-building practice and resume-defense gaps.
-- If the resume has specific projects, Maya should prepare questions that ask the user to defend state model, UX states, tradeoffs, performance, validation, and shipped outcomes.
+If the resume contains React, dashboards, forms, design systems, accessibility, performance, or frontend-heavy projects, Maya should use that evidence in the roadmap and interview prompts.
+
+If frontend evidence is weak, the roadmap should emphasize evidence-building practice and resume-defense gaps.
+
+For specific projects, Maya should prepare questions about:
+
+- State model
+- UX states
+- Tradeoffs
+- Performance
+- Accessibility
+- Testing
+- Shipped outcomes
+
+Resume evidence must affect roadmap content or Maya insights, not only be stored as unused metadata.
 
 ## Dynamic Progress
 
-The whole Home roadmap must render from the user's current progress.
+Home must render from the user's current persisted progress.
 
 Track:
 
-- active session
-- active chapter
-- next question
-- completed questions
-- attempted questions
-- question correctness or score
-- difficulty progress
-- estimated remaining work
-- overall roadmap progress
-- session-level progress
-- chapter-level progress
-- streak or practice continuity
-
-When the user solves or attempts questions, the roadmap should update.
+- Active session
+- Active chapter
+- Next question
+- Completed questions
+- Attempted questions
+- Correctness and score
+- Difficulty progress
+- Estimated remaining work
+- Overall roadmap progress
+- Session progress
+- Chapter progress
+- Practice streak and continuity
 
 Examples:
 
-- If the user completes Arrays & Hashing, the next priority should move to the next unfinished chapter.
-- If the user repeatedly misses sliding-window questions, Maya's insights should call out that weakness.
-- If the user finishes Frontend DSA, the active session should move to JavaScript and React Core.
+- Completing Arrays & Hashing advances the next priority to the next unfinished chapter.
+- Repeated misses in Sliding Window produce a weakness-aware Maya insight.
+- Completing Frontend DSA activates JavaScript and React Core.
+- Progress survives refresh, logout, and login.
 
 ## Maya Welcome
 
-After onboarding a frontend user, `/?welcome=maya` should show Maya's welcome screen.
+After frontend onboarding, `/?welcome=maya` must show Maya's welcome screen.
 
 Maya should:
 
-- welcome the user by name when available
-- say she prepared the six-session frontend roadmap
-- briefly explain why the sessions are ordered that way
-- mention the first active session
-- send the user back to Home when the welcome is dismissed or the start CTA is clicked
+- Welcome the user by name when available.
+- Explain that she prepared the six-session frontend roadmap.
+- Briefly explain why the sessions are ordered that way.
+- Mention the first active session.
+- Return the user to Home when dismissed or when the start CTA is clicked.
 
-The welcome content should remain role-aware. Frontend users get frontend-specific copy. Other roles can keep the general welcome until their roadmap systems are built later.
+The content must be role-aware. Frontend users receive frontend-specific messaging; other roles may keep the general welcome until their roadmap systems exist.
 
 ## Maya Insights
 
-Maya's insights on Home must be dynamic and user-specific.
+Home must show dynamic, user-specific Maya insights derived from progress and attempts. Insights should be persisted or cached for fast loading.
 
-Insights should be derived from the user's roadmap progress and attempts, then stored or cached so Home can load quickly.
+Required insight types:
 
-Maya insights should include:
+- Next priority
+- Common trap
+- Strong answer signal
+- Streak or continuity state
+- Recommended next action
 
-- next priority
-- common trap
-- strong answer signal
-- streak or continuity state
-- recommended next action
+Insights must change as the user practices. They must not be permanently hardcoded.
 
-These values must change as the user practices.
+## DSA Practice and Interviews
 
-## Database Requirement
+Frontend DSA practice must provide:
 
-Add persistent data models for:
+- LeetCode-style problem descriptions
+- Examples and constraints
+- Hints and progressive explanations
+- Notes saved per question
+- Code editor support for Python, JavaScript, Java, and C++
+- One Judge0 execution request containing all test cases
+- Per-test expected and actual output
+- Compile and runtime error display
+- Accepted or failed submission state
 
-- global roadmap/session/chapter/question templates
-- user roadmap instances
-- user session progress
-- user chapter progress
-- user question attempts
-- user Maya insights
+The DSA interview must:
 
-The frontend roadmap shown on Home must be loaded from user-specific database state, not hardcoded arrays alone.
+- Require at least 10 completed practice questions before starting.
+- Prefer important questions the user has already practiced.
+- Exclude class-based questions from the interview pool until Java and C++ class runners are supported.
+- Use important function-based fallback questions when the solved eligible pool is too small.
+- Ask one problem at a time.
+- Evaluate problem understanding, approach, correctness, complexity, communication, and edge cases.
+- Ask natural follow-up questions based on the user's answer instead of repeating generic acknowledgements.
+- Avoid repeating recently asked questions when interview history is available.
+
+## Interview Product
+
+Trailgrad should provide five interview rounds. They share Maya's conversation, transcript, follow-up, evaluation, and reporting infrastructure, but each round uses its own question bank and rubric:
+
+1. **DSA Interview** — coding problem, editor, test execution, complexity, and algorithm evaluation.
+2. **Resume Round** — resume evidence, project ownership, decisions, tradeoffs, and behavioral follow-ups.
+3. **Technical Depth and Fundamentals** — JavaScript, React, web, backend, databases, APIs, and core engineering questions with contextual counter-questions.
+4. **Full-Stack System Design** — structured architecture discussion covering requirements, APIs, services, data, scaling, reliability, security, and tradeoffs.
+5. **Final Mock** — a realistic mixed round combining resume, technical, DSA, and system-design segments.
+
+Only DSA requires code execution. Resume, Technical Depth, and most System Design interviews are conversational. The Final Mock composes the existing round types instead of duplicating their implementations.
+
+### Full-Stack System Design
+
+The system-design round should:
+
+- Present an ambiguous full-stack problem and let the candidate clarify requirements.
+- Move through requirements, high-level architecture, API design, data modeling, scaling, caching, queues, security, reliability, and tradeoffs.
+- Introduce changing constraints and ask the candidate to adapt the design.
+- Provide an optional free diagram editor with predefined nodes such as client, API, service, database, cache, queue, worker, storage, and external service.
+- Save the diagram as interview-session data for Maya's evaluation and the Reports page.
+- Use an open-source client-side canvas library and the existing database; no paid diagram service is required for the initial version.
+- Score requirement clarification, architecture, APIs, data design, scalability, reliability, security, tradeoffs, and communication.
+
+## Database Requirements
+
+Persist the following:
+
+- Global roadmap, session, chapter, and question templates
+- User roadmap instances
+- User session progress
+- User chapter progress
+- User question progress
+- Question attempts and scores
+- Interview history
+- Maya insights
+- Question notes
+
+The database is the source of truth for user-specific roadmap state. Static JSON may remain the source for global DSA content, but it must not be used as fake user progress.
 
 ## Required Backend Flow
 
-1. User completes onboarding with `targetRole = frontend`.
+1. User completes frontend onboarding.
 2. Backend creates or updates the user's frontend roadmap instance.
-3. Backend personalizes the roadmap using role, level, resume, and available question templates.
-4. Home loads the current user roadmap from the database.
-5. User practices questions.
-6. Backend records attempts and progress.
-7. Backend recalculates the next priority, progress, and Maya insights.
-8. Home re-renders with updated roadmap state.
+3. Backend personalizes the roadmap using level, resume, role, and available templates.
+4. Home loads the persisted roadmap and insights.
+5. User opens, attempts, skips, completes, or submits questions.
+6. Backend records the event and performance signals.
+7. Backend recalculates question, chapter, session, roadmap, and insight state.
+8. Home and practice routes render the updated state.
+9. Interview routes use the user's eligible progress and interview history.
 
-## Implementation Progress
+## UI Requirements
 
-Last updated: 2026-08-07.
+Home must render:
 
-Completed:
+- Maya hero and welcome state
+- Active frontend session
+- All six session cards
+- Current chapter or pattern position
+- Progress values from the database
+- Maya insights from persisted state
+- Correct next CTA
 
-- Replaced the old broad product notes with this focused frontend roadmap requirement.
-- Added Prisma models and enums for roadmap templates, user roadmaps, progress tracking, question attempts, and Maya insights.
-- Added migration `20260807000000_user_frontend_roadmap_progress`.
-- Generated Prisma client types for the new roadmap schema.
-- Seeded the global frontend roadmap template as `frontend-roadmap`.
-- Seeded exactly six frontend session templates:
-  1. Frontend DSA
-  2. JavaScript and React Core
-  3. Build Real UI Features
-  4. Production UI Quality
-  5. Resume and Behavioral Defense
-  6. Final Frontend Mock
-- Seeded Frontend DSA with 12 chapter templates and 123 curated question mappings from the DSA bank.
-- Added `FrontendRoadmapService.ensureFrontendRoadmap(ownerId)`.
-- The service now creates or refreshes a frontend user's persisted roadmap from the seeded template.
-- The service creates user session, chapter, and question progress rows without duplicating them on repeat calls.
-- The initial active path is `frontend-dsa -> arrays-hashing -> contains-duplicate`.
-- The service stores basic personalization from level, focus areas, resume evidence, resume file name, and resume confidence.
-- The service creates five active Maya insight rows for next priority, common trap, strong answer signal, streak, and recommended action.
-- Frontend onboarding now calls `ensureFrontendRoadmap(ownerId)` after `completeOnboarding` when `targetRole = frontend`.
-- The onboarding API response now includes a `frontendRoadmap` summary for frontend users.
-- The existing client flow still routes successful new onboarding to `/?welcome=maya`.
-- Added a Home roadmap read model that loads user-specific roadmap sessions, chapters, progress totals, next CTA, question mix, and active Maya insights from the database.
-- Home now requests the persisted frontend roadmap for frontend users instead of loading the static DSA plan directly.
-- The Maya welcome modal, Home hero, chapter carousel, session cards, and Maya insights now receive persisted roadmap state.
-- Added question attempt recording for Frontend DSA questions.
-- Added `/api/roadmap/question-attempt` for `open`, `submit`, `complete`, and `skip` attempt events.
-- DSA question pages now record question opens and provide complete/skip controls.
-- Completing or skipping a question recalculates question, chapter, session, roadmap progress, next priority, and active Maya insight rows.
-- Removed unused generated session-card image assets and kept only images referenced by the six active session cards and analytics UI.
-- Removed the unlinked `/plan-preview` visual QA route.
-- Maya insights now analyze recent user attempt history instead of only static next-question copy.
-- Maya can detect repeated weak/skipped/low-score attempts by question pattern and reflect that in next priority, common trap, and recommended action.
-- Maya's streak insight now uses completed-question attempt days and active attempt history.
+Practice and interview surfaces must remain consistent with the existing Trailgrad visual system. Prefer clean, unframed layouts over unnecessary nested cards. Loading states must belong to the route being loaded and must not reuse unrelated dashboard skeletons.
 
-Added on 2026-08-07 (guided practice and defect fixes):
+## Performance and Reliability
 
-- Added `/practice/[chapter]`: Maya takes a session as a six-beat briefing, then hands over to the questions.
-- Briefing content is derived from the chapter's own questions — concepts, approaches, common mistakes and interview signals are ranked by how many questions share them, not written per chapter.
-- Rebuilt `/dsa-questions/[slug]` on the Home design system, split so the problem is readable before attempting and every spoiler sits behind a collapsed panel.
-- Maya coaches each question by voice and avatar: she names the pattern without giving the answer, speaks each hint as it unlocks, and keeps the key insight sealed until all hints are used.
-- `/practice` now reads the user's persisted roadmap. Its hero previously hardcoded `completed = 0` for everyone.
-- Maya's Practice introduction is generated from real progress and changes as the user works.
-- Mark-done and skip now persist and survive refresh, applied optimistically with rollback on failure.
-- Added loading skeletons for `/practice`, `/practice/[chapter]` and `/dsa-questions/[slug]`.
-- Added keyboard navigation to the briefing (arrow keys, Escape).
+- Question attempt writes must not deadlock or silently drop events.
+- Progress updates should be optimistic in the UI with rollback on failure.
+- Recalculating roadmap state should avoid unnecessary full-roadmap work where possible.
+- Interview startup should fail with a useful error rather than leaving the user in an infinite loading state.
+- Code execution must keep API keys server-side and preserve execution limits.
 
-Fixed on 2026-08-07:
+## Future Product Requirements
 
-- Concurrent question attempts deadlocked in Postgres (`40P01`) and silently dropped an attempt. Serialised per user with an advisory lock and stopped re-running `ensureFrontendRoadmap` on every write.
-- Sessions 2-6 could never unlock: session status was derived only from owning the next unanswered question, so finishing Frontend DSA dead-ended the roadmap. The earliest unfinished session is now promoted when none is live.
-- `nextQuestionKey` of `null` matched the first question through a `null === null` comparison, sending finished users back to `contains-duplicate`.
-- `AvatarStage` created its WebGL context unguarded. Where WebGL is unavailable the throw escaped the effect and took the page down; it now falls back to the existing "Avatar unavailable" state.
-- The workspace shell painted `#0b1740` over `.blueprint`'s `#22409b`, leaving a near-black base that only looked blue where the glow gradient was strong. Page edges read as black.
-- Maya's status controls were positioned over the avatar on the question, session, Practice and Interviews surfaces.
-- `/interviews` rendered with no sidebar. The workspace shell chose its chrome-free routes with `pathname.startsWith("/interview")`, which is also true for `/interviews`, so the interviews list was rendered bare like the live interview room. Bare routes are now matched exactly (`/interview`, `/interview/*`, `/onboarding`).
-- Maya was a silent avatar on `/interviews` while introducing herself on every other surface. She now speaks there too, from real quota, completed-round and focus state.
+These are planned improvements after the current frontend roadmap flow is stable. They should be implemented incrementally and should reuse the existing interview, progress, reports, and question-attempt data models where possible.
 
-Verified:
+### DSA Interview Selection
 
-- `pnpm prisma:seed`
-- `pnpm exec prisma validate`
-- `pnpm exec prisma generate`
-- `pnpm exec tsc --noEmit`
-- `pnpm lint`
-- Manual DB smoke test for `ensureFrontendRoadmap(ownerId)`:
-  - first call created a user roadmap
-  - second call refreshed the same roadmap without duplicates
-  - created 6 session progress rows
-  - created 12 chapter progress rows
-  - created 123 question progress rows
-  - created 5 active Maya insight rows
-- Manual DB smoke test for the Home roadmap read model:
-  - loaded 6 sessions
-  - loaded 12 chapters
-  - loaded 123 questions
-  - loaded 5 active Maya insights
-  - returned next CTA `/dsa-questions/contains-duplicate`
-- Manual DB smoke test for question attempt tracking:
-  - opening `contains-duplicate` changed attempted questions from 0 to 1
-  - completing `contains-duplicate` changed completed questions from 0 to 1
-  - overall progress changed from 0% to 0.8%
-  - first chapter progress changed to 1 of 10 complete
-  - next question changed from `contains-duplicate` to `two-sum`
-  - persisted 2 attempt rows for the question
-- Manual DB smoke test for dynamic Maya insights:
-  - skipping `contains-duplicate` and `two-sum` moved the next question to `best-time-to-buy-and-sell-stock`
-  - Maya detected 2 weak or skipped Arrays & Hashing attempts
-  - next priority, common trap, and recommended action changed from static next-question copy to weakness-aware guidance
-- Step 8 frontend flow QA smoke test:
-  - simulated frontend onboarding through `ProfileService.completeOnboarding`
-  - created the user-specific frontend roadmap from the seeded template
-  - Home read 6 sessions, 12 chapters, 123 questions, and 5 active Maya insights from persisted state
-  - Home next CTA started at `/dsa-questions/contains-duplicate`
-  - opening `contains-duplicate` changed attempted questions to 1 without advancing the next question
-  - completing `contains-duplicate` changed completed questions to 1, changed overall progress to 0.8%, and advanced the next question to `two-sum`
-  - a new Prisma/service read for the same owner preserved completed questions, attempted questions, and next question state, covering refresh/logout/login-style persistence at the data layer
-- Concurrency test on question attempts:
-  - 7 simultaneous writes for one user all succeeded, 8 of 8 completions persisted
-  - previously one write was rejected with `deadlock detected` and its attempt was lost
-- Session advancement test at 100% completion:
-  - session 1 COMPLETED, session 2 ACTIVE, current session `javascript-react-core`
-  - next CTA `/practice` instead of looping back to `contains-duplicate`
-- Rendered verification in headless Chrome at 1920px and 2600px for Home shell, `/interviews`, `/practice`, `/practice/[chapter]` and `/dsa-questions/[slug]`
-- Page survives with WebGL disabled (`--disable-webgl`) instead of blanking
-- `pnpm test` — 72 tests across 13 suites
-- Local HTTP smoke:
-  - `GET /` on `localhost:3001` returned `200`
-  - unauthenticated curl response correctly returned the signed-out/marketing path with Clerk signed-out headers
-- Production integration:
-  - `pnpm build` completed successfully and compiled all dynamic Home, onboarding, practice, DSA, and roadmap API routes
+Relevant routes: `/interviews`, `/interview/dsa`, and `/interview/voice?session=:id`.
 
-Remaining:
+- Balance selected questions across easy, medium, and hard difficulty.
+- Avoid questions asked recently in the user's interview history.
+- Prefer patterns and concepts related to the user's solved, attempted, or weak areas.
+- Select function-based questions that are supported by the current execution system.
+- Choose related follow-up questions that deepen the same problem or pattern instead of switching randomly.
+- Keep the interview selection deterministic enough to explain why a question was chosen while still allowing useful variety.
 
-- Sessions 2-6 have no seeded questions. The roadmap now advances into JavaScript and React Core correctly, but there is nothing to practise there yet. Needs curriculum, not code.
-- Experience level is stored but never applied. `levelStrategy` writes a string into the roadmap's personalization JSON and nothing reads it, so a fresher and a senior receive the identical 123 questions in the identical order. This does not yet meet the experience-level rules above.
-- Resume evidence is captured and stored but likewise does not change which questions are selected.
-- A single question attempt costs roughly 3.5 seconds because the write recalculates the whole roadmap against a remote database. The UI hides this optimistically; the write itself has not been made faster.
+### Maya DSA Evaluation
 
-## Step-by-Step Build Plan
+Relevant route: `/interview/dsa` and the active interview session route.
 
-Step 1: Add the database foundation.
+- Evaluate the user's understanding of the problem before evaluating the code.
+- Evaluate the proposed approach, including brute force versus optimal alternatives.
+- Check correctness, time complexity, space complexity, and edge-case handling.
+- Use code execution results as evidence, not as the only evaluation signal.
+- Ask intelligent follow-ups based on the user's approach, mistakes, failed cases, or missed tradeoffs.
+- Adapt the conversation naturally: Maya should not repeat generic acknowledgements or ask a follow-up after every answer.
+- Finish with actionable feedback covering what was strong, what was missing, and what to practise next.
 
-- Add global roadmap template tables.
-- Add user roadmap instance tables.
-- Add session, chapter, and question progress tables.
-- Add question attempt tracking.
-- Add persisted Maya insight records.
-- Generate Prisma client types.
+### DSA Test Results
 
-Status: Complete on 2026-08-07.
+Relevant route: `/interview/dsa` and the DSA question/editor surface.
 
-Step 2: Seed the frontend roadmap templates.
+- Show passed and failed test cases clearly.
+- Display expected output and actual output for failed cases.
+- Separate compile errors, runtime errors, timeouts, and wrong answers.
+- Preserve the existing execution limits and server-side Judge0 integration.
+- Show a clear accepted state when all test cases pass.
+- Enable a `Submit to Maya` state after accepted code so the user can discuss the solution and receive interview evaluation.
+- Keep execution efficient by sending all test cases for a question in one Judge0 submission where the runner contract supports it, then mapping the returned results back to the UI.
 
-- Persist the six frontend sessions as `RoadmapTemplate` and `RoadmapSessionTemplate` records.
-- Persist Frontend DSA chapters as `RoadmapChapterTemplate` records.
-- Map curated DSA questions into `RoadmapQuestionTemplate` records.
-- Keep seeded templates idempotent.
+### Interview Score Breakdown
 
-Status: Complete on 2026-08-07.
+Relevant routes: `/interview/dsa`, `/interview/voice?session=:id`, and `/reports`.
 
-Step 3: Create the user roadmap service.
+Every completed interview should store and display a score breakdown for:
 
-- Build `ensureFrontendRoadmap(ownerId)`.
-- Personalize from role, level, resume, and template content.
-- Create user session, chapter, and question progress rows.
-- Calculate initial progress and first next question.
+- Problem understanding
+- Algorithm choice
+- Correctness
+- Time and space complexity
+- Communication
+- Edge-case handling
 
-Status: Complete on 2026-08-07.
+Scores should include short evidence-based explanations and should distinguish code-execution results from Maya's conversation-based assessment.
 
-Step 4: Wire onboarding to roadmap creation.
+### Interview History
 
-- After frontend onboarding completes, create or refresh the user's frontend roadmap.
-- Keep the welcome flow on Home.
+Relevant routes: `/interviews`, `/interview/dsa`, `/interview/voice?session=:id`, and `/reports`.
 
-Status: Complete on 2026-08-07.
+- Store each interview attempt, selected question keys, difficulty mix, completion state, duration, transcript or answer summary, and scores.
+- Track recently asked questions so Maya does not repeatedly select the same problems.
+- Track interview-level improvement over time, not only individual question completion.
+- Feed interview history into future question selection, follow-ups, score explanations, and Maya insights.
+- Let users review the result of a completed interview without changing the original result.
 
-Step 5: Load Home from user roadmap state.
+### Reports Page
 
-- Replace static Home plan data with user roadmap data.
-- Render progress, active chapter, active session, and next CTA from DB state.
+Route: `/reports`.
 
-Status: Complete on 2026-08-07.
+The Reports page should become the user's detailed interview review space and should load persisted user data rather than placeholder values. It should include:
 
-Step 6: Track question attempts.
+- Interview history with date, type, duration, completion state, and overall score.
+- Score breakdown for problem understanding, algorithm choice, correctness, complexity, communication, and edge cases.
+- Question-level results with selected question, outcome, test-case status, and Maya's evaluation.
+- Strengths, recurring weaknesses, common mistakes, and recommended practice areas.
+- Transcript or answer review for conversational interviews where available.
+- DSA-specific evidence such as brute-force attempts, optimality, failed cases, and complexity reasoning.
+- Trend views showing improvement across multiple interviews.
+- A clear next action that links back to the relevant practice chapter or interview mode.
 
-- Add attempt recording when a user opens, submits, solves, skips, or completes a question.
-- Update question, chapter, session, and roadmap progress.
+### Progress Page
 
-Status: Complete on 2026-08-07.
+Route: `/progress`.
 
-Step 7: Recalculate Maya insights.
+The Progress page should provide a complete view of preparation progress from persisted roadmap and attempt data. It should include:
 
-- Derive next priority, common trap, strong answer signal, streak, and recommended action from progress.
-- Persist active insights for fast Home rendering.
+- Overall roadmap, session, and chapter completion.
+- Attempted versus completed questions.
+- Accuracy, score, and completion trends over time.
+- Difficulty distribution and pattern coverage.
+- Strong and weak concepts based on actual attempts and interview evaluations.
+- Practice streak, recent activity, and continuity state.
+- Interview count, average score, and improvement trend.
+- Recommended next action based on the active roadmap priority and recent weaknesses.
 
-Status: Complete on 2026-08-07.
+### Lower-Priority Language Runners
 
-Step 8: Finish frontend flow QA.
+Relevant route: `/interview/dsa`.
 
-- Verify progress survives refresh, logout, and login.
-- Verify Home updates after attempts.
-- Verify Maya welcome, Home cards, carousel, and insights all read from user state.
+Implement Java and C++ class-based runners later, behind explicit language and question contracts. Class-based questions remain excluded from DSA interviews until their entry-point handling, test harnesses, and result mapping are implemented. This includes structures such as:
 
-Status: Complete on 2026-08-07. Automated service and build QA passed, a real signed-in
-onboarding created a persisted roadmap (6 sessions, 12 chapters, 123 questions, 5 insights),
-and every workspace surface was rendered and checked in headless Chrome.
+- Browser History
+- LRU Cache
+- Min Stack
+- Queue or stack design
+- Circular Queue
+- Stock Span
+- Time Map
+- Median Finder
+- Trie
+- Word Dictionary
 
-## Required UI Flow
-
-Home should render:
-
-- Maya hero/welcome state
-- active frontend session
-- all six frontend session cards
-- current chapter or pattern position
-- progress numbers from database state
-- Maya insights from database state
-- correct next CTA based on the user's current progress
-
-No Home progress value, insight, active chapter, next question, or session state should be fake once this requirement is complete.
-
-## Done Means
-
-This requirement is complete when:
-
-- a frontend user gets a user-specific roadmap after onboarding
-- the roadmap is persisted in the database
-- Home renders the roadmap from database state
-- Maya welcome explains the user's frontend plan
-- Maya insights are user-specific and change with practice
-- question attempts update progress
-- completing questions changes the active chapter/session
-- progress survives refresh, logout, and login
-- the six frontend sessions remain the main Home experience
-
-## Out Of Scope Until Done
+## Out Of Scope Until Frontend Is Complete
 
 - Backend roadmap specialization
 - Full-stack roadmap specialization
 - Data roadmap specialization
 - AI/ML roadmap specialization
-- PM roadmap specialization
+- Product-management roadmap specialization
 - New unrelated dashboards
 - New unrelated interview modes
-- Non-frontend content expansion beyond what is needed to keep the current app working
+- Broad content expansion unrelated to the current frontend flow
+
+## Completion Criteria
+
+This requirement is complete when:
+
+- A frontend user receives a personalized persisted roadmap after onboarding.
+- Home renders roadmap state from the database.
+- Maya explains the six-session plan after onboarding.
+- Experience level and resume evidence affect the roadmap or insights.
+- Maya insights change from real attempts and progress.
+- Question attempts update progress reliably.
+- Completing questions advances chapters and sessions.
+- Progress survives refresh, logout, and login.
+- Frontend DSA practice supports all four languages and test-case execution.
+- DSA interviews use eligible function-based questions and provide meaningful evaluation.
+- All six frontend sessions remain the primary Home experience.

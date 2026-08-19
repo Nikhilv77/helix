@@ -130,7 +130,7 @@ export function PracticeIntro({
   }, [muted, script]);
 
   return (
-    <section className="mt-6 overflow-hidden rounded-[1.5rem] bg-[#3557b4] p-4 shadow-[inset_0_0_0_1px_rgba(239,232,214,0.07)] sm:p-5">
+    <section className="mt-6 overflow-hidden rounded-[1.25rem] border border-cream/20 bg-cream/[0.035] p-4 sm:p-5">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-stretch">
         {/* Maya, mounted the way Home mounts her: an absolute layer over a box
             with real height, so the WebGL canvas always has dimensions. */}
@@ -192,7 +192,7 @@ export function PracticeIntro({
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-col rounded-2xl bg-[#2a4aa0] p-5 sm:p-7">
+        <div className="flex min-w-0 flex-col p-2 sm:p-5 lg:py-7 lg:pl-2 lg:pr-7">
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="rounded-md bg-[#8be6bd]/14 px-2.5 py-1 text-[11.5px] font-semibold text-[#a9f0d0]">
               {sessionLabel(roadmap)}

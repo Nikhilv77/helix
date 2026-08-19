@@ -214,6 +214,7 @@ model CandidateProfile {
   roadmaps              UserRoadmap[]
   questionAttempts      UserQuestionAttempt[]
   mayaInsights          UserMayaInsight[]
+  dsaNotes              UserDsaQuestionNote[]
 
   @@index([updatedAt])
 }
@@ -263,12 +264,28 @@ model DsaQuestion {
   roadmapQuestions     RoadmapQuestionTemplate[]
   userQuestionProgress UserQuestionProgress[]
   userQuestionAttempts UserQuestionAttempt[]
+  userNotes            UserDsaQuestionNote[]
 
   @@unique([phaseSlug, recommendedOrder])
   @@index([phaseSlug])
   @@index([primaryPattern])
   @@index([difficulty])
   @@index([recommendedOrder])
+}
+
+model UserDsaQuestionNote {
+  id        String        @id @default(uuid()) @db.Uuid
+  ownerId   String
+  slug      String
+  content   String        @db.Text
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  owner     CandidateProfile @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  question  DsaQuestion      @relation(fields: [slug], references: [slug], onDelete: Cascade)
+
+  @@unique([ownerId, slug])
+  @@index([ownerId])
+  @@index([slug])
 }
 
 model PrepQuestionTemplate {

@@ -13,6 +13,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { DsaQuestionActions } from "@/components/workspace/dsa-question-actions";
+import { DsaQuestionWorkspace } from "@/components/workspace/dsa-question-workspace";
 import { QuestionCoach } from "@/components/workspace/question-coach";
 import type { DsaApproach, DsaDifficulty, DsaExample, DsaQuestion } from "@/lib/dsa";
 import { findQuestion } from "@/lib/dsa";
@@ -69,8 +70,8 @@ export default async function DsaQuestionPage({ params }: { params: Promise<{ sl
     : null;
 
   return (
-    <div className="mx-auto w-full max-w-[95rem] px-5 pb-16 sm:px-8 lg:px-10">
-      <nav className="flex flex-wrap items-center gap-2 py-6 text-[13px] font-medium text-cream/45">
+    <div className="mx-auto w-full max-w-[110rem] px-3 pb-16 sm:px-5 lg:px-6">
+      <nav className="flex flex-wrap items-center gap-2 border-b border-cream/15 py-5 text-[13px] font-medium text-cream/45">
         <Link href="/" className="transition hover:text-cream">
           Home
         </Link>
@@ -84,8 +85,8 @@ export default async function DsaQuestionPage({ params }: { params: Promise<{ sl
 
       {/* Header and the solving surface share one raised shell, the way Home's
           hero groups its columns. */}
-      <section className="overflow-hidden rounded-[1.5rem] bg-[#3557b4] p-4 shadow-[inset_0_0_0_1px_rgba(239,232,214,0.07)] sm:p-5">
-        <div className="rounded-2xl bg-[#2a4aa0] p-5 sm:p-7">
+      <section className="mt-6 overflow-hidden rounded-[1.25rem] border border-cream/20 bg-cream/[0.035] p-5 sm:p-7">
+        <div className="p-1 sm:p-2">
           <div className="flex flex-wrap items-center gap-2.5">
             <span
               className={`rounded-md px-2.5 py-1 text-[11.5px] font-semibold capitalize ${DIFFICULTY_STYLE[question.difficulty]}`}
@@ -128,8 +129,8 @@ export default async function DsaQuestionPage({ params }: { params: Promise<{ sl
           />
         </div>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start">
-          <div className="min-w-0 space-y-4">
+        <div className="mt-8 grid gap-6 border-t border-cream/15 pt-6 lg:grid-cols-[minmax(22rem,0.88fr)_minmax(34rem,1.12fr)] lg:items-start xl:grid-cols-[minmax(25rem,0.82fr)_minmax(42rem,1.18fr)]">
+          <div className="min-w-0 space-y-7 lg:border-r lg:border-cream/15 lg:pr-6">
             {question.problemStatement ? (
               <Panel label="The problem">
                 <p className="text-[15px] leading-7 text-cream/78">{question.problemStatement}</p>
@@ -153,12 +154,7 @@ export default async function DsaQuestionPage({ params }: { params: Promise<{ sl
                 <Bullets items={question.edgeCases} />
               </Panel>
             ) : null}
-          </div>
 
-          {/* Sticky so the hints stay reachable while reading a long problem. */}
-          <div className="lg:sticky lg:top-6">
-            {/* Same reason: revealed hints and Maya's introduction belong to
-                one question, not to the position in the tree. */}
             <QuestionCoach
               key={question.slug}
               title={question.title}
@@ -170,13 +166,17 @@ export default async function DsaQuestionPage({ params }: { params: Promise<{ sl
               approachNames={approachNames}
             />
           </div>
+
+          <div className="min-w-0 lg:sticky lg:top-4">
+            <DsaQuestionWorkspace question={question} />
+          </div>
         </div>
       </section>
 
       {/* Everything past this line can spoil the problem, so it is collapsed.
           Kept inside the same raised shell as the problem above: floating these
           on the bare page background read as a different screen. */}
-      <section className="mt-4 overflow-hidden rounded-[1.5rem] bg-[#3557b4] p-4 shadow-[inset_0_0_0_1px_rgba(239,232,214,0.07)] sm:p-5">
+      <section className="mt-8 overflow-hidden border-t border-cream/15 pt-6">
         <div className="px-1 pb-1 pt-2 sm:px-2">
           <div className="flex items-center gap-3">
             <h2 className="font-display text-[1.35rem] font-semibold tracking-tight text-cream">
@@ -190,7 +190,7 @@ export default async function DsaQuestionPage({ params }: { params: Promise<{ sl
           </p>
         </div>
 
-        <div className="mt-4 space-y-3">
+        <div className="mt-5 space-y-3">
           {question.approaches?.length ? (
             <Reveal label="Approaches" hint={`${question.approaches.length} ways in`}>
               <Approaches approaches={question.approaches} />
@@ -245,12 +245,12 @@ export default async function DsaQuestionPage({ params }: { params: Promise<{ sl
           <h2 className="font-display text-[1.35rem] font-semibold tracking-tight text-cream">
             Practice this next
           </h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-4 divide-y divide-cream/10 border-y border-cream/10">
             {relatedQuestions.map((related) => (
               <Link
                 key={related.slug}
                 href={`/dsa-questions/${related.slug}`}
-                className="group rounded-2xl bg-[#2a4aa0] p-4 transition hover:bg-[#2f56b8]"
+                className="group flex items-center justify-between gap-4 py-4 transition hover:bg-cream/[0.035]"
               >
                 <span
                   className={`inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold capitalize ${DIFFICULTY_STYLE[related.difficulty]}`}
@@ -260,6 +260,11 @@ export default async function DsaQuestionPage({ params }: { params: Promise<{ sl
                 <p className="mt-2.5 text-[14.5px] font-semibold leading-6 text-cream/85 group-hover:text-cream">
                   {related.title}
                 </p>
+                <ArrowRight
+                  size={16}
+                  aria-hidden="true"
+                  className="shrink-0 text-cream/35 transition group-hover:translate-x-0.5 group-hover:text-cream"
+                />
               </Link>
             ))}
           </div>
@@ -276,7 +281,7 @@ export default async function DsaQuestionPage({ params }: { params: Promise<{ sl
 
 function Panel({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl bg-[#2a4aa0] p-5 sm:p-6">
+    <section className="border-b border-cream/10 pb-7 last:border-b-0">
       <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.13em] text-cream/45">
         {label}
       </h2>
@@ -313,8 +318,8 @@ function Reveal({
         : "bg-cream/[0.08] text-cream/50";
 
   return (
-    <details className="group overflow-hidden rounded-2xl bg-[#2a4aa0]">
-      <summary className="flex cursor-pointer list-none items-center gap-3 p-5 transition hover:bg-[#2f56b8] [&::-webkit-details-marker]:hidden">
+    <details className="group overflow-hidden border-b border-cream/10">
+      <summary className="flex cursor-pointer list-none items-center gap-3 py-5 transition hover:bg-cream/[0.035] [&::-webkit-details-marker]:hidden">
         <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${accent}`}>
           {icon}
         </span>
@@ -331,14 +336,14 @@ function Reveal({
           className="shrink-0 rotate-90 text-cream/35 transition-transform group-open:-rotate-90"
         />
       </summary>
-      <div className="border-t border-cream/[0.08] p-5 sm:p-6">{children}</div>
+      <div className="border-t border-cream/[0.08] py-5 sm:py-6">{children}</div>
     </details>
   );
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <span className="inline-flex items-baseline gap-2 rounded-lg bg-[#24439b] px-3 py-2">
+    <span className="inline-flex items-baseline gap-2 rounded-lg border border-cream/15 bg-cream/[0.035] px-3 py-2">
       <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-cream/40">
         {label}
       </span>
@@ -369,7 +374,7 @@ function Examples({ examples }: { examples: DsaExample[] }) {
   return (
     <div className="space-y-3">
       {examples.map((example, index) => (
-        <div key={`${index}-${example.input}`} className="rounded-xl bg-[#24439b] p-4">
+        <div key={`${index}-${example.input}`} className="border-l-2 border-cream/[0.18] pl-4">
           <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.13em] text-cream/40">
             Example {index + 1}
           </p>
@@ -393,7 +398,7 @@ function Approaches({ approaches }: { approaches: DsaApproach[] }) {
   return (
     <div className="space-y-4">
       {approaches.map((approach, index) => (
-        <article key={approach.name} className="rounded-xl bg-[#24439b] p-4 sm:p-5">
+      <article key={approach.name} className="border-l-2 border-cream/[0.18] pl-4 sm:pl-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="flex items-center gap-2.5 text-[15px] font-semibold text-cream">
               <span className="grid h-6 w-6 place-items-center rounded-md bg-cream/[0.1] text-[11px] text-cream/60">
@@ -439,7 +444,7 @@ function NeighbourLink({
   return (
     <Link
       href={`/dsa-questions/${question.slug}`}
-      className={`group flex items-center gap-3 rounded-2xl bg-[#2a4aa0] p-4 transition hover:bg-[#2f56b8] ${isNext ? "sm:flex-row-reverse sm:text-right" : ""}`}
+      className={`group flex items-center gap-3 border-t border-cream/10 py-4 transition hover:bg-cream/[0.035] ${isNext ? "sm:flex-row-reverse sm:text-right" : ""}`}
     >
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cream/[0.08] text-cream/50 transition group-hover:text-cream">
         {isNext ? (
