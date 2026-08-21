@@ -1,7 +1,7 @@
 import { ReportsView } from "@/components/workspace/reports/reports-view";
-import { disciplineLabel } from "@/lib/labels";
-import type { ReportsOverview } from "@/lib/reports";
-import { privatePageMetadata } from "@/lib/seo";
+import { disciplineLabel } from "@/lib/shared/labels";
+import type { ReportsOverview } from "@/lib/reports/reports";
+import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 

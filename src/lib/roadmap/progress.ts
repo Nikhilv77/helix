@@ -1,5 +1,5 @@
 import type { RoadmapProgressStatus } from "@prisma/client";
-import type { WorkspaceCompetency } from "@/lib/types";
+import type { WorkspaceCompetency } from "@/lib/shared/types";
 
 /**
  * The read model behind /progress.

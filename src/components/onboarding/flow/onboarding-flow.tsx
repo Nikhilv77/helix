@@ -18,9 +18,9 @@ import { ResumeStep } from "../steps/resume-upload-step";
 import { ResumeEvidenceStep } from "../resume-review/resume-evidence-step";
 import { ResumeIdentityStep } from "../resume-review/resume-identity-step";
 import { ResumeReadinessStep } from "../resume-review/resume-readiness-step";
-import { ApiClientError, completeOnboarding, uploadResume } from "@/lib/api-client";
-import { pageTitle } from "@/lib/seo";
-import type { Level, ResumeExtractionResponse, Role } from "@/lib/types";
+import { ApiClientError, completeOnboarding, uploadResume } from "@/lib/api/api-client";
+import { pageTitle } from "@/lib/shared/seo";
+import type { Level, ResumeExtractionResponse, Role } from "@/lib/shared/types";
 
 export function OnboardingFlow({
   replacingResume = false,
@@ -294,4 +294,3 @@ export function OnboardingFlow({
     </main>
   );
 }
-

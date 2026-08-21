@@ -1,13 +1,13 @@
 import Link from "next/link";
-import type { DsaDifficulty, DsaQuestion } from "@/lib/dsa";
+import type { DsaDifficulty, DsaQuestion } from "@/lib/dsa/dsa";
 import {
   countByDifficulty,
   dsaPhases,
   dsaQuestionCount,
   groupByPattern,
   phaseSlug
-} from "@/lib/dsa";
-import { privatePageMetadata } from "@/lib/seo";
+} from "@/lib/dsa/dsa";
+import { privatePageMetadata } from "@/lib/shared/seo";
 
 /**
  * Temporary internal index for the DSA question bank. This page stays a

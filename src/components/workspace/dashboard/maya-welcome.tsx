@@ -23,13 +23,13 @@ import {
   X,
   type LucideIcon
 } from "lucide-react";
-import { useMayaVoice, voiceUrl, type VoiceState } from "@/lib/use-maya-voice";
-import { FRONTEND_SESSIONS, type FrontendDsaPlan } from "@/lib/frontend-plan";
-import type { FrontendRoadmapHome } from "@/lib/roadmap";
-import type { CandidateProfile, Role } from "@/lib/types";
+import { useMayaVoice, voiceUrl, type VoiceState } from "@/lib/voice/use-maya-voice";
+import { FRONTEND_SESSIONS, type FrontendDsaPlan } from "@/lib/roadmap/frontend-plan";
+import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
+import type { CandidateProfile, Role } from "@/lib/shared/types";
 
 const AvatarStage = dynamic(
-  () => import("@/components/interview/avatar-stage").then((module) => module.AvatarStage),
+  () => import("@/components/interview/voice/avatar-stage").then((module) => module.AvatarStage),
   { ssr: false }
 );
 

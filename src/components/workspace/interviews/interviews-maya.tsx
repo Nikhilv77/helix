@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Mic, Volume2, VolumeX } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
-import { useMayaVoice, voiceUrl } from "@/lib/use-maya-voice";
+import { useMayaVoice, voiceUrl } from "@/lib/voice/use-maya-voice";
 
 /**
  * Maya on the Interviews page, speaking the way she does on Home and Practice.

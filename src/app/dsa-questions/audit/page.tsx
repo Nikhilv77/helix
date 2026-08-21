@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import type { DsaQuestion } from "@/lib/dsa";
-import { auditBank, dsaQuestionCount, subPatternIndex } from "@/lib/dsa";
-import { privatePageMetadata } from "@/lib/seo";
+import type { DsaQuestion } from "@/lib/dsa/dsa";
+import { auditBank, dsaQuestionCount, subPatternIndex } from "@/lib/dsa/dsa";
+import { privatePageMetadata } from "@/lib/shared/seo";
 
 /**
  * Temporary internal audit of the DSA question bank. Every section here is a

@@ -1,4 +1,4 @@
-import type { RoundType } from "./types";
+import type { RoundType } from "../shared/types";
 
 /**
  * A session is a teaching unit first and an interview second: Maya explains

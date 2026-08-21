@@ -1,4 +1,4 @@
-import type { DsaExample } from "@/lib/dsa";
+import type { DsaExample } from "@/lib/dsa/dsa";
 import type { StructuredDsaTestCase } from "./test-cases-batch-1";
 import { structuredCasesForBatch4 } from "./test-cases-batch-4";
 

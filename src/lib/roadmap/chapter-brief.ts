@@ -1,5 +1,5 @@
 import { DSA_CHAPTERS } from "./frontend-plan";
-import type { DsaQuestion } from "./dsa";
+import type { DsaQuestion } from "../dsa/dsa";
 
 /**
  * What Maya says when she takes a session.

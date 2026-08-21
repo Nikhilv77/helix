@@ -2,8 +2,8 @@ import Link from "next/link";
 import { ArrowLeft, Clock3, Lightbulb, Quote, Target, TriangleAlert } from "lucide-react";
 import { SessionCoach } from "./session-coach";
 import { StartSessionButton } from "./session-plan";
-import { ROUND_LABEL } from "@/lib/curriculum";
-import type { CurriculumSession } from "@/lib/curriculum";
+import { ROUND_LABEL } from "@/lib/curriculum/curriculum";
+import type { CurriculumSession } from "@/lib/curriculum/curriculum";
 
 /**
  * Maya teaching one round: what it tests, the structure to answer it, the traps

@@ -1,5 +1,5 @@
 import { buildEvaluationPrompt } from "./interview-evaluator";
-import type { DsaQuestion } from "@/lib/dsa";
+import type { DsaQuestion } from "@/lib/dsa/dsa";
 
 const question = {
   title: "Two Sum",

@@ -4,7 +4,7 @@ import { ArrowRight, Blocks, BriefcaseBusiness, GraduationCap } from "lucide-rea
 import { useEffect, type CSSProperties } from "react";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "../flow/onboarding-data";
 import { BackButton } from "../shared/onboarding-ui";
-import type { ResumeExtractionResponse } from "@/lib/types";
+import type { ResumeExtractionResponse } from "@/lib/shared/types";
 import { AUTO_SCROLL_IDLE_MS } from "./shared";
 
 export function ResumeEvidenceStep({
@@ -164,5 +164,4 @@ export function ResumeEvidenceStep({
     </div>
   );
 }
-
 

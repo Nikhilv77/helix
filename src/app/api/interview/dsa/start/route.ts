@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { findQuestion } from "@/lib/dsa";
+import { findQuestion } from "@/lib/dsa/dsa";
 import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";

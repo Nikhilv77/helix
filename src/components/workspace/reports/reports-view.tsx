@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { DocumentTitle } from "@/components/document-title";
 import { ReportBriefingStage, type ReportCandidate } from "./report-briefing-stage";
-import type { ReportsOverview } from "@/lib/reports";
+import type { ReportsOverview } from "@/lib/reports/reports";
 
 /**
  * Phase 1 report experience.

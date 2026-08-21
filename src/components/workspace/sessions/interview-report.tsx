@@ -19,8 +19,8 @@ import {
   levelLabel,
   roleLabel,
   roundLabel
-} from "@/lib/labels";
-import type { InterviewReport as InterviewReportData } from "@/lib/types";
+} from "@/lib/shared/labels";
+import type { InterviewReport as InterviewReportData } from "@/lib/shared/types";
 
 export function InterviewReport({ report }: { report: InterviewReportData }) {
   const completedCompetencies = report.competencies.filter((item) => item.answered).length;

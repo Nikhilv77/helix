@@ -15,9 +15,9 @@ import {
 import { DsaQuestionActions } from "@/components/workspace/dsa/dsa-question-actions";
 import { DsaQuestionWorkspace } from "@/components/workspace/dsa/dsa-question-workspace";
 import { QuestionCoach } from "@/components/workspace/dsa/question-coach";
-import type { DsaApproach, DsaDifficulty, DsaExample, DsaQuestion } from "@/lib/dsa";
-import { findQuestion } from "@/lib/dsa";
-import { privatePageMetadata } from "@/lib/seo";
+import type { DsaApproach, DsaDifficulty, DsaExample, DsaQuestion } from "@/lib/dsa/dsa";
+import { findQuestion } from "@/lib/dsa/dsa";
+import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
 

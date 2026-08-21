@@ -4,10 +4,10 @@ import Link from "next/link";
 import { ArrowRight, Download, Signal, Target, TriangleAlert, Volume2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { ReportMayaAvatar } from "./report-maya-avatar";
-import { disciplineLabel, formatDuration, formatShortDate, roundShortLabel } from "@/lib/labels";
-import { createThemedReportPdf, type ReportPdfBriefing } from "@/lib/report-pdf";
-import type { ReportsOverview } from "@/lib/reports";
-import { useMayaVoice } from "@/lib/use-maya-voice";
+import { disciplineLabel, formatDuration, formatShortDate, roundShortLabel } from "@/lib/shared/labels";
+import { createThemedReportPdf, type ReportPdfBriefing } from "@/lib/reports/report-pdf";
+import type { ReportsOverview } from "@/lib/reports/reports";
+import { useMayaVoice } from "@/lib/voice/use-maya-voice";
 
 const openingPhaseTimers = [1900, 3900];
 

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { DsaQuestion } from "@/lib/dsa";
+import type { DsaQuestion } from "@/lib/dsa/dsa";
 import { AiService } from "../ai/ai.service";
 
 const evaluationSchema = z.object({

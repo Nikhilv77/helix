@@ -10,7 +10,7 @@ import {
   TriangleAlert,
   Upload
 } from "lucide-react";
-import type { CandidateProfile } from "@/lib/types";
+import type { CandidateProfile } from "@/lib/shared/types";
 import { statTones } from "./candidate-profile-editor-data";
 import { CardPattern } from "./candidate-profile-editor-visuals";
 import { Card, EmptyState, Tag } from "./candidate-profile-editor-ui";
@@ -274,4 +274,3 @@ function ResumeMetric({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-

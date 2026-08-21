@@ -1,6 +1,6 @@
 import { type CSSProperties } from "react";
 import { BadgeCheck, BarChart3, Pencil, Sparkles, Target } from "lucide-react";
-import type { CandidateProfile, CandidateProfileInput } from "@/lib/types";
+import type { CandidateProfile, CandidateProfileInput } from "@/lib/shared/types";
 import {
   focusAreaDetails,
   focusAreaIcons,
@@ -297,5 +297,4 @@ function AnimatedProfileWords({
     </>
   );
 }
-
 

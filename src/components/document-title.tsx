@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { pageTitle } from "@/lib/seo";
+import { pageTitle } from "@/lib/shared/seo";
 
 export function DocumentTitle({ title }: { title: string }) {
   useEffect(() => {

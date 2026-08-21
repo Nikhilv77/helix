@@ -1,9 +1,9 @@
 import { DocumentTitle } from "@/components/document-title";
 import { MayaWelcome } from "./maya-welcome";
 import { MayaWelcomeLoading } from "@/components/workspace/shared/loading/skeletons";
-import type { FrontendDsaPlan } from "@/lib/frontend-plan";
-import type { CandidateProfile, Role } from "@/lib/types";
-import type { FrontendRoadmapHome } from "@/lib/roadmap";
+import type { FrontendDsaPlan } from "@/lib/roadmap/frontend-plan";
+import type { CandidateProfile, Role } from "@/lib/shared/types";
+import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
 import { SessionCards } from "./session-cards";
 
 interface DashboardProps {

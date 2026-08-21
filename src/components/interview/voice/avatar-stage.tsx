@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { attachTrack, detachVoice, readVoice, type VoiceBands } from "@/lib/voice-bus";
+import { attachTrack, detachVoice, readVoice, type VoiceBands } from "@/lib/voice/voice-bus";
 import type { PresenceState } from "./interviewer-presence";
 
 /** Feathers the bottom of the canvas so the figure is not visibly cut off. */

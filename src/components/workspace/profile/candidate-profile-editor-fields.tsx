@@ -12,7 +12,7 @@ import {
   Trash2,
   X
 } from "lucide-react";
-import type { CandidateProfileInput, CandidateStory } from "@/lib/types";
+import type { CandidateProfileInput, CandidateStory } from "@/lib/shared/types";
 import {
   fieldClass,
   levelOptions,
@@ -610,4 +610,3 @@ export function StoryRow({
     </article>
   );
 }
-

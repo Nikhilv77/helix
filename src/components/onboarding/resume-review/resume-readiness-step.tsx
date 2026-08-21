@@ -4,7 +4,7 @@ import { ArrowRight, Tags, Target } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { PRIMARY_BUTTON } from "../flow/onboarding-data";
 import { BackButton } from "../shared/onboarding-ui";
-import type { ResumeExtractionResponse } from "@/lib/types";
+import type { ResumeExtractionResponse } from "@/lib/shared/types";
 import {
   FINAL_AUTO_SCROLL_DELAY_MS,
   TRAIL_FOCUS_STAGGER_MS,
@@ -219,4 +219,3 @@ export function ResumeReadinessStep({
     </div>
   );
 }
-

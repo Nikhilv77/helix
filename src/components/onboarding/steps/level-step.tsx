@@ -3,7 +3,7 @@
 import { Check } from "lucide-react";
 import type { CSSProperties } from "react";
 import { levels } from "../flow/onboarding-data";
-import type { Level } from "@/lib/types";
+import type { Level } from "@/lib/shared/types";
 
 const headingWords = ["Where", "are", "you", "starting", "from?"];
 
@@ -164,4 +164,3 @@ export function LevelStep({
     </>
   );
 }
-

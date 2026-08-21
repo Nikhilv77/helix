@@ -1,4 +1,4 @@
-import type { Level } from "@/lib/types";
+import type { Level } from "@/lib/shared/types";
 
 /**
  * Career-stage artwork: an isometric plinth that gains a tier per level, lit

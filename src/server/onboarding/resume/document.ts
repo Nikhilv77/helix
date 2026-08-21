@@ -1,5 +1,5 @@
 import mammoth from "mammoth";
-import type { Level } from "@/lib/types";
+import type { Level } from "@/lib/shared/types";
 
 const MAX_EXTRACTED_CHARACTERS = 24_000;
 const MAX_RESUME_PAGES = 5;
@@ -564,4 +564,3 @@ function requirement(
 ): { label: string; passed: boolean; reason: string } {
   return { label, passed, reason };
 }
-

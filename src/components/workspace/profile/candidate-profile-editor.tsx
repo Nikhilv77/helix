@@ -11,9 +11,9 @@ import {
   Sparkles,
   Target
 } from "lucide-react";
-import { ApiClientError, saveProfile } from "@/lib/api-client";
-import { pageTitle } from "@/lib/seo";
-import type { CandidateProfile, CandidateProfileInput, CandidateStory } from "@/lib/types";
+import { ApiClientError, saveProfile } from "@/lib/api/api-client";
+import { pageTitle } from "@/lib/shared/seo";
+import type { CandidateProfile, CandidateProfileInput, CandidateStory } from "@/lib/shared/types";
 import {
   EDIT_SECTIONS,
   AvatarPicker,

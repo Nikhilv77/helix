@@ -7,7 +7,7 @@ import { useInView } from "./reveal";
 // Three.js plus a multi-megabyte model has no business in the landing page's
 // initial bundle. Loaded on demand, and only once it is actually scrolled to.
 const AvatarStage = dynamic(
-  () => import("@/components/interview/avatar-stage").then((m) => m.AvatarStage),
+  () => import("@/components/interview/voice/avatar-stage").then((m) => m.AvatarStage),
   { ssr: false }
 );
 
@@ -43,4 +43,3 @@ export function MarketingAvatar({
     </div>
   );
 }
-

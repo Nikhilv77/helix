@@ -16,9 +16,9 @@ import {
   VolumeX
 } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
-import type { DsaQuestion } from "@/lib/dsa";
-import { dsaStarterCode } from "@/lib/dsa-code-templates";
-import { useMayaVoice } from "@/lib/use-maya-voice";
+import type { DsaQuestion } from "@/lib/dsa/dsa";
+import { dsaStarterCode } from "@/lib/dsa/dsa-code-templates";
+import { useMayaVoice } from "@/lib/voice/use-maya-voice";
 
 type Evaluation = {
   verdict: "strong" | "developing" | "needs-work";

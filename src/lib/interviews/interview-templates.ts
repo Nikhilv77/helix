@@ -1,4 +1,4 @@
-import type { Intensity, Role, RoundType } from "./types";
+import type { Intensity, Role, RoundType } from "../shared/types";
 
 export type TemplateCategory = "behavioral" | "technical" | "leadership";
 

@@ -2,8 +2,8 @@
 
 import { Loader2, Volume2, VolumeX } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
-import { useMayaVoice } from "@/lib/use-maya-voice";
-import type { CurriculumSession } from "@/lib/curriculum";
+import { useMayaVoice } from "@/lib/voice/use-maya-voice";
+import type { CurriculumSession } from "@/lib/curriculum/curriculum";
 
 /**
  * Maya introducing a session out loud. Her audio runs through the shared voice

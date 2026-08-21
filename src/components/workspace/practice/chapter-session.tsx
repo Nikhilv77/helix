@@ -16,9 +16,9 @@ import {
   VolumeX
 } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
-import { useMayaVoice, voiceUrl } from "@/lib/use-maya-voice";
-import type { BriefBeat, ChapterBrief } from "@/lib/chapter-brief";
-import type { FrontendRoadmapChapterDetail } from "@/lib/roadmap";
+import { useMayaVoice, voiceUrl } from "@/lib/voice/use-maya-voice";
+import type { BriefBeat, ChapterBrief } from "@/lib/roadmap/chapter-brief";
+import type { FrontendRoadmapChapterDetail } from "@/lib/roadmap/roadmap";
 
 /**
  * Maya takes the session; the user solves the questions.

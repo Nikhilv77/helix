@@ -11,7 +11,7 @@ import type {
   FrontendRoadmapChapterDetail,
   FrontendRoadmapHome,
   FrontendRoadmapSession
-} from "@/lib/roadmap";
+} from "@/lib/roadmap/roadmap";
 import type { PrismaService } from "../../database/prisma.service";
 import {
   attemptStatus,

@@ -1,5 +1,5 @@
 import { ManageAccount } from "@/components/workspace/account/manage-account";
-import { privatePageMetadata } from "@/lib/seo";
+import { privatePageMetadata } from "@/lib/shared/seo";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 
 export const dynamic = "force-dynamic";

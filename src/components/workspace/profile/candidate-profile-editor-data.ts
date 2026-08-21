@@ -10,7 +10,7 @@ import {
   Quote,
   Target
 } from "lucide-react";
-import type { Level, Role } from "@/lib/types";
+import type { Level, Role } from "@/lib/shared/types";
 
 export const roleOptions: Array<{ value: Role; label: string; detail: string; icon: typeof Code2 }> = [
   { value: "backend", label: "Backend", detail: "APIs, data, reliability", icon: Database },
@@ -170,4 +170,3 @@ export const statTones = {
   amber: "bg-[#efcf84]/16 text-[#f7e3ae] ring-1 ring-inset ring-[#efcf84]/30",
   cream: "bg-cream/[0.14] text-cream ring-1 ring-inset ring-cream/25"
 } as const;
-

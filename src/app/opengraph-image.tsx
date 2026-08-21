@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { defaultDescription, siteName } from "@/lib/seo";
+import { defaultDescription, siteName } from "@/lib/shared/seo";
 
 export const alt = "Trailgrad AI interview practice";
 export const size = {

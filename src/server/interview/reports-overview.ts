@@ -1,4 +1,4 @@
-import { formatShortDate, roundShortLabel } from "@/lib/labels";
+import { formatShortDate, roundShortLabel } from "@/lib/shared/labels";
 import {
   evidenceLevel,
   type ReportCompetencyRow,
@@ -8,8 +8,8 @@ import {
   type ReportRoundTypeRow,
   type ReportTrendPoint,
   type ReportsOverview
-} from "@/lib/reports";
-import type { InterviewReport, RoundType } from "@/lib/types";
+} from "@/lib/reports/reports";
+import type { InterviewReport, RoundType } from "@/lib/shared/types";
 
 /** Competencies wide enough to read across, before the matrix gets unwieldy. */
 const MATRIX_ROWS = 10;

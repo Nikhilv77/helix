@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
 import { TrailgradMark } from "@/components/trailgrad-mark";
-import { ApiClientError, getProfile, startInterview } from "@/lib/api-client";
-import type { Curriculum, CurriculumSession } from "@/lib/curriculum";
-import { FRONTEND_SESSIONS, type FrontendSession } from "@/lib/frontend-plan";
-import { findTemplate, type InterviewTemplate } from "@/lib/interview-templates";
-import { pageTitle } from "@/lib/seo";
-import type { Intensity, InterviewSetup, Level, Role, RoundType } from "@/lib/types";
+import { ApiClientError, getProfile, startInterview } from "@/lib/api/api-client";
+import type { Curriculum, CurriculumSession } from "@/lib/curriculum/curriculum";
+import { FRONTEND_SESSIONS, type FrontendSession } from "@/lib/roadmap/frontend-plan";
+import { findTemplate, type InterviewTemplate } from "@/lib/interviews/interview-templates";
+import { pageTitle } from "@/lib/shared/seo";
+import type { Intensity, InterviewSetup, Level, Role, RoundType } from "@/lib/shared/types";
 
 const roleOptions: Array<{ value: Role; label: string }> = [
   { value: "backend", label: "Backend" },

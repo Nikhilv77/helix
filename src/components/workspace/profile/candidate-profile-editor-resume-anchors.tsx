@@ -1,6 +1,6 @@
 import { type CSSProperties } from "react";
 import { Blocks, BriefcaseBusiness, GraduationCap, Sparkles } from "lucide-react";
-import type { CandidateProfile } from "@/lib/types";
+import type { CandidateProfile } from "@/lib/shared/types";
 
 type ProfileResumeAnchor = {
   id: string;
@@ -481,4 +481,3 @@ export function SectionUiTexture({ variant = 0 }: { variant?: number }) {
     </div>
   );
 }
-

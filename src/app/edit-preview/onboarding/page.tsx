@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { OnboardingFlow } from "@/components/onboarding/flow/onboarding-flow";
-import { privatePageMetadata } from "@/lib/seo";
-import type { ResumeExtractionResponse } from "@/lib/types";
+import { privatePageMetadata } from "@/lib/shared/seo";
+import type { ResumeExtractionResponse } from "@/lib/shared/types";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(

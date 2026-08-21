@@ -3,7 +3,7 @@ import type {
   ResumeEducationEntry,
   ResumeExperienceEntry,
   ResumeProjectEntry
-} from "@/lib/types";
+} from "@/lib/shared/types";
 import type { ResumeDocumentEvidence } from "./document";
 import type { ResumeAnalysis } from "./service";
 
@@ -133,4 +133,3 @@ function normalizeEvidence(value: string): string {
     .replace(/\s+/g, " ")
     .trim();
 }
-

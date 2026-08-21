@@ -22,8 +22,8 @@ import {
   TEMPLATE_CATEGORIES,
   type InterviewTemplate,
   type TemplateCategory
-} from "@/lib/interview-templates";
-import type { Level, Role } from "@/lib/types";
+} from "@/lib/interviews/interview-templates";
+import type { Level, Role } from "@/lib/shared/types";
 
 const templateIcons: Record<string, typeof Target> = {
   "defend-projects": Layers,

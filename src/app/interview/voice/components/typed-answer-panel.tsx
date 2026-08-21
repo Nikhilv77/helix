@@ -1,6 +1,6 @@
 import type { KeyboardEvent } from "react";
 import { Code2, Keyboard, Loader2, Send, X } from "lucide-react";
-import type { InterviewQuestion } from "@/lib/types";
+import type { InterviewQuestion } from "@/lib/shared/types";
 
 export function TypedAnswerPanel({
   question,

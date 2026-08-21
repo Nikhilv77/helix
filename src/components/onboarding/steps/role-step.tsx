@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Check } from "lucide-react";
 import { ACCENT, CARD, INK, roles } from "../flow/onboarding-data";
 import { StepHeader } from "../shared/onboarding-ui";
-import type { Role } from "@/lib/types";
+import type { Role } from "@/lib/shared/types";
 
 export function RoleStep({
   selected,
@@ -82,4 +82,3 @@ export function RoleStep({
     </>
   );
 }
-

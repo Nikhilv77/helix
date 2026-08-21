@@ -1,5 +1,5 @@
-import { DsaInterviewEntry } from "@/components/interview/dsa-interview-entry";
-import { privatePageMetadata } from "@/lib/seo";
+import { DsaInterviewEntry } from "@/components/interview/dsa/dsa-interview-entry";
+import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 

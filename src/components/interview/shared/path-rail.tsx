@@ -1,7 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
-import type { Phase } from "@/lib/types";
+import type { Phase } from "@/lib/shared/types";
 
 const MAX_FOLLOW_UPS = 2;
 

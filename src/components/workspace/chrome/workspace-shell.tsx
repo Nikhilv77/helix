@@ -21,7 +21,7 @@ import {
   X
 } from "lucide-react";
 import { TrailgradMark } from "@/components/trailgrad-mark";
-import { isWorkspaceChromeRoute } from "@/lib/workspace-routes";
+import { isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
 
 const navGroups = [
   {

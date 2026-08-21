@@ -15,5 +15,25 @@ export default tseslint.config(
     rules: {
       "@typescript-eslint/no-explicit-any": "error"
     }
+  },
+  {
+    // Build-time asset generators run under Node's CommonJS loader, not in
+    // the browser bundle. Keep this scope narrow so application code still
+    // follows the stricter ESM rules above.
+    files: ["scripts/**/*.js"],
+    languageOptions: {
+      globals: {
+        Buffer: "readonly",
+        console: "readonly",
+        module: "readonly",
+        process: "readonly",
+        require: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly"
+      }
+    },
+    rules: {
+      "@typescript-eslint/no-require-imports": "off"
+    }
   }
 );

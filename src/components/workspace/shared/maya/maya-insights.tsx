@@ -10,7 +10,7 @@ import {
   Target,
   Waypoints
 } from "lucide-react";
-import type { FrontendRoadmapInsight } from "@/lib/roadmap";
+import type { FrontendRoadmapInsight } from "@/lib/roadmap/roadmap";
 
 /**
  * Maya's read on the path, loaded from persisted user-specific roadmap

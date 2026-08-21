@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { CheckCircle2, Code2, Loader2, Play, XCircle } from "lucide-react";
-import { DsaCodeEditor, type DsaEditorLanguage } from "@/components/interview/dsa-code-editor";
-import { DsaQuestionNotes } from "@/components/interview/dsa-question-notes";
-import { dsaStarterCode } from "@/lib/dsa-code-templates";
-import type { DsaQuestion } from "@/lib/dsa";
+import { DsaCodeEditor, type DsaEditorLanguage } from "@/components/interview/dsa/dsa-code-editor";
+import { DsaQuestionNotes } from "@/components/interview/dsa/dsa-question-notes";
+import { dsaStarterCode } from "@/lib/dsa/dsa-code-templates";
+import type { DsaQuestion } from "@/lib/dsa/dsa";
 
 type RunTest = {
   index: number;

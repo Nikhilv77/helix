@@ -6,8 +6,8 @@ import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { DocumentTitle } from "@/components/document-title";
 import { ReportMayaAvatar } from "@/components/workspace/reports/report-maya-avatar";
-import type { ProgressDay, ProgressOverview, ProgressPattern } from "@/lib/progress";
-import { useMayaVoice } from "@/lib/use-maya-voice";
+import type { ProgressDay, ProgressOverview, ProgressPattern } from "@/lib/roadmap/progress";
+import { useMayaVoice } from "@/lib/voice/use-maya-voice";
 
 const FIRST_PHASE_DELAY = 420;
 const SECOND_PHASE_DELAY = 620;

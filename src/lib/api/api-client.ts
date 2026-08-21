@@ -10,7 +10,7 @@ import type {
   InterviewSetup,
   SessionResponse,
   StartResponse
-} from "./types";
+} from "../shared/types";
 
 export class ApiClientError extends Error {
   readonly code: string;

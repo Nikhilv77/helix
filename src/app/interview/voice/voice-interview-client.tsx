@@ -23,19 +23,19 @@ import {
   Volume2
 } from "lucide-react";
 import { TrailgradMark } from "@/components/trailgrad-mark";
-import { DsaCodeEditor } from "@/components/interview/dsa-code-editor";
-import { DsaQuestionNotes } from "@/components/interview/dsa-question-notes";
-import { PathRail } from "@/components/interview/path-rail";
-import { MicMeter } from "@/components/interview/mic-meter";
-import { InterviewerPresence } from "@/components/interview/interviewer-presence";
-import { AvatarStage } from "@/components/interview/avatar-stage";
-import type { PresenceState } from "@/components/interview/interviewer-presence";
-import { ApiClientError, endInterview, getSession } from "@/lib/api-client";
-import { findQuestion } from "@/lib/dsa";
-import type { DsaQuestion } from "@/lib/dsa";
-import { dsaStarterCode } from "@/lib/dsa-code-templates";
-import { pageTitle } from "@/lib/seo";
-import type { InterviewQuestion, InterviewSetup, Phase, Turn } from "@/lib/types";
+import { DsaCodeEditor } from "@/components/interview/dsa/dsa-code-editor";
+import { DsaQuestionNotes } from "@/components/interview/dsa/dsa-question-notes";
+import { PathRail } from "@/components/interview/shared/path-rail";
+import { MicMeter } from "@/components/interview/voice/mic-meter";
+import { InterviewerPresence } from "@/components/interview/voice/interviewer-presence";
+import { AvatarStage } from "@/components/interview/voice/avatar-stage";
+import type { PresenceState } from "@/components/interview/voice/interviewer-presence";
+import { ApiClientError, endInterview, getSession } from "@/lib/api/api-client";
+import { findQuestion } from "@/lib/dsa/dsa";
+import type { DsaQuestion } from "@/lib/dsa/dsa";
+import { dsaStarterCode } from "@/lib/dsa/dsa-code-templates";
+import { pageTitle } from "@/lib/shared/seo";
+import type { InterviewQuestion, InterviewSetup, Phase, Turn } from "@/lib/shared/types";
 import type { AgentState, DsaLanguage, DsaRunResult, VoiceStatus } from "./types";
 import {
   describeVoiceState,

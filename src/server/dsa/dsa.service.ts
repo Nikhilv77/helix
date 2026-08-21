@@ -1,6 +1,6 @@
 import type { PrismaService } from "../database/prisma.service";
-import { buildFrontendDsaPlan } from "@/lib/frontend-plan";
-import type { FrontendDsaPlan, PlanQuestion } from "@/lib/frontend-plan";
+import { buildFrontendDsaPlan } from "@/lib/roadmap/frontend-plan";
+import type { FrontendDsaPlan, PlanQuestion } from "@/lib/roadmap/frontend-plan";
 
 /**
  * Read model over the DSA question bank. The bank is seeded content rather than

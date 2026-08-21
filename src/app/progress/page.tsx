@@ -1,6 +1,6 @@
 import { ProgressView } from "@/components/workspace/progress/progress-view";
-import type { ProgressInterview } from "@/lib/progress";
-import { privatePageMetadata } from "@/lib/seo";
+import type { ProgressInterview } from "@/lib/roadmap/progress";
+import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 

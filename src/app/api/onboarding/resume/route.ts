@@ -3,7 +3,7 @@ import { basename } from "node:path";
 import { auth } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import type { CandidateProfile } from "@/lib/types";
+import type { CandidateProfile } from "@/lib/shared/types";
 import { getAppContainer } from "@/server/app-container";
 import { Logger } from "@/server/common/logger";
 import { apiError, apiSuccess } from "@/server/http/api-response";

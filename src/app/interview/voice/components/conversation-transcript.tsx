@@ -1,6 +1,6 @@
 import { useEffect, useState, type RefObject } from "react";
 import { BriefcaseBusiness, Code2, Loader2 } from "lucide-react";
-import type { InterviewQuestion, InterviewSetup, Turn } from "@/lib/types";
+import type { InterviewQuestion, InterviewSetup, Turn } from "@/lib/shared/types";
 import { formatClock, roleLabel, roundLabel } from "../utils/voice-interview";
 
 export function ConversationTranscript({

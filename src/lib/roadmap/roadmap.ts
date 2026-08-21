@@ -1,5 +1,5 @@
 import type { MayaInsightKind, RoadmapProgressStatus } from "@prisma/client";
-import type { Role } from "@/lib/types";
+import type { Role } from "@/lib/shared/types";
 
 export interface FrontendRoadmapHome {
   roadmapId: string;

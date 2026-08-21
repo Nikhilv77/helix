@@ -3,7 +3,7 @@
 import { BadgeCheck, Blocks, BriefcaseBusiness, GraduationCap } from "lucide-react";
 import { useEffect, useState, type CSSProperties } from "react";
 import { BackButton } from "../shared/onboarding-ui";
-import type { ResumeExtractionResponse } from "@/lib/types";
+import type { ResumeExtractionResponse } from "@/lib/shared/types";
 import {
   AUTO_SCROLL_IDLE_MS,
   IDENTITY_CONTINUE_MS,
@@ -207,5 +207,4 @@ export function ResumeIdentityStep({
     </div>
   );
 }
-
 

@@ -9,7 +9,7 @@ import {
   Trophy,
   type LucideIcon
 } from "lucide-react";
-import type { Level, Role } from "@/lib/types";
+import type { Level, Role } from "@/lib/shared/types";
 
 /**
  * Onboarding shares the product's graphite canvas and restrained orange accent.
@@ -145,4 +145,3 @@ export function formatBytes(bytes: number): string {
     ? `${(bytes / 1024 / 1024).toFixed(1)} MB`
     : `${Math.ceil(bytes / 1024)} KB`;
 }
-

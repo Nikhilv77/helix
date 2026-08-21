@@ -1,5 +1,5 @@
 import type { Participant, Room, TranscriptionSegment } from "livekit-client";
-import type { InterviewQuestion, InterviewSetup } from "@/lib/types";
+import type { InterviewQuestion, InterviewSetup } from "@/lib/shared/types";
 import type { AgentState, VoiceStatus } from "../types";
 
 export function formatClock(ms: number): string {

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { privatePageMetadata } from "@/lib/seo";
+import { privatePageMetadata } from "@/lib/shared/seo";
 
 export const dynamic = "force-dynamic";
 

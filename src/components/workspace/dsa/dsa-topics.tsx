@@ -10,9 +10,9 @@ import {
   Sparkles
 } from "lucide-react";
 import { PracticeIntro } from "@/components/workspace/practice/practice-intro";
-import type { DsaChapter, FrontendDsaPlan, PlanQuestion } from "@/lib/frontend-plan";
-import { FRONTEND_SESSIONS } from "@/lib/frontend-plan";
-import type { FrontendRoadmapChapter, FrontendRoadmapHome } from "@/lib/roadmap";
+import type { DsaChapter, FrontendDsaPlan, PlanQuestion } from "@/lib/roadmap/frontend-plan";
+import { FRONTEND_SESSIONS } from "@/lib/roadmap/frontend-plan";
+import type { FrontendRoadmapChapter, FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
 
 /**
  * The DSA session's actual content, shown on Practice.

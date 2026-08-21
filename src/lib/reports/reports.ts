@@ -1,4 +1,4 @@
-import type { InterviewHistoryStatus, Level, Role, RoundType } from "@/lib/types";
+import type { InterviewHistoryStatus, Level, Role, RoundType } from "@/lib/shared/types";
 
 /**
  * The read model behind /reports.

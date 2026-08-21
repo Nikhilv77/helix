@@ -5,8 +5,8 @@ import { isReverificationCancelledError } from "@clerk/nextjs/errors";
 import { LogOut, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { ApiClientError, deleteAccount } from "@/lib/api-client";
-import type { CandidateProfile } from "@/lib/types";
+import { ApiClientError, deleteAccount } from "@/lib/api/api-client";
+import type { CandidateProfile } from "@/lib/shared/types";
 
 const MANAGE_ORIGIN_KEY = "trailgrad:manage-origin";
 

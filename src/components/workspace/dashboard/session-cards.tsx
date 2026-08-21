@@ -18,11 +18,11 @@ import { InterviewSignal } from "@/components/brand/blueprint-art";
 import { ChapterCarousel } from "@/components/workspace/practice/chapter-carousel";
 import { MayaInsights } from "@/components/workspace/shared/maya/maya-insights";
 import type { CarouselChapter } from "@/components/workspace/practice/chapter-carousel";
-import { FRONTEND_SESSIONS } from "@/lib/frontend-plan";
-import type { FrontendDsaPlan } from "@/lib/frontend-plan";
-import type { FrontendRoadmapInsight } from "@/lib/roadmap";
-import type { FrontendRoadmapHome } from "@/lib/roadmap";
-import type { Role } from "@/lib/types";
+import { FRONTEND_SESSIONS } from "@/lib/roadmap/frontend-plan";
+import type { FrontendDsaPlan } from "@/lib/roadmap/frontend-plan";
+import type { FrontendRoadmapInsight } from "@/lib/roadmap/roadmap";
+import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
+import type { Role } from "@/lib/shared/types";
 
 type SessionMeta = {
   icon: LucideIcon;

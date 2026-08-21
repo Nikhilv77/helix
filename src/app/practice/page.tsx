@@ -1,5 +1,5 @@
 import { DsaTopics } from "@/components/workspace/dsa/dsa-topics";
-import { privatePageMetadata } from "@/lib/seo";
+import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 

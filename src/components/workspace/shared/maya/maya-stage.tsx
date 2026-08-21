@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
  * after the shell paints and leaves a matching placeholder in the meantime.
  */
 const AvatarStage = dynamic(
-  () => import("@/components/interview/avatar-stage").then((module) => module.AvatarStage),
+  () => import("@/components/interview/voice/avatar-stage").then((module) => module.AvatarStage),
   {
     ssr: false,
     loading: () => (

@@ -2,7 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useEffect } from "react";
-import { ApiClientError, getProfile } from "@/lib/api-client";
+import { ApiClientError, getProfile } from "@/lib/api/api-client";
 
 export function ContinueClient() {
   const { isLoaded, isSignedIn } = useAuth();

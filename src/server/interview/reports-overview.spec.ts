@@ -1,5 +1,5 @@
 import { createReportsOverview } from "./reports-overview";
-import type { InterviewCompetencyReport, InterviewReport } from "@/lib/types";
+import type { InterviewCompetencyReport, InterviewReport } from "@/lib/shared/types";
 
 const DAY = 24 * 60 * 60 * 1000;
 

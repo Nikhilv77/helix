@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, CheckCircle2, Clock3, Mic, Play, Sparkles } from "lucide-react";
-import type { Curriculum, CurriculumSession } from "@/lib/curriculum";
-import { ROUND_LABEL } from "@/lib/curriculum";
-import type { RoundType } from "@/lib/types";
+import type { Curriculum, CurriculumSession } from "@/lib/curriculum/curriculum";
+import { ROUND_LABEL } from "@/lib/curriculum/curriculum";
+import type { RoundType } from "@/lib/shared/types";
 
 const roundTone: Record<RoundType, string> = {
   behavioral: "bg-cream/[0.13] text-cream/82 shadow-soft-inset",

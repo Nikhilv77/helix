@@ -5,8 +5,8 @@ import { redirect } from "next/navigation";
 import { MarketingHome } from "@/components/marketing/home/marketing-home";
 import { Dashboard } from "@/components/workspace/dashboard/dashboard";
 import { DashboardSkeleton, MayaWelcomeLoading } from "@/components/workspace/shared/loading/skeletons";
-import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/seo";
-import type { CandidateProfile } from "@/lib/types";
+import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared/seo";
+import type { CandidateProfile } from "@/lib/shared/types";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
 

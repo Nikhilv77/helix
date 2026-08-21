@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Loader2, Play, Sparkles, Volume2, VolumeX } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
-import { useMayaVoice, voiceUrl } from "@/lib/use-maya-voice";
-import type { FrontendRoadmapHome } from "@/lib/roadmap";
+import { useMayaVoice, voiceUrl } from "@/lib/voice/use-maya-voice";
+import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
 
 export interface PracticeIntroStat {
   label: string;

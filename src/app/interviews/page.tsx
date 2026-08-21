@@ -1,5 +1,5 @@
 import { InterviewsView } from "@/components/workspace/interviews/interviews-view";
-import { privatePageMetadata } from "@/lib/seo";
+import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 

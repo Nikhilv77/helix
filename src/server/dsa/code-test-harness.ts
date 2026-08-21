@@ -1,4 +1,4 @@
-import type { DsaExample } from "@/lib/dsa";
+import type { DsaExample } from "@/lib/dsa/dsa";
 import { structuredCasesFor } from "../../data/dsa/test-cases-batch-1";
 
 export type CodeRunnerLanguage = "python" | "javascript" | "cpp" | "java";

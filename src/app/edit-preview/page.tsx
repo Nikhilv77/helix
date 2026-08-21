@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { CandidateProfileEditor } from "@/components/workspace/profile/candidate-profile-editor";
 import { WorkspaceShell } from "@/components/workspace/chrome/workspace-shell";
-import { privatePageMetadata } from "@/lib/seo";
-import type { CandidateProfile } from "@/lib/types";
+import { privatePageMetadata } from "@/lib/shared/seo";
+import type { CandidateProfile } from "@/lib/shared/types";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(

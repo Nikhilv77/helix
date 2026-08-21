@@ -8,7 +8,7 @@ import {
   Target
 } from "lucide-react";
 import { ProfileAvatar } from "./profile-avatar";
-import type { CandidateProfile, CandidateProfileInput, CandidateStory } from "@/lib/types";
+import type { CandidateProfile, CandidateProfileInput, CandidateStory } from "@/lib/shared/types";
 import { roleOptions, statTones } from "./candidate-profile-editor-data";
 import { SectionUiTexture } from "./candidate-profile-editor-resume-anchors";
 import { formatTimestamp } from "./candidate-profile-editor-utils";

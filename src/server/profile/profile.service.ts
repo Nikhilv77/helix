@@ -13,8 +13,8 @@ import type {
   ResumeProjectEntry,
   ResumeRoadmapItem,
   Role
-} from "@/lib/types";
-import type { Curriculum, CurriculumSession } from "@/lib/curriculum";
+} from "@/lib/shared/types";
+import type { Curriculum, CurriculumSession } from "@/lib/curriculum/curriculum";
 import type { PrismaService } from "../database/prisma.service";
 
 const roles = new Set<Role>(["backend", "frontend", "fullstack", "data", "ai-ml", "pm"]);

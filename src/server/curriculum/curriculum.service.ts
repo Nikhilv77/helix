@@ -3,8 +3,8 @@ import { z } from "zod";
 import type { AiService } from "../ai/ai.service";
 import { Logger } from "../common/logger";
 import { ROUND_TYPES } from "../interview/types";
-import type { CandidateProfile } from "@/lib/types";
-import type { Curriculum, CurriculumSession } from "@/lib/curriculum";
+import type { CandidateProfile } from "@/lib/shared/types";
+import type { Curriculum, CurriculumSession } from "@/lib/curriculum/curriculum";
 
 const sessionSchema = z.object({
   title: z.string().min(4).max(70),

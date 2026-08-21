@@ -13,7 +13,7 @@ import {
   type ProgressSessionRow,
   type ProgressStreak,
   type ProgressWeek
-} from "@/lib/progress";
+} from "@/lib/roadmap/progress";
 import type { PrismaService } from "../database/prisma.service";
 
 const FRONTEND_ROADMAP_ROLE = "fullstack";

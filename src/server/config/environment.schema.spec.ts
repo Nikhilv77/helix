@@ -46,10 +46,19 @@ describe("validateEnvironment", () => {
       knowledgeEmbeddingBatchSize: 4,
       retrievalDefaultTopK: 7,
       retrievalMinSimilarity: 0.35,
+      clerkSecretKey: undefined,
       groqDeciderModel: "openai/gpt-oss-20b",
+      groqApiKey: undefined,
       interviewDailyLimit: 2,
+      livekitUrl: undefined,
+      livekitApiKey: undefined,
+      livekitApiSecret: undefined,
       livekitAgentName: "helix-interviewer-v2",
-      deepgramTtsModel: "aura-2-asteria-en"
+      deepgramApiKey: undefined,
+      deepgramTtsModel: "aura-2-asteria-en",
+      judge0Url: "https://judge0-ce.p.rapidapi.com",
+      rapidApiKey: undefined,
+      rapidApiHost: "judge0-ce.p.rapidapi.com"
     });
   });
 

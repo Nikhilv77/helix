@@ -5,7 +5,7 @@ import type {
   InterviewReport,
   WorkspaceCompetency,
   WorkspaceInsights
-} from "@/lib/types";
+} from "@/lib/shared/types";
 import { SESSION_TTL_MS, type StoredInterviewSession } from "./session-store";
 
 export function createHistoryItem(

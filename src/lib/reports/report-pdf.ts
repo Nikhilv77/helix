@@ -1,4 +1,4 @@
-import { brandMark } from "@/lib/report-brand-mark";
+import { brandMark } from "@/lib/reports/report-brand-mark";
 
 export type ReportPdfCompetency = {
   label: string;

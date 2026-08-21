@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { ProgressView } from "@/components/workspace/progress/progress-view";
 import { WorkspaceShell } from "@/components/workspace/chrome/workspace-shell";
-import { patternLabel, type ProgressDay, type ProgressOverview } from "@/lib/progress";
-import { privatePageMetadata } from "@/lib/seo";
+import { patternLabel, type ProgressDay, type ProgressOverview } from "@/lib/roadmap/progress";
+import { privatePageMetadata } from "@/lib/shared/seo";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(

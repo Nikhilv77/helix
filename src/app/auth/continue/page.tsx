@@ -1,5 +1,5 @@
 import { ContinueClient } from "./continue-client";
-import { privatePageMetadata } from "@/lib/seo";
+import { privatePageMetadata } from "@/lib/shared/seo";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(

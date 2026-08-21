@@ -12,7 +12,7 @@ import {
   VolumeX
 } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
-import { useMayaVoice } from "@/lib/use-maya-voice";
+import { useMayaVoice } from "@/lib/voice/use-maya-voice";
 
 /**
  * Maya sitting beside a question the user is solving.

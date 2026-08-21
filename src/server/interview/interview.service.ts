@@ -7,8 +7,8 @@ import { InterviewPlanner } from "./planner";
 import { SessionStore } from "./session-store";
 import { createHistoryItem, createInterviewReport, createWorkspaceInsights } from "./report";
 import { createReportsOverview } from "./reports-overview";
-import type { ReportsOverview } from "@/lib/reports";
-import type { InterviewHistoryItem, InterviewReport, WorkspaceInsights } from "@/lib/types";
+import type { ReportsOverview } from "@/lib/reports/reports";
+import type { InterviewHistoryItem, InterviewReport, WorkspaceInsights } from "@/lib/shared/types";
 import {
   advance,
   appendTurn,

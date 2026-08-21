@@ -1,4 +1,4 @@
-import type { Level, Role, RoundType } from "@/lib/types";
+import type { Level, Role, RoundType } from "@/lib/shared/types";
 
 /**
  * Display names for interview setup values, and the clock formats that go with

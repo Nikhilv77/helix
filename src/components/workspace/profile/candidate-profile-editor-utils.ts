@@ -1,4 +1,4 @@
-import type { CandidateProfile, CandidateProfileInput } from "@/lib/types";
+import type { CandidateProfile, CandidateProfileInput } from "@/lib/shared/types";
 
 /* ----------------------------------------------------------------- helpers */
 
