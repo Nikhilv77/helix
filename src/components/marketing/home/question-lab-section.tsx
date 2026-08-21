@@ -86,8 +86,6 @@ export function QuestionLab() {
 
         <Reveal delay={170} className="-mt-5 sm:mt-0 lg:order-1">
           <div className="relative mx-auto h-[18rem] w-[calc(100%-1.5rem)] max-w-[44rem] sm:h-[29rem] sm:w-full lg:h-[32rem] lg:max-w-[42rem]">
-            <div className="pointer-events-none absolute left-2 top-10 h-20 w-32 rounded-2xl border border-cream/18 opacity-70 sm:left-4 sm:h-24 sm:w-36" />
-            <div className="pointer-events-none absolute right-4 top-16 h-16 w-28 rounded-2xl border border-cream/14 opacity-60 sm:right-6 sm:h-20 sm:w-32" />
             <div className="pointer-events-none absolute bottom-12 left-1/2 h-px w-[74%] -translate-x-1/2 bg-cream/16" />
             <Image
               src="/images/marketing/maya-question-laptop-optimized.png"

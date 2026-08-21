@@ -165,9 +165,6 @@ function FinalCta() {
             <div className="pointer-events-none absolute bottom-8 left-1/2 hidden h-[26rem] w-[25rem] -translate-x-1/2 rounded-full bg-[#4f70d1] opacity-35 blur-3xl sm:block lg:h-[34rem] lg:w-[31rem]" />
             <div className="pointer-events-none absolute bottom-20 left-1/2 hidden h-[18rem] w-[20rem] -translate-x-1/2 rounded-full bg-[#4568ce] opacity-42 blur-2xl sm:block lg:h-[26rem] lg:w-[28rem]" />
             <div className="pointer-events-none absolute left-1/2 top-16 hidden h-48 w-64 -translate-x-1/2 rounded-full bg-cream/12 blur-3xl sm:block" />
-            <div className="pointer-events-none absolute left-6 top-20 h-24 w-36 rounded-2xl border border-cream/16 opacity-60" />
-            <div className="pointer-events-none absolute right-4 top-36 h-20 w-32 rounded-2xl border border-cream/14 opacity-50" />
-            <div className="pointer-events-none absolute bottom-16 left-0 h-20 w-40 rounded-2xl border border-cream/12 opacity-45" />
             <InterviewSignal className="pointer-events-none absolute left-1/2 top-1/2 h-[24rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 opacity-18" />
             <Image
               src="/images/marketing/maya-professional-optimized.webp"
