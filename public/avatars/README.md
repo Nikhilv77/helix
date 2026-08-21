@@ -1,9 +1,12 @@
 # Interviewer avatar
 
-Drop a `.glb` here and point `NEXT_PUBLIC_AVATAR_URL` at it:
+`interviewer-v2.glb` is the current bundled interviewer model. The marketing
+and workspace surfaces use it by default.
+
+To use a different `.glb`, place it here and set `NEXT_PUBLIC_AVATAR_URL`:
 
 ```bash
-NEXT_PUBLIC_AVATAR_URL=/avatars/interviewer.glb
+NEXT_PUBLIC_AVATAR_URL=/avatars/your-avatar.glb
 ```
 
 The model needs **ARKit blendshapes** and **Oculus visemes** — without them
