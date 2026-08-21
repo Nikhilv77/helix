@@ -1,4 +1,4 @@
-import { ManageAccount } from "@/components/workspace/manage-account";
+import { ManageAccount } from "@/components/workspace/account/manage-account";
 import { privatePageMetadata } from "@/lib/seo";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 

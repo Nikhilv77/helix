@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { SessionDetail } from "@/components/workspace/session-detail";
+import { SessionDetail } from "@/components/workspace/sessions/session-detail";
 import { privatePageMetadata } from "@/lib/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";

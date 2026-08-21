@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { InterviewReport } from "@/components/workspace/interview-report";
+import { InterviewReport } from "@/components/workspace/sessions/interview-report";
 import { privatePageMetadata } from "@/lib/seo";
 import { getAppContainer } from "@/server/app-container";
 import { AppHttpError } from "@/server/common/http-error";

@@ -15,7 +15,7 @@ import {
   Volume2,
   VolumeX
 } from "lucide-react";
-import { MayaStage } from "@/components/workspace/maya-stage";
+import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import type { DsaQuestion } from "@/lib/dsa";
 import { dsaStarterCode } from "@/lib/dsa-code-templates";
 import { useMayaVoice } from "@/lib/use-maya-voice";

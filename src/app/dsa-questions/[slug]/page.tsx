@@ -12,9 +12,9 @@ import {
   Radar,
   Sparkles
 } from "lucide-react";
-import { DsaQuestionActions } from "@/components/workspace/dsa-question-actions";
-import { DsaQuestionWorkspace } from "@/components/workspace/dsa-question-workspace";
-import { QuestionCoach } from "@/components/workspace/question-coach";
+import { DsaQuestionActions } from "@/components/workspace/dsa/dsa-question-actions";
+import { DsaQuestionWorkspace } from "@/components/workspace/dsa/dsa-question-workspace";
+import { QuestionCoach } from "@/components/workspace/dsa/question-coach";
 import type { DsaApproach, DsaDifficulty, DsaExample, DsaQuestion } from "@/lib/dsa";
 import { findQuestion } from "@/lib/dsa";
 import { privatePageMetadata } from "@/lib/seo";

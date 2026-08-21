@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { ProgressView } from "@/components/workspace/progress-view";
-import { WorkspaceShell } from "@/components/workspace/workspace-shell";
+import { ProgressView } from "@/components/workspace/progress/progress-view";
+import { WorkspaceShell } from "@/components/workspace/chrome/workspace-shell";
 import { patternLabel, type ProgressDay, type ProgressOverview } from "@/lib/progress";
 import { privatePageMetadata } from "@/lib/seo";
 

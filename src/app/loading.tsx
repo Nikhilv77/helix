@@ -6,9 +6,9 @@ import {
   ManageSkeleton,
   RouteProgress,
   Waveform
-} from "@/components/workspace/skeletons";
-import { InterviewsSkeleton } from "@/components/workspace/interviews-skeleton";
-import { ProfileSkeleton } from "@/components/workspace/profile-skeleton";
+} from "@/components/workspace/shared/loading/skeletons";
+import { InterviewsSkeleton } from "@/components/workspace/interviews/interviews-skeleton";
+import { ProfileSkeleton } from "@/components/workspace/profile/profile-skeleton";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
 

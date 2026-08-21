@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { ReportsView } from "@/components/workspace/reports-view";
-import { WorkspaceShell } from "@/components/workspace/workspace-shell";
+import { ReportsView } from "@/components/workspace/reports/reports-view";
+import { WorkspaceShell } from "@/components/workspace/chrome/workspace-shell";
 import { privatePageMetadata } from "@/lib/seo";
 import { createReportsOverview } from "@/server/interview/reports-overview";
 import type { InterviewCompetencyReport, InterviewReport, RoundType } from "@/lib/types";

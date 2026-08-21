@@ -1,4 +1,4 @@
-import { ProgressView } from "@/components/workspace/progress-view";
+import { ProgressView } from "@/components/workspace/progress/progress-view";
 import type { ProgressInterview } from "@/lib/progress";
 import { privatePageMetadata } from "@/lib/seo";
 import { getAppContainer } from "@/server/app-container";

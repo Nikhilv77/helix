@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { ChapterSession } from "@/components/workspace/chapter-session";
+import { ChapterSession } from "@/components/workspace/practice/chapter-session";
 import { briefBeats, buildChapterBrief } from "@/lib/chapter-brief";
 import { findQuestion } from "@/lib/dsa";
 import { privatePageMetadata } from "@/lib/seo";

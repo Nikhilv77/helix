@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { CandidateProfileEditor } from "@/components/workspace/candidate-profile-editor";
-import { WorkspaceShell } from "@/components/workspace/workspace-shell";
+import { CandidateProfileEditor } from "@/components/workspace/profile/candidate-profile-editor";
+import { WorkspaceShell } from "@/components/workspace/chrome/workspace-shell";
 import { privatePageMetadata } from "@/lib/seo";
 import type { CandidateProfile } from "@/lib/types";
 

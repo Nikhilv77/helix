@@ -3,8 +3,8 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { MarketingHome } from "@/components/marketing/home/marketing-home";
-import { Dashboard } from "@/components/workspace/dashboard";
-import { DashboardSkeleton, MayaWelcomeLoading } from "@/components/workspace/skeletons";
+import { Dashboard } from "@/components/workspace/dashboard/dashboard";
+import { DashboardSkeleton, MayaWelcomeLoading } from "@/components/workspace/shared/loading/skeletons";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/seo";
 import type { CandidateProfile } from "@/lib/types";
 import { getAppContainer } from "@/server/app-container";
@@ -148,4 +148,3 @@ function SoftwareJsonLd() {
     />
   );
 }
-

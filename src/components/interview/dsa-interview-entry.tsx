@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { Loader2, Volume2, VolumeX } from "lucide-react";
-import { MayaStage } from "@/components/workspace/maya-stage";
+import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import { useMayaVoice } from "@/lib/use-maya-voice";
 
 const MIN_SOLVED = 10;

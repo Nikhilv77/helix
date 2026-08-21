@@ -1,4 +1,4 @@
-import { ReportsView } from "@/components/workspace/reports-view";
+import { ReportsView } from "@/components/workspace/reports/reports-view";
 import { disciplineLabel } from "@/lib/labels";
 import type { ReportsOverview } from "@/lib/reports";
 import { privatePageMetadata } from "@/lib/seo";
