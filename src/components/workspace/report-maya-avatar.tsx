@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { InterviewSignal } from "@/components/marketing/blueprint-art";
+import { InterviewSignal } from "@/components/brand/blueprint-art";
 import { MayaStage } from "@/components/workspace/maya-stage";
 
 export function ReportMayaAvatar({

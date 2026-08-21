@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { InterviewSignal, TrailgradMark } from "../blueprint-art";
-import { Counter, Reveal, TypeOut } from "../reveal";
+import { InterviewSignal, TrailgradMark } from "@/components/brand/blueprint-art";
+import { Counter, Reveal, TypeOut } from "./visuals/reveal";
 import { exchanges } from "./data";
 
 export function TheInterview() {

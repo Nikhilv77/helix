@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowRight, Clock3, FileText, Mic, Play } from "lucide-react";
 import { DocumentTitle } from "@/components/document-title";
-import { InterviewSignal } from "@/components/marketing/blueprint-art";
+import { InterviewSignal } from "@/components/brand/blueprint-art";
 import { MayaStage } from "@/components/workspace/maya-stage";
 import { FRONTEND_SESSIONS } from "@/lib/frontend-plan";
 import type { FrontendRoadmapHome, FrontendRoadmapSession } from "@/lib/roadmap";

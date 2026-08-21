@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
-import { InterviewSignal, TrailgradMark } from "../blueprint-art";
-import { Reveal } from "../reveal";
+import { InterviewSignal, TrailgradMark } from "@/components/brand/blueprint-art";
+import { Reveal } from "./visuals/reveal";
 import { PrimaryAction } from "./primary-action";
 
 const reportRows = [

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { OnboardingFlow } from "@/components/onboarding/onboarding-flow";
+import { OnboardingFlow } from "@/components/onboarding/flow/onboarding-flow";
 import { privatePageMetadata } from "@/lib/seo";
 import type { ResumeExtractionResponse } from "@/lib/types";
 

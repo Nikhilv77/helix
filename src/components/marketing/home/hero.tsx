@@ -2,10 +2,10 @@
 
 import { useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
-import { Reveal, useScrollProgress } from "../reveal";
-import { InterviewSignal, TrailgradMark } from "../blueprint-art";
-import { LiveBars } from "../product-frames";
-import { MarketingAvatar } from "../marketing-avatar";
+import { Reveal, useScrollProgress } from "./visuals/reveal";
+import { InterviewSignal, TrailgradMark } from "@/components/brand/blueprint-art";
+import { LiveBars } from "./visuals/product-frames";
+import { MarketingAvatar } from "./visuals/marketing-avatar";
 import { PrimaryAction } from "./primary-action";
 
 /**

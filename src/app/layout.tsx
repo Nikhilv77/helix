@@ -151,10 +151,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 
   if (workspaceRoute && pathname !== "/" && !userId) redirect("/");
 
-  // Layouts persist across client navigation. Keep the signed-in shell mounted
-  // even on bare routes like /interview so the sidebar can reappear when the
-  // user returns to / without needing a full page reload.
-  const showWorkspaceShell = Boolean(userId && !welcomeHome);
+  // Public editorial pages stay outside the signed-in workspace shell. The
+  // URL remains public whether or not a visitor is authenticated.
+  const showWorkspaceShell = Boolean(userId && workspaceRoute && !welcomeHome);
 
   if (userId && workspaceRoute && !welcomeHome) {
     const profile = await getAppContainer()
@@ -183,7 +182,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang="en" className={fontVariables}>
       {/* Decided on the server alongside the shell itself so workspace-specific
           global behavior is present on the first paint. */}
-      <body className={userId ? "workspace" : undefined}>
+      <body className={userId && workspaceRoute ? "workspace" : undefined}>
         {clerkPublishableKey ? (
           <ClerkProvider appearance={clerkAppearance}>{app}</ClerkProvider>
         ) : (

@@ -454,28 +454,33 @@ export class FrontendRoadmapService {
           sessionProgress.map((progress) => [progress.sessionTemplateId, progress])
         );
 
-        for (const session of template.sessions) {
-          const progress = sessionProgressByTemplateId.get(session.id);
-          if (!progress) continue;
+        // The createMany call above already writes these values when a roadmap
+        // is first seeded. Repeating one update per session kept the
+        // interactive transaction open long enough to expire during onboarding.
+        if (!created) {
+          for (const session of template.sessions) {
+            const progress = sessionProgressByTemplateId.get(session.id);
+            if (!progress) continue;
 
-          await tx.userSessionProgress.update({
-            where: {
-              roadmapId_sessionTemplateId: {
-                roadmapId: roadmap.id,
-                sessionTemplateId: session.id
+            await tx.userSessionProgress.update({
+              where: {
+                roadmapId_sessionTemplateId: {
+                  roadmapId: roadmap.id,
+                  sessionTemplateId: session.id
+                }
+              },
+              data: {
+                order: session.order,
+                totalQuestions: session.questions.length,
+                metadata: toJson({
+                  slug: session.slug,
+                  title: session.title,
+                  covers: session.covers,
+                  purpose: session.purpose
+                })
               }
-            },
-            data: {
-              order: session.order,
-              totalQuestions: session.questions.length,
-              metadata: toJson({
-                slug: session.slug,
-                title: session.title,
-                covers: session.covers,
-                purpose: session.purpose
-              })
-            }
-          });
+            });
+          }
         }
 
         await tx.userChapterProgress.createMany({
@@ -525,33 +530,38 @@ export class FrontendRoadmapService {
           chapterProgress.map((progress) => [progress.chapterTemplateId, progress])
         );
 
-        for (const session of template.sessions) {
-          const sessionProgress = sessionProgressByTemplateId.get(session.id);
-          if (!sessionProgress) continue;
+        // As with sessions, the create rows are complete on first seed. Keep
+        // the per-row synchronization only for an existing roadmap, where a
+        // template revision may have changed chapter metadata or ordering.
+        if (!created) {
+          for (const session of template.sessions) {
+            const sessionProgress = sessionProgressByTemplateId.get(session.id);
+            if (!sessionProgress) continue;
 
-          for (const chapter of session.chapters) {
-            const totalChapterQuestions = session.questions.filter(
-              (question) => question.chapterTemplateId === chapter.id
-            ).length;
-            await tx.userChapterProgress.update({
-              where: {
-                roadmapId_chapterTemplateId: {
-                  roadmapId: roadmap.id,
-                  chapterTemplateId: chapter.id
+            for (const chapter of session.chapters) {
+              const totalChapterQuestions = session.questions.filter(
+                (question) => question.chapterTemplateId === chapter.id
+              ).length;
+              await tx.userChapterProgress.update({
+                where: {
+                  roadmapId_chapterTemplateId: {
+                    roadmapId: roadmap.id,
+                    chapterTemplateId: chapter.id
+                  }
+                },
+                data: {
+                  sessionProgressId: sessionProgress.id,
+                  order: chapter.order,
+                  totalQuestions: totalChapterQuestions,
+                  metadata: toJson({
+                    slug: chapter.slug,
+                    title: chapter.title,
+                    purpose: chapter.purpose,
+                    templateMetadata: chapter.metadata
+                  })
                 }
-              },
-              data: {
-                sessionProgressId: sessionProgress.id,
-                order: chapter.order,
-                totalQuestions: totalChapterQuestions,
-                metadata: toJson({
-                  slug: chapter.slug,
-                  title: chapter.title,
-                  purpose: chapter.purpose,
-                  templateMetadata: chapter.metadata
-                })
-              }
-            });
+              });
+            }
           }
         }
 

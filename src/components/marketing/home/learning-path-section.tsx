@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { InterviewSignal, TrailgradMark } from "../blueprint-art";
-import { Counter, Reveal, useInView } from "../reveal";
+import { InterviewSignal, TrailgradMark } from "@/components/brand/blueprint-art";
+import { Counter, Reveal, useInView } from "./visuals/reveal";
 
 const proofStats = [
   { value: 100, label: "Ready" },

@@ -5,7 +5,7 @@ import {
   Mic,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { Exchange } from "../blueprint-art";
+import type { Exchange } from "@/components/brand/blueprint-art";
 
 export const exchanges: Exchange[] = [
   {

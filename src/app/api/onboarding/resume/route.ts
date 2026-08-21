@@ -16,12 +16,12 @@ import {
   MIN_RESUME_TEXT_CHARACTERS,
   ResumeDocumentError,
   withVisualResumeText
-} from "@/server/onboarding/resume-document";
+} from "@/server/onboarding/resume/document";
 import {
   groundResumeEvidence,
   hasGroundedEvidence,
   verifyResumeDocument
-} from "@/server/onboarding/resume-verification";
+} from "@/server/onboarding/resume/verification";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

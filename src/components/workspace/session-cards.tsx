@@ -14,7 +14,7 @@ import {
   Target
 } from "lucide-react";
 import { MayaStage } from "@/components/workspace/maya-stage";
-import { InterviewSignal } from "@/components/marketing/blueprint-art";
+import { InterviewSignal } from "@/components/brand/blueprint-art";
 import { ChapterCarousel } from "@/components/workspace/chapter-carousel";
 import { MayaInsights } from "@/components/workspace/maya-insights";
 import type { CarouselChapter } from "@/components/workspace/chapter-carousel";

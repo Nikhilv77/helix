@@ -17,7 +17,7 @@ import { DsaInterviewEvaluator } from "./dsa/interview-evaluator";
 import { ProfileService } from "./profile/profile.service";
 import { ProgressService } from "./progress/progress.service";
 import { FrontendRoadmapService } from "./roadmap/frontend-roadmap.service";
-import { ResumeService } from "./onboarding/resume.service";
+import { ResumeService } from "./onboarding/resume/service";
 
 export interface AppContainer {
   config: AppConfigService;
