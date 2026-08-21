@@ -38,28 +38,18 @@ export function LearningPath() {
   return (
     <section
       id="learn"
-      className="relative z-10 min-h-screen overflow-hidden bg-blueprint px-5 py-20 sm:px-10 sm:py-28"
+      className="marketing-theme-learning relative z-10 min-h-screen overflow-hidden px-5 py-20 sm:px-10 sm:py-28"
     >
-      <InterviewSignal className="pointer-events-none absolute left-1/2 top-20 h-[26rem] w-[32rem] -translate-x-1/2 opacity-10 sm:h-[30rem] sm:w-[40rem]" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#3657b4] to-transparent" />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-35"
-        style={{
-          backgroundImage:
-            "linear-gradient(90deg, rgba(241,234,216,0.08) 1px, transparent 1px), linear-gradient(180deg, rgba(241,234,216,0.08) 1px, transparent 1px)",
-          backgroundPosition: "center top",
-          backgroundSize: "11rem 11rem"
-        }}
-      />
+      <InterviewSignal className="pointer-events-none absolute left-1/2 top-20 h-[26rem] w-[32rem] -translate-x-1/2 text-[color:var(--dm-accent-soft)] opacity-10 sm:h-[30rem] sm:w-[40rem]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#0d0e10] to-transparent" />
       <div className="pointer-events-none absolute -left-24 top-1/3 h-72 w-72 rounded-full border border-cream/10" />
       <div className="pointer-events-none absolute -right-20 bottom-20 h-80 w-80 rounded-full border border-cream/10" />
       <ProjectSidePatterns />
 
       <div className="relative mx-auto flex w-full max-w-[72rem] flex-col items-center">
         <Reveal>
-          <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 backdrop-blur-sm">
-            <TrailgradMark className="h-3.5 w-3.5 text-cream" />
+          <span className="theme-accent-pill inline-flex items-center gap-2.5 rounded-full px-3.5 py-1.5 backdrop-blur-sm">
+            <TrailgradMark className="h-3.5 w-3.5 text-[color:var(--dm-accent-soft)]" />
             <span className="blueprint-label whitespace-nowrap text-cream/80">
               Built from your resume
             </span>
@@ -123,7 +113,11 @@ function ProjectSidePatterns() {
   }, []);
 
   return (
-    <div ref={ref} aria-hidden="true" className="pointer-events-none absolute inset-0 hidden sm:block">
+    <div
+      ref={ref}
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 hidden sm:block"
+    >
       <svg
         className="absolute left-4 top-[46%] h-28 w-28 text-cream opacity-45 sm:left-[8%] sm:h-36 sm:w-36 lg:top-[43%] xl:h-48 xl:w-48 xl:opacity-60"
         viewBox="0 0 160 160"
@@ -241,8 +235,6 @@ function SimplePrepPath() {
       >
         {prepSteps.map((step, index) => {
           const revealed = inView;
-          const revealedTilt = [-0.9, 0.65, -0.55, 0.85][index];
-          const mobileTilt = [-0.45, 0.35, -0.3, 0.4][index];
           const entryX = [-26, 22, -18, 24][index];
 
           return (
@@ -255,16 +247,18 @@ function SimplePrepPath() {
                   ? "border-cream/80 bg-cream/[0.055] opacity-100"
                   : "border-cream/34 bg-cream/[0.018] opacity-45"
               ].join(" ")}
-              style={{
-                "--stack-margin-left": index === 0 ? "0rem" : revealed ? "1rem" : "-7.5rem",
-                "--stack-transform": revealed
-                  ? `translateY(0) rotate(${revealedTilt}deg) scale(1)`
-                  : `translate(${entryX}px, ${index * 1.35}rem) rotate(${index % 2 === 0 ? "-" : ""}${4 + index * 0.9}deg) scale(${0.94 - index * 0.012})`,
-                "--stack-mobile-transform": revealed
-                  ? `translateY(0) rotate(${mobileTilt}deg) scale(1)`
-                  : `translate(${entryX}px, 1.2rem) rotate(${index % 2 === 0 ? "-" : ""}${2.2 + index * 0.3}deg) scale(0.975)`,
-                zIndex: revealed ? prepSteps.length + index : prepSteps.length - index
-              } as CSSProperties}
+              style={
+                {
+                  "--stack-margin-left": index === 0 ? "0rem" : revealed ? "1rem" : "-7.5rem",
+                  "--stack-transform": revealed
+                    ? "translateY(0) scale(1)"
+                    : `translate(${entryX}px, ${index * 1.35}rem) scale(${0.94 - index * 0.012})`,
+                  "--stack-mobile-transform": revealed
+                    ? "translateY(0) scale(1)"
+                    : `translate(${entryX}px, 1.2rem) scale(0.975)`,
+                  zIndex: revealed ? prepSteps.length + index : prepSteps.length - index
+                } as CSSProperties
+              }
             >
               <span
                 aria-hidden="true"
@@ -284,9 +278,7 @@ function SimplePrepPath() {
                 kind={step.visual}
                 className={[
                   "pointer-events-none absolute right-5 top-5 h-24 w-28 text-cream transition-[opacity,transform] duration-700",
-                  revealed
-                    ? "rotate-[-5deg] scale-100 opacity-[0.2]"
-                    : "rotate-[8deg] scale-75 opacity-0"
+                  revealed ? "scale-100 opacity-[0.2]" : "scale-75 opacity-0"
                 ].join(" ")}
               />
 
@@ -311,7 +303,9 @@ function SimplePrepPath() {
                   ].join(" ")}
                 >
                   <span
-                    className={revealed ? "marketing-text-reveal marketing-text-reveal-delayed" : ""}
+                    className={
+                      revealed ? "marketing-text-reveal marketing-text-reveal-delayed" : ""
+                    }
                   >
                     {step.detail}
                   </span>

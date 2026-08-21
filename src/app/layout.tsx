@@ -11,6 +11,7 @@ import { AuthSync } from "@/components/workspace/auth-sync";
 import { ScrollRestoration } from "@/components/scroll-restoration";
 import { clerkAppearance } from "@/lib/clerk-theme";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/seo";
+import { isWorkspaceChromeRoute } from "@/lib/workspace-routes";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
 import "./globals.css";
@@ -44,10 +45,10 @@ export const metadata: Metadata = {
     // SVG first for the tab (the raw PNG is white on transparency and vanishes
     // on a light tab); the PNG stays for platforms that want a bitmap.
     icon: [
-      { url: "/brand/trailgrad-favicon.svg", type: "image/svg+xml" },
+      { url: "/brand/trailgrad-favicon.svg?v=2", type: "image/svg+xml" },
       { url: "/brand/trailgrad-icon.png", type: "image/png", sizes: "790x796" }
     ],
-    shortcut: "/brand/trailgrad-favicon.svg",
+    shortcut: "/brand/trailgrad-favicon.svg?v=2",
     apple: "/brand/trailgrad-icon.png"
   },
   openGraph: {
@@ -127,21 +128,6 @@ const fontVariables = `${displayFont.variable} ${sansFont.variable} ${monoFont.v
 
 const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
-function isWorkspaceChromeRoute(pathname: string): boolean {
-  return (
-    pathname === "/" ||
-    pathname === "/practice" ||
-    pathname.startsWith("/practice/") ||
-    pathname === "/interviews" ||
-    pathname === "/progress" ||
-    pathname === "/reports" ||
-    pathname === "/profile" ||
-    pathname === "/manage" ||
-    pathname.startsWith("/sessions/") ||
-    pathname.startsWith("/session/")
-  );
-}
-
 /**
  * Never prerendered or reused across auth states.
  *
@@ -195,8 +181,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 
   return (
     <html lang="en" className={fontVariables}>
-      {/* Decided on the server alongside the shell itself, so the canvas is
-          never marketing-black for a signed-in user, even on first paint. */}
+      {/* Decided on the server alongside the shell itself so workspace-specific
+          global behavior is present on the first paint. */}
       <body className={userId ? "workspace" : undefined}>
         {clerkPublishableKey ? (
           <ClerkProvider appearance={clerkAppearance}>{app}</ClerkProvider>

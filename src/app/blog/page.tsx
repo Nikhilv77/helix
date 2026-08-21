@@ -2,9 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, BookOpen, CalendarDays, Clock, Sparkles } from "lucide-react";
-import { SiteFooter, SiteNav } from "@/components/marketing/site-chrome";
 import { TrailgradMark } from "@/components/marketing/blueprint-art";
-import { PrimaryAction } from "@/components/marketing/home/primary-action";
+import { EditorialBackLink } from "@/components/marketing/editorial-back-link";
 import { blogPosts } from "@/lib/blog";
 
 export const metadata: Metadata = {
@@ -24,26 +23,14 @@ export default function BlogIndexPage() {
   const rest = blogPosts.slice(1);
   if (!featured) return null;
 
-  const navAction = (
-    <PrimaryAction ariaLabel="Start" className="outline-none">
-      Start
-    </PrimaryAction>
-  );
-  const footerAction = (
-    <PrimaryAction className="inline-flex items-center gap-2">
-      Start free <ArrowRight size={15} aria-hidden="true" />
-    </PrimaryAction>
-  );
-
   return (
-    <div className="blueprint min-h-screen overflow-x-clip">
-      <div className="blueprint-rails" />
-      <SiteNav action={navAction} actionKind="button" sectionHrefPrefix="/" />
+    <div className="editorial-theme blueprint min-h-screen overflow-x-clip">
+      <EditorialBackLink />
 
       <main className="relative z-10 px-5 pb-14 pt-32 sm:px-10 sm:pb-20 sm:pt-36">
-        <div className="pointer-events-none absolute left-1/2 top-24 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full border border-cream/10" />
-        <div className="pointer-events-none absolute -right-24 top-[36rem] hidden h-80 w-80 rounded-full border border-cream/10 sm:block" />
-        <div className="pointer-events-none absolute -left-28 bottom-72 hidden h-72 w-72 rounded-full border border-cream/10 sm:block" />
+        <div className="pointer-events-none absolute left-1/2 top-24 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full" />
+        <div className="pointer-events-none absolute -right-24 top-[36rem] hidden h-80 w-80 rounded-full sm:block" />
+        <div className="pointer-events-none absolute -left-28 bottom-72 hidden h-72 w-72 rounded-full sm:block" />
 
         <section className="relative mx-auto w-full max-w-[78rem]">
           <div className="blog-rise mx-auto max-w-4xl text-center">
@@ -108,7 +95,7 @@ export default function BlogIndexPage() {
               </div>
             </div>
 
-            <div className="relative order-1 min-h-[19rem] rounded-[1.4rem] border border-cream/[0.045] lg:order-2 lg:min-h-[31rem]">
+            <div className="relative order-1 min-h-[19rem] rounded-[1.4rem] lg:order-2 lg:min-h-[31rem]">
               <Image
                 src={featured.coverImage}
                 alt={featured.coverAlt}
@@ -183,7 +170,6 @@ export default function BlogIndexPage() {
         </section>
       </main>
 
-      <SiteFooter action={footerAction} sectionHrefPrefix="/" />
     </div>
   );
 }

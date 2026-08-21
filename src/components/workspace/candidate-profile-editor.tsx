@@ -18,6 +18,7 @@ import {
   Eye,
   FileText,
   GraduationCap,
+  MessageCircle,
   PackageCheck,
   Pencil,
   Plus,
@@ -84,9 +85,20 @@ const focusAreaDetails: Record<string, string> = {
   "Behavioral stories": "Defend real examples with situation, action, and result."
 };
 
+const focusAreaIcons: Record<string, typeof Code2> = {
+  "Technical depth": BrainCircuit,
+  "System design": Blocks,
+  Coding: Code2,
+  Communication: MessageCircle,
+  Ownership: BriefcaseBusiness,
+  Impact: BarChart3,
+  Leadership: Target,
+  "Behavioral stories": Quote
+};
+
 /** One input treatment for the page, so nothing drifts field to field. */
 const fieldClass =
-  "w-full rounded-xl bg-[#24439b] text-cream outline-none ring-1 ring-inset ring-cream/10 transition placeholder:text-cream/35 hover:bg-[#27479f] focus:bg-[#27479f] focus:ring-2 focus:ring-cream/35";
+  "w-full rounded-xl bg-[#1a1b1f] text-cream outline-none ring-1 ring-inset ring-white/[0.08] transition placeholder:text-cream/35 hover:bg-[#202126] focus:bg-[#202126] focus:ring-2 focus:ring-[#F26E01]/30";
 
 const profileAvatars = [
   {
@@ -293,7 +305,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
   // be a form, which buried the handful of facts that actually matter.
   if (mode === "view") {
     return (
-      <div className="mx-auto w-full max-w-[110rem] px-5 py-6 pb-16 sm:px-8 lg:px-10 lg:py-8">
+      <div className="profile-theme w-full max-w-none px-0 py-0 pb-16 sm:px-3 sm:pt-2 lg:px-3">
         <ProfileHero
           profile={profile}
           saved={saved}
@@ -321,7 +333,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
 
   if (mode === "resume") {
     return (
-      <div className="mx-auto w-full max-w-[110rem] px-5 py-6 pb-16 sm:px-8 lg:px-10 lg:py-8">
+      <div className="profile-theme w-full max-w-none px-0 py-0 pb-16 sm:px-3 sm:pt-2 lg:px-3">
         <ResumeHero resume={resume} onBack={() => setMode("view")} />
         <div className="mt-6">
           <ResumeTab resume={resume} />
@@ -334,7 +346,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
   // and the story bank. Everything else on this page is derived or read-only,
   // so putting it in the form only invited people to fiddle with it.
   return (
-    <div className="mx-auto w-full max-w-[110rem] px-5 py-6 pb-36 sm:px-8 lg:px-10 lg:py-8">
+    <div className="profile-theme w-full max-w-none px-0 py-0 pb-36 sm:px-3 sm:pt-2 lg:px-3">
       <header className="profile-motion surface-raised relative overflow-hidden p-6 sm:p-8 lg:p-10">
         <CardPattern variant="waves" />
         <div
@@ -730,7 +742,7 @@ function CoverPicker({
             ].join(" ")}
           >
             <span
-              className="relative block overflow-hidden rounded-xl bg-[#24439b]"
+              className="relative block overflow-hidden rounded-xl bg-[#1a1b1f]"
               style={{ aspectRatio: `${cover.width} / ${cover.height}` }}
             >
               <img
@@ -744,7 +756,7 @@ function CoverPicker({
                 aria-hidden
                 className={[
                   "absolute inset-0 transition",
-                  selected ? "bg-[#17234a]/8" : "bg-[#17234a]/18 group-hover:bg-[#17234a]/8"
+                  selected ? "bg-black/[0.04]" : "bg-black/[0.2] group-hover:bg-black/[0.06]"
                 ].join(" ")}
               />
               {selected ? (
@@ -861,7 +873,7 @@ function ImagePickerOverlay({
       <section
         className={[
           "image-picker-panel-slow",
-          "relative w-full overflow-hidden rounded-2xl border border-cream/10 bg-[#3657b4]/95 text-cream shadow-[0_24px_80px_-58px_rgba(0,0,0,0.62)] backdrop-blur-xl",
+          "relative w-full overflow-hidden rounded-2xl border border-white/[0.1] bg-[#17181b] text-cream shadow-[0_28px_90px_-48px_rgba(0,0,0,0.9)]",
           choosingCover
             ? "max-h-[min(50rem,calc(100dvh-2rem))] max-w-6xl"
             : "max-h-[min(36rem,calc(100dvh-2rem))] max-w-3xl"
@@ -916,7 +928,7 @@ function ImagePickerOverlay({
                       selected ? "ring-1 ring-cream/42" : "ring-1 ring-cream/8 hover:ring-cream/20"
                     ].join(" ")}
                   >
-                    <span className="relative block aspect-[3.2/1] overflow-hidden rounded-xl bg-[#24439b] sm:aspect-[4/1]">
+                    <span className="relative block aspect-[3.2/1] overflow-hidden rounded-xl bg-[#1a1b1f] sm:aspect-[4/1]">
                       <img
                         src={cover.displaySrc}
                         alt=""
@@ -1232,9 +1244,9 @@ function ProfileHero({
     profileCovers[0];
 
   return (
-    <header className="profile-motion relative overflow-hidden rounded-[1.75rem] bg-[#3557b4]">
+    <header className="profile-motion relative overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-[#151619]">
       <div
-        className="profile-cover-stage relative min-h-36 overflow-hidden bg-[#24439b] sm:min-h-44"
+        className="profile-cover-stage relative min-h-36 overflow-hidden bg-[#111214] sm:min-h-44"
         style={{ aspectRatio: `${cover.width} / ${cover.height}` }}
       >
         <img
@@ -1252,7 +1264,7 @@ function ProfileHero({
         />
         <svg
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-[-1px] h-10 w-full text-[#3657b4] sm:h-14"
+          className="pointer-events-none absolute inset-x-0 bottom-[-1px] h-10 w-full text-[#151619] sm:h-14"
           viewBox="0 0 1440 72"
           preserveAspectRatio="none"
         >
@@ -1267,7 +1279,7 @@ function ProfileHero({
             strokeWidth="1.05"
           />
         </svg>
-        <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[#3657b4]/0" />
+        <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-black/0" />
         <button
           type="button"
           aria-label="Change cover image"
@@ -1387,43 +1399,71 @@ function ProfileHero({
                 >
                   Core focus areas
                 </p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {profile.focusAreas.map((area, index) => (
-                    <article
-                      key={area}
-                      className={[
-                        "profile-soft-reveal relative min-h-28 overflow-hidden rounded-2xl border border-cream/20 bg-cream/[0.025] px-5 py-4 text-left backdrop-blur-sm",
-                        index % 2 === 0 ? "-rotate-1" : "rotate-1"
-                      ].join(" ")}
-                      style={{ "--profile-reveal-delay": `${2280 + index * 65}ms` } as CSSProperties}
-                    >
-                      <SectionUiTexture variant={index % 3} />
-                      <h3 className="relative text-xl font-medium leading-none text-cream sm:text-2xl">
-                        {area}
-                      </h3>
-                      <p className="relative mt-3 max-w-[28rem] text-[15px] leading-6 text-cream/70 sm:text-base">
-                        {focusAreaDetails[area] ?? "Maya will press this signal during practice."}
-                      </p>
-                    </article>
-                  ))}
+                <div className="relative mx-auto mt-5 grid w-full max-w-5xl gap-0 sm:grid-cols-2">
+                  {profile.focusAreas.map((area, index) => {
+                    const FocusIcon = focusAreaIcons[area] ?? Sparkles;
+                    const isUnpairedLastItem =
+                      profile.focusAreas.length % 2 === 1 &&
+                      index === profile.focusAreas.length - 1;
+                    return (
+                      <article
+                        key={area}
+                        className={[
+                          "profile-soft-reveal group relative flex min-h-[6.5rem] items-center gap-4 px-5 py-4 text-left transition-colors duration-200 after:pointer-events-none after:absolute after:inset-x-5 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-white/[0.18] after:to-transparent hover:bg-white/[0.025] sm:min-h-[6.75rem] sm:px-8 sm:py-5 sm:after:inset-x-8 even:sm:pl-12",
+                          isUnpairedLastItem ? "sm:col-span-2 sm:mx-auto sm:w-1/2" : ""
+                        ].join(" ")}
+                        style={
+                          { "--profile-reveal-delay": `${2280 + index * 65}ms` } as CSSProperties
+                        }
+                      >
+                        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-white/[0.13] text-[#F26E01] transition-colors duration-200 group-hover:border-[#F26E01]/45">
+                          <FocusIcon size={24} strokeWidth={1.45} aria-hidden="true" />
+                        </span>
+                        <div className="min-w-0">
+                          <h3 className="truncate text-[1.1rem] font-medium leading-tight text-cream sm:text-[1.25rem]">
+                            {area}
+                          </h3>
+                          <p className="mt-2 max-w-[28rem] text-[13px] leading-5 text-cream/58 sm:text-sm sm:leading-5.5">
+                            {focusAreaDetails[area] ??
+                              "Maya will press this signal during practice."}
+                          </p>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
               </div>
             ) : null}
 
-            <div
-              className="profile-soft-reveal relative mt-7 max-w-4xl rotate-1 overflow-hidden rounded-2xl border border-cream/20 bg-cream/[0.025] px-6 py-5 text-center backdrop-blur-sm sm:px-8"
+            <blockquote
+              className="profile-soft-reveal relative mx-auto mt-9 max-w-2xl px-8 text-center"
               style={
                 {
                   "--profile-reveal-delay": `${profile.focusAreas.length ? 2360 + profile.focusAreas.length * 65 : 2180}ms`
                 } as CSSProperties
               }
             >
-              <SectionUiTexture variant={2} />
-              <p className="relative text-xl font-medium leading-tight text-cream sm:text-2xl">
-                You are preparing for {role?.label ?? "your target role"} and you have{" "}
-                {level?.label ?? "your"} experience.
+              <span
+                aria-hidden="true"
+                className="absolute left-0 top-0 text-4xl leading-none text-[#F26E01]/70"
+              >
+                “
+              </span>
+              <p className="text-lg font-medium leading-8 text-cream/82 sm:text-xl">
+                Grow into a confident {role?.label ?? "professional"}, turning the{" "}
+                {level?.label ?? "current"} stage into strong technical judgment and meaningful
+                product impact.
               </p>
-            </div>
+              <span
+                aria-hidden="true"
+                className="absolute bottom-0 right-0 text-4xl leading-none text-[#F26E01]/70"
+              >
+                ”
+              </span>
+              <footer className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-cream/38">
+                Career goal
+              </footer>
+            </blockquote>
 
             <ProfileResumeAnchors resume={resume} />
           </div>
@@ -1535,6 +1575,11 @@ function ProfileResumeAnchors({ resume }: { resume: CandidateProfile["resume"] }
       label: "Education",
       count: `${educationCount} ${educationCount === 1 ? "entry" : "entries"}`,
       icon: GraduationCap
+    },
+    {
+      label: "Proof",
+      count: `${resume.achievements.length} ${resume.achievements.length === 1 ? "highlight" : "highlights"}`,
+      icon: Sparkles
     }
   ];
 
@@ -1554,7 +1599,7 @@ function ProfileResumeAnchors({ resume }: { resume: CandidateProfile["resume"] }
         </p>
       </div>
 
-      <div className="mx-auto mt-6 grid w-full max-w-[74rem] gap-4 md:grid-cols-3">
+      <div className="mx-auto mt-7 flex w-full max-w-5xl flex-wrap justify-center divide-y divide-white/[0.12] border-y border-white/[0.1] md:divide-x md:divide-y-0">
         {summaryCards.map((card, index) => (
           <ResumeSummaryTile
             key={card.label}
@@ -1566,11 +1611,13 @@ function ProfileResumeAnchors({ resume }: { resume: CandidateProfile["resume"] }
         ))}
       </div>
 
-      <div className="mt-9 space-y-9">
-        <ResumeAnchorGroup title="Work" cards={workCards} />
-        <ResumeAnchorGroup title="Projects" cards={projectCards} />
-        <ResumeAnchorGroup title="Education" cards={educationCards} columns="three" />
-        <ResumeAnchorGroup title="Proof" cards={proofCards} />
+      <div className="mt-9 space-y-10">
+        <ResumeWorkTimeline cards={workCards} />
+        <div className="grid gap-8 lg:grid-cols-[1.35fr_0.8fr_0.8fr]">
+          <ResumeAnchorGroup title="Projects" cards={projectCards} featured />
+          <ResumeAnchorGroup title="Education" cards={educationCards} compact />
+          <ResumeAnchorGroup title="Proof" cards={proofCards} compact />
+        </div>
       </div>
     </section>
   );
@@ -1590,19 +1637,18 @@ function ResumeSummaryTile({
   return (
     <article
       className={[
-        "profile-soft-reveal relative flex min-h-44 flex-col items-center justify-center overflow-hidden rounded-[1.45rem] border border-cream/20 bg-cream/[0.025] px-6 py-7 text-center backdrop-blur-sm",
-        index === 1 ? "sm:rotate-1" : index === 2 ? "sm:-rotate-1" : ""
+        "profile-soft-reveal flex min-w-[10rem] flex-1 items-center gap-3 px-5 py-3 text-left md:min-w-0 md:justify-center",
+        index === 0 ? "border-b-2 border-[#F26E01]" : ""
       ].join(" ")}
       style={{ "--profile-reveal-delay": `${2700 + index * 70}ms` } as CSSProperties}
     >
-      <SectionUiTexture variant={index} />
-      <Icon size={42} strokeWidth={1.65} className="relative text-cream/82" />
-      <h3 className="relative mt-6 text-xl font-medium leading-none text-cream sm:text-2xl">
-        {label}
-      </h3>
-      <p className="relative mt-4 font-mono text-[13px] uppercase tracking-[0.2em] text-cream/76">
-        {count}
-      </p>
+      <Icon size={25} strokeWidth={1.55} className="shrink-0 text-[#F26E01]" />
+      <div className="min-w-0">
+        <h3 className="text-base font-medium leading-none text-cream">{label}</h3>
+        <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-cream/48">
+          {count}
+        </p>
+      </div>
     </article>
   );
 }
@@ -1610,56 +1656,125 @@ function ResumeSummaryTile({
 function ResumeAnchorGroup({
   title,
   cards,
-  columns = "two"
+  featured = false,
+  compact = false
 }: {
   title: string;
   cards: ProfileResumeAnchor[];
-  columns?: "two" | "three";
+  featured?: boolean;
+  compact?: boolean;
 }) {
   if (!cards.length) return null;
   const groupDelay = 2860 + ["Work", "Projects", "Education", "Proof"].indexOf(title) * 130;
 
   return (
     <section
-      className="profile-soft-reveal relative overflow-hidden rounded-[1.35rem] p-2 sm:p-3"
+      className="profile-soft-reveal relative"
       style={{ "--profile-reveal-delay": `${groupDelay}ms` } as CSSProperties}
     >
-      <SectionUiTexture variant={title.length % 3} />
-      <div className="relative mb-4 flex items-center gap-4">
+      <div className="mb-4 flex items-center gap-4">
         <h3 className="text-lg font-medium text-cream/82">{title}</h3>
         <span className="h-px flex-1 bg-gradient-to-r from-cream/28 to-transparent" />
       </div>
 
-      <div
-        className={[
-          "relative grid gap-4",
-          columns === "three" ? "xl:grid-cols-3" : "xl:grid-cols-2"
-        ].join(" ")}
-      >
+      <div className={featured ? "grid gap-3" : "space-y-3"}>
         {cards.map((card, index) => (
-          <ProfileResumeAnchorCard key={card.id} card={card} index={index} groupDelay={groupDelay} />
+          <ProfileResumeAnchorCard
+            key={card.id}
+            card={card}
+            index={index}
+            groupDelay={groupDelay}
+            variant={featured ? "project" : compact ? "compact" : "default"}
+          />
         ))}
       </div>
     </section>
   );
 }
 
+function ResumeWorkTimeline({ cards }: { cards: ProfileResumeAnchor[] }) {
+  if (!cards.length) return null;
+  return (
+    <section
+      className="profile-soft-reveal"
+      style={{ "--profile-reveal-delay": "2860ms" } as CSSProperties}
+    >
+      <div className="mb-5 flex items-center gap-4">
+        <span className="h-2 w-2 rounded-full bg-[#F26E01] shadow-[0_0_10px_rgba(242,110,1,0.45)]" />
+        <h3 className="text-lg font-medium text-cream/84">Work experience</h3>
+        <span className="h-px flex-1 bg-gradient-to-r from-white/20 to-transparent" />
+      </div>
+      <div className="relative border-l border-white/[0.14] pl-8 sm:pl-12">
+        {cards.map((card) => (
+          <ResumeTimelineEntry key={card.id} card={card} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ResumeTimelineEntry({ card }: { card: ProfileResumeAnchor }) {
+  const Icon = card.icon;
+  return (
+    <article className="relative mb-9 border-b border-white/[0.1] pb-9 last:mb-0 last:border-b-0 last:pb-0">
+      <span className="absolute -left-[2.65rem] top-1 grid h-5 w-5 place-items-center rounded-full border border-[#F26E01]/55 bg-[#101113] shadow-[0_0_0_5px_rgba(242,110,1,0.09)] sm:-left-[3.65rem]">
+        <span className="h-2 w-2 rounded-full bg-[#F26E01]" />
+      </span>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <Icon size={23} strokeWidth={1.55} className="mt-0.5 shrink-0 text-[#F26E01]" />
+          <div>
+            <h4 className="text-xl font-medium leading-tight text-cream">{card.title}</h4>
+            {card.meta ? (
+              <p className="mt-2 text-[15px] leading-6 text-cream/58">{card.meta}</p>
+            ) : null}
+          </div>
+        </div>
+        <span className="rounded-full border border-white/[0.1] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-cream/52">
+          {card.badge}
+        </span>
+      </div>
+      {card.body ? (
+        <p className="mt-6 text-[15px] leading-7 text-cream/68 sm:text-base sm:leading-8">
+          {card.body}
+        </p>
+      ) : null}
+      {card.bullets?.length ? (
+        <ul className="mt-6 space-y-4 text-[15px] leading-7 text-cream/68 sm:text-base sm:leading-8">
+          {card.bullets.map((bullet) => (
+            <li key={bullet} className="flex gap-2.5">
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F26E01]" />
+              <span>{bullet}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </article>
+  );
+}
+
 function ProfileResumeAnchorCard({
   card,
   index,
-  groupDelay
+  groupDelay,
+  variant = "default"
 }: {
   card: ProfileResumeAnchor;
   index: number;
   groupDelay: number;
+  variant?: "default" | "project" | "compact";
 }) {
   const Icon = card.icon;
 
   return (
     <article
       className={[
-        "profile-soft-reveal relative flex min-h-[18rem] flex-col overflow-hidden rounded-[1.35rem] border border-cream/20 bg-cream/[0.025] p-5 text-left backdrop-blur-sm sm:p-6",
-        index % 2 === 1 ? "sm:rotate-1" : ""
+        "profile-soft-reveal relative flex flex-col overflow-hidden rounded-xl p-5 text-left transition-colors",
+        variant === "project"
+          ? "min-h-[15rem] border border-[#F26E01]/35 bg-[linear-gradient(120deg,rgba(242,110,1,0.1),rgba(24,25,28,0.98)_42%)] hover:border-[#F26E01]/55"
+          : variant === "compact"
+            ? "min-h-0 border-l border-white/[0.12] rounded-none bg-transparent px-5 py-2 hover:border-[#F26E01]/40"
+            : "min-h-[15rem] border border-white/[0.1] bg-[#18191c] hover:border-white/[0.17] hover:bg-[#1c1d20]"
       ].join(" ")}
       style={
         {
@@ -1667,32 +1782,36 @@ function ProfileResumeAnchorCard({
         } as CSSProperties
       }
     >
-      <SectionUiTexture variant={index % 3} />
-      <div className="relative flex items-start justify-between gap-4">
-        <Icon size={31} strokeWidth={1.8} className="shrink-0 text-cream/78" />
-        <span className="rounded-full border border-cream/22 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-cream/72">
+      <div className="flex items-start justify-between gap-4">
+        <Icon size={27} strokeWidth={1.6} className="shrink-0 text-[#F26E01]" />
+        <span className="rounded-full border border-white/[0.1] bg-white/[0.035] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-cream/58">
           {card.badge}
         </span>
       </div>
 
-      <div className="relative mt-8">
-        <h3 className="text-xl font-medium leading-tight text-cream sm:text-2xl">{card.title}</h3>
+      {variant === "project" ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-10 right-5 h-28 w-28 rounded-full border border-[#F26E01]/20 shadow-[0_0_0_12px_rgba(242,110,1,0.035),0_0_0_24px_rgba(242,110,1,0.025)]"
+        />
+      ) : null}
+
+      <div className={variant === "compact" ? "mt-5" : "mt-6"}>
+        <h3 className="text-xl font-medium leading-tight text-cream">{card.title}</h3>
         {card.meta ? (
-          <p className="mt-3 text-[15px] font-medium leading-6 text-cream/78">{card.meta}</p>
+          <p className="mt-2.5 text-sm font-medium leading-6 text-cream/68">{card.meta}</p>
         ) : null}
       </div>
 
       {card.body ? (
-        <p className="relative mt-5 text-[15px] leading-7 text-cream/70 sm:text-base">
-          {card.body}
-        </p>
+        <p className="mt-4 text-sm leading-6 text-cream/58 sm:text-[15px]">{card.body}</p>
       ) : null}
 
       {card.bullets?.length ? (
-        <ul className="relative mt-5 space-y-2.5 text-[15px] leading-6 text-cream/68">
+        <ul className="mt-4 space-y-2 text-sm leading-6 text-cream/58">
           {card.bullets.map((bullet) => (
             <li key={bullet} className="flex gap-2.5">
-              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#9be8c1]/85" />
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F26E01]/80" />
               <span>{bullet}</span>
             </li>
           ))}
@@ -1700,11 +1819,11 @@ function ProfileResumeAnchorCard({
       ) : null}
 
       {card.tags?.length ? (
-        <div className="relative mt-auto flex flex-wrap gap-2 pt-6">
+        <div className="mt-auto flex flex-wrap gap-2 pt-5">
           {card.tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full bg-cream/[0.075] px-3 py-1 text-[13px] font-medium text-cream/70"
+              className="rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1 text-xs font-medium text-cream/58"
             >
               {tag}
             </span>
@@ -2232,7 +2351,7 @@ function CardPattern({ variant }: { variant: PatternVariant }) {
 
 const statTones = {
   mint: "bg-[#71d6a5]/16 text-[#a9f0cd] ring-1 ring-inset ring-[#71d6a5]/28",
-  sky: "bg-[#7ea0ff]/18 text-[#cfdcff] ring-1 ring-inset ring-[#7ea0ff]/30",
+  sky: "bg-[#F26E01]/12 text-[#ffbd8f] ring-1 ring-inset ring-[#F26E01]/25",
   amber: "bg-[#efcf84]/16 text-[#f7e3ae] ring-1 ring-inset ring-[#efcf84]/30",
   cream: "bg-cream/[0.14] text-cream ring-1 ring-inset ring-cream/25"
 } as const;
@@ -2732,7 +2851,7 @@ function SaveBar({
     // Sticky rather than fixed: the workspace offsets content for its sidebar,
     // and a viewport-fixed bar would sit under it on desktop.
     <div className="sticky bottom-4 z-30 mt-8">
-      <div className="flex flex-col gap-3 rounded-3xl bg-[#132a68]/92 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.09),0_24px_70px_rgba(7,18,58,0.55)] backdrop-blur-2xl sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 rounded-3xl border border-white/[0.08] bg-[#17181b] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_24px_70px_rgba(0,0,0,0.55)] sm:flex-row sm:items-center">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#efcf84]/12 text-[#f4dda6] shadow-soft-inset">
           <Save size={16} />
         </span>

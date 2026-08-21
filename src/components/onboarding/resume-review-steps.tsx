@@ -26,6 +26,8 @@ const IDENTITY_CONTINUE_MS =
 const TRAIL_WORD_STAGGER_MS = 180;
 const TRAIL_SKILL_STAGGER_MS = 150;
 const TRAIL_FOCUS_STAGGER_MS = 280;
+const AUTO_SCROLL_IDLE_MS = 2000;
+const FINAL_AUTO_SCROLL_DELAY_MS = 180;
 const IDENTITY_DETAIL_WAVE = [34, 58, 82, 48, 92, 56, 78, 44, 64];
 
 function useWordReveal(text: string, active: boolean, delay = 0, stagger = TRAIL_WORD_STAGGER_MS) {
@@ -96,7 +98,6 @@ export function ResumeIdentityStep({
 }) {
   const { extraction } = result;
   const [phase, setPhase] = useState<0 | 1 | 2>(0);
-  const progressRef = useRef<HTMLDivElement | null>(null);
   const displayName = extraction.fullName || "there";
   const resumeThings = [
     {
@@ -138,11 +139,9 @@ export function ResumeIdentityStep({
   useEffect(() => {
     if (phase !== 2) return;
 
-    let frame = 0;
     let cancelled = false;
     function cancelScroll() {
       cancelled = true;
-      if (frame) window.cancelAnimationFrame(frame);
     }
 
     window.addEventListener("wheel", cancelScroll, { passive: true });
@@ -151,41 +150,13 @@ export function ResumeIdentityStep({
 
     const timer = window.setTimeout(() => {
       if (cancelled) return;
-      const progress = progressRef.current;
-      if (!progress || window.innerWidth >= 640) return;
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-      const rect = progress.getBoundingClientRect();
-      const maxScroll =
-        document.documentElement.scrollHeight - document.documentElement.clientHeight;
-      const targetTop = Math.min(
-        maxScroll,
-        Math.max(window.scrollY, window.scrollY + rect.bottom - window.innerHeight + 54)
-      );
-      const distance = targetTop - window.scrollY;
-      if (distance <= 0) return;
-
-      const startY = window.scrollY;
-      const startedAt = window.performance.now();
-      const duration = Math.max(1400, Math.min(2400, distance * 7));
-
-      function tick(now: number) {
-        if (cancelled) return;
-        const progressValue = Math.min(1, (now - startedAt) / duration);
-        const eased =
-          progressValue < 0.5
-            ? 2 * progressValue * progressValue
-            : 1 - Math.pow(-2 * progressValue + 2, 2) / 2;
-        window.scrollTo({ top: startY + distance * eased });
-        if (progressValue < 1) frame = window.requestAnimationFrame(tick);
-      }
-
-      frame = window.requestAnimationFrame(tick);
-    }, 650);
+      const root = document.scrollingElement ?? document.documentElement;
+      window.scrollTo({ top: root.scrollHeight - root.clientHeight, behavior: "smooth" });
+    }, AUTO_SCROLL_IDLE_MS);
 
     return () => {
       window.clearTimeout(timer);
-      if (frame) window.cancelAnimationFrame(frame);
       window.removeEventListener("wheel", cancelScroll);
       window.removeEventListener("touchstart", cancelScroll);
       window.removeEventListener("keydown", cancelScroll);
@@ -269,7 +240,6 @@ export function ResumeIdentityStep({
             </div>
 
             <div
-              ref={progressRef}
               className="step-in mx-auto mt-8 w-full max-w-xl"
               style={
                 {
@@ -323,7 +293,6 @@ export function ResumeEvidenceStep({
   onContinue: () => void;
 }) {
   const { extraction } = result;
-  const ctaRef = useRef<HTMLDivElement | null>(null);
   const firstRole = extraction.experience[0];
   const firstProject = extraction.projects[0];
   const firstEducation = extraction.education[0];
@@ -371,11 +340,9 @@ export function ResumeEvidenceStep({
   ];
 
   useEffect(() => {
-    let frame = 0;
     let cancelled = false;
     function cancelScroll() {
       cancelled = true;
-      if (frame) window.cancelAnimationFrame(frame);
     }
 
     window.addEventListener("wheel", cancelScroll, { passive: true });
@@ -384,38 +351,13 @@ export function ResumeEvidenceStep({
 
     const timer = window.setTimeout(() => {
       if (cancelled) return;
-      const cta = ctaRef.current;
-      if (!cta || window.innerWidth >= 640) return;
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-      const rect = cta.getBoundingClientRect();
-      const maxScroll =
-        document.documentElement.scrollHeight - document.documentElement.clientHeight;
-      const targetTop = Math.min(
-        maxScroll,
-        Math.max(window.scrollY, window.scrollY + rect.bottom - window.innerHeight + 64)
-      );
-      const distance = targetTop - window.scrollY;
-      if (distance <= 0) return;
-
-      const startY = window.scrollY;
-      const startedAt = window.performance.now();
-      const duration = Math.max(950, Math.min(1700, distance * 4.5));
-
-      function tick(now: number) {
-        if (cancelled) return;
-        const progress = Math.min(1, (now - startedAt) / duration);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        window.scrollTo({ top: startY + distance * eased });
-        if (progress < 1) frame = window.requestAnimationFrame(tick);
-      }
-
-      frame = window.requestAnimationFrame(tick);
-    }, 120);
+      const root = document.scrollingElement ?? document.documentElement;
+      window.scrollTo({ top: root.scrollHeight - root.clientHeight, behavior: "smooth" });
+    }, AUTO_SCROLL_IDLE_MS);
 
     return () => {
       window.clearTimeout(timer);
-      if (frame) window.cancelAnimationFrame(frame);
       window.removeEventListener("wheel", cancelScroll);
       window.removeEventListener("touchstart", cancelScroll);
       window.removeEventListener("keydown", cancelScroll);
@@ -480,7 +422,7 @@ export function ResumeEvidenceStep({
           })}
         </div>
 
-        <div ref={ctaRef} className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <button
             type="button"
             onClick={onContinue}
@@ -516,6 +458,7 @@ export function ResumeReadinessStep({
   const visibleFocusAreas = extraction.focusAreas.slice(0, 6);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const userStoppedAutoScrollRef = useRef(false);
+  const finalAutoScrollRanRef = useRef(false);
   const [visibleSkillCount, setVisibleSkillCount] = useState(0);
   const [visibleFocusCount, setVisibleFocusCount] = useState(0);
   const skillsTitle = useWordReveal("Good, your skills are in great shape.", true, 180);
@@ -580,26 +523,25 @@ export function ResumeReadinessStep({
   }, []);
 
   useEffect(() => {
+    if (!showCta || finalAutoScrollRanRef.current) return;
     if (userStoppedAutoScrollRef.current) return;
-    if (window.innerWidth >= 640) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
+    finalAutoScrollRanRef.current = true;
     const timer = window.setTimeout(() => {
-      bottomRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "end"
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          const root = document.scrollingElement ?? document.documentElement;
+          window.scrollTo({
+            top: root.scrollHeight - root.clientHeight,
+            behavior: "smooth"
+          });
+        });
       });
-    }, 70);
+    }, FINAL_AUTO_SCROLL_DELAY_MS);
 
     return () => window.clearTimeout(timer);
-  }, [
-    skillsTitle.visibleCount,
-    visibleSkillCount,
-    showRouteTitle,
-    routeTitle.visibleCount,
-    visibleFocusCount,
-    showCta
-  ]);
+  }, [showCta]);
 
   return (
     <div className="relative w-full">
@@ -607,7 +549,7 @@ export function ResumeReadinessStep({
         <BackButton onClick={onBack} />
       </div>
 
-      <section className="mx-auto flex min-h-[calc(100svh-9rem)] w-full max-w-4xl flex-col items-center justify-center pb-10 pt-16 text-center sm:mt-8 sm:min-h-[32rem] sm:py-0">
+      <section className="mx-auto flex min-h-[calc(100svh-9rem)] w-full max-w-4xl flex-col items-center justify-center pb-28 pt-16 text-center sm:mt-8 sm:min-h-[32rem] sm:py-0">
         <div className="identity-stage-in flex w-full flex-col items-center">
           <Tags size={58} strokeWidth={1.25} className="text-cream/78" aria-hidden="true" />
           <h1 className="mt-7 min-h-[3.5rem] text-balance text-[2.25rem] font-bold leading-tight tracking-tight text-cream sm:min-h-[4.5rem] sm:text-[3.35rem]">
@@ -680,7 +622,7 @@ export function ResumeReadinessStep({
           </div>
         ) : null}
 
-        <div ref={bottomRef} className="mt-9 flex min-h-12 justify-center">
+        <div ref={bottomRef} className="mt-9 flex min-h-12 scroll-mb-24 justify-center">
           {showCta ? (
             <div className="flex flex-col items-center gap-3">
               <button

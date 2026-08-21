@@ -12,31 +12,23 @@ import {
 import type { Level, Role } from "@/lib/types";
 
 /**
- * Onboarding runs on the marketing page's blueprint palette: blue ground,
- * cream paper, and blueprint blue as the only accent on that paper.
+ * Onboarding shares the product's graphite canvas and restrained orange accent.
  */
-export const ACCENT = "#3657b4";
-export const INK = "#13234f";
+export const ACCENT = "#F26E01";
+export const INK = "#f3f1ec";
 
-/** Flat cream paper. No stroke, no drop shadow - the blue ground separates. */
-export const CARD = "rounded-lg bg-cream";
-/** A tint of the accent, for rows and tiles sitting inside the paper. */
-export const CARD_INNER = "rounded-lg bg-[#3657b4]/[0.07]";
+/** Neutral enterprise surface used for onboarding panels. */
+export const CARD = "rounded-lg border border-white/[0.1] bg-[#191a1e]";
+/** A quiet graphite inset surface for rows and tiles. */
+export const CARD_INNER = "rounded-lg border border-white/[0.07] bg-[#121316]";
 
 /** Marketing's primary: compact cream action with a soft blueprint glow. */
 export const PRIMARY_BUTTON =
-  "group inline-flex min-h-11 items-center justify-center gap-2.5 rounded-lg border border-cream/35 bg-cream/[0.92] px-6 text-sm font-bold tracking-wide text-[#13234f] shadow-[0_18px_48px_-36px_rgba(241,234,216,0.9),inset_0_1px_0_rgba(255,255,255,0.45)] backdrop-blur-sm transition duration-300 hover:-translate-y-0.5 hover:border-cream/55 hover:bg-cream";
+  "group inline-flex min-h-11 items-center justify-center gap-2.5 rounded-lg border border-white/15 bg-[#f3f1ec] px-6 text-sm font-bold tracking-wide text-[#17181b] shadow-[0_18px_48px_-36px_rgba(0,0,0,0.9)] transition duration-300 hover:-translate-y-0.5 hover:border-white/30 hover:bg-white";
 
 /** Quiet companion to the primary: hairline, fills with cream on hover. */
 export const SECONDARY_BUTTON =
-  "ghost-button inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-cream/30 px-5 text-sm font-semibold text-cream/75 hover:text-cream";
-
-export const BLUEPRINT_GRID = {
-  backgroundImage:
-    "linear-gradient(90deg, rgba(241,234,216,0.08) 1px, transparent 1px), linear-gradient(180deg, rgba(241,234,216,0.08) 1px, transparent 1px)",
-  backgroundPosition: "center top",
-  backgroundSize: "11rem 11rem"
-} as const;
+  "ghost-button inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/15 px-5 text-sm font-semibold text-cream/70 hover:border-[#F26E01]/35 hover:text-cream";
 
 export const roles: Array<{
   value: Role;

@@ -6,6 +6,7 @@ import { MarketingHome } from "@/components/marketing/marketing-home";
 import { Dashboard } from "@/components/workspace/dashboard";
 import { DashboardSkeleton, MayaWelcomeLoading } from "@/components/workspace/skeletons";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/seo";
+import type { CandidateProfile } from "@/lib/types";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
 
@@ -67,10 +68,23 @@ export default async function HomePage({
 
   const query = await searchParams;
   const showMayaWelcome = query.welcome === "maya";
+  let profile: CandidateProfile;
+
+  try {
+    profile = await getAppContainer().profileService.get(authenticatedOwnerId(userId));
+  } catch {
+    redirect("/onboarding");
+  }
+
+  if (!profile.onboardingCompletedAt) redirect("/onboarding");
 
   return (
     <Suspense fallback={showMayaWelcome ? <MayaWelcomeLoading /> : <DashboardSkeleton />}>
-      <WorkspaceHome userId={userId} showMayaWelcome={showMayaWelcome} />
+      <WorkspaceHome
+        userId={userId}
+        profile={profile}
+        showMayaWelcome={showMayaWelcome}
+      />
     </Suspense>
   );
 }
@@ -78,9 +92,11 @@ export default async function HomePage({
 /** The signed-in half: everything that needs a database read. */
 async function WorkspaceHome({
   userId,
+  profile,
   showMayaWelcome
 }: {
   userId: string;
+  profile: CandidateProfile;
   showMayaWelcome: boolean;
 }) {
   let dashboardData;
@@ -89,7 +105,6 @@ async function WorkspaceHome({
     // Home renders the preparation plan only, so it loads the profile it is
     // keyed on and the plan itself — nothing else. Quota, history, insights and
     // the generated curriculum still power Practice, Progress and Reports.
-    const profile = await getAppContainer().profileService.get(ownerId);
     const [frontendRoadmap, frontendPlan] =
       profile.targetRole === "fullstack"
         ? await Promise.all([
@@ -105,8 +120,6 @@ async function WorkspaceHome({
   } catch {
     redirect("/onboarding");
   }
-
-  if (!dashboardData.profile.onboardingCompletedAt) redirect("/onboarding");
 
   return <Dashboard {...dashboardData} showMayaWelcome={showMayaWelcome} />;
 }

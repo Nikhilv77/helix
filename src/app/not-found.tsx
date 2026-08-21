@@ -10,7 +10,7 @@ export default function NotFound() {
       <div className="blueprint-glow" />
 
       <section className="relative z-10 mx-auto w-full max-w-2xl text-center">
-        <TrailgradMark className="mx-auto h-20 w-20 rotate-1 text-cream/78" />
+        <TrailgradMark className="mx-auto h-20 w-20 text-cream/78" />
 
         <p className="blueprint-label mt-8 text-cream/48">404</p>
         <h1 className="mt-4 text-balance text-[2.45rem] font-bold leading-tight tracking-tight text-cream sm:text-[4.5rem]">
@@ -23,14 +23,14 @@ export default function NotFound() {
         <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link
             href="/"
-            className="inline-flex min-h-11 rotate-[-0.7deg] items-center justify-center gap-2 rounded-lg border border-cream/55 bg-cream/[0.05] px-5 text-sm font-bold text-cream/78 outline-none backdrop-blur-sm transition duration-300 hover:-translate-y-0.5 hover:rotate-0 hover:border-cream/75 hover:bg-cream/[0.085] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/65"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-cream/55 bg-cream/[0.05] px-5 text-sm font-bold text-cream/78 outline-none backdrop-blur-sm transition duration-300 hover:-translate-y-0.5 hover:border-cream/75 hover:bg-cream/[0.085] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/65"
           >
             <ArrowLeft size={18} aria-hidden="true" />
             Back home
           </Link>
           <Link
             href="/practice"
-            className="inline-flex min-h-11 rotate-[0.7deg] items-center justify-center gap-2 rounded-lg border border-cream/24 bg-cream/[0.025] px-5 text-sm font-semibold text-cream/58 outline-none backdrop-blur-sm transition duration-300 hover:-translate-y-0.5 hover:rotate-0 hover:border-cream/42 hover:bg-cream/[0.055] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/45"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-cream/24 bg-cream/[0.025] px-5 text-sm font-semibold text-cream/58 outline-none backdrop-blur-sm transition duration-300 hover:-translate-y-0.5 hover:border-cream/42 hover:bg-cream/[0.055] hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/45"
           >
             <Compass size={18} aria-hidden="true" />
             Open practice

@@ -103,10 +103,10 @@ export function LevelStep({
               onClick={() => onSelect(option.value)}
               className={[
                 "onboarding-card-reveal",
-                "group relative min-h-[6.4rem] overflow-hidden rounded-[1.45rem] border p-5 text-left outline-none backdrop-blur-sm transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-cream/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#3657b4] sm:p-6",
+                "group relative min-h-[6.4rem] overflow-hidden rounded-[1.45rem] border p-5 text-left outline-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-[#F26E01]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101113] sm:p-6",
                 active
-                  ? "border-cream/60 bg-cream/[0.065] shadow-[0_20px_58px_-44px_rgba(241,234,216,0.55)]"
-                  : "border-cream/75 bg-cream/[0.035] hover:border-cream hover:bg-cream/[0.08]"
+                  ? "border-[#F26E01]/32 bg-[linear-gradient(145deg,#1d1e22,#18191c)] shadow-[0_22px_64px_-48px_rgba(242,110,1,0.25)]"
+                  : "border-white/12 bg-[linear-gradient(145deg,#1b1c20,#16171a)] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-white/22 hover:bg-[#1d1e22]"
               ].join(" ")}
               style={
                 {
@@ -117,7 +117,7 @@ export function LevelStep({
             >
               <span
                 aria-hidden
-                className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(241,234,216,0.08)_1px,transparent_1px)] bg-[length:5.5rem_100%] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[#F26E01]/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
               />
 
               <span className="relative flex min-h-full items-center justify-between gap-6">
@@ -151,8 +151,8 @@ export function LevelStep({
                 className={[
                   "absolute right-5 top-5 grid h-7 w-7 place-items-center rounded-full border transition",
                   active
-                    ? "border-cream/70 bg-cream/85 text-[#13234f]"
-                    : "border-cream/45"
+                    ? "onboarding-accent-fill border-[#F26E01]/45 text-[#17181b]"
+                    : "border-white/25"
                 ].join(" ")}
               >
                 {active ? <Check size={15} strokeWidth={3} /> : null}

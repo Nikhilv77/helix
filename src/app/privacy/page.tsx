@@ -1,7 +1,6 @@
-import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, ArrowRight, FileText, LockKeyhole, Server, ShieldCheck, User } from "lucide-react";
-import { SiteFooter, SiteNav } from "@/components/marketing/site-chrome";
+import { FileText, LockKeyhole, Server, ShieldCheck, User } from "lucide-react";
+import { EditorialBackLink } from "@/components/marketing/editorial-back-link";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -47,22 +46,9 @@ const sections = [
 ];
 
 export default function PrivacyPage() {
-  const backAction = (
-    <Link href="/" aria-label="Back" title="Back">
-      <ArrowLeft size={20} aria-hidden="true" />
-    </Link>
-  );
-
-  const footerAction = (
-    <Link href="/" className="inline-flex items-center gap-2">
-      Back <ArrowRight size={15} aria-hidden="true" />
-    </Link>
-  );
-
   return (
-    <div className="blueprint min-h-screen overflow-x-clip">
-      <div className="blueprint-grid" />
-      <SiteNav action={backAction} sectionHrefPrefix="/" />
+    <div className="editorial-theme blueprint min-h-screen overflow-x-clip">
+      <EditorialBackLink />
 
       <main className="relative z-10 px-5 pb-12 pt-32 sm:px-8">
         <header className="mx-auto max-w-3xl text-center">
@@ -79,23 +65,23 @@ export default function PrivacyPage() {
           </p>
         </header>
 
-        <section className="mx-auto mt-10 max-w-4xl rounded-[2rem] bg-white p-5 text-[#111827] shadow-[0_24px_70px_-34px_rgba(3,10,31,0.62)] sm:p-8">
+        <section className="mx-auto mt-10 max-w-4xl rounded-[2rem] border border-white/10 bg-[#18191c] p-5 text-cream shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-8">
           <div className="space-y-2">
             {sections.map((section) => {
               const Icon = section.icon;
               return (
                 <section
                   key={section.title}
-                  className="grid gap-4 rounded-2xl p-4 transition hover:bg-[#22409b]/[0.04] sm:grid-cols-[3rem_1fr]"
+                  className="grid gap-4 rounded-2xl p-4 transition hover:bg-[#F26E01]/[0.06] sm:grid-cols-[3rem_1fr]"
                 >
-                  <span className="pt-0.5 text-[#22409b]">
+                  <span className="pt-0.5 text-[#F26E01]">
                     <Icon size={30} strokeWidth={1.75} aria-hidden="true" />
                   </span>
                   <div>
-                    <h2 className="text-xl font-semibold tracking-tight text-[#111827]">
+                    <h2 className="text-xl font-semibold tracking-tight text-cream">
                       {section.title}
                     </h2>
-                    <p className="mt-2 text-base leading-7 text-[#111827]/[0.64]">
+                    <p className="mt-2 text-base leading-7 text-cream/64">
                       {section.body}
                     </p>
                   </div>
@@ -106,7 +92,6 @@ export default function PrivacyPage() {
         </section>
       </main>
 
-      <SiteFooter action={footerAction} sectionHrefPrefix="/" />
     </div>
   );
 }

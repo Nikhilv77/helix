@@ -152,19 +152,8 @@ function WordRevealLine({
 }
 
 function TechInterviewMotifs({ side }: { side: "maya" | "copy" }) {
-  const gridOpacity = side === "maya" ? "opacity-[0.14]" : "opacity-[0.13]";
-
   return (
     <>
-      <span
-        aria-hidden
-        className={`pointer-events-none absolute inset-0 z-0 ${gridOpacity}`}
-        style={{
-          backgroundImage:
-            "linear-gradient(90deg, rgba(241,234,216,0.18) 1px, transparent 1px), linear-gradient(180deg, rgba(241,234,216,0.18) 1px, transparent 1px)",
-          backgroundSize: "6.5rem 6.5rem"
-        }}
-      />
       {side === "maya" ? (
         <>
           <span
@@ -173,7 +162,7 @@ function TechInterviewMotifs({ side }: { side: "maya" | "copy" }) {
           />
           <span
             aria-hidden
-            className="pointer-events-none absolute left-8 top-14 z-0 h-24 w-56 rounded-full bg-cream/[0.06] blur-3xl"
+            className="pointer-events-none absolute left-8 top-14 z-0 h-24 w-56 rounded-full bg-cream/[0.025] blur-3xl"
           />
           <span
             aria-hidden
@@ -229,10 +218,6 @@ function TechInterviewMotifs({ side }: { side: "maya" | "copy" }) {
           <span
             aria-hidden
             className="pointer-events-none absolute -right-28 bottom-12 z-0 h-72 w-72 rounded-full border border-cream/[0.08]"
-          />
-          <span
-            aria-hidden
-            className="pointer-events-none absolute left-[58%] top-[22%] z-0 h-24 w-52 rounded-full bg-cream/[0.05] blur-3xl"
           />
           <span
             aria-hidden
@@ -513,11 +498,11 @@ export function MayaWelcome({
       role="dialog"
       aria-modal="true"
       aria-labelledby="maya-welcome-title"
-      className="fixed inset-0 z-[90] grid place-items-center bg-[#3657b4] p-3 sm:p-6"
+      className="onboarding-theme fixed inset-0 z-[90] grid place-items-center overflow-x-clip p-3 sm:p-6"
     >
       {/* Rows on small screens: the avatar takes a capped share and the copy
           scrolls, so a short phone never clips the slide or its buttons. */}
-      <section className="route-enter relative grid h-[min(46rem,calc(100svh-1.5rem))] w-full max-w-6xl grid-rows-[minmax(12rem,30svh)_minmax(0,1fr)] overflow-hidden rounded-[1.35rem] bg-[#3657b4] shadow-[0_38px_120px_rgba(4,12,42,0.46)] sm:grid-rows-[minmax(16rem,34svh)_minmax(0,1fr)] md:h-[min(43rem,calc(100svh-2rem))] md:grid-cols-[minmax(17rem,0.72fr)_minmax(0,1.28fr)] md:grid-rows-1">
+      <section className="route-enter relative grid min-w-0 h-[min(46rem,calc(100svh-1.5rem))] w-[min(100%,72rem)] max-w-full grid-rows-[minmax(12rem,30svh)_minmax(0,1fr)] overflow-hidden rounded-[1.35rem] border border-white/[0.07] bg-[#111214] shadow-[0_32px_90px_-54px_rgba(0,0,0,0.92)] sm:grid-rows-[minmax(16rem,34svh)_minmax(0,1fr)] md:h-[min(43rem,calc(100svh-2rem))] md:grid-cols-[minmax(17rem,0.72fr)_minmax(0,1.28fr)] md:grid-rows-1">
         <button
           type="button"
           onClick={() => dismiss()}
@@ -527,17 +512,17 @@ export function MayaWelcome({
           <X size={26} strokeWidth={1.35} />
         </button>
 
-        <div className="relative z-10 min-h-0 overflow-hidden bg-[#4565bd]">
+        <div className="relative z-10 min-h-0 overflow-hidden bg-[#17181b]">
           <TechInterviewMotifs side="maya" />
           <AvatarStage
             agentTrack={null}
             state={speaking ? "speaking" : "listening"}
             url="/avatars/interviewer-v2.glb"
           />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#4565bd] to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#17181b] to-transparent" />
         </div>
 
-        <div className="relative z-10 flex min-h-0 flex-col overflow-hidden bg-[#3657b4] px-5 pb-5 pt-5 sm:px-10 sm:pb-8 sm:pt-8 lg:px-14 lg:pb-9 lg:pt-10">
+        <div className="relative z-10 flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden bg-[#111214] px-5 pb-5 pt-5 sm:px-10 sm:pb-8 sm:pt-8 lg:px-14 lg:pb-9 lg:pt-10">
           <TechInterviewMotifs side="copy" />
           <div className="relative z-10 flex shrink-0 items-center gap-2.5 pr-12">
             {slides.map((slide, index) => (
@@ -546,8 +531,8 @@ export function MayaWelcome({
                 className={[
                   "h-1.5 rounded-full transition-all duration-300",
                   index === step
-                    ? "w-12 bg-cream shadow-[0_0_18px_rgba(241,234,216,0.42)]"
-                    : "w-6 bg-cream/40"
+                    ? "w-12 bg-[#F26E01] shadow-[0_0_14px_rgba(242,110,1,0.18)]"
+                    : "w-6 bg-cream/25"
                 ].join(" ")}
               />
             ))}
@@ -561,11 +546,11 @@ export function MayaWelcome({
             onWheel={() => {
               userControlledScroll.current = true;
             }}
-            className="no-scrollbar relative z-10 -mx-1 min-h-0 flex-1 overflow-y-auto px-1"
+            className="no-scrollbar relative z-10 -mx-1 min-h-0 min-w-0 max-w-full flex-1 overflow-x-clip overflow-y-auto px-1"
           >
             <div
               key={step}
-              className="step-in flex min-h-full flex-col justify-center py-4 sm:py-8 lg:py-12"
+              className="step-in flex min-h-full min-w-0 max-w-full flex-col justify-center py-4 sm:py-8 lg:py-12"
             >
               <Icon
                 size={64}
@@ -591,7 +576,7 @@ export function MayaWelcome({
               </p>
 
               {hasRoadmapTrack && step === 1 ? (
-                <div className="mt-5 grid gap-2 sm:mt-7 sm:grid-cols-2">
+                <div className="mx-auto mt-5 grid min-w-0 max-w-full w-[calc(100%-0.75rem)] gap-2 sm:mt-7 sm:w-full sm:grid-cols-2">
                   {FRONTEND_SESSIONS.map((session, index) => {
                     const meta = SESSION_CARD_META[session.id] ?? {
                       label: "Guided practice",
@@ -601,25 +586,24 @@ export function MayaWelcome({
                     return (
                       <div
                         key={session.id}
-                        className="onboarding-card-reveal flex min-h-[5.4rem] items-start gap-3 rounded-lg bg-cream px-4 py-3.5 text-[#13234f]"
+                        className="onboarding-card-reveal flex min-w-0 max-w-full min-h-[5.4rem] items-start gap-3 overflow-hidden rounded-lg border border-white/[0.07] bg-[#191a1d] px-4 py-3.5 text-cream"
                         style={
                           {
-                            "--card-delay": `${240 + index * 70}ms`,
-                            "--card-tilt": `${[-0.4, 0.25, -0.15, 0.35, -0.25, 0.2][index] ?? 0}deg`
+                            "--card-delay": `${240 + index * 70}ms`
                           } as CSSProperties
                         }
                       >
                         <SessionIcon
                           size={25}
                           strokeWidth={1.55}
-                          className="mt-0.5 shrink-0 text-[#13234f]/72"
+                          className="mt-0.5 shrink-0 text-[#F26E01]"
                           aria-hidden="true"
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[1.05rem] font-medium leading-5 text-[#13234f]">
+                          <p className="truncate text-[1.05rem] font-medium leading-5 text-cream">
                             {session.title}
                           </p>
-                          <p className="mt-2 line-clamp-2 text-[0.92rem] font-normal leading-5 text-[#13234f]/62">
+                          <p className="mt-2 line-clamp-2 text-[0.92rem] font-normal leading-5 text-cream/55">
                             {meta.label}. {meta.detail}
                           </p>
                         </div>
@@ -667,7 +651,7 @@ export function MayaWelcome({
                 <button
                   type="button"
                   onClick={() => setStep((currentStep) => currentStep + 1)}
-                  className="browse-nudge inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-cream px-5 text-sm font-semibold text-[#173178] shadow-[0_18px_44px_-26px_rgba(239,232,214,0.75)] transition hover:bg-white sm:w-auto"
+                  className="browse-nudge inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#f5f3ef] px-5 text-sm font-semibold text-[#17181b] shadow-[0_18px_44px_-26px_rgba(245,243,239,0.22)] transition hover:bg-white sm:w-auto"
                 >
                   Continue <ArrowRight size={15} />
                 </button>
@@ -686,7 +670,7 @@ export function MayaWelcome({
                       stopVoice();
                       window.location.replace(hasRoadmapTrack ? "/" : practiceHref);
                     }}
-                    className="browse-nudge inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-cream px-5 text-sm font-semibold text-[#173178] shadow-[0_18px_44px_-26px_rgba(239,232,214,0.75)] transition hover:bg-white"
+                    className="browse-nudge inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#f5f3ef] px-5 text-sm font-semibold text-[#17181b] shadow-[0_18px_44px_-26px_rgba(245,243,239,0.22)] transition hover:bg-white"
                   >
                     {hasRoadmapTrack ? "Start DSA" : "Start a mock"} <ArrowRight size={15} />
                   </button>

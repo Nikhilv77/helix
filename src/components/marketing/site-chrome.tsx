@@ -148,9 +148,9 @@ export function SiteNav({
       <div className="pointer-events-auto relative w-full max-w-[58rem]">
         <nav
           className={[
-            "grid grid-cols-[auto_1fr_auto] items-center overflow-hidden rounded-[1.35rem] border border-transparent bg-[#4565bd] px-2.5 py-2.5 shadow-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:border-cream/10 sm:bg-cream/[0.035] sm:shadow-[0_20px_54px_-40px_rgba(3,10,31,0.5)] sm:backdrop-blur-md",
+            "grid grid-cols-[auto_1fr_auto] items-center overflow-hidden rounded-[1.35rem] border border-transparent bg-[#18191c] px-2.5 py-2.5 shadow-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:border-white/10 sm:bg-[#18191c]/95 sm:shadow-[0_20px_54px_-40px_rgba(0,0,0,0.28)] sm:backdrop-blur-md",
             scrolled
-              ? "bg-[#4565bd] sm:border-cream/16 sm:bg-cream/[0.048] sm:shadow-[0_24px_64px_-42px_rgba(3,10,31,0.58)]"
+              ? "bg-[#18191c] sm:border-white/14 sm:bg-[#202126] sm:shadow-[0_24px_64px_-42px_rgba(0,0,0,0.32)]"
               : ""
           ].join(" ")}
         >
@@ -216,7 +216,7 @@ export function SiteNav({
           aria-hidden={!menuOpen}
           inert={menuOpen ? undefined : true}
           className={[
-            "overflow-hidden rounded-[1.35rem] border border-transparent bg-[#4565bd] text-cream shadow-none transition-[max-height,opacity,transform,margin-top,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[max-height,opacity,transform] sm:hidden",
+            "overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#18191c] text-cream shadow-none transition-[max-height,opacity,transform,margin-top,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[max-height,opacity,transform] sm:hidden",
             menuOpen
               ? "mt-2 max-h-[26rem] translate-y-0 p-2 opacity-100"
               : "mt-0 max-h-0 -translate-y-2 p-0 opacity-0"

@@ -11,10 +11,7 @@ import { TheInterview } from "./home/interview-section";
 
 export function MarketingHome() {
   return (
-    <div className="blueprint overflow-x-clip">
-      <div className="blueprint-grid" />
-      <div className="blueprint-rails" />
-
+    <div className="blueprint marketing-theme overflow-x-clip" data-marketing-accent="orange">
       <SiteNav
         actionKind="button"
         action={
@@ -34,7 +31,7 @@ export function MarketingHome() {
 
       <SiteFooter
         action={
-          <PrimaryAction className="inline-flex items-center gap-2 text-sm font-semibold text-[#22409b] transition hover:gap-3 hover:text-[#13234f]">
+          <PrimaryAction className="inline-flex items-center gap-2 text-sm font-semibold text-[#13234f] transition hover:gap-3 hover:text-[#0d1b44]">
             Start free <ArrowRight size={15} aria-hidden="true" />
           </PrimaryAction>
         }

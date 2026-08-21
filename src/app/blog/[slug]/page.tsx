@@ -2,9 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, CalendarDays, Clock, ListChecks } from "lucide-react";
-import { SiteFooter, SiteNav } from "@/components/marketing/site-chrome";
+import { ArrowRight, CalendarDays, Clock, ListChecks } from "lucide-react";
 import { TrailgradMark } from "@/components/marketing/blueprint-art";
+import { EditorialBackLink } from "@/components/marketing/editorial-back-link";
 import { blogPosts, getBlogPost } from "@/lib/blog";
 
 export function generateStaticParams() {
@@ -60,26 +60,14 @@ export default async function BlogPostPage({
   if (!post) notFound();
 
   const relatedPosts = blogPosts.filter((candidate) => candidate.slug !== post.slug).slice(0, 2);
-  const navAction = (
-    <Link href="/blog" aria-label="Back to blog" title="Back to blog">
-      <ArrowLeft size={20} aria-hidden="true" />
-    </Link>
-  );
-  const footerAction = (
-    <Link href="/blog" className="inline-flex items-center gap-2">
-      More notes <ArrowRight size={15} aria-hidden="true" />
-    </Link>
-  );
-
   return (
-    <div className="blueprint min-h-screen overflow-x-clip">
-      <div className="blueprint-rails" />
-      <SiteNav action={navAction} sectionHrefPrefix="/" />
+    <div className="editorial-theme blueprint min-h-screen overflow-x-clip">
+      <EditorialBackLink href="/blog" />
 
       <main className="relative z-10 px-5 pb-14 pt-32 sm:px-10 sm:pb-20 sm:pt-36">
-        <div className="pointer-events-none absolute left-1/2 top-20 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full border border-cream/10" />
-        <div className="pointer-events-none absolute -left-28 top-[34rem] hidden h-80 w-80 rounded-full border border-cream/10 sm:block" />
-        <div className="pointer-events-none absolute -right-28 bottom-40 hidden h-80 w-80 rounded-full border border-cream/10 sm:block" />
+        <div className="pointer-events-none absolute left-1/2 top-20 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full" />
+        <div className="pointer-events-none absolute -left-28 top-[34rem] hidden h-80 w-80 rounded-full sm:block" />
+        <div className="pointer-events-none absolute -right-28 bottom-40 hidden h-80 w-80 rounded-full sm:block" />
 
         <article className="relative mx-auto w-full max-w-[78rem]">
           <nav className="flex flex-wrap items-center gap-2 text-sm font-semibold text-cream/48">
@@ -123,7 +111,7 @@ export default async function BlogPostPage({
               </div>
             </div>
 
-            <div className="blog-rise relative min-h-[19rem] rounded-[1.4rem] border border-cream/[0.045] sm:min-h-[27rem] lg:min-h-[31rem]">
+            <div className="blog-rise relative min-h-[19rem] rounded-[1.4rem] sm:min-h-[27rem] lg:min-h-[31rem]">
               <Image
                 src={post.coverImage}
                 alt={post.coverAlt}
@@ -136,13 +124,13 @@ export default async function BlogPostPage({
           </header>
 
           <div className="mt-12 grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-            <div className="overflow-hidden rounded-[1.65rem] bg-[#f1ead8] text-[#151923]">
+            <div className="overflow-hidden rounded-[1.65rem] bg-[#18191c] text-cream">
               <div className="px-5 py-8 sm:px-9 sm:py-11 lg:px-12">
-                <div className="grid gap-4 rounded-[1.25rem] bg-[#3657b4]/[0.045] p-5 sm:grid-cols-3">
+                <div className="grid gap-4 rounded-[1.25rem] border border-white/10 bg-[#202126] p-5 sm:grid-cols-3">
                   {post.summary.map((item) => (
                     <div key={item} className="flex gap-3">
-                      <span className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-[#3657b4]" />
-                      <p className="text-base font-semibold leading-7 text-[#1f2937]/78">{item}</p>
+                      <span className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F26E01]" />
+                      <p className="text-base font-semibold leading-7 text-cream/78">{item}</p>
                     </div>
                   ))}
                 </div>
@@ -151,14 +139,14 @@ export default async function BlogPostPage({
                   {post.sections.map((section) => (
                     <section key={section.heading}>
                       {section.kicker ? (
-                        <p className="blueprint-label text-[#3657b4]/70">{section.kicker}</p>
+                        <p className="blueprint-label text-[#F26E01]/80">{section.kicker}</p>
                       ) : null}
-                      <h2 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight text-[#141821] sm:text-4xl">
+                      <h2 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight text-cream sm:text-4xl">
                         {section.heading}
                       </h2>
                       <div className="mt-5 space-y-5">
                         {section.paragraphs.map((paragraph) => (
-                          <p key={paragraph} className="text-lg leading-8 text-[#242832]/72">
+                          <p key={paragraph} className="text-lg leading-8 text-cream/70">
                             {paragraph}
                           </p>
                         ))}
@@ -169,7 +157,7 @@ export default async function BlogPostPage({
                           {section.bullets.map((bullet) => (
                             <li
                               key={bullet}
-                              className="rounded-xl bg-[#3657b4]/[0.055] px-4 py-3 text-base font-semibold leading-7 text-[#17234b]/76"
+                              className="rounded-xl border border-white/10 bg-[#202126] px-4 py-3 text-base font-semibold leading-7 text-cream/76"
                             >
                               {bullet}
                             </li>
@@ -183,7 +171,7 @@ export default async function BlogPostPage({
             </div>
 
             <aside className="lg:sticky lg:top-28">
-              <div className="rounded-[1.35rem] border border-cream/14 bg-cream/[0.045] p-5">
+              <div className="rounded-[1.35rem] border border-cream/[0.07] bg-cream/[0.045] p-5">
                 <div className="flex items-center gap-3 pb-5">
                   <ListChecks
                     size={31}
@@ -234,7 +222,7 @@ export default async function BlogPostPage({
                   href={`/blog/${related.slug}`}
                   className="group grid gap-5 rounded-[1.2rem] bg-cream/[0.035] p-4 transition sm:grid-cols-[11rem_1fr]"
                 >
-                  <div className="relative min-h-[12rem] rounded-[1rem] border border-cream/[0.04] sm:min-h-full">
+                  <div className="relative min-h-[12rem] rounded-[1rem] sm:min-h-full">
                     <Image
                       src={related.coverImage}
                       alt={related.coverAlt}
@@ -257,7 +245,6 @@ export default async function BlogPostPage({
         </article>
       </main>
 
-      <SiteFooter action={footerAction} sectionHrefPrefix="/" />
     </div>
   );
 }

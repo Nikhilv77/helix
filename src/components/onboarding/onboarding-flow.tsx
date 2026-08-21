@@ -187,7 +187,7 @@ export function OnboardingFlow({
   }, [analyze, error, file, result, step, uploading]);
 
   return (
-    <main className="blueprint relative min-h-screen min-h-[100svh] overflow-hidden">
+    <main className="blueprint onboarding-theme relative min-h-screen min-h-[100svh] overflow-x-hidden">
       <BlueprintBackdrop />
       <div className="relative z-10 mx-auto flex min-h-screen min-h-[100svh] w-full max-w-[78rem] flex-col px-4 sm:px-7 lg:px-10">
         <header className="relative mt-7 flex min-h-10 items-center justify-center">
@@ -208,7 +208,7 @@ export function OnboardingFlow({
                 key={item.value}
                 className={[
                   "h-1.5 rounded-full transition-colors duration-500",
-                  index <= stepIndex(step) ? "bg-cream" : "bg-cream/30"
+                  index <= stepIndex(step) ? "onboarding-accent-fill" : "bg-white/15"
                 ].join(" ")}
               />
             ))}

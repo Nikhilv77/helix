@@ -34,7 +34,9 @@ export function RoleStep({
               className={[
                 "group relative flex min-h-[15rem] min-w-0 flex-col p-5 text-left outline-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-cream/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#3657b4]",
                 CARD,
-                active ? "bg-cream-soft" : "hover:bg-cream-soft"
+                active
+                  ? "border-[#F26E01]/35 bg-[#202126]"
+                  : "hover:border-white/20 hover:bg-[#1d1e22]"
               ].join(" ")}
             >
               <div className="flex items-start justify-between gap-3">
@@ -69,7 +71,7 @@ export function RoleStep({
               >
                 {option.label}
               </span>
-              <span className="mt-2 block min-h-[3rem] text-[15px] leading-6 text-[#13234f]/70">
+              <span className="mt-2 block min-h-[3rem] text-[15px] leading-6 text-cream/65">
                 {option.detail}
               </span>
             </button>

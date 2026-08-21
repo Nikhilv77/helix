@@ -21,6 +21,7 @@ import {
   X
 } from "lucide-react";
 import { TrailgradMark } from "@/components/trailgrad-mark";
+import { isWorkspaceChromeRoute } from "@/lib/workspace-routes";
 
 const navGroups = [
   {
@@ -62,7 +63,7 @@ function NavPending() {
 // user's sidebar back to the default. Nobody sees the string.
 const SIDEBAR_STORAGE_KEY = "helix:sidebar-collapsed";
 
-/** Signed-in workspace chrome. Interview and onboarding routes stay distraction-free. */
+/** Signed-in workspace chrome, mounted persistently but shown only on app routes. */
 export function WorkspaceShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user } = useUser();
@@ -72,18 +73,10 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState("");
-  // Chrome-free routes: the live interview room and onboarding.
-  //
-  // This was a `startsWith("/interview")` prefix test, which is also true for
-  // "/interviews" — so the interviews *list* was rendered bare and lost its
-  // sidebar, while every other page kept one. Match the room exactly, or a
-  // path below it, and never the sibling route that merely shares a prefix.
-  const isBareRoute = (path: string) =>
-    path === "/interview" ||
-    path.startsWith("/interview/") ||
-    path.startsWith("/onboarding") ||
-    path.startsWith("/auth/continue");
-  const bare = pathname ? isBareRoute(pathname) : false;
+  // Root layouts survive client and browser-history navigation. A positive
+  // workspace allowlist prevents public pages from inheriting this shell when
+  // a signed-in user moves back from onboarding to marketing or editorial UI.
+  const showChrome = pathname ? isWorkspaceChromeRoute(pathname) : false;
 
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true");
@@ -122,7 +115,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : Boolean(pathname?.startsWith(href));
 
-  if (bare) return <>{children}</>;
+  if (!showChrome) return <>{children}</>;
 
   return (
     <div
@@ -130,10 +123,9 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         // overflow-x-clip, not overflow-hidden: `hidden` makes this a scroll
         // container, which silently kills the sticky mobile header inside it.
         //
-        // No bg override: `.blueprint` defines the same #3657b4 base used by
-        // the marketing home page. The grid/rails below make the signed-in
-        // shell read as the same product surface.
-        "blueprint relative min-h-screen overflow-x-clip transition-[padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        // No bg override: `.blueprint` owns the shared product canvas. The
+        // grid and rails below keep the signed-in shell visually connected.
+        "blueprint workspace-black relative min-h-screen overflow-x-clip transition-[padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
         collapsed ? "md:pl-[6rem]" : "md:pl-[17rem]"
       ].join(" ")}
     >
@@ -142,7 +134,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           type="button"
           aria-label="Close navigation"
           onClick={() => setMenuOpen(false)}
-          className="fixed inset-0 z-40 bg-blueprint-dark/70 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
         />
       ) : null}
 
@@ -151,7 +143,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           // Rail + panel, the way dense product consoles are built: a narrow
           // always-visible icon column, and a wider labelled panel that is what
           // actually collapses.
-          "fixed inset-y-0 left-0 z-50 flex w-[min(16rem,calc(100vw-1rem))] bg-[#3657b4] transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:inset-y-2 md:left-2 md:rounded-2xl",
+          "fixed inset-y-0 left-0 z-50 flex w-[min(16rem,calc(100vw-1rem))] border-r border-white/[0.07] bg-[#111214] shadow-[18px_0_50px_-38px_rgba(0,0,0,0.9)] transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:inset-y-2 md:left-2 md:rounded-2xl md:border",
           menuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
           collapsed ? "md:w-[5rem]" : "md:w-[16rem]"
         ].join(" ")}
@@ -160,9 +152,8 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         <div
           className={[
             // Expanded, the rail is the darker of two columns. Collapsed, it is
-            // the whole sidebar, so it takes the lighter panel blue instead of
-            // leaving a dark sliver against the page.
-            "flex w-16 shrink-0 flex-col items-center gap-1.5 rounded-l-2xl bg-cream/[0.055] py-3 text-cream shadow-[inset_-1px_0_0_rgba(241,234,216,0.08)] backdrop-blur-xl transition-colors duration-300",
+            // the whole sidebar, so it uses the panel surface consistently.
+            "flex w-16 shrink-0 flex-col items-center gap-1.5 rounded-l-2xl bg-[#0d0e10] py-3 text-cream shadow-[inset_-1px_0_0_rgba(241,234,216,0.07)] backdrop-blur-xl transition-colors duration-300",
             collapsed ? "md:w-20 md:gap-2 md:py-4" : ""
           ].join(" ")}
         >
@@ -170,7 +161,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
             href="/"
             aria-label="Trailgrad home"
             className={[
-              "mb-2 grid h-10 w-10 shrink-0 place-items-center rounded-[0.5rem] text-cream transition-colors duration-300 ease-out hover:bg-cream/[0.08]",
+              "mb-2 grid h-10 w-10 shrink-0 place-items-center rounded-[0.5rem] text-cream transition-colors duration-300 ease-out hover:bg-white/[0.07]",
               collapsed ? "md:h-12 md:w-12" : ""
             ].join(" ")}
           >
@@ -193,15 +184,15 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
                   aria-current={active ? "page" : undefined}
                   onClick={() => setMenuOpen(false)}
                   className={[
-                    "group relative grid h-10 w-10 shrink-0 place-items-center rounded-lg outline-none transition-[background,color,transform] duration-200 ease-out hover:translate-x-0.5 hover:bg-cream/[0.09] focus-visible:ring-2 focus-visible:ring-cream/50",
+                    "group relative grid h-10 w-10 shrink-0 place-items-center rounded-lg outline-none transition-[background,color,transform] duration-200 ease-out hover:translate-x-0.5 hover:bg-white/[0.07] focus-visible:ring-2 focus-visible:ring-[#F26E01]/45",
                     collapsed ? "md:h-12 md:w-12" : "",
-                    active ? "text-cream" : "text-cream/58 hover:text-cream"
+                    active ? "bg-[#F26E01]/[0.1] text-cream" : "text-cream/58 hover:text-cream"
                   ].join(" ")}
                 >
                   {active ? (
                     <span
                       aria-hidden="true"
-                      className="absolute right-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-cream/78"
+                      className="absolute right-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#F26E01] shadow-[0_0_10px_rgba(242,110,1,0.45)]"
                     />
                   ) : null}
                   <Icon
@@ -221,7 +212,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className={[
-              "hidden h-10 w-10 shrink-0 place-items-center rounded-lg text-cream/62 outline-none transition-colors duration-300 ease-out hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/40 md:grid",
+              "hidden h-10 w-10 shrink-0 place-items-center rounded-lg text-cream/62 outline-none transition-colors duration-300 ease-out hover:bg-white/[0.06] hover:text-cream focus-visible:ring-2 focus-visible:ring-[#F26E01]/40 md:grid",
               collapsed ? "md:h-12 md:w-12" : ""
             ].join(" ")}
           >
@@ -246,7 +237,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         {/* Labelled panel — this is what collapses away. */}
         <div
           className={[
-            "flex min-w-0 flex-1 flex-col overflow-x-hidden rounded-r-2xl bg-[#3657b4] px-3.5 py-3.5",
+            "flex min-w-0 flex-1 flex-col overflow-x-hidden rounded-r-2xl bg-[#151619] px-3.5 py-3.5",
             collapsed ? "md:hidden" : ""
           ].join(" ")}
         >
@@ -255,7 +246,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
               type="button"
               aria-label="Close navigation"
               onClick={() => setMenuOpen(false)}
-              className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-cream/55 transition hover:bg-cream/[0.09] hover:text-cream"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-cream/55 transition hover:bg-white/[0.07] hover:text-cream"
             >
               <X size={18} aria-hidden="true" />
             </button>
@@ -272,7 +263,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search"
-              className="h-9 w-full rounded-lg bg-cream/[0.065] pl-8 pr-2.5 text-[0.88rem] text-cream placeholder:text-cream/42 outline-none transition focus:bg-cream/[0.095] focus-visible:ring-2 focus-visible:ring-cream/30"
+              className="h-9 w-full rounded-lg border border-white/[0.07] bg-white/[0.035] pl-8 pr-2.5 text-[0.88rem] text-cream placeholder:text-cream/42 outline-none transition focus:border-[#F26E01]/35 focus:bg-white/[0.055] focus-visible:ring-2 focus-visible:ring-[#F26E01]/25"
             />
           </label>
 
@@ -320,16 +311,16 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
                           // effect never fires and the drawer would stay open.
                           onClick={() => setMenuOpen(false)}
                           className={[
-                            "group relative flex h-10 items-center gap-2.5 rounded-lg px-3 text-[0.9rem] font-medium outline-none transition-colors duration-200 ease-out hover:bg-cream/[0.09]",
+                            "group relative flex h-10 items-center gap-2.5 rounded-lg px-3 text-[0.9rem] font-medium outline-none transition-colors duration-200 ease-out hover:bg-white/[0.07]",
                             active
-                              ? "text-cream"
-                              : "text-cream/62 hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/40"
+                              ? "bg-[#F26E01]/[0.1] text-cream"
+                              : "text-cream/62 hover:text-cream focus-visible:ring-2 focus-visible:ring-[#F26E01]/40"
                           ].join(" ")}
                         >
                           {active ? (
                             <span
                               aria-hidden="true"
-                              className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-cream/70"
+                              className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-[#F26E01] shadow-[0_0_12px_rgba(242,110,1,0.35)]"
                             />
                           ) : null}
                           <NavPending />
@@ -352,7 +343,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           <Link
             href="/profile"
             onClick={() => setMenuOpen(false)}
-            className="group mt-3 flex shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[0.9rem] outline-none transition-colors duration-200 ease-out hover:bg-cream/[0.09] focus-visible:ring-2 focus-visible:ring-cream/40"
+            className="group mt-3 flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border-t border-white/[0.07] px-3 py-3 text-[0.9rem] outline-none transition-colors duration-200 ease-out hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-[#F26E01]/40"
           >
             <span className="min-w-0 flex-1">
               <span className="block truncate font-medium text-cream/88 transition-colors group-hover:text-cream">
@@ -366,20 +357,21 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      {!collapsed ? (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none fixed inset-y-8 left-[17rem] z-40 hidden w-px bg-gradient-to-b from-transparent via-cream/50 to-transparent opacity-90 md:block"
-        />
-      ) : null}
+      <span
+        aria-hidden="true"
+        className={[
+          "pointer-events-none fixed top-[5%] z-40 hidden h-[90vh] w-[2px] rounded-full bg-[linear-gradient(180deg,transparent_0%,rgba(242,110,1,0.3)_18%,rgba(242,110,1,0.88)_50%,rgba(242,110,1,0.3)_82%,transparent_100%)] shadow-[0_0_16px_rgba(242,110,1,0.32)] transition-[left,opacity] duration-300 md:block",
+          collapsed ? "left-[5.5rem] opacity-90" : "left-[16.5rem] opacity-100"
+        ].join(" ")}
+      />
 
       {/* Stays put while the page scrolls, so the drawer is always one tap away. */}
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 bg-[#4968b8]/88 px-3 shadow-[inset_0_-1px_0_rgba(239,232,214,0.08)] backdrop-blur-xl md:hidden">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-white/[0.07] bg-[#101113]/92 px-3 shadow-[0_12px_30px_-24px_rgba(0,0,0,0.9)] backdrop-blur-xl md:hidden">
         <button
           type="button"
           aria-label="Open navigation"
           onClick={() => setMenuOpen(true)}
-          className="flex h-11 w-11 shrink-0 items-center justify-center text-cream/80 outline-none transition-colors hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/50"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-cream/80 outline-none transition-colors hover:bg-white/[0.06] hover:text-cream focus-visible:ring-2 focus-visible:ring-[#F26E01]/45"
         >
           <Menu size={25} strokeWidth={1.7} aria-hidden="true" />
         </button>
@@ -455,7 +447,7 @@ function AvatarMenu({
         aria-label="Open account menu"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="relative z-[60] rounded-full outline-none transition hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-cream/50"
+        className="relative z-[60] rounded-full outline-none transition hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-[#F26E01]/45"
       >
         <PlainAvatar imageUrl={imageUrl} name={name} size={size} />
       </button>
@@ -463,7 +455,7 @@ function AvatarMenu({
       {open ? (
         <div
           className={[
-            "account-menu-pop absolute z-[60] w-44 rotate-1 overflow-hidden rounded-lg border border-cream/35 bg-[#4968b8]/95 p-1.5 text-cream shadow-[0_22px_54px_-34px_rgba(4,12,45,0.9)] backdrop-blur-xl",
+            "account-menu-pop absolute z-[60] w-44 overflow-hidden rounded-lg border border-white/[0.14] bg-[#1b1d20] p-1.5 text-cream shadow-[0_24px_58px_-30px_rgba(0,0,0,0.96)]",
             menuPosition
           ].join(" ")}
         >

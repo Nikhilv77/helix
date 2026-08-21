@@ -4,11 +4,11 @@ import {
   DashboardSkeleton,
   MayaWelcomeLoading,
   ManageSkeleton,
-  ProfileSkeleton,
   RouteProgress,
   Waveform
 } from "@/components/workspace/skeletons";
 import { InterviewsSkeleton } from "@/components/workspace/interviews-skeleton";
+import { ProfileSkeleton } from "@/components/workspace/profile-skeleton";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ArrowRight, CheckCircle2, Target, TrendingUp } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { InterviewSignal, TrailgradMark } from "../blueprint-art";
 import { Reveal } from "../reveal";
 import { PrimaryAction } from "./primary-action";
@@ -13,35 +13,23 @@ const reportRows = [
   { label: "Flow", score: 91, note: "Answer flow is easy to follow." }
 ] as const;
 
-const evidenceBars = [38, 54, 46, 72, 64, 86, 78, 92, 88, 96] as const;
-
 export function Delivery() {
   return (
     <section
       id="report"
-      className="relative z-10 overflow-hidden bg-blueprint px-5 py-20 sm:px-10 sm:py-28"
+      className="marketing-theme-section relative z-10 overflow-hidden bg-blueprint px-5 py-20 sm:px-10 sm:py-28"
     >
-      <InterviewSignal className="pointer-events-none absolute left-1/2 top-16 h-[26rem] w-[34rem] -translate-x-1/2 opacity-10 sm:h-[34rem] sm:w-[44rem]" />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.18] sm:opacity-30"
-        style={{
-          backgroundImage:
-            "linear-gradient(90deg, rgba(241,234,216,0.08) 1px, transparent 1px), linear-gradient(180deg, rgba(241,234,216,0.08) 1px, transparent 1px)",
-          backgroundPosition: "center top",
-          backgroundSize: "11rem 11rem"
-        }}
-      />
+      <InterviewSignal className="pointer-events-none absolute left-1/2 top-16 h-[26rem] w-[34rem] -translate-x-1/2 text-[color:var(--dm-accent-soft)] opacity-10 sm:h-[34rem] sm:w-[44rem]" />
       <div className="pointer-events-none absolute -left-28 top-28 hidden h-72 w-72 rounded-full border border-cream/10 sm:block" />
       <div className="pointer-events-none absolute -right-24 bottom-28 hidden h-80 w-80 rounded-full border border-cream/10 sm:block" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#3657b4] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#101113] to-transparent" />
 
       <div className="relative mx-auto w-full max-w-[78rem]">
         <div className="grid gap-14 lg:grid-cols-[1.06fr_0.94fr] lg:items-center">
           <div className="lg:order-2 lg:ml-auto">
             <Reveal>
-              <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 sm:backdrop-blur-sm">
-                <TrailgradMark className="h-3.5 w-3.5 text-cream" />
+              <span className="theme-accent-pill inline-flex items-center gap-2.5 rounded-full px-3.5 py-1.5 sm:backdrop-blur-sm">
+                <TrailgradMark className="h-3.5 w-3.5 text-[color:var(--dm-accent-soft)]" />
                 <span className="blueprint-label whitespace-nowrap text-cream/80">
                   After the round
                 </span>
@@ -69,123 +57,48 @@ export function Delivery() {
           </div>
 
           <Reveal delay={120} className="lg:order-1">
-            <div className="relative min-h-[34rem] [contain:layout_paint]">
-              <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-px bg-cream/14" />
-              <div className="pointer-events-none absolute bottom-8 left-10 top-8 w-px bg-cream/14" />
-              <div className="pointer-events-none absolute right-6 top-0 h-40 w-40 rounded-full border border-cream/10" />
-              <div className="pointer-events-none absolute -left-10 bottom-6 h-28 w-28 rounded-full border border-cream/10" />
-
-              <div className="relative grid gap-10 md:grid-cols-[13rem_1fr] md:items-start">
-                <Reveal delay={220}>
-                  <div className="relative mx-auto grid h-52 w-52 place-items-center">
-                    <svg
-                      viewBox="0 0 140 140"
-                      className="absolute inset-0 h-full w-full -rotate-90"
-                    >
-                      <circle
-                        cx="70"
-                        cy="70"
-                        r="55"
-                        fill="none"
-                        stroke="rgba(241,234,216,0.12)"
-                        strokeWidth="8"
-                      />
-                      <circle
-                        className="report-score-ring"
-                        cx="70"
-                        cy="70"
-                        r="55"
-                        fill="none"
-                        stroke="#f1ead8"
-                        strokeLinecap="round"
-                        strokeWidth="8"
-                        pathLength="100"
-                        strokeDasharray="82 100"
-                      />
-                    </svg>
-                    <div className="text-center">
-                      <p className="wordmark text-6xl text-cream">82</p>
-                      <p className="blueprint-label mt-1 text-cream/45">Clarity</p>
-                    </div>
-                  </div>
-                </Reveal>
-
-                <div className="relative pt-3">
-                  <Reveal delay={260}>
-                    <div className="flex items-center justify-between gap-4 border-b border-cream/18 pb-4">
-                      <span className="blueprint-label text-cream/55">Round recap</span>
-                      <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-cream/70">
-                        <span className="h-2 w-2 rounded-full bg-[#7ee0bd] shadow-[0_0_16px_rgba(126,224,189,0.72)]" />
-                        Improved
-                      </span>
-                    </div>
-                  </Reveal>
-
-                  <Reveal delay={330}>
-                    <div className="mt-8 flex h-28 items-end gap-2 border-b border-l border-cream/14 px-3 pb-3">
-                      {evidenceBars.map((height, index) => (
-                        <span
-                          key={`${height}-${index}`}
-                          className="report-evidence-bar block w-full rounded-t-sm bg-cream/70"
-                          style={{
-                            height: `${height}px`,
-                            animationDelay: `${index * 90}ms`
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </Reveal>
-
-                  <div className="mt-8 grid gap-x-8 gap-y-6 sm:grid-cols-2">
-                    {reportRows.map((row, index) => (
-                      <Reveal key={row.label} delay={420 + index * 100}>
-                        <div className="border-t border-cream/14 pt-4">
-                          <div className="flex items-baseline justify-between gap-4">
-                            <p className="text-xl font-semibold tracking-tight text-cream">
-                              {row.label}
-                            </p>
-                            <p className="font-mono text-xl font-semibold text-cream/78">
-                              {row.score}
-                            </p>
-                          </div>
-                          <div className="mt-3 h-2 overflow-hidden rounded-full bg-cream/10">
-                            <div
-                              className="report-row-fill h-full rounded-full bg-cream"
-                              style={{
-                                width: `${row.score}%`,
-                                animationDelay: `${index * 80}ms`
-                              }}
-                            />
-                          </div>
-                          <p className="mt-2 text-base leading-6 text-cream/58">{row.note}</p>
-                        </div>
-                      </Reveal>
-                    ))}
-                  </div>
-                </div>
+            <div className="overflow-hidden rounded-[1.5rem] border border-white/[0.07] bg-[#18191c] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
+              <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4 sm:px-7">
+                <span className="blueprint-label text-cream/48">Round recap</span>
+                <span className="font-mono text-xs text-cream/34">Interview 06</span>
               </div>
 
-              <div className="relative mt-10 grid gap-5 border-t border-cream/18 pt-6 sm:grid-cols-3">
+              <div className="grid border-b border-white/[0.07] sm:grid-cols-3">
                 {[
-                  { icon: TrendingUp, label: "Trend", value: "+14%" },
-                  { icon: Target, label: "Next focus", value: "Outcome" },
-                  { icon: CheckCircle2, label: "Ready", value: "Next round" }
-                ].map((item, index) => {
-                  const Icon = item.icon;
-                  return (
-                    <Reveal key={item.label} delay={820 + index * 90}>
-                      <div className="flex items-center gap-3">
-                        <span className="shrink-0 text-cream">
-                          <Icon size={34} strokeWidth={1.8} aria-hidden="true" />
-                        </span>
-                        <div>
-                          <p className="blueprint-label text-[0.74rem] text-cream/40">{item.label}</p>
-                          <p className="text-base font-semibold text-cream">{item.value}</p>
-                        </div>
-                      </div>
-                    </Reveal>
-                  );
-                })}
+                  { label: "Overall", value: "82", suffix: "/ 100" },
+                  { label: "Trend", value: "+14%", suffix: "this month" },
+                  { label: "Next focus", value: "Outcome", suffix: "add evidence" }
+                ].map((item, index) => (
+                  <div
+                    key={item.label}
+                    className={`px-5 py-5 sm:px-7 ${index > 0 ? "border-t border-white/[0.07] sm:border-l sm:border-t-0" : ""}`}
+                  >
+                    <p className="blueprint-label text-[0.68rem] text-cream/36">{item.label}</p>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <p className="text-2xl font-semibold tracking-tight text-cream">{item.value}</p>
+                      <p className="text-xs text-cream/35">{item.suffix}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="px-5 py-2 sm:px-7">
+                {reportRows.map((row, index) => (
+                  <Reveal key={row.label} delay={280 + index * 80}>
+                    <div
+                      className={`grid gap-2 py-5 sm:grid-cols-[7rem_3.5rem_1fr] sm:items-start sm:gap-5 ${index > 0 ? "border-t border-white/[0.065]" : ""}`}
+                    >
+                      <p className="text-sm font-semibold text-cream/74">{row.label}</p>
+                      <p className="font-mono text-sm font-semibold text-cream">{row.score}</p>
+                      <p className="text-sm leading-6 text-cream/48">{row.note}</p>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2 border-t border-white/[0.07] px-5 py-4 sm:px-7">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#F26E01]" />
+                <p className="text-xs font-medium text-cream/48">Ready for the next round</p>
               </div>
             </div>
           </Reveal>
@@ -210,8 +123,8 @@ function FinalCta() {
       <div className="relative grid min-h-[34rem] items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="relative z-10 max-w-2xl">
           <Reveal>
-            <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 sm:backdrop-blur-sm">
-              <TrailgradMark className="h-3.5 w-3.5 text-cream" />
+            <span className="theme-accent-pill inline-flex items-center gap-2.5 rounded-full px-3.5 py-1.5 sm:backdrop-blur-sm">
+              <TrailgradMark className="h-3.5 w-3.5 text-[color:var(--dm-accent-soft)]" />
               <span className="blueprint-label whitespace-nowrap text-cream/80">
                 Ready when you are
               </span>

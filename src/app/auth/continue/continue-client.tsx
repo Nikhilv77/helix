@@ -48,5 +48,5 @@ export function ContinueClient() {
     };
   }, [isLoaded, isSignedIn]);
 
-  return <main aria-label="Continuing to Trailgrad" className="min-h-[100svh] bg-[#3657b4]" />;
+  return <main aria-label="Continuing to Trailgrad" className="onboarding-theme min-h-[100svh]" />;
 }

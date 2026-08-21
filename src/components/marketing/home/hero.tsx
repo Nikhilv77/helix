@@ -28,13 +28,13 @@ export function Hero() {
   });
 
   return (
-    <section className="sticky top-0 z-0 h-[100svh] min-h-[40rem] overflow-hidden px-5 pb-10 pt-24 sm:px-10">
+    <section className="marketing-theme-hero sticky top-0 z-0 h-[100svh] min-h-[40rem] overflow-hidden px-5 pb-10 pt-24 sm:px-10">
       <div
         ref={parallaxRef}
         className="hero-parallax relative z-10 mx-auto flex h-full w-full max-w-[46rem] flex-col items-center justify-center text-center"
       >
         <div className="relative max-h-[36rem] min-h-[15rem] w-full max-w-[31rem] flex-1 sm:max-h-[30rem] sm:max-w-[28rem]">
-          <InterviewSignal className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[23rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 opacity-35 sm:h-[26rem] sm:w-[34rem] sm:opacity-50" />
+          <InterviewSignal className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[23rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 text-[color:var(--dm-accent-soft)] opacity-25 sm:h-[26rem] sm:w-[34rem] sm:opacity-40" />
           <MarketingAvatar
             priority
             active={avatarActive}
@@ -46,8 +46,8 @@ export function Hero() {
 
         <div className="flex w-full shrink-0 flex-col items-center">
           <Reveal>
-            <span className="mt-8 inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 backdrop-blur-sm">
-              <TrailgradMark className="h-3.5 w-3.5 text-cream" />
+            <span className="theme-accent-pill mt-8 inline-flex items-center gap-2.5 rounded-full px-3.5 py-1.5 backdrop-blur-sm">
+              <TrailgradMark className="h-3.5 w-3.5 text-[color:var(--dm-accent-soft)]" />
               <span className="blueprint-label whitespace-nowrap text-cream/80">
                 Learn it, then say it
               </span>
@@ -73,7 +73,7 @@ export function Hero() {
           </Reveal>
 
           <Reveal delay={240}>
-            <LiveBars count={18} className="mt-7 hidden h-8 opacity-60 sm:flex" />
+            <LiveBars count={18} className="mt-7 hidden h-8 text-[color:var(--dm-accent-soft)] opacity-50 sm:flex" />
           </Reveal>
 
           <Reveal delay={300}>

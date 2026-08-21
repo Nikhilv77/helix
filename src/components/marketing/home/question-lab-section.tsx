@@ -27,20 +27,10 @@ export function QuestionLab() {
   return (
     <section
       id="questions"
-      className="relative z-10 overflow-hidden bg-blueprint px-5 pb-10 pt-20 sm:px-10 sm:py-28"
+      className="marketing-theme-section relative z-10 overflow-hidden bg-blueprint px-5 pb-10 pt-20 sm:px-10 sm:py-28"
     >
-      <InterviewSignal className="pointer-events-none absolute left-1/2 top-16 h-[26rem] w-[34rem] -translate-x-1/2 opacity-10 sm:h-[34rem] sm:w-[44rem]" />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-20 sm:opacity-32"
-        style={{
-          backgroundImage:
-            "linear-gradient(90deg, rgba(241,234,216,0.08) 1px, transparent 1px), linear-gradient(180deg, rgba(241,234,216,0.08) 1px, transparent 1px)",
-          backgroundPosition: "center top",
-          backgroundSize: "11rem 11rem"
-        }}
-      />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#3657b4] to-transparent" />
+      <InterviewSignal className="pointer-events-none absolute left-1/2 top-16 h-[26rem] w-[34rem] -translate-x-1/2 text-[color:var(--dm-accent-soft)] opacity-10 sm:h-[34rem] sm:w-[44rem]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#101113] to-transparent" />
       <div className="pointer-events-none absolute -left-24 top-28 h-72 w-72 rounded-full border border-cream/10" />
       <div className="pointer-events-none absolute -right-28 bottom-24 h-80 w-80 rounded-full border border-cream/10" />
       <QuestionPatterns />
@@ -48,8 +38,8 @@ export function QuestionLab() {
       <div className="relative mx-auto grid w-full max-w-[78rem] gap-5 sm:gap-8 lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:gap-12">
         <div className="max-w-2xl lg:order-2 lg:ml-auto">
           <Reveal>
-            <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/20 bg-cream/5 px-3.5 py-1.5 sm:backdrop-blur-sm">
-              <TrailgradMark className="h-3.5 w-3.5 text-cream" />
+            <span className="theme-accent-pill inline-flex items-center gap-2.5 rounded-full px-3.5 py-1.5 sm:backdrop-blur-sm">
+              <TrailgradMark className="h-3.5 w-3.5 text-[color:var(--dm-accent-soft)]" />
               <span className="blueprint-label whitespace-nowrap text-cream/80">
                 Maya question lab
               </span>
@@ -100,7 +90,7 @@ export function QuestionLab() {
             <div className="pointer-events-none absolute right-4 top-16 h-16 w-28 rounded-2xl border border-cream/14 opacity-60 sm:right-6 sm:h-20 sm:w-32" />
             <div className="pointer-events-none absolute bottom-12 left-1/2 h-px w-[74%] -translate-x-1/2 bg-cream/16" />
             <Image
-              src="/images/marketing/maya-question-laptop-optimized.webp"
+              src="/images/marketing/maya-question-laptop-optimized.png"
               alt="Maya guiding interview practice questions on a laptop"
               fill
               sizes="(max-width: 640px) 96vw, (max-width: 1024px) 56vw, 42rem"
