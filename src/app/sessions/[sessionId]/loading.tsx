@@ -1,5 +1,5 @@
-import { WorkspaceLoading } from "@/components/workspace/shared/loading/skeletons";
+import { SessionDetailSkeleton } from "@/components/workspace/sessions/session-detail-skeleton";
 
 export default function Loading() {
-  return <WorkspaceLoading />;
+  return <SessionDetailSkeleton />;
 }

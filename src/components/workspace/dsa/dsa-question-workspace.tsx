@@ -107,7 +107,7 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
             type="button"
             onClick={() => void runCode()}
             disabled={running || !code.trim()}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-cream px-3.5 text-xs font-semibold text-[#1d3a86] transition hover:bg-white disabled:pointer-events-none disabled:opacity-45"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-cream px-3.5 text-xs font-semibold text-[#171a16] transition hover:bg-white disabled:pointer-events-none disabled:opacity-45"
           >
             {running ? <Loader2 size={13} className="animate-spin" aria-hidden="true" /> : <Play size={13} aria-hidden="true" />}
             {running ? "Running" : "Run code"}

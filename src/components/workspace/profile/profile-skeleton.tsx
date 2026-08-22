@@ -1,4 +1,4 @@
-import { RouteProgress } from "@/components/workspace/shared/loading/skeletons";
+import { RouteProgress } from "@/components/workspace/shared/loading/primitives";
 
 function Line({ className = "" }: { className?: string }) {
   return <div className={`skeleton h-3 ${className}`} />;
@@ -7,7 +7,7 @@ function Line({ className = "" }: { className?: string }) {
 export function ProfileSkeleton() {
   return (
     <div
-      className="mx-auto w-full max-w-[110rem] px-5 py-6 pb-16 sm:px-8 lg:px-10 lg:py-8"
+      className="mx-auto w-full max-w-[84rem] px-4 pb-20 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10"
       aria-busy="true"
       aria-label="Loading profile"
     >

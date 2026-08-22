@@ -9,7 +9,8 @@ import type {
   Role,
   InterviewSetup,
   SessionResponse,
-  StartResponse
+  StartResponse,
+  WorkspaceAccent
 } from "../shared/types";
 
 export class ApiClientError extends Error {
@@ -132,6 +133,19 @@ export async function deleteAccount(): Promise<{ deleted: boolean }> {
   }
 
   return payload.data as { deleted: boolean };
+}
+
+export function getWorkspaceAccent(): Promise<{ accent: WorkspaceAccent }> {
+  return request<{ accent: WorkspaceAccent }>("/api/account/accent");
+}
+
+export function saveWorkspaceAccent(
+  accent: WorkspaceAccent
+): Promise<{ accent: WorkspaceAccent }> {
+  return request<{ accent: WorkspaceAccent }>("/api/account/accent", {
+    method: "PUT",
+    body: { accent }
+  });
 }
 
 export async function uploadResume(input: {

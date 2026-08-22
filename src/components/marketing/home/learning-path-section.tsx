@@ -41,7 +41,7 @@ export function LearningPath() {
       className="marketing-theme-learning relative z-10 min-h-screen overflow-hidden px-5 py-20 sm:px-10 sm:py-28"
     >
       <InterviewSignal className="pointer-events-none absolute left-1/2 top-20 h-[26rem] w-[32rem] -translate-x-1/2 text-[color:var(--dm-accent-soft)] opacity-10 sm:h-[30rem] sm:w-[40rem]" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#0d0e10] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#060708]/80 to-transparent" />
       <div className="pointer-events-none absolute -left-24 top-1/3 h-72 w-72 rounded-full border border-cream/10" />
       <div className="pointer-events-none absolute -right-20 bottom-20 h-80 w-80 rounded-full border border-cream/10" />
       <ProjectSidePatterns />
@@ -59,7 +59,7 @@ export function LearningPath() {
         <Reveal delay={80}>
           <h2
             className="display-heading mt-6 w-full max-w-4xl text-center text-cream"
-            style={{ fontSize: "clamp(2.4rem, 5.6vw, 5rem)" }}
+            style={{ fontSize: "clamp(2.15rem, 4.8vw, 4.25rem)" }}
           >
             <span className="marketing-text-reveal">Prep that feels like practice.</span>
           </h2>
@@ -241,7 +241,7 @@ function SimplePrepPath() {
             <article
               key={step.label}
               className={[
-                "relative min-h-[18rem] w-[min(23rem,calc(100vw-3rem))] overflow-hidden rounded-[2rem] border p-5 text-left transition-[transform,opacity,border-color,background-color] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] sm:backdrop-blur-sm lg:w-64",
+                "relative min-h-[18rem] w-[min(23rem,calc(100vw-3rem))] overflow-hidden rounded-[2rem] p-5 text-left transition-[transform,opacity,border-color,background-color] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] sm:backdrop-blur-sm lg:w-64",
                 "prep-stack-card",
                 revealed
                   ? "border-cream/80 bg-cream/[0.055] opacity-100"

@@ -203,7 +203,7 @@ function ResumeWorkTimeline({ cards }: { cards: ProfileResumeAnchor[] }) {
       style={{ "--profile-reveal-delay": "2860ms" } as CSSProperties}
     >
       <div className="mb-5 flex items-center gap-4">
-        <span className="h-2 w-2 rounded-full bg-[#F26E01] shadow-[0_0_10px_rgba(242,110,1,0.45)]" />
+        <span className="workspace-accent-dot h-2 w-2 rounded-full" />
         <h3 className="text-lg font-medium text-cream/84">Work experience</h3>
         <span className="h-px flex-1 bg-gradient-to-r from-white/20 to-transparent" />
       </div>
@@ -220,7 +220,7 @@ function ResumeTimelineEntry({ card }: { card: ProfileResumeAnchor }) {
   const Icon = card.icon;
   return (
     <article className="relative mb-9 border-b border-white/[0.1] pb-9 last:mb-0 last:border-b-0 last:pb-0">
-      <span className="absolute -left-[2.65rem] top-1 grid h-5 w-5 place-items-center rounded-full border border-[#F26E01]/55 bg-[#101113] shadow-[0_0_0_5px_rgba(242,110,1,0.09)] sm:-left-[3.65rem]">
+      <span className="workspace-accent-ring absolute -left-[2.65rem] top-1 grid h-5 w-5 place-items-center rounded-full border border-[#F26E01]/55 bg-[#101113] sm:-left-[3.65rem]">
         <span className="h-2 w-2 rounded-full bg-[#F26E01]" />
       </span>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -274,7 +274,7 @@ function ProfileResumeAnchorCard({
       className={[
         "profile-soft-reveal relative flex flex-col overflow-hidden rounded-xl p-5 text-left transition-colors",
         variant === "project"
-          ? "min-h-[15rem] border border-[#F26E01]/35 bg-[linear-gradient(120deg,rgba(242,110,1,0.1),rgba(24,25,28,0.98)_42%)] hover:border-[#F26E01]/55"
+          ? "workspace-accent-card-glow min-h-[15rem] border border-[#F26E01]/35 hover:border-[#F26E01]/55"
           : variant === "compact"
             ? "min-h-[15rem] border border-white/[0.12] bg-[#18191c] shadow-[inset_0_1px_0_rgba(255,255,255,0.055)] hover:border-[#F26E01]/40 hover:bg-[#1c1d20]"
             : "min-h-[15rem] border border-white/[0.1] bg-[#18191c] hover:border-white/[0.17] hover:bg-[#1c1d20]"
@@ -295,7 +295,7 @@ function ProfileResumeAnchorCard({
       {variant === "project" ? (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute -bottom-10 right-5 h-28 w-28 rounded-full border border-[#F26E01]/20 shadow-[0_0_0_12px_rgba(242,110,1,0.035),0_0_0_24px_rgba(242,110,1,0.025)]"
+          className="workspace-accent-orbit pointer-events-none absolute -bottom-10 right-5 h-28 w-28 rounded-full border border-[#F26E01]/20"
         />
       ) : null}
 

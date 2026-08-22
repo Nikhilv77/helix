@@ -154,7 +154,7 @@ export function QuestionCoach({
                 setAwaitingGesture(false);
                 say(intro);
               }}
-              className="inline-flex items-center gap-2 rounded-full bg-cream px-3 py-1.5 text-[12px] font-semibold text-[#1d3a86] transition hover:bg-white"
+              className="inline-flex items-center gap-2 rounded-full bg-cream px-3 py-1.5 text-[12px] font-semibold text-[#171a16] transition hover:bg-white"
             >
               <Volume2 size={13} aria-hidden="true" />
               Hear Maya
@@ -254,7 +254,7 @@ export function QuestionCoach({
                   type="button"
                   onClick={toggleInsight}
                   aria-expanded={insightOpen}
-                  className="flex w-full items-center gap-2.5 p-3.5 text-left transition hover:bg-[#27479f]"
+                  className="flex w-full items-center gap-2.5 p-3.5 text-left transition hover:bg-[#292a2d]"
                 >
                   <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-[#8be6bd]/14 text-[#8be6bd]">
                     <Target size={13} aria-hidden="true" />

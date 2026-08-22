@@ -531,7 +531,7 @@ export function MayaWelcome({
                 className={[
                   "h-1.5 rounded-full transition-all duration-300",
                   index === step
-                    ? "w-12 bg-[#F26E01] shadow-[0_0_14px_rgba(242,110,1,0.18)]"
+                    ? "workspace-accent-dot w-12"
                     : "w-6 bg-cream/25"
                 ].join(" ")}
               />

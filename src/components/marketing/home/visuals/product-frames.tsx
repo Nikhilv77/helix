@@ -261,7 +261,7 @@ export function ProductShowcase({ action }: { action?: ReactNode }) {
         <Reveal delay={80}>
           <h2
             className="display-heading mt-5 text-center text-cream"
-            style={{ fontSize: "clamp(2.25rem, 5.4vw, 4.5rem)" }}
+            style={{ fontSize: "clamp(2rem, 4.6vw, 4rem)" }}
           >
             Setup. Interview. Recap.
           </h2>
@@ -323,4 +323,3 @@ export function ProductShowcase({ action }: { action?: ReactNode }) {
 }
 
 export { LiveBars };
-

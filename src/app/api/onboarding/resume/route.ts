@@ -299,6 +299,7 @@ export async function POST(request: NextRequest) {
       context: extraction.context,
       coverImage: null,
       profileImage: null,
+      workspaceAccent: "ember",
       focusAreas: extraction.focusAreas,
       stories,
       updatedAt: null,

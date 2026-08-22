@@ -91,7 +91,7 @@ export function InterviewsMaya({
   }, [muted, script]);
 
   return (
-    <div className="relative flex min-h-[22rem] flex-col overflow-hidden rounded-2xl bg-[#2a4aa0] lg:min-h-[28rem]">
+    <div className="relative flex min-h-[22rem] flex-col overflow-hidden rounded-2xl bg-[#1b1d20] lg:min-h-[28rem]">
       {/* Stops above the status row so the pill never sits across her. */}
       <div
         className="absolute inset-x-[-6%] bottom-[3.25rem] top-[3.5rem] z-0"

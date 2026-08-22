@@ -34,7 +34,8 @@ function emptyOverview(now: number): ReportsOverview {
     recurringGaps: [],
     rounds: [],
     latest: null,
-    best: null
+    best: null,
+    latestCompletedReport: null
   };
 }
 

@@ -1,6 +1,6 @@
 import { DocumentTitle } from "@/components/document-title";
 import { MayaWelcome } from "./maya-welcome";
-import { MayaWelcomeLoading } from "@/components/workspace/shared/loading/skeletons";
+import { MayaWelcomeLoading } from "./maya-welcome-loading";
 import type { FrontendDsaPlan } from "@/lib/roadmap/frontend-plan";
 import type { CandidateProfile, Role } from "@/lib/shared/types";
 import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";

@@ -275,10 +275,23 @@ select {
     radial-gradient(42rem 28rem at 50% 0%, rgba(242, 110, 1, 0.032), transparent 72%), #080909;
 }
 
-.editorial-theme,
+.editorial-theme {
+  background:
+    radial-gradient(42rem 28rem at 50% 0%, rgba(242, 110, 1, 0.022), transparent 72%), #050506;
+}
+
+.editorial-theme .blog-note-card,
+.editorial-theme aside > div.bg-cream\/\[0\.045\] {
+  background: #101113 !important;
+}
+
+.editorial-theme .blog-note-card:hover {
+  background: #151619 !important;
+}
+
 .marketing-theme {
   background:
-    radial-gradient(42rem 28rem at 50% 0%, rgba(242, 110, 1, 0.04), transparent 72%), #080909;
+    radial-gradient(42rem 28rem at 50% 0%, rgba(242, 110, 1, 0.018), transparent 72%), #030304;
 }
 
 .onboarding-accent-fill {
@@ -300,21 +313,20 @@ select {
 }
 
 /* ---------------------------------------------------------------------------
-   Workspace card surfaces. Separation comes from luminance and a soft drop
-   shadow rather than a stroke — hairline borders on this blue read as harsh
-   white lines. The inset highlight along the top edge keeps the card from
-   looking flat where it meets the page.
+   Workspace card surfaces. The product uses the same graphite, cream, orange,
+   and mint palette as Profile; separation comes from luminance and a soft
+   inset highlight rather than blue panels or harsh strokes.
    --------------------------------------------------------------------------- */
 
 .surface {
-  background: #2a4aa0;
+  background: #17181b;
   border-radius: 1rem;
   box-shadow: inset 0 0 0 1px rgba(241, 234, 216, 0.07);
 }
 
 /* The page-level slab, one step lighter than the cards that sit on it. */
 .surface-raised {
-  background: #3557b4;
+  background: #151619;
   border-radius: 1.25rem;
   box-shadow: inset 0 0 0 1px rgba(241, 234, 216, 0.08);
 }
@@ -336,6 +348,155 @@ select {
 
 .workspace-black {
   background: #000;
+  --workspace-canvas: #000;
+  --workspace-raised: #151619;
+  --workspace-card: #1b1d20;
+  --workspace-card-hover: #202124;
+  --workspace-accent: #f26e01;
+  --workspace-accent-soft: rgba(242, 110, 1, 0.13);
+  --workspace-accent-border: rgba(242, 110, 1, 0.34);
+}
+
+.workspace-black[data-workspace-accent="azure"] {
+  --workspace-accent: #4f8cff;
+  --workspace-accent-soft: rgba(79, 140, 255, 0.13);
+  --workspace-accent-border: rgba(79, 140, 255, 0.36);
+}
+
+.workspace-black[data-workspace-accent="violet"] {
+  --workspace-accent: #9b6dff;
+  --workspace-accent-soft: rgba(155, 109, 255, 0.13);
+  --workspace-accent-border: rgba(155, 109, 255, 0.36);
+}
+
+.workspace-black[data-workspace-accent="emerald"] {
+  --workspace-accent: #39d9a1;
+  --workspace-accent-soft: rgba(57, 217, 161, 0.13);
+  --workspace-accent-border: rgba(57, 217, 161, 0.36);
+}
+
+.workspace-black[data-workspace-accent="rose"] {
+  --workspace-accent: #f0528a;
+  --workspace-accent-soft: rgba(240, 82, 138, 0.13);
+  --workspace-accent-border: rgba(240, 82, 138, 0.36);
+}
+
+.workspace-black[data-workspace-accent="mono"] {
+  --workspace-accent: #d3d0c7;
+  --workspace-accent-soft: rgba(211, 208, 199, 0.13);
+  --workspace-accent-border: rgba(211, 208, 199, 0.32);
+}
+
+/*
+ * Accent treatments that need more than a foreground or border colour. Keeping
+ * them here makes the selected theme apply to glows, gradients and blurs too —
+ * not only to the basic Tailwind colour utilities.
+ */
+.workspace-black .workspace-accent-dot {
+  background-color: var(--workspace-accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--workspace-accent) 45%, transparent);
+}
+
+.workspace-black .workspace-accent-indicator {
+  background-color: var(--workspace-accent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--workspace-accent) 35%, transparent);
+}
+
+.workspace-black .workspace-accent-rail {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--workspace-accent) 30%, transparent) 18%,
+    color-mix(in srgb, var(--workspace-accent) 88%, transparent) 50%,
+    color-mix(in srgb, var(--workspace-accent) 30%, transparent) 82%,
+    transparent 100%
+  );
+  box-shadow: 0 0 16px color-mix(in srgb, var(--workspace-accent) 32%, transparent);
+}
+
+.workspace-black .workspace-accent-ring {
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--workspace-accent) 9%, transparent);
+}
+
+.workspace-black .workspace-accent-orbit {
+  box-shadow:
+    0 0 0 12px color-mix(in srgb, var(--workspace-accent) 3.5%, transparent),
+    0 0 0 24px color-mix(in srgb, var(--workspace-accent) 2.5%, transparent);
+}
+
+.workspace-black .workspace-accent-card-glow {
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--workspace-accent) 13%, transparent),
+    rgba(24, 25, 28, 0.98) 42%
+  );
+}
+
+@keyframes workspace-accent-change-shimmer {
+  0% {
+    opacity: 0;
+    transform: translateX(-56%);
+  }
+  22% {
+    opacity: 0.52;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(58%);
+  }
+}
+
+.workspace-accent-change-shimmer {
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 36%,
+    color-mix(in srgb, var(--workspace-accent) 8%, transparent) 44%,
+    color-mix(in srgb, var(--workspace-accent) 34%, transparent) 50%,
+    color-mix(in srgb, var(--workspace-accent) 8%, transparent) 56%,
+    transparent 64%
+  );
+  animation: workspace-accent-change-shimmer 1.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  mix-blend-mode: screen;
+}
+
+.workspace-black .workspace-accent-blur {
+  background-color: color-mix(in srgb, var(--workspace-accent) 6%, transparent);
+}
+
+.workspace-black .workspace-accent-progress-wash {
+  background:
+    radial-gradient(
+      22rem 14rem at 72% 0%,
+      color-mix(in srgb, var(--workspace-accent) 14%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(18rem 12rem at 18% 100%, rgba(113, 214, 165, 0.1), transparent 72%);
+}
+
+.workspace-black .workspace-accent-progress-overlay {
+  background:
+    linear-gradient(
+      115deg,
+      rgba(21, 22, 25, 0.72) 0%,
+      color-mix(in srgb, var(--workspace-accent) 20%, transparent) 48%,
+      rgba(0, 0, 0, 0.72) 100%
+    ),
+    radial-gradient(18rem 12rem at 35% 35%, rgba(241, 234, 216, 0.14), transparent 72%);
+}
+
+.workspace-black .workspace-accent-progress-card-overlay {
+  background: linear-gradient(
+    180deg,
+    rgba(241, 234, 216, 0.14) 0%,
+    color-mix(in srgb, var(--workspace-accent) 18%, transparent) 43%,
+    rgba(0, 0, 0, 0.72) 100%
+  );
+}
+
+.workspace-black .workspace-chart-dot {
+  background-color: var(--chart-dot);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--chart-dot) 40%, transparent);
 }
 
 .profile-theme .pill {
@@ -352,8 +513,52 @@ select {
 
 .surface-interactive:hover {
   transform: translateY(-2px);
-  background: #2f52ab;
+  background: #202124;
   box-shadow: inset 0 0 0 1px rgba(241, 234, 216, 0.14);
+}
+
+/*
+ * Legacy workspace blue utilities are scoped here while feature surfaces are
+ * progressively expressed with the workspace tokens. This protects every
+ * workspace route (including loading states) from falling back to the retired
+ * blue palette without touching marketing or editorial pages.
+ */
+.workspace-black [class*="bg-[#3557b4]"],
+.workspace-black [class*="bg-[#3657b4]"] {
+  background-color: var(--workspace-raised) !important;
+}
+
+.workspace-black [class*="bg-[#2a4aa0]"],
+.workspace-black [class*="bg-[#456dca]"],
+.workspace-black [class*="bg-[#24439b]"],
+.workspace-black [class*="bg-[#27479f]"],
+.workspace-black [class*="bg-[#2f56b8]"] {
+  background-color: var(--workspace-card) !important;
+}
+
+.workspace-black [class*="text-[#1d3a86]"],
+.workspace-black [class*="text-[#24459a]"],
+.workspace-black [class*="text-[#253f90]"] {
+  color: #171a16 !important;
+}
+
+/* Accent utilities remain local to signed-in workspace surfaces. */
+.workspace-black [class~="bg-[#F26E01]"] {
+  background-color: var(--workspace-accent) !important;
+}
+
+.workspace-black [class*="bg-[#F26E01]/"] {
+  background-color: var(--workspace-accent-soft) !important;
+}
+
+.workspace-black [class*="text-[#F26E01]"] {
+  color: var(--workspace-accent) !important;
+}
+
+.workspace-black [class*="border-[#F26E01]"],
+.workspace-black [class*="ring-[#F26E01]"] {
+  border-color: var(--workspace-accent-border) !important;
+  --tw-ring-color: var(--workspace-accent-border) !important;
 }
 
 /* Soft filled pill, used for chips and tags. */
@@ -1138,6 +1343,26 @@ html {
   }
 }
 
+@keyframes report-maya-glow-drift {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  50% {
+    transform: translate(-46%, -54%) scale(1.06);
+  }
+}
+
+@keyframes report-maya-glow-drift-low {
+  0%,
+  100% {
+    transform: translate(-50%, 0) scale(0.98);
+  }
+  50% {
+    transform: translate(-55%, -10%) scale(1.08);
+  }
+}
+
 @keyframes report-signal-ring {
   0% {
     opacity: 0;
@@ -1160,6 +1385,28 @@ html {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes report-word-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.55em);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes report-signal-insight {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -1204,6 +1451,29 @@ html {
   animation-delay: var(--report-delay, 0ms);
 }
 
+.report-maya-glow-a {
+  animation: report-maya-glow-drift 8s ease-in-out infinite;
+}
+
+.report-maya-glow-b {
+  animation: report-maya-glow-drift-low 10s ease-in-out infinite;
+}
+
+.report-maya-bottom-soften {
+  pointer-events: none;
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 28%;
+  background: rgba(21, 22, 25, 0.01);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 100%);
+}
+
 .report-signal-ring {
   background:
     conic-gradient(from 90deg, transparent 0 54%, rgba(241, 234, 216, 0.86) 60%, transparent 70%),
@@ -1230,6 +1500,17 @@ html {
 
 .report-copy-word {
   color: rgba(241, 234, 216, 0.66);
+}
+
+.report-word-rise {
+  display: inline-block;
+  opacity: 0;
+  animation: report-word-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--word-delay, 0ms);
+}
+
+.report-signal-insight {
+  animation: report-signal-insight 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .report-primary-action {
@@ -1451,7 +1732,7 @@ html {
 .marketing-theme-hero,
 .marketing-theme-learning,
 .marketing-theme-section {
-  background: #080909;
+  background: #030304;
 }
 
 .marketing-theme-hero::before,
@@ -1464,9 +1745,9 @@ html {
 
 .marketing-theme-hero::before {
   background:
-    radial-gradient(34rem 25rem at 50% 34%, rgba(var(--dm-accent-rgb), 0.06), transparent 62%),
-    radial-gradient(58rem 32rem at 50% -15%, rgba(var(--dm-accent-rgb), 0.025), transparent 70%),
-    linear-gradient(180deg, #0b0c0d 0%, #080909 100%);
+    radial-gradient(34rem 25rem at 50% 34%, rgba(var(--dm-accent-rgb), 0.03), transparent 62%),
+    radial-gradient(58rem 32rem at 50% -15%, rgba(var(--dm-accent-rgb), 0.012), transparent 70%),
+    linear-gradient(180deg, #050607 0%, #030304 100%);
 }
 
 .marketing-theme-hero::after {
@@ -1486,15 +1767,15 @@ html {
 .marketing-theme-learning {
   border-top: 0;
   background:
-    radial-gradient(45rem 30rem at 50% 22%, rgba(var(--dm-accent-rgb), 0.025), transparent 70%),
-    #080909;
+    radial-gradient(45rem 30rem at 50% 22%, rgba(var(--dm-accent-rgb), 0.012), transparent 70%),
+    #030304;
 }
 
 .marketing-theme-section {
   border-top: 0;
   background:
-    radial-gradient(42rem 28rem at 50% 8%, rgba(var(--dm-accent-rgb), 0.018), transparent 72%),
-    #080909 !important;
+    radial-gradient(42rem 28rem at 50% 8%, rgba(var(--dm-accent-rgb), 0.008), transparent 72%),
+    #030304 !important;
 }
 
 .theme-accent-pill {
@@ -1504,7 +1785,7 @@ html {
 
 .marketing-theme-learning .prep-stack-card {
   border-color: rgba(255, 255, 255, 0.1) !important;
-  background: #18191c !important;
+  background: #101113 !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.045),
     0 22px 60px -46px rgba(0, 0, 0, 0.9);
@@ -1534,7 +1815,7 @@ html {
 
 .marketing-theme > header nav {
   border-color: rgba(255, 255, 255, 0.09) !important;
-  background: rgba(24, 25, 28, 0.94) !important;
+  background: rgba(12, 13, 15, 0.94) !important;
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24) !important;
   backdrop-filter: blur(18px);
 }
@@ -1558,7 +1839,7 @@ html {
 .marketing-theme-section .rounded-2xl.bg-cream\/\[0\.065\],
 .marketing-theme-section article > div.bg-cream\/\[0\.035\] {
   border-color: rgba(255, 255, 255, 0.07) !important;
-  background: #18191c !important;
+  background: #101113 !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     0 24px 64px -48px rgba(0, 0, 0, 0.9);
@@ -1567,12 +1848,12 @@ html {
 .marketing-theme-section .interview-carousel-progress,
 .marketing-theme-section .report-row-fill,
 .marketing-theme-section .report-evidence-bar {
-  background: #18191c !important;
+  background: #101113 !important;
   box-shadow: none;
 }
 
 .marketing-theme-section .report-score-ring {
-  stroke: #18191c !important;
+  stroke: #101113 !important;
   filter: none;
 }
 
@@ -1612,18 +1893,26 @@ html {
 
 .marketing-theme-section #flow .bg-\[\#4f70d1\],
 .marketing-theme-section #flow .bg-\[\#4568ce\] {
-  background: #18191c !important;
+  background: #101113 !important;
   opacity: 1 !important;
 }
 
 .marketing-theme > footer {
   border-top: 0;
   border-radius: 2.5rem 2.5rem 0 0;
-  background: #18191c;
+  background: #0e0f11;
 }
 
 .marketing-theme > footer a:hover {
   color: var(--dm-accent-soft);
+}
+
+.editorial-theme .bg-\[\#18191c\] {
+  background-color: #101113 !important;
+}
+
+.editorial-theme .bg-\[\#202126\] {
+  background-color: #151619 !important;
 }
 
 @media (max-width: 639px) {
@@ -1979,6 +2268,8 @@ html {
   .report-scan-line,
   .report-action-panel,
   .report-latest-strip,
+  .report-word-rise,
+  .report-signal-insight,
   .browse-nudge,
   .identity-stage-in,
   .identity-text-shine,

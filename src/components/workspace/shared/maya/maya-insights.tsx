@@ -23,7 +23,7 @@ export function MayaInsights({ insights }: { insights: FrontendRoadmapInsight[] 
     <section className="identity-stage-in relative min-w-0 overflow-hidden rounded-2xl bg-gradient-to-b from-[#fff8e8] to-[#e5dcc3] p-4 text-[#171a16] sm:p-5">
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -right-20 -top-24 h-44 w-44 rounded-full bg-[#3657b4]/[0.06] blur-3xl"
+        className="workspace-accent-blur pointer-events-none absolute -right-20 -top-24 h-44 w-44 rounded-full blur-3xl"
       />
       <span
         aria-hidden="true"

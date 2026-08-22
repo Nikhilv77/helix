@@ -146,10 +146,10 @@ export function SessionCards({
       : "Your interview roadmap starts here.";
 
   return (
-    <div className="w-full min-w-0 max-w-[calc(100vw-1rem)] overflow-x-clip px-2 pb-6 pt-2 sm:max-w-full sm:px-3 lg:px-3">
+    <div className="mx-auto w-full min-w-0 max-w-[84rem] overflow-x-clip px-4 pb-20 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
       <section className="relative isolate max-w-full">
         <div className="relative z-10 grid min-w-0 gap-4 lg:grid-cols-[minmax(0,0.78fr)_minmax(17rem,0.92fr)_minmax(0,1.1fr)] lg:items-stretch lg:gap-5 xl:grid-cols-[minmax(0,0.8fr)_minmax(19rem,0.9fr)_minmax(0,1.15fr)] xl:gap-6">
-          <div className="order-2 flex h-full min-w-0 flex-col justify-center rounded-2xl bg-[#2a4aa0] p-5 lg:order-3">
+          <div className="order-2 flex h-full min-w-0 flex-col justify-center rounded-2xl bg-[#1b1d20] p-5 lg:order-3">
             <div className="inline-flex w-fit items-center gap-2 rounded-full bg-cream/[0.1] px-3 py-1.5 text-[13px] font-medium text-cream/80">
               <span className="h-2 w-2 rounded-full bg-[#8be6bd] shadow-[0_0_14px_rgba(139,230,189,0.8)]" />
               Welcome back{firstName ? `, ${displayName(firstName)}` : ""}
@@ -188,7 +188,7 @@ export function SessionCards({
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <Link
                 href={nextHref}
-                className="group inline-flex h-12 min-w-[12.5rem] items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-[#fff8e8] to-[#e5dcc3] px-6 text-[14px] font-semibold text-[#24459a] shadow-[0_18px_38px_-26px_rgba(239,232,214,0.95),inset_0_1px_0_rgba(255,255,255,0.8)] transition hover:from-white hover:to-[#f0e8d2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                className="group inline-flex h-12 min-w-[12.5rem] items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-[#fff8e8] to-[#e5dcc3] px-6 text-[14px] font-semibold text-[#171a16] shadow-[0_18px_38px_-26px_rgba(239,232,214,0.95),inset_0_1px_0_rgba(255,255,255,0.8)] transition hover:from-white hover:to-[#f0e8d2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 Start session
                 <ArrowRight
@@ -197,7 +197,7 @@ export function SessionCards({
                   className="transition-transform duration-300 group-hover:translate-x-1"
                 />
               </Link>
-              <span className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#2a4aa0] px-3.5 text-[12px] font-semibold text-cream/72">
+              <span className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#1b1d20] px-3.5 text-[12px] font-semibold text-cream/72">
                 <Braces size={15} className="text-[#bfe2ff]" aria-hidden="true" />
                 {activeSession?.title ?? "Frontend DSA"}
               </span>
@@ -405,7 +405,7 @@ function SessionCard({ session, isCurrent }: { session: DisplaySession; isCurren
             </span>
           </div>
 
-          <span className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg bg-cream/[0.12] px-3 text-[12px] font-semibold text-cream/82 transition group-hover:bg-cream group-hover:text-[#24459a]">
+          <span className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg bg-cream/[0.12] px-3 text-[12px] font-semibold text-cream/82 transition group-hover:bg-cream group-hover:text-[#171a16]">
             Start session
             <ArrowRight
               size={14}

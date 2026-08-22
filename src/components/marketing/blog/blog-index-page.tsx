@@ -40,7 +40,7 @@ export function BlogIndexPage() {
                 Trailgrad notes
               </span>
             </span>
-            <h1 className="display-heading mt-6 text-5xl text-cream sm:text-7xl lg:text-8xl">
+            <h1 className="display-heading mt-6 text-4xl text-cream sm:text-6xl lg:text-7xl">
               Clearer practice starts here.
             </h1>
             <p className="mx-auto mt-7 max-w-2xl text-lg leading-relaxed text-cream/76 sm:text-xl">
@@ -63,7 +63,7 @@ export function BlogIndexPage() {
                   {featured.readTime}
                 </span>
               </div>
-              <h2 className="mt-6 max-w-xl text-4xl font-semibold tracking-tight text-cream sm:text-5xl">
+              <h2 className="mt-6 max-w-xl text-3xl font-semibold tracking-tight text-cream sm:text-4xl">
                 {featured.title}
               </h2>
               <p className="mt-5 max-w-xl text-base leading-7 text-cream/68 sm:text-lg">
@@ -136,7 +136,7 @@ export function BlogIndexPage() {
                       {post.readTime}
                     </span>
                   </div>
-                  <h3 className="mt-3 text-2xl font-semibold tracking-tight text-cream sm:text-3xl">
+                  <h3 className="mt-3 text-xl font-semibold tracking-tight text-cream sm:text-2xl">
                     {post.title}
                   </h3>
                   <p className="mt-2 max-w-2xl text-base leading-7 text-cream/62">{post.dek}</p>
@@ -152,7 +152,7 @@ export function BlogIndexPage() {
           <section className="blog-rise mt-14 grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
             <div>
               <Sparkles size={34} strokeWidth={1.7} className="text-cream" aria-hidden="true" />
-              <h2 className="mt-5 max-w-lg text-3xl font-semibold tracking-tight text-cream sm:text-4xl">
+              <h2 className="mt-5 max-w-lg text-2xl font-semibold tracking-tight text-cream sm:text-3xl">
                 Notes you can use in the next round.
               </h2>
             </div>
@@ -173,4 +173,3 @@ export function BlogIndexPage() {
     </div>
   );
 }
-

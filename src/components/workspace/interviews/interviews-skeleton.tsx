@@ -8,7 +8,7 @@ function Line({ className = "" }: { className?: string }) {
 export function InterviewsSkeleton() {
   return (
     <div
-      className="w-full min-w-0 max-w-[calc(100vw-1rem)] overflow-x-clip px-2 pb-8 pt-4 sm:px-5 lg:px-8"
+      className="mx-auto w-full min-w-0 max-w-[84rem] overflow-x-clip px-4 pb-20 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10"
       aria-busy="true"
       aria-label="Loading interviews"
     >

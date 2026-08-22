@@ -43,7 +43,7 @@ export function InterviewsView({ quota, sessions, profile, roadmap }: Interviews
     : "Pick a session and Maya will start from that exact work. No domain picker, no generic setup, just the next useful round.";
 
   return (
-    <div className="mx-auto w-full max-w-[82rem] px-5 pb-16 sm:px-8 lg:px-10">
+    <div className="mx-auto w-full max-w-[84rem] px-4 pb-20 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
       <DocumentTitle title="Interviews" />
 
       <section className="profile-motion relative mt-6 overflow-hidden rounded-[1.25rem] border border-cream/20 bg-cream/[0.035] p-5 text-cream sm:p-6 lg:p-7">

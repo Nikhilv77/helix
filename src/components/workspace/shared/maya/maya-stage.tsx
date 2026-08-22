@@ -18,12 +18,25 @@ const AvatarStage = dynamic(
   }
 );
 
-export function MayaStage({ speaking = false }: { speaking?: boolean }) {
+const TransparentAvatarStage = dynamic(
+  () => import("@/components/interview/voice/avatar-stage").then((module) => module.AvatarStage),
+  {
+    ssr: false,
+    loading: () => null
+  }
+);
+
+export function MayaStage({ speaking = false, transparent = false }: { speaking?: boolean; transparent?: boolean }) {
+  const Stage = transparent ? TransparentAvatarStage : AvatarStage;
+
   return (
-    <AvatarStage
+    <Stage
       agentTrack={null}
       state={speaking ? "speaking" : "listening"}
       url="/avatars/interviewer-v2.glb"
+      framing="default"
+      showStatus={!transparent}
+      feather={!transparent}
     />
   );
 }

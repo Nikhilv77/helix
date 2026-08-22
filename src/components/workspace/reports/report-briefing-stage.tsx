@@ -423,13 +423,12 @@ export function ReportEmptyStage({
   firstName: string;
   exhausted: boolean;
 }) {
-  const [phase, setPhase] = useState<0 | 1>(0);
   const [hasTriedVoice, setHasTriedVoice] = useState(false);
   const unlockInFlight = useRef(false);
   const { state, speak, awaitingGesture, setAwaitingGesture } = useMayaVoice();
   const speaking = state === "speaking";
   const name = firstName || "there";
-  const voiceLine = `Nothing to review yet, ${name}. Do one interview round first. After that, I will prepare a clear report with your strongest signal, your repeat gap, and the next thing to practice.`;
+  const voiceLine = `Your first interview is waiting, ${name}. Give it a try with me, and I will turn your answers into a personal report on what felt strong, what needs work, and what to practice next.`;
 
   const startEmptyVoice = useCallback((force = false) => {
     if (hasTriedVoice && !force) return;
@@ -438,15 +437,10 @@ export function ReportEmptyStage({
   }, [hasTriedVoice, speak, voiceLine]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setPhase(1), 1500);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (phase !== 1 || awaitingGesture || hasTriedVoice) return;
+    if (awaitingGesture || hasTriedVoice) return;
     const timer = window.setTimeout(startEmptyVoice, 420);
     return () => window.clearTimeout(timer);
-  }, [awaitingGesture, hasTriedVoice, phase, startEmptyVoice]);
+  }, [awaitingGesture, hasTriedVoice, startEmptyVoice]);
 
   useEffect(() => {
     if (!awaitingGesture) return;
@@ -468,73 +462,56 @@ export function ReportEmptyStage({
   }, [awaitingGesture, setAwaitingGesture, startEmptyVoice]);
 
   return (
-    <div className="relative z-10 mx-auto grid w-full max-w-6xl items-center gap-3 text-center sm:gap-5 lg:grid-cols-[minmax(19rem,0.82fr)_minmax(0,1fr)] lg:gap-8 lg:text-left">
-      <div className="mx-auto w-full max-w-[34rem] lg:mx-0">
-        <ReportMayaAvatar delay={120} speaking={speaking} />
+    <div className="relative z-10 mx-auto flex min-h-[calc(100svh-11rem)] w-full max-w-3xl flex-col items-center justify-center py-8 text-center">
+      <div className="relative mx-auto w-full max-w-[26rem]">
+        <span
+          aria-hidden
+          className="report-maya-glow-a pointer-events-none absolute left-1/2 top-[46%] z-0 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--workspace-accent-soft)] blur-[72px]"
+        />
+        <span
+          aria-hidden
+          className="report-maya-glow-b pointer-events-none absolute bottom-4 left-1/2 z-0 h-28 w-60 -translate-x-1/2 rounded-full bg-[var(--workspace-accent)] opacity-30 blur-[64px]"
+        />
+        <div className="relative z-10">
+          <ReportMayaAvatar delay={120} speaking={speaking} size="compact" transparent />
+        </div>
       </div>
 
-      <div className="mx-auto flex w-full max-w-3xl flex-col justify-center lg:mx-0">
-        {phase === 0 ? (
-          <section key="empty-scan" className="identity-stage-in w-full">
-            <p className="blueprint-label text-cream/36">Reports with Maya</p>
-            <div className="mt-4 flex h-9 items-center justify-start gap-1.5">
-              <InlineWaveLoader />
-            </div>
-            <p className="thinking-shimmer blueprint-label mt-3 text-left text-cream/45">
-              Checking for completed rounds...
-            </p>
-          </section>
-        ) : (
-          <section key="empty-ready" className="identity-stage-in w-full">
-            {awaitingGesture ? <VoiceUnlockNudge /> : null}
-            <p className="blueprint-label text-cream/36">Nothing to review yet</p>
-            <h1 className="mt-4 max-w-3xl text-[clamp(1rem,2.5vw,2.5rem)] font-semibold leading-[0.98] tracking-tight text-cream">
-              <WordReveal
-                text={firstName ? `No report yet, ${firstName}.` : "No report yet."}
-                active
-                delay={120}
-                stagger={78}
-              />
-            </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-cream/64 sm:text-lg sm:leading-8 lg:mx-0">
-              <WordReveal
-                text="Maya needs one completed interview round before she can prepare a useful briefing. Once you finish it, this page will turn into a short read on what sounded strong, what felt thin, and what to practice next."
-                active
-                delay={720}
-                stagger={48}
-                wordClassName="report-copy-word"
-              />
-            </p>
+      <div className="mx-auto mt-6 flex w-full max-w-2xl flex-col items-center">
+        <section className="identity-stage-in w-full">
+          {awaitingGesture ? <VoiceUnlockNudge /> : null}
+          <p className="mx-auto max-w-xl text-lg font-medium leading-7 text-cream sm:text-xl sm:leading-8">
+            <WordReveal
+              text={firstName ? `Maya is ready when you are, ${firstName}.` : "Maya is ready when you are."}
+              active
+              delay={120}
+              stagger={58}
+            />
+          </p>
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-cream/60 sm:text-base sm:leading-7">
+            <WordReveal
+              text="One conversation gives you a clear read on what sounds strong, what needs evidence, and where to practise next."
+              active
+              delay={520}
+              stagger={36}
+              wordClassName="report-copy-word"
+            />
+          </p>
 
-            <div
-              className="report-action-panel mx-auto mt-8 max-w-2xl text-left lg:mx-0"
-              style={{ "--report-delay": "2100ms" } as CSSProperties}
+          <div className="report-action-panel mx-auto mt-7" style={{ "--report-delay": "2100ms" } as CSSProperties}>
+            <Link
+              href="/interview?resume=1"
+              aria-disabled={exhausted}
+              className={[
+                "report-primary-action inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-cream px-6 text-[0.95rem] font-semibold text-[#18130d] transition hover:-translate-y-0.5 hover:bg-white",
+                exhausted ? "pointer-events-none opacity-45" : ""
+              ].join(" ")}
             >
-              <div className="grid gap-3 text-sm leading-6 text-cream/58 sm:grid-cols-3">
-                <span className="rounded-full border border-cream/20 bg-cream/[0.035] px-4 py-2">
-                  Strongest signal
-                </span>
-                <span className="rounded-full border border-cream/20 bg-cream/[0.035] px-4 py-2">
-                  Repeat gap
-                </span>
-                <span className="rounded-full border border-cream/20 bg-cream/[0.035] px-4 py-2">
-                  Next move
-                </span>
-              </div>
-              <Link
-                href="/interviews"
-                aria-disabled={exhausted}
-                className={[
-                  "report-primary-action mt-5 inline-flex h-12 w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-cream px-5 text-[0.95rem] font-semibold text-[#18130d] transition hover:-translate-y-0.5 hover:bg-white",
-                  exhausted ? "pointer-events-none opacity-45" : ""
-                ].join(" ")}
-              >
-                {exhausted ? "Daily limit reached" : "Run your first round"}
-                <ArrowRight size={16} strokeWidth={1.9} aria-hidden="true" />
-              </Link>
-            </div>
-          </section>
-        )}
+              {exhausted ? "Daily limit reached" : "Start your first interview"}
+              <ArrowRight size={16} strokeWidth={1.9} aria-hidden="true" />
+            </Link>
+          </div>
+        </section>
       </div>
     </div>
   );
@@ -554,13 +531,25 @@ function VoiceUnlockNudge() {
 }
 
 function DownloadReportButton({ briefing }: { briefing: ReportBriefingCopy }) {
+  const [isPreparing, setIsPreparing] = useState(false);
+
+  const handleDownload = async () => {
+    setIsPreparing(true);
+    try {
+      await downloadReportPdf(briefing);
+    } finally {
+      setIsPreparing(false);
+    }
+  };
+
   return (
     <button
       type="button"
-      onClick={() => downloadReportPdf(briefing)}
-      className="report-primary-action inline-flex h-12 w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-cream px-5 text-[0.95rem] font-semibold text-[#18130d] transition hover:-translate-y-0.5 hover:bg-white"
+      onClick={handleDownload}
+      disabled={isPreparing}
+      className="report-primary-action inline-flex h-12 w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-cream px-5 text-[0.95rem] font-semibold text-[#18130d] transition hover:-translate-y-0.5 hover:bg-white disabled:cursor-wait disabled:opacity-70"
     >
-      Download report
+      {isPreparing ? "Preparing report…" : "Download report"}
       <Download size={16} strokeWidth={1.9} aria-hidden="true" />
     </button>
   );
@@ -580,14 +569,14 @@ function InlineWaveLoader() {
   );
 }
 
-function downloadReportPdf(briefing: ReportBriefingCopy) {
-  const pdf = createThemedReportPdf(briefing);
-  const url = URL.createObjectURL(new Blob([pdf], { type: "application/pdf" }));
+async function downloadReportPdf(briefing: ReportBriefingCopy) {
+  const pdf = await createThemedReportPdf(briefing);
+  const url = URL.createObjectURL(new Blob([new Uint8Array(pdf)], { type: "application/pdf" }));
   const link = document.createElement("a");
   link.href = url;
   link.download = "trailgrad-report.pdf";
   link.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
 function ReportFinding({
@@ -603,7 +592,7 @@ function ReportFinding({
 }) {
   return (
     <div className="report-action-panel relative" style={{ "--report-delay": `${delay}ms` } as CSSProperties}>
-      <span className="absolute -left-8 top-1 grid h-4 w-4 place-items-center rounded-full bg-[#3657b4] ring-4 ring-[#3657b4]">
+      <span className="absolute -left-8 top-1 grid h-4 w-4 place-items-center rounded-full bg-[#151619] ring-4 ring-[#151619]">
         <Icon size={16} strokeWidth={1.75} className="text-cream/78" aria-hidden="true" />
       </span>
       <p className="blueprint-label text-cream/35">{label}</p>

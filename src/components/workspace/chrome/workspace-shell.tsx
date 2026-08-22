@@ -21,6 +21,12 @@ import {
   X
 } from "lucide-react";
 import { TrailgradMark } from "@/components/trailgrad-mark";
+import { getWorkspaceAccent } from "@/lib/api/api-client";
+import {
+  DEFAULT_WORKSPACE_ACCENT,
+  type WorkspaceAccent,
+  WORKSPACE_ACCENT_CHANGE_EVENT
+} from "@/lib/workspace/accent";
 import { isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
 
 const navGroups = [
@@ -64,23 +70,55 @@ function NavPending() {
 const SIDEBAR_STORAGE_KEY = "helix:sidebar-collapsed";
 
 /** Signed-in workspace chrome, mounted persistently but shown only on app routes. */
-export function WorkspaceShell({ children }: { children: ReactNode }) {
+export function WorkspaceShell({
+  children,
+  initialAccent = DEFAULT_WORKSPACE_ACCENT
+}: {
+  children: ReactNode;
+  initialAccent?: WorkspaceAccent;
+}) {
   const pathname = usePathname();
   const { user } = useUser();
+  const showChrome = pathname ? isWorkspaceChromeRoute(pathname) : false;
   const userName =
     user?.fullName ?? user?.firstName ?? user?.primaryEmailAddress?.emailAddress ?? "";
   const userImage = user?.imageUrl;
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState("");
-  // Root layouts survive client and browser-history navigation. A positive
-  // workspace allowlist prevents public pages from inheriting this shell when
-  // a signed-in user moves back from onboarding to marketing or editorial UI.
-  const showChrome = pathname ? isWorkspaceChromeRoute(pathname) : false;
-
+  const [workspaceAccent, setWorkspaceAccent] =
+    useState<WorkspaceAccent>(initialAccent);
+  const [accentShimmerKey, setAccentShimmerKey] = useState(0);
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true");
   }, []);
+
+  useEffect(() => {
+    if (!showChrome) return;
+
+    let disposed = false;
+    void getWorkspaceAccent()
+      .then(({ accent }) => {
+        if (!disposed) setWorkspaceAccent(accent);
+      })
+      .catch(() => {
+        if (!disposed) setWorkspaceAccent(DEFAULT_WORKSPACE_ACCENT);
+      });
+
+    const onAccentChange = (event: Event) => {
+      const accent = (event as CustomEvent<WorkspaceAccent>).detail;
+      if (!accent) return;
+
+      setWorkspaceAccent(accent);
+      setAccentShimmerKey((current) => current + 1);
+    };
+
+    window.addEventListener(WORKSPACE_ACCENT_CHANGE_EVENT, onAccentChange);
+    return () => {
+      disposed = true;
+      window.removeEventListener(WORKSPACE_ACCENT_CHANGE_EVENT, onAccentChange);
+    };
+  }, [showChrome]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -119,6 +157,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
 
   return (
     <div
+      data-workspace-accent={workspaceAccent}
       className={[
         // overflow-x-clip, not overflow-hidden: `hidden` makes this a scroll
         // container, which silently kills the sticky mobile header inside it.
@@ -126,9 +165,17 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         // No bg override: `.blueprint` owns the shared product canvas. The
         // grid and rails below keep the signed-in shell visually connected.
         "blueprint workspace-black relative min-h-screen overflow-x-clip transition-[padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
-        collapsed ? "md:pl-[6rem]" : "md:pl-[17rem]"
+        collapsed ? "md:pl-[6rem]" : "md:pl-[16rem]"
       ].join(" ")}
     >
+      {accentShimmerKey ? (
+        <span
+          key={accentShimmerKey}
+          aria-hidden
+          className="workspace-accent-change-shimmer pointer-events-none fixed z-[60]"
+        />
+      ) : null}
+
       {menuOpen ? (
         <button
           type="button"
@@ -143,9 +190,9 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           // Rail + panel, the way dense product consoles are built: a narrow
           // always-visible icon column, and a wider labelled panel that is what
           // actually collapses.
-          "fixed inset-y-0 left-0 z-50 flex w-[min(16rem,calc(100vw-1rem))] border-r border-white/[0.07] bg-[#111214] shadow-[18px_0_50px_-38px_rgba(0,0,0,0.9)] transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:inset-y-2 md:left-2 md:rounded-2xl md:border",
+          "fixed inset-y-0 left-0 z-50 flex w-[min(15rem,calc(100vw-1rem))] border-r border-white/[0.07] bg-[#111214] shadow-[18px_0_50px_-38px_rgba(0,0,0,0.9)] transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:inset-y-3 md:left-3 md:rounded-2xl md:border",
           menuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-          collapsed ? "md:w-[5rem]" : "md:w-[16rem]"
+          collapsed ? "md:w-[5rem]" : "md:w-[15rem]"
         ].join(" ")}
       >
         {/* Icon rail */}
@@ -192,7 +239,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
                   {active ? (
                     <span
                       aria-hidden="true"
-                      className="absolute right-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#F26E01] shadow-[0_0_10px_rgba(242,110,1,0.45)]"
+                      className="workspace-accent-dot absolute right-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full"
                     />
                   ) : null}
                   <Icon
@@ -278,7 +325,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
               className="shrink-0 transition-transform duration-200 ease-out group-hover:translate-x-0.5"
               aria-hidden="true"
             />
-            Start interview
+            Interview
           </Link>
 
           <nav
@@ -320,7 +367,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
                           {active ? (
                             <span
                               aria-hidden="true"
-                              className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-[#F26E01] shadow-[0_0_12px_rgba(242,110,1,0.35)]"
+                              className="workspace-accent-indicator absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full"
                             />
                           ) : null}
                           <NavPending />
@@ -343,14 +390,14 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           <Link
             href="/profile"
             onClick={() => setMenuOpen(false)}
-            className="group mt-3 flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border-t border-white/[0.07] px-3 py-3 text-[0.9rem] outline-none transition-colors duration-200 ease-out hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-[#F26E01]/40"
+            className="group mt-3 flex shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-black/15 px-3 py-3 text-[0.9rem] outline-none transition-[background,border-color] duration-200 ease-out hover:border-white/[0.14] hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-white/25"
           >
             <span className="min-w-0 flex-1">
               <span className="block truncate font-medium text-cream/88 transition-colors group-hover:text-cream">
                 {userName || "Your account"}
               </span>
               <span className="block truncate text-[0.8rem] text-cream/45 transition-colors group-hover:text-cream/62">
-                View profile
+                Profile
               </span>
             </span>
           </Link>
@@ -360,8 +407,8 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
       <span
         aria-hidden="true"
         className={[
-          "pointer-events-none fixed top-[5%] z-40 hidden h-[90vh] w-[2px] rounded-full bg-[linear-gradient(180deg,transparent_0%,rgba(242,110,1,0.3)_18%,rgba(242,110,1,0.88)_50%,rgba(242,110,1,0.3)_82%,transparent_100%)] shadow-[0_0_16px_rgba(242,110,1,0.32)] transition-[left,opacity] duration-300 md:block",
-          collapsed ? "left-[5.5rem] opacity-90" : "left-[16.5rem] opacity-100"
+          "workspace-accent-rail pointer-events-none fixed top-[5%] z-40 hidden h-[90vh] w-[2px] rounded-full transition-[left,opacity] duration-300 md:block",
+          collapsed ? "left-[5.5rem] opacity-90" : "left-[15.75rem] opacity-100"
         ].join(" ")}
       />
 

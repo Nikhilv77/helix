@@ -1,14 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
-import {
-  DashboardSkeleton,
-  MayaWelcomeLoading,
-  ManageSkeleton,
-  RouteProgress,
-  Waveform
-} from "@/components/workspace/shared/loading/skeletons";
+import { ManageSkeleton } from "@/components/workspace/account/manage-skeleton";
+import { DashboardSkeleton } from "@/components/workspace/dashboard/dashboard-skeleton";
+import { MayaWelcomeLoading } from "@/components/workspace/dashboard/maya-welcome-loading";
 import { InterviewsSkeleton } from "@/components/workspace/interviews/interviews-skeleton";
 import { ProfileSkeleton } from "@/components/workspace/profile/profile-skeleton";
+import { RouteProgress, Waveform } from "@/components/workspace/shared/loading/primitives";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
 

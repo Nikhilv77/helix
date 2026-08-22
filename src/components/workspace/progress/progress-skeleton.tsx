@@ -1,4 +1,4 @@
-import { RouteProgress } from "@/components/workspace/shared/loading/skeletons";
+import { RouteProgress } from "@/components/workspace/shared/loading/primitives";
 
 function ProgressLine({ className = "" }: { className?: string }) {
   return <div className={["skeleton h-3 bg-cream/20", className].join(" ")} />;
@@ -7,13 +7,13 @@ function ProgressLine({ className = "" }: { className?: string }) {
 export function ProgressSkeleton() {
   return (
     <div
-      className="mx-auto flex min-h-screen w-full max-w-[95rem] flex-col px-5 pb-12 pt-4 text-cream sm:px-8 lg:px-10 lg:pt-6"
+      className="mx-auto flex min-h-screen w-full max-w-[84rem] flex-col px-4 pb-20 pt-6 text-cream sm:px-6 sm:pt-8 lg:px-8 lg:pt-10"
       aria-busy="true"
       aria-label="Loading progress"
     >
       <RouteProgress />
 
-      <section className="relative mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-6xl items-center overflow-hidden rounded-[1.75rem] bg-[#3557b4] px-4 py-6 sm:px-7 sm:py-8 lg:grid-cols-[minmax(19rem,0.82fr)_minmax(0,1fr)] lg:gap-8 lg:px-10">
+      <section className="relative mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-6xl items-center overflow-hidden rounded-[1.75rem] bg-[#151619] px-4 py-6 sm:px-7 sm:py-8 lg:grid-cols-[minmax(19rem,0.82fr)_minmax(0,1fr)] lg:gap-8 lg:px-10">
         <div className="pointer-events-none absolute inset-0 hidden overflow-hidden text-cream sm:block">
           <div className="absolute left-8 top-20 h-20 w-44 rounded-2xl border border-cream/20 opacity-25" />
           <div className="absolute right-16 top-24 h-36 w-36 rounded-full border border-cream/20 opacity-25" />

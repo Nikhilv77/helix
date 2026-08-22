@@ -57,6 +57,9 @@ export function createReportsOverview(
     null
   );
   const latestRound = scored.at(-1) ?? null;
+  const latestCompletedReport = [...scored]
+    .reverse()
+    .find((report) => report.status === "completed") ?? null;
 
   return {
     generatedAt: now,
@@ -83,7 +86,8 @@ export function createReportsOverview(
     recurringGaps: buildRecurringGaps(competencies, scored),
     rounds,
     latest: latestRound ? toRoundRow(latestRound) : null,
-    best: bestRound ? toRoundRow(bestRound) : null
+    best: bestRound ? toRoundRow(bestRound) : null,
+    latestCompletedReport
   };
 }
 

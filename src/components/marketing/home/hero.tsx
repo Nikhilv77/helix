@@ -41,7 +41,7 @@ export function Hero() {
             framing="marketing"
             className="pointer-events-none absolute inset-y-0 -inset-x-10 z-10 -translate-x-10 scale-[1.18] sm:inset-0 sm:translate-x-0 sm:scale-100 sm:drop-shadow-[0_24px_30px_rgba(4,12,35,0.5)]"
           />
-          <div className="pointer-events-none absolute -bottom-1 left-1/2 h-px w-48 -translate-x-1/2 bg-cream/25 shadow-[0_0_24px_rgba(241,234,216,0.35)] sm:w-64" />
+          <div className="pointer-events-none absolute -bottom-1 left-1/2 h-px w-48 -translate-x-1/2 bg-cream/12 shadow-[0_0_16px_rgba(241,234,216,0.18)] sm:w-64" />
         </div>
 
         <div className="flex w-full shrink-0 flex-col items-center">
@@ -58,7 +58,7 @@ export function Hero() {
             <h1 className="mt-6">
               <span
                 className="wordmark block text-cream"
-                style={{ fontSize: "clamp(2.5rem, 6vw, 4.25rem)", letterSpacing: "-0.03em" }}
+                style={{ fontSize: "clamp(2.25rem, 5.2vw, 3.75rem)", letterSpacing: "-0.03em" }}
               >
                 Let&rsquo;s begin.
               </span>

@@ -22,8 +22,12 @@ interface AvatarStageProps {
    * looks morph targets up by name.
    */
   url: string;
-  framing?: "default" | "marketing";
+  framing?: "default" | "marketing" | "portrait";
   performanceProfile?: "default" | "marketing";
+  /** Hide the stage status when the surrounding UI supplies its own visual state. */
+  showStatus?: boolean;
+  /** Keep the full portrait visible instead of fading it into a card edge. */
+  feather?: boolean;
   /**
    * Set false to park the render loop while the avatar is still mounted. The
    * marketing hero is `position: sticky`, so it never leaves the viewport and
@@ -93,7 +97,9 @@ export function AvatarStage({
   url,
   framing = "default",
   active = true,
-  performanceProfile = "default"
+  performanceProfile = "default",
+  showStatus = true,
+  feather = true
 }: AvatarStageProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
@@ -235,8 +241,9 @@ export function AvatarStage({
         const size = box.getSize(new THREE.Vector3());
         const centre = box.getCenter(new THREE.Vector3());
         const marketingFrame = framing === "marketing";
+        const portraitFrame = framing === "portrait";
         const focusY = box.max.y - size.y * 0.075;
-        const framedHeight = size.y * (marketingFrame ? 0.34 : 0.36);
+        const framedHeight = size.y * (marketingFrame ? 0.34 : portraitFrame ? 0.56 : 0.36);
 
         model.position.x -= centre.x;
         model.position.z -= centre.z;
@@ -470,13 +477,10 @@ export function AvatarStage({
       <div
         ref={mountRef}
         className="h-full w-full"
-        style={{
-          maskImage: FADE,
-          WebkitMaskImage: FADE
-        }}
+        style={feather ? { maskImage: FADE, WebkitMaskImage: FADE } : undefined}
       />
 
-      {status !== "ready" ? (
+      {showStatus && status !== "ready" ? (
         <div className="absolute inset-0 flex items-center justify-center">
           <p className="blueprint-label text-cream/40">
             {status === "loading" ? "Loading interviewer" : "Avatar unavailable"}

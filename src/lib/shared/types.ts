@@ -2,6 +2,7 @@ export type Role = "backend" | "frontend" | "fullstack" | "data" | "ai-ml" | "pm
 export type Level = "fresher" | "0-2" | "3-5" | "5-plus";
 export type RoundType = "behavioral" | "technical" | "hiring-manager";
 export type Intensity = "friendly" | "realistic" | "brutal";
+export type { WorkspaceAccent } from "@/lib/workspace/accent";
 
 export interface InterviewSetup {
   role: Role;
@@ -39,6 +40,7 @@ export interface CandidateProfileInput {
 }
 
 export interface CandidateProfile extends CandidateProfileInput {
+  workspaceAccent: import("@/lib/workspace/accent").WorkspaceAccent;
   updatedAt: number | null;
   completeness: number;
   onboardingCompletedAt: number | null;

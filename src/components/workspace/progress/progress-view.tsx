@@ -127,10 +127,10 @@ export function ProgressView({
   }, [awaitingGesture, phase, setAwaitingGesture, spokenPhase, startSpokenPhase]);
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[95rem] flex-col px-5 pb-12 pt-4 text-cream sm:px-8 lg:px-10 lg:pt-6">
+    <div className="mx-auto flex min-h-screen w-full max-w-[84rem] flex-col px-4 pb-20 pt-6 text-cream sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
       <DocumentTitle title="Progress" />
 
-      <section className="relative mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-6xl items-center overflow-hidden rounded-[1.75rem] bg-[#3557b4] px-4 py-6 sm:px-7 sm:py-8 lg:grid-cols-[minmax(19rem,0.82fr)_minmax(0,1fr)] lg:gap-8 lg:px-10">
+      <section className="relative mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-6xl items-center overflow-hidden rounded-[1.75rem] bg-[#151619] px-4 py-6 sm:px-7 sm:py-8 lg:grid-cols-[minmax(19rem,0.82fr)_minmax(0,1fr)] lg:gap-8 lg:px-10">
         <ProgressBackdrop />
 
         <div className="relative z-10 mx-auto w-full max-w-[34rem] lg:mx-0">
@@ -201,6 +201,8 @@ function buildProgressBriefing(overview: ProgressOverview, firstName: string): P
   const totalQuestions = totals.totalQuestions;
   const remainingQuestions = Math.max(0, totalQuestions - completedQuestions);
   const openedNotFinished = Math.max(0, totals.attemptedQuestions - completedQuestions);
+  const completedInterviews = overview.interview.completedSessions;
+  const interviewAnswers = overview.interview.answeredQuestions;
   const recentDays = activity.slice(-7);
   const recentSolved = recentDays.reduce((total, day) => total + day.solved, 0);
   const activeDaysThisWeek = recentDays.filter((day) => day.solved > 0 || day.attempts > 0).length;
@@ -218,7 +220,12 @@ function buildProgressBriefing(overview: ProgressOverview, firstName: string): P
   const topPattern = strongestCompletedPattern(overview.patterns);
   const topicLabel = topPattern?.label ?? nextUp?.chapterTitle ?? overview.roadmapTitle ?? "your roadmap";
   const hasProgress =
-    completedQuestions > 0 || openedNotFinished > 0 || totals.totalAttempts > 0 || recentSolved > 0;
+    completedQuestions > 0 ||
+    openedNotFinished > 0 ||
+    totals.totalAttempts > 0 ||
+    recentSolved > 0 ||
+    completedInterviews > 0 ||
+    interviewAnswers > 0;
   const primaryHref = nextUp?.href ?? "/practice";
   const primaryCta = completedQuestions > 0 ? "Continue the next question" : "Start one question";
 
@@ -246,7 +253,13 @@ function buildProgressBriefing(overview: ProgressOverview, firstName: string): P
   const doneLine =
     completedQuestions > 0
       ? `${completedQuestions} of ${totalQuestions} questions are finished, mostly around ${topicLabel}.`
-      : `${openedNotFinished} ${openedNotFinished === 1 ? "question is" : "questions are"} opened, but not finished yet.`;
+      : openedNotFinished > 0
+        ? `${openedNotFinished} ${openedNotFinished === 1 ? "question is" : "questions are"} opened, but not finished yet.`
+        : "No practice questions are recorded yet.";
+  const interviewLine =
+    completedInterviews > 0
+      ? `You have completed ${completedInterviews} ${completedInterviews === 1 ? "interview round" : "interview rounds"} with ${interviewAnswers} ${interviewAnswers === 1 ? "answer" : "answers"} captured.`
+      : "";
   const unfinishedLine =
     openedNotFinished > 0
       ? `${openedNotFinished} ${openedNotFinished === 1 ? "open question is" : "open questions are"} waiting to be closed.`
@@ -263,7 +276,7 @@ function buildProgressBriefing(overview: ProgressOverview, firstName: string): P
   return {
     hasProgress,
     introHeading: "Your practice trail is moving.",
-    introText: `Good, ${name}. You have started the trail, and that matters. ${doneLine} ${unfinishedLine} Keep it simple now: close the open work, protect the rhythm, and Maya will turn these reps into a clearer progress read.`,
+    introText: `Good, ${name}. You have started the trail, and that matters. ${doneLine} ${interviewLine} ${unfinishedLine} Keep it simple now: close the open work, protect the rhythm, and Maya will turn these reps into a clearer progress read.`,
     paceHeading: "",
     paceText: `${paceLine} Aim for ${recommendedDailyTarget} good ${recommendedDailyTarget === 1 ? "question" : "questions"} a day, done properly. ${timeLine} You were active ${activeDaysThisWeek} of the last 7 days.`,
     primaryCta,

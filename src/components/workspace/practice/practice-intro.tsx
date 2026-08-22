@@ -134,7 +134,7 @@ export function PracticeIntro({
       <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-stretch">
         {/* Maya, mounted the way Home mounts her: an absolute layer over a box
             with real height, so the WebGL canvas always has dimensions. */}
-        <div className="relative flex min-h-[22rem] flex-col overflow-hidden rounded-2xl bg-[#2a4aa0] lg:min-h-[28rem]">
+        <div className="relative flex min-h-[22rem] flex-col overflow-hidden rounded-2xl bg-[#1b1d20] lg:min-h-[28rem]">
           {/* Stops above the control row so the status pill and Hear Maya
               button never sit across her. */}
           <div
@@ -244,7 +244,7 @@ export function PracticeIntro({
             {nextHref ? (
               <Link
                 href={nextHref}
-                className="group inline-flex h-12 items-center gap-2 rounded-xl bg-gradient-to-b from-[#f7f2e5] to-[#e4dcc6] px-6 text-[14.5px] font-semibold text-[#1d3a86] transition hover:from-white hover:to-[#efe8d6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                className="group inline-flex h-12 items-center gap-2 rounded-xl bg-gradient-to-b from-[#f7f2e5] to-[#e4dcc6] px-6 text-[14.5px] font-semibold text-[#171a16] transition hover:from-white hover:to-[#efe8d6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 <Play size={15} aria-hidden="true" fill="currentColor" />
                 {nextLabel}

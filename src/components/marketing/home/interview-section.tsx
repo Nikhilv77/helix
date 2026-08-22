@@ -50,7 +50,7 @@ export function TheInterview() {
         <Reveal delay={80}>
           <h2
             className="display-heading mt-6 max-w-4xl text-center text-cream"
-            style={{ fontSize: "clamp(2.4rem, 5.6vw, 5rem)" }}
+            style={{ fontSize: "clamp(2.15rem, 4.8vw, 4.25rem)" }}
           >
             Then say it out loud.
           </h2>

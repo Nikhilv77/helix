@@ -150,7 +150,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
   // be a form, which buried the handful of facts that actually matter.
   if (mode === "view") {
     return (
-      <div className="profile-theme w-full max-w-none px-0 pb-16 pt-4 sm:px-3 sm:pt-2 lg:px-3">
+      <div className="profile-theme mx-auto w-full max-w-[84rem] px-4 pb-20 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
         <ProfileHero
           profile={profile}
           saved={saved}
@@ -178,7 +178,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
 
   if (mode === "resume") {
     return (
-      <div className="profile-theme w-full max-w-none px-0 pb-16 pt-4 sm:px-3 sm:pt-2 lg:px-3">
+      <div className="profile-theme mx-auto w-full max-w-[84rem] px-4 pb-20 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
         <ResumeHero resume={resume} onBack={() => setMode("view")} />
         <div className="mt-6">
           <ResumeTab resume={resume} />
@@ -191,7 +191,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
   // and the story bank. Everything else on this page is derived or read-only,
   // so putting it in the form only invited people to fiddle with it.
   return (
-    <div className="profile-theme w-full max-w-none px-0 pb-36 pt-4 sm:px-3 sm:pt-2 lg:px-3">
+    <div className="profile-theme mx-auto w-full max-w-[84rem] px-4 pb-36 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
       <header className="profile-motion surface-raised relative overflow-hidden p-6 sm:p-8 lg:p-10">
         <CardPattern variant="waves" />
         <div

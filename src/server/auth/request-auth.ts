@@ -14,12 +14,6 @@ interface ClerkJwtPayload {
 }
 
 export async function requireUserId(request: NextRequest, config: AppConfigService): Promise<string> {
-  const token = getBearerToken(request.headers.get("authorization"));
-
-  if (!token) {
-    throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
-  }
-
   if (!config.clerkSecretKey) {
     throw new ApiRouteError(
       503,
@@ -28,9 +22,17 @@ export async function requireUserId(request: NextRequest, config: AppConfigServi
     );
   }
 
+  // Browser calls use Clerk's session cookie, while workers and other API
+  // clients use a Bearer token. Checking only the latter silently created
+  // anonymous interview histories for signed-in browser users.
   const authenticatedRequest = await authenticateRequestToken(request, config).catch(() => null);
   if (authenticatedRequest) {
     return authenticatedRequest.userId;
+  }
+
+  const token = getBearerToken(request.headers.get("authorization"));
+  if (!token) {
+    throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
   }
 
   const verifiedBearer = await verifyBearerToken(token, config).catch(() => null);

@@ -9,7 +9,7 @@ export function LegalPage({ document }: { document: LegalDocument }) {
       <main className="relative z-10 px-5 pb-12 pt-32 sm:px-8">
         <header className="mx-auto max-w-3xl text-center">
           <p className="blueprint-label text-cream/[0.58]">{document.eyebrow}</p>
-          <h1 className="mt-4 text-5xl font-semibold tracking-tight text-cream sm:text-6xl">
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-cream sm:text-5xl">
             {document.title}
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-cream/[0.72]">
@@ -47,4 +47,3 @@ export function LegalPage({ document }: { document: LegalDocument }) {
     </div>
   );
 }
-

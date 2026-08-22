@@ -22,8 +22,8 @@ export default async function PracticePage() {
   ]);
 
   return (
-    <div className="pb-10">
-      <div className="mx-auto w-full max-w-[95rem] px-5 sm:px-8 lg:px-10">
+    <div>
+      <div className="mx-auto w-full max-w-[84rem] px-4 pb-20 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
         {plan ? (
           <DsaTopics
             plan={plan}

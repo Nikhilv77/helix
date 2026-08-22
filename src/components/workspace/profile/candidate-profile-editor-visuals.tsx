@@ -293,7 +293,7 @@ export function SignatureStoryCard({ story }: { story?: CandidateStory }) {
   if (!story?.title) return null;
 
   return (
-    <section className="relative z-10 mt-6 overflow-hidden rounded-[1.5rem] border border-[#F26E01]/30 bg-[linear-gradient(120deg,rgba(242,110,1,0.13),rgba(24,25,28,0.98)_42%)] p-6 shadow-[0_24px_64px_-38px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.07)] sm:p-8">
+    <section className="workspace-accent-card-glow relative z-10 mt-6 overflow-hidden rounded-[1.5rem] border border-[#F26E01]/30 p-6 shadow-[0_24px_64px_-38px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.07)] sm:p-8">
       <CardPattern variant="quote" />
       <SectionUiTexture variant={1} />
       <Quote size={20} className="absolute left-6 top-6 text-cream/42" aria-hidden />

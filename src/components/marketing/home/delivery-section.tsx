@@ -22,7 +22,7 @@ export function Delivery() {
       <InterviewSignal className="pointer-events-none absolute left-1/2 top-16 h-[26rem] w-[34rem] -translate-x-1/2 text-[color:var(--dm-accent-soft)] opacity-10 sm:h-[34rem] sm:w-[44rem]" />
       <div className="pointer-events-none absolute -left-28 top-28 hidden h-72 w-72 rounded-full border border-cream/10 sm:block" />
       <div className="pointer-events-none absolute -right-24 bottom-28 hidden h-80 w-80 rounded-full border border-cream/10 sm:block" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#101113] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#060708]/80 to-transparent" />
 
       <div className="relative mx-auto w-full max-w-[78rem]">
         <div className="grid gap-14 lg:grid-cols-[1.06fr_0.94fr] lg:items-center">
@@ -38,7 +38,7 @@ export function Delivery() {
             <Reveal delay={80}>
               <h2
                 className="display-heading mt-6 max-w-xl text-cream"
-                style={{ fontSize: "clamp(2.4rem, 5.6vw, 5rem)" }}
+                style={{ fontSize: "clamp(2.15rem, 4.8vw, 4.25rem)" }}
               >
                 Reports that show what changed.
               </h2>
@@ -57,7 +57,7 @@ export function Delivery() {
           </div>
 
           <Reveal delay={120} className="lg:order-1">
-            <div className="overflow-hidden rounded-[1.5rem] border border-white/[0.07] bg-[#18191c] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
+            <div className="overflow-hidden rounded-[1.5rem] border border-white/[0.07] bg-[#0d0e10] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
               <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4 sm:px-7">
                 <span className="blueprint-label text-cream/48">Round recap</span>
                 <span className="font-mono text-xs text-cream/34">Interview 06</span>
@@ -134,7 +134,7 @@ function FinalCta() {
           <Reveal delay={80}>
             <h2
               className="display-heading mt-6 max-w-3xl text-cream"
-              style={{ fontSize: "clamp(2.5rem, 6vw, 5.2rem)" }}
+              style={{ fontSize: "clamp(2.25rem, 5.1vw, 4.5rem)" }}
             >
               Walk in ready, not guessing.
             </h2>
@@ -164,7 +164,7 @@ function FinalCta() {
           <div className="relative mx-auto h-[30rem] w-full max-w-[32rem] lg:h-[38rem] lg:max-w-[40rem]">
             <div className="pointer-events-none absolute bottom-8 left-1/2 hidden h-[26rem] w-[25rem] -translate-x-1/2 rounded-full bg-[#4f70d1] opacity-35 blur-3xl sm:block lg:h-[34rem] lg:w-[31rem]" />
             <div className="pointer-events-none absolute bottom-20 left-1/2 hidden h-[18rem] w-[20rem] -translate-x-1/2 rounded-full bg-[#4568ce] opacity-42 blur-2xl sm:block lg:h-[26rem] lg:w-[28rem]" />
-            <div className="pointer-events-none absolute left-1/2 top-16 hidden h-48 w-64 -translate-x-1/2 rounded-full bg-cream/12 blur-3xl sm:block" />
+            <div className="pointer-events-none absolute left-1/2 top-16 hidden h-48 w-64 -translate-x-1/2 rounded-full bg-cream/[0.055] blur-3xl sm:block" />
             <InterviewSignal className="pointer-events-none absolute left-1/2 top-1/2 h-[24rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 opacity-18" />
             <Image
               src="/images/marketing/maya-professional-optimized.webp"

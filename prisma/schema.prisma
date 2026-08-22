@@ -197,6 +197,7 @@ model CandidateProfile {
   context               String?
   coverImage            String?
   profileImage          String?
+  workspaceAccent       String                @default("ember")
   focusAreas            Json
   stories               Json
   resumeFileName        String?

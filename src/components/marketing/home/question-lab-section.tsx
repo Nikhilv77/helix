@@ -30,7 +30,7 @@ export function QuestionLab() {
       className="marketing-theme-section relative z-10 overflow-hidden bg-blueprint px-5 pb-10 pt-20 sm:px-10 sm:py-28"
     >
       <InterviewSignal className="pointer-events-none absolute left-1/2 top-16 h-[26rem] w-[34rem] -translate-x-1/2 text-[color:var(--dm-accent-soft)] opacity-10 sm:h-[34rem] sm:w-[44rem]" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#101113] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#060708]/80 to-transparent" />
       <div className="pointer-events-none absolute -left-24 top-28 h-72 w-72 rounded-full border border-cream/10" />
       <div className="pointer-events-none absolute -right-28 bottom-24 h-80 w-80 rounded-full border border-cream/10" />
       <QuestionPatterns />
@@ -49,7 +49,7 @@ export function QuestionLab() {
           <Reveal delay={80}>
             <h2
               className="display-heading mt-6 max-w-3xl text-cream"
-              style={{ fontSize: "clamp(2.4rem, 5.6vw, 5rem)" }}
+              style={{ fontSize: "clamp(2.15rem, 4.8vw, 4.25rem)" }}
             >
               Practice resume interview questions.
             </h2>

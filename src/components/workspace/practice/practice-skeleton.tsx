@@ -1,4 +1,4 @@
-import { RouteProgress } from "@/components/workspace/shared/loading/skeletons";
+import { RouteProgress } from "@/components/workspace/shared/loading/primitives";
 
 function Line({ className = "" }: { className?: string }) {
   return <div className={["skeleton h-3", className].join(" ")} />;
@@ -7,7 +7,7 @@ function Line({ className = "" }: { className?: string }) {
 export function PracticeSkeleton() {
   return (
     <div
-      className="mx-auto w-full max-w-[95rem] px-5 pb-16 pt-4 text-cream sm:px-8 lg:px-10 lg:pt-6"
+      className="mx-auto w-full max-w-[84rem] px-4 pb-20 pt-6 text-cream sm:px-6 sm:pt-8 lg:px-8 lg:pt-10"
       aria-busy="true"
       aria-label="Loading practice"
     >

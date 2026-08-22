@@ -12,9 +12,14 @@ import type {
   ResumePracticeQuestion,
   ResumeProjectEntry,
   ResumeRoadmapItem,
-  Role
+  Role,
+  WorkspaceAccent
 } from "@/lib/shared/types";
 import type { Curriculum, CurriculumSession } from "@/lib/curriculum/curriculum";
+import {
+  DEFAULT_WORKSPACE_ACCENT,
+  isWorkspaceAccent
+} from "@/lib/workspace/accent";
 import type { PrismaService } from "../database/prisma.service";
 
 const roles = new Set<Role>(["backend", "frontend", "fullstack", "data", "ai-ml", "pm"]);
@@ -53,6 +58,9 @@ export class ProfileService {
       context: stored.context ?? "",
       coverImage: stored.coverImage ?? null,
       profileImage: stored.profileImage ?? null,
+      workspaceAccent: isWorkspaceAccent(stored.workspaceAccent)
+        ? stored.workspaceAccent
+        : DEFAULT_WORKSPACE_ACCENT,
       focusAreas: stringArray(stored.focusAreas),
       stories: storyArray(stored.stories),
       updatedAt: stored.updatedAt.getTime(),
@@ -100,6 +108,26 @@ export class ProfileService {
     });
 
     return withCompleteness(await this.get(ownerId));
+  }
+
+  async workspaceAccent(ownerId: string): Promise<WorkspaceAccent> {
+    const profile = await this.prisma.candidateProfile.findUnique({
+      where: { ownerId },
+      select: { workspaceAccent: true }
+    });
+
+    return isWorkspaceAccent(profile?.workspaceAccent)
+      ? profile.workspaceAccent
+      : DEFAULT_WORKSPACE_ACCENT;
+  }
+
+  async saveWorkspaceAccent(ownerId: string, accent: WorkspaceAccent): Promise<WorkspaceAccent> {
+    await this.prisma.candidateProfile.update({
+      where: { ownerId },
+      data: { workspaceAccent: accent }
+    });
+
+    return accent;
   }
 
   async deleteAccountData(ownerId: string): Promise<void> {
@@ -224,6 +252,7 @@ function emptyProfile(): CandidateProfile {
     context: "",
     coverImage: null,
     profileImage: null,
+    workspaceAccent: DEFAULT_WORKSPACE_ACCENT,
     focusAreas: [],
     stories: [],
     updatedAt: null,

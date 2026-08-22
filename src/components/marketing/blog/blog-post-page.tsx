@@ -92,7 +92,7 @@ export async function BlogPostPage({
               </span>
               <h1
                 className="display-heading mt-6 max-w-4xl text-cream"
-                style={{ fontSize: "clamp(2.8rem, 6.8vw, 5.8rem)" }}
+                style={{ fontSize: "clamp(2.25rem, 5.1vw, 4.5rem)" }}
               >
                 {post.title}
               </h1>
@@ -141,7 +141,7 @@ export async function BlogPostPage({
                       {section.kicker ? (
                         <p className="blueprint-label text-[#F26E01]/80">{section.kicker}</p>
                       ) : null}
-                      <h2 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight text-cream sm:text-4xl">
+                      <h2 className="mt-3 max-w-3xl text-2xl font-semibold tracking-tight text-cream sm:text-3xl">
                         {section.heading}
                       </h2>
                       <div className="mt-5 space-y-5">
@@ -203,7 +203,7 @@ export async function BlogPostPage({
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="blueprint-label text-cream/42">Read next</p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-cream">
+                <h2 className="mt-3 text-2xl font-semibold tracking-tight text-cream">
                   Keep the loop moving.
                 </h2>
               </div>
@@ -248,4 +248,3 @@ export async function BlogPostPage({
     </div>
   );
 }
-

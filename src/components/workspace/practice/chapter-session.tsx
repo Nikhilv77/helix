@@ -195,10 +195,10 @@ export function ChapterSession({
   const percent = Math.round(detail?.progressPercent ?? 0);
 
   return (
-    <div className="mx-auto w-full max-w-[95rem] px-5 pb-16 sm:px-8 lg:px-10">
+    <div className="mx-auto w-full max-w-[84rem] px-4 pb-20 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
       <Breadcrumb title={brief.title} />
 
-      <section className="relative overflow-hidden rounded-[1.5rem] bg-[#3557b4] p-4 shadow-[inset_0_0_0_1px_rgba(239,232,214,0.07)] sm:p-5">
+      <section className="relative overflow-hidden rounded-[1.5rem] bg-[#151619] p-4 shadow-[inset_0_0_0_1px_rgba(239,232,214,0.07)] sm:p-5">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:items-stretch">
           <MayaColumn
             speaking={speaking}
@@ -211,7 +211,7 @@ export function ChapterSession({
             }}
           />
 
-          <div className="relative flex min-w-0 flex-col overflow-hidden rounded-2xl bg-[#2a4aa0] p-5 sm:p-6">
+          <div className="relative flex min-w-0 flex-col overflow-hidden rounded-2xl bg-[#1b1d20] p-5 sm:p-6">
             {phase === "brief" && beat ? (
               <BriefPanel
                 beat={beat}
@@ -287,7 +287,7 @@ function MayaColumn({
   onWake: () => void;
 }) {
   return (
-    <div className="relative flex min-h-[26rem] flex-col overflow-hidden rounded-2xl bg-[#2a4aa0] lg:min-h-[34rem]">
+    <div className="relative flex min-h-[26rem] flex-col overflow-hidden rounded-2xl bg-[#1b1d20] lg:min-h-[34rem]">
       {/* Same absolute mount Home uses: the WebGL canvas sizes to its parent,
           so it needs a box with real dimensions rather than a flex child that
           can collapse to nothing. */}
@@ -332,7 +332,7 @@ function MayaColumn({
           <button
             type="button"
             onClick={onWake}
-            className="inline-flex items-center gap-2 rounded-full bg-cream px-3.5 py-1.5 text-[12px] font-semibold text-[#1d3a86] transition hover:bg-white"
+            className="inline-flex items-center gap-2 rounded-full bg-cream px-3.5 py-1.5 text-[12px] font-semibold text-[#171a16] transition hover:bg-white"
           >
             <Volume2 size={13} aria-hidden="true" />
             Hear Maya
@@ -424,7 +424,7 @@ function BriefPanel({
             {beat.points.map((point) => (
               <li
                 key={point}
-                className="flex gap-2.5 rounded-xl bg-[#24439b] p-3.5 text-[13.5px] leading-6 text-cream/78"
+                className="flex gap-2.5 rounded-xl bg-[#202124] p-3.5 text-[13.5px] leading-6 text-cream/78"
               >
                 <CircleDot size={14} aria-hidden="true" className="mt-1 shrink-0 text-cream/35" />
                 <span className="min-w-0">{point}</span>
@@ -459,7 +459,7 @@ function BriefPanel({
         <button
           type="button"
           onClick={onNext}
-          className="ml-auto inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-b from-[#f7f2e5] to-[#e4dcc6] px-5 text-[14px] font-semibold text-[#1d3a86] transition hover:from-white hover:to-[#efe8d6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          className="ml-auto inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-b from-[#f7f2e5] to-[#e4dcc6] px-5 text-[14px] font-semibold text-[#171a16] transition hover:from-white hover:to-[#efe8d6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           {isLast ? "Start solving" : "Continue"}
           <ArrowRight size={15} aria-hidden="true" />
@@ -535,7 +535,7 @@ function SolvePanel({
             />
           ))
         ) : (
-          <li className="rounded-xl bg-[#24439b] p-4 text-[13.5px] leading-6 text-cream/60">
+          <li className="rounded-xl bg-[#202124] p-4 text-[13.5px] leading-6 text-cream/60">
             This chapter is not part of your saved roadmap yet. Open it from Home to start tracking
             progress.
           </li>
@@ -546,7 +546,7 @@ function SolvePanel({
         <div className="mt-5 border-t border-cream/[0.09] pt-5">
           <Link
             href={`/dsa-questions/${nextSlug}`}
-            className="group flex h-11 w-full items-center justify-between gap-3 rounded-xl bg-gradient-to-b from-[#f7f2e5] to-[#e4dcc6] px-4 text-[14px] font-semibold text-[#1d3a86] transition hover:from-white hover:to-[#efe8d6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="group flex h-11 w-full items-center justify-between gap-3 rounded-xl bg-gradient-to-b from-[#f7f2e5] to-[#e4dcc6] px-4 text-[14px] font-semibold text-[#171a16] transition hover:from-white hover:to-[#efe8d6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             <span className="min-w-0 truncate">
               {detail?.completedQuestions ? "Continue where you left off" : "Solve the first question"}
@@ -597,7 +597,7 @@ function QuestionRow({
       <Link
         href={`/dsa-questions/${slug}`}
         className={`group flex items-center gap-3 rounded-xl p-3.5 transition ${
-          isNext ? "bg-[#2f56b8] ring-1 ring-inset ring-cream/20" : "bg-[#24439b] hover:bg-[#27479f]"
+          isNext ? "bg-[#292a2d] ring-1 ring-inset ring-cream/20" : "bg-[#202124] hover:bg-[#292a2d]"
         }`}
       >
         <span
@@ -654,7 +654,7 @@ function QuestionRow({
 
 function StatCard({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
-    <div className="rounded-2xl bg-[#2a4aa0] p-5">
+    <div className="rounded-2xl bg-[#1b1d20] p-5">
       <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-cream/45">{label}</p>
       <p className="mt-2 font-display text-[1.6rem] font-semibold tracking-tight text-cream">
         {value}

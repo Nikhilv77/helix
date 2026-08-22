@@ -11,6 +11,7 @@ import { AuthSync } from "@/components/workspace/chrome/auth-sync";
 import { ScrollRestoration } from "@/components/scroll-restoration";
 import { clerkAppearance } from "@/lib/auth/clerk-theme";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared/seo";
+import type { WorkspaceAccent } from "@/lib/workspace/accent";
 import { isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
@@ -154,19 +155,21 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // Public editorial pages stay outside the signed-in workspace shell. The
   // URL remains public whether or not a visitor is authenticated.
   const showWorkspaceShell = Boolean(userId && workspaceRoute && !welcomeHome);
+  let initialWorkspaceAccent: WorkspaceAccent | undefined;
 
   if (userId && workspaceRoute && !welcomeHome) {
     const profile = await getAppContainer()
       .profileService.get(authenticatedOwnerId(userId))
       .catch(() => null);
     if (!profile?.onboardingCompletedAt) redirect("/onboarding");
+    initialWorkspaceAccent = profile.workspaceAccent;
   }
 
   const app = (
     <>
       <ScrollRestoration />
       {showWorkspaceShell ? (
-        <WorkspaceShell>{children}</WorkspaceShell>
+        <WorkspaceShell initialAccent={initialWorkspaceAccent}>{children}</WorkspaceShell>
       ) : userId ? (
         children
       ) : (

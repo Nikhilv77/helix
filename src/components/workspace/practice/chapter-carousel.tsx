@@ -67,7 +67,7 @@ export function ChapterCarousel({ chapters }: { chapters: CarouselChapter[] }) {
     <section
       aria-roledescription="carousel"
       aria-label="Practice patterns"
-      className="relative flex h-full w-full flex-col overflow-hidden rounded-2xl bg-[#2a4aa0] p-5"
+      className="relative flex h-full w-full flex-col overflow-hidden rounded-2xl bg-[#1b1d20] p-5"
       onMouseEnter={() => setPlaying(false)}
       onMouseLeave={() => setPlaying(true)}
       onFocusCapture={() => setPlaying(false)}

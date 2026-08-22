@@ -2,13 +2,31 @@
 
 import { SignOutButton, useReverification, useUser } from "@clerk/nextjs";
 import { isReverificationCancelledError } from "@clerk/nextjs/errors";
-import { LogOut, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { Check, LogOut, Trash2, type LucideIcon } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { ApiClientError, deleteAccount } from "@/lib/api/api-client";
+import { ApiClientError, deleteAccount, saveWorkspaceAccent } from "@/lib/api/api-client";
 import type { CandidateProfile } from "@/lib/shared/types";
+import {
+  type WorkspaceAccent,
+  WORKSPACE_ACCENT_CHANGE_EVENT
+} from "@/lib/workspace/accent";
 
 const MANAGE_ORIGIN_KEY = "trailgrad:manage-origin";
+
+const accentOptions: Array<{
+  value: WorkspaceAccent;
+  label: string;
+  color: string;
+  dots: [string, string, string];
+}> = [
+  { value: "ember", label: "Ember", color: "#f26e01", dots: ["#f26e01", "#ff8b3d", "#efcf84"] },
+  { value: "azure", label: "Azure", color: "#4f8cff", dots: ["#4f8cff", "#78a7ff", "#9b6dff"] },
+  { value: "violet", label: "Violet", color: "#9b6dff", dots: ["#8153e6", "#9b6dff", "#d268c4"] },
+  { value: "emerald", label: "Emerald", color: "#39d9a1", dots: ["#20b983", "#39d9a1", "#8be6bd"] },
+  { value: "rose", label: "Rose", color: "#f0528a", dots: ["#d93b6d", "#f0528a", "#ff7a5b"] },
+  { value: "mono", label: "Mono", color: "#d3d0c7", dots: ["#85837e", "#b2afa8", "#d3d0c7"] }
+];
 
 export function ManageAccount({ profile }: { profile: CandidateProfile }) {
   const { user } = useUser();
@@ -16,6 +34,8 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
   const [avatarDelta, setAvatarDelta] = useState({ x: -190, y: 310 });
   const [deleting, setDeleting] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [accent, setAccent] = useState<WorkspaceAccent>(profile.workspaceAccent);
+  const [savingAccent, setSavingAccent] = useState<WorkspaceAccent | null>(null);
   const [error, setError] = useState<string | null>(null);
   const name =
     profile.resume?.fullName?.trim() ||
@@ -67,9 +87,30 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
     }
   };
 
+  const onAccentChange = async (nextAccent: WorkspaceAccent) => {
+    if (nextAccent === accent || savingAccent) return;
+
+    const previousAccent = accent;
+    setAccent(nextAccent);
+    setSavingAccent(nextAccent);
+    setError(null);
+    window.dispatchEvent(new CustomEvent(WORKSPACE_ACCENT_CHANGE_EVENT, { detail: nextAccent }));
+
+    try {
+      await saveWorkspaceAccent(nextAccent);
+    } catch (caught) {
+      setAccent(previousAccent);
+      window.dispatchEvent(
+        new CustomEvent(WORKSPACE_ACCENT_CHANGE_EVENT, { detail: previousAccent })
+      );
+      setError(caught instanceof ApiClientError ? caught.message : "Could not save your theme.");
+    } finally {
+      setSavingAccent(null);
+    }
+  };
+
   return (
-    <section className="relative mx-auto flex min-h-screen w-full max-w-[95rem] flex-col px-5 py-6 pb-16 text-cream sm:px-8 lg:px-10 lg:py-8">
-      <ManageBackdrop />
+    <section className="profile-theme relative mx-auto flex min-h-screen w-full max-w-[84rem] flex-col px-4 pb-20 pt-6 text-cream sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
 
       <div className="relative z-10 mx-auto flex min-h-[calc(100svh-5rem)] w-full max-w-4xl flex-col items-center justify-center py-10 text-center">
         <div
@@ -93,13 +134,13 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
               className="relative h-full w-full rounded-full object-cover object-center"
             />
           ) : (
-            <span className="relative grid h-full w-full place-items-center rounded-full bg-cream/[0.12] text-3xl font-semibold text-[#253f90]">
+            <span className="relative grid h-full w-full place-items-center rounded-full bg-cream/[0.12] text-3xl font-semibold text-[#171a16]">
               {initialsOf(name)}
             </span>
           )}
         </div>
 
-        <div className="mt-8 w-full">
+        <div className="mt-8 flex w-full flex-col">
           <p className="blueprint-label manage-sequence-line text-cream/42">Manage account</p>
           <h1 className="mt-4 text-[clamp(2.45rem,7vw,5rem)] font-semibold leading-[0.98] tracking-tight text-cream">
             <AnimatedWords text="So far, so good." delay={680} />
@@ -117,47 +158,72 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
             />
           </p>
 
-          <div className="mx-auto mt-10 grid max-w-2xl gap-3 text-left sm:grid-cols-2">
-            <div
-              className="manage-action-line rounded-2xl border border-cream/20 bg-cream/[0.035] p-4"
-              style={{ "--line-delay": "3200ms" } as CSSProperties}
-            >
-              <p className="blueprint-label text-cream/35">Logout</p>
-              <p className="mt-2 text-sm leading-6 text-cream/56">
-                End this session. Your profile, reports, and progress stay saved.
+          <section
+            className="manage-action-line order-2 mx-auto mt-4 w-full max-w-6xl rounded-[1.5rem] bg-[#17181b] p-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] sm:p-6"
+            style={{ "--line-delay": "3200ms" } as CSSProperties}
+          >
+            <h2 className="text-base font-semibold text-cream">Account actions</h2>
+            <div className="mt-2 divide-y divide-white/[0.07]">
+              <AccountActionRow
+                icon={LogOut}
+                title="Log out"
+                description="End your current session on this device."
+                accent
+                action={
+                  <SignOutButton redirectUrl="/">
+                    <button
+                      type="button"
+                      className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-cream px-4 text-sm font-semibold text-[#171a16] transition hover:bg-white sm:w-auto sm:min-w-32"
+                    >
+                      Log out
+                    </button>
+                  </SignOutButton>
+                }
+              />
+              <AccountActionRow
+                icon={Trash2}
+                title="Delete account"
+                description="Permanently delete your account and all data."
+                destructive
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteWarning(true)}
+                    className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-red-400/30 px-4 text-sm font-semibold text-red-300 transition hover:bg-red-400/[0.08] sm:w-auto sm:min-w-32"
+                  >
+                    Delete account
+                  </button>
+                }
+              />
+            </div>
+          </section>
+
+          <section
+            className="manage-action-line order-1 mx-auto mt-10 w-full max-w-6xl rounded-[1.5rem] bg-[#17181b] p-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] sm:p-6"
+            style={{ "--line-delay": "3340ms" } as CSSProperties}
+          >
+            <div>
+              <h2 className="text-base font-semibold text-cream">Theme</h2>
+              <p className="mt-1 text-sm leading-6 text-cream/52">
+                Choose an accent color for your Trailgrad experience.
               </p>
-              <SignOutButton redirectUrl="/">
-                <button
-                  type="button"
-                  className="manage-shine-link mt-3 inline-flex items-center gap-1.5 text-[0.98rem]"
-                >
-                  Logout
-                  <LogOut size={17} strokeWidth={1.85} aria-hidden="true" />
-                </button>
-              </SignOutButton>
             </div>
 
-            <div
-              className="manage-action-line rounded-2xl border border-cream/20 bg-cream/[0.035] p-4"
-              style={{ "--line-delay": "3480ms" } as CSSProperties}
-            >
-              <p className="blueprint-label text-cream/35">Delete account</p>
-              <p className="mt-2 text-sm leading-6 text-cream/50">
-                Remove your profile, roadmap progress, interviews, and account access.
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowDeleteWarning(true)}
-                className="manage-soft-link mt-3 inline-flex items-center gap-1.5 text-[0.98rem]"
-              >
-                Delete account
-                <Trash2 size={16} strokeWidth={1.8} aria-hidden="true" />
-              </button>
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+              {accentOptions.map((option) => (
+                <AccentThemeCard
+                  key={option.value}
+                  option={option}
+                  selected={accent === option.value}
+                  saving={savingAccent === option.value}
+                  onSelect={() => void onAccentChange(option.value)}
+                />
+              ))}
             </div>
-          </div>
+          </section>
 
           {error ? (
-            <p className="manage-action-line mx-auto mt-5 max-w-xl text-[0.9rem] leading-6 text-cream/72">
+            <p className="manage-action-line order-3 mx-auto mt-5 max-w-xl text-[0.9rem] leading-6 text-cream/72">
               {error}
             </p>
           ) : null}
@@ -175,6 +241,170 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
   );
 }
 
+function AccountActionRow({
+  icon: Icon,
+  title,
+  description,
+  action,
+  accent = false,
+  destructive = false
+}: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  action: ReactNode;
+  accent?: boolean;
+  destructive?: boolean;
+}) {
+  const tone = destructive
+    ? "border border-red-400/20 bg-red-400/[0.05] text-red-300"
+    : accent
+      ? "border border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]"
+      : "border border-white/[0.1] bg-white/[0.05] text-cream/70";
+
+  return (
+    <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${tone}`}>
+          <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-cream">{title}</h3>
+          <p className="mt-1 text-sm text-cream/48">{description}</p>
+        </div>
+      </div>
+      <div className="shrink-0">{action}</div>
+    </div>
+  );
+}
+
+function AccentThemeCard({
+  option,
+  selected,
+  saving,
+  onSelect
+}: {
+  option: (typeof accentOptions)[number];
+  selected: boolean;
+  saving: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={saving}
+      aria-pressed={selected}
+      style={{ "--card-accent": option.color } as CSSProperties}
+      className={`
+        group relative min-w-0 rounded-[16px] border p-2.5 text-left
+        transition-all duration-200
+        disabled:cursor-wait disabled:opacity-60
+        ${
+          selected
+            ? "border-[var(--card-accent)] bg-[#1a1b1f] shadow-[0_0_0_1px_var(--card-accent)]"
+            : "border-white/[0.1] bg-[#191a1d] hover:border-white/[0.18] hover:bg-[#1b1c20]"
+        }
+      `}
+    >
+      {/* preview */}
+      <div className="relative aspect-[1.32/1] overflow-hidden rounded-[11px] border border-white/[0.07] bg-[#0d0e10]">
+        <div className="flex h-full">
+          {/* empty accent sidebar */}
+          <div
+            className="relative w-[28%] shrink-0 border-r border-white/[0.06]"
+            style={{
+              background: `
+                radial-gradient(
+                  circle at 35% 22%,
+                  color-mix(in srgb, var(--card-accent) 22%, transparent),
+                  transparent 46%
+                ),
+                linear-gradient(
+                  180deg,
+                  color-mix(in srgb, var(--card-accent) 8%, #0b0c0e),
+                  #0b0c0e 58%
+                )
+              `
+            }}
+          >
+            <div className="absolute inset-0 bg-black/10" />
+
+            <div
+              className="absolute bottom-0 left-0 top-0 w-[2px] opacity-70"
+              style={{
+                background:
+                  "linear-gradient(to bottom, transparent, var(--card-accent), transparent)"
+              }}
+            />
+          </div>
+
+          {/* dashboard */}
+          <div className="relative flex-1 px-[11%] py-[13%]">
+            {/* top */}
+            <div className="flex items-center justify-between">
+              <div className="h-[5px] w-[42%] rounded-full bg-[#96928b]" />
+
+              <div className="h-[8px] w-[8px] rounded-full border border-white/[0.1] bg-white/[0.03]" />
+            </div>
+
+            {/* subtle accent line */}
+            <div className="mt-[11%] h-[2px] w-[24%] rounded-full bg-[var(--card-accent)] opacity-90" />
+
+            {/* main content */}
+            <div className="mt-[16%]">
+              <div className="h-[4px] w-[70%] rounded-full bg-white/[0.18]" />
+              <div className="mt-[10%] h-[4px] w-[52%] rounded-full bg-white/[0.09]" />
+            </div>
+
+            {/* bottom row */}
+            <div className="absolute bottom-[14%] left-[11%] right-[11%] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="h-[6px] w-[6px] rounded-full bg-[var(--card-accent)]" />
+                <span className="h-[3px] w-8 rounded-full bg-white/[0.1]" />
+              </div>
+
+              <span className="h-[4px] w-[28%] rounded-full bg-white/[0.07]" />
+            </div>
+          </div>
+        </div>
+
+        {/* subtle accent wash */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.035]"
+          style={{
+            background:
+              "linear-gradient(135deg, var(--card-accent), transparent 48%)"
+          }}
+        />
+
+        {selected ? (
+          <span className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-[var(--card-accent)] text-[#101113] shadow-[0_4px_14px_rgba(0,0,0,0.4)]">
+            <Check size={15} strokeWidth={2.6} aria-hidden="true" />
+          </span>
+        ) : null}
+      </div>
+
+      {/* footer */}
+      <div className="mt-3 flex min-w-0 items-center justify-between gap-3 px-0.5 pb-0.5">
+        <span className="truncate text-[14px] font-medium tracking-[-0.01em] text-cream">
+          {option.label}
+        </span>
+
+        <div className="flex shrink-0 items-center gap-1.5">
+          {option.dots.map((color) => (
+            <span
+              key={color}
+              className="h-2 w-2 rounded-full ring-1 ring-white/[0.08]"
+              style={{ backgroundColor: color }}
+            />
+          ))}
+        </div>
+      </div>
+    </button>
+  );
+}
 function AnimatedWords({
   text,
   delay,
@@ -260,7 +490,7 @@ function DeleteAccountWarningModal({
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="delete-account-warning-title"
-        className={`relative w-full max-w-md rounded-2xl border border-cream/20 bg-[#3657b4] p-6 text-cream outline-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform ${
+        className={`relative w-full max-w-md rounded-2xl border border-cream/20 bg-[#151619] p-6 text-cream outline-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform ${
           visible ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-[0.97] opacity-0"
         }`}
       >
@@ -300,7 +530,7 @@ function DeleteAccountWarningModal({
   );
 }
 
-function ManageBackdrop() {
+export function ManageBackdrop() {
   return (
     <div
       aria-hidden
