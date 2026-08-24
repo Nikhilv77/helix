@@ -12,19 +12,22 @@ import type {
 } from "livekit-client";
 import {
   Code2,
+  GripVertical,
   Keyboard,
   Loader2,
+  Maximize2,
   Mic,
   MicOff,
+  Minimize2,
   Play,
   RefreshCw,
   Send,
   Square,
   Volume2
 } from "lucide-react";
-import { TrailgradMark } from "@/components/trailgrad-mark";
 import { DsaCodeEditor } from "@/components/interview/dsa/dsa-code-editor";
 import { DsaQuestionNotes } from "@/components/interview/dsa/dsa-question-notes";
+import { ResizableTextarea } from "@/components/interview/dsa/resizable-textarea";
 import { PathRail } from "@/components/interview/shared/path-rail";
 import { MicMeter } from "@/components/interview/voice/mic-meter";
 import { InterviewerPresence } from "@/components/interview/voice/interviewer-presence";
@@ -36,6 +39,7 @@ import type { DsaQuestion } from "@/lib/dsa/dsa";
 import { dsaStarterCode } from "@/lib/dsa/dsa-code-templates";
 import { pageTitle } from "@/lib/shared/seo";
 import type { InterviewQuestion, InterviewSetup, Phase, Turn } from "@/lib/shared/types";
+import type { WorkspaceAccent } from "@/lib/workspace/accent";
 import type { AgentState, DsaLanguage, DsaRunResult, VoiceStatus } from "./types";
 import {
   describeVoiceState,
@@ -48,6 +52,8 @@ import { SessionLoadingScreen, SessionStateScreen, VoiceShell } from "./componen
 import { MicrophonePicker } from "./components/microphone-picker";
 import { TypedAnswerPanel } from "./components/typed-answer-panel";
 import { ConversationTranscript } from "./components/conversation-transcript";
+import { CandidateCameraPreview } from "./components/candidate-camera-preview";
+import { MediaPermissionGate, type MediaSetupResult } from "./components/media-permission-gate";
 import { useInterviewClock } from "./hooks/use-interview-clock";
 
 const HARD_CAP_MS = 15 * 60 * 1000;
@@ -63,7 +69,11 @@ function turnKey(turn: Turn): string {
   return `${turn.speaker}-${turn.startMs}-${turn.endMs}-${turn.text}`;
 }
 
-export function VoiceInterviewClient() {
+function stopMediaStream(stream: MediaStream | null) {
+  stream?.getTracks().forEach((track) => track.stop());
+}
+
+export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: WorkspaceAccent }) {
   const router = useRouter();
   const params = useSearchParams();
   const sessionId = params?.get("session") ?? null;
@@ -103,6 +113,8 @@ export function VoiceInterviewClient() {
   const [dsaLanguage, setDsaLanguage] = useState<DsaLanguage>("javascript");
   const [dsaRunResult, setDsaRunResult] = useState<DsaRunResult | null>(null);
   const [dsaRunning, setDsaRunning] = useState(false);
+  const [mediaSetupComplete, setMediaSetupComplete] = useState(false);
+  const [candidateCameraStream, setCandidateCameraStream] = useState<MediaStream | null>(null);
 
   const roomRef = useRef<Room | null>(null);
   const agentIdentityRef = useRef<string | null>(null);
@@ -121,6 +133,7 @@ export function VoiceInterviewClient() {
   const turnsRef = useRef<Turn[]>([]);
   const startedAtRef = useRef<number | null>(null);
   const typedUserTurnsRef = useRef(0);
+  const candidateCameraStreamRef = useRef<MediaStream | null>(null);
   const [connectionAttempt, setConnectionAttempt] = useState(0);
   const elapsed = useInterviewClock({
     startedAt,
@@ -128,6 +141,42 @@ export function VoiceInterviewClient() {
     hardCapMs: HARD_CAP_MS
   });
   const dsaQuestionSlug = setup?.dsaQuestionSlugs?.[progress.index] ?? null;
+
+  const replaceCandidateCameraStream = useCallback((stream: MediaStream | null) => {
+    const previous = candidateCameraStreamRef.current;
+    candidateCameraStreamRef.current = stream;
+    setCandidateCameraStream(stream);
+    if (previous && previous !== stream) stopMediaStream(previous);
+  }, []);
+
+  const disableCandidateCamera = useCallback(() => {
+    replaceCandidateCameraStream(null);
+  }, [replaceCandidateCameraStream]);
+
+  const completeMediaSetup = useCallback(
+    ({ cameraStream, microphoneDeviceId }: MediaSetupResult) => {
+      if (microphoneDeviceId) {
+        window.localStorage.setItem(MIC_DEVICE_STORAGE_KEY, microphoneDeviceId);
+      }
+      replaceCandidateCameraStream(cameraStream);
+      setStatus("connecting");
+      setMediaSetupComplete(true);
+    },
+    [replaceCandidateCameraStream]
+  );
+
+  useEffect(
+    () => () => {
+      stopMediaStream(candidateCameraStreamRef.current);
+      candidateCameraStreamRef.current = null;
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (status !== "ended" && !sessionUnavailable) return;
+    replaceCandidateCameraStream(null);
+  }, [replaceCandidateCameraStream, sessionUnavailable, status]);
 
   const revealAgentTurn = useCallback((turn: Turn | null | undefined) => {
     if (!turn || turn.speaker !== "agent") return;
@@ -150,11 +199,13 @@ export function VoiceInterviewClient() {
           : "Live Interview"
         : status === "ended"
           ? "Interview Complete"
-          : status === "error"
-            ? "Interview Error"
-            : "Connecting Interview";
+          : sessionChecked && !mediaSetupComplete
+            ? "Interview Setup"
+            : status === "error"
+              ? "Interview Error"
+              : "Connecting Interview";
     document.title = pageTitle(title);
-  }, [phase, status]);
+  }, [mediaSetupComplete, phase, sessionChecked, status]);
 
   // Join the room. The token carries the agent dispatch, so connecting is what
   // summons the interviewer.
@@ -167,7 +218,8 @@ export function VoiceInterviewClient() {
     // Do not open a media room until the durable interview state has been
     // verified. This prevents an expired session from flashing a live call
     // underneath its recovery message.
-    if (sessionUnavailable || sessionCompleteRef.current) return;
+    if (!sessionChecked || !mediaSetupComplete || sessionUnavailable || sessionCompleteRef.current)
+      return;
 
     // React Strict Mode mounts, unmounts, then remounts effects in dev. A
     // naive disconnect in cleanup tears down the WebRTC session mid-negotiation,
@@ -434,7 +486,14 @@ export function VoiceInterviewClient() {
         teardownRef.current = null;
       }, 400);
     };
-  }, [connectionAttempt, router, sessionChecked, sessionId, sessionUnavailable]);
+  }, [
+    connectionAttempt,
+    mediaSetupComplete,
+    router,
+    sessionChecked,
+    sessionId,
+    sessionUnavailable
+  ]);
 
   // The transcript comes from the brain, not from LiveKit — the server already
   // records every turn with millisecond timings.
@@ -533,8 +592,9 @@ export function VoiceInterviewClient() {
   }, [dsaLanguage, dsaQuestionSlug, setup?.templateTitle]);
 
   useEffect(() => {
+    if (setup?.templateTitle === "DSA practice interview") return;
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [liveTranscript, turns]);
+  }, [liveTranscript, setup?.templateTitle, turns]);
 
   useEffect(() => {
     if (agentState === "speaking") {
@@ -779,17 +839,16 @@ export function VoiceInterviewClient() {
   const isDsaInterview = setup?.templateTitle === "DSA practice interview";
   const selectedDsaSlug = setup?.dsaQuestionSlugs?.[progress.index];
   const dsaQuestion =
-    isDsaInterview && selectedDsaSlug
-      ? findQuestion(selectedDsaSlug)?.question ?? null
-      : null;
+    isDsaInterview && selectedDsaSlug ? (findQuestion(selectedDsaSlug)?.question ?? null) : null;
 
   if (sessionUnavailable) {
-    return <SessionStateScreen kind="expired" />;
+    return <SessionStateScreen kind="expired" workspaceAccent={workspaceAccent} />;
   }
 
   if (!sessionChecked) {
     return (
       <SessionLoadingScreen
+        workspaceAccent={workspaceAccent}
         error={sessionLoadError}
         onRetry={() => {
           setSessionLoadError(null);
@@ -802,6 +861,7 @@ export function VoiceInterviewClient() {
   if (status === "ended") {
     return (
       <SessionStateScreen
+        workspaceAccent={workspaceAccent}
         kind="complete"
         duration={Math.min(elapsed, HARD_CAP_MS)}
         answers={turns.filter((turn) => turn.speaker === "user").length}
@@ -809,26 +869,20 @@ export function VoiceInterviewClient() {
     );
   }
 
+  if (!mediaSetupComplete) {
+    return (
+      <VoiceShell workspaceAccent={workspaceAccent} wide>
+        <MediaPermissionGate cameraOptional onComplete={completeMediaSetup} />
+      </VoiceShell>
+    );
+  }
+
   return (
-    <VoiceShell>
+    <VoiceShell workspaceAccent={workspaceAccent} wide>
       <audio ref={audioRef} autoPlay />
 
-      <header className="relative flex flex-wrap items-center gap-4 pb-5">
-        <Link href="/" className="flex items-center gap-2.5 text-cream">
-          <TrailgradMark className="h-7 w-7" />
-          <span className="text-base font-semibold tracking-tight">Trailgrad</span>
-        </Link>
-
-        <div className="hidden items-center gap-3 border-l border-cream/15 pl-4 sm:flex">
-          <div>
-            <p className="text-sm font-semibold text-cream">Maya</p>
-            <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-cream/35">
-              Trailgrad interviewer
-            </p>
-          </div>
-        </div>
-
-        <div className="hidden lg:block">
+      <header className="mb-3 flex shrink-0 flex-col gap-2 rounded-2xl border border-white/[0.08] bg-[rgba(25,26,29,0.58)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:min-h-14 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
+        <div className="thin-scroll w-full min-w-0 overflow-x-auto py-1 sm:flex-1">
           <PathRail
             phase={phase}
             questionIndex={progress.index}
@@ -837,28 +891,50 @@ export function VoiceInterviewClient() {
           />
         </div>
 
-        <div className="ml-auto flex items-center gap-4">
+        <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:ml-auto sm:w-auto">
+          <button
+            type="button"
+            onClick={() => void toggleMic()}
+            disabled={!micAvailable}
+            className={`inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold transition disabled:opacity-30 ${
+              micOn
+                ? "bg-white/[0.06] text-cream hover:bg-white/[0.09]"
+                : "bg-[color-mix(in_srgb,var(--workspace-accent)_12%,transparent)] text-[var(--workspace-accent)] hover:bg-[color-mix(in_srgb,var(--workspace-accent)_17%,transparent)]"
+            }`}
+            aria-label={micOn ? "Mute microphone" : "Unmute microphone"}
+            title={micOn ? "Mute microphone" : "Unmute microphone"}
+          >
+            {micOn ? <Mic size={14} aria-hidden="true" /> : <MicOff size={14} aria-hidden="true" />}
+            <span className="hidden xl:inline">
+              {micOn && micSignal && status === "live" ? "Mic ready" : statusLabel}
+            </span>
+          </button>
+
+          <div className="hidden w-40 xl:block">
+            <MicrophonePicker
+              devices={audioInputs}
+              selectedId={selectedInputId}
+              disabled={!micAvailable || switchingMic}
+              onChange={(deviceId) => void switchMicrophone(deviceId)}
+            />
+          </div>
+
           <span
-            className={`font-mono text-xs tabular-nums ${overCap ? "text-[#ff9a9a]" : "text-cream/60"}`}
+            className={`rounded-xl bg-black/20 px-3 py-2.5 font-mono text-sm tabular-nums ${
+              overCap ? "text-[var(--workspace-accent)]" : "text-cream/72"
+            }`}
           >
             {formatClock(Math.min(elapsed, HARD_CAP_MS))}
-            <span className="text-cream/25"> / 15:00</span>
+            <span className="hidden text-cream/28 sm:inline"> / 15:00</span>
           </span>
           <button
             type="button"
             onClick={() => void stop()}
-            className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-cream/[0.045] px-3 text-xs font-semibold text-cream/55 transition hover:bg-[#dd5f5f]/10 hover:text-cream"
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-white/[0.045] px-3 text-sm font-semibold text-cream/65 transition hover:bg-white/[0.08] hover:text-cream"
           >
             <Square size={11} aria-hidden="true" />
-            End
+            <span className="hidden sm:inline">End</span>
           </button>
-        </div>
-
-        <div className="absolute inset-x-0 bottom-0 h-px bg-cream/12">
-          <div
-            className={`h-full transition-all duration-500 ${overCap ? "bg-[#dd5f5f]" : "bg-cream/70"}`}
-            style={{ width: `${Math.min(100, (elapsed / HARD_CAP_MS) * 100)}%` }}
-          />
         </div>
       </header>
 
@@ -891,139 +967,217 @@ export function VoiceInterviewClient() {
           onDraftChange={setTypedDraft}
           onNotesChange={setTypedNotes}
           onSubmit={() => void submitDsaAnswer()}
+          candidateCameraStream={candidateCameraStream}
+          onDisableCamera={disableCandidateCamera}
         />
       ) : (
-      <div
-        className={`min-h-0 flex-1 gap-4 overflow-hidden ${
-          answerPanelOpen ? "hidden lg:grid" : "grid"
-        } lg:grid-cols-[minmax(17rem,0.82fr)_minmax(0,1.18fr)]`}
-      >
-        <section className="relative min-h-[18rem] overflow-hidden sm:min-h-[22rem] lg:min-h-0">
-          <div className="pointer-events-none absolute inset-4 flex items-center justify-center sm:inset-6">
-            <div className="h-full max-h-[28rem] w-full max-w-[29rem]">
-              {AVATAR_URL ? (
-                <AvatarStage agentTrack={agentTrack} state={presence} url={AVATAR_URL} />
-              ) : (
-                <InterviewerPresence
-                  agentTrack={agentTrack}
-                  localTrack={localTrack}
-                  state={presence}
-                />
-              )}
+        <div
+          className={`thin-scroll min-h-0 flex-1 gap-3 overflow-y-auto pb-4 ${
+            answerPanelOpen ? "hidden lg:grid" : "grid"
+          } xl:grid-cols-[minmax(0,1fr)_19rem] xl:overflow-hidden xl:pb-0`}
+        >
+          <section className="workspace-accent-card-glow order-2 flex min-h-[34rem] min-w-0 flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_22%,transparent)] bg-[linear-gradient(145deg,rgba(21,22,25,0.84),rgba(12,13,15,0.7))] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl xl:order-1 xl:min-h-0">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-4">
+              <div className="flex items-center gap-3">
+                <span className="h-2 w-2 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_14px_var(--workspace-accent)]" />
+                <h1 className="text-base font-semibold text-cream">Conversation</h1>
+              </div>
+              <span className="text-sm text-cream/48">{statusLabel}</span>
             </div>
-          </div>
 
-          {!error ? (
-            <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-cream/[0.055] px-3 py-1.5">
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  status === "live"
-                    ? agentState === "thinking"
-                      ? "animate-pulse bg-[#e0a13c]"
-                      : "bg-[#4bab7c]"
-                    : status === "error"
-                      ? "bg-[#dd5f5f]"
-                      : "animate-pulse bg-cream/50"
-                }`}
-              />
-              <span className="whitespace-nowrap text-xs font-medium text-cream/70">
-                {statusLabel}
-              </span>
-            </div>
-          ) : null}
-        </section>
+            <div className="thin-scroll min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-7">
+              {status === "connecting" || status === "waiting" || status === "reconnecting" ? (
+                <p className="flex items-center gap-2.5 text-sm text-cream/48">
+                  <Loader2
+                    size={15}
+                    className="animate-spin text-[var(--workspace-accent)]"
+                    aria-hidden="true"
+                  />
+                  {status === "waiting"
+                    ? "Maya is joining the room"
+                    : status === "reconnecting"
+                      ? "Restoring your conversation"
+                      : "Connecting your interview"}
+                </p>
+              ) : null}
 
-        <section className="thin-scroll fade-top min-h-0 space-y-4 overflow-y-auto p-0 pr-1">
-          {status === "connecting" || status === "waiting" || status === "reconnecting" ? (
-            <p className="flex items-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-cream/40">
-              <Loader2 size={13} className="animate-spin" aria-hidden="true" />
-              {status === "waiting"
-                ? "Bringing the interviewer in"
-                : status === "reconnecting"
-                  ? "Restoring the call"
-                  : "Connecting to the room"}
-            </p>
-          ) : null}
+              {error ? (
+                <div className="rounded-xl border border-[color-mix(in_srgb,var(--workspace-accent)_18%,transparent)] bg-[color-mix(in_srgb,var(--workspace-accent)_7%,transparent)] px-4 py-3">
+                  <p className="text-sm leading-6 text-cream">{error}</p>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    {!sessionUnavailable ? (
+                      <button
+                        type="button"
+                        onClick={() => void reconnect()}
+                        className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-white/[0.06] px-3 text-sm font-semibold text-cream transition hover:bg-white/10"
+                      >
+                        <RefreshCw size={14} aria-hidden="true" />
+                        Reconnect
+                      </button>
+                    ) : null}
+                    <Link
+                      href="/interview?resume=1"
+                      className="text-sm text-cream/62 hover:text-cream"
+                    >
+                      Start over
+                    </Link>
+                  </div>
+                </div>
+              ) : null}
 
-          {error ? (
-            <div className="rounded-xl bg-[#dd5f5f]/10 px-4 py-3">
-              <p className="text-sm text-cream">{error}</p>
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                {!sessionUnavailable ? (
+              {playbackBlocked ? (
+                <div className="rounded-xl border border-white/[0.07] bg-white/[0.035] px-4 py-3">
+                  <p className="text-sm leading-6 text-cream/78">
+                    Your browser paused call audio. Enable it once and the conversation will
+                    continue.
+                  </p>
                   <button
                     type="button"
-                    onClick={() => void reconnect()}
-                    className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-cream/[0.06] px-3 text-xs font-semibold text-cream transition hover:bg-cream/10"
+                    onClick={() => audioRetryRef.current?.()}
+                    className="mt-2 inline-flex min-h-9 items-center gap-2 rounded-lg bg-white/[0.06] px-3 text-sm font-semibold text-cream transition hover:bg-white/10"
                   >
-                    <RefreshCw size={13} aria-hidden="true" />
-                    Reconnect
+                    <Volume2 size={14} aria-hidden="true" />
+                    Enable audio
                   </button>
-                ) : null}
-                <Link href="/interview?resume=1" className="text-xs text-cream/60 underline">
-                  Start over
-                </Link>
-              </div>
-            </div>
-          ) : null}
+                </div>
+              ) : null}
 
-          {playbackBlocked ? (
-            <div className="rounded-xl bg-cream/[0.06] px-4 py-3">
-              <p className="text-sm leading-6 text-cream">
-                Your browser paused call audio. Enable it once and the conversation will continue.
-              </p>
-              <button
-                type="button"
-                onClick={() => audioRetryRef.current?.()}
-                className="mt-2 inline-flex min-h-9 items-center gap-2 rounded-lg bg-cream/[0.06] px-3 text-xs font-semibold text-cream transition hover:bg-cream/10"
-              >
-                <Volume2 size={14} aria-hidden="true" />
-                Enable audio
-              </button>
-            </div>
-          ) : null}
+              {micError ? (
+                <div className="rounded-xl border border-[color-mix(in_srgb,var(--workspace-accent)_18%,transparent)] bg-[color-mix(in_srgb,var(--workspace-accent)_7%,transparent)] px-4 py-3">
+                  <p className="text-sm leading-6 text-cream/78">{micError}</p>
+                  <button
+                    type="button"
+                    onClick={() => micRetryRef.current?.()}
+                    className="mt-2 inline-flex min-h-9 items-center rounded-lg bg-white/[0.06] px-3 text-sm font-semibold text-cream transition hover:bg-white/10"
+                  >
+                    Retry microphone
+                  </button>
+                </div>
+              ) : null}
 
-          {micError ? (
-            <div className="rounded-xl bg-[#e0a13c]/10 px-4 py-3">
-              <p className="text-sm leading-6 text-cream">{micError}</p>
-              <button
-                type="button"
-                onClick={() => micRetryRef.current?.()}
-                className="mt-2 inline-flex min-h-9 items-center rounded-lg bg-cream/[0.06] px-3 text-xs font-semibold text-cream transition hover:bg-cream/10"
-              >
-                Retry microphone
-              </button>
-            </div>
-          ) : null}
+              {micSilent && !micError ? (
+                <div className="rounded-xl border border-[color-mix(in_srgb,var(--workspace-accent)_18%,transparent)] bg-[color-mix(in_srgb,var(--workspace-accent)_7%,transparent)] px-4 py-3">
+                  <p className="text-sm font-medium text-cream">No microphone signal detected</p>
+                  <p className="mt-1 text-sm leading-6 text-cream/58">
+                    The room is connected to {selectedInputLabel}, but no audible sound is arriving.
+                    Choose the microphone you are speaking into.
+                  </p>
+                  <MicrophonePicker
+                    devices={audioInputs}
+                    selectedId={selectedInputId}
+                    disabled={switchingMic}
+                    onChange={(deviceId) => void switchMicrophone(deviceId)}
+                    className="mt-3 max-w-sm"
+                  />
+                </div>
+              ) : null}
 
-          {micSilent && !micError ? (
-            <div className="rounded-xl bg-[#e0a13c]/10 px-4 py-3">
-              <p className="text-sm font-medium text-cream">No microphone signal detected</p>
-              <p className="mt-1 text-xs leading-5 text-cream/60">
-                Trailgrad connected to {selectedInputLabel}, but no audible sound is arriving.
-                Choose the microphone you are speaking into.
-              </p>
-              <MicrophonePicker
-                devices={audioInputs}
-                selectedId={selectedInputId}
-                disabled={switchingMic}
-                onChange={(deviceId) => void switchMicrophone(deviceId)}
-                className="mt-3 max-w-sm"
+              <ConversationTranscript
+                turns={displayTurns}
+                spokenAgentTurnKeys={spokenAgentTurnKeys}
+                liveUserText={liveTranscript}
+                startedAt={startedAt}
+                setup={setup}
+                question={currentQuestion}
+                thinking={agentState === "thinking"}
+                bottomRef={bottomRef}
+                hideHeader
               />
             </div>
-          ) : null}
 
-          <ConversationTranscript
-            turns={displayTurns}
-            spokenAgentTurnKeys={spokenAgentTurnKeys}
-            liveUserText={liveTranscript}
-            startedAt={startedAt}
-            setup={setup}
-            question={currentQuestion}
-            thinking={agentState === "thinking"}
-            bottomRef={bottomRef}
-          />
-        </section>
-      </div>
+            <div className="flex shrink-0 flex-col gap-3 border-t border-white/[0.06] bg-black/15 px-4 py-3 sm:flex-row sm:items-center">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => void toggleMic()}
+                  disabled={!micAvailable}
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition disabled:opacity-30 ${
+                    micOn
+                      ? "bg-cream text-blueprint"
+                      : "bg-[color-mix(in_srgb,var(--workspace-accent)_12%,transparent)] text-[var(--workspace-accent)]"
+                  }`}
+                  aria-label={micOn ? "Mute microphone" : "Unmute microphone"}
+                >
+                  {micOn ? (
+                    <Mic size={17} aria-hidden="true" />
+                  ) : (
+                    <MicOff size={17} aria-hidden="true" />
+                  )}
+                </button>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-cream">
+                    {micOn && micSignal && status === "live" ? "Maya can hear you" : statusLabel}
+                  </p>
+                  <div className="mt-1.5 max-w-52">
+                    <MicMeter
+                      track={localTrack}
+                      muted={!micOn || !micAvailable}
+                      onSignalChange={handleMicSignalChange}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex min-w-0 shrink-0 items-center gap-2">
+                <div className="hidden w-44 sm:block">
+                  <MicrophonePicker
+                    devices={audioInputs}
+                    selectedId={selectedInputId}
+                    disabled={!micAvailable || switchingMic}
+                    onChange={(deviceId) => void switchMicrophone(deviceId)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void openTypedAnswer()}
+                  disabled={status !== "live" || agentSpeaking || typedSending || answerPanelOpen}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-white/[0.055] px-3.5 text-sm font-semibold text-cream/72 transition hover:bg-white/[0.09] hover:text-cream disabled:opacity-30"
+                >
+                  <Keyboard size={15} aria-hidden="true" />
+                  <span>{currentQuestion?.kind === "code" ? "Write solution" : "Type answer"}</span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <aside className="workspace-accent-card-glow order-1 flex min-h-[20rem] flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_24%,transparent)] bg-[linear-gradient(160deg,color-mix(in_srgb,var(--workspace-accent)_8%,rgba(17,18,21,0.86)),rgba(13,14,16,0.74))] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_70px_rgba(0,0,0,0.3)] backdrop-blur-xl xl:order-2 xl:min-h-0">
+            <div className="relative min-h-64 flex-1 overflow-hidden">
+              <div className="pointer-events-none absolute inset-3 flex items-center justify-center">
+                <div className="h-full max-h-[29rem] w-full max-w-[21rem]">
+                  {AVATAR_URL ? (
+                    <AvatarStage agentTrack={agentTrack} state={presence} url={AVATAR_URL} />
+                  ) : (
+                    <InterviewerPresence
+                      agentTrack={agentTrack}
+                      localTrack={localTrack}
+                      state={presence}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="absolute bottom-4 left-4 flex items-center gap-2 rounded-full border border-white/[0.08] bg-black/55 px-3 py-1.5 backdrop-blur-lg">
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    status === "live"
+                      ? "bg-[var(--workspace-accent)] shadow-[0_0_12px_var(--workspace-accent)]"
+                      : "animate-pulse bg-cream/45"
+                  }`}
+                />
+                <span className="text-sm font-medium text-cream">Maya</span>
+              </div>
+            </div>
+
+            {candidateCameraStream ? (
+              <div className="border-t border-white/[0.06] p-3">
+                <CandidateCameraPreview
+                  stream={candidateCameraStream}
+                  onDisable={disableCandidateCamera}
+                />
+              </div>
+            ) : null}
+          </aside>
+        </div>
       )}
 
       {answerPanelOpen ? (
@@ -1044,59 +1198,9 @@ export function VoiceInterviewClient() {
           onSubmit={() => void submitTypedAnswer()}
         />
       ) : null}
-
-      <div className="mt-4 flex shrink-0 items-center gap-3 px-1 py-3 sm:gap-4 sm:px-0">
-        <button
-          type="button"
-          onClick={() => void toggleMic()}
-          disabled={!micAvailable}
-          className={`flex h-12 w-12 items-center justify-center rounded-full transition disabled:opacity-30 ${
-            micOn ? "bg-cream text-blueprint" : "bg-cream/[0.055] text-cream/60"
-          }`}
-          aria-label={micOn ? "Mute microphone" : "Unmute microphone"}
-        >
-          {micOn ? <Mic size={18} aria-hidden="true" /> : <MicOff size={18} aria-hidden="true" />}
-        </button>
-
-        <div className="flex-1">
-          <p className="text-sm font-medium text-cream">
-            {micOn && micSignal && status === "live" ? "Maya can hear you" : statusLabel}
-          </p>
-          <div className="mt-1.5">
-            <MicMeter
-              track={localTrack}
-              muted={!micOn || !micAvailable}
-              onSignalChange={handleMicSignalChange}
-            />
-          </div>
-        </div>
-
-        <div className="flex min-w-0 shrink-0 items-center gap-2">
-          <div className="hidden w-[12rem] sm:block">
-            <MicrophonePicker
-              devices={audioInputs}
-              selectedId={selectedInputId}
-              disabled={!micAvailable || switchingMic}
-              onChange={(deviceId) => void switchMicrophone(deviceId)}
-            />
-          </div>
-          {!isDsaInterview ? <button
-            type="button"
-            onClick={() => void openTypedAnswer()}
-            disabled={status !== "live" || agentSpeaking || typedSending || answerPanelOpen}
-            className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-cream/[0.045] px-3 text-xs font-semibold text-cream/70 transition hover:bg-cream/[0.08] hover:text-cream disabled:opacity-30"
-          >
-            <Keyboard size={15} aria-hidden="true" />
-            <span className="hidden sm:inline">
-              {currentQuestion?.kind === "code" ? "Write solution" : "Type answer"}
-            </span>
-          </button> : null}
-        </div>
-      </div>
     </VoiceShell>
   );
 }
-
 
 function DsaLiveWorkspace({
   question,
@@ -1125,7 +1229,9 @@ function DsaLiveWorkspace({
   error,
   onDraftChange,
   onNotesChange,
-  onSubmit
+  onSubmit,
+  candidateCameraStream,
+  onDisableCamera
 }: {
   question: DsaQuestion | null;
   questionSlug: string | null;
@@ -1154,139 +1260,356 @@ function DsaLiveWorkspace({
   onLanguageChange: (language: DsaLanguage) => void;
   onRun: () => void;
   onSubmit: () => void;
+  candidateCameraStream: MediaStream | null;
+  onDisableCamera: () => void;
 }) {
   const canSubmit = draft.trim().length >= 10 && !sending;
+  const splitWorkspaceRef = useRef<HTMLDivElement | null>(null);
+  const mayaTranscriptScrollRef = useRef<HTMLDivElement | null>(null);
+  const mayaTranscriptAutoFollowRef = useRef(true);
+  const [questionPaneWidth, setQuestionPaneWidth] = useState(38);
+  const [expandedPane, setExpandedPane] = useState<"question" | "editor" | null>(null);
+
+  useEffect(() => {
+    const transcript = mayaTranscriptScrollRef.current;
+    if (!transcript || !mayaTranscriptAutoFollowRef.current) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      transcript.scrollTop = transcript.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [liveUserText, thinking, turns]);
+
+  const beginPaneResize = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+    const workspace = splitWorkspaceRef.current;
+    if (!workspace) return;
+
+    event.preventDefault();
+    setExpandedPane(null);
+    const bounds = workspace.getBoundingClientRect();
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.userSelect = "none";
+
+    const updateWidth = (pointerEvent: PointerEvent) => {
+      const nextWidth = ((pointerEvent.clientX - bounds.left) / bounds.width) * 100;
+      setQuestionPaneWidth(Math.min(58, Math.max(28, nextWidth)));
+    };
+    const stopResize = () => {
+      document.body.style.userSelect = previousUserSelect;
+      window.removeEventListener("pointermove", updateWidth);
+      window.removeEventListener("pointerup", stopResize);
+      window.removeEventListener("pointercancel", stopResize);
+    };
+
+    updateWidth(event.nativeEvent);
+    window.addEventListener("pointermove", updateWidth);
+    window.addEventListener("pointerup", stopResize);
+    window.addEventListener("pointercancel", stopResize);
+  }, []);
 
   return (
-    <div className="min-h-0 flex-1 grid gap-4 overflow-hidden lg:grid-cols-[minmax(17rem,0.82fr)_minmax(22rem,1.08fr)_minmax(18rem,0.72fr)]">
-      <section className="thin-scroll min-h-0 overflow-y-auto border-r border-cream/10 pr-4">
-        <div className="flex items-center justify-between gap-3 border-b border-cream/10 pb-4">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-cream/50">
-            Problem {questionIndex + 1} of {questionCount}
-          </span>
-          {question ? <span className="text-xs capitalize text-cream/45">{question.difficulty}</span> : null}
-        </div>
-        {question ? (
-          <>
-            <h2 className="mt-5 font-display text-2xl font-semibold leading-tight text-cream">
-              {question.title}
-            </h2>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs text-cream/50">
-              <span>{question.primaryPattern.replace(/-/g, " ")}</span>
-              <span aria-hidden="true">·</span>
-              <span>{question.expectedTimeMinutes} min</span>
-            </div>
-            <DsaCopySection title="Description">
-              <p>{question.problemStatement ?? question.promptSummary}</p>
-            </DsaCopySection>
-            {question.examples?.length ? (
-              <DsaCopySection title="Examples">
-                <div className="space-y-4 font-mono text-xs leading-6 text-cream/70">
-                  {question.examples.map((example, index) => (
-                    <div key={`${example.input}-${example.output}`}>
-                      <p className="mb-1 font-sans font-semibold text-cream/75">Example {index + 1}</p>
-                      <p><span className="text-cream/40">Input:</span> {example.input}</p>
-                      <p><span className="text-cream/40">Output:</span> {example.output}</p>
-                    </div>
-                  ))}
+    <div className="thin-scroll flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 xl:grid xl:grid-cols-[minmax(0,1fr)_19rem] xl:overflow-hidden xl:pb-0">
+      <div
+        ref={splitWorkspaceRef}
+        style={
+          {
+            "--question-pane-size": `${expandedPane === "editor" ? 0 : expandedPane === "question" ? 100 : questionPaneWidth}fr`,
+            "--editor-pane-size": `${expandedPane === "question" ? 0 : expandedPane === "editor" ? 100 : 100 - questionPaneWidth}fr`,
+            "--pane-divider-size": expandedPane ? "0rem" : "0.75rem"
+          } as React.CSSProperties
+        }
+        className="grid shrink-0 gap-3 transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none xl:min-h-0 xl:shrink xl:grid-cols-[minmax(0,var(--question-pane-size))_var(--pane-divider-size)_minmax(0,var(--editor-pane-size))] xl:gap-0"
+      >
+        <section
+          className={`workspace-accent-card-glow thin-scroll min-h-[24rem] min-w-0 max-h-[38rem] overflow-y-auto rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_22%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_18px_55px_rgba(0,0,0,0.2)] backdrop-blur-xl transition-[opacity,transform] duration-300 motion-reduce:transition-none xl:max-h-none xl:min-h-0 ${
+            expandedPane === "editor"
+              ? "xl:pointer-events-none xl:translate-x-2 xl:opacity-0"
+              : "xl:translate-x-0 xl:opacity-100"
+          }`}
+        >
+          {question ? (
+            <div className="px-5 pb-7 sm:px-7 sm:pb-8">
+              <div className="sticky top-0 z-10 -mx-5 flex items-center justify-between gap-3 bg-[rgba(16,17,19,0.92)] px-5 py-4 text-sm backdrop-blur-xl sm:-mx-7 sm:px-7">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]" />
+                  <span className="whitespace-nowrap font-medium text-cream/72">
+                    Problem {questionIndex + 1} of {questionCount}
+                  </span>
+                  <span className="text-cream/24">·</span>
+                  <span className="truncate font-medium capitalize text-cream/48">
+                    {question.difficulty}
+                  </span>
                 </div>
-              </DsaCopySection>
-            ) : null}
-            {question.constraints?.length ? (
-              <DsaCopySection title="Constraints">
-                <ul className="space-y-2 font-mono text-xs leading-6 text-cream/70">
-                  {question.constraints.map((constraint) => <li key={constraint}>• {constraint}</li>)}
-                </ul>
-              </DsaCopySection>
-            ) : null}
-            {questionSlug ? <DsaQuestionNotes slug={questionSlug} /> : null}
-          </>
-        ) : (
-          <p className="mt-6 text-sm leading-6 text-cream/50">Maya is preparing the next problem.</p>
-        )}
-      </section>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExpandedPane((current) => (current === "question" ? null : "question"))
+                  }
+                  className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-cream/46 transition hover:bg-white/[0.06] hover:text-cream xl:inline-flex"
+                  aria-label={
+                    expandedPane === "question" ? "Restore question pane" : "Expand question pane"
+                  }
+                  title={expandedPane === "question" ? "Restore split view" : "Expand question"}
+                >
+                  {expandedPane === "question" ? (
+                    <Minimize2 size={15} aria-hidden="true" />
+                  ) : (
+                    <Maximize2 size={15} aria-hidden="true" />
+                  )}
+                </button>
+              </div>
 
-      <section className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r border-cream/10">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cream/10 pb-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-cream">
-            <Code2 size={15} aria-hidden="true" className="text-cream/55" />
-            Your solution
+              <h1 className="mt-7 text-balance font-display text-[1.8rem] font-semibold leading-[1.14] tracking-tight text-cream sm:text-[2rem]">
+                {question.title}
+              </h1>
+              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+                <DsaMetaPill>{question.primaryPattern.replace(/-/g, " ")}</DsaMetaPill>
+                <DsaMetaPill>{question.expectedTimeMinutes} min</DsaMetaPill>
+              </div>
+
+              <DsaCopySection title="Description">
+                <p>{question.problemStatement ?? question.promptSummary}</p>
+              </DsaCopySection>
+
+              {question.examples?.length ? (
+                <DsaCopySection title="Examples">
+                  <div className="space-y-3">
+                    {question.examples.map((example, index) => (
+                      <article
+                        key={`${example.input}-${example.output}`}
+                        className="rounded-xl bg-white/[0.025] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:p-5"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            aria-hidden="true"
+                            className="h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_9px_var(--workspace-accent)]"
+                          />
+                          <p className="text-sm font-semibold text-cream/78">Example {index + 1}</p>
+                        </div>
+                        <dl className="mt-4 grid gap-3 text-sm leading-6">
+                          <div className="grid gap-1.5 sm:grid-cols-[4.5rem_minmax(0,1fr)]">
+                            <dt className="font-medium text-cream/42">Input</dt>
+                            <dd className="thin-scroll overflow-x-auto whitespace-pre rounded-lg bg-black/20 px-3 py-2 font-mono text-cream/72">
+                              {example.input}
+                            </dd>
+                          </div>
+                          <div className="grid gap-1.5 sm:grid-cols-[4.5rem_minmax(0,1fr)]">
+                            <dt className="font-medium text-cream/42">Output</dt>
+                            <dd className="thin-scroll overflow-x-auto whitespace-pre rounded-lg bg-black/20 px-3 py-2 font-mono text-cream/72">
+                              {example.output}
+                            </dd>
+                          </div>
+                        </dl>
+                        {example.explanation ? (
+                          <p className="mt-4 text-sm leading-6 text-cream/56">
+                            {example.explanation}
+                          </p>
+                        ) : null}
+                      </article>
+                    ))}
+                  </div>
+                </DsaCopySection>
+              ) : null}
+              {question.constraints?.length ? (
+                <DsaCopySection title="Constraints">
+                  <ul className="space-y-3 rounded-xl bg-white/[0.025] p-4 font-mono text-sm leading-6 text-cream/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:p-5">
+                    {question.constraints.map((constraint) => (
+                      <li key={constraint} className="flex gap-3">
+                        <span
+                          aria-hidden="true"
+                          className="mt-[0.62rem] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_9px_var(--workspace-accent)]"
+                        />
+                        <code>{constraint}</code>
+                      </li>
+                    ))}
+                  </ul>
+                </DsaCopySection>
+              ) : null}
+              {questionSlug ? <DsaQuestionNotes slug={questionSlug} /> : null}
+            </div>
+          ) : (
+            <div className="flex h-full items-center justify-center p-8 text-center">
+              <p className="text-sm leading-6 text-cream/50">Maya is preparing the next problem.</p>
+            </div>
+          )}
+        </section>
+
+        <button
+          type="button"
+          onPointerDown={beginPaneResize}
+          onDoubleClick={() => setQuestionPaneWidth(38)}
+          onKeyDown={(event) => {
+            if (event.key !== "ArrowLeft" && event.key !== "ArrowRight" && event.key !== "Home") {
+              return;
+            }
+            event.preventDefault();
+            setExpandedPane(null);
+            setQuestionPaneWidth((current) => {
+              if (event.key === "Home") return 38;
+              const change = event.key === "ArrowLeft" ? -2 : 2;
+              return Math.min(58, Math.max(28, current + change));
+            });
+          }}
+          className={`group relative hidden cursor-col-resize touch-none items-center justify-center overflow-hidden text-cream/24 outline-none transition-[opacity,color] duration-300 hover:text-[var(--workspace-accent)] focus-visible:text-[var(--workspace-accent)] xl:flex ${
+            expandedPane ? "xl:pointer-events-none xl:opacity-0" : "xl:opacity-100"
+          }`}
+          aria-label="Resize question and solution panes"
+          role="separator"
+          aria-orientation="vertical"
+          aria-valuemin={28}
+          aria-valuemax={58}
+          aria-valuenow={Math.round(questionPaneWidth)}
+          title="Drag to resize · Double-click to reset"
+        >
+          <span className="absolute inset-y-6 left-1/2 w-px -translate-x-1/2 bg-white/[0.04] transition group-hover:bg-[var(--workspace-accent)]/30" />
+          <span className="relative flex h-10 w-5 items-center justify-center text-cream/24 transition group-hover:text-[var(--workspace-accent)]">
+            <GripVertical size={13} aria-hidden="true" />
+          </span>
+        </button>
+
+        <section
+          className={`workspace-accent-card-glow flex h-[44rem] min-h-0 min-w-0 shrink-0 flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_22%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_18px_55px_rgba(0,0,0,0.2)] backdrop-blur-xl transition-[opacity,transform] duration-300 motion-reduce:transition-none sm:h-[48rem] xl:h-auto xl:shrink ${
+            expandedPane === "question"
+              ? "xl:pointer-events-none xl:-translate-x-2 xl:opacity-0"
+              : "xl:translate-x-0 xl:opacity-100"
+          }`}
+        >
+          <div className="flex min-h-16 flex-col items-stretch gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 text-base font-semibold text-cream">
+                <Code2 size={17} aria-hidden="true" className="text-[var(--workspace-accent)]" />
+                Solution
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setExpandedPane((current) => (current === "editor" ? null : "editor"))
+                }
+                className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-cream/46 transition hover:bg-white/[0.06] hover:text-cream xl:inline-flex"
+                aria-label={
+                  expandedPane === "editor" ? "Restore solution pane" : "Expand solution pane"
+                }
+                title={expandedPane === "editor" ? "Restore split view" : "Expand solution"}
+              >
+                {expandedPane === "editor" ? (
+                  <Minimize2 size={15} aria-hidden="true" />
+                ) : (
+                  <Maximize2 size={15} aria-hidden="true" />
+                )}
+              </button>
+            </div>
+            <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:w-auto">
+              <label className="sr-only" htmlFor="dsa-language">
+                Language
+              </label>
+              <select
+                id="dsa-language"
+                value={language}
+                onChange={(event) => onLanguageChange(event.target.value as DsaLanguage)}
+                className="h-10 min-w-0 rounded-xl border-0 bg-white/[0.045] px-3 text-sm text-cream/75 outline-none ring-1 ring-inset ring-white/[0.045] transition focus:bg-white/[0.07] focus:ring-white/[0.11] sm:min-w-32"
+              >
+                <option value="javascript">JavaScript</option>
+                <option value="python">Python</option>
+                <option value="cpp">C++</option>
+                <option value="java">Java</option>
+              </select>
+              <button
+                type="button"
+                onClick={onRun}
+                disabled={running || !draft.trim()}
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-cream px-4 text-sm font-semibold text-[#101113] transition hover:bg-white disabled:pointer-events-none disabled:opacity-35"
+              >
+                {running ? (
+                  <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <Play size={13} aria-hidden="true" />
+                )}
+                {running ? "Running" : "Run code"}
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <label className="sr-only" htmlFor="dsa-language">Language</label>
-            <select
-              id="dsa-language"
-              value={language}
-              onChange={(event) => onLanguageChange(event.target.value as DsaLanguage)}
-              className="h-8 bg-cream/[0.05] px-2 text-xs text-cream outline-none focus:bg-cream/[0.1]"
-            >
-              <option value="javascript">JavaScript</option>
-              <option value="python">Python</option>
-              <option value="cpp">C++</option>
-              <option value="java">Java</option>
-            </select>
-            <button
-              type="button"
-              onClick={onRun}
-              disabled={running || !draft.trim()}
-              className="inline-flex h-8 items-center gap-1.5 bg-cream px-3 text-xs font-semibold text-blueprint transition hover:bg-white disabled:pointer-events-none disabled:opacity-35"
-            >
-              {running ? <Loader2 size={13} className="animate-spin" aria-hidden="true" /> : <Play size={13} aria-hidden="true" />}
-              {running ? "Running" : "Run code"}
-            </button>
-          </div>
-        </div>
-        <div className="min-h-64 flex-1 overflow-hidden bg-[#172f78]">
-          <DsaCodeEditor
-            language={language}
-            value={draft}
-            onChange={onDraftChange}
-            onRun={onRun}
-          />
-        </div>
-        <DsaOutputPanel
-          examples={question?.examples ?? []}
-          result={runResult}
-          running={running}
-        />
-        <div className="border-t border-cream/10 pt-3">
-          <label className="font-mono text-[10px] uppercase tracking-[0.16em] text-cream/40">
-            Reasoning and complexity
-            <textarea
-              value={notes}
-              onChange={(event) => onNotesChange(event.target.value)}
-              rows={3}
-              placeholder="Why is this correct? What are the time and space costs?"
-              className="mt-2 w-full resize-none bg-cream/[0.035] p-3 font-sans text-sm leading-6 text-cream outline-none placeholder:text-cream/25 focus:bg-cream/[0.06]"
+          <div className="min-h-64 flex-1 overflow-hidden bg-[#0b0d10]">
+            <DsaCodeEditor
+              language={language}
+              value={draft}
+              onChange={onDraftChange}
+              onRun={onRun}
             />
-          </label>
-          {error ? <p className="mt-2 text-xs text-[#ffb4b4]">{error}</p> : null}
-          <button
-            type="button"
-            onClick={onSubmit}
-            disabled={!canSubmit}
-            className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 bg-cream px-4 text-sm font-semibold text-blueprint transition hover:bg-white disabled:pointer-events-none disabled:opacity-35"
-          >
-            {sending ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <Send size={14} aria-hidden="true" />}
-            {sending ? "Maya is reviewing" : "Send solution to Maya"}
-          </button>
-        </div>
-      </section>
+          </div>
+          <DsaOutputPanel
+            examples={question?.examples ?? []}
+            result={runResult}
+            running={running}
+          />
+          <div className="bg-white/[0.012] p-4 sm:p-5">
+            <label htmlFor="dsa-approach" className="text-sm font-semibold text-cream/82">
+              Explain your approach to Maya
+              <span className="ml-2 hidden font-normal text-cream/38 xl:inline">
+                Include the idea and complexity.
+              </span>
+            </label>
+            <div className="mt-2.5 flex flex-col gap-2.5 sm:flex-row sm:items-end">
+              <ResizableTextarea
+                id="dsa-approach"
+                value={notes}
+                onChange={(event) => onNotesChange(event.target.value)}
+                rows={2}
+                placeholder="Why is this correct? What are the time and space costs?"
+                minHeight={76}
+                maxHeight={144}
+                containerClassName="min-w-0 flex-1"
+                textareaClassName="rounded-xl border-0 bg-black/20 px-3.5 py-2.5 font-sans text-sm leading-6 text-cream outline-none ring-1 ring-inset ring-white/[0.045] transition placeholder:text-cream/26 focus:bg-black/30 focus:ring-white/[0.1]"
+              />
+              <button
+                type="button"
+                onClick={onSubmit}
+                disabled={!canSubmit}
+                className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white disabled:pointer-events-none disabled:opacity-35"
+              >
+                {sending ? (
+                  <Loader2 size={15} className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <Send size={15} aria-hidden="true" />
+                )}
+                {sending ? "Maya is reviewing" : "Send solution to Maya"}
+              </button>
+            </div>
+            {error ? <p className="mt-2 text-sm text-[#ffb4b4]">{error}</p> : null}
+          </div>
+        </section>
+      </div>
 
-      <aside className="flex min-h-0 flex-col overflow-hidden">
-        <div className="relative h-44 shrink-0 overflow-hidden border-b border-cream/10 bg-[#294aa2]/70">
-          <div className="absolute inset-x-[-18%] bottom-[-8%] top-0">
+      <aside className="workspace-accent-card-glow flex min-h-[24rem] shrink-0 flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_22%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_18px_55px_rgba(0,0,0,0.2)] backdrop-blur-xl sm:min-h-[28rem] xl:min-h-0 xl:shrink">
+        <div className="relative h-40 shrink-0 overflow-hidden border-b border-white/[0.07] bg-black/20">
+          <div className="absolute inset-x-[-24%] bottom-[-12%] top-0">
             {AVATAR_URL ? (
               <AvatarStage agentTrack={agentTrack} state={presence} url={AVATAR_URL} />
             ) : (
-              <InterviewerPresence agentTrack={agentTrack} localTrack={localTrack} state={presence} />
+              <InterviewerPresence
+                agentTrack={agentTrack}
+                localTrack={localTrack}
+                state={presence}
+              />
             )}
           </div>
-          <div className="relative z-10 flex items-center gap-2 p-4 text-sm font-semibold text-cream">
-            <Mic size={15} aria-hidden="true" /> Maya
+          <div className="absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full border border-white/[0.07] bg-black/45 px-2.5 py-1.5 text-[11px] font-medium text-cream/72 backdrop-blur-xl">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_9px_var(--workspace-accent)]" />
+            Maya
           </div>
         </div>
-        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto pt-4">
+        <div
+          ref={mayaTranscriptScrollRef}
+          onScroll={(event) => {
+            const transcript = event.currentTarget;
+            const distanceFromBottom =
+              transcript.scrollHeight - transcript.scrollTop - transcript.clientHeight;
+            mayaTranscriptAutoFollowRef.current = distanceFromBottom < 48;
+          }}
+          onWheelCapture={(event) => {
+            if (event.deltaY < 0) mayaTranscriptAutoFollowRef.current = false;
+          }}
+          className="thin-scroll min-h-0 flex-1 overscroll-contain overflow-y-auto p-3.5"
+        >
           <ConversationTranscript
             turns={turns}
             spokenAgentTurnKeys={spokenAgentTurnKeys}
@@ -1296,8 +1619,13 @@ function DsaLiveWorkspace({
             question={currentQuestion}
             thinking={thinking}
             bottomRef={bottomRef}
+            compact
+            hideHeader
           />
         </div>
+        {candidateCameraStream ? (
+          <CandidateCameraPreview stream={candidateCameraStream} onDisable={onDisableCamera} />
+        ) : null}
       </aside>
     </div>
   );
@@ -1312,65 +1640,98 @@ function DsaOutputPanel({
   result: DsaRunResult | null;
   running: boolean;
 }) {
+  const statusClass = result?.accepted ? "text-[var(--workspace-accent)]" : "text-[#ffb4b4]";
+
   return (
-    <section className="max-h-64 shrink-0 overflow-hidden border-t border-cream/10 bg-black/10">
-      <div className="flex items-center justify-between gap-3 border-b border-cream/10 px-3 py-2">
-        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-cream/45">Output</span>
+    <section className="max-h-64 shrink-0 overflow-hidden bg-black/[0.16]">
+      <div className="flex min-h-12 items-center justify-between gap-4 px-4 pb-2 pt-3.5">
+        <div>
+          <h3 className="text-sm font-semibold text-cream/86">Test results</h3>
+          <p className="mt-0.5 text-sm text-cream/38">
+            Check the supplied examples before submitting.
+          </p>
+        </div>
         {running ? (
-          <span className="flex items-center gap-1.5 text-xs text-cream/45">
-            <Loader2 size={12} className="animate-spin" aria-hidden="true" /> Running tests
+          <span className="flex items-center gap-2 text-sm text-cream/58">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]" />
+            Running tests
           </span>
         ) : result ? (
-          <span className={`text-xs font-semibold ${result.accepted ? "text-[#a9f0d0]" : "text-[#ffb4b4]"}`}>
+          <span className={`inline-flex items-center gap-2 text-sm font-semibold ${statusClass}`}>
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                result.accepted
+                  ? "bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]"
+                  : "bg-[#ff8f8f] shadow-[0_0_10px_#ff8f8f]"
+              }`}
+            />
             {result.status}
           </span>
         ) : (
-          <span className="text-xs text-cream/30">Run code to check examples</span>
+          <span className="inline-flex items-center gap-2 text-sm text-cream/48">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]" />
+            Ready to run
+          </span>
         )}
       </div>
-      <div className="thin-scroll max-h-52 overflow-y-auto px-3 py-3">
+      <div className="thin-scroll max-h-48 overflow-y-auto px-4 pb-4 pt-1">
         {result?.compileOutput || result?.stderr ? (
-          <pre className="whitespace-pre-wrap font-mono text-xs leading-5 text-[#ffb4b4]">
+          <pre className="rounded-xl bg-[#dd5f5f]/[0.045] p-4 whitespace-pre-wrap font-mono text-sm leading-6 text-[#ffb4b4] ring-1 ring-inset ring-[#dd5f5f]/10">
             {result.compileOutput || result.stderr}
           </pre>
         ) : result?.tests.length ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {result.tests.map((test) => (
-              <div key={test.index} className="border-b border-cream/[0.07] pb-3 last:border-0 last:pb-0">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-semibold text-cream/65">Case {test.index + 1}</span>
-                  <span className={`text-xs font-semibold ${test.passed ? "text-[#a9f0d0]" : "text-[#ffb4b4]"}`}>
+              <div key={test.index} className="rounded-xl bg-white/[0.025] p-3.5">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm font-semibold text-cream/78">Case {test.index + 1}</span>
+                  <span
+                    className={`text-sm font-semibold ${
+                      test.passed ? "text-[var(--workspace-accent)]" : "text-[#ffb4b4]"
+                    }`}
+                  >
                     {test.passed ? "Passed" : "Failed"}
                   </span>
                 </div>
-                <dl className="mt-2 grid gap-x-3 gap-y-1 font-mono text-[11px] leading-5 sm:grid-cols-[4.5rem_1fr]">
-                  <dt className="text-cream/35">Input</dt><dd className="break-words text-cream/65">{test.input}</dd>
-                  <dt className="text-cream/35">Expected</dt><dd className="break-words text-cream/65">{test.expectedOutput}</dd>
-                  <dt className="text-cream/35">Output</dt><dd className="break-words text-cream/65">{test.error || test.actualOutput || "No output"}</dd>
+                <dl className="mt-3 grid gap-x-4 gap-y-2 text-sm leading-6 sm:grid-cols-[5rem_1fr]">
+                  <dt className="font-medium text-cream/38">Input</dt>
+                  <dd className="break-words font-mono text-cream/68">{test.input}</dd>
+                  <dt className="font-medium text-cream/38">Expected</dt>
+                  <dd className="break-words font-mono text-cream/68">{test.expectedOutput}</dd>
+                  <dt className="font-medium text-cream/38">Your output</dt>
+                  <dd className="break-words font-mono text-cream/68">
+                    {test.error || test.actualOutput || "No output"}
+                  </dd>
                 </dl>
               </div>
             ))}
             {result.stdout ? (
-              <div>
-                <p className="text-xs font-semibold text-cream/50">Console output</p>
-                <pre className="mt-1 whitespace-pre-wrap font-mono text-[11px] leading-5 text-cream/55">{result.stdout}</pre>
+              <div className="rounded-xl bg-white/[0.018] p-3.5">
+                <p className="text-sm font-semibold text-cream/68">Console output</p>
+                <pre className="mt-2 whitespace-pre-wrap font-mono text-sm leading-6 text-cream/58">
+                  {result.stdout}
+                </pre>
               </div>
             ) : null}
           </div>
         ) : examples.length ? (
-          <div className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2">
             {examples.slice(0, 10).map((example, index) => (
-              <div key={`${example.input}-${index}`} className="border-b border-cream/[0.07] pb-3 last:border-0 last:pb-0">
-                <p className="text-xs font-semibold text-cream/55">Case {index + 1}</p>
-                <dl className="mt-2 grid gap-x-3 gap-y-1 font-mono text-[11px] leading-5 sm:grid-cols-[4.5rem_1fr]">
-                  <dt className="text-cream/35">Input</dt><dd className="break-words text-cream/60">{example.input}</dd>
-                  <dt className="text-cream/35">Expected</dt><dd className="break-words text-cream/60">{example.output}</dd>
+              <div key={`${example.input}-${index}`} className="rounded-xl bg-white/[0.025] p-3.5">
+                <p className="text-sm font-semibold text-cream/72">Case {index + 1}</p>
+                <dl className="mt-3 grid gap-x-4 gap-y-2 text-sm leading-6 sm:grid-cols-[5rem_1fr]">
+                  <dt className="font-medium text-cream/38">Input</dt>
+                  <dd className="break-words font-mono text-cream/64">{example.input}</dd>
+                  <dt className="font-medium text-cream/38">Expected</dt>
+                  <dd className="break-words font-mono text-cream/64">{example.output}</dd>
                 </dl>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-xs leading-5 text-cream/35">No runnable examples are available for this question yet.</p>
+          <p className="rounded-xl bg-white/[0.02] p-4 text-sm leading-6 text-cream/42">
+            No runnable examples are available for this question yet.
+          </p>
         )}
       </div>
     </section>
@@ -1379,13 +1740,21 @@ function DsaOutputPanel({
 
 function DsaCopySection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mt-7">
-      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-cream/40">{title}</h3>
-      <div className="text-sm leading-6 text-cream/75">{children}</div>
+    <section className="mt-9">
+      <h2 className="mb-4 text-base font-semibold text-cream/84">{title}</h2>
+      <div className="text-[15px] leading-7 text-cream/68">{children}</div>
     </section>
   );
 }
 
+function DsaMetaPill({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-2 text-sm capitalize text-cream/52">
+      <span className="h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)]" aria-hidden="true" />
+      {children}
+    </span>
+  );
+}
 
 function microphoneOptions(deviceId = ""): AudioCaptureOptions {
   return {

@@ -142,8 +142,7 @@ export function ResumeStep({
           ].join(" ")}
           style={
             {
-              "--card-delay": "360ms",
-              "--card-tilt": "-0.55deg"
+              "--card-delay": "360ms"
             } as CSSProperties
           }
         >
@@ -223,8 +222,7 @@ export function ResumeStep({
             className="onboarding-card-reveal mt-4 rounded-[1.15rem] border border-[#f6b0b0]/35 bg-[#4b1f36]/30 px-4 py-3 text-sm font-medium text-[#ffd3d3] backdrop-blur-sm"
             style={
               {
-                "--card-delay": "80ms",
-                "--card-tilt": "0deg"
+                "--card-delay": "80ms"
               } as CSSProperties
             }
           >
@@ -261,4 +259,3 @@ function ResumeVerificationProgress({ activeStage }: { activeStage: number }) {
     </div>
   );
 }
-

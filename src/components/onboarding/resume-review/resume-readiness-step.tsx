@@ -141,9 +141,8 @@ export function ResumeReadinessStep({
                   key={skill}
                   className="step-in rounded-lg border border-cream/18 px-3 py-1.5 text-[15px] font-semibold leading-7 text-cream/72 sm:text-base"
                   style={
-                    {
-                      "--step-delay": `${index * 24}ms`,
-                      transform: `rotate(${[-1.1, 0.7, -0.45, 1, -0.8][index % 5]}deg)`
+                      {
+                      "--step-delay": `${index * 24}ms`
                     } as CSSProperties
                   }
                 >

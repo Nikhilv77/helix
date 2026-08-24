@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Reveal, useScrollProgress } from "./visuals/reveal";
-import { InterviewSignal, TrailgradMark } from "@/components/brand/blueprint-art";
+import { TrailgradMark } from "@/components/brand/blueprint-art";
 import { LiveBars } from "./visuals/product-frames";
 import { MarketingAvatar } from "./visuals/marketing-avatar";
 import { PrimaryAction } from "./primary-action";
@@ -34,14 +34,12 @@ export function Hero() {
         className="hero-parallax relative z-10 mx-auto flex h-full w-full max-w-[46rem] flex-col items-center justify-center text-center"
       >
         <div className="relative max-h-[36rem] min-h-[15rem] w-full max-w-[31rem] flex-1 sm:max-h-[30rem] sm:max-w-[28rem]">
-          <InterviewSignal className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[23rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 text-[color:var(--dm-accent-soft)] opacity-25 sm:h-[26rem] sm:w-[34rem] sm:opacity-40" />
           <MarketingAvatar
             priority
             active={avatarActive}
             framing="marketing"
             className="pointer-events-none absolute inset-y-0 -inset-x-10 z-10 -translate-x-10 scale-[1.18] sm:inset-0 sm:translate-x-0 sm:scale-100 sm:drop-shadow-[0_24px_30px_rgba(4,12,35,0.5)]"
           />
-          <div className="pointer-events-none absolute -bottom-1 left-1/2 h-px w-48 -translate-x-1/2 bg-cream/12 shadow-[0_0_16px_rgba(241,234,216,0.18)] sm:w-64" />
         </div>
 
         <div className="flex w-full shrink-0 flex-col items-center">
@@ -58,7 +56,7 @@ export function Hero() {
             <h1 className="mt-6">
               <span
                 className="wordmark block text-cream"
-                style={{ fontSize: "clamp(2.25rem, 5.2vw, 3.75rem)", letterSpacing: "-0.03em" }}
+                style={{ fontSize: "clamp(2.15rem, 4.5vw, 3.4rem)", letterSpacing: "-0.03em" }}
               >
                 Let&rsquo;s begin.
               </span>
@@ -73,7 +71,10 @@ export function Hero() {
           </Reveal>
 
           <Reveal delay={240}>
-            <LiveBars count={18} className="mt-7 hidden h-8 text-[color:var(--dm-accent-soft)] opacity-50 sm:flex" />
+            <LiveBars
+              count={18}
+              className="mt-7 hidden h-8 text-[color:var(--dm-accent-soft)] opacity-50 sm:flex"
+            />
           </Reveal>
 
           <Reveal delay={300}>

@@ -4,7 +4,12 @@ import Link from "next/link";
 import { ArrowRight, Download, Signal, Target, TriangleAlert, Volume2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { ReportMayaAvatar } from "./report-maya-avatar";
-import { disciplineLabel, formatDuration, formatShortDate, roundShortLabel } from "@/lib/shared/labels";
+import {
+  disciplineLabel,
+  formatDuration,
+  formatShortDate,
+  roundShortLabel
+} from "@/lib/shared/labels";
 import { createThemedReportPdf, type ReportPdfBriefing } from "@/lib/reports/report-pdf";
 import type { ReportsOverview } from "@/lib/reports/reports";
 import { useMayaVoice } from "@/lib/voice/use-maya-voice";
@@ -23,7 +28,10 @@ type ReportBriefingCopy = ReportPdfBriefing & {
   preparedVoiceLine: string;
 };
 
-function buildBriefingCopy(overview: ReportsOverview, candidate: ReportCandidate): ReportBriefingCopy {
+function buildBriefingCopy(
+  overview: ReportsOverview,
+  candidate: ReportCandidate
+): ReportBriefingCopy {
   const score = overview.readinessScore ?? overview.latestScore;
   const verdict =
     score == null
@@ -69,7 +77,10 @@ function buildBriefingCopy(overview: ReportsOverview, candidate: ReportCandidate
     const roundScore = round.evidenceScore == null ? "not scored" : `${round.evidenceScore}/100`;
     return `${index + 1}. ${roundShortLabel(round.roundType)} · ${roundScore} · ${formatShortDate(round.startedAt)}`;
   });
-  const nextAction = gap?.nextStep ?? overview.latest?.nextStep ?? "Run one focused round and make every answer end with a concrete outcome.";
+  const nextAction =
+    gap?.nextStep ??
+    overview.latest?.nextStep ??
+    "Run one focused round and make every answer end with a concrete outcome.";
   const summaryText = `Maya would put it simply: ${trend} Your strongest signal is ${strongest}. The repeat gap is ${gapLabel}.`;
   const competencyBars = overview.competencies
     .filter((item) => item.answered > 0)
@@ -185,24 +196,26 @@ export function ReportBriefingStage({
   const startSpokenPhase = useCallback(
     (targetPhase: 2 | 3) => {
       if (spokenPhase === targetPhase) return;
-      void speak(targetPhase === 2 ? briefing.voiceLine : briefing.preparedVoiceLine).then((result) => {
-        if (result === "started") {
-          setSpokenPhase(targetPhase);
-          if (targetPhase === 2) {
-            setReportVoiceStarted(true);
-            setReportVoiceFinished(false);
+      void speak(targetPhase === 2 ? briefing.voiceLine : briefing.preparedVoiceLine).then(
+        (result) => {
+          if (result === "started") {
+            setSpokenPhase(targetPhase);
+            if (targetPhase === 2) {
+              setReportVoiceStarted(true);
+              setReportVoiceFinished(false);
+            }
+            return;
           }
-          return;
+          if (result === "unavailable" && targetPhase === 2) {
+            setSpokenPhase(targetPhase);
+            setReportVoiceFinished(true);
+            return;
+          }
+          if (result === "blocked" && targetPhase === 2) {
+            setReportVoiceFinished(true);
+          }
         }
-        if (result === "unavailable" && targetPhase === 2) {
-          setSpokenPhase(targetPhase);
-          setReportVoiceFinished(true);
-          return;
-        }
-        if (result === "blocked" && targetPhase === 2) {
-          setReportVoiceFinished(true);
-        }
-      });
+      );
     },
     [briefing.preparedVoiceLine, briefing.voiceLine, speak, spokenPhase]
   );
@@ -219,9 +232,12 @@ export function ReportBriefingStage({
   useEffect(() => {
     if ((phase !== 2 && phase !== 3) || awaitingGesture || spokenPhase === phase) return;
     let cancelled = false;
-    const timer = window.setTimeout(() => {
-      if (!cancelled) startSpokenPhase(phase);
-    }, phase === 2 ? 360 : 280);
+    const timer = window.setTimeout(
+      () => {
+        if (!cancelled) startSpokenPhase(phase);
+      },
+      phase === 2 ? 360 : 280
+    );
 
     return () => {
       cancelled = true;
@@ -329,7 +345,10 @@ export function ReportBriefingStage({
               />
             </p>
 
-            <div className="report-action-panel mx-auto mt-7 max-w-3xl text-left lg:mx-0" style={{ "--report-delay": "1200ms" } as CSSProperties}>
+            <div
+              className="report-action-panel mx-auto mt-7 max-w-3xl text-left lg:mx-0"
+              style={{ "--report-delay": "1200ms" } as CSSProperties}
+            >
               <p className="text-[1.6rem] font-semibold leading-tight text-cream sm:text-[2rem]">
                 {briefing.verdict}
               </p>
@@ -378,7 +397,6 @@ export function ReportBriefingStage({
                 ) : null}
               </div>
             ) : null}
-
           </section>
         ) : null}
 
@@ -423,44 +441,6 @@ export function ReportEmptyStage({
   firstName: string;
   exhausted: boolean;
 }) {
-  const [hasTriedVoice, setHasTriedVoice] = useState(false);
-  const unlockInFlight = useRef(false);
-  const { state, speak, awaitingGesture, setAwaitingGesture } = useMayaVoice();
-  const speaking = state === "speaking";
-  const name = firstName || "there";
-  const voiceLine = `Your first interview is waiting, ${name}. Give it a try with me, and I will turn your answers into a personal report on what felt strong, what needs work, and what to practice next.`;
-
-  const startEmptyVoice = useCallback((force = false) => {
-    if (hasTriedVoice && !force) return;
-    setHasTriedVoice(true);
-    void speak(voiceLine);
-  }, [hasTriedVoice, speak, voiceLine]);
-
-  useEffect(() => {
-    if (awaitingGesture || hasTriedVoice) return;
-    const timer = window.setTimeout(startEmptyVoice, 420);
-    return () => window.clearTimeout(timer);
-  }, [awaitingGesture, hasTriedVoice, startEmptyVoice]);
-
-  useEffect(() => {
-    if (!awaitingGesture) return;
-    const unlock = () => {
-      if (unlockInFlight.current) return;
-      unlockInFlight.current = true;
-      setAwaitingGesture(false);
-      startEmptyVoice(true);
-      window.setTimeout(() => {
-        unlockInFlight.current = false;
-      }, 250);
-    };
-    window.addEventListener("pointerdown", unlock, { once: true });
-    window.addEventListener("keydown", unlock, { once: true });
-    return () => {
-      window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("keydown", unlock);
-    };
-  }, [awaitingGesture, setAwaitingGesture, startEmptyVoice]);
-
   return (
     <div className="relative z-10 mx-auto flex min-h-[calc(100svh-11rem)] w-full max-w-3xl flex-col items-center justify-center py-8 text-center">
       <div className="relative mx-auto w-full max-w-[26rem]">
@@ -473,32 +453,44 @@ export function ReportEmptyStage({
           className="report-maya-glow-b pointer-events-none absolute bottom-4 left-1/2 z-0 h-28 w-60 -translate-x-1/2 rounded-full bg-[var(--workspace-accent)] opacity-30 blur-[64px]"
         />
         <div className="relative z-10">
-          <ReportMayaAvatar delay={120} speaking={speaking} size="compact" transparent />
+          <ReportMayaAvatar delay={120} size="compact" transparent />
         </div>
       </div>
 
-      <div className="mx-auto mt-6 flex w-full max-w-2xl flex-col items-center">
+      <div className="relative z-10 mx-auto -mt-8 flex w-full max-w-2xl flex-col items-center sm:-mt-10">
         <section className="identity-stage-in w-full">
-          {awaitingGesture ? <VoiceUnlockNudge /> : null}
-          <p className="mx-auto max-w-xl text-lg font-medium leading-7 text-cream sm:text-xl sm:leading-8">
-            <WordReveal
-              text={firstName ? `Maya is ready when you are, ${firstName}.` : "Maya is ready when you are."}
-              active
-              delay={120}
-              stagger={58}
+          <div className="report-glass-card relative mx-auto max-w-xl rounded-2xl px-5 py-4 text-left sm:px-6">
+            <span
+              aria-hidden
+              className="report-glass-tail absolute -top-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45"
             />
-          </p>
-          <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-cream/60 sm:text-base sm:leading-7">
-            <WordReveal
-              text="One conversation gives you a clear read on what sounds strong, what needs evidence, and where to practise next."
-              active
-              delay={520}
-              stagger={36}
-              wordClassName="report-copy-word"
-            />
-          </p>
+            <p className="relative text-base font-medium leading-7 text-cream sm:text-lg sm:leading-8">
+              <WordReveal
+                text={
+                  firstName
+                    ? `Maya is ready when you are, ${firstName}.`
+                    : "Maya is ready when you are."
+                }
+                active
+                delay={120}
+                stagger={58}
+              />
+            </p>
+            <p className="relative mt-3 text-sm leading-6 text-cream/60 sm:text-base sm:leading-7">
+              <WordReveal
+                text="One conversation gives you a clear read on what sounds strong, what needs evidence, and where to practise next."
+                active
+                delay={520}
+                stagger={36}
+                wordClassName="report-copy-word"
+              />
+            </p>
+          </div>
 
-          <div className="report-action-panel mx-auto mt-7" style={{ "--report-delay": "2100ms" } as CSSProperties}>
+          <div
+            className="report-action-panel mx-auto mt-6"
+            style={{ "--report-delay": "2100ms" } as CSSProperties}
+          >
             <Link
               href="/interview?resume=1"
               aria-disabled={exhausted}
@@ -591,7 +583,10 @@ function ReportFinding({
   delay: number;
 }) {
   return (
-    <div className="report-action-panel relative" style={{ "--report-delay": `${delay}ms` } as CSSProperties}>
+    <div
+      className="report-action-panel relative"
+      style={{ "--report-delay": `${delay}ms` } as CSSProperties}
+    >
       <span className="absolute -left-8 top-1 grid h-4 w-4 place-items-center rounded-full bg-[#151619] ring-4 ring-[#151619]">
         <Icon size={16} strokeWidth={1.75} className="text-cream/78" aria-hidden="true" />
       </span>

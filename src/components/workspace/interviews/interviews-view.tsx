@@ -1,9 +1,17 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { ArrowRight, Clock3, FileText, Mic, Play } from "lucide-react";
+import type { CSSProperties } from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+  ArrowRight,
+  Atom,
+  BadgeCheck,
+  CircleGauge,
+  CodeXml,
+  FileCode2,
+  Play,
+  Rocket
+} from "lucide-react";
 import { DocumentTitle } from "@/components/document-title";
-import { InterviewSignal } from "@/components/brand/blueprint-art";
-import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import { FRONTEND_SESSIONS } from "@/lib/roadmap/frontend-plan";
 import type { FrontendRoadmapHome, FrontendRoadmapSession } from "@/lib/roadmap/roadmap";
 import type { CandidateProfile, InterviewHistoryItem, WorkspaceInsights } from "@/lib/shared/types";
@@ -29,219 +37,134 @@ type InterviewRoadmapSession = Pick<
   | "progressPercent"
 >;
 
+const sessionIcons: Record<string, LucideIcon> = {
+  "frontend-dsa": CodeXml,
+  "javascript-react-core": Atom,
+  "build-real-ui-features": FileCode2,
+  "production-ui-quality": CircleGauge,
+  "resume-behavioral-defense": BadgeCheck,
+  "final-frontend-mock": Rocket
+};
+
 export function InterviewsView({ quota, sessions, profile, roadmap }: InterviewsViewProps) {
   const remaining = Math.max(0, quota.limit - quota.used);
   const exhausted = remaining === 0;
   const active = sessions.find((session) => session.status === "in_progress");
   const roadmapSessions = roadmap?.sessions.length ? roadmap.sessions : fallbackRoadmapSessions();
-  const resumeSession = findResumeRoadmapSession(roadmapSessions);
   const firstName = profile.resume?.fullName?.trim().split(/\s+/)[0] ?? "";
-  const resumeHref = resumeSession ? roadmapSessionHref(resumeSession.id) : "/interview?resume=1";
-  const heroHref = active ? `/interview/voice?session=${active.sessionId}` : resumeHref;
   const introCopy = firstName
-    ? `${firstName}, pick a session and Maya will start from that exact work. No domain picker, no generic setup, just the next useful round.`
-    : "Pick a session and Maya will start from that exact work. No domain picker, no generic setup, just the next useful round.";
+    ? `${firstName}, choose the interview session that feels most useful right now. Each round is shaped around your saved profile and a focused agenda, so you can practise with intent and leave knowing exactly what to sharpen next.`
+    : "Choose the interview session that feels most useful right now. Each round is shaped around your saved profile and a focused agenda, so you can practise with intent and leave knowing exactly what to sharpen next.";
+  const introWords = introCopy.split(" ");
 
   return (
-    <div className="mx-auto w-full max-w-[84rem] px-4 pb-20 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
+    <main className="relative isolate mx-auto w-full max-w-[92rem] overflow-x-clip px-4 pb-20 pt-10 sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
       <DocumentTitle title="Interviews" />
+      <span
+        aria-hidden="true"
+        className="interviews-accent-glow interviews-accent-glow-top pointer-events-none absolute -top-32 left-1/2 -z-10 h-[34rem] w-[48rem] -translate-x-1/2 rounded-full"
+      />
 
-      <section className="profile-motion relative mt-6 overflow-hidden rounded-[1.25rem] border border-cream/20 bg-cream/[0.035] p-5 text-cream sm:p-6 lg:p-7">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,28rem)] lg:items-stretch">
-          <div className="flex max-w-3xl flex-col justify-center">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-cream/45">
-              Session interviews
-            </p>
-            <h1 className="mt-2 font-display text-[1.9rem] font-semibold leading-[1.08] tracking-normal text-cream sm:text-[2.35rem]">
-              Choose a session, then start.
-            </h1>
-            <p className="mt-3 max-w-2xl text-[14.5px] leading-6 text-cream/62">{introCopy}</p>
-
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <PrimaryInterviewLink href={heroHref} disabled={exhausted && !active}>
-                {active ? (
-                  <>
-                    <Play size={17} aria-hidden="true" fill="currentColor" />
-                    Resume interview
-                  </>
-                ) : (
-                  <>
-                    <Mic size={17} aria-hidden="true" />
-                    Start interview
-                  </>
-                )}
-              </PrimaryInterviewLink>
-              <SecondaryInterviewLink href={resumeHref} disabled={exhausted && !active}>
-                <FileText size={17} aria-hidden="true" />
-                Resume round
-              </SecondaryInterviewLink>
-            </div>
-          </div>
-
-          <TopMayaPreview speaking={Boolean(active)} />
-        </div>
+      <section className="interviews-intro-in mx-auto max-w-3xl text-center">
+        <p className="font-display text-[clamp(1.1rem,1.25vw,1.4rem)] font-medium leading-[1.55] tracking-normal text-cream">
+          {introWords.map((word, index) => (
+            <span
+              key={`${word}-${index}`}
+              className="interviews-intro-word"
+              style={{ "--interview-word-delay": `${index * 22}ms` } as CSSProperties}
+            >
+              {word}
+            </span>
+          ))}
+        </p>
+        {active ? (
+          <Link
+            href={`/interview/voice?session=${active.sessionId}`}
+            className="interviews-active-link group mt-6 inline-flex items-center gap-3 rounded-2xl bg-[#17181b]/90 px-4 py-3 text-left transition hover:-translate-y-0.5 hover:bg-[#1c1e22] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
+          >
+            <Play
+              size={17}
+              aria-hidden="true"
+              fill="currentColor"
+              className="shrink-0 text-[var(--workspace-accent)]"
+            />
+            <span>
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-cream/52">
+                Round in progress
+              </span>
+              <span className="mt-0.5 flex items-center gap-1.5 text-sm font-medium text-cream/82">
+                Resume your interview
+                <ArrowRight
+                  size={15}
+                  aria-hidden="true"
+                  className="transition-transform duration-200 group-hover:translate-x-0.5"
+                />
+              </span>
+            </span>
+          </Link>
+        ) : null}
       </section>
 
-      <section className="relative mt-8">
-        <div className="flex flex-col gap-2 border-b border-cream/20 pb-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-cream/42">
-              Roadmap sessions
-            </p>
-            <p className="mt-1 text-[14.5px] leading-6 text-cream/58">
-              Pick the track for this round. Maya will use its agenda and your saved profile.
-            </p>
-          </div>
-          {roadmap?.title ? (
-            <p className="max-w-sm text-left text-[13px] leading-5 text-cream/38 sm:text-right">
-              {roadmap.title}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="overflow-hidden">
+      <section className="relative isolate mt-12 sm:mt-14" aria-label="Interview sessions">
+        <div className="relative z-10 grid gap-x-8 gap-y-12 md:grid-cols-2 xl:grid-cols-4">
           {roadmapSessions.length ? (
-            roadmapSessions.map((session) => (
-              <RoadmapSessionRow
+            roadmapSessions.map((session, index) => (
+              <RoadmapSessionCard
                 key={session.id}
                 session={session}
                 disabled={exhausted && !active}
+                delay={index * 70}
               />
             ))
           ) : (
-            <div className="py-9 text-center text-cream/58">
-              Maya is still preparing your session plan. You can start a profile-wide round now.
-            </div>
+            <p className="col-span-full rounded-2xl bg-[#17181b] px-5 py-8 text-center text-sm leading-6 text-cream/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
+              Maya is still preparing your session plan. Please check back in a moment.
+            </p>
           )}
         </div>
-
-        <div className="mt-7 rounded-[1.1rem] border border-cream/20 px-5 py-4 text-cream sm:flex sm:items-center sm:justify-between sm:gap-5">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cream/42">
-              Resume interview
-            </p>
-            <p className="mt-1 text-[14.5px] leading-6 text-cream/58">
-              Want Maya to question your actual resume instead? Start from the evidence there.
-            </p>
-          </div>
-          <div className="mt-4 sm:mt-0 sm:shrink-0">
-            <SecondaryInterviewLink href={resumeHref} disabled={exhausted && !active}>
-              <FileText size={17} aria-hidden="true" />
-              Start resume round
-            </SecondaryInterviewLink>
-          </div>
-        </div>
       </section>
-    </div>
+    </main>
   );
 }
 
-function TopMayaPreview({ speaking }: { speaking: boolean }) {
-  return (
-    <div className="relative h-full min-h-[17rem] overflow-hidden rounded-2xl bg-cream/[0.055] backdrop-blur-xl sm:min-h-[20rem] lg:min-h-[23rem]">
-      <InterviewSignal className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[15rem] w-[20rem] -translate-x-1/2 -translate-y-1/2 opacity-30 sm:h-[18rem] sm:w-[24rem] lg:h-[21rem] lg:w-[28rem] lg:opacity-40" />
-
-      <div
-        className="absolute inset-x-[-10%] bottom-[-4%] top-[-10%] z-10 sm:inset-x-[-6%] lg:inset-x-[-5%] xl:inset-x-[-2%]"
-        style={{
-          maskImage: "linear-gradient(180deg,#000 0%,#000 88%,transparent 100%)",
-          WebkitMaskImage: "linear-gradient(180deg,#000 0%,#000 88%,transparent 100%)"
-        }}
-      >
-        <MayaStage speaking={speaking} />
-      </div>
-    </div>
-  );
-}
-
-function PrimaryInterviewLink({
-  href,
-  disabled,
-  children
-}: {
-  href: string;
-  disabled?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <Link
-      href={disabled ? "#" : href}
-      aria-disabled={disabled}
-      className={[
-        "inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-cream px-6 text-[14.5px] font-semibold text-[#101010] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/60 sm:min-w-[12rem]",
-        disabled ? "pointer-events-none opacity-45" : "hover:bg-white"
-      ].join(" ")}
-    >
-      {children}
-    </Link>
-  );
-}
-
-function SecondaryInterviewLink({
-  href,
-  disabled,
-  children
-}: {
-  href: string;
-  disabled?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <Link
-      href={disabled ? "#" : href}
-      aria-disabled={disabled}
-      className={[
-        "inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-cream/20 bg-cream/[0.04] px-6 text-[14.5px] font-semibold text-cream/78 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/45 sm:min-w-[12rem]",
-        disabled ? "pointer-events-none opacity-45" : "hover:bg-cream/[0.09] hover:text-cream"
-      ].join(" ")}
-    >
-      {children}
-    </Link>
-  );
-}
-
-function RoadmapSessionRow({
+function RoadmapSessionCard({
   session,
-  disabled
+  disabled,
+  delay
 }: {
   session: InterviewRoadmapSession;
   disabled: boolean;
+  delay: number;
 }) {
+  const SessionIcon = sessionIcons[session.id] ?? FileCode2;
+
   return (
     <Link
       href={disabled ? "#" : roadmapSessionHref(session.id)}
       aria-disabled={disabled}
+      style={{ "--interview-delay": `${delay}ms` } as CSSProperties}
       className={[
-        "group grid gap-4 border-b border-cream/20 py-5 transition last:border-b-0 sm:grid-cols-[3.25rem_minmax(0,1fr)_auto] sm:items-center",
-        disabled ? "pointer-events-none opacity-45" : "hover:bg-cream/[0.035]"
+        "interview-session-card group relative flex min-h-[28rem] flex-col rounded-[2rem] p-7 text-left transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/35 lg:p-8",
+        disabled ? "pointer-events-none opacity-45" : ""
       ].join(" ")}
     >
-      <span className="font-mono text-[1.35rem] leading-none text-cream/32">
-        {String(session.order).padStart(2, "0")}
+      <span className="interview-session-icon flex h-20 w-20 items-center justify-center rounded-[1.45rem] lg:h-24 lg:w-24">
+        <SessionIcon size={40} strokeWidth={1.45} aria-hidden="true" />
       </span>
 
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <h2 className="font-display text-[1.22rem] font-semibold tracking-normal text-cream sm:text-[1.35rem]">
-            {session.title}
-          </h2>
-          <span className="rounded-full border border-cream/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.13em] text-cream/50">
-            {session.progressPercent}% done
-          </span>
-        </div>
-        <p className="mt-2 max-w-3xl text-[14px] leading-6 text-cream/54">{session.purpose}</p>
-        <p className="mt-1.5 max-w-3xl text-[12.5px] leading-5 text-cream/36">
-          {session.covers.slice(0, 2).join(" · ")}
-        </p>
-      </div>
+      <h2 className="mt-16 max-w-[17rem] font-display text-[1.5rem] font-semibold leading-[1.2] tracking-normal text-cream sm:text-[1.65rem]">
+        {session.title}
+      </h2>
+      <p className="mt-4 max-w-[19rem] text-base leading-7 text-cream/72">{session.purpose}</p>
 
-      <div className="flex items-center gap-4 text-[13px] font-semibold text-cream/62 sm:justify-end">
-        <span className="inline-flex items-center gap-1.5">
-          <Clock3 size={15} aria-hidden="true" />
-          {session.completedQuestions}/{session.totalQuestions || "—"}
-        </span>
-        <span className="inline-flex items-center gap-2 text-cream transition group-hover:translate-x-0.5">
-          Start <ArrowRight size={16} aria-hidden="true" />
+      <div className="relative z-10 mt-auto pt-9">
+        <span className="interview-session-link inline-flex items-center gap-2 text-base font-medium text-cream/88 transition-colors group-hover:text-cream">
+          Start session
+          <ArrowRight
+            size={17}
+            aria-hidden="true"
+            className="transition-transform duration-300 group-hover:translate-x-1"
+          />
         </span>
       </div>
     </Link>
@@ -259,16 +182,6 @@ function fallbackRoadmapSessions(): InterviewRoadmapSession[] {
     completedQuestions: 0,
     progressPercent: 0
   }));
-}
-
-function findResumeRoadmapSession(
-  sessions: InterviewRoadmapSession[]
-): InterviewRoadmapSession | null {
-  return (
-    sessions.find((session) => session.id === "resume-behavioral-defense") ??
-    sessions.find((session) => session.title.toLowerCase().includes("resume")) ??
-    null
-  );
 }
 
 function roadmapSessionHref(id: string): string {

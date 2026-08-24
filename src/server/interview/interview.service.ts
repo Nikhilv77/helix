@@ -111,6 +111,12 @@ export class InterviewService {
     return sessions.map((session) => createHistoryItem(session, now));
   }
 
+  /** Claims sessions created by the same browser before Clerk auth was resolved. */
+  async claimAnonymousHistory(anonymousOwnerId: string, ownerId: string): Promise<number> {
+    if (!anonymousOwnerId.startsWith("anon:") || !ownerId.startsWith("user:")) return 0;
+    return this.store.reassignOwner(anonymousOwnerId, ownerId);
+  }
+
   async insights(ownerId: string, limit = 30, now = Date.now()): Promise<WorkspaceInsights> {
     const boundedLimit = Math.max(1, Math.min(limit, 50));
     return createWorkspaceInsights(await this.store.listByOwner(ownerId, boundedLimit), now);

@@ -14,9 +14,6 @@ export function BlueprintBackdrop() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
       <InterviewSignal className="absolute left-1/2 top-8 h-[26rem] w-[34rem] -translate-x-1/2 text-[#F26E01] opacity-[0.07] sm:h-[32rem] sm:w-[42rem]" />
-      <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#17181c] to-transparent" />
-      <div className="absolute -left-28 top-40 h-72 w-72 rounded-full border border-cream/10" />
-      <div className="absolute -right-24 bottom-24 h-80 w-80 rounded-full border border-cream/10" />
     </div>
   );
 }
@@ -187,4 +184,3 @@ function Eyebrow({ icon: Icon, children }: { icon: LucideIcon; children: ReactNo
     </span>
   );
 }
-

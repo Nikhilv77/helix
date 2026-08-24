@@ -106,6 +106,15 @@ describe("createReportsOverview", () => {
     expect(overview.rounds.map((round) => round.sessionId)).toEqual(["c", "b", "a"]);
   });
 
+  it("uses the latest answered round for the report, even during wrap-up", () => {
+    const overview = createReportsOverview([
+      report({ sessionId: "finished", startedAt: DAY, status: "completed" }),
+      report({ sessionId: "just-answered", startedAt: 2 * DAY, status: "in_progress" })
+    ]);
+
+    expect(overview.latestCompletedReport?.sessionId).toBe("just-answered");
+  });
+
   // An abandoned round scores zero. Averaging it in would read as a collapse in
   // performance rather than a session the candidate simply closed.
   it("excludes rounds with no answers from every score", () => {

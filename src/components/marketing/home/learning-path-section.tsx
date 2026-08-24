@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import type { CSSProperties } from "react";
-import { InterviewSignal, TrailgradMark } from "@/components/brand/blueprint-art";
+import { TrailgradMark } from "@/components/brand/blueprint-art";
 import { Counter, Reveal, useInView } from "./visuals/reveal";
 
 const proofStats = [
@@ -38,14 +38,8 @@ export function LearningPath() {
   return (
     <section
       id="learn"
-      className="marketing-theme-learning relative z-10 min-h-screen overflow-hidden px-5 py-20 sm:px-10 sm:py-28"
+      className="marketing-theme-learning relative z-10 overflow-hidden px-5 py-16 sm:px-10 sm:py-24"
     >
-      <InterviewSignal className="pointer-events-none absolute left-1/2 top-20 h-[26rem] w-[32rem] -translate-x-1/2 text-[color:var(--dm-accent-soft)] opacity-10 sm:h-[30rem] sm:w-[40rem]" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#060708]/80 to-transparent" />
-      <div className="pointer-events-none absolute -left-24 top-1/3 h-72 w-72 rounded-full border border-cream/10" />
-      <div className="pointer-events-none absolute -right-20 bottom-20 h-80 w-80 rounded-full border border-cream/10" />
-      <ProjectSidePatterns />
-
       <div className="relative mx-auto flex w-full max-w-[72rem] flex-col items-center">
         <Reveal>
           <span className="theme-accent-pill inline-flex items-center gap-2.5 rounded-full px-3.5 py-1.5 backdrop-blur-sm">
@@ -59,7 +53,7 @@ export function LearningPath() {
         <Reveal delay={80}>
           <h2
             className="display-heading mt-6 w-full max-w-4xl text-center text-cream"
-            style={{ fontSize: "clamp(2.15rem, 4.8vw, 4.25rem)" }}
+            style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)" }}
           >
             <span className="marketing-text-reveal">Prep that feels like practice.</span>
           </h2>
@@ -97,141 +91,15 @@ export function LearningPath() {
   );
 }
 
-function ProjectSidePatterns() {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, "0px 0px -10% 0px");
-  const [desktop, setDesktop] = useState(false);
-  const active = desktop && inView;
-  const percent = useCountUp(100, active);
-
-  useEffect(() => {
-    const query = window.matchMedia("(min-width: 640px)");
-    const update = () => setDesktop(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
-
-  return (
-    <div
-      ref={ref}
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 hidden sm:block"
-    >
-      <svg
-        className="absolute left-4 top-[46%] h-28 w-28 text-cream opacity-45 sm:left-[8%] sm:h-36 sm:w-36 lg:top-[43%] xl:h-48 xl:w-48 xl:opacity-60"
-        viewBox="0 0 160 160"
-        fill="none"
-      >
-        <circle cx="80" cy="80" r="54" stroke="currentColor" strokeOpacity="0.12" strokeWidth="8" />
-        <circle
-          cx="80"
-          cy="80"
-          r="54"
-          stroke="currentColor"
-          strokeWidth="8"
-          strokeLinecap="round"
-          pathLength="100"
-          strokeDasharray="100"
-          strokeDashoffset={100 - percent}
-          className="origin-center -rotate-90 transition-[stroke-dashoffset] duration-75 ease-linear"
-        />
-        <circle cx="80" cy="80" r="64" stroke="currentColor" strokeOpacity="0.18" />
-        <text
-          x="80"
-          y="88"
-          textAnchor="middle"
-          className="fill-current font-mono text-[26px] font-semibold"
-        >
-          {percent}%
-        </text>
-      </svg>
-
-      <svg
-        className="absolute right-3 top-[50%] h-28 w-36 text-cream opacity-38 sm:right-[8%] sm:h-36 sm:w-44 lg:top-[46%] xl:h-52 xl:w-64 xl:opacity-55"
-        viewBox="0 0 240 180"
-        fill="none"
-      >
-        <path d="M28 146H214" stroke="currentColor" strokeOpacity="0.16" strokeWidth="1.5" />
-        <path d="M28 36V146" stroke="currentColor" strokeOpacity="0.16" strokeWidth="1.5" />
-        {[62, 96, 130, 164, 198].map((x) => (
-          <line
-            key={x}
-            x1={x}
-            x2={x}
-            y1="146"
-            y2="142"
-            stroke="currentColor"
-            strokeOpacity="0.22"
-            strokeWidth="1.5"
-          />
-        ))}
-        <path
-          className={active ? "prep-j-curve" : ""}
-          d="M32 136C72 138 95 130 116 111C138 91 146 60 168 52C189 44 202 32 218 18"
-          stroke="currentColor"
-          strokeWidth="5"
-          strokeLinecap="round"
-        />
-        {active ? (
-          <circle className="prep-j-dot" r="5" fill="currentColor">
-            <animateMotion
-              dur="7s"
-              fill="freeze"
-              repeatCount="1"
-              path="M32 136C72 138 95 130 116 111C138 91 146 60 168 52C189 44 202 32 218 18"
-            />
-          </circle>
-        ) : null}
-      </svg>
-    </div>
-  );
-}
-
-function useCountUp(target: number, active: boolean) {
-  const [value, setValue] = useState(0);
-
-  useEffect(() => {
-    if (!active) {
-      setValue(0);
-      return;
-    }
-
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (query.matches) {
-      setValue(target);
-      return;
-    }
-
-    const duration = 9000;
-    const start = window.performance.now();
-
-    const timer = window.setInterval(() => {
-      const elapsed = window.performance.now() - start;
-      const linear = Math.min(1, elapsed / duration);
-      const eased = 1 - Math.pow(1 - linear, 3);
-      setValue(Math.round(target * eased));
-
-      if (linear >= 1) {
-        window.clearInterval(timer);
-      }
-    }, 90);
-
-    return () => window.clearInterval(timer);
-  }, [active, target]);
-
-  return value;
-}
-
 function SimplePrepPath() {
   const stageRef = useRef<HTMLDivElement>(null);
   const inView = useInView(stageRef, "0px 0px -18% 0px");
 
   return (
-    <div className="mt-12 w-full max-w-6xl">
+    <div className="mt-10 w-full max-w-6xl">
       <div
         ref={stageRef}
-        className="prep-stack-stage relative mx-auto grid gap-4 lg:flex lg:min-h-[24rem] lg:items-center lg:justify-center lg:gap-0"
+        className="prep-stack-stage relative mx-auto grid gap-4 lg:flex lg:min-h-[21rem] lg:items-center lg:justify-center lg:gap-0"
       >
         {prepSteps.map((step, index) => {
           const revealed = inView;
@@ -241,7 +109,7 @@ function SimplePrepPath() {
             <article
               key={step.label}
               className={[
-                "relative min-h-[18rem] w-[min(23rem,calc(100vw-3rem))] overflow-hidden rounded-[2rem] p-5 text-left transition-[transform,opacity,border-color,background-color] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] sm:backdrop-blur-sm lg:w-64",
+                "relative min-h-[16rem] w-[min(23rem,calc(100vw-3rem))] overflow-hidden rounded-[1.6rem] p-5 text-left transition-[transform,opacity,border-color,background-color] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] sm:backdrop-blur-sm lg:w-64",
                 "prep-stack-card",
                 revealed
                   ? "border-cream/80 bg-cream/[0.055] opacity-100"
@@ -284,7 +152,7 @@ function SimplePrepPath() {
 
               <div
                 className={[
-                  "relative z-10 flex min-h-[14.5rem] flex-col items-start justify-center px-2 py-6 transition-[opacity,transform] duration-700",
+                  "relative z-10 flex min-h-[12.5rem] flex-col items-start justify-center px-2 py-5 transition-[opacity,transform] duration-700",
                   revealed ? "translate-y-0 opacity-100" : "translate-y-3 opacity-55"
                 ].join(" ")}
               >
@@ -298,7 +166,7 @@ function SimplePrepPath() {
                 </h3>
                 <p
                   className={[
-                    "mt-5 min-h-[6.25rem] w-full max-w-[14.75rem] text-[1.05rem] font-medium leading-7 text-cream/70 transition-[opacity,transform] duration-500 sm:text-[1.1rem]",
+                    "mt-4 min-h-[5.25rem] w-full max-w-[14.75rem] text-base font-medium leading-7 text-cream/70 transition-[opacity,transform] duration-500 sm:text-[1.05rem]",
                     revealed ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
                   ].join(" ")}
                 >

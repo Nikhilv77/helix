@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Brain, MessageSquareText, TimerReset } from "lucide-react";
-import { InterviewSignal, TrailgradMark } from "@/components/brand/blueprint-art";
+import { TrailgradMark } from "@/components/brand/blueprint-art";
 import { Reveal } from "./visuals/reveal";
 
 const questionSignals = [
@@ -27,14 +27,8 @@ export function QuestionLab() {
   return (
     <section
       id="questions"
-      className="marketing-theme-section relative z-10 overflow-hidden bg-blueprint px-5 pb-10 pt-20 sm:px-10 sm:py-28"
+      className="marketing-theme-section relative z-10 overflow-hidden bg-blueprint px-5 pb-10 pt-16 sm:px-10 sm:py-24"
     >
-      <InterviewSignal className="pointer-events-none absolute left-1/2 top-16 h-[26rem] w-[34rem] -translate-x-1/2 text-[color:var(--dm-accent-soft)] opacity-10 sm:h-[34rem] sm:w-[44rem]" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#060708]/80 to-transparent" />
-      <div className="pointer-events-none absolute -left-24 top-28 h-72 w-72 rounded-full border border-cream/10" />
-      <div className="pointer-events-none absolute -right-28 bottom-24 h-80 w-80 rounded-full border border-cream/10" />
-      <QuestionPatterns />
-
       <div className="relative mx-auto grid w-full max-w-[78rem] gap-5 sm:gap-8 lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:gap-12">
         <div className="max-w-2xl lg:order-2 lg:ml-auto">
           <Reveal>
@@ -49,7 +43,7 @@ export function QuestionLab() {
           <Reveal delay={80}>
             <h2
               className="display-heading mt-6 max-w-3xl text-cream"
-              style={{ fontSize: "clamp(2.15rem, 4.8vw, 4.25rem)" }}
+              style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)" }}
             >
               Practice resume interview questions.
             </h2>
@@ -107,63 +101,5 @@ export function QuestionLab() {
         </Reveal>
       </div>
     </section>
-  );
-}
-
-function QuestionPatterns() {
-  return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden text-cream sm:block">
-      <svg
-        className="absolute left-[7%] top-[18%] h-28 w-44 opacity-24 sm:h-36 sm:w-56"
-        viewBox="0 0 230 150"
-        fill="none"
-      >
-        <rect
-          x="18"
-          y="24"
-          width="160"
-          height="68"
-          rx="14"
-          stroke="currentColor"
-          strokeOpacity="0.55"
-        />
-        <circle cx="42" cy="48" r="5" fill="currentColor" fillOpacity="0.38" />
-        <path
-          d="M61 45h78M61 64h104"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeOpacity="0.38"
-        />
-        <path
-          d="M28 116h178"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeDasharray="7 12"
-          strokeOpacity="0.25"
-        />
-      </svg>
-
-      <svg
-        className="absolute bottom-[14%] right-[7%] h-32 w-52 opacity-26 sm:h-44 sm:w-72"
-        viewBox="0 0 280 180"
-        fill="none"
-      >
-        <path d="M18 92h24m196 0h24" stroke="currentColor" strokeOpacity="0.28" />
-        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((item) => (
-          <line
-            key={item}
-            x1={64 + item * 16}
-            x2={64 + item * 16}
-            y1={92 - ((item % 4) + 2) * 8}
-            y2={92 + ((item % 4) + 2) * 8}
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeOpacity="0.38"
-            strokeWidth="3"
-          />
-        ))}
-        <circle cx="140" cy="92" r="74" stroke="currentColor" strokeOpacity="0.18" />
-      </svg>
-    </div>
   );
 }

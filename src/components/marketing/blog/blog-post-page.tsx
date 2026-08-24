@@ -4,7 +4,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArrowRight, CalendarDays, Clock, ListChecks } from "lucide-react";
 import { TrailgradMark } from "@/components/brand/blueprint-art";
-import { EditorialBackLink } from "@/components/marketing/chrome/editorial-back-link";
+import { SiteFooter, SiteNav } from "@/components/marketing/chrome/site-chrome";
+import { PrimaryAction } from "@/components/marketing/home/primary-action";
 import { blogPosts, getBlogPost } from "@/content/marketing/blog";
 
 export function generateStaticParams() {
@@ -50,25 +51,28 @@ export async function generateMetadata({
   };
 }
 
-export async function BlogPostPage({
-  params
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const post = getBlogPost(slug);
   if (!post) notFound();
 
   const relatedPosts = blogPosts.filter((candidate) => candidate.slug !== post.slug).slice(0, 2);
   return (
-    <div className="editorial-theme blueprint min-h-screen overflow-x-clip">
-      <EditorialBackLink href="/blog" />
+    <div
+      className="marketing-theme editorial-theme blueprint min-h-screen overflow-x-clip"
+      data-marketing-accent="orange"
+    >
+      <SiteNav
+        actionKind="button"
+        sectionHrefPrefix="/"
+        action={
+          <PrimaryAction ariaLabel="Start" className="outline-none">
+            Start
+          </PrimaryAction>
+        }
+      />
 
       <main className="relative z-10 px-5 pb-14 pt-32 sm:px-10 sm:pb-20 sm:pt-36">
-        <div className="pointer-events-none absolute left-1/2 top-20 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full" />
-        <div className="pointer-events-none absolute -left-28 top-[34rem] hidden h-80 w-80 rounded-full sm:block" />
-        <div className="pointer-events-none absolute -right-28 bottom-40 hidden h-80 w-80 rounded-full sm:block" />
-
         <article className="relative mx-auto w-full max-w-[78rem]">
           <nav className="flex flex-wrap items-center gap-2 text-sm font-semibold text-cream/48">
             <Link href="/" className="transition hover:text-cream">
@@ -92,7 +96,7 @@ export async function BlogPostPage({
               </span>
               <h1
                 className="display-heading mt-6 max-w-4xl text-cream"
-                style={{ fontSize: "clamp(2.25rem, 5.1vw, 4.5rem)" }}
+                style={{ fontSize: "clamp(2.1rem, 4.2vw, 3.75rem)" }}
               >
                 {post.title}
               </h1>
@@ -124,9 +128,9 @@ export async function BlogPostPage({
           </header>
 
           <div className="mt-12 grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-            <div className="overflow-hidden rounded-[1.65rem] bg-[#18191c] text-cream">
+            <div className="public-glass overflow-hidden rounded-[1.65rem] text-cream">
               <div className="px-5 py-8 sm:px-9 sm:py-11 lg:px-12">
-                <div className="grid gap-4 rounded-[1.25rem] border border-white/10 bg-[#202126] p-5 sm:grid-cols-3">
+                <div className="public-subtle-card grid gap-4 rounded-[1.25rem] p-5 sm:grid-cols-3">
                   {post.summary.map((item) => (
                     <div key={item} className="flex gap-3">
                       <span className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F26E01]" />
@@ -157,7 +161,7 @@ export async function BlogPostPage({
                           {section.bullets.map((bullet) => (
                             <li
                               key={bullet}
-                              className="rounded-xl border border-white/10 bg-[#202126] px-4 py-3 text-base font-semibold leading-7 text-cream/76"
+                              className="public-subtle-card rounded-xl px-4 py-3 text-base font-semibold leading-7 text-cream/76"
                             >
                               {bullet}
                             </li>
@@ -171,7 +175,7 @@ export async function BlogPostPage({
             </div>
 
             <aside className="lg:sticky lg:top-28">
-              <div className="rounded-[1.35rem] border border-cream/[0.07] bg-cream/[0.045] p-5">
+              <div className="public-glass rounded-[1.35rem] p-5">
                 <div className="flex items-center gap-3 pb-5">
                   <ListChecks
                     size={31}
@@ -189,7 +193,10 @@ export async function BlogPostPage({
                 </h2>
                 <ol className="mt-5 space-y-4">
                   {post.nextPractice.map((item, index) => (
-                    <li key={item} className="flex gap-3 text-sm font-semibold leading-6 text-cream/68">
+                    <li
+                      key={item}
+                      className="flex gap-3 text-sm font-semibold leading-6 text-cream/68"
+                    >
                       <span className="font-mono text-cream/38">{index + 1}</span>
                       <span>{item}</span>
                     </li>
@@ -220,7 +227,7 @@ export async function BlogPostPage({
                 <Link
                   key={related.slug}
                   href={`/blog/${related.slug}`}
-                  className="group grid gap-5 rounded-[1.2rem] bg-cream/[0.035] p-4 transition sm:grid-cols-[11rem_1fr]"
+                  className="public-glass group grid gap-5 rounded-[1.2rem] p-4 transition sm:grid-cols-[11rem_1fr]"
                 >
                   <div className="relative min-h-[12rem] rounded-[1rem] sm:min-h-full">
                     <Image
@@ -244,7 +251,14 @@ export async function BlogPostPage({
           </section>
         </article>
       </main>
-
+      <SiteFooter
+        sectionHrefPrefix="/"
+        action={
+          <PrimaryAction className="inline-flex items-center gap-2">
+            Start free <ArrowRight size={15} aria-hidden="true" />
+          </PrimaryAction>
+        }
+      />
     </div>
   );
 }

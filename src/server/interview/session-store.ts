@@ -9,6 +9,8 @@ export interface SessionStore {
   /** Durable owner-scoped read used by history and reports; does not enforce room TTL. */
   getOwned(id: string, ownerId: string): Promise<StoredInterviewSession | null>;
   listByOwner(ownerId: string, limit: number): Promise<StoredInterviewSession[]>;
+  /** Moves legacy browser-anonymous sessions into the signed-in owner's history. */
+  reassignOwner(fromOwnerId: string, toOwnerId: string): Promise<number>;
   save(state: InterviewState): Promise<void>;
   /** Backs the "2 sessions per user per day" cap. */
   countStartedSince(ownerId: string, since: number): Promise<number>;
@@ -70,6 +72,18 @@ export class MemorySessionStore implements SessionStore {
       .sort((left, right) => right.state.startedAt - left.state.startedAt)
       .slice(0, limit)
       .map((session) => ({ state: session.state, touchedAt: session.touchedAt }));
+  }
+
+  async reassignOwner(fromOwnerId: string, toOwnerId: string): Promise<number> {
+    let moved = 0;
+    for (const [id, stored] of this.durableSessions.entries()) {
+      if (stored.ownerId !== fromOwnerId) continue;
+      const updated = { ...stored, ownerId: toOwnerId };
+      this.durableSessions.set(id, updated);
+      if (this.sessions.has(id)) this.sessions.set(id, updated);
+      moved += 1;
+    }
+    return moved;
   }
 
   async save(state: InterviewState): Promise<void> {
@@ -154,6 +168,14 @@ export class PrismaSessionStore implements SessionStore {
       state: session.state as unknown as InterviewState,
       touchedAt: session.touchedAt.getTime()
     }));
+  }
+
+  async reassignOwner(fromOwnerId: string, toOwnerId: string): Promise<number> {
+    const result = await this.prisma.interviewSession.updateMany({
+      where: { ownerId: fromOwnerId },
+      data: { ownerId: toOwnerId }
+    });
+    return result.count;
   }
 
   async save(state: InterviewState): Promise<void> {

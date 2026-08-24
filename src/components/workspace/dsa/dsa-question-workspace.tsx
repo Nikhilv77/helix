@@ -69,7 +69,9 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
       } | null;
 
       if (!response.ok || !payload?.success || !payload.data) {
-        throw new Error(payload?.error?.message ?? "The code runner could not execute this solution.");
+        throw new Error(
+          payload?.error?.message ?? "The code runner could not execute this solution."
+        );
       }
 
       setResult(payload.data);
@@ -81,11 +83,11 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
   }
 
   return (
-    <section className="mt-0 min-w-0 overflow-hidden rounded-[0.75rem] border border-cream/20 bg-[#182f73] shadow-[0_18px_45px_rgba(8,20,68,0.18)]">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cream/15 bg-[#203d8d] px-4 py-3 sm:px-5">
-        <div className="flex items-center gap-2 text-sm font-semibold text-cream">
-          <Code2 size={16} aria-hidden="true" className="text-cream/55" />
-          Write your solution
+    <section className="practice-editor-shell mt-0 min-w-0 overflow-hidden rounded-[1.5rem]">
+      <div className="practice-editor-header flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
+        <div className="flex items-center gap-2.5 text-[15px] font-semibold text-cream">
+          <Code2 size={17} aria-hidden="true" style={{ color: "var(--workspace-accent)" }} />
+          Solution
         </div>
         <div className="flex items-center gap-2">
           <label htmlFor="question-language" className="sr-only">
@@ -95,7 +97,7 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
             id="question-language"
             value={language}
             onChange={(event) => changeLanguage(event.target.value as DsaEditorLanguage)}
-            className="h-9 rounded-lg border border-cream/15 bg-cream/[0.05] px-3 text-xs font-medium text-cream outline-none focus:bg-cream/[0.1]"
+            className="h-10 rounded-xl border border-cream/10 bg-cream/[0.055] px-3.5 text-[13px] font-medium text-cream/80 outline-none transition focus:border-[var(--workspace-accent-border)] focus:bg-cream/[0.08]"
           >
             {LANGUAGES.map((item) => (
               <option key={item.value} value={item.value}>
@@ -107,21 +109,30 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
             type="button"
             onClick={() => void runCode()}
             disabled={running || !code.trim()}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-cream px-3.5 text-xs font-semibold text-[#171a16] transition hover:bg-white disabled:pointer-events-none disabled:opacity-45"
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[13px] font-semibold text-[#171a16] transition hover:bg-white disabled:pointer-events-none disabled:opacity-45"
           >
-            {running ? <Loader2 size={13} className="animate-spin" aria-hidden="true" /> : <Play size={13} aria-hidden="true" />}
+            {running ? (
+              <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+            ) : (
+              <Play size={13} aria-hidden="true" />
+            )}
             {running ? "Running" : "Run code"}
           </button>
         </div>
       </div>
 
-      <div className="h-[34rem] min-h-0 overflow-hidden bg-[#172f78] sm:h-[40rem] lg:h-[calc(100svh-18rem)] lg:min-h-[38rem] lg:max-h-[52rem]">
-        <DsaCodeEditor language={language} value={code} onChange={setCode} onRun={() => void runCode()} />
+      <div className="h-[31rem] min-h-0 overflow-hidden bg-[#0b0d10] sm:h-[37rem] lg:h-[calc(100svh-19rem)] lg:min-h-[34rem] lg:max-h-[48rem]">
+        <DsaCodeEditor
+          language={language}
+          value={code}
+          onChange={setCode}
+          onRun={() => void runCode()}
+        />
       </div>
 
       <RunOutput examples={examples} result={result} running={running} error={error} />
 
-      <div className="border-t border-cream/15 bg-[#182f73] px-4 pb-4 sm:px-5">
+      <div className="bg-black/10 px-4 pb-4 sm:px-5">
         <DsaQuestionNotes slug={question.slug} />
       </div>
     </section>
@@ -140,25 +151,44 @@ function RunOutput({
   error: string | null;
 }) {
   return (
-    <section className="border-t border-cream/15 bg-black/10">
-      <div className="flex items-center justify-between gap-3 border-b border-cream/10 px-4 py-3 sm:px-5">
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-cream/45">
-          Test results
-        </span>
+    <section className="bg-black/10 px-4 py-4 sm:px-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h3 className="text-[15px] font-semibold text-cream">Test results</h3>
+          <p className="mt-0.5 text-[13px] leading-5 text-cream/45">
+            Check the supplied examples before submitting.
+          </p>
+        </div>
         {running ? (
-          <span className="flex items-center gap-1.5 text-xs text-cream/45">
-            <Loader2 size={12} className="animate-spin" aria-hidden="true" /> Running tests
+          <span className="flex items-center gap-2 text-[13px] text-cream/50">
+            <Loader2 size={13} className="animate-spin" aria-hidden="true" /> Running tests
           </span>
         ) : result ? (
-          <span className={result.accepted ? "text-xs font-semibold text-[#a9f0d0]" : "text-xs font-semibold text-[#ffb4b4]"}>
+          <span
+            className={
+              result.accepted
+                ? "text-[13px] font-semibold text-cream"
+                : "text-[13px] font-semibold text-[#ffb4b4]"
+            }
+          >
+            <span
+              className="mr-2 inline-block h-2 w-2 rounded-full"
+              style={{ background: result.accepted ? "var(--workspace-accent)" : "#ff8f8f" }}
+            />
             {result.status}
           </span>
         ) : (
-          <span className="text-xs text-cream/30">Run code to check the examples</span>
+          <span className="flex items-center gap-2 text-[13px] text-cream/50">
+            <span
+              className="h-2 w-2 rounded-full shadow-[0_0_12px_var(--workspace-accent)]"
+              style={{ background: "var(--workspace-accent)" }}
+            />
+            Ready to run
+          </span>
         )}
       </div>
 
-      <div className="max-h-72 overflow-y-auto px-4 py-4 sm:px-5">
+      <div className="mt-4 max-h-72 overflow-y-auto pr-1">
         {error ? <p className="text-sm leading-6 text-[#ffb4b4]">{error}</p> : null}
         {result?.compileOutput || result?.stderr ? (
           <pre className="whitespace-pre-wrap font-mono text-xs leading-5 text-[#ffb4b4]">
@@ -167,18 +197,31 @@ function RunOutput({
         ) : result?.tests.length ? (
           <div className="grid gap-3 sm:grid-cols-2">
             {result.tests.map((test) => (
-              <div key={test.index} className="border border-cream/10 bg-cream/[0.025] p-3.5">
+              <div key={test.index} className="practice-glass-soft rounded-2xl p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-semibold text-cream/65">Case {test.index + 1}</span>
-                  <span className={`inline-flex items-center gap-1 text-xs font-semibold ${test.passed ? "text-[#a9f0d0]" : "text-[#ffb4b4]"}`}>
-                    {test.passed ? <CheckCircle2 size={13} aria-hidden="true" /> : <XCircle size={13} aria-hidden="true" />}
+                  <span className="text-[13px] font-semibold text-cream/75">
+                    Case {test.index + 1}
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1 text-[13px] font-semibold ${test.passed ? "text-cream" : "text-[#ffb4b4]"}`}
+                  >
+                    {test.passed ? (
+                      <CheckCircle2 size={13} aria-hidden="true" />
+                    ) : (
+                      <XCircle size={13} aria-hidden="true" />
+                    )}
                     {test.passed ? "Passed" : "Failed"}
                   </span>
                 </div>
-                <dl className="mt-3 grid gap-x-3 gap-y-1 font-mono text-[11px] leading-5 sm:grid-cols-[4.5rem_1fr]">
-                  <dt className="text-cream/35">Input</dt><dd className="break-words text-cream/65">{test.input}</dd>
-                  <dt className="text-cream/35">Expected</dt><dd className="break-words text-cream/65">{test.expectedOutput}</dd>
-                  <dt className="text-cream/35">Output</dt><dd className="break-words text-cream/65">{test.error || test.actualOutput || "No output"}</dd>
+                <dl className="mt-3 grid gap-x-3 gap-y-1.5 font-mono text-[12.5px] leading-5 sm:grid-cols-[4.5rem_1fr]">
+                  <dt className="text-cream/35">Input</dt>
+                  <dd className="break-words text-cream/65">{test.input}</dd>
+                  <dt className="text-cream/35">Expected</dt>
+                  <dd className="break-words text-cream/65">{test.expectedOutput}</dd>
+                  <dt className="text-cream/35">Output</dt>
+                  <dd className="break-words text-cream/65">
+                    {test.error || test.actualOutput || "No output"}
+                  </dd>
                 </dl>
               </div>
             ))}
@@ -186,15 +229,24 @@ function RunOutput({
         ) : examples.length ? (
           <div className="grid gap-3 sm:grid-cols-2">
             {examples.map((example, index) => (
-              <div key={`${example.input}-${index}`} className="border border-cream/10 p-3.5">
-                <p className="text-xs font-semibold text-cream/55">Case {index + 1}</p>
-                <p className="mt-2 font-mono text-[11px] leading-5 text-cream/60">Input: {example.input}</p>
-                <p className="font-mono text-[11px] leading-5 text-cream/60">Expected: {example.output}</p>
+              <div
+                key={`${example.input}-${index}`}
+                className="practice-glass-soft rounded-2xl p-4"
+              >
+                <p className="text-[13px] font-semibold text-cream/75">Case {index + 1}</p>
+                <dl className="mt-3 grid gap-x-3 gap-y-1.5 font-mono text-[12.5px] leading-5 sm:grid-cols-[4.5rem_1fr]">
+                  <dt className="text-cream/35">Input</dt>
+                  <dd className="break-words text-cream/68">{example.input}</dd>
+                  <dt className="text-cream/35">Expected</dt>
+                  <dd className="break-words text-cream/68">{example.output}</dd>
+                </dl>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-xs leading-5 text-cream/35">No runnable examples are available for this question yet.</p>
+          <p className="text-[13px] leading-5 text-cream/40">
+            No runnable examples are available for this question yet.
+          </p>
         )}
       </div>
     </section>

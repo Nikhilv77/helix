@@ -1,15 +1,28 @@
-import { EditorialBackLink } from "@/components/marketing/chrome/editorial-back-link";
+import { ArrowRight } from "lucide-react";
+import { SiteFooter, SiteNav } from "@/components/marketing/chrome/site-chrome";
+import { PrimaryAction } from "@/components/marketing/home/primary-action";
 import type { LegalDocument } from "@/content/marketing/legal";
 
 export function LegalPage({ document }: { document: LegalDocument }) {
   return (
-    <div className="editorial-theme blueprint min-h-screen overflow-x-clip">
-      <EditorialBackLink />
+    <div
+      className="marketing-theme editorial-theme blueprint min-h-screen overflow-x-clip"
+      data-marketing-accent="orange"
+    >
+      <SiteNav
+        actionKind="button"
+        sectionHrefPrefix="/"
+        action={
+          <PrimaryAction ariaLabel="Start" className="outline-none">
+            Start
+          </PrimaryAction>
+        }
+      />
 
       <main className="relative z-10 px-5 pb-12 pt-32 sm:px-8">
         <header className="mx-auto max-w-3xl text-center">
           <p className="blueprint-label text-cream/[0.58]">{document.eyebrow}</p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-cream sm:text-5xl">
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-cream sm:text-4xl">
             {document.title}
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-cream/[0.72]">
@@ -20,17 +33,17 @@ export function LegalPage({ document }: { document: LegalDocument }) {
           </p>
         </header>
 
-        <section className="mx-auto mt-10 max-w-4xl rounded-[2rem] border border-white/10 bg-[#18191c] p-5 text-cream shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-8">
-          <div className="space-y-2">
-            {document.sections.map((section) => {
+        <section className="public-glass mx-auto mt-10 max-w-4xl rounded-[2rem] px-5 text-cream sm:px-8">
+          <div>
+            {document.sections.map((section, index) => {
               const Icon = section.icon;
               return (
                 <section
                   key={section.title}
-                  className="grid gap-4 rounded-2xl p-4 transition hover:bg-[#F26E01]/[0.06] sm:grid-cols-[3rem_1fr]"
+                  className={`grid gap-4 py-7 sm:grid-cols-[3rem_1fr] sm:py-8 ${index > 0 ? "border-t border-white/[0.08]" : ""}`}
                 >
-                  <span className="pt-0.5 text-[#F26E01]">
-                    <Icon size={30} strokeWidth={1.75} aria-hidden="true" />
+                  <span className="pt-0.5 text-cream/58">
+                    <Icon size={28} strokeWidth={1.6} aria-hidden="true" />
                   </span>
                   <div>
                     <h2 className="text-xl font-semibold tracking-tight text-cream">
@@ -44,6 +57,14 @@ export function LegalPage({ document }: { document: LegalDocument }) {
           </div>
         </section>
       </main>
+      <SiteFooter
+        sectionHrefPrefix="/"
+        action={
+          <PrimaryAction className="inline-flex items-center gap-2">
+            Start free <ArrowRight size={15} aria-hidden="true" />
+          </PrimaryAction>
+        }
+      />
     </div>
   );
 }

@@ -23,13 +23,9 @@ export default async function PracticePage() {
 
   return (
     <div>
-      <div className="mx-auto w-full max-w-[84rem] px-4 pb-20 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
+      <div className="mx-auto w-full max-w-[94rem] px-4 pb-20 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
         {plan ? (
-          <DsaTopics
-            plan={plan}
-            roadmap={roadmap}
-            questionStatuses={questionStatuses}
-          />
+          <DsaTopics plan={plan} roadmap={roadmap} questionStatuses={questionStatuses} />
         ) : (
           <p className="mt-10 text-sm text-cream/45">
             The question bank is unavailable right now. Refresh in a moment.

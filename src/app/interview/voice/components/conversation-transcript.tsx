@@ -11,7 +11,9 @@ export function ConversationTranscript({
   setup,
   question,
   thinking,
-  bottomRef
+  bottomRef,
+  compact = false,
+  hideHeader = false
 }: {
   turns: Turn[];
   spokenAgentTurnKeys: ReadonlySet<string>;
@@ -21,6 +23,8 @@ export function ConversationTranscript({
   question: InterviewQuestion | null;
   thinking: boolean;
   bottomRef: RefObject<HTMLDivElement | null>;
+  compact?: boolean;
+  hideHeader?: boolean;
 }) {
   const visibleTurns = mergeConsecutiveUserTurns(
     turns.filter(
@@ -56,27 +60,35 @@ export function ConversationTranscript({
 
   return (
     <section className="msg-in flex min-h-0 flex-col">
-      <div className="flex flex-wrap items-center gap-3 px-1 pb-4">
-        <span className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-cream/62">
-          {isCode ? (
-            <Code2 size={12} aria-hidden="true" />
-          ) : (
-            <BriefcaseBusiness size={12} aria-hidden="true" />
-          )}
-          Live exchange
-        </span>
+      {!hideHeader ? (
+        <div className="flex flex-wrap items-center gap-3 px-1 pb-4">
+          <span className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-cream/62">
+            {isCode ? (
+              <Code2 size={12} aria-hidden="true" />
+            ) : (
+              <BriefcaseBusiness size={12} aria-hidden="true" />
+            )}
+            Live exchange
+          </span>
 
-        {setup ? (
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            <ContextPill>{roleLabel(setup.role)}</ContextPill>
-            <ContextPill>{roundLabel(setup.roundType)}</ContextPill>
-          </div>
-        ) : null}
-      </div>
+          {setup ? (
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <ContextPill>{roleLabel(setup.role)}</ContextPill>
+              <ContextPill>{roundLabel(setup.roundType)}</ContextPill>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {displayTurns.length === 0 ? (
-        <div className="rounded-xl bg-cream/[0.045] px-5 py-5">
-          <p className="text-base leading-7 text-cream sm:text-lg sm:leading-8">
+        <div className="px-1 py-2">
+          <p
+            className={
+              compact
+                ? "text-sm leading-6 text-cream/76"
+                : "text-base leading-7 text-cream sm:text-lg sm:leading-8"
+            }
+          >
             {question
               ? "Maya is getting ready to speak."
               : "Maya is preparing your first question."}
@@ -86,7 +98,7 @@ export function ConversationTranscript({
           ) : null}
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className={compact ? "space-y-5" : "space-y-7"}>
           {displayTurns.map((turn, index) => {
             const isAgent = turn.speaker === "agent";
             const isLatestAgent = isAgent && index === latestAgentIndex;
@@ -97,15 +109,15 @@ export function ConversationTranscript({
                 className={`flex ${isAgent ? "justify-start" : "justify-end"}`}
               >
                 <div
-                  className={`max-w-[min(100%,44rem)] ${
-                    isLatestAgent
-                      ? "rounded-xl bg-cream/[0.06] px-4 py-3"
-                      : isAgent
-                        ? "px-1"
-                        : "rounded-xl bg-black/10 px-4 py-3"
+                  className={`max-w-[min(100%,44rem)] break-words px-1 ${
+                    isAgent ? "text-left" : "max-w-[88%] text-right"
                   }`}
                 >
-                  <div className="mb-2 flex items-center gap-2">
+                  <div
+                    className={
+                      compact ? "mb-1.5 flex items-center gap-2" : "mb-2 flex items-center gap-2"
+                    }
+                  >
                     <span
                       className={`font-mono text-[9px] uppercase tracking-[0.18em] ${
                         isAgent ? "text-cream/60" : "text-cream/38"
@@ -121,11 +133,15 @@ export function ConversationTranscript({
                   <TypewriterText
                     active={isLatestAgent}
                     className={
-                      isLatestAgent
-                        ? "text-base leading-7 text-cream sm:text-lg sm:leading-8"
-                        : isAgent
-                          ? "text-base leading-7 text-cream/82"
-                          : "text-sm leading-6 text-cream/68"
+                      compact
+                        ? isAgent
+                          ? "text-sm leading-6 text-cream/82"
+                          : "text-sm leading-6 text-cream/64"
+                        : isLatestAgent
+                          ? "text-base leading-7 text-cream sm:text-lg sm:leading-8"
+                          : isAgent
+                            ? "text-base leading-7 text-cream/82"
+                            : "text-sm leading-6 text-cream/68"
                     }
                     text={turn.text}
                   />

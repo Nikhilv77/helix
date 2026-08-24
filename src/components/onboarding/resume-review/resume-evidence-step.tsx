@@ -33,8 +33,7 @@ export function ResumeEvidenceStep({
         ? `${firstRole.organization}${firstRole.period ? ` · ${firstRole.period}` : ""}`
         : "No role listed yet. Maya will lean more on projects.",
       note: firstRole?.summary || "Roles and responsibilities pulled from the resume.",
-      icon: BriefcaseBusiness,
-      tilt: "-0.55deg"
+      icon: BriefcaseBusiness
     },
     {
       label: "Projects",
@@ -47,8 +46,7 @@ export function ResumeEvidenceStep({
         firstProject?.outcome ||
         firstProject?.summary ||
         "Project work gives the round concrete systems and decisions to explore.",
-      icon: Blocks,
-      tilt: "0.25deg"
+      icon: Blocks
     },
     {
       label: "Education",
@@ -60,8 +58,7 @@ export function ResumeEvidenceStep({
       note: firstEducation?.period
         ? `Timeline noted: ${firstEducation.period}.`
         : "Schools, programs, and credentials from your resume.",
-      icon: GraduationCap,
-      tilt: "0.55deg"
+      icon: GraduationCap
     }
   ];
 
@@ -115,9 +112,8 @@ export function ResumeEvidenceStep({
                 key={item.label}
                 className="onboarding-card-reveal group flex min-h-[17.5rem] flex-col rounded-[1.35rem] border border-cream/28 bg-cream/[0.035] p-5 text-left text-cream shadow-[inset_0_1px_0_rgba(241,234,216,0.08)] backdrop-blur-[2px] transition duration-300 hover:-translate-y-1 hover:border-cream/45 hover:bg-cream/[0.05] sm:p-6"
                 style={
-                  {
-                    "--card-delay": `${260 + index * 170}ms`,
-                    "--card-tilt": item.tilt
+                      {
+                    "--card-delay": `${260 + index * 170}ms`
                   } as CSSProperties
                 }
               >
@@ -164,4 +160,3 @@ export function ResumeEvidenceStep({
     </div>
   );
 }
-

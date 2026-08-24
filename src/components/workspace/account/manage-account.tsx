@@ -7,10 +7,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { createPortal } from "react-dom";
 import { ApiClientError, deleteAccount, saveWorkspaceAccent } from "@/lib/api/api-client";
 import type { CandidateProfile } from "@/lib/shared/types";
-import {
-  type WorkspaceAccent,
-  WORKSPACE_ACCENT_CHANGE_EVENT
-} from "@/lib/workspace/accent";
+import { type WorkspaceAccent, WORKSPACE_ACCENT_CHANGE_EVENT } from "@/lib/workspace/accent";
 
 const MANAGE_ORIGIN_KEY = "trailgrad:manage-origin";
 
@@ -111,7 +108,6 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
 
   return (
     <section className="profile-theme relative mx-auto flex min-h-screen w-full max-w-[84rem] flex-col px-4 pb-20 pt-6 text-cream sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
-
       <div className="relative z-10 mx-auto flex min-h-[calc(100svh-5rem)] w-full max-w-4xl flex-col items-center justify-center py-10 text-center">
         <div
           ref={avatarRef}
@@ -159,7 +155,7 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
           </p>
 
           <section
-            className="manage-action-line order-2 mx-auto mt-4 w-full max-w-6xl rounded-[1.5rem] bg-[#17181b] p-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] sm:p-6"
+            className="manage-action-line report-glass-card order-2 mx-auto mt-4 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:p-6"
             style={{ "--line-delay": "3200ms" } as CSSProperties}
           >
             <h2 className="text-base font-semibold text-cream">Account actions</h2>
@@ -199,7 +195,7 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
           </section>
 
           <section
-            className="manage-action-line order-1 mx-auto mt-10 w-full max-w-6xl rounded-[1.5rem] bg-[#17181b] p-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] sm:p-6"
+            className="manage-action-line report-glass-card order-1 mx-auto mt-10 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:p-6"
             style={{ "--line-delay": "3340ms" } as CSSProperties}
           >
             <div>
@@ -374,8 +370,7 @@ function AccentThemeCard({
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.035]"
           style={{
-            background:
-              "linear-gradient(135deg, var(--card-accent), transparent 48%)"
+            background: "linear-gradient(135deg, var(--card-accent), transparent 48%)"
           }}
         />
 

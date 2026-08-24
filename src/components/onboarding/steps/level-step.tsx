@@ -7,26 +7,22 @@ import type { Level } from "@/lib/shared/types";
 
 const headingWords = ["Where", "are", "you", "starting", "from?"];
 
-const levelCopy: Record<Level, { word: string; line: string; tilt: number }> = {
+const levelCopy: Record<Level, { word: string; line: string }> = {
   fresher: {
     word: "Start",
-    line: "You are building proof, language, and interview rhythm.",
-    tilt: -0.7
+    line: "You are building proof, language, and interview rhythm."
   },
   "0-2": {
     word: "Grow",
-    line: "You have shipped some work and need sharper stories around it.",
-    tilt: 0.35
+    line: "You have shipped some work and need sharper stories around it."
   },
   "3-5": {
     word: "Own",
-    line: "You have real scope, tradeoffs, and decisions to defend.",
-    tilt: -0.25
+    line: "You have real scope, tradeoffs, and decisions to defend."
   },
   "5-plus": {
     word: "Lead",
-    line: "You need to show judgment, leverage, and systems-level thinking.",
-    tilt: 0.55
+    line: "You need to show judgment, leverage, and systems-level thinking."
   }
 };
 
@@ -110,8 +106,7 @@ export function LevelStep({
               ].join(" ")}
               style={
                 {
-                  "--card-delay": `${360 + index * 115}ms`,
-                  "--card-tilt": `${copy.tilt}deg`
+                  "--card-delay": `${360 + index * 115}ms`
                 } as CSSProperties
               }
             >

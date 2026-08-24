@@ -44,7 +44,9 @@ export function DsaTopics({
   const title = activeSession?.title ?? fallback?.title ?? "Full-stack DSA";
   const purpose = activeSession?.purpose ?? fallback?.purpose ?? "";
 
-  const hours = roadmap ? Math.round(roadmap.totalMinutes / 60) : Math.round(plan.totalMinutes / 60);
+  const hours = roadmap
+    ? Math.round(roadmap.totalMinutes / 60)
+    : Math.round(plan.totalMinutes / 60);
   const mix = roadmap?.questionMix ?? plan.counts;
 
   // Per-chapter progress, keyed by slug, so each block can show real state.
@@ -85,22 +87,35 @@ export function DsaTopics({
       />
 
       <div className="mt-8">
-        <div className="flex flex-col gap-2 border-b border-cream/20 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-cream/42">
-              Practice plan
+            <p className="text-[12px] font-semibold uppercase tracking-[0.22em] text-cream/42">
+              Pattern library
             </p>
-            <p className="mt-1 text-[14.5px] leading-6 text-cream/58">
-              Work through each pattern, then open a question when you are ready to solve.
+            <h2 className="mt-2 max-w-2xl font-display text-2xl font-semibold tracking-[-0.035em] text-cream sm:text-[2rem]">
+              Build the instincts that make a solution feel obvious.
+            </h2>
+            <p className="mt-2 max-w-2xl text-[15px] leading-7 text-cream/55">
+              Open a chapter for Maya&apos;s briefing or go directly to a problem. Your progress
+              stays attached to every pattern.
             </p>
           </div>
-          <p className="text-[13px] leading-5 text-cream/38 sm:text-right">
-            {roadmap?.completedQuestions ?? 0} of {roadmap?.totalQuestions ?? plan.totalQuestions} complete
-          </p>
+          <div className="practice-glass-soft flex shrink-0 items-center gap-3 rounded-2xl px-4 py-3">
+            <span
+              className="h-2 w-2 rounded-full shadow-[0_0_14px_var(--workspace-accent)]"
+              style={{ backgroundColor: "var(--workspace-accent)" }}
+            />
+            <p className="text-[14px] text-cream/58">
+              <strong className="font-semibold text-cream">
+                {roadmap?.completedQuestions ?? 0}
+              </strong>{" "}
+              of {roadmap?.totalQuestions ?? plan.totalQuestions} complete
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="divide-y divide-cream/10">
+      <div className="mt-6 space-y-4">
         {plan.chapters.map((chapter, index) => (
           <ChapterBlock
             key={chapter.id}
@@ -114,7 +129,6 @@ export function DsaTopics({
     </section>
   );
 }
-
 
 function ChapterBlock({
   chapter,
@@ -133,29 +147,41 @@ function ChapterBlock({
 
   return (
     <details
-      className={`group overflow-hidden ${current ? "bg-cream/[0.025]" : ""}`}
+      className={`practice-chapter-card group overflow-hidden ${current ? "is-current" : ""}`}
       open={index === 0}
     >
-      <summary className="flex cursor-pointer list-none items-start gap-4 py-5 transition hover:bg-cream/[0.035] [&::-webkit-details-marker]:hidden sm:gap-5">
+      <summary className="flex cursor-pointer list-none items-start gap-4 p-5 [&::-webkit-details-marker]:hidden sm:gap-5 sm:p-6">
         <span
-          className={`mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl text-xs font-semibold ${
-            done ? "bg-[#8be6bd]/15 text-[#8be6bd]" : "bg-cream/[0.07] font-mono text-cream/60"
-          }`}
+          className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-cream/[0.1] bg-black/25 font-mono text-[12px] font-semibold text-cream/52"
+          style={
+            done
+              ? { color: "var(--workspace-accent)", borderColor: "var(--workspace-accent-border)" }
+              : undefined
+          }
         >
           {done ? <Check size={16} aria-hidden="true" /> : String(index + 1).padStart(2, "0")}
         </span>
 
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="text-lg font-semibold tracking-tight text-cream">{chapter.title}</span>
-            <span className="text-xs font-medium text-cream/40">
+            <span className="text-lg font-semibold tracking-[-0.02em] text-cream sm:text-xl">
+              {chapter.title}
+            </span>
+            <span className="text-[13px] font-medium text-cream/40">
               {progress
                 ? `${progress.completedQuestions}/${progress.questions} done`
                 : `${chapter.questions.length} questions`}{" "}
               · ~{Math.round(chapter.minutes / 60)}h
             </span>
             {current ? (
-              <span className="rounded-md bg-cream/[0.1] px-2 py-0.5 text-[11px] font-semibold text-cream/75">
+              <span
+                className="rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
+                style={{
+                  color: "var(--workspace-accent)",
+                  borderColor: "var(--workspace-accent-border)",
+                  backgroundColor: "var(--workspace-accent-soft)"
+                }}
+              >
                 Current
               </span>
             ) : null}
@@ -165,11 +191,15 @@ function ChapterBlock({
           </span>
 
           {progress && progress.completedQuestions > 0 ? (
-            <span className="mt-3 flex items-center gap-3">
-              <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-[#1e3c88]">
+            <span className="mt-4 flex items-center gap-3">
+              <span className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-cream/[0.08]">
                 <span
-                  className="block h-full rounded-full bg-[#8be6bd]"
-                  style={{ width: `${percent}%` }}
+                  className="block h-full rounded-full"
+                  style={{
+                    width: `${percent}%`,
+                    backgroundColor: "var(--workspace-accent)",
+                    boxShadow: "0 0 12px var(--workspace-accent)"
+                  }}
                 />
               </span>
               <span className="shrink-0 text-[11.5px] font-semibold text-cream/50">{percent}%</span>
@@ -190,19 +220,27 @@ function ChapterBlock({
         />
       </summary>
 
-      <div className="border-t border-cream/[0.07] py-3 sm:pl-[4.5rem]">
+      <div className="border-t border-cream/[0.07] px-5 pt-4 sm:px-6 sm:pl-[5.5rem]">
         <Link
           href={`/practice/${chapter.id}`}
-          className="group/session flex items-center gap-3 rounded-xl border border-cream/15 bg-cream/[0.035] p-3.5 transition hover:bg-cream/[0.08]"
+          className="group/session flex items-center gap-3 rounded-2xl border p-4 transition duration-300 hover:-translate-y-0.5"
+          style={{
+            borderColor: "var(--workspace-accent-border)",
+            background:
+              "linear-gradient(120deg, var(--workspace-accent-soft), rgba(255,255,255,0.025) 72%)"
+          }}
         >
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-cream text-[#254294]">
+          <span
+            className="grid h-9 w-9 shrink-0 place-items-center"
+            style={{ color: "var(--workspace-accent)" }}
+          >
             <Sparkles size={16} aria-hidden="true" />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold text-cream">
               Take this session with Maya
             </span>
-            <span className="mt-0.5 block text-xs text-cream/45">
+            <span className="mt-0.5 block text-[13px] leading-5 text-cream/50">
               She sets up the pattern and the traps, then you solve.
             </span>
           </span>
@@ -214,7 +252,7 @@ function ChapterBlock({
         </Link>
       </div>
 
-      <ul className="pb-3 sm:pl-[4.5rem]">
+      <ul className="grid gap-2 p-5 sm:px-6 sm:pl-[5.5rem] lg:grid-cols-2">
         {chapter.questions.map((question, position) => (
           <li key={question.slug}>
             <QuestionRow
@@ -229,16 +267,10 @@ function ChapterBlock({
   );
 }
 
-const MIX_TONE: Record<"easy" | "medium" | "hard", string> = {
-  easy: "bg-emerald-400/14 text-emerald-200/90",
-  medium: "bg-amber-400/14 text-amber-200/90",
-  hard: "bg-rose-400/14 text-rose-200/90"
-};
-
 function MixChip({ tone, count }: { tone: "easy" | "medium" | "hard"; count: number }) {
   if (count === 0) return null;
   return (
-    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${MIX_TONE[tone]}`}>
+    <span className="rounded-full border border-cream/[0.08] bg-black/20 px-2.5 py-1 text-[11px] font-semibold capitalize text-cream/48">
       {count} {tone}
     </span>
   );
@@ -259,14 +291,19 @@ function QuestionRow({
   return (
     <Link
       href={`/dsa-questions/${question.slug}`}
-      className="group/row flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-cream/[0.06] sm:gap-4"
+      className="practice-question-row group/row flex min-h-[4.75rem] items-center gap-3 rounded-2xl px-3.5 py-3 transition sm:gap-4"
     >
       <span
-        className={`grid h-6 w-6 shrink-0 place-items-center rounded-md transition ${
+        className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-cream/[0.08] bg-black/20 text-cream/30 transition group-hover/row:text-cream/60"
+        style={
           done
-            ? "bg-[#8be6bd]/15 text-[#8be6bd]"
-            : "bg-cream/[0.06] text-cream/30 group-hover/row:text-cream/60"
-        }`}
+            ? {
+                color: "var(--workspace-accent)",
+                borderColor: "var(--workspace-accent-border)",
+                backgroundColor: "var(--workspace-accent-soft)"
+              }
+            : undefined
+        }
       >
         {done ? (
           <Check size={13} aria-hidden="true" />
@@ -290,7 +327,7 @@ function QuestionRow({
         >
           {question.title}
         </span>
-        <span className="mt-0.5 block truncate text-[11px] text-cream/33">
+        <span className="mt-0.5 block truncate text-[12px] capitalize text-cream/38">
           {question.primaryPattern.replace(/-/g, " ")}
         </span>
       </span>
@@ -298,9 +335,7 @@ function QuestionRow({
       <span className="hidden shrink-0 items-center gap-1 text-[11px] text-cream/35 sm:flex">
         <Clock size={11} aria-hidden="true" /> {question.expectedTimeMinutes}m
       </span>
-      <span
-        className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold capitalize ${MIX_TONE[question.difficulty]}`}
-      >
+      <span className="shrink-0 rounded-full border border-cream/[0.08] bg-black/20 px-2 py-1 text-[10px] font-semibold capitalize text-cream/45">
         {question.difficulty}
       </span>
     </Link>

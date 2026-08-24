@@ -3,14 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import {
-  ChartNoAxesCombined,
-  GraduationCap,
-  Mic,
-  Menu,
-  PlayCircle,
-  X
-} from "lucide-react";
+import { ChartNoAxesCombined, GraduationCap, Mic, Menu, PlayCircle, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { TrailgradMark } from "@/components/brand/blueprint-art";
 
@@ -145,7 +138,7 @@ export function SiteNav({
 
   return (
     <header className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4 sm:top-5">
-      <div className="pointer-events-auto relative w-full max-w-[58rem]">
+      <div className="pointer-events-auto relative w-full max-w-[68rem]">
         <nav
           className={[
             "grid grid-cols-[auto_1fr_auto] items-center overflow-hidden rounded-[1.35rem] border border-transparent bg-[#18191c] px-2.5 py-2.5 shadow-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:border-white/10 sm:bg-[#18191c]/95 sm:shadow-[0_20px_54px_-40px_rgba(0,0,0,0.28)] sm:backdrop-blur-md",
@@ -279,7 +272,7 @@ export function SiteFooter({
   sectionHrefPrefix?: string;
 }) {
   return (
-    <footer className="relative z-10 rounded-t-[2.5rem] bg-cream/[0.04] px-6 py-10 text-cream backdrop-blur-[2px] sm:rounded-t-[3.5rem] sm:px-10 sm:backdrop-blur-md">
+    <footer className="relative z-10 px-6 py-12 text-cream sm:px-10 sm:py-14">
       <div className="mx-auto w-full max-w-[78rem]">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-sm">
@@ -288,7 +281,7 @@ export function SiteFooter({
               aria-label="Trailgrad home"
               className="inline-flex items-center gap-2 rounded-xl text-cream outline-none focus-visible:ring-2 focus-visible:ring-cream/35"
             >
-              <span className="grid h-11 w-11 place-items-center rounded-[1rem] bg-cream/[0.05]">
+              <span className="grid h-11 w-11 place-items-center rounded-[1rem] border border-cream/10 bg-cream/[0.025]">
                 <TrailgradMark className="h-8 w-8" />
               </span>
               <span className="text-2xl font-semibold tracking-tight text-cream">Trailgrad</span>
@@ -345,4 +338,3 @@ export function SiteFooter({
     </footer>
   );
 }
-

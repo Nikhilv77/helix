@@ -57,9 +57,10 @@ export function createReportsOverview(
     null
   );
   const latestRound = scored.at(-1) ?? null;
-  const latestCompletedReport = [...scored]
-    .reverse()
-    .find((report) => report.status === "completed") ?? null;
+  // A report becomes useful as soon as the candidate has answered something.
+  // Do not leave the Reports page in its empty state while a just-finished
+  // round is still moving through the wrap-up phase.
+  const latestCompletedReport = latestRound;
 
   return {
     generatedAt: now,

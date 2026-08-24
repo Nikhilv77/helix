@@ -42,7 +42,7 @@ export interface ReportsOverview {
   rounds: ReportRoundRow[];
   latest: ReportRoundRow | null;
   best: ReportRoundRow | null;
-  /** Full data for the most recent finished interview, used by the report detail view. */
+  /** Full data for the most recent interview with answer evidence. */
   latestCompletedReport?: InterviewReport | null;
 }
 

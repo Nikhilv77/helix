@@ -86,8 +86,7 @@ export function WorkspaceShell({
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState("");
-  const [workspaceAccent, setWorkspaceAccent] =
-    useState<WorkspaceAccent>(initialAccent);
+  const [workspaceAccent, setWorkspaceAccent] = useState<WorkspaceAccent>(initialAccent);
   const [accentShimmerKey, setAccentShimmerKey] = useState(0);
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true");
@@ -310,7 +309,7 @@ export function WorkspaceShell({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search"
-              className="h-9 w-full rounded-lg border border-white/[0.07] bg-white/[0.035] pl-8 pr-2.5 text-[0.88rem] text-cream placeholder:text-cream/42 outline-none transition focus:border-[#F26E01]/35 focus:bg-white/[0.055] focus-visible:ring-2 focus-visible:ring-[#F26E01]/25"
+              className="h-9 w-full rounded-lg border border-white/[0.07] bg-white/[0.035] pl-8 pr-2.5 text-[0.88rem] text-cream placeholder:text-cream/42 outline-none transition focus:border-white/[0.14] focus:bg-white/[0.055] focus-visible:ring-2 focus-visible:ring-white/[0.08]"
             />
           </label>
 

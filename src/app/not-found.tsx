@@ -4,15 +4,13 @@ import { TrailgradMark } from "@/components/trailgrad-mark";
 
 export default function NotFound() {
   return (
-    <main className="blueprint relative grid min-h-screen min-h-[100svh] place-items-center overflow-hidden px-5 py-16 text-cream">
-      <div className="blueprint-grid" />
-      <div className="blueprint-rails" />
+    <main className=" relative grid min-h-screen min-h-[100svh] place-items-center overflow-hidden px-5 py-16 text-cream">
       <div className="blueprint-glow" />
 
       <section className="relative z-10 mx-auto w-full max-w-2xl text-center">
         <TrailgradMark className="mx-auto h-20 w-20 text-cream/78" />
 
-        <p className="blueprint-label mt-8 text-cream/48">404</p>
+        <p className=" mt-8 text-cream/48">404</p>
         <h1 className="mt-4 text-balance text-[2.45rem] font-bold leading-tight tracking-tight text-cream sm:text-[4.5rem]">
           This trail stops here.
         </h1>

@@ -1,4 +1,7 @@
-import { ProgressView } from "@/components/workspace/progress/progress-view";
+import {
+  ProgressView,
+  type ProgressStarterQuestion
+} from "@/components/workspace/progress/progress-view";
 import type { ProgressInterview } from "@/lib/roadmap/progress";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
@@ -25,7 +28,10 @@ export default async function ProgressPage() {
   const { ownerId, profile } = await requireOnboardedProfile();
   const container = getAppContainer();
 
-  const insights = await container.interviewService.insights(ownerId).catch(() => null);
+  const [insights, plan] = await Promise.all([
+    container.interviewService.insights(ownerId).catch(() => null),
+    container.dsaService.frontendPlan().catch(() => null)
+  ]);
 
   const interview: ProgressInterview = insights
     ? {
@@ -40,11 +46,25 @@ export default async function ProgressPage() {
     : EMPTY_INTERVIEW;
 
   const overview = await container.progressService.overview(ownerId, interview);
+  const starterQuestions: ProgressStarterQuestion[] =
+    plan?.chapters
+      .flatMap((chapter) =>
+        chapter.questions.map((question) => ({
+          title: question.title,
+          difficulty: question.difficulty,
+          minutes: question.expectedTimeMinutes,
+          href: `/dsa-questions/${question.slug}`,
+          chapterTitle: chapter.title
+        }))
+      )
+      .filter((question) => question.difficulty === "easy")
+      .slice(0, 3) ?? [];
 
   return (
     <ProgressView
       overview={overview}
       firstName={profile.resume?.fullName?.trim().split(/\s+/)[0] ?? ""}
+      starterQuestions={starterQuestions}
     />
   );
 }

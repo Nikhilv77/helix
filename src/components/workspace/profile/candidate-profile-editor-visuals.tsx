@@ -10,7 +10,6 @@ import {
 import { ProfileAvatar } from "./profile-avatar";
 import type { CandidateProfile, CandidateProfileInput, CandidateStory } from "@/lib/shared/types";
 import { roleOptions, statTones } from "./candidate-profile-editor-data";
-import { SectionUiTexture } from "./candidate-profile-editor-resume-anchors";
 import { formatTimestamp } from "./candidate-profile-editor-utils";
 
 export function ProfileHeroSidePatterns() {
@@ -293,21 +292,18 @@ export function SignatureStoryCard({ story }: { story?: CandidateStory }) {
   if (!story?.title) return null;
 
   return (
-    <section className="workspace-accent-card-glow relative z-10 mt-6 overflow-hidden rounded-[1.5rem] border border-[#F26E01]/30 p-6 shadow-[0_24px_64px_-38px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.07)] sm:p-8">
-      <CardPattern variant="quote" />
-      <SectionUiTexture variant={1} />
-      <Quote size={20} className="absolute left-6 top-6 text-cream/42" aria-hidden />
-      <div className="relative px-9 sm:px-11">
-        <p className="max-w-5xl text-base leading-7 text-cream/84 sm:text-[17px] sm:leading-8">
-          {story.outcome || story.situation}
-        </p>
-        <p className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-cream/58">
-          {story.title}
-        </p>
+    <section className="profile-glass profile-motion relative z-10 mt-6 rounded-2xl px-6 py-6 sm:px-8 sm:py-7">
+      <div className="flex items-start gap-4 sm:gap-5">
+        <Quote size={24} strokeWidth={1.5} className="mt-0.5 shrink-0 text-cream/48" aria-hidden />
+        <div className="min-w-0">
+          <p className="max-w-5xl text-base leading-7 text-cream/82 sm:text-[17px] sm:leading-8">
+            {story.outcome || story.situation}
+          </p>
+          <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-cream/42">
+            {story.title}
+          </p>
+        </div>
       </div>
-      <span className="absolute bottom-6 right-6 grid h-10 w-10 place-items-center rounded-full border border-cream/18 bg-cream/[0.035] text-cream/48">
-        <Quote size={16} />
-      </span>
     </section>
   );
 }

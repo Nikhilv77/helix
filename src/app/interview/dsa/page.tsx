@@ -19,6 +19,7 @@ export default async function DsaInterviewEntryPage() {
     <DsaInterviewEntry
       completedCount={completed.length}
       firstName={profile.resume?.fullName?.trim().split(/\s+/)[0] ?? ""}
+      workspaceAccent={profile.workspaceAccent}
     />
   );
 }

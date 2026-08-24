@@ -3,7 +3,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, BookOpen, CalendarDays, Clock, Sparkles } from "lucide-react";
 import { TrailgradMark } from "@/components/brand/blueprint-art";
-import { EditorialBackLink } from "@/components/marketing/chrome/editorial-back-link";
+import { SiteFooter, SiteNav } from "@/components/marketing/chrome/site-chrome";
+import { PrimaryAction } from "@/components/marketing/home/primary-action";
 import { blogPosts } from "@/content/marketing/blog";
 
 export const metadata: Metadata = {
@@ -24,14 +25,21 @@ export function BlogIndexPage() {
   if (!featured) return null;
 
   return (
-    <div className="editorial-theme blueprint min-h-screen overflow-x-clip">
-      <EditorialBackLink />
+    <div
+      className="marketing-theme editorial-theme blueprint min-h-screen overflow-x-clip"
+      data-marketing-accent="orange"
+    >
+      <SiteNav
+        actionKind="button"
+        sectionHrefPrefix="/"
+        action={
+          <PrimaryAction ariaLabel="Start" className="outline-none">
+            Start
+          </PrimaryAction>
+        }
+      />
 
       <main className="relative z-10 px-5 pb-14 pt-32 sm:px-10 sm:pb-20 sm:pt-36">
-        <div className="pointer-events-none absolute left-1/2 top-24 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full" />
-        <div className="pointer-events-none absolute -right-24 top-[36rem] hidden h-80 w-80 rounded-full sm:block" />
-        <div className="pointer-events-none absolute -left-28 bottom-72 hidden h-72 w-72 rounded-full sm:block" />
-
         <section className="relative mx-auto w-full max-w-[78rem]">
           <div className="blog-rise mx-auto max-w-4xl text-center">
             <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/18 bg-cream/[0.045] px-3.5 py-1.5 sm:backdrop-blur-sm">
@@ -40,18 +48,18 @@ export function BlogIndexPage() {
                 Trailgrad notes
               </span>
             </span>
-            <h1 className="display-heading mt-6 text-4xl text-cream sm:text-6xl lg:text-7xl">
+            <h1 className="display-heading mt-6 text-4xl text-cream sm:text-5xl lg:text-6xl">
               Clearer practice starts here.
             </h1>
             <p className="mx-auto mt-7 max-w-2xl text-lg leading-relaxed text-cream/76 sm:text-xl">
-              Short reads on resumes, interview answers, and the small fixes that make practice
-              feel easier to use.
+              Short reads on resumes, interview answers, and the small fixes that make practice feel
+              easier to use.
             </p>
           </div>
 
           <Link
             href={`/blog/${featured.slug}`}
-            className="blog-feature group mt-14 grid gap-8 transition lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:items-center"
+            className="public-glass blog-feature group mt-14 grid gap-8 rounded-[1.75rem] p-5 transition lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:items-center lg:p-8"
           >
             <div className="relative order-2 lg:order-1">
               <div className="flex flex-wrap items-center gap-3">
@@ -63,7 +71,7 @@ export function BlogIndexPage() {
                   {featured.readTime}
                 </span>
               </div>
-              <h2 className="mt-6 max-w-xl text-3xl font-semibold tracking-tight text-cream sm:text-4xl">
+              <h2 className="mt-6 max-w-xl text-3xl font-semibold tracking-tight text-cream sm:text-[2.15rem]">
                 {featured.title}
               </h2>
               <p className="mt-5 max-w-xl text-base leading-7 text-cream/68 sm:text-lg">
@@ -112,7 +120,7 @@ export function BlogIndexPage() {
               <Link
                 key={post.slug}
                 href={`/blog/${post.slug}`}
-                className="blog-note-card group grid gap-5 rounded-[1.25rem] bg-cream/[0.035] p-4 transition sm:grid-cols-[13rem_1fr_auto] sm:items-center"
+                className="public-glass blog-note-card group grid gap-5 rounded-[1.25rem] p-4 transition sm:grid-cols-[13rem_1fr_auto] sm:items-center"
                 style={{ animationDelay: `${180 + index * 130}ms` }}
               >
                 <div className="relative min-h-[12rem] rounded-[1.15rem] border border-cream/[0.04] sm:min-h-[8.5rem]">
@@ -158,7 +166,7 @@ export function BlogIndexPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               {["Resume stories", "Live answers", "Next fixes"].map((item) => (
-                <div key={item} className="rounded-[1.1rem] bg-cream/[0.035] p-5">
+                <div key={item} className="public-subtle-card rounded-[1.1rem] p-5">
                   <p className="blueprint-label text-cream/40">{item}</p>
                   <p className="mt-3 text-base leading-7 text-cream/64">
                     Small, practical ideas you can turn into one better practice session.
@@ -169,7 +177,14 @@ export function BlogIndexPage() {
           </section>
         </section>
       </main>
-
+      <SiteFooter
+        sectionHrefPrefix="/"
+        action={
+          <PrimaryAction className="inline-flex items-center gap-2">
+            Start free <ArrowRight size={15} aria-hidden="true" />
+          </PrimaryAction>
+        }
+      />
     </div>
   );
 }

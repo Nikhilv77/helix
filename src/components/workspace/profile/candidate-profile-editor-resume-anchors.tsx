@@ -88,21 +88,20 @@ export function ProfileResumeAnchors({ resume }: { resume: CandidateProfile["res
 
   return (
     <section
-      className="profile-soft-reveal mt-10 w-full max-w-[82rem] text-left"
+      className="profile-soft-reveal mt-14 w-full max-w-6xl text-left"
       style={{ "--profile-reveal-delay": "2580ms" } as CSSProperties}
     >
-      <div className="mx-auto h-px w-[calc(100%-2rem)] max-w-6xl bg-gradient-to-r from-transparent via-cream/30 to-transparent" />
-
-      <div className="mt-7 flex flex-col items-center text-center">
-        <p className="inline-flex border-b border-cream/42 pb-1 text-base font-medium text-cream/74">
-          Resume anchors
+      <div className="flex flex-col items-center text-center">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cream/38">
+          Interview evidence
         </p>
+        <h2 className="mt-2 text-2xl font-medium tracking-tight text-cream">Resume anchors</h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-cream/58 sm:text-[15px]">
           Maya found the parts of your resume that can become interview questions.
         </p>
       </div>
 
-      <div className="mx-auto mt-7 flex w-full max-w-5xl flex-wrap justify-center divide-y divide-white/[0.12] border-y border-white/[0.1] md:divide-x md:divide-y-0">
+      <div className="mx-auto mt-6 grid w-full grid-cols-2 gap-3 lg:grid-cols-4">
         {summaryCards.map((card, index) => (
           <ResumeSummaryTile
             key={card.label}
@@ -114,12 +113,12 @@ export function ProfileResumeAnchors({ resume }: { resume: CandidateProfile["res
         ))}
       </div>
 
-      <div className="mt-9 space-y-10">
+      <div className="mt-8 space-y-8">
         <ResumeWorkTimeline cards={workCards} />
-        <div className="grid gap-8 lg:grid-cols-[1.35fr_0.8fr_0.8fr]">
-          <ResumeAnchorGroup title="Projects" cards={projectCards} featured />
-          <ResumeAnchorGroup title="Education" cards={educationCards} compact />
-          <ResumeAnchorGroup title="Proof" cards={proofCards} compact />
+        <div className="grid gap-5 lg:grid-cols-3">
+          <ResumeAnchorGroup title="Projects" cards={projectCards} />
+          <ResumeAnchorGroup title="Education" cards={educationCards} />
+          <ResumeAnchorGroup title="Proof" cards={proofCards} />
         </div>
       </div>
     </section>
@@ -139,34 +138,19 @@ function ResumeSummaryTile({
 }) {
   return (
     <article
-      className={[
-        "profile-soft-reveal flex min-w-[10rem] flex-1 items-center gap-3 px-5 py-3 text-left md:min-w-0 md:justify-center",
-        index === 0 ? "border-b-2 border-[#F26E01]" : ""
-      ].join(" ")}
+      className="profile-glass profile-soft-reveal flex items-center gap-3 rounded-xl px-4 py-4 text-left"
       style={{ "--profile-reveal-delay": `${2700 + index * 70}ms` } as CSSProperties}
     >
-      <Icon size={25} strokeWidth={1.55} className="shrink-0 text-[#F26E01]" />
+      <Icon size={23} strokeWidth={1.55} className="shrink-0 text-[var(--workspace-accent)]" />
       <div className="min-w-0">
-        <h3 className="text-base font-medium leading-none text-cream">{label}</h3>
-        <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-cream/48">
-          {count}
-        </p>
+        <h3 className="text-sm font-medium leading-none text-cream sm:text-base">{label}</h3>
+        <p className="mt-2 text-xs text-cream/48 sm:text-[13px]">{count}</p>
       </div>
     </article>
   );
 }
 
-function ResumeAnchorGroup({
-  title,
-  cards,
-  featured = false,
-  compact = false
-}: {
-  title: string;
-  cards: ProfileResumeAnchor[];
-  featured?: boolean;
-  compact?: boolean;
-}) {
+function ResumeAnchorGroup({ title, cards }: { title: string; cards: ProfileResumeAnchor[] }) {
   if (!cards.length) return null;
   const groupDelay = 2860 + ["Work", "Projects", "Education", "Proof"].indexOf(title) * 130;
 
@@ -175,19 +159,17 @@ function ResumeAnchorGroup({
       className="profile-soft-reveal relative"
       style={{ "--profile-reveal-delay": `${groupDelay}ms` } as CSSProperties}
     >
-      <div className="mb-4 flex items-center gap-4">
-        <h3 className="text-lg font-medium text-cream/82">{title}</h3>
-        <span className="h-px flex-1 bg-gradient-to-r from-cream/28 to-transparent" />
-      </div>
+      <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-cream/42">
+        {title}
+      </h3>
 
-      <div className={featured ? "grid gap-3" : "grid gap-3"}>
+      <div className="grid gap-3">
         {cards.map((card, index) => (
           <ProfileResumeAnchorCard
             key={card.id}
             card={card}
             index={index}
             groupDelay={groupDelay}
-            variant={featured ? "project" : compact ? "compact" : "default"}
           />
         ))}
       </div>
@@ -202,83 +184,32 @@ function ResumeWorkTimeline({ cards }: { cards: ProfileResumeAnchor[] }) {
       className="profile-soft-reveal"
       style={{ "--profile-reveal-delay": "2860ms" } as CSSProperties}
     >
-      <div className="mb-5 flex items-center gap-4">
-        <span className="workspace-accent-dot h-2 w-2 rounded-full" />
-        <h3 className="text-lg font-medium text-cream/84">Work experience</h3>
-        <span className="h-px flex-1 bg-gradient-to-r from-white/20 to-transparent" />
-      </div>
-      <div className="relative border-l border-white/[0.14] pl-8 sm:pl-12">
-        {cards.map((card) => (
-          <ResumeTimelineEntry key={card.id} card={card} />
+      <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-cream/42">
+        Work experience
+      </h3>
+      <div className="grid gap-3 lg:grid-cols-2">
+        {cards.map((card, index) => (
+          <ProfileResumeAnchorCard key={card.id} card={card} index={index} groupDelay={2860} />
         ))}
       </div>
     </section>
   );
 }
 
-function ResumeTimelineEntry({ card }: { card: ProfileResumeAnchor }) {
-  const Icon = card.icon;
-  return (
-    <article className="relative mb-9 border-b border-white/[0.1] pb-9 last:mb-0 last:border-b-0 last:pb-0">
-      <span className="workspace-accent-ring absolute -left-[2.65rem] top-1 grid h-5 w-5 place-items-center rounded-full border border-[#F26E01]/55 bg-[#101113] sm:-left-[3.65rem]">
-        <span className="h-2 w-2 rounded-full bg-[#F26E01]" />
-      </span>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <Icon size={23} strokeWidth={1.55} className="mt-0.5 shrink-0 text-[#F26E01]" />
-          <div>
-            <h4 className="text-xl font-medium leading-tight text-cream">{card.title}</h4>
-            {card.meta ? (
-              <p className="mt-2 text-[15px] leading-6 text-cream/58">{card.meta}</p>
-            ) : null}
-          </div>
-        </div>
-        <span className="rounded-full border border-white/[0.1] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-cream/52">
-          {card.badge}
-        </span>
-      </div>
-      {card.body ? (
-        <p className="mt-6 text-[15px] leading-7 text-cream/68 sm:text-base sm:leading-8">
-          {card.body}
-        </p>
-      ) : null}
-      {card.bullets?.length ? (
-        <ul className="mt-6 space-y-4 text-[15px] leading-7 text-cream/68 sm:text-base sm:leading-8">
-          {card.bullets.map((bullet) => (
-            <li key={bullet} className="grid grid-cols-[0.375rem_minmax(0,1fr)] gap-2.5">
-              <span className="mt-[0.7em] h-1.5 w-1.5 rounded-full bg-[#F26E01]" />
-              <span className="min-w-0">{bullet}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </article>
-  );
-}
-
 function ProfileResumeAnchorCard({
   card,
   index,
-  groupDelay,
-  variant = "default"
+  groupDelay
 }: {
   card: ProfileResumeAnchor;
   index: number;
   groupDelay: number;
-  variant?: "default" | "project" | "compact";
 }) {
   const Icon = card.icon;
 
   return (
     <article
-      className={[
-        "profile-soft-reveal relative flex flex-col overflow-hidden rounded-xl p-5 text-left transition-colors",
-        variant === "project"
-          ? "workspace-accent-card-glow min-h-[15rem] border border-[#F26E01]/35 hover:border-[#F26E01]/55"
-          : variant === "compact"
-            ? "min-h-[15rem] border border-white/[0.12] bg-[#18191c] shadow-[inset_0_1px_0_rgba(255,255,255,0.055)] hover:border-[#F26E01]/40 hover:bg-[#1c1d20]"
-            : "min-h-[15rem] border border-white/[0.1] bg-[#18191c] hover:border-white/[0.17] hover:bg-[#1c1d20]"
-      ].join(" ")}
+      className="profile-glass profile-soft-reveal relative flex flex-col overflow-hidden rounded-2xl p-5 text-left transition-colors hover:bg-white/[0.035]"
       style={
         {
           "--profile-reveal-delay": `${groupDelay + 90 + Math.min(index, 4) * 65}ms`
@@ -286,35 +217,28 @@ function ProfileResumeAnchorCard({
       }
     >
       <div className="flex items-start justify-between gap-4">
-        <Icon size={27} strokeWidth={1.6} className="shrink-0 text-[#F26E01]" />
-        <span className="rounded-full border border-white/[0.1] bg-white/[0.035] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-cream/58">
+        <Icon size={25} strokeWidth={1.6} className="shrink-0 text-[var(--workspace-accent)]" />
+        <span className="rounded-full border border-white/[0.1] px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-cream/52">
           {card.badge}
         </span>
       </div>
 
-      {variant === "project" ? (
-        <span
-          aria-hidden="true"
-          className="workspace-accent-orbit pointer-events-none absolute -bottom-10 right-5 h-28 w-28 rounded-full border border-[#F26E01]/20"
-        />
-      ) : null}
-
-      <div className="mt-6">
-        <h3 className="text-xl font-medium leading-tight text-cream">{card.title}</h3>
+      <div className="mt-5">
+        <h3 className="text-lg font-medium leading-tight text-cream sm:text-xl">{card.title}</h3>
         {card.meta ? (
           <p className="mt-2.5 text-sm font-medium leading-6 text-cream/68">{card.meta}</p>
         ) : null}
       </div>
 
       {card.body ? (
-        <p className="mt-4 text-sm leading-6 text-cream/58 sm:text-[15px]">{card.body}</p>
+        <p className="mt-4 text-sm leading-6 text-cream/62 sm:text-[15px]">{card.body}</p>
       ) : null}
 
       {card.bullets?.length ? (
-        <ul className="mt-4 space-y-2 text-sm leading-6 text-cream/58">
+        <ul className="mt-4 space-y-2.5 text-sm leading-6 text-cream/58">
           {card.bullets.map((bullet) => (
             <li key={bullet} className="grid grid-cols-[0.375rem_minmax(0,1fr)] gap-2.5">
-              <span className="mt-[0.68em] h-1.5 w-1.5 rounded-full bg-[#F26E01]/80" />
+              <span className="mt-[0.68em] h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)] opacity-80" />
               <span className="min-w-0">{bullet}</span>
             </li>
           ))}

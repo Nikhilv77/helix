@@ -2,6 +2,7 @@
 
 import { Loader2, NotebookPen, Save } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ResizableTextarea } from "./resizable-textarea";
 
 type SaveState = "idle" | "loading" | "saving" | "saved" | "error";
 
@@ -65,20 +66,18 @@ export function DsaQuestionNotes({ slug }: { slug: string }) {
             ? "Couldn't save"
             : dirty
               ? "Unsaved"
-              : "Saved locally to your account";
+              : "";
 
   return (
-    <section className="mt-8 border-t border-cream/10 pt-5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-cream">
-          <NotebookPen size={15} aria-hidden="true" className="text-cream/55" />
+    <section className="mt-9 pt-1">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 text-base font-semibold text-cream/86">
+          <NotebookPen size={17} aria-hidden="true" className="text-[var(--workspace-accent)]" />
           Notes
         </div>
-        <span className="font-mono text-[9px] uppercase tracking-[0.13em] text-cream/35">
-          {statusLabel}
-        </span>
+        <span className="text-sm text-cream/38">{statusLabel}</span>
       </div>
-      <textarea
+      <ResizableTextarea
         value={content}
         onChange={(event) => {
           setContent(event.target.value);
@@ -88,20 +87,25 @@ export function DsaQuestionNotes({ slug }: { slug: string }) {
         maxLength={20_000}
         placeholder="Jot down an idea, edge case, or hint..."
         aria-label="Notes for this question"
-        className="mt-3 min-h-32 w-full resize-y bg-transparent text-sm leading-6 text-cream outline-none placeholder:text-cream/25 disabled:opacity-50"
+        minHeight={112}
+        maxHeight={360}
+        containerClassName="mt-4 w-full"
+        textareaClassName="bg-transparent text-[15px] leading-7 text-cream/76 outline-none placeholder:text-cream/28 disabled:opacity-50"
       />
-      <div className="mt-2 flex items-center justify-between gap-3">
-        <span className="font-mono text-[9px] tabular-nums text-cream/25">{content.length}/20,000</span>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <span className="font-mono text-sm tabular-nums text-cream/30">
+          {content.length}/20,000
+        </span>
         <button
           type="button"
           onClick={() => void save()}
           disabled={!dirty || saveState === "loading" || saveState === "saving"}
-          className="inline-flex min-h-8 items-center gap-1.5 text-xs font-semibold text-cream/70 transition hover:text-cream disabled:opacity-30"
+          className="inline-flex min-h-9 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-cream/66 transition hover:bg-white/[0.035] hover:text-cream disabled:opacity-30"
         >
           {saveState === "saving" ? (
-            <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+            <Loader2 size={15} className="animate-spin" aria-hidden="true" />
           ) : (
-            <Save size={13} aria-hidden="true" />
+            <Save size={15} aria-hidden="true" />
           )}
           Save notes
         </button>

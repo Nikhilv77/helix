@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { InterviewSignal, TrailgradMark } from "@/components/brand/blueprint-art";
+import { TrailgradMark } from "@/components/brand/blueprint-art";
 import { Counter, Reveal, TypeOut } from "./visuals/reveal";
 import { exchanges } from "./data";
 
@@ -33,12 +33,8 @@ export function TheInterview() {
   return (
     <section
       id="interview"
-      className="marketing-theme-section relative z-10 overflow-hidden bg-blueprint px-5 py-20 sm:px-10 sm:py-28"
+      className="marketing-theme-section relative z-10 overflow-hidden bg-blueprint px-5 py-16 sm:px-10 sm:py-24"
     >
-      <InterviewSignal className="pointer-events-none absolute left-1/2 top-14 h-[26rem] w-[34rem] -translate-x-1/2 text-[color:var(--dm-accent-soft)] opacity-10 sm:h-[34rem] sm:w-[44rem]" />
-      <div className="pointer-events-none absolute -left-28 top-20 h-72 w-72 rounded-full border border-cream/10" />
-      <div className="pointer-events-none absolute -right-24 bottom-16 h-80 w-80 rounded-full border border-cream/10" />
-
       <div className="relative mx-auto flex w-full max-w-[76rem] flex-col items-center">
         <Reveal>
           <span className="theme-accent-pill inline-flex items-center gap-2.5 rounded-full px-3.5 py-1.5 sm:backdrop-blur-sm">
@@ -50,7 +46,7 @@ export function TheInterview() {
         <Reveal delay={80}>
           <h2
             className="display-heading mt-6 max-w-4xl text-center text-cream"
-            style={{ fontSize: "clamp(2.15rem, 4.8vw, 4.25rem)" }}
+            style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)" }}
           >
             Then say it out loud.
           </h2>
@@ -128,7 +124,6 @@ export function TheInterview() {
                     </button>
                   </div>
                 </div>
-
               </div>
             </Reveal>
           </div>
@@ -169,26 +164,26 @@ function InterviewNote({
 
   return (
     <article className="relative mx-auto w-full max-w-2xl text-left text-cream">
-        <div className="relative mx-auto max-w-4xl border-y border-white/[0.08] py-8 sm:py-10">
-          <div className="flex items-center justify-between gap-4">
-            <p className="blueprint-label text-cream/48">Maya asks</p>
-            <span className="font-mono text-xs text-cream/35">{exchange.elapsed}</span>
-          </div>
-          <p className="relative mt-5 min-h-[5.5rem] overflow-hidden text-[1.8rem] font-semibold leading-tight text-cream sm:text-[2.8rem]">
-              <span className="invisible block" aria-hidden="true">
-                {exchange.question}
-              </span>
-              <span className="absolute inset-0 block">
-                {active ? (
-                  <TypeOut key={`${exchange.question}-q`} text={exchange.question} speed={64} />
-                ) : (
-                  exchange.question
-                )}
-              </span>
-          </p>
-          <div className="mt-9 border-l-2 border-[#F26E01]/45 pl-5 sm:pl-7">
-            <p className="blueprint-label text-cream/42">Your answer</p>
-            <p className="relative mt-3 min-h-[5rem] overflow-hidden text-base leading-7 text-cream/62 sm:text-xl sm:leading-8">
+      <div className="relative mx-auto max-w-4xl border-y border-white/[0.08] py-8 sm:py-10">
+        <div className="flex items-center justify-between gap-4">
+          <p className="blueprint-label text-cream/48">Maya asks</p>
+          <span className="font-mono text-xs text-cream/35">{exchange.elapsed}</span>
+        </div>
+        <p className="relative mt-5 min-h-[5.5rem] overflow-hidden text-[1.8rem] font-semibold leading-tight text-cream sm:text-[2.8rem]">
+          <span className="invisible block" aria-hidden="true">
+            {exchange.question}
+          </span>
+          <span className="absolute inset-0 block">
+            {active ? (
+              <TypeOut key={`${exchange.question}-q`} text={exchange.question} speed={64} />
+            ) : (
+              exchange.question
+            )}
+          </span>
+        </p>
+        <div className="mt-9 border-l-2 border-[#F26E01]/45 pl-5 sm:pl-7">
+          <p className="blueprint-label text-cream/42">Your answer</p>
+          <p className="relative mt-3 min-h-[5rem] overflow-hidden text-base leading-7 text-cream/62 sm:text-xl sm:leading-8">
             <span className="invisible block" aria-hidden="true">
               {answerText}
             </span>
@@ -204,9 +199,9 @@ function InterviewNote({
                 answerText
               )}
             </span>
-            </p>
-          </div>
+          </p>
         </div>
+      </div>
     </article>
   );
 }

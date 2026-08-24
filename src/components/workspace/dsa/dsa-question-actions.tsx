@@ -70,13 +70,12 @@ export function DsaQuestionActions({
 
   return (
     <div className="mt-6">
-      <div className="flex flex-col gap-3 border-y border-cream/15 py-3.5 sm:flex-row sm:items-center">
+      <div className="practice-glass-soft flex flex-col gap-3 rounded-2xl p-3 sm:flex-row sm:items-center">
         {done || skipped ? (
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <span
-              className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
-                done ? "bg-[#8be6bd]/15 text-[#8be6bd]" : "bg-cream/[0.08] text-cream/45"
-              }`}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cream/[0.055]"
+              style={{ color: done ? "var(--workspace-accent)" : undefined }}
             >
               {done ? (
                 <Check size={18} aria-hidden="true" />
@@ -117,7 +116,7 @@ export function DsaQuestionActions({
               type="button"
               onClick={() => run("complete")}
               disabled={pending}
-              className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-[#f7f2e5] to-[#e4dcc6] px-5 text-[14px] font-semibold text-[#171a16] transition hover:from-white hover:to-[#efe8d6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
+              className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-[14px] font-semibold text-[#171a16] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
             >
               {pending ? (
                 <Loader2 size={16} aria-hidden="true" className="animate-spin" />

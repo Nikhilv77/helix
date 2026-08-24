@@ -122,7 +122,7 @@ export function SaveBar({
     // Sticky rather than fixed: the workspace offsets content for its sidebar,
     // and a viewport-fixed bar would sit under it on desktop.
     <div className="sticky bottom-4 z-30 mt-8">
-      <div className="flex flex-col gap-3 rounded-3xl border border-white/[0.08] bg-[#17181b] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_24px_70px_rgba(0,0,0,0.55)] sm:flex-row sm:items-center">
+      <div className="profile-glass flex flex-col gap-3 rounded-3xl border border-white/[0.08] p-4 sm:flex-row sm:items-center">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#efcf84]/12 text-[#f4dda6] shadow-soft-inset">
           <Save size={16} />
         </span>
@@ -168,5 +168,3 @@ export function SavedFooter() {
     </div>
   );
 }
-
-

@@ -59,7 +59,7 @@ function Node({ state, label, title }: { state: NodeState; label: string; title?
     state === "done"
       ? "border-cream/70 bg-cream/70 text-blueprint"
       : state === "active"
-        ? "border-cream bg-cream text-blueprint shadow-[0_0_0_4px_rgba(239,232,214,0.14)]"
+        ? "border-[var(--workspace-accent)] bg-[var(--workspace-accent)] text-black shadow-[0_0_0_4px_var(--workspace-accent-soft)]"
         : "border-cream/25 text-cream/35";
 
   return (
@@ -87,9 +87,7 @@ function FollowUpPips({ used }: { used: number }) {
       {Array.from({ length: MAX_FOLLOW_UPS }, (_, index) => (
         <span
           key={index}
-          className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
-            index < used ? "bg-[#e0a13c]" : "bg-cream/20"
-          }`}
+          className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${index < used ? "bg-[var(--workspace-accent)]" : "bg-cream/20"}`}
         />
       ))}
     </span>

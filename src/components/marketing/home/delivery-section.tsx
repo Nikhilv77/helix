@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
-import { InterviewSignal, TrailgradMark } from "@/components/brand/blueprint-art";
+import { TrailgradMark } from "@/components/brand/blueprint-art";
 import { Reveal } from "./visuals/reveal";
 import { PrimaryAction } from "./primary-action";
 
@@ -17,13 +17,8 @@ export function Delivery() {
   return (
     <section
       id="report"
-      className="marketing-theme-section relative z-10 overflow-hidden bg-blueprint px-5 py-20 sm:px-10 sm:py-28"
+      className="marketing-theme-section relative z-10 overflow-hidden bg-blueprint px-5 py-16 sm:px-10 sm:py-24"
     >
-      <InterviewSignal className="pointer-events-none absolute left-1/2 top-16 h-[26rem] w-[34rem] -translate-x-1/2 text-[color:var(--dm-accent-soft)] opacity-10 sm:h-[34rem] sm:w-[44rem]" />
-      <div className="pointer-events-none absolute -left-28 top-28 hidden h-72 w-72 rounded-full border border-cream/10 sm:block" />
-      <div className="pointer-events-none absolute -right-24 bottom-28 hidden h-80 w-80 rounded-full border border-cream/10 sm:block" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#060708]/80 to-transparent" />
-
       <div className="relative mx-auto w-full max-w-[78rem]">
         <div className="grid gap-14 lg:grid-cols-[1.06fr_0.94fr] lg:items-center">
           <div className="lg:order-2 lg:ml-auto">
@@ -38,7 +33,7 @@ export function Delivery() {
             <Reveal delay={80}>
               <h2
                 className="display-heading mt-6 max-w-xl text-cream"
-                style={{ fontSize: "clamp(2.15rem, 4.8vw, 4.25rem)" }}
+                style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)" }}
               >
                 Reports that show what changed.
               </h2>
@@ -57,7 +52,7 @@ export function Delivery() {
           </div>
 
           <Reveal delay={120} className="lg:order-1">
-            <div className="overflow-hidden rounded-[1.5rem] border border-white/[0.07] bg-[#0d0e10] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+            <div className="public-glass overflow-hidden rounded-[1.5rem]">
               <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4 sm:px-7">
                 <span className="blueprint-label text-cream/48">Round recap</span>
                 <span className="font-mono text-xs text-cream/34">Interview 06</span>
@@ -75,7 +70,9 @@ export function Delivery() {
                   >
                     <p className="blueprint-label text-[0.68rem] text-cream/36">{item.label}</p>
                     <div className="mt-2 flex items-baseline gap-2">
-                      <p className="text-2xl font-semibold tracking-tight text-cream">{item.value}</p>
+                      <p className="text-2xl font-semibold tracking-tight text-cream">
+                        {item.value}
+                      </p>
                       <p className="text-xs text-cream/35">{item.suffix}</p>
                     </div>
                   </div>
@@ -112,15 +109,8 @@ export function Delivery() {
 
 function FinalCta() {
   return (
-    <div id="flow" className="relative scroll-mt-28 pt-24 sm:pt-32">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-12 h-px bg-gradient-to-r from-transparent via-cream/35 to-transparent"
-      />
-      <div className="pointer-events-none absolute left-1/2 top-10 h-[30rem] w-[30rem] -translate-x-1/2 rounded-full border border-cream/10" />
-      <div className="pointer-events-none absolute right-0 top-24 hidden h-52 w-52 rounded-full border border-cream/10 lg:block" />
-
-      <div className="relative grid min-h-[34rem] items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+    <div id="flow" className="relative scroll-mt-28 pt-20 sm:pt-24">
+      <div className="relative grid min-h-[30rem] items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="relative z-10 max-w-2xl">
           <Reveal>
             <span className="theme-accent-pill inline-flex items-center gap-2.5 rounded-full px-3.5 py-1.5 sm:backdrop-blur-sm">
@@ -134,7 +124,7 @@ function FinalCta() {
           <Reveal delay={80}>
             <h2
               className="display-heading mt-6 max-w-3xl text-cream"
-              style={{ fontSize: "clamp(2.25rem, 5.1vw, 4.5rem)" }}
+              style={{ fontSize: "clamp(2.1rem, 4.2vw, 3.75rem)" }}
             >
               Walk in ready, not guessing.
             </h2>
@@ -153,19 +143,13 @@ function FinalCta() {
                 Start free
                 <ArrowRight size={18} aria-hidden="true" />
               </PrimaryAction>
-              <p className="blueprint-label text-cream/45">
-                No card required · Private workspace
-              </p>
+              <p className="blueprint-label text-cream/45">No card required · Private workspace</p>
             </div>
           </Reveal>
         </div>
 
         <Reveal delay={180}>
           <div className="relative mx-auto h-[30rem] w-full max-w-[32rem] lg:h-[38rem] lg:max-w-[40rem]">
-            <div className="pointer-events-none absolute bottom-8 left-1/2 hidden h-[26rem] w-[25rem] -translate-x-1/2 rounded-full bg-[#4f70d1] opacity-35 blur-3xl sm:block lg:h-[34rem] lg:w-[31rem]" />
-            <div className="pointer-events-none absolute bottom-20 left-1/2 hidden h-[18rem] w-[20rem] -translate-x-1/2 rounded-full bg-[#4568ce] opacity-42 blur-2xl sm:block lg:h-[26rem] lg:w-[28rem]" />
-            <div className="pointer-events-none absolute left-1/2 top-16 hidden h-48 w-64 -translate-x-1/2 rounded-full bg-cream/[0.055] blur-3xl sm:block" />
-            <InterviewSignal className="pointer-events-none absolute left-1/2 top-1/2 h-[24rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 opacity-18" />
             <Image
               src="/images/marketing/maya-professional-optimized.webp"
               alt="Maya, a professional AI interview coach"
@@ -177,8 +161,7 @@ function FinalCta() {
               className="object-contain object-bottom sm:drop-shadow-[0_0_18px_rgba(91,124,220,0.42)]"
               style={{
                 maskImage: "linear-gradient(to bottom, black 0%, black 82%, transparent 100%)",
-                WebkitMaskImage:
-                  "linear-gradient(to bottom, black 0%, black 82%, transparent 100%)"
+                WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 82%, transparent 100%)"
               }}
             />
           </div>

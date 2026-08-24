@@ -498,11 +498,20 @@ export function MayaWelcome({
       role="dialog"
       aria-modal="true"
       aria-labelledby="maya-welcome-title"
-      className="onboarding-theme fixed inset-0 z-[90] grid place-items-center overflow-x-clip p-3 sm:p-6"
+      data-workspace-accent={profile.workspaceAccent}
+      className="workspace-black fixed inset-0 z-[90] grid place-items-center overflow-x-clip bg-black p-3 sm:p-6"
     >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-[18%] top-1/2 h-[24rem] w-[24rem] -translate-y-1/2 rounded-full bg-[var(--workspace-accent-soft)] opacity-15 blur-[140px]"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-[15%] top-[38%] h-[22rem] w-[22rem] rounded-full bg-[var(--workspace-accent-soft)] opacity-15 blur-[150px]"
+      />
       {/* Rows on small screens: the avatar takes a capped share and the copy
           scrolls, so a short phone never clips the slide or its buttons. */}
-      <section className="route-enter relative grid min-w-0 h-[min(46rem,calc(100svh-1.5rem))] w-[min(100%,72rem)] max-w-full grid-rows-[minmax(12rem,30svh)_minmax(0,1fr)] overflow-hidden rounded-[1.35rem] border border-white/[0.07] bg-[#111214] shadow-[0_32px_90px_-54px_rgba(0,0,0,0.92)] sm:grid-rows-[minmax(16rem,34svh)_minmax(0,1fr)] md:h-[min(43rem,calc(100svh-2rem))] md:grid-cols-[minmax(17rem,0.72fr)_minmax(0,1.28fr)] md:grid-rows-1">
+      <section className="route-enter relative grid min-w-0 h-[min(46rem,calc(100svh-1.5rem))] w-[min(100%,72rem)] max-w-full grid-rows-[minmax(12rem,30svh)_minmax(0,1fr)] overflow-hidden rounded-[1.35rem] border border-white/[0.1] bg-[rgba(27,28,32,0.62)] shadow-[0_32px_90px_-54px_rgba(0,0,0,0.92)] backdrop-blur-2xl sm:grid-rows-[minmax(16rem,34svh)_minmax(0,1fr)] md:h-[min(43rem,calc(100svh-2rem))] md:grid-cols-[minmax(17rem,0.72fr)_minmax(0,1.28fr)] md:grid-rows-1">
         <button
           type="button"
           onClick={() => dismiss()}
@@ -512,27 +521,29 @@ export function MayaWelcome({
           <X size={26} strokeWidth={1.35} />
         </button>
 
-        <div className="relative z-10 min-h-0 overflow-hidden bg-[#17181b]">
-          <TechInterviewMotifs side="maya" />
+        <div className="relative z-10 min-h-0 overflow-hidden bg-white/[0.012]">
+          <div className="hidden">
+            <TechInterviewMotifs side="maya" />
+          </div>
           <AvatarStage
             agentTrack={null}
             state={speaking ? "speaking" : "listening"}
             url="/avatars/interviewer-v2.glb"
           />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#17181b] to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[rgba(17,18,20,0.7)] to-transparent" />
         </div>
 
-        <div className="relative z-10 flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden bg-[#111214] px-5 pb-5 pt-5 sm:px-10 sm:pb-8 sm:pt-8 lg:px-14 lg:pb-9 lg:pt-10">
-          <TechInterviewMotifs side="copy" />
+        <div className="relative z-10 flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden bg-transparent px-5 pb-5 pt-5 sm:px-10 sm:pb-8 sm:pt-8 lg:px-14 lg:pb-9 lg:pt-10">
+          <div className="hidden">
+            <TechInterviewMotifs side="copy" />
+          </div>
           <div className="relative z-10 flex shrink-0 items-center gap-2.5 pr-12">
             {slides.map((slide, index) => (
               <span
                 key={slide.eyebrow}
                 className={[
                   "h-1.5 rounded-full transition-all duration-300",
-                  index === step
-                    ? "workspace-accent-dot w-12"
-                    : "w-6 bg-cream/25"
+                  index === step ? "workspace-accent-dot w-12" : "w-6 bg-cream/25"
                 ].join(" ")}
               />
             ))}
@@ -555,7 +566,7 @@ export function MayaWelcome({
               <Icon
                 size={64}
                 strokeWidth={1.25}
-                className="hidden text-cream/82 min-[360px]:block sm:size-16"
+                className="hidden text-[var(--workspace-accent)] min-[360px]:block sm:size-16"
                 aria-hidden="true"
               />
               <p className="blueprint-label text-cream/45 min-[360px]:mt-4 sm:mt-5 lg:mt-7">
@@ -586,7 +597,7 @@ export function MayaWelcome({
                     return (
                       <div
                         key={session.id}
-                        className="onboarding-card-reveal flex min-w-0 max-w-full min-h-[5.4rem] items-start gap-3 overflow-hidden rounded-lg border border-white/[0.07] bg-[#191a1d] px-4 py-3.5 text-cream"
+                        className="onboarding-card-reveal flex min-w-0 max-w-full min-h-[5.4rem] items-start gap-3 overflow-hidden rounded-lg border border-white/[0.09] bg-white/[0.035] px-4 py-3.5 text-cream backdrop-blur-xl"
                         style={
                           {
                             "--card-delay": `${240 + index * 70}ms`
@@ -596,7 +607,7 @@ export function MayaWelcome({
                         <SessionIcon
                           size={25}
                           strokeWidth={1.55}
-                          className="mt-0.5 shrink-0 text-[#F26E01]"
+                          className="mt-0.5 shrink-0 text-[var(--workspace-accent)]"
                           aria-hidden="true"
                         />
                         <div className="min-w-0 flex-1">
