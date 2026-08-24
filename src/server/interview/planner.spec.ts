@@ -11,6 +11,26 @@ const setup: InterviewSetup = {
   context: "Rebuilt a payments retry pipeline handling delayed webhooks."
 };
 
+const dsaSetup: InterviewSetup = {
+  ...setup,
+  role: "frontend",
+  questionCount: 3,
+  templateTitle: "DSA practice interview",
+  dsaQuestionSlugs: ["two-sum", "coin-change", "number-of-islands"],
+  agenda: ["Two Sum: ...", "Coin Change: ...", "Number of Islands: ..."]
+};
+
+function plannedDsaQuestion(text: string) {
+  return {
+    text,
+    evidenceAnchor: "A problem the model chose to name itself",
+    competency: "Algorithmic reasoning",
+    intent: "Establish whether the candidate can reason to the approach.",
+    mustHit: ["the data structure", "the complexity"],
+    probeIfMissing: "What is the time complexity of that?"
+  };
+}
+
 describe("InterviewPlanner", () => {
   beforeEach(() => {
     jest.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
@@ -43,15 +63,61 @@ describe("InterviewPlanner", () => {
     expect(plan.every((question) => !question.codeSnippet)).toBe(true);
   });
 
-  it("keeps a DSA round to three questions", () => {
-    const plan = createFallbackPlan({
-      ...setup,
-      questionCount: 3,
-      templateTitle: "DSA practice interview",
-      agenda: ["Two Sum: explain the approach", "Binary Search: prove the invariant"]
-    });
+  it("builds a DSA fallback from the selected problems", () => {
+    const plan = createFallbackPlan(dsaSetup);
 
     expect(plan).toHaveLength(3);
+    expect(plan.map((question) => question.evidenceAnchor)).toEqual([
+      "Two Sum",
+      "Coin Change",
+      "Number of Islands"
+    ]);
+    expect(plan[0]?.text).toContain("Two Sum");
+    expect(plan[0]?.codeTask).toContain("Two Sum");
+    // The generic role exercise must never displace a selected problem, or the
+    // room asks about React while the workspace shows an algorithm.
+    expect(plan.some((question) => question.codeSnippet?.includes("SearchResults"))).toBe(false);
+  });
+
+  it("keeps a planned DSA round aligned with the workspace order", async () => {
+    const ai = {
+      generateStructured: jest.fn(async () => ({
+        questions: [
+          plannedDsaQuestion("How would you find the two numbers that add to the target?"),
+          plannedDsaQuestion("What is the cheapest way to make that amount?"),
+          plannedDsaQuestion("How would you count the separate islands in that grid?")
+        ]
+      }))
+    } as unknown as AiService;
+
+    const plan = await new InterviewPlanner(ai).plan(dsaSetup);
+
+    expect(plan.map((question) => question.evidenceAnchor)).toEqual([
+      "Two Sum",
+      "Coin Change",
+      "Number of Islands"
+    ]);
+    expect(plan.every((question) => question.kind === "code")).toBe(true);
+    expect(plan.some((question) => question.codeSnippet)).toBe(false);
+  });
+
+  it("asks the provider for one question per selected problem", async () => {
+    const prompts: string[] = [];
+    const ai = {
+      generateStructured: jest.fn((request: { prompt: string }) => {
+        prompts.push(request.prompt);
+        return new Promise(() => undefined);
+      })
+    } as unknown as AiService;
+
+    await new InterviewPlanner(ai, 5).plan(dsaSetup);
+
+    const prompt = prompts[0] ?? "";
+    expect(prompt).toContain("DSA coding interview");
+    expect(prompt).toContain("1. Two Sum");
+    expect(prompt).toContain("exactly 3 questions, one per problem");
+    // The resume arc has no place in a round planned from a problem list.
+    expect(prompt).not.toContain("Examine a failure, constraint, disagreement");
   });
 
   it("falls back quickly when the provider does not respond", async () => {

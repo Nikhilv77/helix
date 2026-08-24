@@ -71,3 +71,12 @@ export function isResumeRound(setup: InterviewSetup): boolean {
 export function describeSetup(setup: InterviewSetup): string {
   return `${describeRound(setup.roundType)} interview for a ${describeLevel(setup.level)} interviewing as a ${describeRole(setup.role)}`;
 }
+
+/**
+ * A DSA round is planned from a fixed list of practice problems rather than
+ * from the candidate's resume, so it needs its own prompt and must never have
+ * the generic role code exercise substituted into it.
+ */
+export function isDsaRound(setup: InterviewSetup): boolean {
+  return Boolean(setup.dsaQuestionSlugs?.length);
+}

@@ -2,7 +2,12 @@ export type DsaTemplateLanguage = "python" | "javascript" | "cpp" | "java";
 
 type TemplateKind = "list" | "list-mutated" | "tree" | "tree-mutated" | "tree-value" | "tree-target" | "operation";
 
-const operationQuestions = new Set([
+/**
+ * Design problems: the candidate implements a class with several operations
+ * rather than a single function. They need their own starter template, and a
+ * DSA interview leaves them out because they do not fit a spoken round.
+ */
+export const OPERATION_DSA_SLUGS = new Set([
   "design-browser-history", "lru-cache", "min-stack", "implement-queue-using-stacks",
   "implement-stack-using-queues", "design-circular-queue", "online-stock-span",
   "time-based-key-value-store", "find-median-from-data-stream", "implement-trie-prefix-tree",
@@ -26,7 +31,7 @@ const treeQuestions = new Set([
 ]);
 
 function templateKind(slug: string): TemplateKind | null {
-  if (operationQuestions.has(slug)) return "operation";
+  if (OPERATION_DSA_SLUGS.has(slug)) return "operation";
   if (slug === "reorder-list") return "list-mutated";
   if (slug === "flatten-binary-tree-to-linked-list" || slug === "recover-binary-search-tree") return "tree-mutated";
   if (slug === "lowest-common-ancestor-of-a-binary-tree") return "tree-value";

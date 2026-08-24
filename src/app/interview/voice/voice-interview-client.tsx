@@ -38,7 +38,23 @@ import { findQuestion } from "@/lib/dsa/dsa";
 import type { DsaQuestion } from "@/lib/dsa/dsa";
 import { dsaStarterCode } from "@/lib/dsa/dsa-code-templates";
 import { pageTitle } from "@/lib/shared/seo";
-import type { InterviewQuestion, InterviewSetup, Phase, Turn } from "@/lib/shared/types";
+import type {
+  CandidateResume,
+  InterviewConcept,
+  InterviewQuestion,
+  InterviewSetup,
+  InterviewStage,
+  Phase,
+  Turn
+} from "@/lib/shared/types";
+import { MayaAside } from "./components/maya-aside";
+import { INTERVIEW_PANEL_RULE, INTERVIEW_PANEL_SHELL } from "./components/panel-surface";
+import {
+  ResumeLiveWorkspace,
+  resumeEditorLanguage
+} from "./components/resume-live-workspace";
+import { stageCounts } from "./components/interview-question-panel";
+import { FundamentalsLiveWorkspace } from "./components/fundamentals-live-workspace";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 import type { AgentState, DsaLanguage, DsaRunResult, VoiceStatus } from "./types";
 import {
@@ -56,7 +72,7 @@ import { CandidateCameraPreview } from "./components/candidate-camera-preview";
 import { MediaPermissionGate, type MediaSetupResult } from "./components/media-permission-gate";
 import { useInterviewClock } from "./hooks/use-interview-clock";
 
-const HARD_CAP_MS = 15 * 60 * 1000;
+const DEFAULT_HARD_CAP_MS = 15 * 60 * 1000;
 const AVATAR_URL = process.env.NEXT_PUBLIC_AVATAR_URL ?? "";
 const POLL_MS = 1500;
 const AGENT_STATE_ATTRIBUTE = "lk.agent.state";
@@ -73,7 +89,14 @@ function stopMediaStream(stream: MediaStream | null) {
   stream?.getTracks().forEach((track) => track.stop());
 }
 
-export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: WorkspaceAccent }) {
+export function VoiceInterviewClient({
+  workspaceAccent,
+  resume
+}: {
+  workspaceAccent: WorkspaceAccent;
+  /** Backs the resume round's document preview. Null for other rounds. */
+  resume?: CandidateResume | null;
+}) {
   const router = useRouter();
   const params = useSearchParams();
   const sessionId = params?.get("session") ?? null;
@@ -96,6 +119,10 @@ export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: Wor
   const [setup, setSetup] = useState<InterviewSetup | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<InterviewQuestion | null>(null);
   const [progress, setProgress] = useState({ index: 0, count: 4, followUps: 0 });
+  const [planStages, setPlanStages] = useState<Array<InterviewStage | null>>([]);
+  const [answeredConcept, setAnsweredConcept] = useState<InterviewConcept | null>(null);
+  const [hardCapMs, setHardCapMs] = useState(DEFAULT_HARD_CAP_MS);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [agentTrack, setAgentTrack] = useState<MediaStreamTrack | null>(null);
   const [localTrack, setLocalTrack] = useState<MediaStreamTrack | null>(null);
@@ -138,7 +165,7 @@ export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: Wor
   const elapsed = useInterviewClock({
     startedAt,
     disabled: sessionUnavailable || status === "ended" || status === "error",
-    hardCapMs: HARD_CAP_MS
+    hardCapMs
   });
   const dsaQuestionSlug = setup?.dsaQuestionSlugs?.[progress.index] ?? null;
 
@@ -514,6 +541,9 @@ export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: Wor
       setPhase(session.phase);
       setSetup(session.setup);
       setCurrentQuestion(session.currentQuestion);
+      setPlanStages(session.stages ?? []);
+      setAnsweredConcept(session.answeredConcept ?? null);
+      setHardCapMs(session.hardCapMs ?? DEFAULT_HARD_CAP_MS);
       setStartedAt(session.startedAt);
       startedAtRef.current = session.startedAt;
       setSessionLoadError(null);
@@ -575,11 +605,32 @@ export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: Wor
       setTypedStartedAt(Date.now());
       return;
     }
+    if (setup?.resumeRound || setup?.fundamentalsRound) {
+      // The middle panel is always open in a staged round, and the next
+      // question supplies its own surface, so only the answer itself clears.
+      setTypedDraft("");
+      setTypedNotes("");
+      setTypedStartedAt(Date.now());
+      return;
+    }
     setAnswerPanelOpen(false);
     setTypedDraft("");
     setTypedNotes("");
     setTypedStartedAt(null);
-  }, [setup?.templateTitle, turns, typedSending]);
+  }, [setup?.fundamentalsRound, setup?.resumeRound, setup?.templateTitle, turns, typedSending]);
+
+  useEffect(() => {
+    if (!setup?.resumeRound && !setup?.fundamentalsRound) return;
+
+    setSelectedOption(null);
+    setTypedError(null);
+    setDsaRunResult(null);
+    setTypedNotes("");
+    setTypedDraft(currentQuestion?.stage === "code" ? (currentQuestion.codeSnippet ?? "") : "");
+    setTypedStartedAt(Date.now());
+    // Keyed on the question index so a follow-up on the same question keeps
+    // whatever the candidate has already written.
+  }, [progress.index, setup?.fundamentalsRound, setup?.resumeRound]);
 
   useEffect(() => {
     if (setup?.templateTitle !== "DSA practice interview" || !dsaQuestionSlug) return;
@@ -701,6 +752,35 @@ export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: Wor
     }
   }
 
+  /**
+   * A multiple choice answer travels the same path as a typed one. The server
+   * recognises the question kind and scores it by comparison, so this costs no
+   * model call and still lands in the transcript as something the candidate said.
+   */
+  async function submitOptionAnswer(option: string) {
+    const room = roomRef.current;
+    if (!room || !sessionId || !startedAt || typedSending || selectedOption) return;
+
+    const now = Date.now();
+    const startMs = Math.max(0, (typedStartedAt ?? now) - startedAt);
+    const endMs = Math.max(startMs, now - startedAt);
+    typedUserTurnsRef.current = turns.filter((turn) => turn.speaker === "user").length;
+    setSelectedOption(option);
+    setTypedSending(true);
+    setTypedError(null);
+
+    try {
+      await room.localParticipant.publishData(
+        new TextEncoder().encode(JSON.stringify({ text: option, startMs, endMs })),
+        { reliable: true, topic: TYPED_ANSWER_TOPIC }
+      );
+    } catch (caught) {
+      setSelectedOption(null);
+      setTypedSending(false);
+      setTypedError(caught instanceof Error ? caught.message : "That answer could not be sent.");
+    }
+  }
+
   async function submitDsaAnswer() {
     const room = roomRef.current;
     const code = typedDraft.trim();
@@ -728,6 +808,43 @@ export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: Wor
     } catch (caught) {
       setTypedSending(false);
       setTypedError(caught instanceof Error ? caught.message : "The solution could not be sent.");
+    }
+  }
+
+  /**
+   * The resume round's task is written for this candidate, so there are no
+   * stored test cases. The code is run as-is and its output reported back.
+   */
+  async function runResumeCode() {
+    const code = typedDraft.trim();
+    if (!code || dsaRunning) return;
+
+    setDsaRunning(true);
+    setDsaRunResult(null);
+    setTypedError(null);
+    try {
+      const response = await fetch("/api/code/run", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          code: typedDraft,
+          language: resumeEditorLanguage(currentQuestion?.language ?? null),
+          stdin: ""
+        })
+      });
+      const payload = (await response.json()) as {
+        success?: boolean;
+        data?: DsaRunResult;
+        error?: { message?: string };
+      };
+      if (!response.ok || !payload.success || !payload.data) {
+        throw new Error(payload.error?.message || "The code runner could not run this.");
+      }
+      setDsaRunResult(payload.data);
+    } catch (caught) {
+      setTypedError(caught instanceof Error ? caught.message : "Code execution failed.");
+    } finally {
+      setDsaRunning(false);
     }
   }
 
@@ -774,7 +891,7 @@ export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: Wor
   }, [sessionId]);
 
   useEffect(() => {
-    if (elapsed < HARD_CAP_MS || status === "ended" || sessionUnavailable) return;
+    if (elapsed < hardCapMs || status === "ended" || sessionUnavailable) return;
     void stop();
   }, [elapsed, sessionUnavailable, status, stop]);
 
@@ -804,7 +921,7 @@ export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: Wor
     setConnectionAttempt((attempt) => attempt + 1);
   }
 
-  const overCap = elapsed >= HARD_CAP_MS;
+  const overCap = elapsed >= hardCapMs;
   const latestAgentTurn = [...turns].reverse().find((turn) => turn.speaker === "agent") ?? null;
   const optimisticAlreadyPersisted = optimisticUserTurn
     ? turns.some(
@@ -837,6 +954,26 @@ export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: Wor
     audioInputs.find((device) => device.deviceId === selectedInputId)?.label ||
     "Selected microphone";
   const isDsaInterview = setup?.templateTitle === "DSA practice interview";
+  const isResumeRound = setup?.resumeRound === true;
+  const isFundamentalsRound = setup?.fundamentalsRound === true;
+
+  const stageProgress = stageCounts(planStages, progress.index);
+  // Maya's reply to a graded answer carries the verdict, so the panel can mark
+  // the chosen option without a second request.
+  const lastGrade = (() => {
+    for (let index = turns.length - 1; index >= 0; index -= 1) {
+      const turn = turns[index];
+      if (turn?.speaker === "agent" && typeof turn.correct === "boolean") {
+        return { questionIndex: turn.gradedQuestionIndex ?? -1, correct: turn.correct };
+      }
+    }
+    return null;
+  })();
+  const normalizedTemplateTitle = setup?.templateTitle?.toLowerCase() ?? "";
+  const isBehavioralInterview =
+    setup?.roundType === "behavioral" ||
+    normalizedTemplateTitle.includes("resume") ||
+    normalizedTemplateTitle.includes("behavioral");
   const selectedDsaSlug = setup?.dsaQuestionSlugs?.[progress.index];
   const dsaQuestion =
     isDsaInterview && selectedDsaSlug ? (findQuestion(selectedDsaSlug)?.question ?? null) : null;
@@ -863,7 +1000,7 @@ export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: Wor
       <SessionStateScreen
         workspaceAccent={workspaceAccent}
         kind="complete"
-        duration={Math.min(elapsed, HARD_CAP_MS)}
+        duration={Math.min(elapsed, hardCapMs)}
         answers={turns.filter((turn) => turn.speaker === "user").length}
       />
     );
@@ -924,8 +1061,8 @@ export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: Wor
               overCap ? "text-[var(--workspace-accent)]" : "text-cream/72"
             }`}
           >
-            {formatClock(Math.min(elapsed, HARD_CAP_MS))}
-            <span className="hidden text-cream/28 sm:inline"> / 15:00</span>
+            {formatClock(Math.min(elapsed, hardCapMs))}
+            <span className="hidden text-cream/28 sm:inline"> / {formatClock(hardCapMs)}</span>
           </span>
           <button
             type="button"
@@ -938,7 +1075,88 @@ export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: Wor
         </div>
       </header>
 
-      {isDsaInterview ? (
+      {isFundamentalsRound ? (
+        <FundamentalsLiveWorkspace
+          question={currentQuestion}
+          questionIndex={progress.index}
+          questionCount={progress.count}
+          counts={stageProgress}
+          grade={lastGrade}
+          concept={answeredConcept}
+          turns={displayTurns}
+          spokenAgentTurnKeys={spokenAgentTurnKeys}
+          liveUserText={liveTranscript}
+          startedAt={startedAt}
+          setup={setup}
+          thinking={agentState === "thinking"}
+          bottomRef={bottomRef}
+          agentSlot={
+            AVATAR_URL ? (
+              <AvatarStage agentTrack={agentTrack} state={presence} url={AVATAR_URL} />
+            ) : (
+              <InterviewerPresence
+                agentTrack={agentTrack}
+                localTrack={localTrack}
+                state={presence}
+              />
+            )
+          }
+          micOn={micOn}
+          sending={typedSending}
+          error={typedError}
+          draft={typedDraft}
+          selectedOption={selectedOption}
+          onDraftChange={setTypedDraft}
+          onSelectOption={(option) => void submitOptionAnswer(option)}
+          onSubmit={() => void submitTypedAnswer()}
+          onRequestMic={() => void toggleMic()}
+          candidateCameraStream={candidateCameraStream}
+          onDisableCamera={disableCandidateCamera}
+        />
+      ) : isResumeRound ? (
+        <ResumeLiveWorkspace
+          resume={resume ?? null}
+          question={currentQuestion}
+          questionIndex={progress.index}
+          questionCount={progress.count}
+          counts={stageProgress}
+          grade={lastGrade}
+          turns={displayTurns}
+          spokenAgentTurnKeys={spokenAgentTurnKeys}
+          liveUserText={liveTranscript}
+          startedAt={startedAt}
+          setup={setup}
+          thinking={agentState === "thinking"}
+          bottomRef={bottomRef}
+          agentSlot={
+            AVATAR_URL ? (
+              <AvatarStage agentTrack={agentTrack} state={presence} url={AVATAR_URL} />
+            ) : (
+              <InterviewerPresence
+                agentTrack={agentTrack}
+                localTrack={localTrack}
+                state={presence}
+              />
+            )
+          }
+          micOn={micOn}
+          language={resumeEditorLanguage(currentQuestion?.language ?? null)}
+          sending={typedSending}
+          error={typedError}
+          draft={typedDraft}
+          notes={typedNotes}
+          selectedOption={selectedOption}
+          running={dsaRunning}
+          onDraftChange={setTypedDraft}
+          onNotesChange={setTypedNotes}
+          onSelectOption={(option) => void submitOptionAnswer(option)}
+          onSubmit={() => void submitTypedAnswer()}
+          onRun={() => void runResumeCode()}
+          onRequestMic={() => void toggleMic()}
+          candidateCameraStream={candidateCameraStream}
+          onDisableCamera={disableCandidateCamera}
+        />
+      ) : isDsaInterview ? (
         <DsaLiveWorkspace
           question={dsaQuestion}
           questionSlug={selectedDsaSlug ?? null}
@@ -974,15 +1192,32 @@ export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: Wor
         <div
           className={`thin-scroll min-h-0 flex-1 gap-3 overflow-y-auto pb-4 ${
             answerPanelOpen ? "hidden lg:grid" : "grid"
-          } xl:grid-cols-[minmax(0,1fr)_19rem] xl:overflow-hidden xl:pb-0`}
+          } xl:grid-cols-[minmax(0,1fr)_20rem] xl:overflow-hidden xl:pb-0`}
         >
-          <section className="workspace-accent-card-glow order-2 flex min-h-[34rem] min-w-0 flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_22%,transparent)] bg-[linear-gradient(145deg,rgba(21,22,25,0.84),rgba(12,13,15,0.7))] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl xl:order-1 xl:min-h-0">
-            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-4">
-              <div className="flex items-center gap-3">
+          <section
+            className={`${INTERVIEW_PANEL_SHELL} order-2 flex min-h-[34rem] min-w-0 flex-col overflow-hidden xl:order-1 xl:min-h-0`}
+          >
+            <div className={`flex shrink-0 items-center justify-between gap-4 border-b ${INTERVIEW_PANEL_RULE} px-5 py-4 sm:px-6`}>
+              <div className="flex min-w-0 items-center gap-3">
                 <span className="h-2 w-2 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_14px_var(--workspace-accent)]" />
-                <h1 className="text-base font-semibold text-cream">Conversation</h1>
+                <div className="min-w-0">
+                  <h1 className="truncate text-base font-semibold text-cream">
+                    {isBehavioralInterview ? "Resume conversation" : "Interview conversation"}
+                  </h1>
+                  {isBehavioralInterview ? (
+                    <p className="mt-0.5 truncate text-sm text-cream/45">
+                      Evidence, ownership and decisions from your experience
+                    </p>
+                  ) : null}
+                </div>
               </div>
-              <span className="text-sm text-cream/48">{statusLabel}</span>
+              <div className="flex shrink-0 items-center gap-2 text-sm text-cream/48">
+                <span className="hidden sm:inline">
+                  Question {Math.min(progress.index + 1, progress.count)} of {progress.count}
+                </span>
+                <span className="hidden h-1 w-1 rounded-full bg-cream/24 sm:block" />
+                <span>{statusLabel}</span>
+              </div>
             </div>
 
             <div className="thin-scroll min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-7">
@@ -1085,7 +1320,7 @@ export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: Wor
               />
             </div>
 
-            <div className="flex shrink-0 flex-col gap-3 border-t border-white/[0.06] bg-black/15 px-4 py-3 sm:flex-row sm:items-center">
+            <div className={`flex shrink-0 flex-col gap-3 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 px-4 py-3 sm:flex-row sm:items-center`}>
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 <button
                   type="button"
@@ -1140,7 +1375,7 @@ export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: Wor
             </div>
           </section>
 
-          <aside className="workspace-accent-card-glow order-1 flex min-h-[20rem] flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_24%,transparent)] bg-[linear-gradient(160deg,color-mix(in_srgb,var(--workspace-accent)_8%,rgba(17,18,21,0.86)),rgba(13,14,16,0.74))] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_70px_rgba(0,0,0,0.3)] backdrop-blur-xl xl:order-2 xl:min-h-0">
+          <aside className="workspace-accent-card-glow order-1 flex min-h-[20rem] flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_26%,transparent)] bg-[color-mix(in_srgb,var(--workspace-accent)_4%,rgba(17,18,21,0.68))] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_24px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl xl:order-2 xl:min-h-0">
             <div className="relative min-h-64 flex-1 overflow-hidden">
               <div className="pointer-events-none absolute inset-3 flex items-center justify-center">
                 <div className="h-full max-h-[29rem] w-full max-w-[21rem]">
@@ -1169,12 +1404,10 @@ export function VoiceInterviewClient({ workspaceAccent }: { workspaceAccent: Wor
             </div>
 
             {candidateCameraStream ? (
-              <div className="border-t border-white/[0.06] p-3">
-                <CandidateCameraPreview
-                  stream={candidateCameraStream}
-                  onDisable={disableCandidateCamera}
-                />
-              </div>
+              <CandidateCameraPreview
+                stream={candidateCameraStream}
+                onDisable={disableCandidateCamera}
+              />
             ) : null}
           </aside>
         </div>
@@ -1265,20 +1498,8 @@ function DsaLiveWorkspace({
 }) {
   const canSubmit = draft.trim().length >= 10 && !sending;
   const splitWorkspaceRef = useRef<HTMLDivElement | null>(null);
-  const mayaTranscriptScrollRef = useRef<HTMLDivElement | null>(null);
-  const mayaTranscriptAutoFollowRef = useRef(true);
   const [questionPaneWidth, setQuestionPaneWidth] = useState(38);
   const [expandedPane, setExpandedPane] = useState<"question" | "editor" | null>(null);
-
-  useEffect(() => {
-    const transcript = mayaTranscriptScrollRef.current;
-    if (!transcript || !mayaTranscriptAutoFollowRef.current) return;
-
-    const frame = window.requestAnimationFrame(() => {
-      transcript.scrollTop = transcript.scrollHeight;
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [liveUserText, thinking, turns]);
 
   const beginPaneResize = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
     const workspace = splitWorkspaceRef.current;
@@ -1321,7 +1542,7 @@ function DsaLiveWorkspace({
         className="grid shrink-0 gap-3 transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none xl:min-h-0 xl:shrink xl:grid-cols-[minmax(0,var(--question-pane-size))_var(--pane-divider-size)_minmax(0,var(--editor-pane-size))] xl:gap-0"
       >
         <section
-          className={`workspace-accent-card-glow thin-scroll min-h-[24rem] min-w-0 max-h-[38rem] overflow-y-auto rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_22%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_18px_55px_rgba(0,0,0,0.2)] backdrop-blur-xl transition-[opacity,transform] duration-300 motion-reduce:transition-none xl:max-h-none xl:min-h-0 ${
+          className={`${INTERVIEW_PANEL_SHELL} thin-scroll min-h-[24rem] min-w-0 max-h-[38rem] overflow-y-auto transition-[opacity,transform] duration-300 motion-reduce:transition-none xl:max-h-none xl:min-h-0 ${
             expandedPane === "editor"
               ? "xl:pointer-events-none xl:translate-x-2 xl:opacity-0"
               : "xl:translate-x-0 xl:opacity-100"
@@ -1329,16 +1550,14 @@ function DsaLiveWorkspace({
         >
           {question ? (
             <div className="px-5 pb-7 sm:px-7 sm:pb-8">
-              <div className="sticky top-0 z-10 -mx-5 flex items-center justify-between gap-3 bg-[rgba(16,17,19,0.92)] px-5 py-4 text-sm backdrop-blur-xl sm:-mx-7 sm:px-7">
+              <div className={`sticky top-0 z-10 -mx-5 flex items-center justify-between gap-3 border-b ${INTERVIEW_PANEL_RULE} bg-[rgba(17,18,21,0.92)] px-5 py-4 text-sm backdrop-blur-2xl sm:-mx-7 sm:px-7`}>
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]" />
                   <span className="whitespace-nowrap font-medium text-cream/72">
                     Problem {questionIndex + 1} of {questionCount}
                   </span>
-                  <span className="text-cream/24">·</span>
-                  <span className="truncate font-medium capitalize text-cream/48">
-                    {question.difficulty}
-                  </span>
+                  <span aria-hidden="true" className="h-1 w-1 shrink-0 rounded-full bg-cream/24" />
+                  <span className="truncate capitalize text-cream/44">{question.difficulty}</span>
                 </div>
                 <button
                   type="button"
@@ -1359,7 +1578,7 @@ function DsaLiveWorkspace({
                 </button>
               </div>
 
-              <h1 className="mt-7 text-balance font-display text-[1.8rem] font-semibold leading-[1.14] tracking-tight text-cream sm:text-[2rem]">
+              <h1 className="mt-6 text-balance font-display text-[1.8rem] font-semibold leading-[1.14] tracking-tight text-cream sm:text-[2rem]">
                 {question.title}
               </h1>
               <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
@@ -1377,7 +1596,7 @@ function DsaLiveWorkspace({
                     {question.examples.map((example, index) => (
                       <article
                         key={`${example.input}-${example.output}`}
-                        className="rounded-xl bg-white/[0.025] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:p-5"
+                        className="rounded-xl bg-white/[0.03] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:p-5"
                       >
                         <div className="flex items-center gap-2.5">
                           <span
@@ -1412,7 +1631,7 @@ function DsaLiveWorkspace({
               ) : null}
               {question.constraints?.length ? (
                 <DsaCopySection title="Constraints">
-                  <ul className="space-y-3 rounded-xl bg-white/[0.025] p-4 font-mono text-sm leading-6 text-cream/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:p-5">
+                  <ul className="space-y-3 rounded-xl bg-white/[0.03] p-4 font-mono text-sm leading-6 text-cream/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:p-5">
                     {question.constraints.map((constraint) => (
                       <li key={constraint} className="flex gap-3">
                         <span
@@ -1468,13 +1687,13 @@ function DsaLiveWorkspace({
         </button>
 
         <section
-          className={`workspace-accent-card-glow flex h-[44rem] min-h-0 min-w-0 shrink-0 flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_22%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_18px_55px_rgba(0,0,0,0.2)] backdrop-blur-xl transition-[opacity,transform] duration-300 motion-reduce:transition-none sm:h-[48rem] xl:h-auto xl:shrink ${
+          className={`${INTERVIEW_PANEL_SHELL} flex h-[44rem] min-h-0 min-w-0 shrink-0 flex-col overflow-hidden transition-[opacity,transform] duration-300 motion-reduce:transition-none sm:h-[48rem] xl:h-auto xl:shrink ${
             expandedPane === "question"
               ? "xl:pointer-events-none xl:-translate-x-2 xl:opacity-0"
               : "xl:translate-x-0 xl:opacity-100"
           }`}
         >
-          <div className="flex min-h-16 flex-col items-stretch gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div className={`flex min-h-16 shrink-0 flex-col items-stretch gap-3 border-b ${INTERVIEW_PANEL_RULE} px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5`}>
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 text-base font-semibold text-cream">
                 <Code2 size={17} aria-hidden="true" className="text-[var(--workspace-accent)]" />
@@ -1541,7 +1760,7 @@ function DsaLiveWorkspace({
             result={runResult}
             running={running}
           />
-          <div className="bg-white/[0.012] p-4 sm:p-5">
+          <div className={`shrink-0 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 p-4 sm:p-5`}>
             <label htmlFor="dsa-approach" className="text-sm font-semibold text-cream/82">
               Explain your approach to Maya
               <span className="ml-2 hidden font-normal text-cream/38 xl:inline">
@@ -1579,54 +1798,25 @@ function DsaLiveWorkspace({
         </section>
       </div>
 
-      <aside className="workspace-accent-card-glow flex min-h-[24rem] shrink-0 flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_22%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_18px_55px_rgba(0,0,0,0.2)] backdrop-blur-xl sm:min-h-[28rem] xl:min-h-0 xl:shrink">
-        <div className="relative h-40 shrink-0 overflow-hidden border-b border-white/[0.07] bg-black/20">
-          <div className="absolute inset-x-[-24%] bottom-[-12%] top-0">
-            {AVATAR_URL ? (
-              <AvatarStage agentTrack={agentTrack} state={presence} url={AVATAR_URL} />
-            ) : (
-              <InterviewerPresence
-                agentTrack={agentTrack}
-                localTrack={localTrack}
-                state={presence}
-              />
-            )}
-          </div>
-          <div className="absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full border border-white/[0.07] bg-black/45 px-2.5 py-1.5 text-[11px] font-medium text-cream/72 backdrop-blur-xl">
-            <span className="h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_9px_var(--workspace-accent)]" />
-            Maya
-          </div>
-        </div>
-        <div
-          ref={mayaTranscriptScrollRef}
-          onScroll={(event) => {
-            const transcript = event.currentTarget;
-            const distanceFromBottom =
-              transcript.scrollHeight - transcript.scrollTop - transcript.clientHeight;
-            mayaTranscriptAutoFollowRef.current = distanceFromBottom < 48;
-          }}
-          onWheelCapture={(event) => {
-            if (event.deltaY < 0) mayaTranscriptAutoFollowRef.current = false;
-          }}
-          className="thin-scroll min-h-0 flex-1 overscroll-contain overflow-y-auto p-3.5"
-        >
-          <ConversationTranscript
-            turns={turns}
-            spokenAgentTurnKeys={spokenAgentTurnKeys}
-            liveUserText={liveUserText}
-            startedAt={startedAt}
-            setup={setup}
-            question={currentQuestion}
-            thinking={thinking}
-            bottomRef={bottomRef}
-            compact
-            hideHeader
-          />
-        </div>
-        {candidateCameraStream ? (
-          <CandidateCameraPreview stream={candidateCameraStream} onDisable={onDisableCamera} />
-        ) : null}
-      </aside>
+      <MayaAside
+        agentSlot={
+          AVATAR_URL ? (
+            <AvatarStage agentTrack={agentTrack} state={presence} url={AVATAR_URL} />
+          ) : (
+            <InterviewerPresence agentTrack={agentTrack} localTrack={localTrack} state={presence} />
+          )
+        }
+        turns={turns}
+        spokenAgentTurnKeys={spokenAgentTurnKeys}
+        liveUserText={liveUserText}
+        startedAt={startedAt}
+        setup={setup}
+        question={currentQuestion}
+        thinking={thinking}
+        bottomRef={bottomRef}
+        candidateCameraStream={candidateCameraStream}
+        onDisableCamera={onDisableCamera}
+      />
     </div>
   );
 }
@@ -1643,7 +1833,7 @@ function DsaOutputPanel({
   const statusClass = result?.accepted ? "text-[var(--workspace-accent)]" : "text-[#ffb4b4]";
 
   return (
-    <section className="max-h-64 shrink-0 overflow-hidden bg-black/[0.16]">
+    <section className={`max-h-64 shrink-0 overflow-hidden border-t ${INTERVIEW_PANEL_RULE} bg-black/10`}>
       <div className="flex min-h-12 items-center justify-between gap-4 px-4 pb-2 pt-3.5">
         <div>
           <h3 className="text-sm font-semibold text-cream/86">Test results</h3>
@@ -1682,7 +1872,7 @@ function DsaOutputPanel({
         ) : result?.tests.length ? (
           <div className="space-y-2">
             {result.tests.map((test) => (
-              <div key={test.index} className="rounded-xl bg-white/[0.025] p-3.5">
+              <div key={test.index} className="rounded-xl bg-white/[0.03] p-3.5">
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-sm font-semibold text-cream/78">Case {test.index + 1}</span>
                   <span
@@ -1706,7 +1896,7 @@ function DsaOutputPanel({
               </div>
             ))}
             {result.stdout ? (
-              <div className="rounded-xl bg-white/[0.018] p-3.5">
+              <div className="rounded-xl bg-white/[0.02] p-3.5">
                 <p className="text-sm font-semibold text-cream/68">Console output</p>
                 <pre className="mt-2 whitespace-pre-wrap font-mono text-sm leading-6 text-cream/58">
                   {result.stdout}
@@ -1717,7 +1907,7 @@ function DsaOutputPanel({
         ) : examples.length ? (
           <div className="grid gap-2 sm:grid-cols-2">
             {examples.slice(0, 10).map((example, index) => (
-              <div key={`${example.input}-${index}`} className="rounded-xl bg-white/[0.025] p-3.5">
+              <div key={`${example.input}-${index}`} className="rounded-xl bg-white/[0.03] p-3.5">
                 <p className="text-sm font-semibold text-cream/72">Case {index + 1}</p>
                 <dl className="mt-3 grid gap-x-4 gap-y-2 text-sm leading-6 sm:grid-cols-[5rem_1fr]">
                   <dt className="font-medium text-cream/38">Input</dt>
@@ -1729,7 +1919,7 @@ function DsaOutputPanel({
             ))}
           </div>
         ) : (
-          <p className="rounded-xl bg-white/[0.02] p-4 text-sm leading-6 text-cream/42">
+          <p className="rounded-xl bg-white/[0.03] p-4 text-sm leading-6 text-cream/42">
             No runnable examples are available for this question yet.
           </p>
         )}

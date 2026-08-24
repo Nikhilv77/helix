@@ -1,10 +1,12 @@
 import { z } from "zod";
+import { findQuestion } from "@/lib/dsa/dsa";
 import { AiService } from "../ai/ai.service";
 import { Logger } from "../common/logger";
 import {
   describeLevel,
   describeRole,
   describeRound,
+  isDsaRound,
   isResumeRound,
   levelFocus
 } from "./prompt-context";
@@ -21,9 +23,16 @@ const plannedQuestionSchema = z.object({
   probeIfMissing: z.string().min(1).max(160)
 });
 
-const planSchema = z.object({
-  questions: z.array(plannedQuestionSchema).min(3).max(QUESTION_COUNT)
-});
+/**
+ * The array bounds are part of the JSON schema the provider sees, so they have
+ * to track the round's own question count. A DSA round asks three, the default
+ * arc asks four, and a longer round may ask five.
+ */
+function buildPlanSchema(questionCount: number) {
+  return z.object({
+    questions: z.array(plannedQuestionSchema).min(questionCount).max(questionCount)
+  });
+}
 
 const SYSTEM_INSTRUCTION = `You are a senior interviewer designing a coherent, evidence-led interview. Return only JSON matching the requested schema.
 
@@ -31,9 +40,48 @@ Write questions a skilled human interviewer would naturally ask aloud. The set m
 
 Use relaxed spoken English, with simple wording and a clear reason for asking. Do not sound like a questionnaire, rubric, or resume parser.`;
 
+/**
+ * A DSA round is not planned from a resume. The problems are already chosen and
+ * the workspace renders them one at a time, in order, so the plan's only job is
+ * to turn each problem into a question a human interviewer would actually ask.
+ */
+function buildDsaPrompt(setup: InterviewSetup, questionCount: number): string {
+  const problems = dsaProblems(setup).slice(0, questionCount);
+
+  return `Design a DSA coding interview for a ${describeLevel(setup.level)}.
+
+The candidate has practised these problems, and the workspace shows them one at a time in exactly this order:
+
+${problems
+  .map(
+    (problem, index) =>
+      `${index + 1}. ${problem.title} (${problem.difficulty}, ${problem.pattern})\n   ${problem.statement}`
+  )
+  .join("\n")}
+
+Produce exactly ${questionCount} questions, one per problem, in that order. Question 1 is about problem 1, question 2 about problem 2, and so on. Never ask about a problem that is not on this list, and never combine two problems into one question.
+
+Constraints:
+- Open each question by naming the problem, so the candidate knows which one is on screen.
+- Ask for the approach first. Complexity, correctness, and edge cases are what the follow-ups are for.
+- Use relaxed spoken English. One natural sentence, at most 20 words, asking exactly one thing.
+- Never state the solution, the optimal data structure, or the complexity in the question itself.
+- Do not include Markdown or code. The candidate writes code in the workspace.
+- ${levelFocus(setup.level)}
+
+For each question return:
+- text: the exact words spoken. One natural sentence, at most 20 words.
+- evidenceAnchor: the problem title, copied exactly.
+- competency: a short label such as Algorithmic reasoning, Data structure choice, or Complexity analysis.
+- intent: one sentence explaining what strong evidence this question should uncover.
+- mustHit: 2-3 observable pieces of evidence, such as the chosen data structure, the time and space complexity, or the edge case that breaks a naive attempt.
+- probeIfMissing: one specific fallback question for the most likely missing evidence, at most 18 words.`;
+}
+
 function buildPrompt(setup: InterviewSetup): string {
   const questionCount = setup.questionCount ?? QUESTION_COUNT;
   const agenda = setup.agenda?.filter((item) => item.trim().length > 0) ?? [];
+  if (isDsaRound(setup)) return buildDsaPrompt(setup, questionCount);
   const resumeGuidance = isResumeRound(setup)
     ? "This is a resume-defense round. Start from the candidate's actual evidence and let the conversation deepen around one or two strongest stories. Ask what happened, what they personally did, why they chose it, what changed, and what they would do differently now. Treat resume claims as starting points, not facts to praise. Every evidenceAnchor must copy or tightly paraphrase a named role, project, technology, achievement, or metric from the candidate context. Never invent a company, project, technology, or number."
     : "";
@@ -94,20 +142,21 @@ export class InterviewPlanner {
   ) {}
 
   async plan(setup: InterviewSetup): Promise<PlannedQuestion[]> {
+    const expectedCount = setup.questionCount ?? QUESTION_COUNT;
+
     try {
       const result = await withDeadline(
         this.ai.generateStructured({
           operation: "interview.plan",
           systemInstruction: SYSTEM_INSTRUCTION,
           prompt: buildPrompt(setup),
-          schema: planSchema,
+          schema: buildPlanSchema(expectedCount),
           modelClass: "fast",
           temperature: 0.2
         }),
         this.planningBudgetMs
       );
 
-      const expectedCount = setup.questionCount ?? QUESTION_COUNT;
       if (result.questions.length !== expectedCount) {
         throw new Error(`Expected ${expectedCount} questions, received ${result.questions.length}`);
       }
@@ -126,6 +175,8 @@ export class InterviewPlanner {
 }
 
 export function createFallbackPlan(setup: InterviewSetup): PlannedQuestion[] {
+  if (isDsaRound(setup)) return createDsaFallbackPlan(setup);
+
   const evidenceAnchor = fallbackEvidenceAnchor(setup);
   const decisionQuestion: Record<InterviewSetup["role"], string> = {
     backend: "Which reliability or data-flow decision created the hardest trade-off in that work?",
@@ -203,9 +254,86 @@ function applyQuestionFormats(
     codeTask: "",
     codeSnippet: ""
   }));
+
+  // A DSA round is already all code. Its questions carry the selected problem
+  // instead of the generic role exercise, and the position of each question has
+  // to keep matching `dsaQuestionSlugs`, which is what the workspace renders.
+  if (isDsaRound(setup)) return applyDsaFormats(setup, formatted);
+
   const coding = fallbackCodingQuestion(setup);
   if (coding && formatted.length > 2) formatted[2] = coding;
   return formatted;
+}
+
+/**
+ * Stamps each planned question with the problem the workspace will show at that
+ * index, so a model that drifts off the requested order cannot leave Maya
+ * asking about one problem while the editor shows another.
+ */
+function applyDsaFormats(setup: InterviewSetup, questions: PlannedQuestion[]): PlannedQuestion[] {
+  const problems = dsaProblems(setup);
+
+  return questions.map((question, index) => {
+    const problem = problems[index];
+    if (!problem) return question;
+
+    return {
+      ...question,
+      kind: "code" as const,
+      language: "",
+      codeTask: `${problem.title}: ${problem.statement}`,
+      codeSnippet: "",
+      evidenceAnchor: problem.title
+    };
+  });
+}
+
+interface DsaProblem {
+  slug: string;
+  title: string;
+  difficulty: string;
+  pattern: string;
+  statement: string;
+}
+
+/** The selected problems, in the order the workspace shows them. */
+function dsaProblems(setup: InterviewSetup): DsaProblem[] {
+  return (setup.dsaQuestionSlugs ?? []).map((slug) => {
+    const question = findQuestion(slug)?.question;
+
+    return {
+      slug,
+      title: question?.title ?? slug,
+      difficulty: question?.difficulty ?? "unknown difficulty",
+      pattern: question?.primaryPattern ?? "unknown pattern",
+      statement:
+        question?.problemStatement ??
+        question?.promptSummary ??
+        "Discuss the approach, complexity, and edge cases."
+    };
+  });
+}
+
+/**
+ * Used when planning fails. Every question is derived from a selected problem,
+ * so a failed provider call degrades the phrasing rather than replacing the
+ * round with unrelated questions.
+ */
+function createDsaFallbackPlan(setup: InterviewSetup): PlannedQuestion[] {
+  return dsaProblems(setup)
+    .slice(0, setup.questionCount ?? QUESTION_COUNT)
+    .map((problem) => ({
+      text: `Walk me through how you would solve ${problem.title}.`,
+      evidenceAnchor: problem.title,
+      kind: "code" as const,
+      language: "",
+      codeTask: `${problem.title}: ${problem.statement}`,
+      codeSnippet: "",
+      competency: "Algorithmic reasoning",
+      intent: `Establish whether the candidate can reason through ${problem.title} rather than recall a memorised solution.`,
+      mustHit: ["the approach and the data structure it needs", "time and space complexity"],
+      probeIfMissing: "What is the time and space complexity of that approach?"
+    }));
 }
 
 function fallbackCodingQuestion(setup: InterviewSetup): PlannedQuestion | null {

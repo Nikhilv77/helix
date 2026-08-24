@@ -18,6 +18,7 @@ import { ProfileService } from "./profile/profile.service";
 import { ProgressService } from "./progress/progress.service";
 import { FrontendRoadmapService } from "./roadmap/frontend-roadmap.service";
 import { ResumeService } from "./onboarding/resume/service";
+import { ResumeInterviewKitService } from "./onboarding/resume/interview-kit";
 
 export interface AppContainer {
   config: AppConfigService;
@@ -26,6 +27,7 @@ export interface AppContainer {
   profileService: ProfileService;
   curriculumService: CurriculumService;
   resumeService: ResumeService;
+  resumeInterviewKitService: ResumeInterviewKitService;
   dsaService: DsaService;
   dsaNotesService: DsaNotesService;
   dsaInterviewEvaluator: DsaInterviewEvaluator;
@@ -51,10 +53,12 @@ export function getAppContainer(): AppContainer {
     ? new AiService(new GroqProvider(config, config.groqApiKey, config.groqDeciderModel))
     : geminiAi;
 
+  const profileService = new ProfileService(prisma);
+
   container = {
     config,
     healthService: new HealthService(config, prisma),
-    profileService: new ProfileService(prisma),
+    profileService,
     // Seeded content, identical for every user, so the service caches it.
     dsaService: new DsaService(prisma),
     dsaNotesService: new DsaNotesService(prisma),
@@ -67,6 +71,9 @@ export function getAppContainer(): AppContainer {
     // Resume classification benefits from the document-oriented model path;
     // keep the low-latency interview model reserved for live conversation.
     resumeService: new ResumeService(geminiAi),
+    // Written once per resume and read by every later resume round, so the
+    // round itself never spends a model call on planning.
+    resumeInterviewKitService: new ResumeInterviewKitService(geminiAi, profileService),
     interviewService: new InterviewService(
       new InterviewPlanner(interviewAi),
       new InterviewDecider(interviewAi),

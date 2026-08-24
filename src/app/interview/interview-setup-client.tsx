@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
 import { ApiClientError, getProfile, startInterview } from "@/lib/api/api-client";
 import type { Curriculum, CurriculumSession } from "@/lib/curriculum/curriculum";
@@ -9,7 +9,7 @@ import { FRONTEND_SESSIONS, type FrontendSession } from "@/lib/roadmap/frontend-
 import { findTemplate, type InterviewTemplate } from "@/lib/interviews/interview-templates";
 import { pageTitle } from "@/lib/shared/seo";
 import type { Intensity, InterviewSetup, Level, Role, RoundType } from "@/lib/shared/types";
-import type { WorkspaceAccent } from "@/lib/workspace/accent";
+import { type WorkspaceAccent, workspaceAccentCssVariables } from "@/lib/workspace/accent";
 
 const roleOptions: Array<{ value: Role; label: string }> = [
   { value: "backend", label: "Backend" },
@@ -420,6 +420,7 @@ export default function InterviewSetupClient({
   return (
     <main
       data-workspace-accent={workspaceAccent}
+      style={workspaceAccentCssVariables(workspaceAccent) as CSSProperties}
       className="workspace-black relative flex min-h-screen flex-col overflow-hidden bg-black text-cream"
     >
       <div className="pointer-events-none absolute left-1/2 top-[-12rem] h-[32rem] w-[44rem] max-w-[92vw] -translate-x-1/2 rounded-full bg-[var(--workspace-accent)] opacity-[0.055] blur-[160px]" />
@@ -666,9 +667,6 @@ function StartingState({ label }: { label: string }) {
       <p className="mt-2 text-sm text-cream/48">
         Building a focused round from your saved profile.
       </p>
-      <div className="mt-6 h-1 w-40 overflow-hidden rounded-full bg-white/[0.06]">
-        <span className="block h-full w-1/2 animate-pulse rounded-full bg-[var(--workspace-accent)] shadow-[0_0_14px_var(--workspace-accent)]" />
-      </div>
     </div>
   );
 }

@@ -91,15 +91,7 @@ Competency: ${competency ?? "Role-relevant judgement"}
 Interview intent: ${intent ?? "Collect concrete evidence from the candidate's real experience."}
 Evidence anchor: ${input.evidenceAnchor ?? "No single anchor was recorded; use the candidate context carefully."}
 Question format: ${questionKind ?? "conversation"}
-${
-  questionKind === "code"
-    ? `Coding language: ${language ?? "unspecified"}
-Task: ${codeTask ?? questionAsked}
-Starter code:
-${codeSnippet ?? ""}
-For code answers, judge correctness, failure handling, and the candidate's explanation. Do not demand one exact implementation if their approach is sound.`
-    : ""
-}
+${questionKind === "code" ? codeContext({ language, codeTask, codeSnippet, questionAsked }) : ""}
 
 A complete answer contains:
 ${mustHit.map((item) => `- ${item}`).join("\n")}
@@ -177,6 +169,27 @@ export class InterviewDecider {
 }
 
 export { buildPrompt as buildDecidePrompt };
+
+/**
+ * A DSA round has a task but no starter code, since the candidate writes in an
+ * empty workspace editor. Empty lines here read to the model as a blank
+ * snippet, so each part is only printed when it exists.
+ */
+function codeContext(input: {
+  language?: string;
+  codeTask?: string;
+  codeSnippet?: string;
+  questionAsked: string;
+}): string {
+  return [
+    input.language ? `Coding language: ${input.language}` : "",
+    `Task: ${input.codeTask || input.questionAsked}`,
+    input.codeSnippet ? `Starter code:\n${input.codeSnippet}` : "",
+    "For code answers, judge correctness, failure handling, and the candidate's explanation. Do not demand one exact implementation if their approach is sound."
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
 
 function formatEvidenceLedger(ledger?: EvidenceLedger): string {
   if (!ledger) return "No evidence ledger yet.";

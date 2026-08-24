@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { findQuestion } from "@/lib/dsa/dsa";
+import { OPERATION_DSA_SLUGS } from "@/lib/dsa/dsa-code-templates";
 import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
@@ -10,19 +11,6 @@ export const maxDuration = 60;
 
 const MIN_SOLVED = 10;
 const QUESTION_COUNT = 3 as const;
-const CLASS_BASED_DSA_SLUGS = new Set([
-  "design-browser-history",
-  "lru-cache",
-  "min-stack",
-  "implement-queue-using-stacks",
-  "implement-stack-using-queues",
-  "design-circular-queue",
-  "online-stock-span",
-  "time-based-key-value-store",
-  "find-median-from-data-stream",
-  "implement-trie-prefix-tree",
-  "design-add-and-search-words-data-structure"
-]);
 const IMPORTANT_FUNCTION_QUESTION_SLUGS = [
   "two-sum",
   "longest-substring-without-repeating-characters",
@@ -45,22 +33,34 @@ export async function POST(request: NextRequest) {
     const ownerId = await resolveOwnerId(request, app.config);
     const profile = await app.profileService.get(ownerId);
     const completed = await app.frontendRoadmapService.completedDsaQuestions(ownerId);
+    // The gate counts what the round can actually draw on. Design problems are
+    // solved in the workspace but never asked in a spoken round, so counting
+    // them would let a candidate through to an interview of unseen problems.
+    const solvedFunctionQuestions = completed.filter(
+      (item) => !OPERATION_DSA_SLUGS.has(item.slug)
+    );
 
-    if (completed.length < MIN_SOLVED) {
+    if (solvedFunctionQuestions.length < MIN_SOLVED) {
       throw new ApiRouteError(
         409,
         "DSA_INTERVIEW_NOT_READY",
         `Solve at least ${MIN_SOLVED} DSA practice questions before starting an interview.`,
-        { completed: completed.length, required: MIN_SOLVED }
+        { completed: solvedFunctionQuestions.length, required: MIN_SOLVED }
       );
     }
 
-    const solvedFunctionQuestions = completed.filter((item) => !CLASS_BASED_DSA_SLUGS.has(item.slug));
-    const fallbackQuestions = IMPORTANT_FUNCTION_QUESTION_SLUGS
-      .map((slug) => findQuestion(slug)?.question)
+    const fallbackQuestions = IMPORTANT_FUNCTION_QUESTION_SLUGS.map(
+      (slug) => findQuestion(slug)?.question
+    )
       .filter((question): question is NonNullable<typeof question> => Boolean(question))
       .filter((question) => !solvedFunctionQuestions.some((item) => item.slug === question.slug));
-    const selected = shuffle([...solvedFunctionQuestions, ...fallbackQuestions]).slice(0, QUESTION_COUNT);
+    // Problems the candidate has actually solved come first. The curated list
+    // only tops the round up when they have not solved enough of them, so a
+    // round is never filled with unseen problems while solved ones are left out.
+    const selected = [...shuffle(solvedFunctionQuestions), ...shuffle(fallbackQuestions)].slice(
+      0,
+      QUESTION_COUNT
+    );
     const agenda = selected.map((item) => {
       const question = findQuestion(item.slug)?.question;
       return `${item.title}: ${question?.problemStatement ?? "Discuss the solution, trade-offs, and edge cases."}`;

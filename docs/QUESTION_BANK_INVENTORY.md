@@ -67,7 +67,7 @@ Home should show a frontend playlist with six sessions:
 
 1. Frontend DSA
 2. JavaScript and React Core
-3. Build Real UI Features
+3. Computer Fundamentals
 4. Production UI Quality
 5. Resume and Behavioral Defense
 6. Final Frontend Mock

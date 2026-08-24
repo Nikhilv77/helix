@@ -6,10 +6,11 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import {
   ArrowRight,
   Blocks,
-  BrainCircuit,
   Braces,
+  BrainCircuit,
   Check,
   Code2,
+  Cpu,
   Database,
   FileText,
   Gauge,
@@ -50,9 +51,9 @@ const SESSION_CARD_META: Record<string, { label: string; detail: string }> = {
     label: "Core depth",
     detail: "JS behaviour, React timing, and rendering."
   },
-  "build-real-ui-features": {
-    label: "Product build",
-    detail: "Real feature rounds with tradeoff pressure."
+  "computer-fundamentals": {
+    label: "Under the hood",
+    detail: "Network, OS and database behaviour."
   },
   "production-ui-quality": {
     label: "Ship quality",
@@ -71,6 +72,7 @@ const SESSION_CARD_META: Record<string, { label: string; detail: string }> = {
 const SESSION_ICON_RULES: Array<{ keywords: string[]; icon: LucideIcon }> = [
   { keywords: ["dsa", "pattern", "algorithm", "data-structure"], icon: Braces },
   { keywords: ["javascript", "react", "frontend", "ui", "component", "render"], icon: Code2 },
+  { keywords: ["fundamental", "network", "operating", "protocol", "memory"], icon: Cpu },
   { keywords: ["build", "feature", "product", "project"], icon: Blocks },
   { keywords: ["quality", "performance", "reliability", "accessibility", "testing"], icon: Gauge },
   { keywords: ["resume", "behavioral", "story", "evidence"], icon: FileText },

@@ -17,7 +17,7 @@ The current product focus is only the frontend interview-preparation experience.
 - `/practice`: Frontend practice overview based on persisted roadmap progress.
 - `/practice/:chapter`: Chapter briefing and guided practice flow.
 - `/dsa-questions/:slug`: Individual DSA question, explanation, hints, notes, editor, and execution results.
-- `/interview/dsa/:slug`: DSA interview workspace for a selected problem.
+- `/interview/dsa/:slug`: legacy link target that redirects to `/interview/dsa`. The per-problem workspace now lives inside the live interview room.
 - `/reports`: Interview history, evaluations, score breakdowns, and recommendations.
 - `/progress`: Roadmap, practice, pattern, and interview progress trends.
 
@@ -43,7 +43,7 @@ The base roadmap contains six sessions:
 
 1. Frontend DSA
 2. JavaScript and React Core
-3. Build Real UI Features
+3. Computer Fundamentals
 4. Production UI Quality
 5. Resume and Behavioral Defense
 6. Final Frontend Mock

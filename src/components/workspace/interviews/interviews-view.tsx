@@ -7,6 +7,7 @@ import {
   BadgeCheck,
   CircleGauge,
   CodeXml,
+  Cpu,
   FileCode2,
   Play,
   Rocket
@@ -14,15 +15,13 @@ import {
 import { DocumentTitle } from "@/components/document-title";
 import { FRONTEND_SESSIONS } from "@/lib/roadmap/frontend-plan";
 import type { FrontendRoadmapHome, FrontendRoadmapSession } from "@/lib/roadmap/roadmap";
-import type { CandidateProfile, InterviewHistoryItem, WorkspaceInsights } from "@/lib/shared/types";
+import type { CandidateProfile, InterviewHistoryItem } from "@/lib/shared/types";
 
 interface InterviewsViewProps {
   quota: { used: number; limit: number };
   sessions: InterviewHistoryItem[];
   profile: CandidateProfile;
-  insights: WorkspaceInsights;
   roadmap: FrontendRoadmapHome | null;
-  historyAvailable?: boolean;
 }
 
 type InterviewRoadmapSession = Pick<
@@ -40,7 +39,7 @@ type InterviewRoadmapSession = Pick<
 const sessionIcons: Record<string, LucideIcon> = {
   "frontend-dsa": CodeXml,
   "javascript-react-core": Atom,
-  "build-real-ui-features": FileCode2,
+  "computer-fundamentals": Cpu,
   "production-ui-quality": CircleGauge,
   "resume-behavioral-defense": BadgeCheck,
   "final-frontend-mock": Rocket
@@ -106,7 +105,7 @@ export function InterviewsView({ quota, sessions, profile, roadmap }: Interviews
       </section>
 
       <section className="relative isolate mt-12 sm:mt-14" aria-label="Interview sessions">
-        <div className="relative z-10 grid gap-x-8 gap-y-12 md:grid-cols-2 xl:grid-cols-4">
+        <div className="relative z-10 grid gap-x-8 gap-y-12 md:grid-cols-2 xl:grid-cols-3">
           {roadmapSessions.length ? (
             roadmapSessions.map((session, index) => (
               <RoadmapSessionCard
@@ -137,6 +136,7 @@ function RoadmapSessionCard({
   delay: number;
 }) {
   const SessionIcon = sessionIcons[session.id] ?? FileCode2;
+  const started = session.completedQuestions > 0;
 
   return (
     <Link
@@ -159,7 +159,7 @@ function RoadmapSessionCard({
 
       <div className="relative z-10 mt-auto pt-9">
         <span className="interview-session-link inline-flex items-center gap-2 text-base font-medium text-cream/88 transition-colors group-hover:text-cream">
-          Start session
+          {started ? "Continue session" : "Start session"}
           <ArrowRight
             size={17}
             aria-hidden="true"
@@ -186,6 +186,8 @@ function fallbackRoadmapSessions(): InterviewRoadmapSession[] {
 
 function roadmapSessionHref(id: string): string {
   if (id === "frontend-dsa") return "/interview/dsa";
+  if (id === "resume-behavioral-defense") return "/interview/resume";
+  if (id === "computer-fundamentals") return "/interview/fundamentals";
   const params = new URLSearchParams({ roadmapSession: id });
   return `/interview?${params.toString()}`;
 }

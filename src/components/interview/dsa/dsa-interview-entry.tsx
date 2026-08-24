@@ -11,10 +11,13 @@ const MIN_SOLVED = 10;
 
 export function DsaInterviewEntry({
   completedCount,
+  sessionsRemaining,
   firstName,
   workspaceAccent
 }: {
   completedCount: number;
+  /** Null when the quota could not be read; the server still enforces it. */
+  sessionsRemaining: number | null;
   firstName: string;
   workspaceAccent: WorkspaceAccent;
 }) {
@@ -24,11 +27,17 @@ export function DsaInterviewEntry({
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const { state, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
 
-  const ready = completedCount >= MIN_SOLVED;
+  const solvedEnough = completedCount >= MIN_SOLVED;
+  // Starting a round the server will reject wastes the wait and the greeting,
+  // so the quota is checked before the page auto-starts rather than after.
+  const outOfSessions = sessionsRemaining === 0;
+  const ready = solvedEnough && !outOfSessions;
   const greeting = firstName ? `Hey ${firstName},` : "Hey there,";
-  const script = ready
-    ? `${greeting} let's start. I'll choose three important function-based problems, prioritizing ones you've already solved. I'll ask one at a time, follow up when it matters, and keep the conversation moving.`
-    : `${greeting} you've solved ${completedCount} practice question${completedCount === 1 ? "" : "s"} so far. Solve at least ${MIN_SOLVED} before we start a DSA interview, so the problems Maya asks about are ones you actually know.`;
+  const script = !solvedEnough
+    ? `${greeting} you've solved ${completedCount} practice question${completedCount === 1 ? "" : "s"} so far. Solve at least ${MIN_SOLVED} before we start a DSA interview, so the problems Maya asks about are ones you actually know.`
+    : outOfSessions
+      ? `${greeting} you've used all your interview sessions for today. Come back tomorrow and we'll run the DSA round then.`
+      : `${greeting} let's start. I'll choose three important function-based problems, prioritizing ones you've already solved. I'll ask one at a time, follow up when it matters, and keep the conversation moving.`;
 
   useEffect(() => {
     if (!ready || error || !isLoaded || !isSignedIn) return;
@@ -148,12 +157,18 @@ export function DsaInterviewEntry({
             DSA interview
           </p>
           <h1 className="mt-4 max-w-3xl font-display text-xl font-semibold leading-[1.08] tracking-tight text-cream sm:text-2xl lg:text-3xl">
-            {ready ? `${greeting} let's start.` : `${greeting} let's get you ready first.`}
+            {!solvedEnough
+              ? `${greeting} let's get you ready first.`
+              : outOfSessions
+                ? `${greeting} that's it for today.`
+                : `${greeting} let's start.`}
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-8 text-cream/72 sm:text-lg">
-            {ready
-              ? "I'll choose three important function-based problems, prioritizing ones you've already solved. I'll ask one at a time, follow up when it matters, and keep the conversation moving."
-              : `You've solved ${completedCount} question${completedCount === 1 ? "" : "s"} so far. Solve at least ${MIN_SOLVED} practice questions first, then Maya can interview you on problems you actually know.`}
+            {!solvedEnough
+              ? `You've solved ${completedCount} question${completedCount === 1 ? "" : "s"} so far. Solve at least ${MIN_SOLVED} practice questions first, then Maya can interview you on problems you actually know.`
+              : outOfSessions
+                ? "You've used all your interview sessions for today. Your next round unlocks tomorrow, so this is a good moment to solve another practice question."
+                : "I'll choose three important function-based problems, prioritizing ones you've already solved. I'll ask one at a time, follow up when it matters, and keep the conversation moving."}
           </p>
           {ready && starting ? (
             <p className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-cream/78">

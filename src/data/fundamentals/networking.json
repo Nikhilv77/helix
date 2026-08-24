@@ -1,0 +1,386 @@
+{
+  "area": "networking",
+  "title": "Networking",
+  "whyItMatters": "Every request a frontend makes crosses this layer. Most 'slow page' answers live here.",
+  "questions": [
+    {
+      "slug": "no-cache-vs-no-store",
+      "format": "mcq",
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "What does `Cache-Control: no-cache` tell the browser to do?",
+      "options": [
+        "Never store the response at all",
+        "Store it, but revalidate with the server before reusing it",
+        "Store it for the default heuristic lifetime",
+        "Store it only in memory, never on disk"
+      ],
+      "answerIndex": 1,
+      "explanation": "no-cache stores the response but forces revalidation; no-store is the directive that refuses to write it down at all.",
+      "concept": {
+        "title": "no-cache is not no-store",
+        "summary": "The two directives sound alike and do almost opposite things.",
+        "points": [
+          "no-store: never written to any cache. Used for sensitive responses.",
+          "no-cache: cached, but every reuse needs a revalidation round trip.",
+          "A revalidation that returns 304 still costs latency, just not bandwidth.",
+          "max-age=0, must-revalidate behaves close to no-cache."
+        ]
+      }
+    },
+    {
+      "slug": "http2-head-of-line",
+      "format": "mcq",
+      "levels": [
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "What problem did HTTP/2 multiplexing solve compared to HTTP/1.1?",
+      "options": [
+        "Responses could not be compressed",
+        "Only six requests could be in flight per connection, and each blocked the next",
+        "Requests could not be encrypted",
+        "Cookies had to be sent on every request"
+      ],
+      "answerIndex": 1,
+      "explanation": "HTTP/1.1 needed one connection per in-flight request, so browsers capped at ~6 per origin and queued the rest.",
+      "concept": {
+        "title": "Head-of-line blocking, twice",
+        "summary": "Each HTTP version moved the queue somewhere else rather than removing it.",
+        "points": [
+          "HTTP/1.1: one request per connection, browser opens ~6 per origin, rest queue.",
+          "HTTP/2: many streams on one TCP connection, so no application-level queue.",
+          "But a lost TCP packet still stalls every stream, because TCP delivers in order.",
+          "HTTP/3 moves to QUIC over UDP so one lost packet only stalls its own stream."
+        ]
+      }
+    },
+    {
+      "slug": "cors-preflight-trigger",
+      "format": "mcq",
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "Which request triggers a CORS preflight?",
+      "options": [
+        "A cross-origin GET with no custom headers",
+        "A cross-origin POST sending JSON with Content-Type: application/json",
+        "A same-origin PUT",
+        "Any request that sets a cookie"
+      ],
+      "answerIndex": 1,
+      "explanation": "application/json is not a CORS-safelisted content type, so the browser sends an OPTIONS preflight first.",
+      "concept": {
+        "title": "What makes a request 'simple'",
+        "summary": "A cross-origin request skips the preflight only if it stays inside a narrow safelist.",
+        "points": [
+          "Method must be GET, HEAD or POST.",
+          "Content-Type must be form-urlencoded, multipart/form-data or text/plain.",
+          "No custom request headers such as Authorization or X-Request-Id.",
+          "Anything outside that sends an OPTIONS preflight the server must answer."
+        ]
+      }
+    },
+    {
+      "slug": "tcp-vs-udp",
+      "format": "mcq",
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "prompt": "What does TCP give you that UDP does not?",
+      "options": [
+        "Encryption of the payload",
+        "Ordered, retransmitted delivery",
+        "Lower latency on first connection",
+        "Compression of the payload"
+      ],
+      "answerIndex": 1,
+      "explanation": "TCP guarantees ordering and retransmits what is lost; UDP does neither, which is why it is faster and lossier.",
+      "concept": {
+        "title": "TCP vs UDP",
+        "summary": "TCP trades latency for guarantees. Neither one encrypts anything.",
+        "points": [
+          "TCP: handshake, ordered delivery, retransmission, congestion control.",
+          "UDP: fire and forget, no ordering, no retransmission, no handshake.",
+          "Encryption is TLS, a separate layer, available over both.",
+          "Video calls and QUIC pick UDP and rebuild only the guarantees they need."
+        ]
+      }
+    },
+    {
+      "slug": "tls-handshake-purpose",
+      "format": "mcq",
+      "levels": [
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "What is the certificate in a TLS handshake actually proving?",
+      "options": [
+        "That the connection is encrypted",
+        "That the server owns the domain it claims to be",
+        "That the payload has not been compressed",
+        "That the client is who it says it is"
+      ],
+      "answerIndex": 1,
+      "explanation": "The certificate binds a public key to a domain, vouched for by a CA. Encryption comes from the key exchange, not the certificate.",
+      "concept": {
+        "title": "What TLS does in what order",
+        "summary": "Identity first, then a shared secret, then encrypted traffic.",
+        "points": [
+          "Server presents a certificate chaining to a CA the client trusts.",
+          "Client verifies the chain and that the domain matches.",
+          "Both derive a shared symmetric key without ever sending it.",
+          "Traffic from then on is symmetric-encrypted, which is the fast part."
+        ]
+      }
+    },
+    {
+      "slug": "etag-conditional-request",
+      "format": "mcq",
+      "levels": [
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "A browser holds a response with an ETag. What does it send on the next request?",
+      "options": [
+        "The full response body for comparison",
+        "An If-None-Match header carrying that ETag",
+        "A Cache-Control: no-store header",
+        "Nothing — it serves from cache without contacting the server"
+      ],
+      "answerIndex": 1,
+      "explanation": "If-None-Match lets the server reply 304 with no body when the resource is unchanged.",
+      "concept": {
+        "title": "Revalidation saves bytes, not round trips",
+        "summary": "A 304 is still a full network round trip.",
+        "points": [
+          "ETag is an opaque version tag the server chose.",
+          "If-None-Match asks: has it changed since this version?",
+          "304 Not Modified: no body, but you still paid the latency.",
+          "Only a fresh max-age avoids the network entirely."
+        ]
+      }
+    },
+    {
+      "slug": "status-301-vs-302",
+      "format": "mcq",
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "prompt": "Why is shipping a 301 riskier than a 302?",
+      "options": [
+        "301 is slower to process",
+        "Browsers cache 301 permanently, so a mistake is hard to take back",
+        "301 drops query parameters",
+        "301 cannot be used with HTTPS"
+      ],
+      "answerIndex": 1,
+      "explanation": "A 301 is a permanent redirect and browsers cache it aggressively, so a wrong target can persist long after the server is fixed.",
+      "concept": {
+        "title": "Redirects you can and cannot undo",
+        "summary": "The permanence is a promise to the client, not just a label.",
+        "points": [
+          "301 / 308: permanent, cached by browsers, hard to reverse.",
+          "302 / 307: temporary, re-checked each time.",
+          "307 and 308 preserve the method; 301 and 302 historically did not.",
+          "Use 302 while you are unsure, 301 once the move is final."
+        ]
+      }
+    },
+    {
+      "slug": "dns-resolution-order",
+      "format": "mcq",
+      "levels": [
+        "0-2",
+        "3-5"
+      ],
+      "prompt": "Where does a browser look first when resolving a hostname?",
+      "options": [
+        "The authoritative nameserver for the domain",
+        "Its own and the OS cache, before any network query",
+        "The root nameservers",
+        "The nearest CDN edge node"
+      ],
+      "answerIndex": 1,
+      "explanation": "Resolution walks outward from local caches; the recursive resolver only queries the hierarchy on a miss.",
+      "concept": {
+        "title": "DNS resolution, outward",
+        "summary": "Every layer is a cache, which is why DNS changes take time to appear.",
+        "points": [
+          "Browser cache, then OS cache, then the configured resolver.",
+          "Resolver misses walk root → TLD → authoritative nameserver.",
+          "Each answer carries a TTL that decides how long it is reused.",
+          "That TTL is why a DNS cutover is planned hours ahead."
+        ]
+      }
+    },
+    {
+      "slug": "same-origin-definition",
+      "format": "mcq",
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "prompt": "Which of these is a different origin from `https://app.example.com/dashboard`?",
+      "options": [
+        "https://app.example.com/settings",
+        "https://app.example.com:8443/dashboard",
+        "https://app.example.com/dashboard?tab=1",
+        "https://app.example.com/dashboard#top"
+      ],
+      "answerIndex": 1,
+      "explanation": "An origin is scheme, host and port. The path, query and fragment are not part of it, but a different port is a different origin.",
+      "concept": {
+        "title": "Origin = scheme + host + port",
+        "summary": "Three parts, and all three must match.",
+        "points": [
+          "https vs http is a different origin, even on the same host.",
+          "A different port is a different origin, including 443 vs 8443.",
+          "Subdomains are different origins: app.example.com ≠ example.com.",
+          "Path, query and hash never affect the origin."
+        ]
+      }
+    },
+    {
+      "slug": "why-http3-udp",
+      "format": "explain",
+      "levels": [
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "HTTP/3 runs over UDP instead of TCP. What did that buy?",
+      "expects": [
+        "names TCP head-of-line blocking as the problem",
+        "explains that streams become independent",
+        "mentions the faster handshake or connection migration"
+      ],
+      "probeIfMissing": "What happens to the other streams when one TCP packet is lost?",
+      "concept": {
+        "title": "Why QUIC left TCP behind",
+        "summary": "HTTP/2 removed the application queue but inherited TCP's.",
+        "points": [
+          "TCP delivers bytes in order, so one lost packet stalls every HTTP/2 stream on that connection.",
+          "QUIC tracks streams itself, so loss only stalls the stream it belongs to.",
+          "QUIC folds the TLS handshake in, cutting a round trip on connect.",
+          "Connections are identified by an ID, so they survive a network change."
+        ]
+      }
+    },
+    {
+      "slug": "explain-cache-still-network",
+      "format": "explain",
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "A response is in the browser cache but the request still hits the network. Why?",
+      "expects": [
+        "distinguishes fresh from stale",
+        "names revalidation or a 304",
+        "connects it to a directive such as no-cache or max-age=0"
+      ],
+      "probeIfMissing": "What is the difference between a cached response and a fresh one?",
+      "concept": {
+        "title": "Cached is not the same as fresh",
+        "summary": "The cache decides reuse by freshness, not by presence.",
+        "points": [
+          "Fresh (inside max-age): served with no network at all.",
+          "Stale or no-cache: revalidated with If-None-Match or If-Modified-Since.",
+          "304 means the body is reused, but the round trip already happened.",
+          "stale-while-revalidate serves the old copy and refreshes in the background."
+        ]
+      }
+    },
+    {
+      "slug": "scenario-fast-in-postman",
+      "format": "scenario",
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "The API is fast in Postman but slow in the browser. Where do you look?",
+      "expects": [
+        "separates server time from everything around it",
+        "names at least two browser-only costs such as CORS preflight, TLS, DNS or connection limits",
+        "describes how they would confirm it rather than guessing"
+      ],
+      "probeIfMissing": "What does the browser do before the request that Postman does not?",
+      "concept": {
+        "title": "What the browser adds",
+        "summary": "Same endpoint, very different work around it.",
+        "points": [
+          "A preflight OPTIONS doubles the round trips on every call.",
+          "Cold DNS, TCP and TLS can cost more than the response itself.",
+          "Per-origin connection limits queue requests on HTTP/1.1.",
+          "The waterfall in devtools splits all of this out — read it before guessing."
+        ]
+      }
+    },
+    {
+      "slug": "explain-preflight-cost",
+      "format": "explain",
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "Your team added an Authorization header and latency doubled. Why would that happen?",
+      "expects": [
+        "connects the custom header to a CORS preflight",
+        "explains the extra OPTIONS round trip",
+        "mentions caching the preflight with Access-Control-Max-Age"
+      ],
+      "probeIfMissing": "What does the browser send before the real request now?",
+      "concept": {
+        "title": "A header that costs a round trip",
+        "summary": "A custom header pushes the request out of the CORS safelist.",
+        "points": [
+          "Authorization is not safelisted, so every call now preflights.",
+          "That is an extra OPTIONS round trip before the real one.",
+          "Access-Control-Max-Age lets the browser cache the preflight result.",
+          "Same-origin requests never preflight, which is why a proxy path also fixes it."
+        ]
+      }
+    },
+    {
+      "slug": "scenario-works-for-me",
+      "format": "scenario",
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "You shipped a fix. It works for you but users still report the old behaviour. Where do you look?",
+      "expects": [
+        "names caching at some layer as the likely cause",
+        "distinguishes browser cache, CDN and service worker",
+        "proposes how to confirm which layer is serving the stale copy"
+      ],
+      "probeIfMissing": "How many places between your server and that user could be holding the old file?",
+      "concept": {
+        "title": "Every layer holds a copy",
+        "summary": "'Works for me' usually means your cache cleared and theirs did not.",
+        "points": [
+          "Browser cache, service worker, CDN edge and origin each keep their own copy.",
+          "A service worker can serve stale assets long after a hard refresh.",
+          "Content-hashed filenames make each deploy a new URL, sidestepping all of it.",
+          "Check the response headers on the user's request, not yours."
+        ]
+      }
+    }
+  ]
+}

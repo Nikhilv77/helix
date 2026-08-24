@@ -5,5 +5,5 @@
     "moduleResolution": "node",
     "noEmit": false
   },
-  "include": ["prisma/**/*.ts", "src/lib/frontend-plan.ts"]
+  "include": ["prisma/**/*.ts", "src/lib/roadmap/frontend-plan.ts"]
 }

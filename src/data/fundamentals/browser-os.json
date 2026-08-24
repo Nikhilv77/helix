@@ -1,0 +1,303 @@
+{
+  "area": "browser-os",
+  "title": "Browser & OS",
+  "whyItMatters": "The machinery under the framework: what the process, the thread and the event loop are actually doing while your code runs.",
+  "questions": [
+    {
+      "slug": "process-vs-thread",
+      "format": "mcq",
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "prompt": "What do two threads in the same process share that two processes do not?",
+      "options": [
+        "The CPU core they run on",
+        "The same address space and heap",
+        "The same call stack",
+        "The same file descriptors only"
+      ],
+      "answerIndex": 1,
+      "explanation": "Threads share the process's memory, which is what makes them cheap to switch between and dangerous to write to concurrently.",
+      "concept": {
+        "title": "Process vs thread",
+        "summary": "The difference is memory isolation, and everything else follows from it.",
+        "points": [
+          "Each process has its own address space; a crash cannot corrupt another.",
+          "Threads inside a process share the heap, so they need locks.",
+          "Each thread still gets its own stack and registers.",
+          "Chrome puts tabs in separate processes so one tab cannot read another."
+        ]
+      }
+    },
+    {
+      "slug": "microtask-ordering",
+      "format": "mcq",
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "A click handler schedules `setTimeout(f, 0)` and then resolves a promise with `.then(g)`. Which runs first?",
+      "options": [
+        "f, because it was scheduled first",
+        "g, because microtasks drain before the next task",
+        "They run in parallel",
+        "Whichever the browser decides that tick"
+      ],
+      "answerIndex": 1,
+      "explanation": "The microtask queue is drained completely after the current task, before any timer callback is taken from the task queue.",
+      "concept": {
+        "title": "Two queues, not one",
+        "summary": "Microtasks are not just faster timers — they run at a different point in the loop.",
+        "points": [
+          "Tasks: timers, events, I/O. One is taken per loop turn.",
+          "Microtasks: promise callbacks, queueMicrotask, MutationObserver.",
+          "After each task, the entire microtask queue drains — including ones added while draining.",
+          "An endlessly self-queueing microtask starves the loop and freezes the page."
+        ]
+      }
+    },
+    {
+      "slug": "reflow-vs-repaint",
+      "format": "mcq",
+      "levels": [
+        "0-2",
+        "3-5"
+      ],
+      "prompt": "Which change forces layout (reflow) rather than only paint?",
+      "options": [
+        "Changing an element's background-color",
+        "Changing an element's width",
+        "Changing an element's opacity",
+        "Changing an element's box-shadow colour"
+      ],
+      "answerIndex": 1,
+      "explanation": "Width changes geometry, so positions must be recomputed. Colour and opacity do not move anything.",
+      "concept": {
+        "title": "Style → layout → paint → composite",
+        "summary": "The further up the pipeline your change lands, the more work it costs.",
+        "points": [
+          "Geometry (width, top, font-size) triggers layout, then paint, then composite.",
+          "Colour and shadow skip layout but still repaint.",
+          "transform and opacity can be handled by the compositor alone.",
+          "Reading offsetHeight after a write forces a synchronous layout — the classic thrash."
+        ]
+      }
+    },
+    {
+      "slug": "main-thread-blocking",
+      "format": "mcq",
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "Why does a long synchronous loop freeze the page rather than just delaying itself?",
+      "options": [
+        "The browser deprioritises long-running scripts",
+        "Rendering and event handling share the same thread as your script",
+        "The garbage collector pauses the page",
+        "The loop consumes the microtask queue"
+      ],
+      "answerIndex": 1,
+      "explanation": "Script, layout, paint and event dispatch all run on the main thread, so a busy loop leaves no turn for any of them.",
+      "concept": {
+        "title": "One thread does everything visible",
+        "summary": "Blocking it blocks the whole page, not just your code.",
+        "points": [
+          "Script execution, layout, paint and event handlers share the main thread.",
+          "Nothing renders until the current task yields.",
+          "Web Workers get their own thread but no DOM access.",
+          "Breaking work into chunks across tasks keeps the page responsive."
+        ]
+      }
+    },
+    {
+      "slug": "worker-structured-clone",
+      "format": "mcq",
+      "levels": [
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "What actually happens to an object you `postMessage` to a Web Worker?",
+      "options": [
+        "The worker receives a reference to the same object",
+        "It is structured-cloned, so the worker gets a copy",
+        "It is serialised to JSON and parsed",
+        "It is shared only if it is frozen"
+      ],
+      "answerIndex": 1,
+      "explanation": "Structured clone copies the object, which is why workers cannot corrupt main-thread state — and why sending a large object is not free.",
+      "concept": {
+        "title": "Workers copy, they do not share",
+        "summary": "Isolation is the whole point, and the copy is the price.",
+        "points": [
+          "Structured clone handles Maps, Sets, Dates and cycles — unlike JSON.",
+          "Cloning a large payload costs real main-thread time.",
+          "Transferables (ArrayBuffer) move ownership instead of copying.",
+          "SharedArrayBuffer is the only true shared memory, and it needs COOP/COEP headers."
+        ]
+      }
+    },
+    {
+      "slug": "stack-vs-heap",
+      "format": "mcq",
+      "levels": [
+        "fresher",
+        "0-2"
+      ],
+      "prompt": "What lives on the stack rather than the heap?",
+      "options": [
+        "Every object your program allocates",
+        "The call frames and local references of running functions",
+        "Anything declared with const",
+        "Strings, because they are immutable"
+      ],
+      "answerIndex": 1,
+      "explanation": "The stack holds call frames and their local slots; objects themselves live on the heap and the frame holds a reference.",
+      "concept": {
+        "title": "Stack frames, heap objects",
+        "summary": "The stack unwinds automatically; the heap needs a collector.",
+        "points": [
+          "Each call pushes a frame with its locals and return address.",
+          "Objects, arrays and closures are allocated on the heap.",
+          "Return pops the frame instantly — no collection needed.",
+          "Unbounded recursion overflows the stack long before the heap fills."
+        ]
+      }
+    },
+    {
+      "slug": "gc-reachability",
+      "format": "mcq",
+      "levels": [
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "What makes an object eligible for garbage collection?",
+      "options": [
+        "Its variable went out of scope",
+        "It is no longer reachable from any root",
+        "Its reference count reached zero",
+        "It has not been read for a full GC cycle"
+      ],
+      "answerIndex": 1,
+      "explanation": "Modern engines trace reachability from roots. Reference counting alone cannot collect cycles, which is why it is not used on its own.",
+      "concept": {
+        "title": "Reachability, not scope",
+        "summary": "Leaks are almost always something still holding a reference.",
+        "points": [
+          "Roots are the global object and the active call stacks.",
+          "Anything reachable from a root survives, however unused.",
+          "Two objects referencing only each other are still collected — the cycle is unreachable.",
+          "Detached DOM nodes held by a listener or closure are the classic browser leak."
+        ]
+      }
+    },
+    {
+      "slug": "explain-event-loop-under-js",
+      "format": "explain",
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "JavaScript is single-threaded, so how does a fetch happen at the same time as your code?",
+      "expects": [
+        "separates the JS thread from the browser's other threads",
+        "describes the callback being queued, not run immediately",
+        "names the event loop taking it once the stack is empty"
+      ],
+      "probeIfMissing": "Which part of that work is actually running in JavaScript?",
+      "concept": {
+        "title": "Single-threaded JS, multi-threaded browser",
+        "summary": "The concurrency is real; it just is not happening in your code.",
+        "points": [
+          "The network request is handled by the browser, not the JS thread.",
+          "When it completes, the callback is pushed onto a queue.",
+          "The event loop only takes from that queue when the stack is empty.",
+          "So your code is never interrupted mid-function — it just resumes later."
+        ]
+      }
+    },
+    {
+      "slug": "explain-process-isolation",
+      "format": "explain",
+      "levels": [
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "Why does a browser put each tab in its own process when threads would be cheaper?",
+      "expects": [
+        "names crash isolation",
+        "names memory or security isolation between sites",
+        "acknowledges the memory cost as the tradeoff"
+      ],
+      "probeIfMissing": "What would one tab be able to do to another if they shared memory?",
+      "concept": {
+        "title": "Paying memory for isolation",
+        "summary": "The cost is deliberate and the reason is security first.",
+        "points": [
+          "A crash or an out-of-memory kill takes down one tab, not the browser.",
+          "Separate address spaces mean one site cannot read another's memory.",
+          "Spectre made that hardware-level, not just policy — hence site isolation.",
+          "The price is real: each process carries its own heap and engine state."
+        ]
+      }
+    },
+    {
+      "slug": "scenario-page-janky-scroll",
+      "format": "scenario",
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "A list scrolls smoothly with 50 rows and stutters at 5000. Walk me through where you look.",
+      "expects": [
+        "distinguishes work per frame from work per item",
+        "names a concrete tool or measurement before a fix",
+        "reaches a structural fix such as virtualisation rather than micro-optimising"
+      ],
+      "probeIfMissing": "What is being done 5000 times that was only done 50 times before?",
+      "concept": {
+        "title": "Reading a stutter",
+        "summary": "A frame budget is about 16ms. Find what exceeds it before changing anything.",
+        "points": [
+          "Record a performance profile during the stutter — do not guess.",
+          "Long layout or paint bars point at DOM size; long script bars at your code.",
+          "Scroll handlers doing layout reads per event are a common cause.",
+          "5000 rows in the DOM is usually the answer: virtualise, do not micro-optimise."
+        ]
+      }
+    },
+    {
+      "slug": "explain-memory-leak-spa",
+      "format": "explain",
+      "levels": [
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "A single-page app grows to a gigabyte of memory after an hour of navigation. What are you looking for?",
+      "expects": [
+        "names something still holding references after unmount",
+        "gives a concrete example such as a listener, timer or subscription",
+        "mentions heap snapshots or detached nodes as the way to confirm"
+      ],
+      "probeIfMissing": "What could still be pointing at a component that is no longer on screen?",
+      "concept": {
+        "title": "The leak is always a reference",
+        "summary": "Nothing is collected while a root can still reach it.",
+        "points": [
+          "Listeners on window or document outlive the component that added them.",
+          "An uncleaned interval keeps its whole closure alive forever.",
+          "Detached DOM nodes held by a closure show up clearly in a heap snapshot.",
+          "Compare two snapshots taken minutes apart and look at what grew."
+        ]
+      }
+    }
+  ]
+}

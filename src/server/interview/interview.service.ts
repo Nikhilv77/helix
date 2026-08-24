@@ -23,12 +23,14 @@ import {
   DecisionAction,
   EvidenceDimension,
   EvidenceLedger,
-  HARD_CAP_MS,
   InterviewSetup,
   InterviewState,
-  MissingDimension
+  MissingDimension,
+  PlannedQuestion,
+  roundCaps
 } from "./types";
 import { isResumeRound } from "./prompt-context";
+import { gradeMultipleChoice, multipleChoiceReply } from "./resume-round";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** A spoken conversation should never wait on the model's full provider timeout. */
@@ -55,7 +57,17 @@ export class InterviewService {
     private readonly dailyLimit = 2
   ) {}
 
-  async start(setup: InterviewSetup, ownerId: string, now = Date.now()): Promise<StartResult> {
+  /**
+   * `prebuiltPlan` is for rounds that are assembled from stored content rather
+   * than planned by the model, which is what makes the resume round free to
+   * start. Everything else still goes through the planner.
+   */
+  async start(
+    setup: InterviewSetup,
+    ownerId: string,
+    now = Date.now(),
+    prebuiltPlan?: PlannedQuestion[]
+  ): Promise<StartResult> {
     const used = await this.store.countStartedSince(ownerId, now - DAY_MS);
     if (used >= this.dailyLimit) {
       throw new BadRequestErrorException("SESSION_LIMIT_REACHED", "Daily session limit reached", {
@@ -64,7 +76,7 @@ export class InterviewService {
       });
     }
 
-    const plan = await this.planner.plan(setup);
+    const plan = prebuiltPlan?.length ? prebuiltPlan : await this.planner.plan(setup);
     if (plan.length === 0) {
       throw new BadRequestErrorException("PLAN_EMPTY", "No questions could be planned", {});
     }
@@ -192,13 +204,20 @@ export class InterviewService {
       questionIndex: existing.questionIndex
     });
 
+    // A multiple choice answer is decided by comparison, not by the model. The
+    // correct option and its explanation were written when the resume was read.
+    const graded = gradeMultipleChoice(question, answer.text);
+    if (graded) {
+      return this.completeGradedAnswer(withAnswer, question, graded.correct, now);
+    }
+
     const raw = await this.decideWithFallback({
       setup: withAnswer.setup,
       questionAsked: question.text,
       evidenceAnchor: question.evidenceAnchor,
       competency: question.competency,
       intent: question.intent,
-      questionKind: question.kind,
+      questionKind: question.kind === "mcq" ? "code" : question.kind,
       language: question.language,
       codeTask: question.codeTask,
       codeSnippet: question.codeSnippet,
@@ -275,6 +294,61 @@ export class InterviewService {
     );
 
     return { state: finalState, decision };
+  }
+
+  /**
+   * Finishes a turn that was scored without a model call. It always moves on:
+   * a graded question has no missing evidence left to probe for.
+   */
+  private async completeGradedAnswer(
+    state: InterviewState,
+    question: PlannedQuestion,
+    correct: boolean,
+    now: number
+  ): Promise<AnswerResult> {
+    const result = advance(state, "move_on", now);
+    const utterance = this.composeUtterance(
+      result.state,
+      result.action,
+      multipleChoiceReply(question, correct)
+    );
+    const spokenAt = elapsedMs(result.state, now);
+    const finalState = appendTurn(result.state, {
+      speaker: "agent",
+      text: utterance,
+      startMs: spokenAt,
+      endMs: spokenAt,
+      action: result.action,
+      forcedBy: result.forcedBy,
+      questionIndex: result.state.questionIndex,
+      correct,
+      gradedQuestionIndex: state.questionIndex
+    });
+
+    await this.store.save(finalState);
+
+    this.logger.log(
+      JSON.stringify({
+        event: "interview.graded",
+        sessionId: finalState.id,
+        correct,
+        questionIndex: finalState.questionIndex,
+        elapsedMs: elapsedMs(finalState, now)
+      })
+    );
+
+    return {
+      state: finalState,
+      decision: {
+        action: result.action,
+        missing: correct ? "none" : "specificity",
+        reason: correct
+          ? "multiple choice answered correctly"
+          : "multiple choice answered incorrectly",
+        utterance,
+        forcedBy: result.forcedBy
+      }
+    };
   }
 
   async end(sessionId: string): Promise<InterviewState> {
@@ -527,13 +601,15 @@ function evidenceDimensionForMissing(value: string): EvidenceDimension | null {
 
 function introUtterance(state: InterviewState): string {
   const first = state.plan[0];
-  const minutes = Math.round(HARD_CAP_MS / 60000);
+  const minutes = Math.round(roundCaps(state.setup).hardCapMs / 60000);
   const intro =
     state.setup.templateTitle === "DSA practice interview"
       ? "Hi, I'm Maya. Welcome to your DSA interview. I picked a few problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful."
-      : isResumeRound(state.setup)
-        ? "Hi, I'm Maya. Let's have a relaxed conversation about the work on your resume. I'll pick a few threads and ask about what actually happened, what you did, and what changed. Take your time."
-        : `Hi, I'm Maya, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
+      : state.setup.fundamentalsRound
+        ? "Hi, I'm Maya. This is a computer fundamentals round, in three parts. A few quick checks first, then I'll ask you to explain the mechanism behind some of them, and we'll finish by diagnosing something real. After each answer I'll show you what I was listening for."
+        : isResumeRound(state.setup)
+          ? "Hi, I'm Maya. Let's have a relaxed conversation about the work on your resume. I'll pick a few threads and ask about what actually happened, what you did, and what changed. Take your time."
+          : `Hi, I'm Maya, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
 
   return first ? `${intro} ${first.text}` : intro;
 }

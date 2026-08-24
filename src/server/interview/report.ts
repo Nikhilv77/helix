@@ -185,7 +185,7 @@ function compact(value: string, limit: number): string {
 }
 
 function assessAnswer(
-  kind: "conversation" | "code",
+  kind: "conversation" | "code" | "mcq",
   answers: string[],
   interviewerActions: Array<string | undefined>
 ): Pick<

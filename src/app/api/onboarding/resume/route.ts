@@ -328,7 +328,10 @@ export async function POST(request: NextRequest) {
         practiceQuestions,
         roadmap,
         document: documentSummary,
-        evidence: evidenceSummary
+        evidence: evidenceSummary,
+        // Built on demand the first time a resume round starts, so the upload
+        // path stays within its latency budget.
+        interviewKit: null
       }
     };
 

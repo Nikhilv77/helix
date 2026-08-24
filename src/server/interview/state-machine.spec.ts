@@ -89,3 +89,34 @@ describe("interview state machine", () => {
     ]);
   });
 });
+
+describe("per-round time caps", () => {
+  const resumeState = () => stateWith({ setup: { ...setup, resumeRound: true } });
+
+  it("wraps a default round at its own soft cap", () => {
+    expect(advance(stateWith(), "probe", SOFT_WRAP_MS + 1).forcedBy).toBe("soft-time");
+  });
+
+  it("gives a resume round room for all three stages", () => {
+    // The moment a default round would already have been wrapped up.
+    const still = advance(resumeState(), "probe", SOFT_WRAP_MS + 60_000);
+
+    expect(still.forcedBy).toBeNull();
+    expect(still.action).toBe("probe");
+  });
+
+  it("still wraps a resume round at its own soft cap", () => {
+    expect(advance(resumeState(), "probe", 21 * 60 * 1000 + 1).forcedBy).toBe("soft-time");
+  });
+
+  it("still ends a resume round at its own hard cap", () => {
+    const ended = advance(resumeState(), "probe", 24 * 60 * 1000 + 1);
+
+    expect(ended.forcedBy).toBe("hard-time");
+    expect(ended.state.phase).toBe("done");
+  });
+
+  it("does not extend a default round past the shared hard cap", () => {
+    expect(advance(stateWith(), "probe", HARD_CAP_MS + 1).forcedBy).toBe("hard-time");
+  });
+});

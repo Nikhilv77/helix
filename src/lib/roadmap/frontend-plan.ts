@@ -47,14 +47,15 @@ export const FRONTEND_SESSIONS: FrontendSession[] = [
     status: "planned"
   },
   {
-    id: "build-real-ui-features",
+    id: "computer-fundamentals",
     order: 3,
-    title: "Build Real UI Features",
-    purpose: "Live-build rounds: the components interviewers actually ask you to write.",
+    title: "Computer Fundamentals",
+    purpose:
+      "The layer under the framework — what the network, the browser process and the database are actually doing.",
     covers: [
-      "Autocomplete, infinite scroll, modals and data tables",
-      "State shape and prop design under time pressure",
-      "Talking through tradeoffs while you build"
+      "HTTP, DNS, TLS and what caching really invalidates",
+      "Processes, threads, memory and the event loop underneath",
+      "Databases, indexes and the cost of a query"
     ],
     status: "planned"
   },

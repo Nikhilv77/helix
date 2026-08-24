@@ -8,7 +8,9 @@ export default async function VoiceInterviewPage() {
 
   return (
     <Suspense fallback={null}>
-      <VoiceInterviewClient workspaceAccent={profile.workspaceAccent} />
+      {/* The resume backs the document preview in a resume round. It is already
+          loaded here, so passing it costs nothing extra. */}
+      <VoiceInterviewClient workspaceAccent={profile.workspaceAccent} resume={profile.resume} />
     </Suspense>
   );
 }

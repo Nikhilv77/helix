@@ -1,0 +1,221 @@
+{
+  "area": "systems",
+  "title": "Systems Basics",
+  "whyItMatters": "The intuitions that make a design answer credible: what is expensive, what races, and what is safe to retry.",
+  "questions": [
+    {
+      "slug": "latency-ordering",
+      "format": "mcq",
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "Order these from fastest to slowest: SSD read, main memory read, network round trip within a datacentre.",
+      "options": [
+        "Network, memory, SSD",
+        "Memory, SSD, network",
+        "SSD, memory, network",
+        "Memory, network, SSD"
+      ],
+      "answerIndex": 1,
+      "explanation": "Memory is around 100 nanoseconds, an SSD read tens of microseconds, and a datacentre round trip around half a millisecond.",
+      "concept": {
+        "title": "Numbers worth carrying",
+        "summary": "Orders of magnitude matter more than exact figures.",
+        "points": [
+          "L1 cache: ~1ns. Main memory: ~100ns.",
+          "SSD read: ~50µs — a few hundred times slower than memory.",
+          "Same-datacentre round trip: ~0.5ms. Cross-continent: ~150ms.",
+          "Each step is roughly 100× the last, which is why caching pays."
+        ]
+      }
+    },
+    {
+      "slug": "idempotency",
+      "format": "mcq",
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "What does it mean for an endpoint to be idempotent?",
+      "options": [
+        "It always returns the same response body",
+        "Calling it twice leaves the system in the same state as calling it once",
+        "It cannot be called concurrently",
+        "It never writes to the database"
+      ],
+      "answerIndex": 1,
+      "explanation": "Idempotency is about resulting state, not the response. It is what makes a retry safe.",
+      "concept": {
+        "title": "Why retries need idempotency",
+        "summary": "A network timeout never tells you whether the write landed.",
+        "points": [
+          "GET, PUT and DELETE are idempotent by definition; POST is not.",
+          "A client that times out cannot know if the server committed.",
+          "An idempotency key lets the server recognise and ignore the repeat.",
+          "Without it, a retry on a payment charges twice."
+        ]
+      }
+    },
+    {
+      "slug": "race-condition",
+      "format": "mcq",
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "prompt": "Two requests read a counter of 5, each add 1, and each write back. What is stored?",
+      "options": [
+        "7",
+        "6",
+        "5",
+        "It depends on the isolation level"
+      ],
+      "answerIndex": 1,
+      "explanation": "Both read 5 and both write 6, so one increment is silently lost — the classic read-modify-write race.",
+      "concept": {
+        "title": "Lost update",
+        "summary": "The read and the write are two steps, and anything can happen between them.",
+        "points": [
+          "Read-modify-write is only safe if the pair is atomic.",
+          "An atomic increment in the database avoids the round trip entirely.",
+          "Optimistic locking adds a version check on write and retries on conflict.",
+          "Pessimistic locking takes the row lock up front and blocks the other writer."
+        ]
+      }
+    },
+    {
+      "slug": "optimistic-vs-pessimistic",
+      "format": "mcq",
+      "levels": [
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "When is optimistic locking the better choice?",
+      "options": [
+        "When conflicts are frequent",
+        "When conflicts are rare and you would rather not hold locks",
+        "When the write must never be retried",
+        "When the table has no primary key"
+      ],
+      "answerIndex": 1,
+      "explanation": "Optimistic locking assumes conflicts are rare and pays only when one happens; under contention its retries cost more than a lock would.",
+      "concept": {
+        "title": "Two ways to not lose a write",
+        "summary": "Pick by how often you expect to collide.",
+        "points": [
+          "Optimistic: check a version on write, retry on mismatch. No lock held.",
+          "Pessimistic: lock the row first. Nobody else proceeds until you commit.",
+          "Rare conflicts favour optimistic; heavy contention favours pessimistic.",
+          "Holding a lock across a network call is how deadlocks and timeouts start."
+        ]
+      }
+    },
+    {
+      "slug": "cache-invalidation",
+      "format": "mcq",
+      "levels": [
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "What is a cache stampede?",
+      "options": [
+        "A cache growing past its memory limit",
+        "Many requests all missing the same expired key at once and hitting the origin together",
+        "Two caches disagreeing about a value",
+        "A cache serving data that was never written"
+      ],
+      "answerIndex": 1,
+      "explanation": "One popular key expiring can send every concurrent request through to the origin at the same instant.",
+      "concept": {
+        "title": "The moment a hot key expires",
+        "summary": "Expiry is synchronised, and that is the problem.",
+        "points": [
+          "All in-flight requests miss simultaneously and pile onto the origin.",
+          "A lock or single-flight lets one request refill while others wait.",
+          "stale-while-revalidate serves the old value during the refill.",
+          "Jittered TTLs stop many keys expiring on the same tick."
+        ]
+      }
+    },
+    {
+      "slug": "explain-why-cdn-helps",
+      "format": "explain",
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "prompt": "Why does putting a CDN in front of an app make it feel faster, even when the server was never slow?",
+      "expects": [
+        "names physical distance and round-trip latency",
+        "distinguishes server processing time from transit time",
+        "mentions caching at the edge or connection termination"
+      ],
+      "probeIfMissing": "How long does a packet take to cross an ocean, and how many times does a page load do it?",
+      "concept": {
+        "title": "Distance is the slow part",
+        "summary": "You cannot optimise your way past the speed of light.",
+        "points": [
+          "A cross-continent round trip is ~150ms, and a page makes many.",
+          "TLS and TCP handshakes each cost round trips before any data moves.",
+          "An edge node terminates those close to the user, even for uncached responses.",
+          "Cached assets never reach your origin at all."
+        ]
+      }
+    },
+    {
+      "slug": "scenario-intermittent-failure",
+      "format": "scenario",
+      "levels": [
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "One in fifty requests fails, and you cannot reproduce it locally. How do you chase it?",
+      "expects": [
+        "reaches for logs, tracing or metrics rather than local reproduction",
+        "looks for what differs between the failing and passing requests",
+        "names a plausible intermittent cause such as a race, a timeout or one bad instance"
+      ],
+      "probeIfMissing": "What do the failing requests have in common that the others do not?",
+      "concept": {
+        "title": "Chasing the intermittent",
+        "summary": "A 2% failure rate is a pattern, not randomness. Find the axis.",
+        "points": [
+          "Group failures by instance, region, user and time — one axis usually stands out.",
+          "One bad instance behind a load balancer produces exactly this shape.",
+          "A timeout just under the norm fails only the slow tail.",
+          "A race fails only when two requests interleave, so load is the trigger."
+        ]
+      }
+    },
+    {
+      "slug": "explain-retry-danger",
+      "format": "explain",
+      "levels": [
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "A service is struggling, so clients retry failed calls. Why can that make things worse?",
+      "expects": [
+        "describes retries adding load to an already-loaded service",
+        "names synchronised retries or a retry storm",
+        "reaches for backoff, jitter or a circuit breaker"
+      ],
+      "probeIfMissing": "What happens to total traffic the moment every client retries at once?",
+      "concept": {
+        "title": "Retries amplify",
+        "summary": "The naive retry multiplies load exactly when the service can least take it.",
+        "points": [
+          "Every client retrying triples traffic against a service already failing.",
+          "Fixed-interval retries synchronise into waves.",
+          "Exponential backoff with jitter spreads them out.",
+          "A circuit breaker stops calling a dead dependency at all until it recovers."
+        ]
+      }
+    }
+  ]
+}

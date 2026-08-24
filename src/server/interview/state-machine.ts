@@ -1,11 +1,10 @@
 import {
   DecisionAction,
   ForcedReason,
-  HARD_CAP_MS,
   InterviewState,
   MAX_FOLLOW_UPS,
   PlannedQuestion,
-  SOFT_WRAP_MS,
+  roundCaps,
   Turn
 } from "./types";
 
@@ -52,8 +51,12 @@ export function elapsedMs(state: InterviewState, now: number): number {
 
 export function advance(state: InterviewState, requested: DecisionAction, now: number): Advance {
   const elapsed = elapsedMs(state, now);
+  // Caps depend on the round: a three-stage resume round needs longer than a
+  // single-arc conversation, and the guards must use the same budget the room
+  // is counting down.
+  const { softWrapMs, hardCapMs } = roundCaps(state.setup);
 
-  if (elapsed >= HARD_CAP_MS) {
+  if (elapsed >= hardCapMs) {
     return {
       state: { ...state, phase: "done" },
       action: "move_on",
@@ -69,7 +72,7 @@ export function advance(state: InterviewState, requested: DecisionAction, now: n
     forcedBy = "follow-up-budget";
   }
 
-  if (action !== "move_on" && elapsed >= SOFT_WRAP_MS) {
+  if (action !== "move_on" && elapsed >= softWrapMs) {
     action = "move_on";
     forcedBy = "soft-time";
   }
@@ -84,7 +87,7 @@ export function advance(state: InterviewState, requested: DecisionAction, now: n
 
   const questionIndex = state.questionIndex + 1;
   const outOfQuestions = questionIndex >= state.plan.length;
-  const outOfTime = elapsed >= SOFT_WRAP_MS;
+  const outOfTime = elapsed >= softWrapMs;
 
   return {
     state: {

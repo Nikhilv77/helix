@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
-import { HARD_CAP_MS } from "@/server/interview/types";
+import { roundCaps } from "@/server/interview/types";
 
 export const dynamic = "force-dynamic";
 
@@ -47,9 +47,9 @@ export async function POST(request: NextRequest) {
       throw new ApiRouteError(409, "SESSION_COMPLETE", "This interview has ended", {});
     }
 
-    // The token expires when the interview's 15 minutes do, so a leaked token
-    // cannot outlive the cap it is meant to enforce.
-    const remainingMs = HARD_CAP_MS - (Date.now() - state.startedAt);
+    // The token expires when the interview's own time budget does, so a leaked
+    // token cannot outlive the cap it is meant to enforce.
+    const remainingMs = roundCaps(state.setup).hardCapMs - (Date.now() - state.startedAt);
     if (remainingMs <= 0) {
       throw new ApiRouteError(409, "SESSION_EXPIRED", "This interview has run out of time", {});
     }

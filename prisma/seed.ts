@@ -16,7 +16,7 @@ import {
   buildFrontendDsaPlan,
   FRONTEND_SESSIONS,
   type PlanQuestion
-} from "../src/lib/frontend-plan";
+} from "../src/lib/roadmap/frontend-plan";
 
 const prisma = new PrismaClient();
 
@@ -440,7 +440,7 @@ async function seedFrontendRoadmapTemplates(): Promise<void> {
       version: 1,
       status: RoadmapTemplateStatus.ACTIVE,
       metadata: {
-        source: "src/lib/frontend-plan.ts",
+        source: "src/lib/roadmap/frontend-plan.ts",
         personalizationInputs: ["targetRole", "level", "resume", "progress", "attempts"]
       }
     },
@@ -453,11 +453,26 @@ async function seedFrontendRoadmapTemplates(): Promise<void> {
       version: 1,
       status: RoadmapTemplateStatus.ACTIVE,
       metadata: {
-        source: "src/lib/frontend-plan.ts",
+        source: "src/lib/roadmap/frontend-plan.ts",
         personalizationInputs: ["targetRole", "level", "resume", "progress", "attempts"]
       }
     }
   });
+
+  const sessionSlugs = FRONTEND_SESSIONS.map((session) => session.id);
+
+  // Sessions are unique on (templateId, order) as well as (templateId, slug).
+  // Removing dropped sessions first, then parking the survivors outside the
+  // real range, keeps a rename or a reorder from colliding with the row it is
+  // about to replace.
+  await prisma.roadmapSessionTemplate.deleteMany({
+    where: { templateId: frontendTemplate.id, slug: { notIn: sessionSlugs } }
+  });
+  await prisma.$executeRaw`
+    UPDATE "RoadmapSessionTemplate"
+    SET "order" = -"order"
+    WHERE "templateId" = ${frontendTemplate.id}::uuid AND "order" > 0
+  `;
 
   const sessionTemplateIds: string[] = [];
   for (const session of FRONTEND_SESSIONS) {
@@ -488,11 +503,9 @@ async function seedFrontendRoadmapTemplates(): Promise<void> {
     sessionTemplateIds.push(stored.id);
   }
 
+  // Anything still parked was neither upserted nor dropped above.
   await prisma.roadmapSessionTemplate.deleteMany({
-    where: {
-      templateId: frontendTemplate.id,
-      id: { notIn: sessionTemplateIds }
-    }
+    where: { templateId: frontendTemplate.id, id: { notIn: sessionTemplateIds } }
   });
 
   const frontendDsaSession = await prisma.roadmapSessionTemplate.findUniqueOrThrow({

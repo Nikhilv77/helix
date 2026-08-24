@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import {
   ArrowRight,
   CheckCircle2,
@@ -10,7 +11,7 @@ import {
   WifiOff
 } from "lucide-react";
 import { TrailgradMark } from "@/components/trailgrad-mark";
-import type { WorkspaceAccent } from "@/lib/workspace/accent";
+import { workspaceAccentCssVariables, type WorkspaceAccent } from "@/lib/workspace/accent";
 import { formatClock } from "../utils/voice-interview";
 
 export function VoiceShell({
@@ -25,6 +26,7 @@ export function VoiceShell({
   return (
     <main
       data-workspace-accent={workspaceAccent}
+      style={workspaceAccentCssVariables(workspaceAccent) as CSSProperties}
       className="workspace-black relative h-[100dvh] overflow-hidden bg-black px-4 text-cream sm:px-8"
     >
       <span

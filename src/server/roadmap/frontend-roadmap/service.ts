@@ -292,15 +292,31 @@ export class FrontendRoadmapService {
           role: FRONTEND_ROADMAP_ROLE
         }
       },
-      select: { id: true }
+      select: { id: true, _count: { select: { sessionProgress: true } } }
     });
 
     if (!existing) {
       const created = await this.ensureFrontendRoadmap(ownerId);
       if (!created) return null;
+    } else if (await this.sessionsOutOfDate(existing._count.sessionProgress)) {
+      // The plan gained or lost a session since this roadmap was built, so the
+      // candidate would otherwise be missing a card until they re-onboarded.
+      // Reconciling is idempotent and only runs on the mismatch.
+      await this.ensureFrontendRoadmap(ownerId);
     }
 
     return readFrontendRoadmapHome(this.prisma, ownerId);
+  }
+
+  /** One count against the active template, on the happy path only. */
+  private async sessionsOutOfDate(sessionCount: number): Promise<boolean> {
+    const templateSessions = await this.prisma.roadmapSessionTemplate.count({
+      where: {
+        template: { slug: FRONTEND_ROADMAP_SLUG, status: RoadmapTemplateStatus.ACTIVE }
+      }
+    });
+
+    return templateSessions > 0 && templateSessions !== sessionCount;
   }
 
   async ensureFrontendRoadmap(ownerId: string): Promise<EnsureFrontendRoadmapResult | null> {

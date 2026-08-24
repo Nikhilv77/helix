@@ -19,7 +19,12 @@ export const maxDuration = 20;
 const runSchema = z.object({
   code: z.string().trim().min(1).max(20_000),
   language: z.enum(["python", "javascript", "cpp", "java"]),
-  slug: z.string().trim().min(1).max(140),
+  /**
+   * A DSA question to check the code against. Omitted by rounds whose task is
+   * written for the candidate rather than drawn from the bank, which run the
+   * code as-is and report its output.
+   */
+  slug: z.string().trim().min(1).max(140).optional(),
   stdin: z.string().max(10_000).default("")
 });
 
@@ -56,24 +61,28 @@ export async function POST(request: NextRequest) {
       "X-RapidAPI-Key": config.rapidApiKey,
       "X-RapidAPI-Host": config.rapidApiHost
     };
-    const question = findQuestion(parsed.data.slug)?.question;
-    if (!question) throw new ApiRouteError(404, "DSA_QUESTION_NOT_FOUND", "Question not found.");
-    if (!question.examples?.length) {
-      throw new ApiRouteError(422, "TEST_CASES_UNAVAILABLE", "This question has no runnable test cases yet.");
-    }
+    const slug = parsed.data.slug;
+    let testCases: ReturnType<typeof buildTestCases> = [];
+    let sourceCode = parsed.data.code;
 
-    const functionName = question.slug.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
-    let testCases;
-    let sourceCode;
-    try {
-      testCases = buildTestCases(question.examples, parsed.data.slug);
-      sourceCode = buildTestHarness(parsed.data.code, parsed.data.language, functionName, testCases);
-    } catch (error) {
-      throw new ApiRouteError(
-        422,
-        "TEST_HARNESS_UNAVAILABLE",
-        error instanceof Error ? error.message : "This question cannot be run yet."
-      );
+    if (slug) {
+      const question = findQuestion(slug)?.question;
+      if (!question) throw new ApiRouteError(404, "DSA_QUESTION_NOT_FOUND", "Question not found.");
+      if (!question.examples?.length) {
+        throw new ApiRouteError(422, "TEST_CASES_UNAVAILABLE", "This question has no runnable test cases yet.");
+      }
+
+      const functionName = question.slug.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+      try {
+        testCases = buildTestCases(question.examples, slug);
+        sourceCode = buildTestHarness(parsed.data.code, parsed.data.language, functionName, testCases);
+      } catch (error) {
+        throw new ApiRouteError(
+          422,
+          "TEST_HARNESS_UNAVAILABLE",
+          error instanceof Error ? error.message : "This question cannot be run yet."
+        );
+      }
     }
 
     const language = languages[parsed.data.language];
@@ -102,7 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     const stdout = decodeJudgeOutput(result.stdout);
-    const tests = parseTestResults(stdout, testCases);
+    const tests = slug ? parseTestResults(stdout, testCases) : [];
     const passedCount = tests.filter((test) => test.passed).length;
     const executionAccepted = result.status?.description === "Accepted";
     const visibleOutput = stdout
@@ -113,8 +122,12 @@ export async function POST(request: NextRequest) {
 
     return apiSuccess({
       language: language.name,
-      status: executionAccepted ? `${passedCount}/${tests.length} tests passed` : result.status?.description ?? "Unknown",
-      accepted: executionAccepted && passedCount === tests.length,
+      status: !slug
+        ? (result.status?.description ?? "Unknown")
+        : executionAccepted
+          ? `${passedCount}/${tests.length} tests passed`
+          : (result.status?.description ?? "Unknown"),
+      accepted: executionAccepted && (slug ? passedCount === tests.length : true),
       stdout: visibleOutput,
       stderr: decodeJudgeOutput(result.stderr),
       compileOutput: decodeJudgeOutput(result.compile_output),

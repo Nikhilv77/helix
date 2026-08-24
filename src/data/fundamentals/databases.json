@@ -1,0 +1,246 @@
+{
+  "area": "databases",
+  "title": "Databases",
+  "whyItMatters": "Enough to reason about why a screen is slow and what your API is really costing the server.",
+  "questions": [
+    {
+      "slug": "what-an-index-costs",
+      "format": "mcq",
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "What does adding an index cost you?",
+      "options": [
+        "Nothing — it only speeds things up",
+        "Storage, and slower writes, since every insert must update it",
+        "Read consistency across transactions",
+        "The ability to query the column directly"
+      ],
+      "answerIndex": 1,
+      "explanation": "An index is a second sorted structure the database must keep in step, so every write pays for it.",
+      "concept": {
+        "title": "An index is a second copy",
+        "summary": "Reads get faster because writes do more work.",
+        "points": [
+          "A B-tree index keeps the column sorted for fast lookup and range scans.",
+          "Every insert, update and delete must maintain every index on the table.",
+          "Unused indexes are pure cost — they slow writes and buy nothing.",
+          "Write-heavy tables are where over-indexing hurts most."
+        ]
+      }
+    },
+    {
+      "slug": "n-plus-one",
+      "format": "mcq",
+      "levels": [
+        "0-2",
+        "3-5"
+      ],
+      "prompt": "An endpoint returns 100 posts and issues 101 queries. What is happening?",
+      "options": [
+        "The connection pool is too small",
+        "Each post's author is fetched in its own query after the list query",
+        "The query is missing an index",
+        "The ORM is retrying failed queries"
+      ],
+      "answerIndex": 1,
+      "explanation": "One query for the list plus one per row is the N+1 pattern — usually a lazily-loaded relation inside a loop.",
+      "concept": {
+        "title": "N+1 queries",
+        "summary": "The count gives it away: rows + 1.",
+        "points": [
+          "One query loads the list; touching a relation per row fires another each time.",
+          "Latency multiplies even though each query looks fast in isolation.",
+          "Fix by joining or by batching the second query with an IN clause.",
+          "Prisma's `include`, SQL's JOIN and DataLoader all solve the same problem."
+        ]
+      }
+    },
+    {
+      "slug": "index-not-used",
+      "format": "mcq",
+      "levels": [
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "A column is indexed but the query still does a full scan. Which of these explains it?",
+      "options": [
+        "The query returns more than one row",
+        "The query wraps the column in a function, such as LOWER(email)",
+        "The table has fewer than a million rows",
+        "The index was created after the rows were inserted"
+      ],
+      "answerIndex": 1,
+      "explanation": "Applying a function to the column means the indexed values no longer match what is being compared, so the index cannot be used.",
+      "concept": {
+        "title": "When an index goes unused",
+        "summary": "Usually the query, not the index, is the problem.",
+        "points": [
+          "A function on the column defeats it — index the expression instead.",
+          "A composite index only helps if the query uses its leading column.",
+          "A leading wildcard, LIKE '%term', cannot use a B-tree.",
+          "EXPLAIN tells you what the planner actually chose. Read it."
+        ]
+      }
+    },
+    {
+      "slug": "transaction-atomicity",
+      "format": "mcq",
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "prompt": "Two updates run inside one transaction and the second fails. What happens?",
+      "options": [
+        "The first is kept and the second is retried",
+        "Both are rolled back, as if neither happened",
+        "The first is kept and the transaction stays open",
+        "The database decides based on isolation level"
+      ],
+      "answerIndex": 1,
+      "explanation": "Atomicity is all-or-nothing: a failed transaction leaves no partial writes behind.",
+      "concept": {
+        "title": "ACID, briefly",
+        "summary": "Four guarantees, and they answer different questions.",
+        "points": [
+          "Atomicity: all of it or none of it.",
+          "Consistency: constraints hold before and after.",
+          "Isolation: how much concurrent transactions can see of each other.",
+          "Durability: once committed, it survives a crash."
+        ]
+      }
+    },
+    {
+      "slug": "isolation-phantom",
+      "format": "mcq",
+      "levels": [
+        "5-plus"
+      ],
+      "prompt": "Read Committed prevents which of these?",
+      "options": [
+        "Reading a value another transaction has written but not committed",
+        "Getting a different result from the same query twice in one transaction",
+        "New rows appearing in a repeated range query",
+        "All of the above"
+      ],
+      "answerIndex": 0,
+      "explanation": "Read Committed only rules out dirty reads. Non-repeatable reads and phantoms need stricter levels.",
+      "concept": {
+        "title": "What each level rules out",
+        "summary": "Stricter levels cost concurrency, so pick the weakest that is correct.",
+        "points": [
+          "Read Uncommitted: dirty reads allowed.",
+          "Read Committed: no dirty reads; the same query can still change.",
+          "Repeatable Read: rows you read stay stable; new rows can still appear.",
+          "Serializable: as if transactions ran one at a time."
+        ]
+      }
+    },
+    {
+      "slug": "explain-why-query-slow-in-prod",
+      "format": "explain",
+      "levels": [
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "A query is instant on your laptop and slow in production. What differs?",
+      "expects": [
+        "names data volume or distribution as the main difference",
+        "mentions the planner choosing differently at scale",
+        "reaches for EXPLAIN or real measurement"
+      ],
+      "probeIfMissing": "How many rows does your local database have compared to production?",
+      "concept": {
+        "title": "Why local lies",
+        "summary": "The plan that is fast on a thousand rows can be quadratic on ten million.",
+        "points": [
+          "A full scan is cheap on a small table, so a missing index never shows up locally.",
+          "Planners use table statistics, and yours are nothing like production's.",
+          "Concurrency, locks and cold caches only exist under real load.",
+          "EXPLAIN ANALYZE against production-shaped data is the only honest test."
+        ]
+      }
+    },
+    {
+      "slug": "scenario-list-endpoint-slow",
+      "format": "scenario",
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "A list endpoint got slower every week for a month with no code changes. What is your first move?",
+      "expects": [
+        "connects the gradual slowdown to growing data",
+        "proposes a measurement before a fix",
+        "names a plausible cause such as a missing index, a full scan or unbounded pagination"
+      ],
+      "probeIfMissing": "What changes week over week if the code does not?",
+      "concept": {
+        "title": "Slow growth means data growth",
+        "summary": "A gradual curve almost always tracks row count.",
+        "points": [
+          "No deploy plus steady decay points at the table, not the code.",
+          "A query with no LIMIT returns more every week by definition.",
+          "A full scan degrades linearly; an index keeps it near flat.",
+          "Check row counts and EXPLAIN before touching anything."
+        ]
+      }
+    },
+    {
+      "slug": "explain-index-tradeoff",
+      "format": "explain",
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "Someone proposes indexing every column that appears in a WHERE clause. What is wrong with that?",
+      "expects": [
+        "names the write cost of maintaining each index",
+        "mentions storage or memory pressure",
+        "distinguishes indexes that are actually used from ones that are not"
+      ],
+      "probeIfMissing": "What has to happen on every insert once a table has ten indexes?",
+      "concept": {
+        "title": "Indexes are not free",
+        "summary": "Each one is another structure to keep in step on every write.",
+        "points": [
+          "Every insert, update and delete maintains every index on the table.",
+          "Indexes compete for the same buffer cache as your data.",
+          "A composite index often replaces several single-column ones.",
+          "Databases expose index usage stats — drop the ones nothing reads."
+        ]
+      }
+    },
+    {
+      "slug": "scenario-duplicate-rows",
+      "format": "scenario",
+      "levels": [
+        "3-5",
+        "5-plus"
+      ],
+      "prompt": "Users occasionally end up with two identical orders. Where do you start?",
+      "expects": [
+        "considers a double submit, a retry, or a race between two requests",
+        "reaches for a uniqueness guarantee rather than only a UI fix",
+        "distinguishes preventing it from detecting it"
+      ],
+      "probeIfMissing": "What does the client do when the request times out but the server already committed?",
+      "concept": {
+        "title": "Duplicates are a concurrency bug",
+        "summary": "A disabled button narrows the window; it does not close it.",
+        "points": [
+          "A retry after a timeout submits a request the server may already have run.",
+          "Two concurrent requests can both pass a check-then-insert.",
+          "A unique constraint is the only guarantee the database will enforce.",
+          "An idempotency key lets the retry return the original result instead of failing."
+        ]
+      }
+    }
+  ]
+}

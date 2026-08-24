@@ -1,4 +1,5 @@
 import { InterviewDecider } from "./decider";
+import { buildFundamentalsPlan } from "./fundamentals-round";
 import { InterviewPlanner } from "./planner";
 import { InterviewService } from "./interview.service";
 import { MemorySessionStore } from "./session-store";
@@ -30,15 +31,162 @@ const questions: PlannedQuestion[] = [
 ];
 
 function harness(plan = questions) {
-  const planner = {
-    plan: jest.fn().mockResolvedValue(plan)
-  } as unknown as InterviewPlanner;
+  const planQuestions = jest.fn().mockResolvedValue(plan);
+  const planner = { plan: planQuestions } as unknown as InterviewPlanner;
   const decide = jest.fn();
   const decider = { decide } as unknown as InterviewDecider;
   const service = new InterviewService(planner, decider, new MemorySessionStore(), 10);
 
-  return { service, decide };
+  return { service, decide, planQuestions };
 }
+
+const mcqQuestion: PlannedQuestion = {
+  text: "Which hook keeps a value stable between renders without causing one?",
+  evidenceAnchor: "React",
+  kind: "mcq",
+  stage: "skills",
+  skill: "React",
+  options: ["useState", "useRef", "useMemo"],
+  answerIndex: 1,
+  explanation: "useRef survives renders without triggering one.",
+  answerFormat: "mcq",
+  competency: "Technical depth",
+  intent: "Check the candidate knows what useRef is for.",
+  mustHit: ["names useRef"],
+  probeIfMissing: "Which of those does not re-render?"
+};
+
+describe("InterviewService resume round", () => {
+  it("starts from a prebuilt plan without asking the planner for one", async () => {
+    const { service, planQuestions } = harness();
+    const result = await service.start(
+      { ...setup, resumeRound: true },
+      "user-1",
+      1_000,
+      [mcqQuestion, questions[0]!]
+    );
+
+    expect(planQuestions).not.toHaveBeenCalled();
+    expect(result.state.plan).toHaveLength(2);
+    expect(result.state.plan[0]?.kind).toBe("mcq");
+  });
+
+  it("grades a multiple choice answer without calling the decider", async () => {
+    const { service, decide } = harness();
+    const started = await service.start({ ...setup, resumeRound: true }, "user-1", 1_000, [
+      mcqQuestion,
+      questions[0]!
+    ]);
+
+    const { state, decision } = await service.answer(
+      started.state.id,
+      { text: "useRef", startMs: 0, endMs: 1_000 },
+      2_000
+    );
+
+    expect(decide).not.toHaveBeenCalled();
+    expect(decision.action).toBe("move_on");
+    expect(decision.utterance).toContain("That's right");
+    // Maya moves straight into the next question, as she does after any move_on.
+    expect(decision.utterance).toContain(questions[0]!.text);
+    expect(state.questionIndex).toBe(1);
+  });
+
+  it("names the right option after a wrong answer, still without a model call", async () => {
+    const { service, decide } = harness();
+    const started = await service.start({ ...setup, resumeRound: true }, "user-1", 1_000, [
+      mcqQuestion,
+      questions[0]!
+    ]);
+
+    const { state, decision } = await service.answer(
+      started.state.id,
+      { text: "useMemo", startMs: 0, endMs: 1_000 },
+      2_000
+    );
+
+    expect(decide).not.toHaveBeenCalled();
+    expect(decision.utterance).toContain("useRef");
+    const reply = state.turns.at(-1);
+    expect(reply).toMatchObject({ speaker: "agent", correct: false, gradedQuestionIndex: 0 });
+  });
+
+  it("sends a written skills answer through the decider as usual", async () => {
+    const { service, decide } = harness();
+    decide.mockResolvedValue({
+      action: "move_on",
+      missing: "none",
+      reason: "answered",
+      acknowledgement: "",
+      line: ""
+    });
+    const started = await service.start({ ...setup, resumeRound: true }, "user-1", 1_000, [
+      questions[0]!,
+      questions[1]!
+    ]);
+
+    await service.answer(
+      started.state.id,
+      { text: "I owned the sync layer end to end.", startMs: 0, endMs: 1_000 },
+      2_000
+    );
+
+    expect(decide).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("InterviewService fundamentals round", () => {
+  it("starts from the bank without calling the planner or the decider", async () => {
+    const { service, decide, planQuestions } = harness();
+    const plan = buildFundamentalsPlan("3-5", { shuffle: (items) => items });
+
+    const started = await service.start(
+      { ...setup, fundamentalsRound: true, roundType: "technical" },
+      "user-1",
+      1_000,
+      plan
+    );
+    const first = started.state.plan[0]!;
+
+    const { decision } = await service.answer(
+      started.state.id,
+      { text: first.options![first.answerIndex!]!, startMs: 0, endMs: 1_000 },
+      2_000
+    );
+
+    expect(planQuestions).not.toHaveBeenCalled();
+    expect(decide).not.toHaveBeenCalled();
+    expect(decision.utterance).toContain("That's right");
+  });
+
+  it("sends a spoken fundamentals answer to the decider", async () => {
+    const { service, decide } = harness();
+    decide.mockResolvedValue({
+      action: "move_on",
+      missing: "none",
+      reason: "answered",
+      acknowledgement: "",
+      line: ""
+    });
+    const plan = buildFundamentalsPlan("3-5", { shuffle: (items) => items });
+    // The explain stage begins once the rapid questions are behind us.
+    const spoken = plan.filter((question) => question.stage === "explain");
+
+    const started = await service.start(
+      { ...setup, fundamentalsRound: true, roundType: "technical" },
+      "user-1",
+      1_000,
+      spoken
+    );
+    await service.answer(
+      started.state.id,
+      { text: "Because the response is stale and needs revalidating.", startMs: 0, endMs: 1_000 },
+      2_000
+    );
+
+    expect(decide).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe("InterviewService conversation", () => {
   it("opens as a calm, named interviewer", async () => {

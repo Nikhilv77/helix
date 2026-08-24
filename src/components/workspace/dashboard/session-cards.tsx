@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowRight,
-  Box,
   Braces,
+  Cpu,
   CheckCircle2,
   Boxes,
   Code2,
@@ -47,12 +47,12 @@ const SESSION_META: Record<string, SessionMeta> = {
     tag: "React",
     metric: "Core concepts"
   },
-  "build-real-ui-features": {
-    icon: Box,
+  "computer-fundamentals": {
+    icon: Cpu,
     accent: "bg-[linear-gradient(135deg,#cde8ff,#82c2ff)]",
-    background: "/images/session-cards/build-real-ui-features-v2.jpg",
-    tag: "UI build",
-    metric: "Live tasks"
+    background: "/images/session-cards/computer-fundamentals-v2.jpg",
+    tag: "Fundamentals",
+    metric: "Network · OS · DB"
   },
   "production-ui-quality": {
     icon: Sparkles,

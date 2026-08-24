@@ -8,8 +8,12 @@ import type {
   ResumeDocumentSummary,
   ResumeEducationEntry,
   ResumeEvidenceSummary,
+  ResumeCodingTask,
   ResumeExperienceEntry,
+  ResumeExperienceQuestion,
+  ResumeInterviewKit,
   ResumePracticeQuestion,
+  ResumeSkillQuestion,
   ResumeProjectEntry,
   ResumeRoadmapItem,
   Role,
@@ -41,6 +45,24 @@ export class ProfileService {
     await this.prisma.candidateProfile.update({
       where: { ownerId },
       data: { curriculum: toJson(curriculum), curriculumBuiltAt: new Date(curriculum.builtAt) }
+    });
+  }
+
+  /**
+   * The resume round's question bank. Written once per resume and read on every
+   * later round, so the round itself never costs a model call.
+   */
+  async saveResumeInterviewKit(ownerId: string, kit: ResumeInterviewKit): Promise<void> {
+    const stored = await this.prisma.candidateProfile.findUnique({
+      where: { ownerId },
+      select: { resumeAnalysis: true }
+    });
+    const analysis = stored?.resumeAnalysis ?? null;
+    if (!analysis || !isRecord(analysis)) return;
+
+    await this.prisma.candidateProfile.update({
+      where: { ownerId },
+      data: { resumeAnalysis: toJson({ ...analysis, interviewKit: kit }) }
     });
   }
 
@@ -344,8 +366,83 @@ function resumeFromJson(
     practiceQuestions: resumeQuestionsFromJson(value.practiceQuestions),
     roadmap: resumeRoadmapFromJson(value.roadmap),
     document: resumeDocumentFromJson(value.document),
-    evidence: resumeEvidenceFromJson(value.evidence)
+    evidence: resumeEvidenceFromJson(value.evidence),
+    interviewKit: resumeInterviewKitFromJson(value.interviewKit)
   };
+}
+
+function resumeInterviewKitFromJson(value: Prisma.JsonValue | undefined): ResumeInterviewKit | null {
+  if (value === undefined || value === null || !isRecord(value)) return null;
+  const record = value;
+
+  const skillQuestions = Array.isArray(record.skillQuestions)
+    ? record.skillQuestions.flatMap((item): ResumeSkillQuestion[] => {
+        if (!isRecord(item)) return [];
+        const prompt = stringValue(item.prompt);
+        if (!prompt) return [];
+        const format =
+          item.format === "mcq" || item.format === "typed" || item.format === "spoken"
+            ? item.format
+            : "typed";
+        const options = plainStringArray(item.options, 4);
+        // A multiple choice question without a usable option set would leave the
+        // candidate with nothing to click, so it degrades to a typed answer.
+        if (format === "mcq" && options.length < 2) return [];
+
+        return [
+          {
+            skill: stringValue(item.skill),
+            competency: stringValue(item.competency) || "Technical depth",
+            format,
+            prompt,
+            options: format === "mcq" ? options : [],
+            answerIndex:
+              typeof item.answerIndex === "number" && item.answerIndex >= 0
+                ? Math.min(Math.floor(item.answerIndex), Math.max(0, options.length - 1))
+                : 0,
+            explanation: stringValue(item.explanation),
+            expects: plainStringArray(item.expects, 3)
+          }
+        ];
+      })
+    : [];
+
+  const rawTask =
+    record.codingTask !== undefined && record.codingTask !== null && isRecord(record.codingTask)
+      ? record.codingTask
+      : null;
+  const codingTask: ResumeCodingTask | null =
+    rawTask && stringValue(rawTask.brief)
+      ? {
+          skill: stringValue(rawTask.skill),
+          language: stringValue(rawTask.language) || "javascript",
+          title: stringValue(rawTask.title) || "Coding task",
+          brief: stringValue(rawTask.brief),
+          starterCode: stringValue(rawTask.starterCode),
+          expects: plainStringArray(rawTask.expects, 3)
+        }
+      : null;
+
+  const experienceQuestions = Array.isArray(record.experienceQuestions)
+    ? record.experienceQuestions.flatMap((item): ResumeExperienceQuestion[] => {
+        if (!isRecord(item)) return [];
+        const prompt = stringValue(item.prompt);
+        if (!prompt) return [];
+
+        return [
+          {
+            prompt,
+            evidenceAnchor: stringValue(item.evidenceAnchor),
+            competency: stringValue(item.competency) || "Ownership",
+            expects: plainStringArray(item.expects, 3),
+            probeIfMissing: stringValue(item.probeIfMissing)
+          }
+        ];
+      })
+    : [];
+
+  if (!skillQuestions.length && !codingTask && !experienceQuestions.length) return null;
+  return { skillQuestions, codingTask, experienceQuestions };
 }
 
 function resumeExperienceFromJson(value: Prisma.JsonValue | undefined): ResumeExperienceEntry[] {

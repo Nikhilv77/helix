@@ -27,8 +27,27 @@ export interface InterviewSetup {
   /** Slugs selected for the live DSA workspace, in interview order. */
   dsaQuestionSlugs?: string[];
   /** DSA rounds use a compact set of practice questions instead of the default four-question arc. */
-  questionCount?: 3 | 4 | 5;
+  questionCount?: 3 | 4 | 5 | 6 | 8;
+  /**
+   * Marks the staged resume round, which is planned entirely from the kit
+   * stored with the candidate's resume rather than from a model call.
+   */
+  resumeRound?: boolean;
+  /**
+   * Marks the computer fundamentals round, planned entirely from the authored
+   * question bank rather than from a model call.
+   */
+  fundamentalsRound?: boolean;
 }
+
+export type InterviewStage =
+  | "skills"
+  | "code"
+  | "experience"
+  /** Computer fundamentals: rapid checks, then mechanism, then diagnosis. */
+  | "rapid"
+  | "explain"
+  | "scenario";
 
 export interface PlannedQuestion {
   /** Spoken verbatim. The decider never rewrites this. */
@@ -36,10 +55,24 @@ export interface PlannedQuestion {
   /** Exact resume/project claim that motivated this question. */
   evidenceAnchor?: string;
   /** Structured presentation metadata. Optional for sessions saved before code rounds existed. */
-  kind?: "conversation" | "code";
+  kind?: "conversation" | "code" | "mcq";
   language?: string;
   codeTask?: string;
   codeSnippet?: string;
+  /** Which stage of a resume round this question belongs to. */
+  stage?: InterviewStage;
+  /** The resume skill a skills-stage question came from. */
+  skill?: string;
+  /** Options for `kind: "mcq"`. */
+  options?: string[];
+  /** Index into `options`. Graded on the server and never serialised to the client. */
+  answerIndex?: number;
+  /** Spoken after an mcq is graded, so grading costs no model call. */
+  explanation?: string;
+  /** How the candidate is expected to answer. */
+  answerFormat?: "mcq" | "typed" | "spoken";
+  /** Bank slug a question was drawn from, for its concept card. */
+  sourceSlug?: string;
   /** Human-readable skill area, used to keep the interview arc balanced. */
   competency?: string;
   /** What the interviewer is trying to learn, not spoken to the candidate. */
@@ -80,6 +113,10 @@ export interface Turn {
   forcedBy?: ForcedReason | null;
   /** Which planned question this turn belonged to. */
   questionIndex?: number;
+  /** Set on Maya's reply to a multiple choice answer, which is graded locally. */
+  correct?: boolean;
+  /** The question `correct` refers to, since the turn itself already advanced. */
+  gradedQuestionIndex?: number;
 }
 
 export type TurnAction = DecisionAction | "interrupt" | "intro";
@@ -117,3 +154,22 @@ export const QUESTION_COUNT = 4;
 export const HARD_CAP_MS = 15 * 60 * 1000;
 /** After this point the machine wraps up regardless of questions remaining. */
 export const SOFT_WRAP_MS = 13 * 60 * 1000;
+
+/**
+ * The resume round runs three stages across eight questions, one of which is
+ * written at the keyboard. The default caps would wrap it up somewhere in the
+ * middle of the experience stage, so it gets its own budget.
+ */
+export const RESUME_HARD_CAP_MS = 24 * 60 * 1000;
+export const RESUME_SOFT_WRAP_MS = 21 * 60 * 1000;
+
+export interface RoundCaps {
+  softWrapMs: number;
+  hardCapMs: number;
+}
+
+export function roundCaps(setup: InterviewSetup | undefined): RoundCaps {
+  return setup?.resumeRound
+    ? { softWrapMs: RESUME_SOFT_WRAP_MS, hardCapMs: RESUME_HARD_CAP_MS }
+    : { softWrapMs: SOFT_WRAP_MS, hardCapMs: HARD_CAP_MS };
+}
