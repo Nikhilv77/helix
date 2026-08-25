@@ -5,6 +5,7 @@ import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { resolveOwnerId } from "@/server/interview/owner";
+import { selectDsaInterviewQuestions } from "@/server/interview/dsa-session-selection";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -31,14 +32,15 @@ export async function POST(request: NextRequest) {
   try {
     const app = getAppContainer();
     const ownerId = await resolveOwnerId(request, app.config);
-    const profile = await app.profileService.get(ownerId);
-    const completed = await app.frontendRoadmapService.completedDsaQuestions(ownerId);
+    const [profile, completed, performance] = await Promise.all([
+      app.profileService.get(ownerId),
+      app.frontendRoadmapService.completedDsaQuestions(ownerId),
+      app.personalizedPerformanceStore.refresh(ownerId)
+    ]);
     // The gate counts what the round can actually draw on. Design problems are
     // solved in the workspace but never asked in a spoken round, so counting
     // them would let a candidate through to an interview of unseen problems.
-    const solvedFunctionQuestions = completed.filter(
-      (item) => !OPERATION_DSA_SLUGS.has(item.slug)
-    );
+    const solvedFunctionQuestions = completed.filter((item) => !OPERATION_DSA_SLUGS.has(item.slug));
 
     if (solvedFunctionQuestions.length < MIN_SOLVED) {
       throw new ApiRouteError(
@@ -57,10 +59,12 @@ export async function POST(request: NextRequest) {
     // Problems the candidate has actually solved come first. The curated list
     // only tops the round up when they have not solved enough of them, so a
     // round is never filled with unseen problems while solved ones are left out.
-    const selected = [...shuffle(solvedFunctionQuestions), ...shuffle(fallbackQuestions)].slice(
-      0,
-      QUESTION_COUNT
-    );
+    const selected = selectDsaInterviewQuestions({
+      solved: solvedFunctionQuestions,
+      fallback: fallbackQuestions,
+      performance,
+      count: QUESTION_COUNT
+    });
     const agenda = selected.map((item) => {
       const question = findQuestion(item.slug)?.question;
       return `${item.title}: ${question?.problemStatement ?? "Discuss the solution, trade-offs, and edge cases."}`;
@@ -77,12 +81,13 @@ export async function POST(request: NextRequest) {
 
     const result = await app.interviewService.start(
       {
-        role: "frontend",
+        role: profile.targetRole ?? "frontend",
         level: profile.level ?? "0-2",
         roundType: "technical",
         intensity: "realistic",
         context,
         agenda,
+        templateId: "frontend-dsa",
         templateTitle: "DSA practice interview",
         dsaQuestionSlugs: selected.map((item) => item.slug),
         questionCount: QUESTION_COUNT
@@ -98,13 +103,4 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   }
-}
-
-function shuffle<T>(items: T[]): T[] {
-  const copy = [...items];
-  for (let index = copy.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [copy[index], copy[swapIndex]] = [copy[swapIndex]!, copy[index]!];
-  }
-  return copy;
 }

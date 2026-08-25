@@ -3,13 +3,12 @@
 import { Check } from "lucide-react";
 import type { Phase } from "@/lib/shared/types";
 
-const MAX_FOLLOW_UPS = 2;
-
 interface PathRailProps {
   phase: Phase;
   questionIndex: number;
   questionCount: number;
   followUpCount: number;
+  maxFollowUps?: number;
 }
 
 type NodeState = "done" | "active" | "upcoming";
@@ -21,7 +20,13 @@ type NodeState = "done" | "active" | "upcoming";
  * available in state, but revealing what is coming would let the candidate
  * prepare, which is the whole thing this product is trying to prevent.
  */
-export function PathRail({ phase, questionIndex, questionCount, followUpCount }: PathRailProps) {
+export function PathRail({
+  phase,
+  questionIndex,
+  questionCount,
+  followUpCount,
+  maxFollowUps = 2
+}: PathRailProps) {
   const finished = phase === "done";
 
   function stateFor(index: number): NodeState {
@@ -42,7 +47,9 @@ export function PathRail({ phase, questionIndex, questionCount, followUpCount }:
         return (
           <div key={index} className="flex items-center gap-2.5">
             <Node state={state} label={String(index + 1)} />
-            {state === "active" ? <FollowUpPips used={followUpCount} /> : null}
+            {state === "active" ? (
+              <FollowUpPips used={followUpCount} maximum={maxFollowUps} />
+            ) : null}
             {index < questionCount - 1 ? <Connector filled={state === "done"} /> : null}
           </div>
         );
@@ -81,10 +88,11 @@ function Connector({ filled }: { filled: boolean }) {
 }
 
 /** How much of the follow-up budget this question has burned. */
-function FollowUpPips({ used }: { used: number }) {
+function FollowUpPips({ used, maximum }: { used: number; maximum: number }) {
+  if (maximum <= 0) return null;
   return (
-    <span className="flex items-center gap-1" title={`${used} of ${MAX_FOLLOW_UPS} follow-ups`}>
-      {Array.from({ length: MAX_FOLLOW_UPS }, (_, index) => (
+    <span className="flex items-center gap-1" title={`${used} of ${maximum} follow-ups`}>
+      {Array.from({ length: maximum }, (_, index) => (
         <span
           key={index}
           className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${index < used ? "bg-[var(--workspace-accent)]" : "bg-cream/20"}`}

@@ -7,12 +7,14 @@ import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
   "Computer fundamentals",
-  "A fundamentals interview with Maya across networking, browser behaviour and databases."
+  "A fundamentals interview with your chosen teacher across networking, browser behaviour and databases."
 );
 
 export default async function FundamentalsInterviewEntryPage() {
   const { ownerId, profile } = await requireOnboardedProfile();
-  const quota = await getAppContainer().interviewService.quota(ownerId).catch(() => null);
+  const quota = await getAppContainer()
+    .interviewService.quota(ownerId)
+    .catch(() => null);
 
   return (
     <FundamentalsInterviewEntry

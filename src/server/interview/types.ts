@@ -1,3 +1,10 @@
+import type {
+  BlueprintDifficulty,
+  BlueprintStageKind,
+  QuestionFormat,
+  SessionBlueprint
+} from "@/lib/interviews/personalized-plan";
+
 export const ROLES = ["backend", "frontend", "fullstack", "data", "ai-ml", "pm"] as const;
 export const LEVELS = ["fresher", "0-2", "3-5", "5-plus"] as const;
 export const ROUND_TYPES = ["behavioral", "technical", "hiring-manager"] as const;
@@ -24,10 +31,15 @@ export interface InterviewSetup {
   /** Which template produced the agenda, for history and reports. */
   templateId?: string;
   templateTitle?: string;
+  /** Trusted plan duration; personalized blueprint launches set this server-side. */
+  durationMinutes?: number;
+  /** Trusted immutable source copied into the session when a blueprint launches. */
+  personalizedPlanId?: string;
+  personalizedBlueprint?: SessionBlueprint;
   /** Slugs selected for the live DSA workspace, in interview order. */
   dsaQuestionSlugs?: string[];
   /** DSA rounds use a compact set of practice questions instead of the default four-question arc. */
-  questionCount?: 3 | 4 | 5 | 6 | 8;
+  questionCount?: 3 | 4 | 5 | 6 | 7 | 8;
   /**
    * Marks the staged resume round, which is planned entirely from the kit
    * stored with the candidate's resume rather than from a model call.
@@ -75,6 +87,14 @@ export interface PlannedQuestion {
   sourceSlug?: string;
   /** Human-readable skill area, used to keep the interview arc balanced. */
   competency?: string;
+  /** Runtime metadata stamped from a trusted personalized blueprint. */
+  blueprintStage?: BlueprintStageKind;
+  blueprintDifficulty?: BlueprintDifficulty;
+  blueprintFormat?: QuestionFormat;
+  topicKey?: string;
+  skillKeys?: string[];
+  rubricKeys?: string[];
+  maxFollowUps?: number;
   /** What the interviewer is trying to learn, not spoken to the candidate. */
   intent?: string;
   mustHit: string[];
@@ -96,6 +116,58 @@ export interface EvidenceLedger {
   specificity: string[];
   outcome: string[];
   gaps: EvidenceDimension[];
+  /** Grounding needed to aggregate demonstrated skill ability after the round. */
+  blueprint?: {
+    planId: string;
+    blueprintId: string;
+    stage: BlueprintStageKind;
+    topicKey: string;
+    skillKeys: string[];
+    rubricKeys: string[];
+    answerExcerpts: string[];
+  };
+}
+
+export type TechnicalVerdict =
+  | "correct"
+  | "mostly-correct"
+  | "partially-correct"
+  | "incorrect"
+  | "insufficient-evidence";
+
+export interface QuestionRubricEvaluation {
+  rubricKey: string;
+  score: number;
+  rationale: string;
+}
+
+/** Durable Judge0 evidence. Compilation alone is never treated as correctness. */
+export interface CodeExecutionEvidence {
+  language: string;
+  status: string;
+  accepted: boolean;
+  testsPassed: number;
+  testCount: number;
+  compileOutput: string;
+  stderr: string;
+  time: string | null;
+  memory: number | null;
+  recordedAt: number;
+}
+
+/** Persisted technical judgement used by reports and adaptive planning. */
+export interface QuestionEvaluation {
+  source: "semantic-evaluator" | "local-mcq" | "evaluation-unavailable";
+  score: number;
+  verdict: TechnicalVerdict;
+  confidence: number;
+  summary: string;
+  strengths: string[];
+  gaps: string[];
+  rubricScores: QuestionRubricEvaluation[];
+  answerExcerpts: string[];
+  execution: CodeExecutionEvidence | null;
+  evaluatedAt: number;
 }
 
 /** Timestamps are offsets in milliseconds from the session start. */
@@ -134,6 +206,10 @@ export interface InterviewState {
   turns: Turn[];
   /** Durable evidence per planned question/resume claim. */
   evidence?: Record<string, EvidenceLedger>;
+  /** Semantic/local correctness judgements keyed by planned-question index. */
+  questionEvaluations?: Record<string, QuestionEvaluation>;
+  /** Latest Judge0 result per code question, recorded before answer submission. */
+  codeExecutions?: Record<string, CodeExecutionEvidence>;
 }
 
 export interface Decision {
@@ -162,6 +238,7 @@ export const SOFT_WRAP_MS = 13 * 60 * 1000;
  */
 export const RESUME_HARD_CAP_MS = 24 * 60 * 1000;
 export const RESUME_SOFT_WRAP_MS = 21 * 60 * 1000;
+const PERSONALIZED_WRAP_BUFFER_MS = 2 * 60 * 1000;
 
 export interface RoundCaps {
   softWrapMs: number;
@@ -169,7 +246,15 @@ export interface RoundCaps {
 }
 
 export function roundCaps(setup: InterviewSetup | undefined): RoundCaps {
-  return setup?.resumeRound
-    ? { softWrapMs: RESUME_SOFT_WRAP_MS, hardCapMs: RESUME_HARD_CAP_MS }
-    : { softWrapMs: SOFT_WRAP_MS, hardCapMs: HARD_CAP_MS };
+  if (setup?.resumeRound) {
+    return { softWrapMs: RESUME_SOFT_WRAP_MS, hardCapMs: RESUME_HARD_CAP_MS };
+  }
+  if (setup?.durationMinutes) {
+    const hardCapMs = Math.max(5, Math.min(60, setup.durationMinutes)) * 60 * 1000;
+    return {
+      softWrapMs: Math.max(3 * 60 * 1000, hardCapMs - PERSONALIZED_WRAP_BUFFER_MS),
+      hardCapMs
+    };
+  }
+  return { softWrapMs: SOFT_WRAP_MS, hardCapMs: HARD_CAP_MS };
 }

@@ -80,7 +80,7 @@ export function InterviewTemplateGrid({ role, level, locked = false }: TemplateG
         <div>
           <p className="blueprint-label text-cream/35">Choose a round</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-cream">
-            What should Maya press on?
+            What should your teacher press on?
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-cream/45">
             Each round has a fixed agenda. Pick one and the whole interview stays on it.

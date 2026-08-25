@@ -3,8 +3,14 @@
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
-import { ApiClientError, getProfile, startInterview } from "@/lib/api/api-client";
+import {
+  ApiClientError,
+  getPersonalizedInterviewPlan,
+  getProfile,
+  startInterview
+} from "@/lib/api/api-client";
 import type { Curriculum, CurriculumSession } from "@/lib/curriculum/curriculum";
+import type { SessionBlueprint } from "@/lib/interviews/personalized-plan";
 import { FRONTEND_SESSIONS, type FrontendSession } from "@/lib/roadmap/frontend-plan";
 import { findTemplate, type InterviewTemplate } from "@/lib/interviews/interview-templates";
 import { pageTitle } from "@/lib/shared/seo";
@@ -45,6 +51,11 @@ const startingLabels = ["Reading your resume", "Writing your questions", "Settin
 const setupStepTitles = ["Role", "Experience", "Round", "Intensity", "Context"];
 const RESUME_SESSION_ID = "resume-behavioral-defense";
 
+type PlannedSessionSelection = Pick<CurriculumSession, "id" | "title"> & {
+  planId?: string;
+  blueprintId?: string;
+};
+
 export default function InterviewSetupClient({
   workspaceAccent
 }: {
@@ -61,12 +72,13 @@ export default function InterviewSetupClient({
   const [startingLabel, setStartingLabel] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [template, setTemplate] = useState<InterviewTemplate | null>(null);
-  const [plannedSession, setPlannedSession] = useState<CurriculumSession | null>(null);
+  const [plannedSession, setPlannedSession] = useState<PlannedSessionSelection | null>(null);
   const [plannedSessionTitle, setPlannedSessionTitle] = useState<string | null>(null);
   const [scope, setScope] = useState<"session" | "overall" | null>(null);
   const [planAgenda, setPlanAgenda] = useState<string[] | null>(null);
   const [autoStart, setAutoStart] = useState(false);
   const [profileReady, setProfileReady] = useState(false);
+  const [launchPlanReady, setLaunchPlanReady] = useState(true);
   const autoStartedRef = useRef(false);
 
   useEffect(() => {
@@ -91,12 +103,15 @@ export default function InterviewSetupClient({
     const roadmapSession =
       requestedRoadmapSession ?? (resumeLaunch ? findRoadmapSession(RESUME_SESSION_ID) : null);
     const sessionId = params.get("session");
+    const blueprintId = params.get("blueprint");
+    const expectedPlanId = params.get("plan");
     const overall = params.get("scope") === "overall";
     const chosenTemplate = findTemplate(params.get("template"));
     const shouldAutoStart =
       params.get("autostart") === "1" ||
       resumeLaunch ||
       Boolean(roadmapSession) ||
+      Boolean(blueprintId) ||
       Boolean(sessionId) ||
       overall ||
       Boolean(params.get("focus")) ||
@@ -116,7 +131,8 @@ export default function InterviewSetupClient({
     setAutoStart(shouldAutoStart);
     if (queryRole) setRole(queryRole);
     if (queryLevel) setLevel(queryLevel);
-    if (params.get("session") || params.get("scope") === "overall" || roadmapSession) setStep(4);
+    if (params.get("session") || params.get("scope") === "overall" || roadmapSession || blueprintId)
+      setStep(4);
 
     // A template picked on the interviews page fixes the round and its agenda.
     const chosen = chosenTemplate;
@@ -124,7 +140,7 @@ export default function InterviewSetupClient({
       setTemplate(chosen);
       setRoundType(chosen.roundType);
       setIntensity(chosen.intensity);
-    } else if (!roadmapSession && !sessionId && !overall) {
+    } else if (!roadmapSession && !blueprintId && !sessionId && !overall) {
       setRoundType("behavioral");
       setIntensity("realistic");
     }
@@ -137,11 +153,45 @@ export default function InterviewSetupClient({
       setPlanAgenda(agendaForRoadmapSession(roadmapSession));
     }
 
+    if (blueprintId && !roadmapSession) {
+      setScope("session");
+      setIntensity("realistic");
+      setRoundType("technical");
+      setLaunchPlanReady(false);
+      void getPersonalizedInterviewPlan()
+        .then((plan) => {
+          if (cancelled) return;
+          if (expectedPlanId && plan.id !== expectedPlanId) {
+            throw new Error("The personalized plan changed");
+          }
+          const blueprint = plan.sessions.find((session) => session.id === blueprintId);
+          if (!blueprint) throw new Error("The personalized session was not found");
+
+          setPlannedSession({
+            id: blueprint.id,
+            title: blueprint.title,
+            planId: plan.id,
+            blueprintId: blueprint.id
+          });
+          setPlanAgenda(agendaForPersonalizedBlueprint(blueprint));
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setAutoStart(false);
+          setScope(null);
+          setError("This personalized session changed. Return to Interviews and choose it again.");
+        })
+        .finally(() => {
+          if (!cancelled) setLaunchPlanReady(true);
+        });
+    }
+
     // Rounds launched from the plan already know their subject. Onboarding
     // captured the role and level, so nothing is asked again here.
-    if ((sessionId || overall) && !roadmapSession) {
+    if ((sessionId || overall) && !roadmapSession && !blueprintId) {
       setScope(overall ? "overall" : "session");
       setIntensity("realistic");
+      setLaunchPlanReady(false);
       void fetch("/api/curriculum", { cache: "no-store" })
         .then((response) => (response.ok ? response.json() : Promise.reject(response.status)))
         .then((payload: { data: Curriculum }) => {
@@ -165,6 +215,9 @@ export default function InterviewSetupClient({
         })
         .catch(() => {
           if (!cancelled) setScope(null);
+        })
+        .finally(() => {
+          if (!cancelled) setLaunchPlanReady(true);
         });
     }
 
@@ -288,7 +341,16 @@ export default function InterviewSetupClient({
         ? {
             agenda: planAgenda,
             ...(plannedSession
-              ? { templateId: plannedSession.id, templateTitle: plannedSession.title }
+              ? {
+                  templateId: plannedSession.id,
+                  templateTitle: plannedSession.title,
+                  ...(plannedSession.blueprintId
+                    ? {
+                        planId: plannedSession.planId,
+                        blueprintId: plannedSession.blueprintId
+                      }
+                    : {})
+                }
               : { templateTitle: plannedSessionTitle ?? "Full interview across your sessions" })
           }
         : template
@@ -326,7 +388,8 @@ export default function InterviewSetupClient({
   ]);
 
   useEffect(() => {
-    if (!autoStart || autoStartedRef.current || starting || !profileReady) return;
+    if (!autoStart || autoStartedRef.current || starting || !profileReady || !launchPlanReady)
+      return;
     if (!role || !level || !roundType || !intensity) return;
 
     if (context.trim().length < MIN_CONTEXT) {
@@ -338,7 +401,18 @@ export default function InterviewSetupClient({
 
     autoStartedRef.current = true;
     void begin();
-  }, [autoStart, begin, context, intensity, level, profileReady, role, roundType, starting]);
+  }, [
+    autoStart,
+    begin,
+    context,
+    intensity,
+    launchPlanReady,
+    level,
+    profileReady,
+    role,
+    roundType,
+    starting
+  ]);
 
   // A template already fixes the round and the intensity, so those two steps
   // drop out of the wizard rather than asking a question with one answer.
@@ -348,7 +422,7 @@ export default function InterviewSetupClient({
   );
   const position = Math.max(0, activeSteps.indexOf(step));
   const onLastStep = position === activeSteps.length - 1;
-  const isPreparing = !profileReady || starting || autoStart;
+  const isPreparing = !profileReady || !launchPlanReady || starting || autoStart;
 
   const goTo = useCallback(
     (offset: number) => {
@@ -647,6 +721,15 @@ function agendaForRoadmapSession(session: FrontendSession): string[] {
     `${session.title}: ${session.purpose}`,
     ...session.covers.map((item) => `${session.title}: ${item}`)
   ];
+}
+
+function agendaForPersonalizedBlueprint(blueprint: SessionBlueprint): string[] {
+  return [
+    `Session goal: ${blueprint.rationale}`,
+    ...blueprint.topics.map(
+      (topic) => `${topic.label}: ${topic.objectives[0] ?? "Test practical depth and trade-offs"}`
+    )
+  ].map((item) => item.slice(0, 200));
 }
 
 function roundTypeForRoadmapSession(id: string): RoundType {

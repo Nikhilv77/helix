@@ -3,11 +3,8 @@
 import { Check, Loader2, Mic, Send, X } from "lucide-react";
 import type { InterviewQuestion, InterviewStage } from "@/lib/shared/types";
 import { ResizableTextarea } from "@/components/interview/dsa/resizable-textarea";
-import {
-  INTERVIEW_PANEL_CARD,
-  INTERVIEW_PANEL_RULE,
-  INTERVIEW_PANEL_SHELL
-} from "./panel-surface";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
+import { INTERVIEW_PANEL_CARD, INTERVIEW_PANEL_RULE, INTERVIEW_PANEL_SHELL } from "./panel-surface";
 
 export interface InterviewStageDef {
   id: InterviewStage;
@@ -107,6 +104,7 @@ export function InterviewQuestionPanel({
   onSubmit: () => void;
   onRequestMic: () => void;
 }) {
+  const teacher = useWorkspaceTeacher();
   const stage = question?.stage ?? stages[0]?.id ?? "skills";
   const format = question?.answerFormat ?? (question?.kind === "code" ? "typed" : "spoken");
   const graded = grade && grade.questionIndex === questionIndex ? grade : null;
@@ -235,7 +233,9 @@ export function InterviewQuestionPanel({
                     aria-hidden="true"
                   />
                   <p className="text-sm font-medium text-cream/76">
-                    {micOn ? "Answer out loud — Maya is listening" : "Your microphone is off"}
+                    {micOn
+                      ? `Answer out loud — ${teacher.name} is listening`
+                      : "Your microphone is off"}
                   </p>
                   {!micOn ? (
                     <button
@@ -260,25 +260,28 @@ export function InterviewQuestionPanel({
           </>
         ) : (
           <p className={`${INTERVIEW_PANEL_CARD} p-5 text-sm leading-7 text-cream/50`}>
-            {thinking ? "Maya is thinking…" : "Waiting for Maya's next question."}
+            {thinking
+              ? `${teacher.name} is thinking…`
+              : `Waiting for ${teacher.name}'s next question.`}
           </p>
         )}
       </div>
 
       {question && format !== "mcq" ? (
-        <div className={`shrink-0 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 px-4 py-3.5 sm:px-5`}>
-          <label
-            htmlFor="resume-answer"
-            className="text-sm font-semibold text-cream/80"
-          >
-            {question.codeTask ? "Explain your code to Maya" : "Or write your answer"}
+        <div
+          className={`shrink-0 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 px-4 py-3.5 sm:px-5`}
+        >
+          <label htmlFor="resume-answer" className="text-sm font-semibold text-cream/80">
+            {question.codeTask ? `Explain your code to ${teacher.name}` : "Or write your answer"}
           </label>
           <div className="mt-2.5 flex flex-col gap-2.5 sm:flex-row sm:items-end">
             <ResizableTextarea
               id="resume-answer"
               value={question.codeTask ? notes : draft}
               onChange={(event) =>
-                question.codeTask ? onNotesChange(event.target.value) : onDraftChange(event.target.value)
+                question.codeTask
+                  ? onNotesChange(event.target.value)
+                  : onDraftChange(event.target.value)
               }
               rows={2}
               placeholder={
@@ -302,7 +305,11 @@ export function InterviewQuestionPanel({
               ) : (
                 <Send size={15} aria-hidden="true" />
               )}
-              {sending ? "Maya is reading" : question.codeTask ? "Send solution" : "Send answer"}
+              {sending
+                ? `${teacher.name} is reading`
+                : question.codeTask
+                  ? "Send solution"
+                  : "Send answer"}
             </button>
           </div>
           {error ? <p className="mt-2 text-sm text-[#ffb4b4]">{error}</p> : null}
@@ -328,8 +335,10 @@ function StageRail({
   counts: StageCounts;
 }) {
   return (
-    <div className={`grid shrink-0 gap-px border-b ${INTERVIEW_PANEL_RULE} bg-white/[0.04]`}
-      style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(0, 1fr))` }}>
+    <div
+      className={`grid shrink-0 gap-px border-b ${INTERVIEW_PANEL_RULE} bg-white/[0.04]`}
+      style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(0, 1fr))` }}
+    >
       {stages.map((stage) => {
         const { total, done } = counts[stage.id] ?? { total: 0, done: 0 };
         const active = stage.id === current;
@@ -340,7 +349,9 @@ function StageRail({
             key={stage.id}
             aria-current={active ? "step" : undefined}
             className={`relative px-4 py-3 transition ${
-              active ? "bg-[color-mix(in_srgb,var(--workspace-accent)_9%,rgba(17,18,21,0.9))]" : "bg-[rgba(17,18,21,0.9)]"
+              active
+                ? "bg-[color-mix(in_srgb,var(--workspace-accent)_9%,rgba(17,18,21,0.9))]"
+                : "bg-[rgba(17,18,21,0.9)]"
             }`}
           >
             <div className="flex items-center gap-2">

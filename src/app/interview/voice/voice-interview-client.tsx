@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Room, RoomEvent, Track } from "livekit-client";
 import type {
   AudioCaptureOptions,
@@ -31,6 +31,8 @@ import { ResizableTextarea } from "@/components/interview/dsa/resizable-textarea
 import { PathRail } from "@/components/interview/shared/path-rail";
 import { MicMeter } from "@/components/interview/voice/mic-meter";
 import { InterviewerPresence } from "@/components/interview/voice/interviewer-presence";
+import { personaById, personaForSession } from "@/lib/avatars/personas";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { AvatarStage } from "@/components/interview/voice/avatar-stage";
 import type { PresenceState } from "@/components/interview/voice/interviewer-presence";
 import { ApiClientError, endInterview, getSession } from "@/lib/api/api-client";
@@ -49,10 +51,7 @@ import type {
 } from "@/lib/shared/types";
 import { MayaAside } from "./components/maya-aside";
 import { INTERVIEW_PANEL_RULE, INTERVIEW_PANEL_SHELL } from "./components/panel-surface";
-import {
-  ResumeLiveWorkspace,
-  resumeEditorLanguage
-} from "./components/resume-live-workspace";
+import { ResumeLiveWorkspace, resumeEditorLanguage } from "./components/resume-live-workspace";
 import { stageCounts } from "./components/interview-question-panel";
 import { FundamentalsLiveWorkspace } from "./components/fundamentals-live-workspace";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
@@ -73,7 +72,13 @@ import { MediaPermissionGate, type MediaSetupResult } from "./components/media-p
 import { useInterviewClock } from "./hooks/use-interview-clock";
 
 const DEFAULT_HARD_CAP_MS = 15 * 60 * 1000;
-const AVATAR_URL = process.env.NEXT_PUBLIC_AVATAR_URL ?? "";
+/**
+ * Normally empty: the interviewer comes from the session's persona. Set it to a
+ * path to pin one model across every session while previewing a replacement,
+ * or to "off" to fall back to the non-3D presence indicator.
+ */
+const AVATAR_OVERRIDE = process.env.NEXT_PUBLIC_AVATAR_URL ?? "";
+const AVATAR_DISABLED = AVATAR_OVERRIDE.toLowerCase() === "off";
 const POLL_MS = 1500;
 const AGENT_STATE_ATTRIBUTE = "lk.agent.state";
 const AGENT_JOIN_TIMEOUT_MS = 15_000;
@@ -91,15 +96,22 @@ function stopMediaStream(stream: MediaStream | null) {
 
 export function VoiceInterviewClient({
   workspaceAccent,
-  resume
+  resume,
+  teacherId
 }: {
   workspaceAccent: WorkspaceAccent;
   /** Backs the resume round's document preview. Null for other rounds. */
   resume?: CandidateResume | null;
+  /** Persisted onboarding selection; legacy profiles fall back deterministically. */
+  teacherId?: string | null;
 }) {
   const router = useRouter();
   const params = useSearchParams();
   const sessionId = params?.get("session") ?? null;
+  const persona = useMemo(
+    () => personaById(teacherId) ?? personaForSession(sessionId),
+    [sessionId, teacherId]
+  );
 
   const [status, setStatus] = useState<VoiceStatus>("connecting");
   const [error, setError] = useState<string | null>(null);
@@ -423,7 +435,7 @@ export function VoiceInterviewClient({
         const response = await fetch("/api/livekit/token", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ sessionId })
+          body: JSON.stringify({ sessionId, teacherId: persona.id })
         });
         const payload = await response.json();
         if (!payload?.success) {
@@ -519,7 +531,8 @@ export function VoiceInterviewClient({
     router,
     sessionChecked,
     sessionId,
-    sessionUnavailable
+    sessionUnavailable,
+    persona.id
   ]);
 
   // The transcript comes from the brain, not from LiveKit — the server already
@@ -817,7 +830,7 @@ export function VoiceInterviewClient({
    */
   async function runResumeCode() {
     const code = typedDraft.trim();
-    if (!code || dsaRunning) return;
+    if (!code || dsaRunning || !sessionId) return;
 
     setDsaRunning(true);
     setDsaRunResult(null);
@@ -829,7 +842,9 @@ export function VoiceInterviewClient({
         body: JSON.stringify({
           code: typedDraft,
           language: resumeEditorLanguage(currentQuestion?.language ?? null),
-          stdin: ""
+          stdin: "",
+          sessionId,
+          questionIndex: progress.index
         })
       });
       const payload = (await response.json()) as {
@@ -849,7 +864,7 @@ export function VoiceInterviewClient({
   }
 
   async function runDsaCode() {
-    if (!typedDraft.trim() || !dsaQuestionSlug || dsaRunning) return;
+    if (!typedDraft.trim() || !dsaQuestionSlug || dsaRunning || !sessionId) return;
     setDsaRunning(true);
     setDsaRunResult(null);
     setTypedError(null);
@@ -861,7 +876,9 @@ export function VoiceInterviewClient({
           code: typedDraft,
           language: dsaLanguage,
           slug: dsaQuestionSlug,
-          stdin: ""
+          stdin: "",
+          sessionId,
+          questionIndex: progress.index
         })
       });
       const payload = (await response.json()) as {
@@ -941,6 +958,19 @@ export function VoiceInterviewClient({
           : agentSpeaking
             ? "speaking"
             : "listening";
+
+  // Four layouts render the interviewer; a function keeps them from drifting.
+  const interviewerSlot = () =>
+    AVATAR_DISABLED ? (
+      <InterviewerPresence agentTrack={agentTrack} localTrack={localTrack} state={presence} />
+    ) : (
+      <AvatarStage
+        agentTrack={agentTrack}
+        state={presence}
+        url={AVATAR_OVERRIDE || persona.model}
+        rig={persona.rig}
+      />
+    );
   const micAvailable = status === "waiting" || status === "live" || status === "reconnecting";
   const statusLabel = describeVoiceState(
     status,
@@ -1025,6 +1055,7 @@ export function VoiceInterviewClient({
             questionIndex={progress.index}
             questionCount={progress.count}
             followUpCount={progress.followUps}
+            maxFollowUps={currentQuestion?.maxFollowUps ?? 2}
           />
         </div>
 
@@ -1090,17 +1121,7 @@ export function VoiceInterviewClient({
           setup={setup}
           thinking={agentState === "thinking"}
           bottomRef={bottomRef}
-          agentSlot={
-            AVATAR_URL ? (
-              <AvatarStage agentTrack={agentTrack} state={presence} url={AVATAR_URL} />
-            ) : (
-              <InterviewerPresence
-                agentTrack={agentTrack}
-                localTrack={localTrack}
-                state={presence}
-              />
-            )
-          }
+          agentSlot={interviewerSlot()}
           micOn={micOn}
           sending={typedSending}
           error={typedError}
@@ -1128,17 +1149,7 @@ export function VoiceInterviewClient({
           setup={setup}
           thinking={agentState === "thinking"}
           bottomRef={bottomRef}
-          agentSlot={
-            AVATAR_URL ? (
-              <AvatarStage agentTrack={agentTrack} state={presence} url={AVATAR_URL} />
-            ) : (
-              <InterviewerPresence
-                agentTrack={agentTrack}
-                localTrack={localTrack}
-                state={presence}
-              />
-            )
-          }
+          agentSlot={interviewerSlot()}
           micOn={micOn}
           language={resumeEditorLanguage(currentQuestion?.language ?? null)}
           sending={typedSending}
@@ -1170,9 +1181,7 @@ export function VoiceInterviewClient({
           questionCount={progress.count}
           thinking={agentState === "thinking"}
           bottomRef={bottomRef}
-          agentTrack={agentTrack}
-          localTrack={localTrack}
-          presence={presence}
+          renderInterviewer={interviewerSlot}
           language={dsaLanguage}
           runResult={dsaRunResult}
           running={dsaRunning}
@@ -1197,7 +1206,9 @@ export function VoiceInterviewClient({
           <section
             className={`${INTERVIEW_PANEL_SHELL} order-2 flex min-h-[34rem] min-w-0 flex-col overflow-hidden xl:order-1 xl:min-h-0`}
           >
-            <div className={`flex shrink-0 items-center justify-between gap-4 border-b ${INTERVIEW_PANEL_RULE} px-5 py-4 sm:px-6`}>
+            <div
+              className={`flex shrink-0 items-center justify-between gap-4 border-b ${INTERVIEW_PANEL_RULE} px-5 py-4 sm:px-6`}
+            >
               <div className="flex min-w-0 items-center gap-3">
                 <span className="h-2 w-2 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_14px_var(--workspace-accent)]" />
                 <div className="min-w-0">
@@ -1229,7 +1240,7 @@ export function VoiceInterviewClient({
                     aria-hidden="true"
                   />
                   {status === "waiting"
-                    ? "Maya is joining the room"
+                    ? `${persona.name} is joining the room`
                     : status === "reconnecting"
                       ? "Restoring your conversation"
                       : "Connecting your interview"}
@@ -1320,7 +1331,9 @@ export function VoiceInterviewClient({
               />
             </div>
 
-            <div className={`flex shrink-0 flex-col gap-3 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 px-4 py-3 sm:flex-row sm:items-center`}>
+            <div
+              className={`flex shrink-0 flex-col gap-3 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 px-4 py-3 sm:flex-row sm:items-center`}
+            >
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 <button
                   type="button"
@@ -1341,7 +1354,9 @@ export function VoiceInterviewClient({
                 </button>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-cream">
-                    {micOn && micSignal && status === "live" ? "Maya can hear you" : statusLabel}
+                    {micOn && micSignal && status === "live"
+                      ? `${persona.name} can hear you`
+                      : statusLabel}
                   </p>
                   <div className="mt-1.5 max-w-52">
                     <MicMeter
@@ -1378,17 +1393,7 @@ export function VoiceInterviewClient({
           <aside className="workspace-accent-card-glow order-1 flex min-h-[20rem] flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_26%,transparent)] bg-[color-mix(in_srgb,var(--workspace-accent)_4%,rgba(17,18,21,0.68))] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_24px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl xl:order-2 xl:min-h-0">
             <div className="relative min-h-64 flex-1 overflow-hidden">
               <div className="pointer-events-none absolute inset-3 flex items-center justify-center">
-                <div className="h-full max-h-[29rem] w-full max-w-[21rem]">
-                  {AVATAR_URL ? (
-                    <AvatarStage agentTrack={agentTrack} state={presence} url={AVATAR_URL} />
-                  ) : (
-                    <InterviewerPresence
-                      agentTrack={agentTrack}
-                      localTrack={localTrack}
-                      state={presence}
-                    />
-                  )}
-                </div>
+                <div className="h-full max-h-[29rem] w-full max-w-[21rem]">{interviewerSlot()}</div>
               </div>
 
               <div className="absolute bottom-4 left-4 flex items-center gap-2 rounded-full border border-white/[0.08] bg-black/55 px-3 py-1.5 backdrop-blur-lg">
@@ -1399,7 +1404,7 @@ export function VoiceInterviewClient({
                       : "animate-pulse bg-cream/45"
                   }`}
                 />
-                <span className="text-sm font-medium text-cream">Maya</span>
+                <span className="text-sm font-medium text-cream">{persona.name}</span>
               </div>
             </div>
 
@@ -1448,9 +1453,7 @@ function DsaLiveWorkspace({
   questionCount,
   thinking,
   bottomRef,
-  agentTrack,
-  localTrack,
-  presence,
+  renderInterviewer,
   language,
   runResult,
   running,
@@ -1478,9 +1481,8 @@ function DsaLiveWorkspace({
   questionCount: number;
   thinking: boolean;
   bottomRef: React.RefObject<HTMLDivElement | null>;
-  agentTrack: MediaStreamTrack | null;
-  localTrack: MediaStreamTrack | null;
-  presence: PresenceState;
+  /** Built by the parent so every layout shows the same interviewer. */
+  renderInterviewer: () => React.ReactNode;
   language: DsaLanguage;
   runResult: DsaRunResult | null;
   running: boolean;
@@ -1496,6 +1498,7 @@ function DsaLiveWorkspace({
   candidateCameraStream: MediaStream | null;
   onDisableCamera: () => void;
 }) {
+  const teacher = useWorkspaceTeacher();
   const canSubmit = draft.trim().length >= 10 && !sending;
   const splitWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const [questionPaneWidth, setQuestionPaneWidth] = useState(38);
@@ -1550,7 +1553,9 @@ function DsaLiveWorkspace({
         >
           {question ? (
             <div className="px-5 pb-7 sm:px-7 sm:pb-8">
-              <div className={`sticky top-0 z-10 -mx-5 flex items-center justify-between gap-3 border-b ${INTERVIEW_PANEL_RULE} bg-[rgba(17,18,21,0.92)] px-5 py-4 text-sm backdrop-blur-2xl sm:-mx-7 sm:px-7`}>
+              <div
+                className={`sticky top-0 z-10 -mx-5 flex items-center justify-between gap-3 border-b ${INTERVIEW_PANEL_RULE} bg-[rgba(17,18,21,0.92)] px-5 py-4 text-sm backdrop-blur-2xl sm:-mx-7 sm:px-7`}
+              >
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]" />
                   <span className="whitespace-nowrap font-medium text-cream/72">
@@ -1648,7 +1653,9 @@ function DsaLiveWorkspace({
             </div>
           ) : (
             <div className="flex h-full items-center justify-center p-8 text-center">
-              <p className="text-sm leading-6 text-cream/50">Maya is preparing the next problem.</p>
+              <p className="text-sm leading-6 text-cream/50">
+                {teacher.name} is preparing the next problem.
+              </p>
             </div>
           )}
         </section>
@@ -1693,7 +1700,9 @@ function DsaLiveWorkspace({
               : "xl:translate-x-0 xl:opacity-100"
           }`}
         >
-          <div className={`flex min-h-16 shrink-0 flex-col items-stretch gap-3 border-b ${INTERVIEW_PANEL_RULE} px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5`}>
+          <div
+            className={`flex min-h-16 shrink-0 flex-col items-stretch gap-3 border-b ${INTERVIEW_PANEL_RULE} px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5`}
+          >
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 text-base font-semibold text-cream">
                 <Code2 size={17} aria-hidden="true" className="text-[var(--workspace-accent)]" />
@@ -1762,7 +1771,7 @@ function DsaLiveWorkspace({
           />
           <div className={`shrink-0 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 p-4 sm:p-5`}>
             <label htmlFor="dsa-approach" className="text-sm font-semibold text-cream/82">
-              Explain your approach to Maya
+              Explain your approach to {teacher.name}
               <span className="ml-2 hidden font-normal text-cream/38 xl:inline">
                 Include the idea and complexity.
               </span>
@@ -1790,7 +1799,7 @@ function DsaLiveWorkspace({
                 ) : (
                   <Send size={15} aria-hidden="true" />
                 )}
-                {sending ? "Maya is reviewing" : "Send solution to Maya"}
+                {sending ? `${teacher.name} is reviewing` : `Send solution to ${teacher.name}`}
               </button>
             </div>
             {error ? <p className="mt-2 text-sm text-[#ffb4b4]">{error}</p> : null}
@@ -1799,13 +1808,7 @@ function DsaLiveWorkspace({
       </div>
 
       <MayaAside
-        agentSlot={
-          AVATAR_URL ? (
-            <AvatarStage agentTrack={agentTrack} state={presence} url={AVATAR_URL} />
-          ) : (
-            <InterviewerPresence agentTrack={agentTrack} localTrack={localTrack} state={presence} />
-          )
-        }
+        agentSlot={renderInterviewer()}
         turns={turns}
         spokenAgentTurnKeys={spokenAgentTurnKeys}
         liveUserText={liveUserText}
@@ -1833,7 +1836,9 @@ function DsaOutputPanel({
   const statusClass = result?.accepted ? "text-[var(--workspace-accent)]" : "text-[#ffb4b4]";
 
   return (
-    <section className={`max-h-64 shrink-0 overflow-hidden border-t ${INTERVIEW_PANEL_RULE} bg-black/10`}>
+    <section
+      className={`max-h-64 shrink-0 overflow-hidden border-t ${INTERVIEW_PANEL_RULE} bg-black/10`}
+    >
       <div className="flex min-h-12 items-center justify-between gap-4 px-4 pb-2 pt-3.5">
         <div>
           <h3 className="text-sm font-semibold text-cream/86">Test results</h3>

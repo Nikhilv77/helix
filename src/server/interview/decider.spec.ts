@@ -50,4 +50,33 @@ describe("resume interview decider prompt", () => {
     expect(prompt).toContain("Current gaps: outcome");
     expect(prompt).toContain("do not ask for these again");
   });
+
+  it("bounds personalized follow-ups to the assigned topic and rubric", () => {
+    const prompt = buildDecidePrompt({
+      ...input,
+      maxFollowUps: 3,
+      topicLabel: "Laravel",
+      blueprintDifficulty: "intermediate",
+      rubric: [
+        {
+          key: "depth",
+          label: "Technical depth",
+          weightPercent: 100,
+          strongSignals: ["Explains the request lifecycle"],
+          weakSignals: ["Only names framework features"]
+        }
+      ],
+      followUpPolicy: {
+        maxPerQuestion: 3,
+        probeWeakClaims: true,
+        increaseDifficultyAfterStrongAnswer: true,
+        stayWithinBlueprintTopics: true
+      }
+    });
+
+    expect(prompt).toContain("Assigned topic: Laravel");
+    expect(prompt).toContain("Technical depth: strong=Explains the request lifecycle");
+    expect(prompt).toContain("Stay within the assigned topic");
+    expect(prompt).toContain("0 of 3");
+  });
 });

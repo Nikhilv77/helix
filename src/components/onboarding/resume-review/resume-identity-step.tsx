@@ -145,7 +145,7 @@ export function ResumeIdentityStep({
                 return (
                   <div
                     key={item.label}
-                    className="onboarding-card-reveal rounded-[1.35rem] border border-cream/32 bg-cream/[0.038] px-5 py-7 text-center text-cream transition duration-300 hover:-translate-y-1 hover:border-cream/52 hover:bg-cream/[0.055] sm:backdrop-blur-sm"
+                    className="onboarding-card-reveal rounded-[1.35rem] bg-cream/[0.038] px-5 py-7 text-center text-cream transition duration-300 hover:-translate-y-1 hover:bg-cream/[0.055] sm:backdrop-blur-sm"
                     style={
                       {
                         "--card-delay": `${240 + index * 150}ms`

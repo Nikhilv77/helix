@@ -110,7 +110,7 @@ export function ResumeEvidenceStep({
             return (
               <article
                 key={item.label}
-                className="onboarding-card-reveal group flex min-h-[17.5rem] flex-col rounded-[1.35rem] border border-cream/28 bg-cream/[0.035] p-5 text-left text-cream shadow-[inset_0_1px_0_rgba(241,234,216,0.08)] backdrop-blur-[2px] transition duration-300 hover:-translate-y-1 hover:border-cream/45 hover:bg-cream/[0.05] sm:p-6"
+                className="onboarding-card-reveal group flex min-h-[17.5rem] flex-col rounded-[1.35rem] bg-cream/[0.035] p-5 text-left text-cream backdrop-blur-[2px] transition duration-300 hover:-translate-y-1 hover:bg-cream/[0.05] sm:p-6"
                 style={
                       {
                     "--card-delay": `${260 + index * 170}ms`

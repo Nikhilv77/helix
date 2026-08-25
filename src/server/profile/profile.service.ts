@@ -83,6 +83,7 @@ export class ProfileService {
       workspaceAccent: isWorkspaceAccent(stored.workspaceAccent)
         ? stored.workspaceAccent
         : DEFAULT_WORKSPACE_ACCENT,
+      teacherId: stored.teacherId,
       focusAreas: stringArray(stored.focusAreas),
       stories: storyArray(stored.stories),
       updatedAt: stored.updatedAt.getTime(),
@@ -152,6 +153,15 @@ export class ProfileService {
     return accent;
   }
 
+  async saveTeacher(ownerId: string, teacherId: string): Promise<string> {
+    await this.prisma.candidateProfile.update({
+      where: { ownerId },
+      data: { teacherId }
+    });
+
+    return teacherId;
+  }
+
   async deleteAccountData(ownerId: string): Promise<void> {
     await this.prisma.$transaction([
       this.prisma.interviewSession.deleteMany({ where: { ownerId } }),
@@ -165,6 +175,8 @@ export class ProfileService {
     input: {
       targetRole: Role;
       level: Level;
+      /** Persona id, already validated by the route. Null keeps the default. */
+      teacherId: string | null;
       headline: string;
       context: string;
       focusAreas: string[];
@@ -208,6 +220,7 @@ export class ProfileService {
         ownerId,
         targetRole: input.targetRole,
         level: input.level,
+        teacherId: input.teacherId,
         headline: clean(input.headline),
         context: clean(input.context),
         coverImage: null,
@@ -225,6 +238,7 @@ export class ProfileService {
       update: {
         targetRole: input.targetRole,
         level: input.level,
+        teacherId: input.teacherId,
         headline: clean(input.headline),
         context: clean(input.context),
         coverImage: null,
@@ -275,6 +289,7 @@ function emptyProfile(): CandidateProfile {
     coverImage: null,
     profileImage: null,
     workspaceAccent: DEFAULT_WORKSPACE_ACCENT,
+    teacherId: null,
     focusAreas: [],
     stories: [],
     updatedAt: null,
@@ -352,7 +367,7 @@ function resumeFromJson(
     confidence: confidence ?? 0,
     fullName: typeof value.fullName === "string" ? value.fullName : "",
     skills: Array.isArray(value.skills)
-      ? value.skills.filter((skill): skill is string => typeof skill === "string").slice(0, 16)
+      ? value.skills.filter((skill): skill is string => typeof skill === "string").slice(0, 24)
       : [],
     warnings: Array.isArray(value.warnings)
       ? value.warnings

@@ -7,6 +7,7 @@ import type {
   WorkspaceInsights
 } from "@/lib/shared/types";
 import { SESSION_TTL_MS, type StoredInterviewSession } from "./session-store";
+import type { QuestionEvaluation } from "./types";
 
 export function createHistoryItem(
   session: StoredInterviewSession,
@@ -45,11 +46,15 @@ export function createInterviewReport(
       (turn) => turn.speaker === "user" && turn.questionIndex === index
     );
     const answer = answers[0];
-    const assessment = assessAnswer(
+    const heuristicAssessment = assessAnswer(
       question.kind ?? "conversation",
       answers.map((turn) => turn.text),
       agentTurns.filter((turn) => turn.questionIndex === index).map((turn) => turn.action)
     );
+    const evaluation = state.questionEvaluations?.[String(index)];
+    const assessment = evaluation
+      ? assessedTechnicalAnswer(heuristicAssessment, evaluation)
+      : heuristicAssessment;
 
     return {
       label: question.competency?.trim() || `Question ${index + 1}`,
@@ -65,17 +70,24 @@ export function createInterviewReport(
   const codeAnswer = state.turns.find(
     (turn) => turn.speaker === "user" && turn.questionIndex === codeQuestionIndex
   );
+  const codeExecution =
+    codeQuestionIndex >= 0 ? state.codeExecutions?.[String(codeQuestionIndex)] : undefined;
+  const codeEvaluation =
+    codeQuestionIndex >= 0 ? state.questionEvaluations?.[String(codeQuestionIndex)] : undefined;
 
   const answeredCompetencies = competencies.filter((item) => item.answered);
-  const ordered = [...answeredCompetencies].sort(
+  const scoredCompetencies = answeredCompetencies.filter(
+    (item) => item.technicalEvaluation?.source !== "evaluation-unavailable"
+  );
+  const ordered = [...scoredCompetencies].sort(
     (left, right) => right.evidenceScore - left.evidenceScore
   );
   const strongest = ordered[0] ?? null;
   const recommended = ordered.at(-1) ?? competencies[0] ?? null;
-  const evidenceScore = answeredCompetencies.length
+  const evidenceScore = scoredCompetencies.length
     ? Math.round(
-        answeredCompetencies.reduce((total, item) => total + item.evidenceScore, 0) /
-          answeredCompetencies.length
+        scoredCompetencies.reduce((total, item) => total + item.evidenceScore, 0) /
+          scoredCompetencies.length
       )
     : 0;
 
@@ -92,7 +104,19 @@ export function createInterviewReport(
       ? {
           language: codeQuestion.language?.trim() || "Code",
           task: codeQuestion.codeTask?.trim() || codeQuestion.text,
-          submitted: Boolean(codeAnswer?.text.trim())
+          submitted: Boolean(codeAnswer?.text.trim()),
+          execution: codeExecution
+            ? {
+                status: codeExecution.status,
+                accepted: codeExecution.accepted,
+                testsPassed: codeExecution.testsPassed,
+                testCount: codeExecution.testCount
+              }
+            : null,
+          correctnessScore:
+            codeEvaluation?.source === "evaluation-unavailable"
+              ? null
+              : (codeEvaluation?.score ?? null)
         }
       : null,
     summary: {
@@ -120,7 +144,10 @@ export function createWorkspaceInsights(
   const groups = new Map<string, { label: string; scores: number[] }>();
 
   for (const report of reports) {
-    for (const competency of report.competencies.filter((item) => item.answered)) {
+    for (const competency of report.competencies.filter(
+      (item) =>
+        item.answered && item.technicalEvaluation?.source !== "evaluation-unavailable"
+    )) {
       const key = normaliseCompetency(competency.label);
       const existing = groups.get(key) ?? { label: competency.label, scores: [] };
       existing.scores.push(competency.evidenceScore);
@@ -271,6 +298,46 @@ function assessAnswer(
     signals,
     gap: missing[0] ?? "The answer contains a complete evidence chain.",
     nextStep: missing[0] ?? "Practice delivering the same evidence in a tighter 60-second response."
+  };
+}
+
+function assessedTechnicalAnswer(
+  heuristic: ReturnType<typeof assessAnswer>,
+  evaluation: QuestionEvaluation
+): ReturnType<typeof assessAnswer> & Pick<InterviewCompetencyReport, "technicalEvaluation"> {
+  const gap = evaluation.gaps[0] ?? evaluation.summary;
+  return {
+    ...heuristic,
+    evidenceScore: evaluation.score,
+    evidenceLevel:
+      evaluation.verdict === "insufficient-evidence"
+        ? "missing"
+        : evaluation.score >= 75
+          ? "strong"
+          : "developing",
+    signals: evaluation.strengths,
+    gap,
+    nextStep: evaluation.gaps.length
+      ? `Correct this technical gap: ${gap}`
+      : "Practice explaining the same correct mechanism more concisely.",
+    technicalEvaluation: {
+      source: evaluation.source,
+      score: evaluation.score,
+      verdict: evaluation.verdict,
+      confidence: evaluation.confidence,
+      summary: evaluation.summary,
+      strengths: evaluation.strengths,
+      gaps: evaluation.gaps,
+      rubricScores: evaluation.rubricScores,
+      execution: evaluation.execution
+        ? {
+            status: evaluation.execution.status,
+            accepted: evaluation.execution.accepted,
+            testsPassed: evaluation.execution.testsPassed,
+            testCount: evaluation.execution.testCount
+          }
+        : null
+    }
   };
 }
 

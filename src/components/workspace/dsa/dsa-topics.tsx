@@ -96,8 +96,8 @@ export function DsaTopics({
               Build the instincts that make a solution feel obvious.
             </h2>
             <p className="mt-2 max-w-2xl text-[15px] leading-7 text-cream/55">
-              Open a chapter for Maya&apos;s briefing or go directly to a problem. Your progress
-              stays attached to every pattern.
+              Open a chapter for your teacher&apos;s briefing or go directly to a problem. Your
+              progress stays attached to every pattern.
             </p>
           </div>
           <div className="practice-glass-soft flex shrink-0 items-center gap-3 rounded-2xl px-4 py-3">
@@ -238,7 +238,7 @@ function ChapterBlock({
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold text-cream">
-              Take this session with Maya
+              Take this session with your teacher
             </span>
             <span className="mt-0.5 block text-[13px] leading-5 text-cream/50">
               She sets up the pattern and the traps, then you solve.

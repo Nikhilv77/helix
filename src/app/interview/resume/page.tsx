@@ -6,12 +6,14 @@ import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
   "Resume interview",
-  "A staged resume interview with Maya, built from the skills and work on your own resume."
+  "A staged resume interview with your chosen teacher, built from the skills and work on your own resume."
 );
 
 export default async function ResumeInterviewEntryPage() {
   const { ownerId, profile } = await requireOnboardedProfile();
-  const quota = await getAppContainer().interviewService.quota(ownerId).catch(() => null);
+  const quota = await getAppContainer()
+    .interviewService.quota(ownerId)
+    .catch(() => null);
 
   return (
     <ResumeInterviewEntry

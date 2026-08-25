@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { personaById } from "@/lib/avatars/personas";
 import { getAppContainer } from "@/server/app-container";
 import { Logger } from "@/server/common/logger";
 import { ApiRouteError } from "@/server/http/api-error";
@@ -65,6 +66,17 @@ const roadmapItemSchema = z.object({
 const completeSchema = z.object({
   targetRole: z.enum(ROLES),
   level: z.enum(LEVELS),
+  /**
+   * The teacher chosen on the first onboarding step. Validated against the
+   * registry rather than stored as free text, so an unknown id cannot be
+   * written to the profile and later fail to resolve to a model.
+   */
+  teacherId: z
+    .string()
+    .trim()
+    .max(60)
+    .nullish()
+    .transform((id) => (personaById(id)?.id ?? null)),
   resumeFile: z.object({
     fileName: z.string().trim().min(1).max(160),
     mimeType: z.string().trim().min(1).max(200)
@@ -117,10 +129,11 @@ export async function POST(request: NextRequest) {
 
     const ownerId = authenticatedOwnerId(userId);
     const app = getAppContainer();
-    const { targetRole, level, extraction, resumeFile } = body.data;
+    const { targetRole, level, teacherId, extraction, resumeFile } = body.data;
     const profile = await app.profileService.completeOnboarding(ownerId, {
       targetRole,
       level,
+      teacherId,
       headline: extraction.headline,
       context: extraction.context,
       focusAreas: extraction.focusAreas,

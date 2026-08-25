@@ -2,14 +2,38 @@
 
 import { SignOutButton, useReverification, useUser } from "@clerk/nextjs";
 import { isReverificationCancelledError } from "@clerk/nextjs/errors";
-import { Check, LogOut, Trash2, type LucideIcon } from "lucide-react";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  LogOut,
+  Trash2,
+  Volume2,
+  VolumeX,
+  type LucideIcon
+} from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { ApiClientError, deleteAccount, saveWorkspaceAccent } from "@/lib/api/api-client";
+import { ALL_PERSONAS, MAYA, personaById, type InterviewerPersona } from "@/lib/avatars/personas";
+import {
+  ApiClientError,
+  deleteAccount,
+  saveWorkspaceAccent,
+  saveWorkspaceTeacher
+} from "@/lib/api/api-client";
 import type { CandidateProfile } from "@/lib/shared/types";
+import { useMayaVoice } from "@/lib/voice/use-maya-voice";
 import { type WorkspaceAccent, WORKSPACE_ACCENT_CHANGE_EVENT } from "@/lib/workspace/accent";
 
 const MANAGE_ORIGIN_KEY = "trailgrad:manage-origin";
+
+const AvatarStage = dynamic(
+  () => import("@/components/interview/voice/avatar-stage").then((module) => module.AvatarStage),
+  { ssr: false, loading: () => null }
+);
 
 const accentOptions: Array<{
   value: WorkspaceAccent;
@@ -155,7 +179,7 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
           </p>
 
           <section
-            className="manage-action-line report-glass-card order-2 mx-auto mt-4 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:p-6"
+            className="manage-action-line report-glass-card order-3 mx-auto mt-4 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:p-6"
             style={{ "--line-delay": "3200ms" } as CSSProperties}
           >
             <h2 className="text-base font-semibold text-cream">Account actions</h2>
@@ -194,8 +218,13 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
             </div>
           </section>
 
+          <ManageTeacherPicker
+            initialTeacherId={profile.teacherId}
+            onError={(message) => setError(message)}
+          />
+
           <section
-            className="manage-action-line report-glass-card order-1 mx-auto mt-10 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:p-6"
+            className="manage-action-line report-glass-card order-2 mx-auto mt-4 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:mt-4 sm:p-6"
             style={{ "--line-delay": "3340ms" } as CSSProperties}
           >
             <div>
@@ -219,7 +248,7 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
           </section>
 
           {error ? (
-            <p className="manage-action-line order-3 mx-auto mt-5 max-w-xl text-[0.9rem] leading-6 text-cream/72">
+            <p className="manage-action-line order-4 mx-auto mt-5 max-w-xl text-[0.9rem] leading-6 text-cream/72">
               {error}
             </p>
           ) : null}
@@ -234,6 +263,188 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
         />
       ) : null}
     </section>
+  );
+}
+
+function ManageTeacherPicker({
+  initialTeacherId,
+  onError
+}: {
+  initialTeacherId: string | null;
+  onError: (message: string | null) => void;
+}) {
+  const router = useRouter();
+  const initialTeacher = personaById(initialTeacherId) ?? MAYA;
+  const [index, setIndex] = useState(() => {
+    const initialIndex = ALL_PERSONAS.findIndex((persona) => persona.id === initialTeacher.id);
+    return initialIndex < 0 ? 0 : initialIndex;
+  });
+  const [savedTeacherId, setSavedTeacherId] = useState(initialTeacher.id);
+  const [saving, setSaving] = useState(false);
+  const { state, speak, stop } = useMayaVoice();
+
+  const focused = ALL_PERSONAS[index] ?? MAYA;
+  const previous = ALL_PERSONAS[(index - 1 + ALL_PERSONAS.length) % ALL_PERSONAS.length] ?? MAYA;
+  const next = ALL_PERSONAS[(index + 1) % ALL_PERSONAS.length] ?? MAYA;
+  const speaking = state === "loading" || state === "speaking";
+  const selected = focused.id === savedTeacherId;
+
+  const move = (direction: -1 | 1) => {
+    stop();
+    setIndex((current) => (current + direction + ALL_PERSONAS.length) % ALL_PERSONAS.length);
+  };
+
+  const saveTeacher = async () => {
+    if (saving || selected) return;
+    setSaving(true);
+    onError(null);
+
+    try {
+      const saved = await saveWorkspaceTeacher(focused.id);
+      setSavedTeacherId(saved.teacherId);
+      router.refresh();
+    } catch (caught) {
+      onError(caught instanceof ApiClientError ? caught.message : "Could not save your teacher.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section
+      className="manage-action-line report-glass-card order-1 mx-auto mt-10 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:p-6"
+      style={{ "--line-delay": "3280ms" } as CSSProperties}
+    >
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+        <div>
+          <h2 className="text-base font-semibold text-cream">Your teacher</h2>
+          <p className="mt-1 text-sm leading-6 text-cream/52">
+            Choose who guides your practice and runs your interviews.
+          </p>
+        </div>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cream/36">
+          {savedTeacherId === focused.id ? `${focused.name} is with you` : "Previewing a change"}
+        </p>
+      </div>
+
+      <div className="mt-6 flex items-center justify-center gap-2 sm:gap-4">
+        <button
+          type="button"
+          onClick={() => move(-1)}
+          aria-label="Previous teacher"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.045] text-cream/62 transition hover:bg-white/[0.09] hover:text-cream"
+        >
+          <ChevronLeft size={18} />
+        </button>
+
+        <TeacherSidePreview persona={previous} onClick={() => move(-1)} />
+
+        <div className="w-full max-w-[17rem] text-center sm:max-w-[19rem]">
+          <div className="relative mx-auto h-56 w-full overflow-hidden rounded-[1.35rem] bg-[#121316] shadow-[0_24px_60px_-42px_rgba(0,0,0,0.9)] sm:h-64">
+            <AvatarStage
+              agentTrack={null}
+              state={speaking ? "speaking" : "listening"}
+              url={focused.model}
+              rig={focused.rig}
+              framing="default"
+              performanceProfile="preview"
+              showStatus={false}
+              feather={false}
+              introducing={state === "speaking"}
+            />
+
+            <button
+              type="button"
+              onClick={() => (speaking ? stop() : void speak(focused.greeting, focused.id))}
+              aria-label={speaking ? `Stop ${focused.name}` : `Hear ${focused.name}`}
+              className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-black/38 text-cream/72 backdrop-blur-lg transition hover:bg-black/58 hover:text-cream"
+            >
+              {state === "loading" ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : state === "unavailable" ? (
+                <VolumeX size={15} />
+              ) : (
+                <Volume2 size={15} />
+              )}
+            </button>
+
+            {selected ? (
+              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-[var(--workspace-accent)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#111214]">
+                <Check size={11} strokeWidth={2.6} /> Current
+              </span>
+            ) : null}
+          </div>
+
+          <div key={focused.id} className="step-in mt-4">
+            <h3 className="text-[1.55rem] font-semibold leading-none tracking-[-0.03em] text-cream">
+              {focused.name}
+            </h3>
+            <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+              {focused.tagline}
+            </p>
+            <p className="mx-auto mt-3 min-h-12 max-w-sm text-sm leading-6 text-cream/54">
+              {focused.manner}
+            </p>
+          </div>
+        </div>
+
+        <TeacherSidePreview persona={next} onClick={() => move(1)} />
+
+        <button
+          type="button"
+          onClick={() => move(1)}
+          aria-label="Next teacher"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.045] text-cream/62 transition hover:bg-white/[0.09] hover:text-cream"
+        >
+          <ChevronRight size={18} />
+        </button>
+      </div>
+
+      <div className="mt-5 flex justify-center">
+        <button
+          type="button"
+          onClick={() => void saveTeacher()}
+          disabled={saving || selected}
+          className="inline-flex h-10 min-w-40 items-center justify-center rounded-lg bg-cream px-5 text-sm font-medium text-[#171a16] transition hover:bg-white disabled:cursor-default disabled:bg-white/[0.07] disabled:text-cream/38"
+        >
+          {saving ? "Saving teacher…" : selected ? `${focused.name} is selected` : `Choose ${focused.name}`}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function TeacherSidePreview({
+  persona,
+  onClick
+}: {
+  persona: InterviewerPersona;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Preview ${persona.name}`}
+      className="group hidden w-28 shrink-0 text-center opacity-48 transition duration-300 hover:-translate-y-0.5 hover:opacity-80 sm:block lg:w-32"
+    >
+      <span className="block h-36 overflow-hidden rounded-[1.1rem] bg-white/[0.025] lg:h-40">
+        <AvatarStage
+          agentTrack={null}
+          state="listening"
+          url={persona.model}
+          rig={persona.rig}
+          framing="default"
+          performanceProfile="preview"
+          showStatus={false}
+          feather={false}
+          active={false}
+        />
+      </span>
+      <span className="mt-2 block text-xs font-medium text-cream/60 group-hover:text-cream/82">
+        {persona.name}
+      </span>
+    </button>
   );
 }
 

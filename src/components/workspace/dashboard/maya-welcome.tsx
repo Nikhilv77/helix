@@ -25,6 +25,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { useMayaVoice, voiceUrl, type VoiceState } from "@/lib/voice/use-maya-voice";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { FRONTEND_SESSIONS, type FrontendDsaPlan } from "@/lib/roadmap/frontend-plan";
 import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
 import type { CandidateProfile, Role } from "@/lib/shared/types";
@@ -38,7 +39,7 @@ const WELCOME_TITLE_STAGGER_MS = 92;
 const WELCOME_BODY_STAGGER_MS = 26;
 const FALLBACK_WELCOME_SLIDE = {
   eyebrow: "Roadmap ready",
-  title: "Hi, I’m Maya.",
+  title: "Your roadmap is ready.",
   body: "I prepared your interview roadmap and I am ready to walk you through the first step.",
   icon: Check
 };
@@ -291,6 +292,7 @@ export function MayaWelcome({
   frontendRoadmap = null,
   frontendPlan = null
 }: MayaWelcomeProps) {
+  const teacher = useWorkspaceTeacher();
   // Maya introduces herself out loud by default; muting her turns this off for
   // the rest of the walkthrough.
   const voiceEnabled = useRef(true);
@@ -332,7 +334,7 @@ export function MayaWelcome({
         ? [
             {
               eyebrow: "Roadmap ready",
-              title: `Hi ${firstName}, I’m Maya.`,
+              title: `Hi ${firstName}, I’m ${teacher.name}.`,
               body: `I prepared your full-stack interview roadmap: ${frontendStats.sessions} focused sessions, starting with DSA and ending in a full mock. I used your target role and resume evidence so this feels like your path, not a generic checklist.`,
               icon: Check
             },
@@ -352,7 +354,7 @@ export function MayaWelcome({
         : [
             {
               eyebrow: "Profile understood",
-              title: `Hi ${firstName}, I’m Maya.`,
+              title: `Hi ${firstName}, I’m ${teacher.name}.`,
               body: `I reviewed your profile for ${role} interviews. I found ${topEvidence} and ${resume?.skills.length ?? 0} supported skills, so our practice can start from your real experience instead of generic prompts.`,
               icon: Check
             },
@@ -380,6 +382,7 @@ export function MayaWelcome({
       resume?.practiceQuestions.length,
       resume?.skills.length,
       role,
+      teacher.name,
       topEvidence
     ]
   );
@@ -436,10 +439,10 @@ export function MayaWelcome({
   useEffect(() => {
     const next = slides[step + 1];
     if (!next) return;
-    const warm = new Audio(voiceUrl(`${next.title} ${next.body}`));
+    const warm = new Audio(voiceUrl(`${next.title} ${next.body}`, teacher.id));
     warm.preload = "auto";
     warm.load();
-  }, [slides, step]);
+  }, [slides, step, teacher.id]);
 
   // Releasing the lock is all this does: the effect above then speaks whichever
   // slide is current, so a gesture that also advances the slide narrates the
@@ -517,7 +520,7 @@ export function MayaWelcome({
         <button
           type="button"
           onClick={() => dismiss()}
-          aria-label="Close Maya introduction"
+          aria-label={`Close ${teacher.name} introduction`}
           className="absolute right-3 top-3 z-20 flex h-11 w-11 items-center justify-center text-cream/55 transition hover:text-cream sm:right-5 sm:top-5"
         >
           <X size={26} strokeWidth={1.35} />
@@ -530,7 +533,8 @@ export function MayaWelcome({
           <AvatarStage
             agentTrack={null}
             state={speaking ? "speaking" : "listening"}
-            url="/avatars/interviewer-v2.glb"
+            url={teacher.model}
+            rig={teacher.rig}
           />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[rgba(17,18,20,0.7)] to-transparent" />
         </div>
@@ -657,7 +661,7 @@ export function MayaWelcome({
               ) : (
                 <Volume2 size={15} />
               )}
-              {voiceLabel(voiceState)}
+              {voiceLabel(voiceState, teacher.name)}
             </button>
             <div className="sm:ml-auto">
               {step < slides.length - 1 ? (
@@ -698,9 +702,9 @@ export function MayaWelcome({
   );
 }
 
-function voiceLabel(state: VoiceState): string {
+function voiceLabel(state: VoiceState, teacherName: string): string {
   return {
-    idle: "Hear Maya",
+    idle: `Hear ${teacherName}`,
     loading: "Loading voice",
     speaking: "Stop voice",
     // A failed line is usually a blip, so the control stays live to retry.

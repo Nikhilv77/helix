@@ -7,6 +7,7 @@ import { DocumentTitle } from "@/components/document-title";
 import { ReportMayaAvatar } from "@/components/workspace/reports/report-maya-avatar";
 import type { ProgressOverview } from "@/lib/roadmap/progress";
 import { useMayaVoice } from "@/lib/voice/use-maya-voice";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
 type ProgressInsight = {
   icon: LucideIcon;
@@ -152,6 +153,7 @@ export function ProgressView({
 }
 
 function StarterQuestionCards({ questions }: { questions: ProgressStarterQuestion[] }) {
+  const teacher = useWorkspaceTeacher();
   const questionIcons = [Braces, Target, TrendingUp];
 
   return (
@@ -170,7 +172,7 @@ function StarterQuestionCards({ questions }: { questions: ProgressStarterQuestio
               <Icon size={26} strokeWidth={1.7} aria-hidden="true" />
             </span>
             <span className="mt-7 text-[11px] font-semibold uppercase tracking-[0.16em] text-cream/46">
-              Maya suggests
+              {teacher.name} suggests
             </span>
             <h2 className="mt-3 text-lg font-semibold leading-7 text-cream">{question.title}</h2>
             <p className="mt-3 text-base leading-6 text-cream/72">{question.chapterTitle}</p>

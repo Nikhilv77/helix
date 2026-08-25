@@ -12,6 +12,7 @@ import type {
   StartResponse,
   WorkspaceAccent
 } from "../shared/types";
+import type { PersonalizedInterviewPlan } from "../interviews/personalized-plan";
 
 export class ApiClientError extends Error {
   readonly code: string;
@@ -103,6 +104,10 @@ export function getProfile(): Promise<CandidateProfile> {
   return request<CandidateProfile>("/api/profile");
 }
 
+export function getPersonalizedInterviewPlan(): Promise<PersonalizedInterviewPlan> {
+  return request<PersonalizedInterviewPlan>("/api/interview-plan");
+}
+
 export function saveProfile(profile: CandidateProfileInput): Promise<CandidateProfile> {
   return request<CandidateProfile>("/api/profile", { method: "PUT", body: profile });
 }
@@ -139,12 +144,17 @@ export function getWorkspaceAccent(): Promise<{ accent: WorkspaceAccent }> {
   return request<{ accent: WorkspaceAccent }>("/api/account/accent");
 }
 
-export function saveWorkspaceAccent(
-  accent: WorkspaceAccent
-): Promise<{ accent: WorkspaceAccent }> {
+export function saveWorkspaceAccent(accent: WorkspaceAccent): Promise<{ accent: WorkspaceAccent }> {
   return request<{ accent: WorkspaceAccent }>("/api/account/accent", {
     method: "PUT",
     body: { accent }
+  });
+}
+
+export function saveWorkspaceTeacher(teacherId: string): Promise<{ teacherId: string }> {
+  return request<{ teacherId: string }>("/api/account/teacher", {
+    method: "PUT",
+    body: { teacherId }
   });
 }
 
@@ -190,7 +200,8 @@ export async function uploadResume(input: {
 }
 
 export function completeOnboarding(
-  result: ResumeExtractionResponse
+  result: ResumeExtractionResponse,
+  teacherId?: string | null
 ): Promise<ResumeExtractionResponse> {
   if (!result.profile.targetRole || !result.profile.level) {
     throw new ApiClientError({
@@ -205,6 +216,7 @@ export function completeOnboarding(
     body: {
       targetRole: result.profile.targetRole,
       level: result.profile.level,
+      teacherId: teacherId ?? null,
       resumeFile: result.resumeFile,
       extraction: result.extraction
     }

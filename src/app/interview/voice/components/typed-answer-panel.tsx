@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from "react";
 import { Code2, Keyboard, Loader2, Send, X } from "lucide-react";
 import type { InterviewQuestion } from "@/lib/shared/types";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
 export function TypedAnswerPanel({
   question,
@@ -25,6 +26,7 @@ export function TypedAnswerPanel({
   onClose: () => void;
   onSubmit: () => void;
 }) {
+  const teacher = useWorkspaceTeacher();
   const isCode = question?.kind === "code";
   const canSubmit = draft.trim().length > 0 && !sending;
 
@@ -125,7 +127,7 @@ export function TypedAnswerPanel({
           ) : (
             <Send size={14} aria-hidden="true" />
           )}
-          {sending ? "Maya is reviewing" : isCode ? "Submit solution" : "Submit answer"}
+          {sending ? `${teacher.name} is reviewing` : isCode ? "Submit solution" : "Submit answer"}
         </button>
       </div>
     </section>

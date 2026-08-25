@@ -6,6 +6,7 @@ import { Loader2, Volume2, VolumeX } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 import { useMayaVoice } from "@/lib/voice/use-maya-voice";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
 const MIN_SOLVED = 10;
 
@@ -21,6 +22,7 @@ export function DsaInterviewEntry({
   firstName: string;
   workspaceAccent: WorkspaceAccent;
 }) {
+  const teacher = useWorkspaceTeacher();
   const [error, setError] = useState<string | null>(null);
   const [startAttempt, setStartAttempt] = useState(0);
   const [starting, setStarting] = useState(false);
@@ -34,7 +36,7 @@ export function DsaInterviewEntry({
   const ready = solvedEnough && !outOfSessions;
   const greeting = firstName ? `Hey ${firstName},` : "Hey there,";
   const script = !solvedEnough
-    ? `${greeting} you've solved ${completedCount} practice question${completedCount === 1 ? "" : "s"} so far. Solve at least ${MIN_SOLVED} before we start a DSA interview, so the problems Maya asks about are ones you actually know.`
+    ? `${greeting} you've solved ${completedCount} practice question${completedCount === 1 ? "" : "s"} so far. Solve at least ${MIN_SOLVED} before we start a DSA interview, so the problems ${teacher.name} asks about are ones you actually know.`
     : outOfSessions
       ? `${greeting} you've used all your interview sessions for today. Come back tomorrow and we'll run the DSA round then.`
       : `${greeting} let's start. I'll choose three important function-based problems, prioritizing ones you've already solved. I'll ask one at a time, follow up when it matters, and keep the conversation moving.`;
@@ -65,7 +67,9 @@ export function DsaInterviewEntry({
           error?: { message?: string };
         };
         if (!response.ok || !payload.success || !payload.data?.sessionId) {
-          throw new Error(payload.error?.message || "Maya could not start the DSA interview.");
+          throw new Error(
+            payload.error?.message || `${teacher.name} could not start the DSA interview.`
+          );
         }
 
         if (!cancelled)
@@ -74,10 +78,10 @@ export function DsaInterviewEntry({
         if (!cancelled) {
           setError(
             caught instanceof DOMException && caught.name === "AbortError"
-              ? "Maya is taking too long to prepare this round. Try again."
+              ? `${teacher.name} is taking too long to prepare this round. Try again.`
               : caught instanceof Error
                 ? caught.message
-                : "Maya could not start the interview."
+                : `${teacher.name} could not start the interview.`
           );
           setStarting(false);
         }
@@ -91,7 +95,7 @@ export function DsaInterviewEntry({
       controller.abort();
       window.clearTimeout(timeout);
     };
-  }, [error, getToken, isLoaded, isSignedIn, ready, startAttempt]);
+  }, [error, getToken, isLoaded, isSignedIn, ready, startAttempt, teacher.name]);
 
   useEffect(() => {
     if (awaitingGesture) return;
@@ -165,7 +169,7 @@ export function DsaInterviewEntry({
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-8 text-cream/72 sm:text-lg">
             {!solvedEnough
-              ? `You've solved ${completedCount} question${completedCount === 1 ? "" : "s"} so far. Solve at least ${MIN_SOLVED} practice questions first, then Maya can interview you on problems you actually know.`
+              ? `You've solved ${completedCount} question${completedCount === 1 ? "" : "s"} so far. Solve at least ${MIN_SOLVED} practice questions first, then ${teacher.name} can interview you on problems you actually know.`
               : outOfSessions
                 ? "You've used all your interview sessions for today. Your next round unlocks tomorrow, so this is a good moment to solve another practice question."
                 : "I'll choose three important function-based problems, prioritizing ones you've already solved. I'll ask one at a time, follow up when it matters, and keep the conversation moving."}
@@ -177,7 +181,7 @@ export function DsaInterviewEntry({
                 className="animate-spin text-[var(--workspace-accent)]"
                 aria-hidden="true"
               />
-              Maya is choosing your questions…
+              {teacher.name} is choosing your questions…
             </p>
           ) : null}
           {error ? (
@@ -200,7 +204,7 @@ export function DsaInterviewEntry({
               type="button"
               onClick={toggleMayaVoice}
               disabled={state === "unavailable"}
-              aria-label={state === "speaking" ? "Stop Maya" : "Hear Maya"}
+              aria-label={state === "speaking" ? `Stop ${teacher.name}` : `Hear ${teacher.name}`}
               className="inline-flex items-center gap-2 text-sm font-semibold text-cream/76 transition hover:text-cream disabled:opacity-40"
             >
               {state === "loading" ? (
@@ -215,15 +219,15 @@ export function DsaInterviewEntry({
                 <Volume2 size={16} className="text-[var(--workspace-accent)]" aria-hidden="true" />
               )}
               {state === "loading"
-                ? "Starting Maya"
+                ? `Starting ${teacher.name}`
                 : state === "speaking"
-                  ? "Stop Maya"
+                  ? `Stop ${teacher.name}`
                   : state === "unavailable"
                     ? "Voice unavailable"
-                    : "Hear Maya"}
+                    : `Hear ${teacher.name}`}
             </button>
             {awaitingGesture ? (
-              <span className="text-xs text-cream/42">Tap to hear Maya</span>
+              <span className="text-xs text-cream/42">Tap to hear {teacher.name}</span>
             ) : null}
           </div>
         </div>

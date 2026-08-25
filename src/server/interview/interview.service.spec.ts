@@ -3,7 +3,8 @@ import { buildFundamentalsPlan } from "./fundamentals-round";
 import { InterviewPlanner } from "./planner";
 import { InterviewService } from "./interview.service";
 import { MemorySessionStore } from "./session-store";
-import type { InterviewSetup, PlannedQuestion } from "./types";
+import type { TechnicalAnswerEvaluator } from "./technical-answer-evaluator";
+import type { InterviewSetup, PlannedQuestion, QuestionEvaluation } from "./types";
 
 const setup: InterviewSetup = {
   role: "frontend",
@@ -30,14 +31,24 @@ const questions: PlannedQuestion[] = [
   }
 ];
 
-function harness(plan = questions) {
+function harness(plan = questions, evaluation?: QuestionEvaluation) {
   const planQuestions = jest.fn().mockResolvedValue(plan);
   const planner = { plan: planQuestions } as unknown as InterviewPlanner;
   const decide = jest.fn();
   const decider = { decide } as unknown as InterviewDecider;
-  const service = new InterviewService(planner, decider, new MemorySessionStore(), 10);
+  const evaluate = jest.fn().mockResolvedValue(evaluation);
+  const evaluator = evaluation
+    ? ({ evaluate } as unknown as TechnicalAnswerEvaluator)
+    : undefined;
+  const service = new InterviewService(
+    planner,
+    decider,
+    new MemorySessionStore(),
+    10,
+    evaluator
+  );
 
-  return { service, decide, planQuestions };
+  return { service, decide, evaluate, planQuestions };
 }
 
 const mcqQuestion: PlannedQuestion = {
@@ -59,12 +70,10 @@ const mcqQuestion: PlannedQuestion = {
 describe("InterviewService resume round", () => {
   it("starts from a prebuilt plan without asking the planner for one", async () => {
     const { service, planQuestions } = harness();
-    const result = await service.start(
-      { ...setup, resumeRound: true },
-      "user-1",
-      1_000,
-      [mcqQuestion, questions[0]!]
-    );
+    const result = await service.start({ ...setup, resumeRound: true }, "user-1", 1_000, [
+      mcqQuestion,
+      questions[0]!
+    ]);
 
     expect(planQuestions).not.toHaveBeenCalled();
     expect(result.state.plan).toHaveLength(2);
@@ -90,6 +99,11 @@ describe("InterviewService resume round", () => {
     // Maya moves straight into the next question, as she does after any move_on.
     expect(decision.utterance).toContain(questions[0]!.text);
     expect(state.questionIndex).toBe(1);
+    expect(state.questionEvaluations?.["0"]).toMatchObject({
+      source: "local-mcq",
+      score: 100,
+      verdict: "correct"
+    });
   });
 
   it("names the right option after a wrong answer, still without a model call", async () => {
@@ -185,6 +199,194 @@ describe("InterviewService fundamentals round", () => {
     );
 
     expect(decide).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("InterviewService personalized blueprint evidence", () => {
+  it("passes trusted constraints to the decider and persists attributable answer evidence", async () => {
+    const { service, decide } = harness();
+    decide.mockResolvedValue({
+      action: "move_on",
+      missing: "none",
+      reason: "answered",
+      acknowledgement: "",
+      line: ""
+    });
+    const personalizedSetup: InterviewSetup = {
+      ...setup,
+      personalizedPlanId: "plan-1",
+      personalizedBlueprint: {
+        id: "blueprint-1",
+        kind: "core-technical",
+        order: 2,
+        title: "React Deep Dive",
+        subtitle: "Mechanisms and trade-offs",
+        durationMinutes: 35,
+        difficulty: "intermediate",
+        rationale: "React is central to the target role.",
+        topics: [
+          {
+            key: "react",
+            label: "React",
+            targetPercent: 100,
+            skillKeys: ["react", "typescript"],
+            objectives: ["Explain state and rendering trade-offs"]
+          }
+        ],
+        structure: [
+          {
+            kind: "core",
+            questionCount: 1,
+            formats: ["spoken"],
+            purpose: "Probe mechanisms."
+          }
+        ],
+        followUpPolicy: {
+          maxPerQuestion: 3,
+          probeWeakClaims: true,
+          increaseDifficultyAfterStrongAnswer: true,
+          stayWithinBlueprintTopics: true
+        },
+        rubric: [
+          {
+            key: "depth",
+            label: "Technical depth",
+            weightPercent: 100,
+            strongSignals: ["Explains rendering behavior"],
+            weakSignals: ["Only names hooks"]
+          }
+        ]
+      }
+    };
+    const personalizedQuestion: PlannedQuestion = {
+      ...questions[0]!,
+      blueprintStage: "core",
+      blueprintDifficulty: "intermediate",
+      blueprintFormat: "spoken",
+      topicKey: "react",
+      skillKeys: ["react", "typescript"],
+      rubricKeys: ["depth"],
+      maxFollowUps: 3
+    };
+    const started = await service.start(personalizedSetup, "user-personalized", 1_000, [
+      personalizedQuestion
+    ]);
+
+    const { state } = await service.answer(
+      started.state.id,
+      {
+        text: "I chose local state because it reduced rerenders for our 2,000 users.",
+        startMs: 0,
+        endMs: 1_000
+      },
+      2_000
+    );
+
+    expect(decide).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maxFollowUps: 3,
+        topicLabel: "React",
+        blueprintDifficulty: "intermediate",
+        rubric: [expect.objectContaining({ key: "depth" })]
+      })
+    );
+    expect(state.evidence?.["0"]?.blueprint).toEqual({
+      planId: "plan-1",
+      blueprintId: "blueprint-1",
+      stage: "core",
+      topicKey: "react",
+      skillKeys: ["react", "typescript"],
+      rubricKeys: ["depth"],
+      answerExcerpts: ["I chose local state because it reduced rerenders for our 2,000 users."]
+    });
+  });
+
+  it("persists a dedicated technical verdict instead of inferring correctness from fluency", async () => {
+    const evaluation: QuestionEvaluation = {
+      source: "semantic-evaluator",
+      score: 24,
+      verdict: "incorrect",
+      confidence: 0.94,
+      summary: "The answer reverses React's state update behavior.",
+      strengths: ["Names the relevant API."],
+      gaps: ["The central rendering mechanism is technically incorrect."],
+      rubricScores: [
+        { rubricKey: "technical-correctness", score: 24, rationale: "Central claim is false." }
+      ],
+      answerExcerpts: ["A very clear but incorrect answer."],
+      execution: null,
+      evaluatedAt: 2_000
+    };
+    const { service, decide, evaluate } = harness([questions[0]!], evaluation);
+    decide.mockResolvedValue({
+      action: "move_on",
+      missing: "none",
+      reason: "clear response",
+      acknowledgement: "",
+      line: ""
+    });
+    const started = await service.start(setup, "user-technical", 1_000, [questions[0]!]);
+
+    const result = await service.answer(
+      started.state.id,
+      { text: "A very clear but incorrect answer.", startMs: 0, endMs: 1_000 },
+      2_000
+    );
+
+    expect(evaluate).toHaveBeenCalledTimes(1);
+    expect(result.state.questionEvaluations?.["0"]).toEqual(evaluation);
+  });
+
+  it("attaches authored test results to the correctness evaluation", async () => {
+    const codeQuestion: PlannedQuestion = {
+      ...questions[0]!,
+      kind: "code",
+      language: "JavaScript",
+      codeTask: "Implement retry()."
+    };
+    const execution = {
+      language: "JavaScript",
+      status: "1/3 tests passed",
+      accepted: false,
+      testsPassed: 1,
+      testCount: 3,
+      compileOutput: "",
+      stderr: "",
+      time: "0.01",
+      memory: 512,
+      recordedAt: 1_500
+    };
+    const evaluation: QuestionEvaluation = {
+      source: "semantic-evaluator",
+      score: 35,
+      verdict: "incorrect",
+      confidence: 0.98,
+      summary: "The implementation fails two authored tests.",
+      strengths: [],
+      gaps: ["Retry bounds are incorrect."],
+      rubricScores: [],
+      answerExcerpts: ["function retry() {}"],
+      execution,
+      evaluatedAt: 2_000
+    };
+    const { service, decide, evaluate } = harness([codeQuestion], evaluation);
+    decide.mockResolvedValue({
+      action: "move_on",
+      missing: "none",
+      reason: "submitted",
+      acknowledgement: "",
+      line: ""
+    });
+    const started = await service.start(setup, "user-code", 1_000, [codeQuestion]);
+    await service.recordCodeExecution("user-code", started.state.id, 0, execution);
+
+    await service.answer(
+      started.state.id,
+      { text: "function retry() {}", startMs: 0, endMs: 1_000 },
+      2_000
+    );
+
+    expect(evaluate).toHaveBeenCalledWith(expect.objectContaining({ execution }));
   });
 });
 

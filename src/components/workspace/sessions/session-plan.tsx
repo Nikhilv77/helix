@@ -165,13 +165,13 @@ function PlanBuilding({ failed }: { failed: boolean }) {
       {failed ? (
         <div className="surface mt-6 p-6">
           <p className="text-sm text-cream/70">
-            Maya could not build your plan just now. Refresh and she will try again.
+            Your teacher could not build your plan just now. Refresh to try again.
           </p>
         </div>
       ) : (
         <>
           <p className="mt-2 max-w-xl text-sm leading-6 text-cream/45">
-            Maya is reading your resume and writing a plan around it. This happens once.
+            Your teacher is reading your resume and writing a plan around it. This happens once.
           </p>
           <div className="mt-6 grid gap-3">
             {Array.from({ length: 4 }, (_, index) => (

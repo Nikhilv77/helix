@@ -54,7 +54,7 @@ export function ProfileResumeAnchors({ resume }: { resume: CandidateProfile["res
           badge: "Evidence",
           icon: Sparkles,
           title: "Resume highlights",
-          body: "Evidence Maya can turn into follow-up questions.",
+          body: "Evidence your teacher can turn into follow-up questions.",
           bullets: resume.achievements.map(cleanText).filter(Boolean).slice(0, 5)
         }
       ]
@@ -97,7 +97,7 @@ export function ProfileResumeAnchors({ resume }: { resume: CandidateProfile["res
         </p>
         <h2 className="mt-2 text-2xl font-medium tracking-tight text-cream">Resume anchors</h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-cream/58 sm:text-[15px]">
-          Maya found the parts of your resume that can become interview questions.
+          Your teacher found the parts of your resume that can become interview questions.
         </p>
       </div>
 

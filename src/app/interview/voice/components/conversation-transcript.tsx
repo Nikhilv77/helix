@@ -2,6 +2,7 @@ import { useEffect, useState, type RefObject } from "react";
 import { BriefcaseBusiness, Code2, Loader2 } from "lucide-react";
 import type { InterviewQuestion, InterviewSetup, Turn } from "@/lib/shared/types";
 import { formatClock, roleLabel, roundLabel } from "../utils/voice-interview";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
 export function ConversationTranscript({
   turns,
@@ -26,6 +27,7 @@ export function ConversationTranscript({
   compact?: boolean;
   hideHeader?: boolean;
 }) {
+  const teacher = useWorkspaceTeacher();
   const visibleTurns = mergeConsecutiveUserTurns(
     turns.filter(
       (turn) =>
@@ -90,8 +92,8 @@ export function ConversationTranscript({
             }
           >
             {question
-              ? "Maya is getting ready to speak."
-              : "Maya is preparing your first question."}
+              ? `${teacher.name} is getting ready to speak.`
+              : `${teacher.name} is preparing your first question.`}
           </p>
           {question?.codeTask ? (
             <p className="mt-4 text-sm leading-6 text-cream/60">{question.codeTask}</p>
@@ -123,7 +125,7 @@ export function ConversationTranscript({
                         isAgent ? "text-cream/60" : "text-cream/38"
                       }`}
                     >
-                      {isAgent ? "Maya" : "You"}
+                      {isAgent ? teacher.name : "You"}
                     </span>
                     <span className="font-mono text-[9px] text-cream/25">
                       {formatClock(turn.startMs)}

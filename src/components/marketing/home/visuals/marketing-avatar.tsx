@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useRef } from "react";
 import { useInView } from "./reveal";
+import { MAYA } from "@/lib/avatars/personas";
 
 // Three.js plus a multi-megabyte model has no business in the landing page's
 // initial bundle. Loaded on demand, and only once it is actually scrolled to.
@@ -11,7 +12,8 @@ const AvatarStage = dynamic(
   { ssr: false }
 );
 
-const AVATAR_URL = process.env.NEXT_PUBLIC_AVATAR_URL || "/avatars/interviewer-v2.glb";
+// The env override stays for previewing a replacement model without a deploy.
+const AVATAR_URL = process.env.NEXT_PUBLIC_AVATAR_URL || MAYA.model;
 
 export function MarketingAvatar({
   className,
@@ -35,6 +37,7 @@ export function MarketingAvatar({
           agentTrack={null}
           state="listening"
           url={AVATAR_URL}
+          rig={MAYA.rig}
           framing={framing}
           active={active}
           performanceProfile={framing === "marketing" ? "marketing" : "default"}

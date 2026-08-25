@@ -19,6 +19,7 @@ import type { ReportsOverview } from "@/lib/reports/reports";
 import { formatDuration, formatShortDate, roundShortLabel } from "@/lib/shared/labels";
 import type { InterviewReport } from "@/lib/shared/types";
 import { useMayaVoice } from "@/lib/voice/use-maya-voice";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { ReportEmptyStage } from "./report-briefing-stage";
 import { ReportMayaAvatar } from "./report-maya-avatar";
 
@@ -50,6 +51,7 @@ export function InterviewReportDashboard({
   candidate: Candidate;
   quota: { used: number; limit: number };
 }) {
+  const teacher = useWorkspaceTeacher();
   const router = useRouter();
   const ownerReconciled = useRef(false);
 
@@ -155,12 +157,16 @@ export function InterviewReportDashboard({
               ) : (
                 <Volume2 size={15} aria-hidden="true" />
               )}
-              {voiceState === "loading" ? "Starting Maya" : speaking ? "Stop Maya" : "Hear Maya"}
+              {voiceState === "loading"
+                ? `Starting ${teacher.name}`
+                : speaking
+                  ? `Stop ${teacher.name}`
+                  : `Hear ${teacher.name}`}
             </button>
           </div>
           {awaitingGesture ? (
             <p className="mt-3 text-xs font-medium text-[var(--workspace-accent)]">
-              Tap to hear Maya
+              Tap to hear {teacher.name}
             </p>
           ) : null}
           <p className="mt-3 text-sm text-cream/54">
@@ -453,7 +459,7 @@ function findSignalCompetency(report: InterviewReport, signalId: Signal["id"]) {
 function signalNextMove(signalId: Signal["id"]) {
   const nextMoves: Record<Signal["id"], string> = {
     clarity:
-      "Lead with the point, then support it with one concrete detail so Maya never has to ask what you mean.",
+      "Lead with the point, then support it with one concrete detail so your interviewer never has to ask what you mean.",
     structure:
       "Use a simple context → decision → result flow to make the path through your answer easy to follow.",
     ownership:
@@ -507,7 +513,7 @@ function pressureMessage(report: InterviewReport) {
   const clarifications = report.interaction.clarifications;
   if (clarifications > 0)
     return `A few answers needed a little more context. Leading with your main point will make them easier to follow.`;
-  return "Maya could follow your answers without needing extra clarification.";
+  return "Your interviewer could follow your answers without needing extra clarification.";
 }
 
 function buildPdfBriefing(

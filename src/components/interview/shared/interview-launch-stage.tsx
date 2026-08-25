@@ -6,6 +6,7 @@ import { Loader2, Volume2, VolumeX } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 import { useMayaVoice } from "@/lib/voice/use-maya-voice";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
 export interface InterviewLaunchCopy {
   /** Small label above the headline. */
@@ -37,6 +38,7 @@ export function InterviewLaunchStage({
   workspaceAccent: WorkspaceAccent;
   startingLabel?: string;
 }) {
+  const teacher = useWorkspaceTeacher();
   const [error, setError] = useState<string | null>(null);
   const [startAttempt, setStartAttempt] = useState(0);
   const [starting, setStarting] = useState(false);
@@ -70,7 +72,9 @@ export function InterviewLaunchStage({
           error?: { message?: string };
         };
         if (!response.ok || !payload.success || !payload.data?.sessionId) {
-          throw new Error(payload.error?.message || "Maya could not start this interview.");
+          throw new Error(
+            payload.error?.message || `${teacher.name} could not start this interview.`
+          );
         }
 
         if (!cancelled) {
@@ -80,10 +84,10 @@ export function InterviewLaunchStage({
         if (!cancelled) {
           setError(
             caught instanceof DOMException && caught.name === "AbortError"
-              ? "Maya is taking too long to prepare this round. Try again."
+              ? `${teacher.name} is taking too long to prepare this round. Try again.`
               : caught instanceof Error
                 ? caught.message
-                : "Maya could not start the interview."
+                : `${teacher.name} could not start the interview.`
           );
           setStarting(false);
         }
@@ -97,7 +101,7 @@ export function InterviewLaunchStage({
       controller.abort();
       window.clearTimeout(timeout);
     };
-  }, [error, getToken, isLoaded, isSignedIn, ready, startAttempt, startPath]);
+  }, [error, getToken, isLoaded, isSignedIn, ready, startAttempt, startPath, teacher.name]);
 
   useEffect(() => {
     if (awaitingGesture) return;
@@ -174,7 +178,7 @@ export function InterviewLaunchStage({
                 className="animate-spin text-[var(--workspace-accent)]"
                 aria-hidden="true"
               />
-              {startingLabel}
+              {startingLabel.replaceAll("Maya", teacher.name)}
             </p>
           ) : null}
 
@@ -199,7 +203,7 @@ export function InterviewLaunchStage({
               type="button"
               onClick={toggleMayaVoice}
               disabled={state === "unavailable"}
-              aria-label={state === "speaking" ? "Stop Maya" : "Hear Maya"}
+              aria-label={state === "speaking" ? `Stop ${teacher.name}` : `Hear ${teacher.name}`}
               className="inline-flex items-center gap-2 text-sm font-semibold text-cream/76 transition hover:text-cream disabled:opacity-40"
             >
               {state === "loading" ? (
@@ -214,15 +218,15 @@ export function InterviewLaunchStage({
                 <Volume2 size={16} className="text-[var(--workspace-accent)]" aria-hidden="true" />
               )}
               {state === "loading"
-                ? "Starting Maya"
+                ? `Starting ${teacher.name}`
                 : state === "speaking"
-                  ? "Stop Maya"
+                  ? `Stop ${teacher.name}`
                   : state === "unavailable"
                     ? "Voice unavailable"
-                    : "Hear Maya"}
+                    : `Hear ${teacher.name}`}
             </button>
             {awaitingGesture ? (
-              <span className="text-xs text-cream/42">Tap to hear Maya</span>
+              <span className="text-xs text-cream/42">Tap to hear {teacher.name}</span>
             ) : null}
           </div>
         </div>

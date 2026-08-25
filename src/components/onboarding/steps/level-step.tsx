@@ -101,8 +101,8 @@ export function LevelStep({
                 "onboarding-card-reveal",
                 "group relative min-h-[6.4rem] overflow-hidden rounded-[1.45rem] border p-5 text-left outline-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-[#F26E01]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101113] sm:p-6",
                 active
-                  ? "border-[#F26E01]/32 bg-[linear-gradient(145deg,#1d1e22,#18191c)] shadow-[0_22px_64px_-48px_rgba(242,110,1,0.25)]"
-                  : "border-white/12 bg-[linear-gradient(145deg,#1b1c20,#16171a)] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-white/22 hover:bg-[#1d1e22]"
+                  ? "border-none bg-[linear-gradient(145deg,#1d1e22,#18191c)] shadow-[0_22px_64px_-48px_rgba(242,110,1,0.25)]"
+                  : "border-none bg-[linear-gradient(145deg,#1b1c20,#16171a)] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-white/22 hover:bg-[#1d1e22]"
               ].join(" ")}
               style={
                 {

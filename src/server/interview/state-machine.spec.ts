@@ -1,5 +1,5 @@
 import { advance, appendTurn, createState, currentQuestion } from "./state-machine";
-import { HARD_CAP_MS, InterviewSetup, PlannedQuestion, SOFT_WRAP_MS } from "./types";
+import { HARD_CAP_MS, InterviewSetup, PlannedQuestion, SOFT_WRAP_MS, roundCaps } from "./types";
 
 const setup: InterviewSetup = {
   role: "backend",
@@ -43,6 +43,30 @@ describe("interview state machine", () => {
     expect(result.forcedBy).toBe("follow-up-budget");
     expect(result.state.questionIndex).toBe(1);
     expect(result.state.followUpCount).toBe(0);
+  });
+
+  it("honors a zero-follow-up personalized question", () => {
+    const result = advance(
+      stateWith({ plan: [{ ...question("Q1"), maxFollowUps: 0 }, question("Q2")] }),
+      "probe",
+      1_000
+    );
+
+    expect(result.action).toBe("move_on");
+    expect(result.forcedBy).toBe("follow-up-budget");
+    expect(result.state.questionIndex).toBe(1);
+  });
+
+  it("allows a third follow-up when the trusted question budget is three", () => {
+    const result = advance(
+      stateWith({ plan: [{ ...question("Q1"), maxFollowUps: 3 }], followUpCount: 2 }),
+      "challenge",
+      1_000
+    );
+
+    expect(result.action).toBe("challenge");
+    expect(result.forcedBy).toBeNull();
+    expect(result.state.followUpCount).toBe(3);
   });
 
   it("ends naturally after the last question", () => {
@@ -92,6 +116,13 @@ describe("interview state machine", () => {
 
 describe("per-round time caps", () => {
   const resumeState = () => stateWith({ setup: { ...setup, resumeRound: true } });
+
+  it("uses a personalized blueprint duration with a two-minute wrap buffer", () => {
+    expect(roundCaps({ ...setup, durationMinutes: 35 })).toEqual({
+      softWrapMs: 33 * 60 * 1000,
+      hardCapMs: 35 * 60 * 1000
+    });
+  });
 
   it("wraps a default round at its own soft cap", () => {
     expect(advance(stateWith(), "probe", SOFT_WRAP_MS + 1).forcedBy).toBe("soft-time");

@@ -1,4 +1,9 @@
 import { z } from "zod";
+import type {
+  BlueprintDifficulty,
+  BlueprintRubricDimension,
+  SessionBlueprint
+} from "@/lib/interviews/personalized-plan";
 import { AiService } from "../ai/ai.service";
 import {
   describeLevel,
@@ -50,6 +55,11 @@ export interface DecideInput {
   mustHit: string[];
   userAnswer: string;
   followUpCount: number;
+  maxFollowUps?: number;
+  topicLabel?: string;
+  blueprintDifficulty?: BlueprintDifficulty;
+  rubric?: BlueprintRubricDimension[];
+  followUpPolicy?: SessionBlueprint["followUpPolicy"];
   conversationHistory: Array<{ speaker: "agent" | "user"; text: string }>;
   evidenceLedger?: EvidenceLedger;
 }
@@ -67,6 +77,7 @@ function buildPrompt(input: DecideInput): string {
     mustHit,
     userAnswer,
     followUpCount,
+    maxFollowUps = MAX_FOLLOW_UPS,
     conversationHistory,
     evidenceLedger
   } = input;
@@ -79,6 +90,15 @@ function buildPrompt(input: DecideInput): string {
     : "No earlier turns.";
   const resumeGuidance = isResumeRound(setup)
     ? `This is a resume-defense conversation. The resume is only a lead. Stay with the candidate's story when it becomes interesting: ask about a concrete moment, their own decision, the trade-off, or the result. A counter-question is useful when a claim is vague, inflated, contradictory, or unclear about personal ownership. Do not counter every answer; move on when the answer is credible and complete.`
+    : "";
+  const blueprintGuidance = input.topicLabel
+    ? `This question belongs to the persisted personalized blueprint.
+Assigned topic: ${input.topicLabel}
+Planned difficulty: ${input.blueprintDifficulty ?? "adaptive"}
+Rubric for this question:
+${formatRubric(input.rubric)}
+
+Stay within the assigned topic. ${input.followUpPolicy?.probeWeakClaims ? "Probe a weak claim when it would produce useful evidence." : "Do not probe merely because a claim is weak."} ${input.followUpPolicy?.increaseDifficultyAfterStrongAnswer ? "After a clearly strong answer, a harder in-topic follow-up is allowed." : "Do not increase the planned difficulty."}`
     : "";
 
   return `You are conducting a ${describeRound(setup.roundType)} interview for a ${describeLevel(setup.level)} interviewing as a ${describeRole(setup.role)}.
@@ -111,9 +131,11 @@ ${formatEvidenceLedger(evidenceLedger)}
 
 ${resumeGuidance}
 
+${blueprintGuidance}
+
 Treat the evidence anchor as a claim to verify, not as proof. If the candidate's answer does not match it, ask a curious, specific question about the difference. Do not invent details that are absent from the anchor or conversation.
 
-Follow-ups already used on this question: ${followUpCount} of ${MAX_FOLLOW_UPS}
+Follow-ups already used on this question: ${followUpCount} of ${maxFollowUps}
 
 Choose exactly one action:
 
@@ -197,13 +219,33 @@ function formatEvidenceLedger(ledger?: EvidenceLedger): string {
   const line = (label: string, values: string[]) =>
     `${label}: ${values.length ? values.slice(-2).join(" | ") : "not established"}`;
 
+  const blueprint = ledger.blueprint
+    ? [
+        `Blueprint topic: ${ledger.blueprint.topicKey}`,
+        `Blueprint skills: ${ledger.blueprint.skillKeys.join(", ") || "none"}`,
+        `Blueprint rubric keys: ${ledger.blueprint.rubricKeys.join(", ") || "none"}`,
+        line("Prior in-topic answer evidence", ledger.blueprint.answerExcerpts)
+      ]
+    : [];
+
   return [
     line("Personal ownership", ledger.ownership),
     line("Decision or trade-off", ledger.decision),
     line("Specific details", ledger.specificity),
     line("Outcome or impact", ledger.outcome),
-    `Current gaps: ${ledger.gaps.join(", ") || "none"}`
+    `Current gaps: ${ledger.gaps.join(", ") || "none"}`,
+    ...blueprint
   ].join("\n");
+}
+
+function formatRubric(rubric?: BlueprintRubricDimension[]): string {
+  if (!rubric?.length) return "- Use the assigned topic objective.";
+  return rubric
+    .map(
+      (dimension) =>
+        `- ${dimension.label}: strong=${dimension.strongSignals.join("; ")}; weak=${dimension.weakSignals.join("; ")}`
+    )
+    .join("\n");
 }
 
 export function isDecisionAction(value: string): value is DecisionAction {

@@ -22,7 +22,13 @@ import {
 } from "@/lib/shared/labels";
 import type { InterviewReport as InterviewReportData } from "@/lib/shared/types";
 
-export function InterviewReport({ report }: { report: InterviewReportData }) {
+export function InterviewReport({
+  report,
+  teacherName
+}: {
+  report: InterviewReportData;
+  teacherName: string;
+}) {
   const completedCompetencies = report.competencies.filter((item) => item.answered).length;
 
   return (
@@ -239,7 +245,7 @@ export function InterviewReport({ report }: { report: InterviewReportData }) {
             >
               <div className="flex items-center justify-between gap-4">
                 <p className="blueprint-label text-cream/35">
-                  {turn.speaker === "user" ? "You" : "Maya"}
+                  {turn.speaker === "user" ? "You" : teacherName}
                 </p>
                 <time className="font-mono text-[10px] text-cream/25">
                   {formatClock(turn.startMs)}

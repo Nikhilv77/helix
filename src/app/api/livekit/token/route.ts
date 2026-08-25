@@ -5,6 +5,7 @@ import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
 import { roundCaps } from "@/server/interview/types";
+import { MAYA, personaById } from "@/lib/avatars/personas";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,8 @@ export function roomNameFor(sessionId: string, connectionId = crypto.randomUUID(
 }
 
 const requestSchema = z.object({
-  sessionId: z.string().uuid()
+  sessionId: z.string().uuid(),
+  teacherId: z.string().trim().max(60).optional()
 });
 
 export async function POST(request: NextRequest) {
@@ -42,6 +44,7 @@ export async function POST(request: NextRequest) {
 
     // Throws SESSION_NOT_FOUND if the interview does not exist.
     const state = await app.interviewService.get(parsed.data.sessionId);
+    const teacher = personaById(parsed.data.teacherId) ?? MAYA;
 
     if (state.phase === "done") {
       throw new ApiRouteError(409, "SESSION_COMPLETE", "This interview has ended", {});
@@ -74,7 +77,12 @@ export async function POST(request: NextRequest) {
     // waits forever. Attaching the dispatch to the token means joining is the
     // only step — the interviewer is summoned with them.
     token.roomConfig = new RoomConfiguration({
-      agents: [new RoomAgentDispatch({ agentName: livekitAgentName })]
+      agents: [
+        new RoomAgentDispatch({
+          agentName: livekitAgentName,
+          metadata: JSON.stringify({ personaId: teacher.id, voice: teacher.voice })
+        })
+      ]
     });
 
     return apiSuccess({

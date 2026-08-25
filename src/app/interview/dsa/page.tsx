@@ -7,7 +7,7 @@ import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
   "DSA interview",
-  "A DSA interview with Maya based on the questions you have solved."
+  "A DSA interview with your chosen teacher based on the questions you have solved."
 );
 
 export default async function DsaInterviewEntryPage() {

@@ -6,6 +6,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { attachTrack, detachVoice, readVoice, type VoiceBands } from "@/lib/voice/voice-bus";
+import { DEFAULT_RIG, type AvatarRig } from "@/lib/avatars/personas";
 import type { PresenceState } from "./interviewer-presence";
 
 /** Feathers the bottom of the canvas so the figure is not visibly cut off. */
@@ -23,11 +24,13 @@ interface AvatarStageProps {
    */
   url: string;
   framing?: "default" | "marketing" | "portrait";
-  performanceProfile?: "default" | "marketing";
+  performanceProfile?: "default" | "marketing" | "preview";
   /** Hide the stage status when the surrounding UI supplies its own visual state. */
   showStatus?: boolean;
   /** Keep the full portrait visible instead of fading it into a card edge. */
   feather?: boolean;
+  /** Plays a short smile-and-nod gesture at the start of an introduction. */
+  introducing?: boolean;
   /**
    * Set false to park the render loop while the avatar is still mounted. The
    * marketing hero is `position: sticky`, so it never leaves the viewport and
@@ -35,6 +38,12 @@ interface AvatarStageProps {
    * the top of it.
    */
   active?: boolean;
+  /**
+   * Per-persona motion constants. Two personas can share a mesh and still read
+   * as different people: the blink rate, resting mouth and idle sway carry most
+   * of it. Defaults to the neutral rig.
+   */
+  rig?: AvatarRig;
 }
 
 /**
@@ -61,8 +70,15 @@ const MOBILE_PIXEL_RATIO_CAP = 2.5;
 const MARKETING_MOBILE_PIXEL_RATIO_CAP = 1.75;
 const DESKTOP_PIXEL_RATIO_CAP = 2;
 
-function mobileProfile(performanceProfile: "default" | "marketing") {
+function mobileProfile(performanceProfile: "default" | "marketing" | "preview") {
   const dpr = window.devicePixelRatio || 1;
+  if (performanceProfile === "preview") {
+    return {
+      antialias: true,
+      pixelRatio: Math.min(dpr, 1),
+      frameInterval: 0
+    };
+  }
   const coarse = window.matchMedia("(pointer: coarse)").matches;
   const small = Math.min(window.innerWidth, window.innerHeight) < 820;
   const constrained = coarse && small;
@@ -72,7 +88,11 @@ function mobileProfile(performanceProfile: "default" | "marketing") {
     antialias: true,
     pixelRatio: Math.min(
       dpr,
-      marketingMobile ? MARKETING_MOBILE_PIXEL_RATIO_CAP : constrained ? MOBILE_PIXEL_RATIO_CAP : DESKTOP_PIXEL_RATIO_CAP
+      marketingMobile
+        ? MARKETING_MOBILE_PIXEL_RATIO_CAP
+        : constrained
+          ? MOBILE_PIXEL_RATIO_CAP
+          : DESKTOP_PIXEL_RATIO_CAP
     ),
     frameInterval: marketingMobile ? 1000 / 30 : 0
   };
@@ -99,7 +119,9 @@ export function AvatarStage({
   active = true,
   performanceProfile = "default",
   showStatus = true,
-  feather = true
+  feather = true,
+  introducing = false,
+  rig = DEFAULT_RIG
 }: AvatarStageProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
@@ -117,6 +139,12 @@ export function AvatarStage({
   // would cost far more than the loop it is trying to stop.
   const activeRef = useRef(active);
   activeRef.current = active;
+  // Also read inside the loop rather than through the dependency list: swapping
+  // a persona's motion constants must not re-download the model.
+  const rigRef = useRef(rig);
+  rigRef.current = rig;
+  const introducingRef = useRef(introducing);
+  introducingRef.current = introducing;
   const syncRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -176,10 +204,16 @@ export function AvatarStage({
     let disposed = false;
     let frame = 0;
 
-    let blinkAt = performance.now() + 2500;
+    let blinkAt = performance.now() + rigRef.current.blinkIntervalMs[0];
     let blinkPhase = -1;
     let lastFrame = 0;
     let lastRenderedFrame = 0;
+    let head: THREE.Object3D | null = null;
+    const headRest = new THREE.Quaternion();
+    const nodRotation = new THREE.Quaternion();
+    const nodAxis = new THREE.Vector3(1, 0, 0);
+    let wasIntroducing = false;
+    let introductionElapsed = Number.POSITIVE_INFINITY;
     // One value per shape, each eased separately: mouths open fast and close
     // slowly, and a single shared scalar could not express that.
     const shapes = {
@@ -191,7 +225,8 @@ export function AvatarStage({
       I: 0,
       sil: 0,
       press: 0,
-      smile: 0
+      smile: 0,
+      cheek: 0
     };
     let clock = 0;
 
@@ -233,6 +268,16 @@ export function AvatarStage({
           }
         });
 
+        // Both supported skeleton families expose a head bone, but use
+        // different names. Keep its authored rest pose and layer only a tiny
+        // greeting nod on top so the model never snaps into a generic pose.
+        head =
+          model.getObjectByName("Head") ??
+          model.getObjectByName("Bip01 Head") ??
+          model.children.find((child) => /(^|\s)head$/i.test(child.name)) ??
+          null;
+        if (head) headRest.copy(head.quaternion);
+
         // Frame from geometry, not node names. Matching a node called "head"
         // is unreliable across rigs — several models aim the camera at the
         // knees. Human proportions put the head centre about 7% down from the
@@ -253,6 +298,9 @@ export function AvatarStage({
         camera.lookAt(0, focusY - size.y * 0.02, 0);
 
         resize();
+        // Parked preview stages still need one frame on screen. Their render
+        // loops remain stopped after this initial draw.
+        renderer.render(scene, camera);
         setStatus("ready");
       },
       undefined,
@@ -268,13 +316,21 @@ export function AvatarStage({
       return current + (target - current) * (1 - Math.exp(-rate * delta));
     }
 
-    function shapeMouth(voice: VoiceBands, delta: number, speaking: boolean) {
+    function shapeMouth(
+      voice: VoiceBands,
+      delta: number,
+      speaking: boolean,
+      introductionAmount: number
+    ) {
       const energy = voice.low + voice.mid + voice.high || 1;
       const lowShare = voice.low / energy;
       const midShare = voice.mid / energy;
       const highShare = voice.high / energy;
 
-      const open = voice.level;
+      // Raw audio energy is too wide for these morphs: jaw and vowel targets
+      // compound visually even though only one vowel is active. Keep the face
+      // articulate without stretching the lips to their authored extremes.
+      const open = voice.level * 0.58;
       const voicing = speaking && !voice.silent;
       // Lips only meet between words *within* a line. At rest every mouth shape
       // returns to zero, otherwise the face sits there with pressed lips.
@@ -292,28 +348,36 @@ export function AvatarStage({
 
       if (voicing) {
         if (rounded) {
-          O = open * 0.62;
-          U = open * 0.18;
+          O = open * 0.5;
+          U = open * 0.14;
         } else if (highShare > midShare && highShare > lowShare) {
-          I = open * 0.5;
+          I = open * 0.4;
         } else if (midShare >= lowShare) {
-          E = open * 0.66;
+          E = open * 0.52;
         } else {
-          aa = open * 0.8;
+          aa = open * 0.62;
         }
       }
 
-      shapes.jaw = ease(shapes.jaw, open * 0.7, 26, 13, delta);
-      shapes.aa = ease(shapes.aa, aa, 24, 14, delta);
-      shapes.E = ease(shapes.E, E, 26, 15, delta);
-      shapes.I = ease(shapes.I, I, 28, 16, delta);
-      shapes.O = ease(shapes.O, O, 20, 12, delta);
-      shapes.U = ease(shapes.U, U, 18, 11, delta);
-      shapes.sil = ease(shapes.sil, betweenWords ? 0.22 : 0, 22, 18, delta);
-      shapes.press = ease(shapes.press, betweenWords ? 0.07 : 0, 20, 16, delta);
+      shapes.jaw = ease(shapes.jaw, open * 0.54, 18, 11, delta);
+      shapes.aa = ease(shapes.aa, aa, 17, 11, delta);
+      shapes.E = ease(shapes.E, E, 18, 12, delta);
+      shapes.I = ease(shapes.I, I, 19, 12, delta);
+      shapes.O = ease(shapes.O, O, 16, 10, delta);
+      shapes.U = ease(shapes.U, U, 15, 10, delta);
+      shapes.sil = ease(shapes.sil, betweenWords ? 0.16 : 0, 16, 13, delta);
+      shapes.press = ease(shapes.press, betweenWords ? 0.05 : 0, 15, 12, delta);
       // Barely there. On this rig the smile target pushes the lips up and out,
-      // so anything higher reads as a pout rather than a resting expression.
-      shapes.smile = ease(shapes.smile, speaking ? 0 : 0.025, 6, 6, delta);
+      // so anything much higher reads as a pout rather than a resting
+      // expression — which is why personas vary it only within a narrow band.
+      const smileTarget =
+        introductionAmount > 0
+          ? Math.max(rigRef.current.restingSmile, introductionAmount * 0.075)
+          : speaking
+            ? 0
+            : rigRef.current.restingSmile;
+      shapes.smile = ease(shapes.smile, smileTarget, 8, 6, delta);
+      shapes.cheek = ease(shapes.cheek, introductionAmount * 0.035, 8, 6, delta);
 
       // jawOpen and mouthOpen both open the mouth; applying both doubles it.
       if (hasMorph("jawOpen")) {
@@ -335,7 +399,9 @@ export function AvatarStage({
         setMorph("mouthSmileLeft", shapes.smile);
         setMorph("mouthSmileRight", shapes.smile);
       }
-      setMorph("browInnerUp", shapes.jaw * 0.12);
+      setMorph("cheekSquintLeft", shapes.cheek);
+      setMorph("cheekSquintRight", shapes.cheek);
+      setMorph("browInnerUp", shapes.jaw * rigRef.current.browActivity);
     }
 
     function hasMorph(name: string): boolean {
@@ -358,15 +424,32 @@ export function AvatarStage({
       clock += delta;
 
       const speaking = stateRef.current === "speaking";
+      const introducingNow = introducingRef.current;
+      if (introducingNow && !wasIntroducing) introductionElapsed = 0;
+      if (introducingNow) introductionElapsed += delta;
+      wasIntroducing = introducingNow;
+
+      // One smooth down-and-up nod with a smile that fades before the spoken
+      // introduction finishes. Squaring the sine removes the sharp endpoints.
+      const introductionProgress = Math.min(1, introductionElapsed / 2.1);
+      const introductionAmount =
+        introductionProgress < 1 ? Math.sin(Math.PI * introductionProgress) ** 2 : 0;
       const voice = speaking ? readVoice() : SILENT_VOICE;
-      shapeMouth(voice, delta, speaking);
+      shapeMouth(voice, delta, speaking, introductionAmount);
+
+      if (head) {
+        const nodAngle = reduced ? 0 : introductionAmount * 0.075;
+        nodRotation.setFromAxisAngle(nodAxis, nodAngle);
+        head.quaternion.copy(headRest).multiply(nodRotation);
+      }
 
       // Blink. Advanced by elapsed time, not by frame: at a fixed step per
       // frame the same blink took half as long on a 120Hz display as on a
       // 60Hz one. BLINK_RATE reproduces the 60Hz timing exactly.
       if (blinkPhase < 0 && now > blinkAt) {
         blinkPhase = 0;
-        blinkAt = now + 2600 + Math.random() * 3800;
+        const [minGap, maxGap] = rigRef.current.blinkIntervalMs;
+        blinkAt = now + minGap + Math.random() * (maxGap - minGap);
       }
       if (blinkPhase >= 0) {
         blinkPhase += delta * BLINK_RATE;
@@ -378,10 +461,13 @@ export function AvatarStage({
 
       if (!reduced) {
         // Breathing and a little attention drift, so it is never truly still.
-        root.position.y = Math.sin(clock * 1.1) * 0.004;
+        // `motion` scales the amplitudes but not the frequencies: a composed
+        // interviewer moves less, not more slowly.
+        const motion = rigRef.current.motion;
+        root.position.y = Math.sin(clock * 1.1) * 0.004 * motion;
         root.rotation.y =
-          Math.sin(clock * 0.35) * 0.05 + (speaking ? Math.sin(clock * 2.4) * 0.012 : 0);
-        root.rotation.x = Math.sin(clock * 0.27) * 0.02;
+          (Math.sin(clock * 0.35) * 0.05 + (speaking ? Math.sin(clock * 2.4) * 0.012 : 0)) * motion;
+        root.rotation.x = Math.sin(clock * 0.27) * 0.02 * motion;
       }
 
       renderer.render(scene, camera);

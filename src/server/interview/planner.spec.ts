@@ -20,6 +20,60 @@ const dsaSetup: InterviewSetup = {
   agenda: ["Two Sum: ...", "Coin Change: ...", "Number of Islands: ..."]
 };
 
+const personalizedSetup: InterviewSetup = {
+  ...setup,
+  questionCount: 3,
+  personalizedPlanId: "plan-1",
+  personalizedBlueprint: {
+    id: "blueprint-1",
+    kind: "applied-engineering",
+    order: 3,
+    title: "Applied Backend Engineering",
+    subtitle: "Production scenarios",
+    durationMinutes: 40,
+    difficulty: "intermediate",
+    rationale: "The resume repeatedly demonstrates Laravel production work.",
+    topics: [
+      {
+        key: "laravel",
+        label: "Laravel",
+        targetPercent: 100,
+        skillKeys: ["php", "laravel"],
+        objectives: ["Handle production failure modes"]
+      }
+    ],
+    structure: [
+      {
+        kind: "warm-up",
+        questionCount: 1,
+        formats: ["spoken"],
+        purpose: "Establish context."
+      },
+      {
+        kind: "scenario",
+        questionCount: 2,
+        formats: ["code", "spoken"],
+        purpose: "Diagnose production failures."
+      }
+    ],
+    followUpPolicy: {
+      maxPerQuestion: 3,
+      probeWeakClaims: true,
+      increaseDifficultyAfterStrongAnswer: true,
+      stayWithinBlueprintTopics: true
+    },
+    rubric: [
+      {
+        key: "production-judgement",
+        label: "Production judgement",
+        weightPercent: 100,
+        strongSignals: ["Anticipates failures"],
+        weakSignals: ["Only handles the happy path"]
+      }
+    ]
+  }
+};
+
 function plannedDsaQuestion(text: string) {
   return {
     text,
@@ -99,6 +153,40 @@ describe("InterviewPlanner", () => {
     ]);
     expect(plan.every((question) => question.kind === "code")).toBe(true);
     expect(plan.some((question) => question.codeSnippet)).toBe(false);
+  });
+
+  it("plans exact personalized slots and stamps trusted blueprint metadata", async () => {
+    const prompts: string[] = [];
+    const ai = {
+      generateStructured: jest.fn(async (request: { prompt: string }) => {
+        prompts.push(request.prompt);
+        return {
+          questions: [
+            plannedDsaQuestion("Where did Laravel carry the most production responsibility?"),
+            plannedDsaQuestion("Implement a safe retry path for the failed request."),
+            plannedDsaQuestion("How would you diagnose that Laravel failure in production?")
+          ]
+        };
+      })
+    } as unknown as AiService;
+
+    const plan = await new InterviewPlanner(ai).plan(personalizedSetup);
+
+    expect(plan).toHaveLength(3);
+    expect(plan.map((question) => question.blueprintStage)).toEqual([
+      "warm-up",
+      "scenario",
+      "scenario"
+    ]);
+    expect(plan[1]).toMatchObject({
+      kind: "code",
+      language: "php",
+      topicKey: "laravel",
+      rubricKeys: ["production-judgement"],
+      maxFollowUps: 3
+    });
+    expect(prompts[0]).toContain("persisted personalized interview blueprint");
+    expect(prompts[0]).toContain("Produce exactly 3 questions in this exact slot order");
   });
 
   it("asks the provider for one question per selected problem", async () => {

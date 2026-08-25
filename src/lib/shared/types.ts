@@ -1,3 +1,5 @@
+import type { SessionBlueprint } from "@/lib/interviews/personalized-plan";
+
 export type Role = "backend" | "frontend" | "fullstack" | "data" | "ai-ml" | "pm";
 export type Level = "fresher" | "0-2" | "3-5" | "5-plus";
 export type RoundType = "behavioral" | "technical" | "hiring-manager";
@@ -14,7 +16,15 @@ export interface InterviewSetup {
   agenda?: string[];
   templateId?: string;
   templateTitle?: string;
-  dsaQuestionSlugs?: string[];  /** Marks the staged resume round, which the workspace renders differently. */
+  /** Trusted server-side blueprint selection for a personalized plan launch. */
+  planId?: string;
+  blueprintId?: string;
+  /** Supplied by the server for personalized blueprint sessions. */
+  durationMinutes?: number;
+  personalizedPlanId?: string;
+  personalizedBlueprint?: SessionBlueprint;
+  questionCount?: 3 | 4 | 5 | 6 | 7 | 8;
+  dsaQuestionSlugs?: string[]; /** Marks the staged resume round, which the workspace renders differently. */
   resumeRound?: boolean;
   /** Marks the computer fundamentals round. */
   fundamentalsRound?: boolean;
@@ -44,6 +54,8 @@ export interface CandidateProfileInput {
 
 export interface CandidateProfile extends CandidateProfileInput {
   workspaceAccent: import("@/lib/workspace/accent").WorkspaceAccent;
+  /** Persona id chosen at onboarding; null falls back to the default teacher. */
+  teacherId: string | null;
   updatedAt: number | null;
   completeness: number;
   onboardingCompletedAt: number | null;
@@ -265,6 +277,8 @@ export interface InterviewQuestion {
   answerFormat: "mcq" | "typed" | "spoken" | null;
   /** What a strong answer contains, shown as a hint on typed questions. */
   expects: string[] | null;
+  /** Trusted per-question probe budget from a personalized blueprint. */
+  maxFollowUps: number | null;
 }
 
 export interface StartResponse {
@@ -337,6 +351,28 @@ export interface InterviewCompetencyReport {
   signals: string[];
   gap: string;
   nextStep: string;
+  /** Present when correctness came from the semantic evaluator or an authored answer key. */
+  technicalEvaluation?: {
+    source: "semantic-evaluator" | "local-mcq" | "evaluation-unavailable";
+    score: number;
+    verdict:
+      | "correct"
+      | "mostly-correct"
+      | "partially-correct"
+      | "incorrect"
+      | "insufficient-evidence";
+    confidence: number;
+    summary: string;
+    strengths: string[];
+    gaps: string[];
+    rubricScores: Array<{ rubricKey: string; score: number; rationale: string }>;
+    execution: {
+      status: string;
+      accepted: boolean;
+      testsPassed: number;
+      testCount: number;
+    } | null;
+  };
 }
 
 export interface InterviewReport extends InterviewHistoryItem {
@@ -351,6 +387,13 @@ export interface InterviewReport extends InterviewHistoryItem {
     language: string;
     task: string;
     submitted: boolean;
+    execution?: {
+      status: string;
+      accepted: boolean;
+      testsPassed: number;
+      testCount: number;
+    } | null;
+    correctnessScore?: number | null;
   } | null;
   summary: {
     evidenceScore: number;

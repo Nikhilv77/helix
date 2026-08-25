@@ -14,6 +14,7 @@ import {
 } from "./onboarding-data";
 import { BlueprintBackdrop } from "../shared/onboarding-ui";
 import { LevelStep } from "../steps/level-step";
+import { TeacherStep } from "../steps/teacher-step";
 import { ResumeStep } from "../steps/resume-upload-step";
 import { ResumeEvidenceStep } from "../resume-review/resume-evidence-step";
 import { ResumeIdentityStep } from "../resume-review/resume-identity-step";
@@ -28,18 +29,22 @@ export function OnboardingFlow({
   // extraction for the steps that only exist after an upload. Production
   // passes neither, so the flow still always begins at the experience picker with
   // no result.
-  initialStep = "level",
-  initialResult = null
+  initialStep = "teacher",
+  initialResult = null,
+  initialTeacherId = null
 }: {
   replacingResume?: boolean;
   initialStep?: Step;
   initialResult?: ResumeExtractionResponse | null;
+  /** A teacher already on the profile, so returning here does not re-ask. */
+  initialTeacherId?: string | null;
 }) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const uploadAbortRef = useRef<AbortController | null>(null);
   const uploadRunRef = useRef(0);
   const [step, setStep] = useState<Step>(initialStep);
+  const [teacherId, setTeacherId] = useState<string | null>(initialTeacherId);
   const [role] = useState<Role>("fullstack");
   const [level, setLevel] = useState<Level | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -160,7 +165,7 @@ export function OnboardingFlow({
     setError(null);
 
     try {
-      await completeOnboarding(result);
+      await completeOnboarding(result, teacherId);
       router.push(replacingResume ? "/profile" : "/?welcome=maya");
       router.refresh();
     } catch (caught) {
@@ -172,7 +177,7 @@ export function OnboardingFlow({
     } finally {
       setCompleting(false);
     }
-  }, [completing, replacingResume, result, router]);
+  }, [completing, replacingResume, result, router, teacherId]);
 
   useEffect(() => {
     if (step !== "resume" || !file || uploading || result || error) return;
@@ -198,7 +203,7 @@ export function OnboardingFlow({
             </a>
           ) : null}
           <div
-            className="grid w-32 grid-cols-5 gap-1.5 sm:w-52 sm:gap-2"
+            className="grid w-36 grid-cols-6 gap-1.5 sm:w-60 sm:gap-2"
             aria-label={`Onboarding step ${stepIndex(step) + 1} of ${onboardingSteps.length}: ${onboardingSteps[stepIndex(step)]?.label}`}
           >
             {onboardingSteps.map((item, index) => (
@@ -215,6 +220,13 @@ export function OnboardingFlow({
 
         <div className="flex flex-1 flex-col items-center justify-center py-10">
           <section key={step} className="step-in w-full min-w-0">
+            {step === "teacher" ? (
+              <TeacherStep
+                selected={teacherId}
+                onSelect={setTeacherId}
+                onContinue={() => setStep("level")}
+              />
+            ) : null}
             {step === "level" ? (
               <LevelStep
                 selected={level}
@@ -291,6 +303,7 @@ export function OnboardingFlow({
           </section>
         </div>
       </div>
+
     </main>
   );
 }

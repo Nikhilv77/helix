@@ -16,9 +16,10 @@ export default async function InterviewsPage() {
   const { ownerId, profile: candidateProfile } = await requireOnboardedProfile();
 
   try {
-    const [quota, sessions, roadmap] = await Promise.all([
+    const [quota, sessions, personalizedPlan, roadmap] = await Promise.all([
       interviewService.quota(ownerId),
       interviewService.history(ownerId),
+      app.personalizedInterviewPlanningService.activePlan(ownerId).catch(() => null),
       app.frontendRoadmapService.home(ownerId).catch(() => null)
     ]);
     return (
@@ -26,6 +27,7 @@ export default async function InterviewsPage() {
         quota={quota}
         sessions={sessions}
         profile={candidateProfile}
+        personalizedPlan={personalizedPlan}
         roadmap={roadmap}
       />
     );
@@ -35,6 +37,7 @@ export default async function InterviewsPage() {
         quota={{ used: 0, limit: 2 }}
         sessions={[]}
         profile={candidateProfile}
+        personalizedPlan={null}
         roadmap={null}
       />
     );

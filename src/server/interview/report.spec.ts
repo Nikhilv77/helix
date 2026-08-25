@@ -114,6 +114,46 @@ describe("interview report", () => {
     expect(history.durationMs).toBe(12_000);
   });
 
+  it("uses persisted technical correctness instead of fluent-answer heuristics", () => {
+    const evaluated: InterviewState = {
+      ...state,
+      questionEvaluations: {
+        "1": {
+          source: "semantic-evaluator",
+          score: 18,
+          verdict: "incorrect",
+          confidence: 0.96,
+          summary: "The retry implementation has no retry bound or backoff.",
+          strengths: ["Submitted syntactically recognizable code."],
+          gaps: ["The implementation does not meet the bounded retry requirement."],
+          rubricScores: [
+            {
+              rubricKey: "technical-correctness",
+              score: 18,
+              rationale: "Required behavior is absent."
+            }
+          ],
+          answerExcerpts: ["function retry() {}"],
+          execution: null,
+          evaluatedAt: 13_000
+        }
+      }
+    };
+
+    const report = createInterviewReport({ state: evaluated, touchedAt: 14_000 }, 20_000);
+
+    expect(report.competencies[1]).toMatchObject({
+      evidenceScore: 18,
+      evidenceLevel: "developing",
+      gap: "The implementation does not meet the bounded retry requirement.",
+      technicalEvaluation: {
+        score: 18,
+        verdict: "incorrect"
+      }
+    });
+    expect(report.codeExercise?.correctnessScore).toBe(18);
+  });
+
   it("aggregates answer evidence into a workspace competency map", () => {
     const insights = createWorkspaceInsights([{ state, touchedAt: 14_000 }], 20_000);
 

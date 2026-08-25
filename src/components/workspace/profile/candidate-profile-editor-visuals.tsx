@@ -441,7 +441,7 @@ export function ResumeHero({
           </button>
           <p className="blueprint-label mt-8 text-cream/35">Resume evidence</p>
           <h1 className="mt-3 max-w-4xl text-4xl font-semibold leading-[1.03] tracking-tight text-cream sm:text-5xl lg:text-6xl">
-            Verified proof Maya can question.
+            Verified proof your teacher can question.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-cream/58">
             Every item here is read-only and grounded in the uploaded resume, so interviews stay

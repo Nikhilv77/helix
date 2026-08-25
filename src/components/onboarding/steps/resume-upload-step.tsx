@@ -132,12 +132,12 @@ export function ResumeStep({
             onFile(event.dataTransfer.files?.[0] ?? null);
           }}
           className={[
-            "onboarding-card-reveal group relative min-h-[21rem] overflow-hidden rounded-[1.65rem] border p-5 text-left outline-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 sm:p-7 sm:backdrop-blur-sm",
+            "onboarding-card-reveal group relative min-h-[21rem] overflow-hidden rounded-[1.65rem] p-5 text-left outline-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 sm:p-7 sm:backdrop-blur-sm",
             dragging
-              ? "border-cream/72 bg-cream/[0.075]"
+              ? "bg-cream/[0.075] shadow-[0_22px_70px_rgba(0,0,0,0.22)]"
               : file
-                ? "border-cream/62 bg-cream/[0.06]"
-                : "border-cream/55 bg-cream/[0.032] hover:border-cream/72 hover:bg-cream/[0.052]",
+                ? "bg-cream/[0.06]"
+                : "bg-cream/[0.032] hover:bg-cream/[0.052]",
             uploading ? "opacity-80" : ""
           ].join(" ")}
           style={
@@ -207,7 +207,7 @@ export function ResumeStep({
                   type="button"
                   disabled={uploading}
                   onClick={() => inputRef.current?.click()}
-                  className="browse-nudge mt-7 min-h-11 rounded-lg border border-cream/45 bg-cream/[0.035] px-5 text-sm font-bold text-cream transition hover:-translate-y-0.5 hover:border-cream/70 hover:bg-cream/[0.09] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0"
+                  className="browse-nudge mt-7 min-h-11 rounded-lg border border-cream/20 bg-cream/[0.035] px-5 text-sm font-bold text-cream transition hover:-translate-y-0.5 hover:border-cream/35 hover:bg-cream/[0.09] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0"
                 >
                   Browse files
                 </button>

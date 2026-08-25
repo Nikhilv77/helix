@@ -22,6 +22,10 @@ import {
   hasGroundedEvidence,
   verifyResumeDocument
 } from "@/server/onboarding/resume/verification";
+import {
+  detectExplicitResumeTechnologies,
+  mergeResumeTechnologies
+} from "@/server/onboarding/resume/technology-detector";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -210,6 +214,8 @@ export async function POST(request: NextRequest) {
       analysis,
       document.text
     );
+    const detectedTechnologies = detectExplicitResumeTechnologies(document.text);
+    const mergedSkills = mergeResumeTechnologies(analysis.skills, detectedTechnologies);
     const practiceQuestions = analysis.practiceQuestions.map((question) => ({
       ...question,
       id: randomUUID()
@@ -276,7 +282,7 @@ export async function POST(request: NextRequest) {
       fullName,
       headline: analysis.headline,
       context: analysis.summary,
-      skills: analysis.skills,
+      skills: mergedSkills,
       focusAreas: analysis.focusAreas,
       stories,
       experience,
@@ -293,6 +299,9 @@ export async function POST(request: NextRequest) {
     const previewProfile: CandidateProfile = {
       targetRole: selection.data.targetRole,
       level: selection.data.level,
+      // The teacher is chosen before the resume step and written at completion;
+      // this preview never carries one.
+      teacherId: null,
       targetCompany: "",
       targetDate: null,
       headline: extraction.headline,
@@ -345,7 +354,9 @@ export async function POST(request: NextRequest) {
         experience: experience.length,
         projects: projects.length,
         education: education.length,
-        practiceQuestions: practiceQuestions.length
+        practiceQuestions: practiceQuestions.length,
+        extractedSkills: analysis.skills.length,
+        mergedSkills: mergedSkills.length
       })
     );
 

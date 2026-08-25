@@ -5,6 +5,7 @@ import type { FrontendDsaPlan } from "@/lib/roadmap/frontend-plan";
 import type { CandidateProfile, Role } from "@/lib/shared/types";
 import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
 import { SessionCards } from "./session-cards";
+import { MAYA, personaById } from "@/lib/avatars/personas";
 
 interface DashboardProps {
   profile: CandidateProfile;
@@ -30,6 +31,7 @@ export function Dashboard({
   frontendRoadmap = null,
   frontendPlan = null
 }: DashboardProps) {
+  const teacher = personaById(profile.teacherId) ?? MAYA;
   const practiceHref = buildPracticeHref(
     profile.targetRole,
     profile.level,
@@ -59,6 +61,7 @@ export function Dashboard({
         fallbackPlan={frontendPlan}
         firstName={profile.resume?.fullName?.trim().split(/\s+/)[0] ?? ""}
         targetRole={profile.targetRole}
+        teacherName={teacher.name}
       />
     </div>
   );

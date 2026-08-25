@@ -169,6 +169,18 @@ def session_id_from_room(room_name: str) -> str:
     return session_id
 
 
+def tts_model_from_job(ctx: agents.JobContext) -> str:
+    """Resolve the validated teacher voice attached by the web app dispatch."""
+    try:
+        metadata = json.loads(ctx.job.metadata or "{}")
+        voice = metadata.get("voice")
+        if isinstance(voice, str) and voice.startswith("aura-2-") and voice.endswith("-en"):
+            return voice
+    except (TypeError, ValueError, json.JSONDecodeError):
+        logger.warning("invalid voice metadata; using configured fallback")
+    return SPEECH.tts_model
+
+
 @server.rtc_session(agent_name=TRAILGRAD.agent_name)
 async def interview_session(ctx: agents.JobContext) -> None:
     try:
@@ -179,7 +191,8 @@ async def interview_session(ctx: agents.JobContext) -> None:
         logger.warning("declining non-interview room %r", ctx.room.name)
         return
 
-    logger.info("joining interview %s", session_id)
+    tts_model = tts_model_from_job(ctx)
+    logger.info("joining interview %s with voice %s", session_id, tts_model)
 
     http = aiohttp.ClientSession()
 
@@ -201,7 +214,7 @@ async def interview_session(ctx: agents.JobContext) -> None:
     session = AgentSession(
         stt=build_stt(),
         # Aura-2: the voice is baked into the model id, no `voice` param.
-        tts=deepgram.TTS(model=SPEECH.tts_model),
+        tts=deepgram.TTS(model=tts_model),
         vad=silero.VAD.load(),
         # Defaults (0.5s) are tuned for "what's the weather". A candidate
         # recalling an incident pauses mid-answer, and cutting in there is what

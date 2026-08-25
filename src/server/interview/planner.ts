@@ -10,6 +10,12 @@ import {
   isResumeRound,
   levelFocus
 } from "./prompt-context";
+import {
+  applyPersonalizedBlueprintFormats,
+  buildPersonalizedBlueprintPrompt,
+  createPersonalizedBlueprintFallback,
+  personalizedQuestionSlots
+} from "./personalized-blueprint-runtime";
 import { InterviewSetup, PlannedQuestion, QUESTION_COUNT } from "./types";
 
 const DEFAULT_PLANNING_BUDGET_MS = 8_000;
@@ -79,6 +85,7 @@ For each question return:
 }
 
 function buildPrompt(setup: InterviewSetup): string {
+  if (setup.personalizedBlueprint) return buildPersonalizedBlueprintPrompt(setup);
   const questionCount = setup.questionCount ?? QUESTION_COUNT;
   const agenda = setup.agenda?.filter((item) => item.trim().length > 0) ?? [];
   if (isDsaRound(setup)) return buildDsaPrompt(setup, questionCount);
@@ -142,7 +149,9 @@ export class InterviewPlanner {
   ) {}
 
   async plan(setup: InterviewSetup): Promise<PlannedQuestion[]> {
-    const expectedCount = setup.questionCount ?? QUESTION_COUNT;
+    const expectedCount = setup.personalizedBlueprint
+      ? personalizedQuestionSlots(setup.personalizedBlueprint, setup.questionCount).length
+      : (setup.questionCount ?? QUESTION_COUNT);
 
     try {
       const result = await withDeadline(
@@ -175,6 +184,7 @@ export class InterviewPlanner {
 }
 
 export function createFallbackPlan(setup: InterviewSetup): PlannedQuestion[] {
+  if (setup.personalizedBlueprint) return createPersonalizedBlueprintFallback(setup);
   if (isDsaRound(setup)) return createDsaFallbackPlan(setup);
 
   const evidenceAnchor = fallbackEvidenceAnchor(setup);
@@ -247,6 +257,9 @@ function applyQuestionFormats(
   setup: InterviewSetup,
   questions: PlannedQuestion[]
 ): PlannedQuestion[] {
+  if (setup.personalizedBlueprint) {
+    return applyPersonalizedBlueprintFormats(setup, questions);
+  }
   const formatted: PlannedQuestion[] = questions.map((question) => ({
     ...question,
     kind: "conversation" as const,

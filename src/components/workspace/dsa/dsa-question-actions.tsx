@@ -94,7 +94,7 @@ export function DsaQuestionActions({
                     Saving your progress…
                   </>
                 ) : done ? (
-                  "Maya moved your path to the next question."
+                  "Your teacher moved your path to the next question."
                 ) : (
                   "You can come back to this one any time."
                 )}

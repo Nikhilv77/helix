@@ -89,12 +89,14 @@ export function SessionCards({
   roadmap,
   fallbackPlan,
   firstName,
-  targetRole = null
+  targetRole = null,
+  teacherName
 }: {
   roadmap: FrontendRoadmapHome | null;
   fallbackPlan?: FrontendDsaPlan | null;
   firstName: string;
   targetRole?: Role | null;
+  teacherName: string;
 }) {
   const sessions = roadmap?.sessions.length
     ? roadmap.sessions
@@ -208,7 +210,7 @@ export function SessionCards({
             <div className="relative order-1 h-full min-h-[17rem] overflow-hidden rounded-2xl bg-cream/[0.055] backdrop-blur-xl sm:min-h-[20rem] lg:min-h-[23rem]">
               <span className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 text-[12px] font-semibold text-cream/65">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#8be6bd]" />
-                Maya is ready
+                {teacherName} is ready
               </span>
 
               {/* Same interview-turn trace that sits behind Maya on the
@@ -247,7 +249,7 @@ export function SessionCards({
             ))}
           </div>
 
-          <MayaInsights insights={insights} />
+          <MayaInsights insights={insights} teacherName={teacherName} />
         </div>
       </section>
     </div>
@@ -434,7 +436,7 @@ function displayName(value: string): string {
 function shortCover(value: string): string {
   return value
     .replace("Pattern-by-pattern practice, warmups first", "Pattern practice")
-    .replace("Maya introduces each pattern and how to recognize it", "Maya coaching")
+    .replace("Maya introduces each pattern and how to recognize it", "Teacher coaching")
     .replace("Common mistakes and interview signals per group", "Interview signals")
     .replace("Closures, `this`, prototypes and the event loop", "JS internals")
     .replace("React rendering, state batching and effect timing", "React rendering")

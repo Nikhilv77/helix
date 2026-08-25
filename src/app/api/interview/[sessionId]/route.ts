@@ -70,7 +70,8 @@ function serialise(state: InterviewState) {
           // browser never receives the correct option.
           options: question.options?.length ? question.options : null,
           answerFormat: question.answerFormat ?? null,
-          expects: question.mustHit?.length ? question.mustHit : null
+          expects: question.mustHit?.length ? question.mustHit : null,
+          maxFollowUps: question.maxFollowUps ?? null
         }
       : null
   };

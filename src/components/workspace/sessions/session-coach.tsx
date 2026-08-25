@@ -3,6 +3,7 @@
 import { Loader2, Volume2, VolumeX } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import { useMayaVoice } from "@/lib/voice/use-maya-voice";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import type { CurriculumSession } from "@/lib/curriculum/curriculum";
 
 /**
@@ -10,6 +11,7 @@ import type { CurriculumSession } from "@/lib/curriculum/curriculum";
  * bus, so the avatar's mouth moves with the words rather than sitting still.
  */
 export function SessionCoach({ session }: { session: CurriculumSession }) {
+  const teacher = useWorkspaceTeacher();
   const { state, speak, stop } = useMayaVoice();
   const speaking = state === "speaking";
   const line = `${session.title}. ${session.coachNote} ${session.objective}`;
@@ -20,7 +22,7 @@ export function SessionCoach({ session }: { session: CurriculumSession }) {
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#102764] to-transparent" />
 
       <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold text-cream">Maya</span>
+        <span className="text-xs font-semibold text-cream">{teacher.name}</span>
         <button
           type="button"
           onClick={() => (speaking || state === "loading" ? stop() : void speak(line))}
@@ -34,7 +36,7 @@ export function SessionCoach({ session }: { session: CurriculumSession }) {
           ) : (
             <Volume2 size={12} />
           )}
-          {state === "unavailable" ? "No voice" : speaking ? "Stop" : "Hear Maya"}
+          {state === "unavailable" ? "No voice" : speaking ? "Stop" : `Hear ${teacher.name}`}
         </button>
       </div>
     </div>

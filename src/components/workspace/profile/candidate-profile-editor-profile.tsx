@@ -159,7 +159,7 @@ export function ProfileHero({
                   <AnimatedProfileWords
                     text={
                       profile.context ||
-                      "Add a short profile summary so Maya can shape interviews around your real work."
+                      "Add a short profile summary so your teacher can shape interviews around your real work."
                     }
                     delay={1760}
                     copy
@@ -203,7 +203,8 @@ export function ProfileHero({
                         {area}
                       </h3>
                       <p className="mt-2 text-[13px] leading-5.5 text-cream/58 sm:text-sm">
-                        {focusAreaDetails[area] ?? "Maya will press this signal during practice."}
+                        {focusAreaDetails[area] ??
+                          "Your teacher will press this signal during practice."}
                       </p>
                     </div>
                   </article>

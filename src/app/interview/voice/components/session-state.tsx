@@ -13,6 +13,7 @@ import {
 import { TrailgradMark } from "@/components/trailgrad-mark";
 import { workspaceAccentCssVariables, type WorkspaceAccent } from "@/lib/workspace/accent";
 import { formatClock } from "../utils/voice-interview";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
 export function VoiceShell({
   children,
@@ -57,6 +58,7 @@ export function SessionLoadingScreen({
   onRetry: () => void;
   workspaceAccent: WorkspaceAccent;
 }) {
+  const teacher = useWorkspaceTeacher();
   return (
     <VoiceShell workspaceAccent={workspaceAccent}>
       <StateHeader />
@@ -80,7 +82,8 @@ export function SessionLoadingScreen({
             {error ? "The room could not be loaded" : "Preparing your interview"}
           </h1>
           <p className="relative mx-auto mt-3 max-w-md text-sm leading-6 text-cream/64">
-            {error ?? "Checking your session and getting Maya ready. This usually takes a moment."}
+            {error ??
+              `Checking your session and getting ${teacher.name} ready. This usually takes a moment.`}
           </p>
           {error ? (
             <button
@@ -113,6 +116,7 @@ export function SessionStateScreen({
   answers?: number;
   workspaceAccent: WorkspaceAccent;
 }) {
+  const teacher = useWorkspaceTeacher();
   const complete = kind === "complete";
 
   if (complete) {
@@ -134,8 +138,8 @@ export function SessionStateScreen({
                 Interview complete.
               </h1>
               <p className="mx-auto mt-4 max-w-2xl text-pretty text-sm leading-7 text-cream/62 sm:text-base">
-                Your conversation is safely recorded. Take a breath, then review the signals Maya
-                found or begin another focused round.
+                Your conversation is safely recorded. Take a breath, then review the signals
+                {` ${teacher.name} found`} or begin another focused round.
               </p>
             </div>
 
@@ -205,7 +209,7 @@ export function SessionStateScreen({
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-cream/64 sm:text-base">
             Interview rooms close after their session window. Start a fresh round to reconnect with
-            Maya.
+            {` ${teacher.name}.`}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link

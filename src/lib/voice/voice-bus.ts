@@ -45,10 +45,10 @@ function ensureContext(): AudioContext | null {
 
   context = new Ctor();
   analyser = context.createAnalyser();
-  // Small window and light internal smoothing: the mouth needs to react inside
-  // a syllable, and the shaping below does its own damping.
+  // Keep syllables responsive while filtering the tiny level spikes that make
+  // amplitude-driven lips look jittery rather than intentional.
   analyser.fftSize = 1024;
-  analyser.smoothingTimeConstant = 0.25;
+  analyser.smoothingTimeConstant = 0.45;
   frequencies = new Uint8Array(analyser.frequencyBinCount);
   samples = new Uint8Array(analyser.fftSize);
   return context;

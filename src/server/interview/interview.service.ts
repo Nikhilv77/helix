@@ -19,6 +19,7 @@ import {
   finish
 } from "./state-machine";
 import {
+  CodeExecutionEvidence,
   Decision,
   DecisionAction,
   EvidenceDimension,
@@ -27,14 +28,20 @@ import {
   InterviewState,
   MissingDimension,
   PlannedQuestion,
+  QuestionEvaluation,
   roundCaps
 } from "./types";
 import { isResumeRound } from "./prompt-context";
 import { gradeMultipleChoice, multipleChoiceReply } from "./resume-round";
+import {
+  shouldEvaluateTechnicalAnswer,
+  type TechnicalAnswerEvaluator
+} from "./technical-answer-evaluator";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** A spoken conversation should never wait on the model's full provider timeout. */
 const DECIDER_BUDGET_MS = 4_000;
+const EVALUATOR_BUDGET_MS = 3_500;
 
 export interface StartResult {
   state: InterviewState;
@@ -54,7 +61,8 @@ export class InterviewService {
     private readonly decider: InterviewDecider,
     private readonly store: SessionStore,
     /** Configurable so local iteration is not throttled by the product cap. */
-    private readonly dailyLimit = 2
+    private readonly dailyLimit = 2,
+    private readonly answerEvaluator?: TechnicalAnswerEvaluator
   ) {}
 
   /**
@@ -169,6 +177,39 @@ export class InterviewService {
     return state;
   }
 
+  /** Records execution separately from correctness so reports never equate compiling with passing. */
+  async recordCodeExecution(
+    ownerId: string,
+    sessionId: string,
+    questionIndex: number,
+    execution: CodeExecutionEvidence
+  ): Promise<InterviewState> {
+    const session = await this.store.getOwned(sessionId, ownerId);
+    if (!session) {
+      throw new NotFoundErrorException("SESSION_NOT_FOUND", "Interview session not found", {
+        sessionId
+      });
+    }
+    const question = session.state.plan[questionIndex];
+    if (!question || question.kind !== "code" || session.state.questionIndex !== questionIndex) {
+      throw new BadRequestErrorException(
+        "CODE_EXECUTION_QUESTION_MISMATCH",
+        "The code result does not belong to the active interview question.",
+        { sessionId, questionIndex }
+      );
+    }
+
+    const next: InterviewState = {
+      ...session.state,
+      codeExecutions: {
+        ...session.state.codeExecutions,
+        [String(questionIndex)]: execution
+      }
+    };
+    await this.store.save(next);
+    return next;
+  }
+
   /**
    * The whole turn: record the answer, ask the model for an action, let the
    * guards override it, record what the agent says back.
@@ -211,39 +252,55 @@ export class InterviewService {
       return this.completeGradedAnswer(withAnswer, question, graded.correct, now);
     }
 
-    const raw = await this.decideWithFallback({
-      setup: withAnswer.setup,
-      questionAsked: question.text,
-      evidenceAnchor: question.evidenceAnchor,
-      competency: question.competency,
-      intent: question.intent,
-      questionKind: question.kind === "mcq" ? "code" : question.kind,
-      language: question.language,
-      codeTask: question.codeTask,
-      codeSnippet: question.codeSnippet,
-      mustHit: question.mustHit,
-      userAnswer: answer.text,
-      followUpCount: withAnswer.followUpCount,
-      fallbackProbe: question.probeIfMissing,
-      evidenceLedger: withAnswer.evidence?.[String(withAnswer.questionIndex)],
-      conversationHistory: withAnswer.turns
-        .slice(0, -1)
-        .slice(-8)
-        .map((turn) => ({ speaker: turn.speaker, text: turn.text.slice(0, 600) }))
-    });
+    const [raw, evaluation] = await Promise.all([
+      this.decideWithFallback({
+        setup: withAnswer.setup,
+        questionAsked: question.text,
+        evidenceAnchor: question.evidenceAnchor,
+        competency: question.competency,
+        intent: question.intent,
+        questionKind: question.kind === "mcq" ? "code" : question.kind,
+        language: question.language,
+        codeTask: question.codeTask,
+        codeSnippet: question.codeSnippet,
+        mustHit: question.mustHit,
+        userAnswer: answer.text,
+        followUpCount: withAnswer.followUpCount,
+        maxFollowUps: question.maxFollowUps,
+        topicLabel: topicLabelFor(withAnswer.setup, question),
+        blueprintDifficulty: question.blueprintDifficulty,
+        rubric: rubricFor(withAnswer.setup, question),
+        followUpPolicy: withAnswer.setup.personalizedBlueprint?.followUpPolicy,
+        fallbackProbe: question.probeIfMissing,
+        evidenceLedger: withAnswer.evidence?.[String(withAnswer.questionIndex)],
+        conversationHistory: withAnswer.turns
+          .slice(0, -1)
+          .slice(-8)
+          .map((turn) => ({ speaker: turn.speaker, text: turn.text.slice(0, 600) }))
+      }),
+      this.evaluateAnswer(withAnswer, question, now)
+    ]);
 
     const result = advance(withAnswer, raw.action, now);
     const questionEvidence = recordEvidence(
       withAnswer.evidence?.[String(withAnswer.questionIndex)],
       answer.text,
-      raw.missing
+      raw.missing,
+      question,
+      withAnswer.setup
     );
-    const withEvidence = {
+    const withEvidence: InterviewState = {
       ...result.state,
       evidence: {
         ...withAnswer.evidence,
         [String(withAnswer.questionIndex)]: questionEvidence
-      }
+      },
+      questionEvaluations: evaluation
+        ? {
+            ...result.state.questionEvaluations,
+            [String(withAnswer.questionIndex)]: evaluation
+          }
+        : result.state.questionEvaluations
     };
     const acknowledgement = naturalAcknowledgement(
       raw.acknowledgement,
@@ -306,7 +363,14 @@ export class InterviewService {
     correct: boolean,
     now: number
   ): Promise<AnswerResult> {
-    const result = advance(state, "move_on", now);
+    const evaluatedState: InterviewState = {
+      ...state,
+      questionEvaluations: {
+        ...state.questionEvaluations,
+        [String(state.questionIndex)]: multipleChoiceEvaluation(state, question, correct, now)
+      }
+    };
+    const result = advance(evaluatedState, "move_on", now);
     const utterance = this.composeUtterance(
       result.state,
       result.action,
@@ -357,6 +421,47 @@ export class InterviewService {
     return closed;
   }
 
+  private async evaluateAnswer(
+    state: InterviewState,
+    question: PlannedQuestion,
+    now: number
+  ): Promise<QuestionEvaluation | null> {
+    if (!shouldEvaluateTechnicalAnswer(state.setup, question)) {
+      return null;
+    }
+    if (!this.answerEvaluator) return unavailableTechnicalEvaluation(state, question, now);
+
+    const questionIndex = state.questionIndex;
+    const answers = state.turns
+      .filter((turn) => turn.speaker === "user" && turn.questionIndex === questionIndex)
+      .map((turn) => turn.text);
+
+    try {
+      return await within(
+        this.answerEvaluator.evaluate({
+          setup: state.setup,
+          question,
+          answers,
+          rubric: rubricFor(state.setup, question) ?? [],
+          execution: state.codeExecutions?.[String(questionIndex)] ?? null,
+          evaluatedAt: now
+        }),
+        EVALUATOR_BUDGET_MS,
+        "Interview answer evaluator"
+      );
+    } catch (error) {
+      this.logger.warn(
+        JSON.stringify({
+          event: "interview.answer-evaluation.fallback",
+          sessionId: state.id,
+          questionIndex,
+          reason: error instanceof Error ? error.name : "unknown"
+        })
+      );
+      return unavailableTechnicalEvaluation(state, question, now);
+    }
+  }
+
   /**
    * A failed decider call must not stall the interview. The planner already
    * wrote a grounded fallback probe for every question, so use it.
@@ -374,12 +479,17 @@ export class InterviewService {
     mustHit: string[];
     userAnswer: string;
     followUpCount: number;
+    maxFollowUps?: number;
+    topicLabel?: string;
+    blueprintDifficulty?: PlannedQuestion["blueprintDifficulty"];
+    rubric?: NonNullable<InterviewSetup["personalizedBlueprint"]>["rubric"];
+    followUpPolicy?: NonNullable<InterviewSetup["personalizedBlueprint"]>["followUpPolicy"];
     fallbackProbe: string;
     conversationHistory: Array<{ speaker: "agent" | "user"; text: string }>;
     evidenceLedger?: EvidenceLedger;
   }) {
     try {
-      return await within(this.decider.decide(input), DECIDER_BUDGET_MS);
+      return await within(this.decider.decide(input), DECIDER_BUDGET_MS, "Interview decider");
     } catch (error) {
       this.logger.warn(
         JSON.stringify({
@@ -388,17 +498,17 @@ export class InterviewService {
         })
       );
 
+      const shouldMove = input.followUpCount >= Math.min(1, input.maxFollowUps ?? 2);
       return {
-        action: input.followUpCount >= 1 ? ("move_on" as const) : ("probe" as const),
+        action: shouldMove ? ("move_on" as const) : ("probe" as const),
         missing: "specificity",
         reason: "decider unavailable; used planned fallback",
-        acknowledgement:
-          input.followUpCount >= 1
-            ? ["That helps", "Right, I see the thread", "That gives me a clearer picture"][
-                input.followUpCount % 3
-              ]
-            : "",
-        line: input.followUpCount >= 1 ? "" : input.fallbackProbe
+        acknowledgement: shouldMove
+          ? ["That helps", "Right, I see the thread", "That gives me a clearer picture"][
+              input.followUpCount % 3
+            ]
+          : "",
+        line: shouldMove ? "" : input.fallbackProbe
       };
     }
   }
@@ -436,19 +546,86 @@ export class InterviewService {
   }
 }
 
-async function within<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+async function within<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   try {
     return await Promise.race([
       promise,
       new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(() => reject(new Error("Interview decider timed out")), timeoutMs);
+        timer = setTimeout(() => reject(new Error(`${label} timed out`)), timeoutMs);
       })
     ]);
   } finally {
     if (timer) clearTimeout(timer);
   }
+}
+
+function multipleChoiceEvaluation(
+  state: InterviewState,
+  question: PlannedQuestion,
+  correct: boolean,
+  evaluatedAt: number
+): QuestionEvaluation {
+  const answer = state.turns
+    .filter((turn) => turn.speaker === "user" && turn.questionIndex === state.questionIndex)
+    .at(-1)?.text;
+  const rubricKey =
+    question.rubricKeys?.[0] ?? question.competency ?? "technical-correctness";
+
+  return {
+    source: "local-mcq",
+    score: correct ? 100 : 0,
+    verdict: correct ? "correct" : "incorrect",
+    confidence: 1,
+    summary: correct
+      ? "The selected answer matches the authored correct option."
+      : "The selected answer does not match the authored correct option.",
+    strengths: correct ? ["Selected the technically correct option."] : [],
+    gaps: correct ? [] : ["Review the underlying concept and the authored correct option."],
+    rubricScores: [
+      {
+        rubricKey,
+        score: correct ? 100 : 0,
+        rationale: correct
+          ? "Matched the authored answer key."
+          : "Did not match the authored answer key."
+      }
+    ],
+    answerExcerpts: answer ? [answer.replace(/\s+/g, " ").trim().slice(0, 240)] : [],
+    execution: null,
+    evaluatedAt
+  };
+}
+
+function unavailableTechnicalEvaluation(
+  state: InterviewState,
+  question: PlannedQuestion,
+  evaluatedAt: number
+): QuestionEvaluation {
+  const answers = state.turns
+    .filter((turn) => turn.speaker === "user" && turn.questionIndex === state.questionIndex)
+    .map((turn) => turn.text.replace(/\s+/g, " ").trim().slice(0, 240))
+    .filter(Boolean)
+    .slice(-3);
+
+  return {
+    source: "evaluation-unavailable",
+    score: 0,
+    verdict: "insufficient-evidence",
+    confidence: 0,
+    summary: "Technical correctness could not be verified for this answer.",
+    strengths: [],
+    gaps: ["Retry evaluation before using this answer as a performance signal."],
+    rubricScores: (question.rubricKeys ?? []).map((rubricKey) => ({
+      rubricKey,
+      score: 0,
+      rationale: "Not scored because the correctness evaluator was unavailable."
+    })),
+    answerExcerpts: answers,
+    execution: state.codeExecutions?.[String(state.questionIndex)] ?? null,
+    evaluatedAt
+  };
 }
 
 function joinSpoken(bridge: string, sentence: string): string {
@@ -529,7 +706,9 @@ function recentlyUsed(acknowledgement: string, turns: InterviewState["turns"]): 
 function recordEvidence(
   current: EvidenceLedger | undefined,
   answer: string,
-  missing: string
+  missing: string,
+  question: PlannedQuestion,
+  setup: InterviewSetup
 ): EvidenceLedger {
   const ledger: EvidenceLedger = current
     ? {
@@ -537,7 +716,15 @@ function recordEvidence(
         decision: [...current.decision],
         specificity: [...current.specificity],
         outcome: [...current.outcome],
-        gaps: [...current.gaps]
+        gaps: [...current.gaps],
+        blueprint: current.blueprint
+          ? {
+              ...current.blueprint,
+              skillKeys: [...current.blueprint.skillKeys],
+              rubricKeys: [...current.blueprint.rubricKeys],
+              answerExcerpts: [...current.blueprint.answerExcerpts]
+            }
+          : undefined
       }
     : {
         ownership: [],
@@ -547,6 +734,30 @@ function recordEvidence(
         gaps: ["ownership", "decision", "specificity", "outcome"]
       };
   const snippet = answer.replace(/\s+/g, " ").trim().slice(0, 240);
+  if (
+    snippet &&
+    !ledger.blueprint &&
+    setup.personalizedPlanId &&
+    setup.personalizedBlueprint &&
+    question.blueprintStage &&
+    question.topicKey
+  ) {
+    ledger.blueprint = {
+      planId: setup.personalizedPlanId,
+      blueprintId: setup.personalizedBlueprint.id,
+      stage: question.blueprintStage,
+      topicKey: question.topicKey,
+      skillKeys: [...(question.skillKeys ?? [])],
+      rubricKeys: [...(question.rubricKeys ?? [])],
+      answerExcerpts: []
+    };
+  }
+  if (snippet && ledger.blueprint) {
+    ledger.blueprint.answerExcerpts = [
+      ...ledger.blueprint.answerExcerpts.filter((item) => item !== snippet),
+      snippet
+    ].slice(-3);
+  }
   const dimensions: EvidenceDimension[] = [];
 
   if (/\b(i|i'm|i’ve|i've|my|personally|owned|led|built|implemented|designed)\b/i.test(answer)) {
@@ -581,6 +792,17 @@ function recordEvidence(
   const missingDimension = evidenceDimensionForMissing(missing);
   if (missingDimension) knownGaps.add(missingDimension);
   return { ...ledger, gaps: [...knownGaps] };
+}
+
+function topicLabelFor(setup: InterviewSetup, question: PlannedQuestion): string | undefined {
+  return setup.personalizedBlueprint?.topics.find((topic) => topic.key === question.topicKey)
+    ?.label;
+}
+
+function rubricFor(setup: InterviewSetup, question: PlannedQuestion) {
+  const rubricKeys = new Set(question.rubricKeys ?? []);
+  if (!rubricKeys.size) return undefined;
+  return setup.personalizedBlueprint?.rubric.filter((rubric) => rubricKeys.has(rubric.key));
 }
 
 function evidenceDimensionForMissing(value: string): EvidenceDimension | null {

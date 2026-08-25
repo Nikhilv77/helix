@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import { useMayaVoice } from "@/lib/voice/use-maya-voice";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
 /**
  * Maya sitting beside a question the user is solving.
@@ -39,6 +40,7 @@ export function QuestionCoach({
   keyInsight: string | null;
   approachNames: string[];
 }) {
+  const teacher = useWorkspaceTeacher();
   const [revealed, setRevealed] = useState(0);
   const [insightOpen, setInsightOpen] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -121,14 +123,14 @@ export function QuestionCoach({
           <div className="flex items-center gap-2.5">
             <Sparkles size={17} aria-hidden="true" style={{ color: "var(--workspace-accent)" }} />
             <div>
-              <p className="text-[15px] font-semibold leading-tight text-cream">Maya</p>
+              <p className="text-[15px] font-semibold leading-tight text-cream">{teacher.name}</p>
               <p className="mt-0.5 text-[12px] font-medium text-cream/48">Question coach</p>
             </div>
           </div>
           <button
             type="button"
             onClick={() => setMuted((value) => !value)}
-            aria-label={muted ? "Unmute Maya" : "Mute Maya"}
+            aria-label={muted ? `Unmute ${teacher.name}` : `Mute ${teacher.name}`}
             className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-cream/50 transition hover:bg-cream/[0.08] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
           >
             {muted ? (
@@ -152,7 +154,7 @@ export function QuestionCoach({
               className="inline-flex items-center gap-2 rounded-full bg-cream px-3.5 py-2 text-[13px] font-semibold text-[#171a16] transition hover:bg-white"
             >
               <Volume2 size={13} aria-hidden="true" />
-              Hear Maya
+              Hear {teacher.name}
             </button>
           ) : (
             <span className="inline-flex items-center gap-2 rounded-full bg-cream/[0.045] px-3 py-1.5 text-[12px] font-semibold text-cream/55">

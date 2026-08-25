@@ -80,6 +80,20 @@ enum MayaInsightKind {
   RECOMMENDED_ACTION
 }
 
+enum PersonalizedInterviewPlanStatus {
+  DRAFT
+  READY
+  SUPERSEDED
+}
+
+enum PersonalizedInterviewSessionKind {
+  PROBLEM_SOLVING
+  CORE_TECHNICAL
+  APPLIED_ENGINEERING
+  ARCHITECTURE_SYSTEM_DESIGN
+  FINAL_MOCK
+}
+
 model Project {
   id             String          @id @default(uuid()) @db.Uuid
   ownerId        String          @default("local-dev")
@@ -188,36 +202,127 @@ model InterviewSession {
 }
 
 model CandidateProfile {
-  ownerId               String                @id
-  targetRole            String?
-  level                 String?
-  targetCompany         String?
-  targetDate            DateTime?
-  headline              String?
-  context               String?
-  coverImage            String?
-  profileImage          String?
-  workspaceAccent       String                @default("ember")
-  focusAreas            Json
-  stories               Json
-  resumeFileName        String?
-  resumeMimeType        String?
-  resumeAnalysis        Json?
-  resumeUploadedAt      DateTime?
-  resumeVerifiedAt      DateTime?
-  resumeConfidence      Float?
-  onboardingCompletedAt DateTime?
+  ownerId                    String                               @id
+  targetRole                 String?
+  level                      String?
+  targetCompany              String?
+  targetDate                 DateTime?
+  headline                   String?
+  context                    String?
+  coverImage                 String?
+  profileImage               String?
+  workspaceAccent            String                               @default("ember")
+  /// Persona id from src/lib/avatars/personas.ts — the teacher chosen at onboarding.
+  teacherId                  String?
+  focusAreas                 Json
+  stories                    Json
+  resumeFileName             String?
+  resumeMimeType             String?
+  resumeAnalysis             Json?
+  resumeUploadedAt           DateTime?
+  resumeVerifiedAt           DateTime?
+  resumeConfidence           Float?
+  onboardingCompletedAt      DateTime?
   /// Maya's curated session plan for this candidate, generated from the resume.
-  curriculum            Json?
-  curriculumBuiltAt     DateTime?
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime              @updatedAt
-  roadmaps              UserRoadmap[]
-  questionAttempts      UserQuestionAttempt[]
-  mayaInsights          UserMayaInsight[]
-  dsaNotes              UserDsaQuestionNote[]
+  curriculum                 Json?
+  curriculumBuiltAt          DateTime?
+  createdAt                  DateTime                             @default(now())
+  updatedAt                  DateTime                             @updatedAt
+  roadmaps                   UserRoadmap[]
+  questionAttempts           UserQuestionAttempt[]
+  mayaInsights               UserMayaInsight[]
+  dsaNotes                   UserDsaQuestionNote[]
+  interviewProfileVersions   CandidateInterviewProfileVersion[]   @relation("CandidateInterviewProfileVersions")
+  interviewPlanVersions      PersonalizedInterviewPlanVersion[]   @relation("CandidateInterviewPlanVersions")
+  performanceProfileVersions CandidatePerformanceProfileVersion[] @relation("CandidatePerformanceProfileVersions")
 
   @@index([updatedAt])
+}
+
+/// Immutable aggregate of demonstrated skill evidence from completed
+/// personalized interview sessions.
+model CandidatePerformanceProfileVersion {
+  id                       String           @id @default(uuid()) @db.Uuid
+  ownerId                  String
+  revision                 Int
+  schemaVersion            Int
+  sourceSessionFingerprint String
+  completedSessionCount    Int
+  answeredQuestionCount    Int
+  profile                  Json
+  generatedAt              DateTime
+  createdAt                DateTime         @default(now())
+  owner                    CandidateProfile @relation("CandidatePerformanceProfileVersions", fields: [ownerId], references: [ownerId], onDelete: Cascade)
+
+  @@unique([ownerId, revision])
+  @@unique([ownerId, sourceSessionFingerprint, schemaVersion])
+  @@index([ownerId, generatedAt])
+  @@index([sourceSessionFingerprint])
+}
+
+/// Immutable normalized resume/profile snapshot. A new source resume creates
+/// a new revision; historical interview plans keep pointing at the old one.
+model CandidateInterviewProfileVersion {
+  id                      String                             @id @default(uuid()) @db.Uuid
+  ownerId                 String
+  revision                Int
+  schemaVersion           Int
+  sourceResumeFingerprint String
+  profile                 Json
+  generatedAt             DateTime
+  createdAt               DateTime                           @default(now())
+  owner                   CandidateProfile                   @relation("CandidateInterviewProfileVersions", fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  plans                   PersonalizedInterviewPlanVersion[]
+
+  @@unique([ownerId, revision])
+  @@unique([ownerId, sourceResumeFingerprint, schemaVersion])
+  @@index([ownerId, generatedAt])
+  @@index([sourceResumeFingerprint])
+}
+
+/// Versioned five-session plan. READY is the active revision; saving a newer
+/// READY plan supersedes the previous one without changing historical data.
+model PersonalizedInterviewPlanVersion {
+  id                String                           @id @default(uuid()) @db.Uuid
+  ownerId           String
+  profileVersionId  String                           @db.Uuid
+  revision          Int
+  schemaVersion     Int
+  status            PersonalizedInterviewPlanStatus  @default(DRAFT)
+  sourceSnapshot    Json
+  rationale         String                           @db.Text
+  generatedAt       DateTime
+  supersededAt      DateTime?
+  createdAt         DateTime                         @default(now())
+  updatedAt         DateTime                         @updatedAt
+  owner             CandidateProfile                 @relation("CandidateInterviewPlanVersions", fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  profileVersion    CandidateInterviewProfileVersion @relation(fields: [profileVersionId], references: [id], onDelete: Restrict)
+  sessionBlueprints InterviewSessionBlueprint[]
+
+  @@unique([ownerId, revision])
+  @@index([ownerId, status])
+  @@index([profileVersionId])
+  @@index([generatedAt])
+}
+
+/// Queryable session metadata plus the complete immutable blueprint snapshot.
+model InterviewSessionBlueprint {
+  id              String                           @id @default(uuid()) @db.Uuid
+  planVersionId   String                           @db.Uuid
+  kind            PersonalizedInterviewSessionKind
+  order           Int
+  title           String
+  subtitle        String
+  durationMinutes Int
+  difficulty      String
+  blueprint       Json
+  createdAt       DateTime                         @default(now())
+  planVersion     PersonalizedInterviewPlanVersion @relation(fields: [planVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([planVersionId, kind])
+  @@unique([planVersionId, order])
+  @@index([planVersionId])
+  @@index([kind])
 }
 
 model DsaPhase {
@@ -275,12 +380,12 @@ model DsaQuestion {
 }
 
 model UserDsaQuestionNote {
-  id        String        @id @default(uuid()) @db.Uuid
+  id        String           @id @default(uuid()) @db.Uuid
   ownerId   String
   slug      String
-  content   String        @db.Text
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  content   String           @db.Text
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
   owner     CandidateProfile @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
   question  DsaQuestion      @relation(fields: [slug], references: [slug], onDelete: Cascade)
 

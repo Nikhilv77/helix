@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Loader2, Play, Sparkles, Volume2, VolumeX } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import { useMayaVoice, voiceUrl } from "@/lib/voice/use-maya-voice";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
 
 export interface PracticeIntroStat {
@@ -53,6 +54,7 @@ export function PracticeIntro({
   nextHref: string | null;
   nextLabel: string;
 }) {
+  const teacher = useWorkspaceTeacher();
   const [muted, setMuted] = useState(false);
   const { state, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
   const speaking = state === "speaking";
@@ -123,10 +125,10 @@ export function PracticeIntro({
 
   useEffect(() => {
     if (muted) return;
-    const warm = new Audio(voiceUrl(script));
+    const warm = new Audio(voiceUrl(script, teacher.id));
     warm.preload = "auto";
     warm.load();
-  }, [muted, script]);
+  }, [muted, script, teacher.id]);
 
   return (
     <section className="practice-glass practice-reveal relative mt-7 overflow-hidden rounded-[1.75rem]">
@@ -147,14 +149,14 @@ export function PracticeIntro({
             <div className="flex items-center gap-2.5">
               <Sparkles size={17} aria-hidden="true" style={{ color: "var(--workspace-accent)" }} />
               <div>
-                <p className="text-[15px] font-semibold text-cream">Maya</p>
+                <p className="text-[15px] font-semibold text-cream">{teacher.name}</p>
                 <p className="text-[12px] text-cream/45">Practice coach</p>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setMuted((value) => !value)}
-              aria-label={muted ? "Unmute Maya" : "Mute Maya"}
+              aria-label={muted ? `Unmute ${teacher.name}` : `Mute ${teacher.name}`}
               className="grid h-9 w-9 place-items-center rounded-full text-cream/55 transition hover:bg-cream/[0.07] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/30"
             >
               {muted ? (
@@ -169,7 +171,7 @@ export function PracticeIntro({
             <span className="practice-glass-soft inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12px] font-medium text-cream/68">
               <span className="workspace-accent-dot h-1.5 w-1.5 rounded-full" />
               {speaking
-                ? "Maya is speaking"
+                ? `${teacher.name} is speaking`
                 : muted
                   ? "Voice muted"
                   : awaitingGesture
@@ -260,7 +262,7 @@ export function PracticeIntro({
               ) : (
                 <Volume2 size={16} aria-hidden="true" />
               )}
-              Hear Maya
+              Hear {teacher.name}
             </button>
           </div>
         </div>

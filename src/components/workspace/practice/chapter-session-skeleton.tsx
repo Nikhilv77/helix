@@ -14,7 +14,7 @@ export function ChapterSessionSkeleton() {
         <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[var(--workspace-accent)] shadow-[0_0_22px_var(--workspace-accent)]" />
         <p className="mt-5 text-[15px] font-semibold text-cream">Opening your session</p>
         <p className="mt-2 text-sm leading-6 text-cream/48">
-          Maya is assembling the brief and your saved progress.
+          Your teacher is assembling the brief and your saved progress.
         </p>
       </div>
     </div>

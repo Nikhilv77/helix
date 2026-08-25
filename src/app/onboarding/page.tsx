@@ -20,17 +20,27 @@ export default async function OnboardingPage({
   if (!userId) redirect("/");
 
   const replacingResume = (await searchParams).replace === "resume";
+  let teacherId: string | null = null;
 
   try {
     const profile = await getAppContainer().profileService.get(authenticatedOwnerId(userId));
     if (profile.onboardingCompletedAt && !replacingResume) redirect("/");
+    teacherId = profile.teacherId;
   } catch (error) {
     // A database hiccup should not block onboarding outright; the upload route
     // authorises and persists on its own. Re-throw the redirect Next.js raises.
     if (isRedirectError(error)) throw error;
   }
 
-  return <OnboardingFlow replacingResume={replacingResume} />;
+  return (
+    <OnboardingFlow
+      replacingResume={replacingResume}
+      // Someone swapping their resume already has a teacher; send them straight
+      // past the picker rather than making them choose again.
+      initialStep={replacingResume && teacherId ? "level" : "teacher"}
+      initialTeacherId={teacherId}
+    />
+  );
 }
 
 function isRedirectError(error: unknown): boolean {

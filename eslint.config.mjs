@@ -17,10 +17,10 @@ export default tseslint.config(
     }
   },
   {
-    // Build-time asset generators run under Node's CommonJS loader, not in
-    // the browser bundle. Keep this scope narrow so application code still
-    // follows the stricter ESM rules above.
-    files: ["scripts/**/*.js"],
+    // Build-time asset generators run under Node, not in the browser bundle —
+    // .js under the CommonJS loader, .mjs as ESM. Keep this scope narrow so
+    // application code still follows the stricter rules above.
+    files: ["scripts/**/*.{js,mjs}"],
     languageOptions: {
       globals: {
         Buffer: "readonly",

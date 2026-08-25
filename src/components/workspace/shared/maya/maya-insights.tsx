@@ -16,7 +16,13 @@ import type { FrontendRoadmapInsight } from "@/lib/roadmap/roadmap";
  * Maya's read on the path, loaded from persisted user-specific roadmap
  * insights. Step 7 will make the same rows adapt after each question attempt.
  */
-export function MayaInsights({ insights }: { insights: FrontendRoadmapInsight[] }) {
+export function MayaInsights({
+  insights,
+  teacherName
+}: {
+  insights: FrontendRoadmapInsight[];
+  teacherName: string;
+}) {
   if (insights.length === 0) return null;
 
   return (
@@ -33,7 +39,7 @@ export function MayaInsights({ insights }: { insights: FrontendRoadmapInsight[] 
       <header className="relative z-10 mb-4">
         <div className="min-w-0 flex-1">
           <p className="text-[1.14rem] font-medium leading-tight tracking-tight text-[#171a16]">
-            Maya&apos;s insights
+            {teacherName}&apos;s insights
           </p>
           <p className="mt-1 text-[0.92rem] font-normal leading-5 text-[#6f716a]">
             Tuned to your roadmap progress
@@ -109,9 +115,11 @@ function InsightCard({
   return (
     <article
       className="onboarding-card-reveal group relative min-h-[6.75rem] overflow-hidden rounded-[1rem] border border-[#171a16]/[0.07] bg-[#dcefd7]/72 p-3.5 transition-[border-color,transform,filter] duration-300 hover:-translate-y-0.5 hover:border-[#171a16]/[0.13] hover:brightness-[1.02]"
-      style={{
-        "--card-delay": `${index * 85}ms`
-      } as CSSProperties}
+      style={
+        {
+          "--card-delay": `${index * 85}ms`
+        } as CSSProperties
+      }
     >
       <span
         aria-hidden="true"

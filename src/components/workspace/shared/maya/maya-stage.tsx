@@ -2,9 +2,11 @@
 
 import dynamic from "next/dynamic";
 
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
+
 /**
- * Maya on the home page. The 3D stage is client-only and heavy, so it loads
- * after the shell paints and leaves a matching placeholder in the meantime.
+ * The selected teacher on workspace pages. The 3D stage is client-only and
+ * heavy, so it loads after the shell paints and leaves a matching placeholder.
  */
 const AvatarStage = dynamic(
   () => import("@/components/interview/voice/avatar-stage").then((module) => module.AvatarStage),
@@ -26,14 +28,22 @@ const TransparentAvatarStage = dynamic(
   }
 );
 
-export function MayaStage({ speaking = false, transparent = false }: { speaking?: boolean; transparent?: boolean }) {
+export function MayaStage({
+  speaking = false,
+  transparent = false
+}: {
+  speaking?: boolean;
+  transparent?: boolean;
+}) {
+  const teacher = useWorkspaceTeacher();
   const Stage = transparent ? TransparentAvatarStage : AvatarStage;
 
   return (
     <Stage
       agentTrack={null}
       state={speaking ? "speaking" : "listening"}
-      url="/avatars/interviewer-v2.glb"
+      url={teacher.model}
+      rig={teacher.rig}
       framing="default"
       showStatus={!transparent}
       feather={!transparent}

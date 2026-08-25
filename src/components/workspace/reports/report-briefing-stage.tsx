@@ -13,6 +13,7 @@ import {
 import { createThemedReportPdf, type ReportPdfBriefing } from "@/lib/reports/report-pdf";
 import type { ReportsOverview } from "@/lib/reports/reports";
 import { useMayaVoice } from "@/lib/voice/use-maya-voice";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
 const openingPhaseTimers = [1900, 3900];
 
@@ -30,7 +31,8 @@ type ReportBriefingCopy = ReportPdfBriefing & {
 
 function buildBriefingCopy(
   overview: ReportsOverview,
-  candidate: ReportCandidate
+  candidate: ReportCandidate,
+  teacherName: string
 ): ReportBriefingCopy {
   const score = overview.readinessScore ?? overview.latestScore;
   const verdict =
@@ -45,7 +47,7 @@ function buildBriefingCopy(
   const delta = overview.scoreDelta;
   const trend =
     delta == null
-      ? "The pattern is still forming because Maya needs a little more round history."
+      ? `The pattern is still forming because ${teacherName} needs a little more round history.`
       : delta > 4
         ? `You are improving: your signal is up ${delta} points from your first scored round.`
         : delta < -4
@@ -66,10 +68,10 @@ function buildBriefingCopy(
   const perRound = overview.pressure.perRound;
   const pressureText =
     perRound >= 3
-      ? `Maya had to probe a lot: about ${perRound.toFixed(1)} follow-ups per scored round.`
+      ? `${teacherName} had to probe a lot: about ${perRound.toFixed(1)} follow-ups per scored round.`
       : perRound >= 1
-        ? `Maya had to probe a little: about ${perRound.toFixed(1)} follow-ups per scored round.`
-        : "Maya did not need many follow-ups yet, so the next report will be clearer after more rounds.";
+        ? `${teacherName} had to probe a little: about ${perRound.toFixed(1)} follow-ups per scored round.`
+        : `${teacherName} did not need many follow-ups yet, so the next report will be clearer after more rounds.`;
   const latestText = overview.latest
     ? `${roundShortLabel(overview.latest.roundType)} round, ${overview.latest.evidenceScore ?? score ?? 0}/100, ${formatDuration(overview.latest.durationMs)}, ${formatShortDate(overview.latest.startedAt)}.`
     : null;
@@ -81,7 +83,7 @@ function buildBriefingCopy(
     gap?.nextStep ??
     overview.latest?.nextStep ??
     "Run one focused round and make every answer end with a concrete outcome.";
-  const summaryText = `Maya would put it simply: ${trend} Your strongest signal is ${strongest}. The repeat gap is ${gapLabel}.`;
+  const summaryText = `${teacherName} would put it simply: ${trend} Your strongest signal is ${strongest}. The repeat gap is ${gapLabel}.`;
   const competencyBars = overview.competencies
     .filter((item) => item.answered > 0)
     .slice()
@@ -184,6 +186,7 @@ export function ReportBriefingStage({
   overview: ReportsOverview;
   candidate: ReportCandidate;
 }) {
+  const teacher = useWorkspaceTeacher();
   const [phase, setPhase] = useState<0 | 1 | 2 | 3>(0);
   const [spokenPhase, setSpokenPhase] = useState<2 | 3 | null>(null);
   const [reportVoiceStarted, setReportVoiceStarted] = useState(false);
@@ -191,7 +194,10 @@ export function ReportBriefingStage({
   const unlockInFlight = useRef(false);
   const { state, speak, awaitingGesture, setAwaitingGesture } = useMayaVoice();
   const speaking = state === "speaking";
-  const briefing = useMemo(() => buildBriefingCopy(overview, candidate), [candidate, overview]);
+  const briefing = useMemo(
+    () => buildBriefingCopy(overview, candidate, teacher.name),
+    [candidate, overview, teacher.name]
+  );
 
   const startSpokenPhase = useCallback(
     (targetPhase: 2 | 3) => {
@@ -288,7 +294,7 @@ export function ReportBriefingStage({
           <div className="min-h-[5.5rem] w-full">
             {phase === 0 ? (
               <section key="reviewing" className="identity-stage-in w-full">
-                <p className="blueprint-label text-cream/36">Reports with Maya</p>
+                <p className="blueprint-label text-cream/36">Reports with {teacher.name}</p>
                 <div className="mt-4 flex h-9 items-center justify-start gap-1.5">
                   <InlineWaveLoader />
                 </div>
@@ -405,7 +411,7 @@ export function ReportBriefingStage({
             {awaitingGesture ? <VoiceUnlockNudge /> : null}
             <p className="mx-auto max-w-3xl text-[clamp(1.85rem,3.8vw,3.45rem)] font-semibold leading-[1.05] tracking-tight text-cream lg:mx-0">
               <WordReveal
-                text="Maya has prepared a report for you."
+                text={`${teacher.name} has prepared a report for you.`}
                 active
                 delay={140}
                 stagger={120}
@@ -441,6 +447,7 @@ export function ReportEmptyStage({
   firstName: string;
   exhausted: boolean;
 }) {
+  const teacher = useWorkspaceTeacher();
   return (
     <div className="relative z-10 mx-auto flex min-h-[calc(100svh-11rem)] w-full max-w-3xl flex-col items-center justify-center py-8 text-center">
       <div className="relative mx-auto w-full max-w-[26rem]">
@@ -468,8 +475,8 @@ export function ReportEmptyStage({
               <WordReveal
                 text={
                   firstName
-                    ? `Maya is ready when you are, ${firstName}.`
-                    : "Maya is ready when you are."
+                    ? `${teacher.name} is ready when you are, ${firstName}.`
+                    : `${teacher.name} is ready when you are.`
                 }
                 active
                 delay={120}
@@ -510,14 +517,15 @@ export function ReportEmptyStage({
 }
 
 function VoiceUnlockNudge() {
+  const teacher = useWorkspaceTeacher();
   return (
     <button
       type="button"
       className="report-action-panel mb-5 inline-flex items-center gap-2 rounded-full border border-cream/20 bg-cream/[0.055] px-4 py-2 text-sm font-medium text-cream/72 transition hover:border-cream/30 hover:bg-cream/[0.08] hover:text-cream"
-      aria-label="Tap to hear Maya"
+      aria-label={`Tap to hear ${teacher.name}`}
     >
       <Volume2 size={15} strokeWidth={1.8} aria-hidden="true" />
-      Tap to hear Maya
+      Tap to hear {teacher.name}
     </button>
   );
 }

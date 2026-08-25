@@ -26,7 +26,12 @@ import {
   SelectChip,
   StoryRow
 } from "./candidate-profile-editor-fields";
-import { fieldClass, focusOptions, levelOptions, roleOptions } from "./candidate-profile-editor-data";
+import {
+  fieldClass,
+  focusOptions,
+  levelOptions,
+  roleOptions
+} from "./candidate-profile-editor-data";
 import { ProfileHero } from "./candidate-profile-editor-profile";
 import {
   CardPattern,
@@ -209,10 +214,10 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
             </button>
             <p className="blueprint-label mt-8 text-cream/35">Interview memory</p>
             <h1 className="mt-3 max-w-4xl text-4xl font-semibold leading-[1.03] tracking-tight text-cream sm:text-5xl lg:text-6xl">
-              Shape the way Maya interviews you.
+              Shape the way your teacher interviews you.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-cream/58">
-              Keep the inputs short and concrete. Maya turns these signals into questions,
+              Keep the inputs short and concrete. Your teacher turns these signals into questions,
               follow-ups, and pressure points.
             </p>
           </div>

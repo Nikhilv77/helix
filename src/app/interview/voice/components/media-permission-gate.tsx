@@ -2,6 +2,7 @@
 
 import { ArrowRight, Camera, CameraOff, Check, Loader2, Mic, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
 type PermissionState = "idle" | "requesting" | "ready" | "skipped" | "error";
 
@@ -37,6 +38,7 @@ export function MediaPermissionGate({
   cameraOptional: boolean;
   onComplete: (result: MediaSetupResult) => void;
 }) {
+  const teacher = useWorkspaceTeacher();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const microphoneStreamRef = useRef<MediaStream | null>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
@@ -211,8 +213,8 @@ export function MediaPermissionGate({
                 {requesting
                   ? "Your browser may ask you to confirm access now."
                   : cameraOptional
-                    ? "Check your voice and framing before Maya joins."
-                    : "Check your voice before Maya joins."}
+                    ? `Check your voice and framing before ${teacher.name} joins.`
+                    : `Check your voice before ${teacher.name} joins.`}
               </p>
             </div>
           )}
@@ -225,15 +227,18 @@ export function MediaPermissionGate({
 
         <div className="flex min-w-0 flex-col p-5 sm:p-8 lg:p-10">
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-cream/42">
-            Before Maya joins
+            Before {teacher.name} joins
           </p>
-          <h1 id="media-setup-title" className="mt-2.5 text-[1.75rem] font-semibold leading-tight tracking-[-0.035em] text-cream sm:mt-3 sm:text-4xl">
+          <h1
+            id="media-setup-title"
+            className="mt-2.5 text-[1.75rem] font-semibold leading-tight tracking-[-0.035em] text-cream sm:mt-3 sm:text-4xl"
+          >
             Set up your interview.
           </h1>
           <p className="mt-3 text-[0.9375rem] leading-6 text-cream/58 sm:mt-4 sm:text-base sm:leading-7">
             {cameraOptional
               ? "Your microphone is required for the conversation. Your camera is an optional local self view and is never uploaded."
-              : "Your microphone is required for the conversation. We’ll check it here before Maya joins."}
+              : `Your microphone is required for the conversation. We’ll check it here before ${teacher.name} joins.`}
           </p>
 
           <div className="mt-5 min-w-0 overflow-hidden rounded-2xl bg-black/15 sm:mt-7">
@@ -245,7 +250,13 @@ export function MediaPermissionGate({
               state={microphoneState}
             />
             <PermissionRow
-              icon={cameraState === "skipped" ? <CameraOff size={20} aria-hidden="true" /> : <Camera size={20} aria-hidden="true" />}
+              icon={
+                cameraState === "skipped" ? (
+                  <CameraOff size={20} aria-hidden="true" />
+                ) : (
+                  <Camera size={20} aria-hidden="true" />
+                )
+              }
               label="Camera"
               detail={cameraLabel}
               state={cameraState}
@@ -266,7 +277,11 @@ export function MediaPermissionGate({
                   disabled={requesting}
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white disabled:cursor-wait disabled:opacity-55 outline-none"
                 >
-                  {requesting ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Mic size={16} aria-hidden="true" />}
+                  {requesting ? (
+                    <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Mic size={16} aria-hidden="true" />
+                  )}
                   {requesting
                     ? "Waiting for permission"
                     : cameraOptional
@@ -352,7 +367,10 @@ function PermissionRow({
         ) : state === "ready" ? (
           <Check size={18} aria-label="Ready" />
         ) : state === "error" ? (
-          <span className="h-2 w-2 rounded-full bg-[#ff8f8f] shadow-[0_0_10px_#ff8f8f]" aria-label="Needs attention" />
+          <span
+            className="h-2 w-2 rounded-full bg-[#ff8f8f] shadow-[0_0_10px_#ff8f8f]"
+            aria-label="Needs attention"
+          />
         ) : state === "skipped" ? (
           <span className="h-1.5 w-1.5 rounded-full bg-cream/25" aria-label="Skipped" />
         ) : (

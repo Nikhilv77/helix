@@ -9,6 +9,8 @@ import { HealthService } from "./health/health.service";
 import { InterviewDecider } from "./interview/decider";
 import { InterviewPlanner } from "./interview/planner";
 import { InterviewService } from "./interview/interview.service";
+import { PersonalizedInterviewPlanningService } from "./interview/personalized-interview-planning.service";
+import { PersonalizedInterviewPlanGenerator } from "./interview/personalized-plan-generator";
 import { PrismaSessionStore } from "./interview/session-store";
 import { CurriculumService } from "./curriculum/curriculum.service";
 import { DsaService } from "./dsa/dsa.service";
@@ -19,6 +21,9 @@ import { ProgressService } from "./progress/progress.service";
 import { FrontendRoadmapService } from "./roadmap/frontend-roadmap.service";
 import { ResumeService } from "./onboarding/resume/service";
 import { ResumeInterviewKitService } from "./onboarding/resume/interview-kit";
+import { PersonalizedPlanningStore } from "./interview/personalized-planning-store";
+import { PersonalizedPerformanceStore } from "./interview/personalized-performance-store";
+import { TechnicalAnswerEvaluator } from "./interview/technical-answer-evaluator";
 
 export interface AppContainer {
   config: AppConfigService;
@@ -33,6 +38,10 @@ export interface AppContainer {
   dsaInterviewEvaluator: DsaInterviewEvaluator;
   frontendRoadmapService: FrontendRoadmapService;
   progressService: ProgressService;
+  personalizedPlanningStore: PersonalizedPlanningStore;
+  personalizedPerformanceStore: PersonalizedPerformanceStore;
+  personalizedInterviewPlanGenerator: PersonalizedInterviewPlanGenerator;
+  personalizedInterviewPlanningService: PersonalizedInterviewPlanningService;
 }
 
 let container: AppContainer | null = null;
@@ -54,6 +63,9 @@ export function getAppContainer(): AppContainer {
     : geminiAi;
 
   const profileService = new ProfileService(prisma);
+  const personalizedPlanningStore = new PersonalizedPlanningStore(prisma, profileService);
+  const personalizedPerformanceStore = new PersonalizedPerformanceStore(prisma);
+  const personalizedInterviewPlanGenerator = new PersonalizedInterviewPlanGenerator();
 
   container = {
     config,
@@ -66,7 +78,20 @@ export function getAppContainer(): AppContainer {
     frontendRoadmapService: new FrontendRoadmapService(prisma),
     // Read-only aggregate over roadmap progress and attempt history.
     progressService: new ProgressService(prisma),
-    // The plan is written once per resume, so quality matters more than latency.
+    // Additive versioned storage for the dynamic interview-planning pipeline.
+    // Existing candidates are lazily backfilled from their saved resume.
+    personalizedPlanningStore,
+    personalizedPerformanceStore,
+    // Produces the five evidence-grounded blueprints before question generation.
+    personalizedInterviewPlanGenerator,
+    // Reuses or publishes the active immutable plan for the current inputs.
+    personalizedInterviewPlanningService: new PersonalizedInterviewPlanningService(
+      personalizedPlanningStore,
+      personalizedInterviewPlanGenerator,
+      profileService,
+      personalizedPerformanceStore
+    ),
+    // Curriculum generation remains independent from the adaptive interview plan.
     curriculumService: new CurriculumService(geminiAi),
     // Resume classification benefits from the document-oriented model path;
     // keep the low-latency interview model reserved for live conversation.
@@ -78,7 +103,8 @@ export function getAppContainer(): AppContainer {
       new InterviewPlanner(interviewAi),
       new InterviewDecider(interviewAi),
       new PrismaSessionStore(prisma),
-      config.interviewDailyLimit
+      config.interviewDailyLimit,
+      new TechnicalAnswerEvaluator(interviewAi)
     )
   };
 

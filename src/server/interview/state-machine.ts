@@ -49,6 +49,15 @@ export function elapsedMs(state: InterviewState, now: number): number {
   return Math.max(0, now - state.startedAt);
 }
 
+/** The persisted question wins; the blueprint policy is the session fallback. */
+export function followUpLimit(state: InterviewState): number {
+  return (
+    currentQuestion(state)?.maxFollowUps ??
+    state.setup.personalizedBlueprint?.followUpPolicy.maxPerQuestion ??
+    MAX_FOLLOW_UPS
+  );
+}
+
 export function advance(state: InterviewState, requested: DecisionAction, now: number): Advance {
   const elapsed = elapsedMs(state, now);
   // Caps depend on the round: a three-stage resume round needs longer than a
@@ -67,7 +76,7 @@ export function advance(state: InterviewState, requested: DecisionAction, now: n
   let action = requested;
   let forcedBy: ForcedReason | null = null;
 
-  if (action !== "move_on" && state.followUpCount >= MAX_FOLLOW_UPS) {
+  if (action !== "move_on" && state.followUpCount >= followUpLimit(state)) {
     action = "move_on";
     forcedBy = "follow-up-budget";
   }

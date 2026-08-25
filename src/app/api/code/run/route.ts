@@ -5,6 +5,7 @@ import { findQuestion } from "@/lib/dsa/dsa";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { getAppContainer } from "@/server/app-container";
+import { authenticatedOwnerId } from "@/server/interview/owner";
 import {
   buildTestCases,
   buildTestHarness,
@@ -16,17 +17,29 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 20;
 
-const runSchema = z.object({
-  code: z.string().trim().min(1).max(20_000),
-  language: z.enum(["python", "javascript", "cpp", "java"]),
-  /**
-   * A DSA question to check the code against. Omitted by rounds whose task is
-   * written for the candidate rather than drawn from the bank, which run the
-   * code as-is and report its output.
-   */
-  slug: z.string().trim().min(1).max(140).optional(),
-  stdin: z.string().max(10_000).default("")
-});
+const runSchema = z
+  .object({
+    code: z.string().trim().min(1).max(20_000),
+    language: z.enum(["python", "javascript", "cpp", "java"]),
+    /**
+     * A DSA question to check the code against. Omitted by rounds whose task is
+     * written for the candidate rather than drawn from the bank, which run the
+     * code as-is and report its output.
+     */
+    slug: z.string().trim().min(1).max(140).optional(),
+    stdin: z.string().max(10_000).default(""),
+    sessionId: z.string().uuid().optional(),
+    questionIndex: z.number().int().nonnegative().optional()
+  })
+  .superRefine((value, context) => {
+    if ((value.sessionId === undefined) !== (value.questionIndex === undefined)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["sessionId"],
+        message: "sessionId and questionIndex must be supplied together"
+      });
+    }
+  });
 
 // Verified against Judge0 CE's RapidAPI /languages response on 2026-08-19.
 const languages: Record<z.infer<typeof runSchema>["language"], { id: number; name: string }> = {
@@ -48,7 +61,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const config = getAppContainer().config;
+    const app = getAppContainer();
+    const config = app.config;
     if (!config.rapidApiKey) {
       throw new ApiRouteError(
         503,
@@ -120,7 +134,7 @@ export async function POST(request: NextRequest) {
       .join("\n")
       .trim();
 
-    return apiSuccess({
+    const data = {
       language: language.name,
       status: !slug
         ? (result.status?.description ?? "Unknown")
@@ -134,7 +148,29 @@ export async function POST(request: NextRequest) {
       time: result.time ?? null,
       memory: result.memory ?? null,
       tests
-    });
+    };
+
+    if (parsed.data.sessionId !== undefined && parsed.data.questionIndex !== undefined) {
+      await app.interviewService.recordCodeExecution(
+        authenticatedOwnerId(userId),
+        parsed.data.sessionId,
+        parsed.data.questionIndex,
+        {
+          language: data.language,
+          status: data.status,
+          accepted: data.accepted,
+          testsPassed: passedCount,
+          testCount: tests.length,
+          compileOutput: data.compileOutput.slice(0, 2_000),
+          stderr: data.stderr.slice(0, 2_000),
+          time: data.time,
+          memory: data.memory,
+          recordedAt: Date.now()
+        }
+      );
+    }
+
+    return apiSuccess(data);
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   }

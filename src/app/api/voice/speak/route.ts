@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { auth } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { personaById } from "@/lib/avatars/personas";
 import { getAppContainer } from "@/server/app-container";
 import { Logger } from "@/server/common/logger";
 import { apiError } from "@/server/http/api-response";
@@ -24,7 +25,13 @@ const audioCache = new Map<string, Buffer>();
 const logger = new Logger("VoiceSpeak");
 
 const speakSchema = z.object({
-  text: z.string().trim().min(1).max(1_200)
+  text: z.string().trim().min(1).max(1_200),
+  /**
+   * A persona id, never a raw provider model. The client chooses who speaks;
+   * the mapping to a Deepgram voice stays here, so no caller-supplied string
+   * can reach the provider as a model parameter.
+   */
+  persona: z.string().trim().max(60).optional()
 });
 
 /**
@@ -37,7 +44,10 @@ export async function GET(request: NextRequest) {
     const { userId } = await auth();
     if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
 
-    const parsed = speakSchema.safeParse({ text: request.nextUrl.searchParams.get("text") ?? "" });
+    const parsed = speakSchema.safeParse({
+      text: request.nextUrl.searchParams.get("text") ?? "",
+      persona: request.nextUrl.searchParams.get("persona") ?? undefined
+    });
     if (!parsed.success) {
       throw new ApiRouteError(
         400,
@@ -56,7 +66,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const model = config.deepgramTtsModel;
+    // An unknown id falls back to the configured default rather than failing:
+    // a retired persona should still be able to speak.
+    const model = personaById(parsed.data.persona)?.voice ?? config.deepgramTtsModel;
     const cacheKey = createHash("sha256").update(`${model}:${parsed.data.text}`).digest("hex");
     const cached = audioCache.get(cacheKey);
     if (cached) return audioResponse(cached, "hit");

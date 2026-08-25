@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import { useMayaVoice, voiceUrl } from "@/lib/voice/use-maya-voice";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import type { BriefBeat, ChapterBrief } from "@/lib/roadmap/chapter-brief";
 import type { FrontendRoadmapChapterDetail } from "@/lib/roadmap/roadmap";
 
@@ -37,6 +38,7 @@ export function ChapterSession({
   beats: BriefBeat[];
   detail: FrontendRoadmapChapterDetail | null;
 }) {
+  const teacher = useWorkspaceTeacher();
   // Always open on the briefing. Roadmap "attempts" include merely opening a
   // question page, so they cannot tell us whether this session was ever
   // actually taken — only having watched it can, and that is remembered here.
@@ -115,10 +117,10 @@ export function ChapterSession({
   useEffect(() => {
     const upcoming = beats[step + 1];
     if (!upcoming || muted) return;
-    const warm = new Audio(voiceUrl(lineFor(upcoming)));
+    const warm = new Audio(voiceUrl(lineFor(upcoming), teacher.id));
     warm.preload = "auto";
     warm.load();
-  }, [beats, lineFor, muted, step]);
+  }, [beats, lineFor, muted, step, teacher.id]);
 
   useEffect(() => {
     if (phase === "solve") stop();
@@ -171,6 +173,7 @@ export function ChapterSession({
         />
         <div className="grid gap-4 lg:grid-cols-[minmax(18rem,21rem)_minmax(0,1fr)] lg:items-stretch">
           <MayaColumn
+            teacherName={teacher.name}
             speaking={speaking}
             muted={muted}
             blocked={awaitingGesture}
@@ -248,12 +251,14 @@ function Breadcrumb({ title }: { title: string }) {
 }
 
 function MayaColumn({
+  teacherName,
   speaking,
   muted,
   blocked,
   onToggleMute,
   onWake
 }: {
+  teacherName: string;
   speaking: boolean;
   muted: boolean;
   blocked: boolean;
@@ -283,7 +288,7 @@ function MayaColumn({
             <Sparkles size={15} aria-hidden="true" />
           </span>
           <div>
-            <p className="text-[14px] font-semibold leading-tight text-cream">Maya</p>
+            <p className="text-[14px] font-semibold leading-tight text-cream">{teacherName}</p>
             <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-cream/45">
               Taking this session
             </p>
@@ -292,7 +297,7 @@ function MayaColumn({
         <button
           type="button"
           onClick={onToggleMute}
-          aria-label={muted ? "Unmute Maya" : "Mute Maya"}
+          aria-label={muted ? `Unmute ${teacherName}` : `Mute ${teacherName}`}
           className="grid h-8 w-8 place-items-center rounded-lg text-cream/55 transition hover:bg-cream/[0.1] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/40"
         >
           {muted ? (
@@ -313,7 +318,7 @@ function MayaColumn({
             className="inline-flex items-center gap-2 rounded-full bg-cream px-3.5 py-1.5 text-[12px] font-semibold text-[#171a16] transition hover:bg-white"
           >
             <Volume2 size={13} aria-hidden="true" />
-            Hear Maya
+            Hear {teacherName}
           </button>
         ) : (
           <span
@@ -466,6 +471,7 @@ function SolvePanel({
   detail: FrontendRoadmapChapterDetail | null;
   onReplayBriefing: () => void;
 }) {
+  const teacher = useWorkspaceTeacher();
   // Without saved progress we still list the chapter, just without state.
   const rows = useMemo(() => {
     if (detail?.questions.length) return detail.questions;
@@ -551,7 +557,7 @@ function SolvePanel({
       ) : (
         <div className="mt-5 flex items-center gap-2.5 rounded-xl bg-[var(--workspace-accent-soft)] p-4 text-[13.5px] font-medium text-[var(--workspace-accent)]">
           <Check size={16} aria-hidden="true" />
-          Chapter complete. Maya has moved your path to the next pattern.
+          Chapter complete. {teacher.name} has moved your path to the next pattern.
         </div>
       )}
     </>

@@ -6,6 +6,7 @@ import {
   Atom,
   BadgeCheck,
   CircleGauge,
+  Clock3,
   CodeXml,
   Cpu,
   FileCode2,
@@ -13,28 +14,22 @@ import {
   Rocket
 } from "lucide-react";
 import { DocumentTitle } from "@/components/document-title";
-import { FRONTEND_SESSIONS } from "@/lib/roadmap/frontend-plan";
-import type { FrontendRoadmapHome, FrontendRoadmapSession } from "@/lib/roadmap/roadmap";
+import {
+  interviewRoadmapSessions,
+  roadmapSessionHref,
+  type InterviewRoadmapSession
+} from "@/lib/interviews/interview-roadmap-sessions";
+import type { PersonalizedInterviewPlan } from "@/lib/interviews/personalized-plan";
+import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
 import type { CandidateProfile, InterviewHistoryItem } from "@/lib/shared/types";
 
 interface InterviewsViewProps {
   quota: { used: number; limit: number };
   sessions: InterviewHistoryItem[];
   profile: CandidateProfile;
+  personalizedPlan: PersonalizedInterviewPlan | null;
   roadmap: FrontendRoadmapHome | null;
 }
-
-type InterviewRoadmapSession = Pick<
-  FrontendRoadmapSession,
-  | "id"
-  | "order"
-  | "title"
-  | "purpose"
-  | "covers"
-  | "totalQuestions"
-  | "completedQuestions"
-  | "progressPercent"
->;
 
 const sessionIcons: Record<string, LucideIcon> = {
   "frontend-dsa": CodeXml,
@@ -42,14 +37,29 @@ const sessionIcons: Record<string, LucideIcon> = {
   "computer-fundamentals": Cpu,
   "production-ui-quality": CircleGauge,
   "resume-behavioral-defense": BadgeCheck,
-  "final-frontend-mock": Rocket
+  "final-frontend-mock": Rocket,
+  "problem-solving": CodeXml,
+  "core-technical": Atom,
+  "applied-engineering": Cpu,
+  "architecture-system-design": CircleGauge,
+  "final-mock": Rocket
 };
 
-export function InterviewsView({ quota, sessions, profile, roadmap }: InterviewsViewProps) {
+export function InterviewsView({
+  quota,
+  sessions,
+  profile,
+  personalizedPlan,
+  roadmap
+}: InterviewsViewProps) {
   const remaining = Math.max(0, quota.limit - quota.used);
   const exhausted = remaining === 0;
   const active = sessions.find((session) => session.status === "in_progress");
-  const roadmapSessions = roadmap?.sessions.length ? roadmap.sessions : fallbackRoadmapSessions();
+  const roadmapSessions = interviewRoadmapSessions({
+    personalizedPlan,
+    roadmap,
+    history: sessions
+  });
   const firstName = profile.resume?.fullName?.trim().split(/\s+/)[0] ?? "";
   const introCopy = firstName
     ? `${firstName}, choose the interview session that feels most useful right now. Each round is shaped around your saved profile and a focused agenda, so you can practise with intent and leave knowing exactly what to sharpen next.`
@@ -117,7 +127,7 @@ export function InterviewsView({ quota, sessions, profile, roadmap }: Interviews
             ))
           ) : (
             <p className="col-span-full rounded-2xl bg-[#17181b] px-5 py-8 text-center text-sm leading-6 text-cream/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
-              Maya is still preparing your session plan. Please check back in a moment.
+              Your teacher is still preparing your session plan. Please check back in a moment.
             </p>
           )}
         </div>
@@ -135,12 +145,30 @@ function RoadmapSessionCard({
   disabled: boolean;
   delay: number;
 }) {
-  const SessionIcon = sessionIcons[session.id] ?? FileCode2;
-  const started = session.completedQuestions > 0;
+  const SessionIcon = sessionIcons[session.kind ?? session.id] ?? FileCode2;
+  const statusLabel =
+    session.attemptStatus === "in_progress"
+      ? `${session.completedQuestions}/${session.totalQuestions} complete`
+      : session.updatedPracticeAvailable
+        ? "Completed · Updated round"
+        : session.attemptStatus === "completed"
+          ? "Completed"
+          : session.attemptStatus === "expired"
+            ? "Previous attempt saved"
+            : null;
+  const actionLabel = session.resumeSessionId
+    ? "Resume session"
+    : session.updatedPracticeAvailable
+      ? "Try updated session"
+      : session.attemptStatus === "completed"
+        ? "Practice again"
+        : session.attemptStatus === "expired"
+          ? "Start again"
+          : "Start session";
 
   return (
     <Link
-      href={disabled ? "#" : roadmapSessionHref(session.id)}
+      href={disabled ? "#" : roadmapSessionHref(session)}
       aria-disabled={disabled}
       style={{ "--interview-delay": `${delay}ms` } as CSSProperties}
       className={[
@@ -157,9 +185,43 @@ function RoadmapSessionCard({
       </h2>
       <p className="mt-4 max-w-[19rem] text-base leading-7 text-cream/72">{session.purpose}</p>
 
+      {statusLabel ? (
+        <span className="mt-5 w-fit rounded-full border border-[color-mix(in_srgb,var(--workspace-accent)_28%,transparent)] bg-[color-mix(in_srgb,var(--workspace-accent)_9%,transparent)] px-3 py-1.5 text-[11px] font-medium text-cream/68">
+          {statusLabel}
+        </span>
+      ) : null}
+
+      {session.durationMinutes || session.difficulty ? (
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          {session.durationMinutes ? (
+            <span className="pill inline-flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-cream/55">
+              <Clock3 size={11} aria-hidden="true" /> {session.durationMinutes} min
+            </span>
+          ) : null}
+          {session.difficulty ? (
+            <span className="pill px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-cream/55">
+              {session.difficulty}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
+      {session.covers.length ? (
+        <ul className="mt-5 flex flex-wrap gap-2" aria-label="Session topics">
+          {session.covers.slice(0, 4).map((topic) => (
+            <li
+              key={topic}
+              className="rounded-full border border-white/[0.08] bg-white/[0.035] px-2.5 py-1 text-[11px] text-cream/48"
+            >
+              {topic}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
       <div className="relative z-10 mt-auto pt-9">
         <span className="interview-session-link inline-flex items-center gap-2 text-base font-medium text-cream/88 transition-colors group-hover:text-cream">
-          {started ? "Continue session" : "Start session"}
+          {actionLabel}
           <ArrowRight
             size={17}
             aria-hidden="true"
@@ -169,25 +231,4 @@ function RoadmapSessionCard({
       </div>
     </Link>
   );
-}
-
-function fallbackRoadmapSessions(): InterviewRoadmapSession[] {
-  return FRONTEND_SESSIONS.map((session) => ({
-    id: session.id,
-    order: session.order,
-    title: session.title,
-    purpose: session.purpose,
-    covers: session.covers,
-    totalQuestions: session.id === "frontend-dsa" ? 123 : 0,
-    completedQuestions: 0,
-    progressPercent: 0
-  }));
-}
-
-function roadmapSessionHref(id: string): string {
-  if (id === "frontend-dsa") return "/interview/dsa";
-  if (id === "resume-behavioral-defense") return "/interview/resume";
-  if (id === "computer-fundamentals") return "/interview/fundamentals";
-  const params = new URLSearchParams({ roadmapSession: id });
-  return `/interview?${params.toString()}`;
 }

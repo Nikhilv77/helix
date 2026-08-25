@@ -8,6 +8,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { WorkspaceShell } from "@/components/workspace/chrome/workspace-shell";
 import { AuthSync } from "@/components/workspace/chrome/auth-sync";
+import { WorkspaceTeacherProvider } from "@/lib/avatars/teacher-context";
 import { ScrollRestoration } from "@/components/scroll-restoration";
 import { clerkAppearance } from "@/lib/auth/clerk-theme";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared/seo";
@@ -156,22 +157,28 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // URL remains public whether or not a visitor is authenticated.
   const showWorkspaceShell = Boolean(userId && workspaceRoute && !welcomeHome);
   let initialWorkspaceAccent: WorkspaceAccent | undefined;
+  let initialTeacherId: string | null = null;
 
-  if (userId && workspaceRoute && !welcomeHome) {
+  if (userId) {
     const profile = await getAppContainer()
       .profileService.get(authenticatedOwnerId(userId))
       .catch(() => null);
-    if (!profile?.onboardingCompletedAt) redirect("/onboarding");
-    initialWorkspaceAccent = profile.workspaceAccent;
+    if (workspaceRoute && !welcomeHome && !profile?.onboardingCompletedAt) redirect("/onboarding");
+    if (profile) {
+      initialTeacherId = profile.teacherId;
+      if (workspaceRoute && !welcomeHome) initialWorkspaceAccent = profile.workspaceAccent;
+    }
   }
 
   const app = (
     <>
       <ScrollRestoration />
       {showWorkspaceShell ? (
-        <WorkspaceShell initialAccent={initialWorkspaceAccent}>{children}</WorkspaceShell>
+        <WorkspaceTeacherProvider teacherId={initialTeacherId}>
+          <WorkspaceShell initialAccent={initialWorkspaceAccent}>{children}</WorkspaceShell>
+        </WorkspaceTeacherProvider>
       ) : userId ? (
-        children
+        <WorkspaceTeacherProvider teacherId={initialTeacherId}>{children}</WorkspaceTeacherProvider>
       ) : (
         <>
           <AuthSync />
