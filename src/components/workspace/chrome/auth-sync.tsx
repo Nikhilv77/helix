@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { reconcileInterviewOwner } from "@/lib/api/api-client";
 
 /**
  * Repairs a layout that rendered without the workspace chrome.
@@ -24,7 +25,9 @@ export function AuthSync() {
     if (!isLoaded || !isSignedIn || repaired.current) return;
     // Once only — a refresh that does not resolve it must not become a loop.
     repaired.current = true;
-    router.refresh();
+    void reconcileInterviewOwner()
+      .catch(() => undefined)
+      .finally(() => router.refresh());
   }, [isLoaded, isSignedIn, router]);
 
   return null;

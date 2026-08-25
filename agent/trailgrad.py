@@ -6,6 +6,7 @@ module only moves text back and forth.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 
@@ -38,9 +39,18 @@ class SessionSnapshot:
 
 
 class TrailgradClient:
-    def __init__(self, session: aiohttp.ClientSession) -> None:
+    def __init__(
+        self,
+        session: aiohttp.ClientSession,
+        interview_capability: str | None = None,
+    ) -> None:
         self._http = session
         self._base = TRAILGRAD.api_base_url.rstrip("/")
+        self._headers = (
+            {"Authorization": f"Bearer {interview_capability}"}
+            if interview_capability
+            else None
+        )
 
     async def get_session(self, session_id: str) -> SessionSnapshot:
         payload = await self._get(f"/api/interview/{session_id}")
@@ -63,20 +73,32 @@ class TrailgradClient:
     async def decide(
         self,
         session_id: str,
+        turn_id: str,
         answer: str,
         start_ms: int,
         end_ms: int,
     ) -> Decision:
         """One turn. The response is spoken verbatim — the agent never writes."""
-        payload = await self._post(
-            "/api/interview/decide",
-            {
-                "sessionId": session_id,
-                "userAnswer": answer,
-                "startMs": start_ms,
-                "endMs": end_ms,
-            },
-        )
+        body = {
+            "sessionId": session_id,
+            "turnId": turn_id,
+            "userAnswer": answer,
+            "startMs": start_ms,
+            "endMs": end_ms,
+        }
+        for attempt in range(3):
+            try:
+                payload = await self._post("/api/interview/decide", body)
+                break
+            except TrailgradApiError as error:
+                if error.code != "ANSWER_IN_PROGRESS" or attempt == 2:
+                    raise
+            except (aiohttp.ClientError, asyncio.TimeoutError):
+                if attempt == 2:
+                    raise
+            await asyncio.sleep(0.2 * (attempt + 1))
+        else:  # pragma: no cover - the loop either breaks or raises
+            raise RuntimeError("interview decision retry exhausted")
 
         return Decision(
             action=payload["action"],
@@ -90,7 +112,9 @@ class TrailgradClient:
 
     async def _get(self, path: str) -> dict:
         async with self._http.get(
-            f"{self._base}{path}", timeout=aiohttp.ClientTimeout(total=TRAILGRAD.request_timeout_s)
+            f"{self._base}{path}",
+            headers=self._headers,
+            timeout=aiohttp.ClientTimeout(total=TRAILGRAD.request_timeout_s),
         ) as response:
             return self._unwrap(await response.json(), path)
 
@@ -98,6 +122,7 @@ class TrailgradClient:
         async with self._http.post(
             f"{self._base}{path}",
             json=body,
+            headers=self._headers,
             timeout=aiohttp.ClientTimeout(total=TRAILGRAD.request_timeout_s),
         ) as response:
             return self._unwrap(await response.json(), path)

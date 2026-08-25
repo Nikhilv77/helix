@@ -30,7 +30,7 @@ describe("GeminiProvider", () => {
   function createConfig(
     overrides: Partial<ConstructorParameters<typeof AppConfigService>[0]> = {}
   ) {
-    return new AppConfigService({
+    const config: ConstructorParameters<typeof AppConfigService>[0] = {
       nodeEnv: "test",
       port: 3000,
       databaseUrl: "postgresql://postgres:postgres@localhost:5432/ai_system_design",
@@ -50,8 +50,15 @@ describe("GeminiProvider", () => {
       knowledgeEmbeddingBatchSize: 4,
       retrievalDefaultTopK: 5,
       retrievalMinSimilarity: 0.2,
-      ...overrides
-    });
+      interviewDailyLimit: 2,
+      groqDeciderModel: "test-groq-model",
+      livekitAgentName: "test-agent",
+      judge0Url: "https://judge0.example.com",
+      rapidApiKey: undefined,
+      rapidApiHost: "judge0.example.com"
+    };
+    Object.assign(config, overrides);
+    return new AppConfigService(config);
   }
 
   function createRequest(overrides: Partial<GenerateStructuredRequest<Output>> = {}) {

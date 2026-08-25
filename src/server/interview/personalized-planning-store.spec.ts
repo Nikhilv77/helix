@@ -71,6 +71,7 @@ function candidateProfile(candidateResume: CandidateResume | null = resume()): C
     coverImage: null,
     profileImage: null,
     workspaceAccent: "ember",
+    teacherId: null,
     updatedAt: NOW,
     completeness: 80,
     onboardingCompletedAt: NOW,

@@ -12,6 +12,7 @@ import {
   parseTestResults,
   resultMarker
 } from "@/server/dsa/code-test-harness";
+import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
 
     const app = getAppContainer();
     const config = app.config;
+    const ownerId = authenticatedOwnerId(userId);
     if (!config.rapidApiKey) {
       throw new ApiRouteError(
         503,
@@ -83,13 +85,24 @@ export async function POST(request: NextRequest) {
       const question = findQuestion(slug)?.question;
       if (!question) throw new ApiRouteError(404, "DSA_QUESTION_NOT_FOUND", "Question not found.");
       if (!question.examples?.length) {
-        throw new ApiRouteError(422, "TEST_CASES_UNAVAILABLE", "This question has no runnable test cases yet.");
+        throw new ApiRouteError(
+          422,
+          "TEST_CASES_UNAVAILABLE",
+          "This question has no runnable test cases yet."
+        );
       }
 
-      const functionName = question.slug.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+      const functionName = question.slug.replace(/-([a-z])/g, (_, letter: string) =>
+        letter.toUpperCase()
+      );
       try {
         testCases = buildTestCases(question.examples, slug);
-        sourceCode = buildTestHarness(parsed.data.code, parsed.data.language, functionName, testCases);
+        sourceCode = buildTestHarness(
+          parsed.data.code,
+          parsed.data.language,
+          functionName,
+          testCases
+        );
       } catch (error) {
         throw new ApiRouteError(
           422,
@@ -101,76 +114,92 @@ export async function POST(request: NextRequest) {
 
     const language = languages[parsed.data.language];
 
-    const submissionResponse = await fetch(
-      `${config.judge0Url}/submissions?base64_encoded=true&wait=true`,
+    const guard = getSharedGuard(config);
+    await guard.enforce(RATE_LIMIT_POLICIES.codeExecution, ownerId);
+    const lease = await guard.acquire(
       {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          language_id: language.id,
-          source_code: Buffer.from(sourceCode, "utf8").toString("base64"),
-          stdin: Buffer.from(parsed.data.stdin, "utf8").toString("base64"),
-          cpu_time_limit: 5,
-          wall_time_limit: 10,
-          memory_limit: 256_000,
-          max_processes_and_or_threads: 64,
-          enable_network: false
-        }),
-        signal: AbortSignal.timeout(15_000)
-      }
+        namespace: "code-run",
+        ttlMs: 25_000,
+        code: "CODE_RUN_IN_PROGRESS",
+        message: "Your previous code run is still in progress."
+      },
+      ownerId
     );
-    const result = (await submissionResponse.json().catch(() => null)) as JudgeResult | null;
-    if (!submissionResponse.ok || !result) {
-      throw new ApiRouteError(502, "CODE_RUN_FAILED", "Judge0 could not execute the submission.");
-    }
 
-    const stdout = decodeJudgeOutput(result.stdout);
-    const tests = slug ? parseTestResults(stdout, testCases) : [];
-    const passedCount = tests.filter((test) => test.passed).length;
-    const executionAccepted = result.status?.description === "Accepted";
-    const visibleOutput = stdout
-      .split(/\r?\n/)
-      .filter((line) => !line.startsWith(resultMarker()))
-      .join("\n")
-      .trim();
-
-    const data = {
-      language: language.name,
-      status: !slug
-        ? (result.status?.description ?? "Unknown")
-        : executionAccepted
-          ? `${passedCount}/${tests.length} tests passed`
-          : (result.status?.description ?? "Unknown"),
-      accepted: executionAccepted && (slug ? passedCount === tests.length : true),
-      stdout: visibleOutput,
-      stderr: decodeJudgeOutput(result.stderr),
-      compileOutput: decodeJudgeOutput(result.compile_output),
-      time: result.time ?? null,
-      memory: result.memory ?? null,
-      tests
-    };
-
-    if (parsed.data.sessionId !== undefined && parsed.data.questionIndex !== undefined) {
-      await app.interviewService.recordCodeExecution(
-        authenticatedOwnerId(userId),
-        parsed.data.sessionId,
-        parsed.data.questionIndex,
+    try {
+      const submissionResponse = await fetch(
+        `${config.judge0Url}/submissions?base64_encoded=true&wait=true`,
         {
-          language: data.language,
-          status: data.status,
-          accepted: data.accepted,
-          testsPassed: passedCount,
-          testCount: tests.length,
-          compileOutput: data.compileOutput.slice(0, 2_000),
-          stderr: data.stderr.slice(0, 2_000),
-          time: data.time,
-          memory: data.memory,
-          recordedAt: Date.now()
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            language_id: language.id,
+            source_code: Buffer.from(sourceCode, "utf8").toString("base64"),
+            stdin: Buffer.from(parsed.data.stdin, "utf8").toString("base64"),
+            cpu_time_limit: 5,
+            wall_time_limit: 10,
+            memory_limit: 256_000,
+            max_processes_and_or_threads: 64,
+            enable_network: false
+          }),
+          signal: AbortSignal.timeout(15_000)
         }
       );
-    }
+      const result = (await submissionResponse.json().catch(() => null)) as JudgeResult | null;
+      if (!submissionResponse.ok || !result) {
+        throw new ApiRouteError(502, "CODE_RUN_FAILED", "Judge0 could not execute the submission.");
+      }
 
-    return apiSuccess(data);
+      const stdout = decodeJudgeOutput(result.stdout);
+      const tests = slug ? parseTestResults(stdout, testCases) : [];
+      const passedCount = tests.filter((test) => test.passed).length;
+      const executionAccepted = result.status?.description === "Accepted";
+      const visibleOutput = stdout
+        .split(/\r?\n/)
+        .filter((line) => !line.startsWith(resultMarker()))
+        .join("\n")
+        .trim();
+
+      const data = {
+        language: language.name,
+        status: !slug
+          ? (result.status?.description ?? "Unknown")
+          : executionAccepted
+            ? `${passedCount}/${tests.length} tests passed`
+            : (result.status?.description ?? "Unknown"),
+        accepted: executionAccepted && (slug ? passedCount === tests.length : true),
+        stdout: visibleOutput,
+        stderr: decodeJudgeOutput(result.stderr),
+        compileOutput: decodeJudgeOutput(result.compile_output),
+        time: result.time ?? null,
+        memory: result.memory ?? null,
+        tests
+      };
+
+      if (parsed.data.sessionId !== undefined && parsed.data.questionIndex !== undefined) {
+        await app.interviewService.recordCodeExecution(
+          ownerId,
+          parsed.data.sessionId,
+          parsed.data.questionIndex,
+          {
+            language: data.language,
+            status: data.status,
+            accepted: data.accepted,
+            testsPassed: passedCount,
+            testCount: tests.length,
+            compileOutput: data.compileOutput.slice(0, 2_000),
+            stderr: data.stderr.slice(0, 2_000),
+            time: data.time,
+            memory: data.memory,
+            recordedAt: Date.now()
+          }
+        );
+      }
+
+      return apiSuccess(data);
+    } finally {
+      await lease.release();
+    }
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   }

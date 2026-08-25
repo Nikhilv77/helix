@@ -28,6 +28,12 @@ export function apiError(error: unknown, path: string): NextResponse {
 
   const normalized = normalizeError(error);
 
+  const retryAfterMs = normalized.details.retryAfterMs;
+  const headers =
+    normalized.statusCode === 429 && typeof retryAfterMs === "number"
+      ? { "retry-after": String(Math.max(1, Math.ceil(retryAfterMs / 1_000))) }
+      : undefined;
+
   return NextResponse.json(
     {
       success: false,
@@ -39,7 +45,7 @@ export function apiError(error: unknown, path: string): NextResponse {
       timestamp: new Date().toISOString(),
       path
     },
-    { status: normalized.statusCode }
+    { status: normalized.statusCode, headers }
   );
 }
 

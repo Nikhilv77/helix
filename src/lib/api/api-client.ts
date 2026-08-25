@@ -85,11 +85,15 @@ export function startInterview(setup: InterviewSetup): Promise<StartResponse> {
 
 export function submitAnswer(params: {
   sessionId: string;
+  turnId?: string;
   userAnswer: string;
   startMs: number;
   endMs: number;
 }): Promise<DecideResponse> {
-  return request<DecideResponse>("/api/interview/decide", { method: "POST", body: params });
+  return request<DecideResponse>("/api/interview/decide", {
+    method: "POST",
+    body: { ...params, turnId: params.turnId ?? crypto.randomUUID() }
+  });
 }
 
 export function getSession(sessionId: string): Promise<SessionResponse> {
@@ -102,6 +106,10 @@ export function endInterview(sessionId: string): Promise<SessionResponse> {
 
 export function getProfile(): Promise<CandidateProfile> {
   return request<CandidateProfile>("/api/profile");
+}
+
+export function reconcileInterviewOwner(): Promise<{ moved: number }> {
+  return request<{ moved: number }>("/api/interview/reconcile-owner", { method: "POST" });
 }
 
 export function getPersonalizedInterviewPlan(): Promise<PersonalizedInterviewPlan> {

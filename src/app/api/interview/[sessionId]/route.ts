@@ -5,6 +5,7 @@ import { ApiRouteError } from "@/server/http/api-error";
 import { currentQuestion } from "@/server/interview/state-machine";
 import { roundCaps, type InterviewState } from "@/server/interview/types";
 import { findFundamentalsQuestion } from "@/lib/fundamentals/fundamentals";
+import { authorizeInterviewSession } from "@/server/interview/session-access";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,13 @@ type RouteContext = { params: Promise<{ sessionId: string }> | { sessionId: stri
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const { sessionId } = await context.params;
-    const state = await getAppContainer().interviewService.get(requireUuid(sessionId));
+    const id = requireUuid(sessionId);
+    const app = getAppContainer();
+    const access = await authorizeInterviewSession(request, app.config, id, "read");
+    const state =
+      access.kind === "owner"
+        ? await app.interviewService.getOwnedActive(access.ownerId, id)
+        : await app.interviewService.get(id);
     return apiSuccess(serialise(state));
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
@@ -24,7 +31,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     const { sessionId } = await context.params;
-    const state = await getAppContainer().interviewService.end(requireUuid(sessionId));
+    const id = requireUuid(sessionId);
+    const app = getAppContainer();
+    const access = await authorizeInterviewSession(request, app.config, id, "end");
+    const state =
+      access.kind === "owner"
+        ? await app.interviewService.endOwned(access.ownerId, id)
+        : await app.interviewService.end(id);
     return apiSuccess(serialise(state));
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);

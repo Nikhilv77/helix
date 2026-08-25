@@ -3,6 +3,9 @@ import { EnvironmentConfig } from "./environment.schema";
 type AppConfigInput = Omit<
   EnvironmentConfig,
   | "clerkSecretKey"
+  | "interviewAuthSecret"
+  | "upstashRedisRestUrl"
+  | "upstashRedisRestToken"
   | "groqApiKey"
   | "livekitUrl"
   | "livekitApiKey"
@@ -11,6 +14,9 @@ type AppConfigInput = Omit<
   | "deepgramTtsModel"
 > & {
   clerkSecretKey?: EnvironmentConfig["clerkSecretKey"];
+  interviewAuthSecret?: EnvironmentConfig["interviewAuthSecret"];
+  upstashRedisRestUrl?: EnvironmentConfig["upstashRedisRestUrl"];
+  upstashRedisRestToken?: EnvironmentConfig["upstashRedisRestToken"];
   groqApiKey?: EnvironmentConfig["groqApiKey"];
   livekitUrl?: EnvironmentConfig["livekitUrl"];
   livekitApiKey?: EnvironmentConfig["livekitApiKey"];
@@ -100,6 +106,25 @@ export class AppConfigService {
 
   get interviewDailyLimit(): EnvironmentConfig["interviewDailyLimit"] {
     return this.config.interviewDailyLimit;
+  }
+
+  get upstashRedisRestUrl(): EnvironmentConfig["upstashRedisRestUrl"] {
+    return this.config.upstashRedisRestUrl;
+  }
+
+  get upstashRedisRestToken(): EnvironmentConfig["upstashRedisRestToken"] {
+    return this.config.upstashRedisRestToken;
+  }
+
+  /**
+   * Prefer a dedicated signing secret. Existing deployments can roll this out
+   * without downtime because their server-only Clerk or LiveKit secret remains
+   * a secure fallback until INTERVIEW_AUTH_SECRET is configured.
+   */
+  get interviewAuthSecret(): string | undefined {
+    return (
+      this.config.interviewAuthSecret ?? this.config.clerkSecretKey ?? this.config.livekitApiSecret
+    );
   }
 
   get groqApiKey(): EnvironmentConfig["groqApiKey"] {

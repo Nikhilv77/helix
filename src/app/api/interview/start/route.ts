@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
-import { resolveOwnerId } from "@/server/interview/owner";
+import { attachInterviewOwnerCookie, resolveInterviewOwner } from "@/server/interview/owner";
 import {
   INTENSITIES,
   LEVELS,
@@ -13,6 +13,7 @@ import {
   type Role
 } from "@/server/interview/types";
 import type { RoleFamily, SessionBlueprint } from "@/lib/interviews/personalized-plan";
+import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -43,47 +44,68 @@ export async function POST(request: NextRequest) {
     }
 
     const app = getAppContainer();
-    const ownerId = await resolveOwnerId(request, app.config);
-    const { blueprintId, planId, ...requestedSetup } = parsed.data;
-    if (blueprintId && !ownerId.startsWith("user:")) {
-      throw new ApiRouteError(
-        401,
-        "AUTH_REQUIRED",
-        "Sign in to launch a personalized interview session."
-      );
-    }
-    if (planId && !blueprintId) {
-      throw new ApiRouteError(
-        400,
-        "BLUEPRINT_REQUIRED",
-        "A plan ID can only be used with an interview blueprint."
-      );
-    }
+    const owner = await resolveInterviewOwner(request, app.config);
+    const { ownerId } = owner;
+    const guard = getSharedGuard(app.config);
+    await guard.enforce(RATE_LIMIT_POLICIES.interviewCreation, ownerId);
+    const creationLease = await guard.acquire(
+      {
+        namespace: "interview-create",
+        ttlMs: 65_000,
+        code: "INTERVIEW_CREATION_IN_PROGRESS",
+        message: "An interview is already being prepared for you."
+      },
+      ownerId
+    );
 
-    let setup: InterviewSetup = requestedSetup;
-    if (blueprintId) {
-      const selection = await app.personalizedInterviewPlanningService.blueprint(
-        ownerId,
-        blueprintId,
-        planId
-      );
-      setup = blueprintSetup(
-        requestedSetup,
-        selection.plan.id,
-        selection.blueprint,
-        selection.plan.sourceSnapshot.targetRole.family
-      );
-    }
-    const { state, utterance } = await app.interviewService.start(setup, ownerId);
+    try {
+      const { blueprintId, planId, ...requestedSetup } = parsed.data;
+      if (blueprintId && !ownerId.startsWith("user:")) {
+        throw new ApiRouteError(
+          401,
+          "AUTH_REQUIRED",
+          "Sign in to launch a personalized interview session."
+        );
+      }
+      if (planId && !blueprintId) {
+        throw new ApiRouteError(
+          400,
+          "BLUEPRINT_REQUIRED",
+          "A plan ID can only be used with an interview blueprint."
+        );
+      }
 
-    return apiSuccess({
-      sessionId: state.id,
-      phase: state.phase,
-      questionCount: state.plan.length,
-      questionIndex: state.questionIndex,
-      startedAt: state.startedAt,
-      utterance
-    });
+      let setup: InterviewSetup = requestedSetup;
+      if (blueprintId) {
+        const selection = await app.personalizedInterviewPlanningService.blueprint(
+          ownerId,
+          blueprintId,
+          planId
+        );
+        setup = blueprintSetup(
+          requestedSetup,
+          selection.plan.id,
+          selection.blueprint,
+          selection.plan.sourceSnapshot.targetRole.family
+        );
+      }
+      const { state, utterance } = await app.interviewService.start(setup, ownerId);
+
+      return attachInterviewOwnerCookie(
+        apiSuccess({
+          sessionId: state.id,
+          phase: state.phase,
+          questionCount: state.plan.length,
+          questionIndex: state.questionIndex,
+          startedAt: state.startedAt,
+          utterance
+        }),
+        owner,
+        app.config
+      );
+    } finally {
+      await creationLease.release();
+    }
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   }

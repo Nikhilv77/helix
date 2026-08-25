@@ -169,15 +169,20 @@ def session_id_from_room(room_name: str) -> str:
     return session_id
 
 
-def tts_model_from_job(ctx: agents.JobContext) -> str:
-    """Resolve the validated teacher voice attached by the web app dispatch."""
+def metadata_from_job(ctx: agents.JobContext) -> dict:
     try:
         metadata = json.loads(ctx.job.metadata or "{}")
-        voice = metadata.get("voice")
-        if isinstance(voice, str) and voice.startswith("aura-2-") and voice.endswith("-en"):
-            return voice
+        return metadata if isinstance(metadata, dict) else {}
     except (TypeError, ValueError, json.JSONDecodeError):
-        logger.warning("invalid voice metadata; using configured fallback")
+        logger.warning("invalid interview dispatch metadata")
+        return {}
+
+
+def tts_model_from_metadata(metadata: dict) -> str:
+    """Resolve the validated teacher voice attached by the web app dispatch."""
+    voice = metadata.get("voice")
+    if isinstance(voice, str) and voice.startswith("aura-2-") and voice.endswith("-en"):
+        return voice
     return SPEECH.tts_model
 
 
@@ -191,7 +196,13 @@ async def interview_session(ctx: agents.JobContext) -> None:
         logger.warning("declining non-interview room %r", ctx.room.name)
         return
 
-    tts_model = tts_model_from_job(ctx)
+    metadata = metadata_from_job(ctx)
+    capability = metadata.get("interviewCapability")
+    if not isinstance(capability, str) or not capability.startswith("iat1."):
+        logger.error("declining interview %s without a session capability", session_id)
+        return
+
+    tts_model = tts_model_from_metadata(metadata)
     logger.info("joining interview %s with voice %s", session_id, tts_model)
 
     http = aiohttp.ClientSession()
@@ -201,7 +212,7 @@ async def interview_session(ctx: agents.JobContext) -> None:
 
     ctx.add_shutdown_callback(close_http)
 
-    trailgrad = TrailgradClient(http)
+    trailgrad = TrailgradClient(http, capability)
     try:
         snapshot = await trailgrad.get_session(session_id)
     except Exception:
@@ -321,6 +332,8 @@ async def interview_session(ctx: agents.JobContext) -> None:
         try:
             payload = json.loads(getattr(packet, "data", b"").decode("utf-8"))
             text = str(payload.get("text", "")).strip()
+            turn_id = str(payload.get("turnId", ""))
+            uuid.UUID(turn_id)
             start_ms = max(0, int(payload.get("startMs", 0)))
             end_ms = max(start_ms, int(payload.get("endMs", start_ms)))
         except (UnicodeDecodeError, ValueError, TypeError, json.JSONDecodeError):
@@ -339,6 +352,7 @@ async def interview_session(ctx: agents.JobContext) -> None:
                 state,
                 text,
                 timing=(start_ms, end_ms),
+                turn_id=turn_id,
                 on_waiting=schedule_silence_nudge,
             )
         )
@@ -432,6 +446,7 @@ async def handle_turn(
     state: TurnState,
     text: str,
     timing: tuple[int, int] | None = None,
+    turn_id: str | None = None,
     on_waiting: Callable[[], None] | None = None,
 ) -> None:
     dispatch = (
@@ -447,7 +462,13 @@ async def handle_turn(
 
     decision_started = time.monotonic()
     try:
-        decision = await trailgrad.decide(session_id, answer, start_ms, end_ms)
+        decision = await trailgrad.decide(
+            session_id,
+            turn_id or str(uuid.uuid4()),
+            answer,
+            start_ms,
+            end_ms,
+        )
     except TrailgradApiError as error:
         logger.error("decide failed: %s", error)
         state.end_dispatch()

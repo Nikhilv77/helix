@@ -1,41 +1,104 @@
-import { createHash } from "node:crypto";
 import { auth } from "@clerk/nextjs/server";
-import type { NextRequest } from "next/server";
+import type { NextRequest, NextResponse } from "next/server";
 import { AppConfigService } from "../config/app-config.service";
 import { requireUserId } from "../auth/request-auth";
+import {
+  createAnonymousOwnerCookie,
+  INTERVIEW_OWNER_COOKIE,
+  requireInterviewAuthSecret,
+  verifyAnonymousOwnerCookie
+} from "./interview-auth";
+
+export interface ResolvedInterviewOwner {
+  ownerId: string;
+  /** Present only when this response must establish a new anonymous browser. */
+  cookieValue?: string;
+}
 
 /**
  * Interviews work logged out, so the daily cap needs an identity even without
- * Clerk. Signed-in users are keyed by their Clerk id; everyone else falls back
- * to a coarse fingerprint. This is a rate-limit key, not an auth boundary.
+ * Clerk. Signed-in users are keyed by their Clerk id; everyone else receives a
+ * cryptographically random, signed browser identity.
  */
-export async function resolveOwnerId(
+export async function resolveInterviewOwner(
   request: NextRequest,
   config: AppConfigService
-): Promise<string> {
-  // Route handlers already run inside Clerk's request context. Prefer it over
-  // manually re-authenticating the cookie, which can otherwise fall through
-  // to an anonymous key for a signed-in workspace user.
-  const { userId } = await auth();
-  if (userId) return authenticatedOwnerId(userId);
+): Promise<ResolvedInterviewOwner> {
+  const authenticated = await authenticatedOwnerFromRequest(request, config);
+  if (authenticated) return { ownerId: authenticated };
 
-  const requestUserId = await requireUserId(request, config).catch(() => null);
-  if (requestUserId) return authenticatedOwnerId(requestUserId);
+  const existing = anonymousOwnerIdFromRequest(request, config);
+  if (existing) return { ownerId: existing };
 
-  return anonymousOwnerId(request);
+  const created = createAnonymousOwnerCookie(requireInterviewAuthSecret(config));
+  return { ownerId: created.ownerId, cookieValue: created.value };
 }
 
-/** The legacy browser-scoped key used only when a visitor is not signed in. */
-export function anonymousOwnerId(request: NextRequest): string {
-  const forwardedFor = request.headers.get("x-forwarded-for") ?? "";
-  const ip = forwardedFor.split(",")[0]?.trim() || "local";
-  const agent = request.headers.get("user-agent") ?? "";
-  const fingerprint = createHash("sha256").update(`${ip}|${agent}`).digest("hex").slice(0, 24);
+/** Resolves an already-established owner without silently creating access. */
+export async function existingInterviewOwnerId(
+  request: NextRequest,
+  config: AppConfigService
+): Promise<string | null> {
+  return (
+    (await authenticatedOwnerFromRequest(request, config)) ??
+    anonymousOwnerIdFromRequest(request, config)
+  );
+}
 
-  return `anon:${fingerprint}`;
+export function anonymousOwnerIdFromRequest(
+  request: NextRequest,
+  config: AppConfigService
+): string | null {
+  const value = request.cookies.get(INTERVIEW_OWNER_COOKIE)?.value;
+  if (!value || !config.interviewAuthSecret) return null;
+  return verifyAnonymousOwnerCookie(value, config.interviewAuthSecret);
+}
+
+export function attachInterviewOwnerCookie<T extends NextResponse>(
+  response: T,
+  owner: ResolvedInterviewOwner,
+  config: AppConfigService
+): T {
+  if (!owner.cookieValue) return response;
+  response.cookies.set(INTERVIEW_OWNER_COOKIE, owner.cookieValue, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: config.nodeEnv === "production",
+    path: "/",
+    maxAge: 365 * 24 * 60 * 60
+  });
+  return response;
+}
+
+export function clearInterviewOwnerCookie<T extends NextResponse>(
+  response: T,
+  config: AppConfigService
+): T {
+  response.cookies.set(INTERVIEW_OWNER_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: config.nodeEnv === "production",
+    path: "/",
+    maxAge: 0
+  });
+  return response;
 }
 
 /** Canonical durable owner key for server-rendered, Clerk-authenticated pages. */
 export function authenticatedOwnerId(userId: string): string {
   return `user:${userId}`;
+}
+
+async function authenticatedOwnerFromRequest(
+  request: NextRequest,
+  config: AppConfigService
+): Promise<string | null> {
+  // Route handlers already run inside Clerk's request context. Prefer it over
+  // manually re-authenticating the cookie, which can otherwise fall through
+  // to an anonymous identity for a signed-in workspace user.
+  const clerkAuth = await auth().catch(() => null);
+  if (clerkAuth?.userId) return authenticatedOwnerId(clerkAuth.userId);
+
+  const requestUserId = await requireUserId(request, config).catch(() => null);
+  return requestUserId ? authenticatedOwnerId(requestUserId) : null;
 }

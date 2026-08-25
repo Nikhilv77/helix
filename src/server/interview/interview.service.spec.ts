@@ -37,18 +37,11 @@ function harness(plan = questions, evaluation?: QuestionEvaluation) {
   const decide = jest.fn();
   const decider = { decide } as unknown as InterviewDecider;
   const evaluate = jest.fn().mockResolvedValue(evaluation);
-  const evaluator = evaluation
-    ? ({ evaluate } as unknown as TechnicalAnswerEvaluator)
-    : undefined;
-  const service = new InterviewService(
-    planner,
-    decider,
-    new MemorySessionStore(),
-    10,
-    evaluator
-  );
+  const evaluator = evaluation ? ({ evaluate } as unknown as TechnicalAnswerEvaluator) : undefined;
+  const store = new MemorySessionStore();
+  const service = new InterviewService(planner, decider, store, 10, evaluator);
 
-  return { service, decide, evaluate, planQuestions };
+  return { service, store, decide, evaluate, planQuestions };
 }
 
 const mcqQuestion: PlannedQuestion = {
@@ -68,6 +61,18 @@ const mcqQuestion: PlannedQuestion = {
 };
 
 describe("InterviewService resume round", () => {
+  it("does not expose a live session to a different owner", async () => {
+    const { service } = harness();
+    const started = await service.start(setup, "user-1", 1_000);
+
+    await expect(service.getOwnedActive("user-2", started.state.id)).rejects.toMatchObject({
+      code: "SESSION_NOT_FOUND"
+    });
+    await expect(service.endOwned("user-2", started.state.id)).rejects.toMatchObject({
+      code: "SESSION_NOT_FOUND"
+    });
+  });
+
   it("starts from a prebuilt plan without asking the planner for one", async () => {
     const { service, planQuestions } = harness();
     const result = await service.start({ ...setup, resumeRound: true }, "user-1", 1_000, [
@@ -146,6 +151,105 @@ describe("InterviewService resume round", () => {
     );
 
     expect(decide).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("InterviewService answer idempotency", () => {
+  const answer = {
+    text: "I owned the conflict resolver and reduced merge failures by 30 percent.",
+    startMs: 500,
+    endMs: 4_000
+  };
+  const decision = {
+    action: "move_on" as const,
+    missing: "none" as const,
+    reason: "answer complete",
+    acknowledgement: "That is clear",
+    line: ""
+  };
+
+  it("replays a completed response when the same turn is retried", async () => {
+    const { service, decide } = harness();
+    decide.mockResolvedValue(decision);
+    const started = await service.start(setup, "user-1", 1_000);
+    const turnId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+
+    const first = await service.answer(started.state.id, answer, 6_000, turnId);
+    const retry = await service.answer(started.state.id, answer, 7_000, turnId);
+
+    expect(retry.response).toEqual(first.response);
+    expect(decide).toHaveBeenCalledTimes(1);
+    expect(retry.state.turns.filter((turn) => turn.speaker === "user")).toHaveLength(1);
+  });
+
+  it("coalesces simultaneous duplicates behind one decision", async () => {
+    const { service, decide } = harness();
+    decide.mockResolvedValue(decision);
+    const started = await service.start(setup, "user-1", 1_000);
+    const turnId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+    const [first, duplicate] = await Promise.all([
+      service.answer(started.state.id, answer, 6_000, turnId),
+      service.answer(started.state.id, answer, 6_000, turnId)
+    ]);
+
+    expect(duplicate.response).toEqual(first.response);
+    expect(decide).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects reusing a turn ID for a different answer", async () => {
+    const { service, decide } = harness();
+    decide.mockResolvedValue(decision);
+    const started = await service.start(setup, "user-1", 1_000);
+    const turnId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+
+    await service.answer(started.state.id, answer, 6_000, turnId);
+    await expect(
+      service.answer(
+        started.state.id,
+        { ...answer, text: "A different payload using the old identity." },
+        7_000,
+        turnId
+      )
+    ).rejects.toMatchObject({ code: "TURN_ID_REUSED" });
+    expect(decide).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects one of two different turns racing on the same version", async () => {
+    const { service, decide } = harness();
+    let releaseDecision!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      releaseDecision = resolve;
+    });
+    decide.mockImplementation(async () => {
+      await gate;
+      return decision;
+    });
+    const started = await service.start(setup, "user-1", 1_000);
+    const first = service.answer(
+      started.state.id,
+      answer,
+      6_000,
+      "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    );
+    const second = service.answer(
+      started.state.id,
+      { ...answer, text: `${answer.text} Second callback.` },
+      6_000,
+      "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
+    );
+
+    while (decide.mock.calls.length < 2) await Promise.resolve();
+    releaseDecision();
+    const results = await Promise.allSettled([first, second]);
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    const rejected = results.find(
+      (result): result is PromiseRejectedResult => result.status === "rejected"
+    );
+    expect(rejected?.reason).toMatchObject({ code: "SESSION_VERSION_CONFLICT" });
+    const finalState = await service.get(started.state.id);
+    expect(finalState.turns.filter((turn) => turn.speaker === "user")).toHaveLength(1);
   });
 });
 

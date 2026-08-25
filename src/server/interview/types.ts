@@ -129,11 +129,7 @@ export interface EvidenceLedger {
 }
 
 export type TechnicalVerdict =
-  | "correct"
-  | "mostly-correct"
-  | "partially-correct"
-  | "incorrect"
-  | "insufficient-evidence";
+  "correct" | "mostly-correct" | "partially-correct" | "incorrect" | "insufficient-evidence";
 
 export interface QuestionRubricEvaluation {
   rubricKey: string;
@@ -221,6 +217,19 @@ export interface Decision {
   utterance: string;
   /** Set when a guard overrode the model's requested action. */
   forcedBy: ForcedReason | null;
+}
+
+/** Exact API result retained for idempotent answer retries. */
+export interface InterviewAnswerResponse {
+  action: DecisionAction;
+  utterance: string;
+  missing: MissingDimension;
+  forcedBy: ForcedReason | null;
+  phase: Phase;
+  questionIndex: number;
+  questionCount: number;
+  followUpCount: number;
+  elapsedMs: number;
 }
 
 export type ForcedReason = "follow-up-budget" | "soft-time" | "hard-time";

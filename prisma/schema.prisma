@@ -190,15 +190,33 @@ model KnowledgeChunk {
 }
 
 model InterviewSession {
-  id        String   @id @db.Uuid
-  ownerId   String
-  state     Json
-  startedAt DateTime
-  touchedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
+  id             String                   @id @db.Uuid
+  ownerId        String
+  state          Json
+  version        Int                      @default(0)
+  startedAt      DateTime
+  touchedAt      DateTime                 @updatedAt
+  createdAt      DateTime                 @default(now())
+  answerRequests InterviewAnswerRequest[]
 
   @@index([ownerId, startedAt])
   @@index([touchedAt])
+}
+
+model InterviewAnswerRequest {
+  id         String           @id @default(uuid()) @db.Uuid
+  sessionId  String           @db.Uuid
+  turnId     String           @db.Uuid
+  answerHash String
+  status     String
+  response   Json?
+  leaseUntil DateTime
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  session    InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, turnId])
+  @@index([status, leaseUntil])
 }
 
 model CandidateProfile {

@@ -7,6 +7,8 @@ import { getAppContainer } from "@/server/app-container";
 import { Logger } from "@/server/common/logger";
 import { apiError } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
+import { authenticatedOwnerId } from "@/server/interview/owner";
+import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -72,6 +74,13 @@ export async function GET(request: NextRequest) {
     const cacheKey = createHash("sha256").update(`${model}:${parsed.data.text}`).digest("hex");
     const cached = audioCache.get(cacheKey);
     if (cached) return audioResponse(cached, "hit");
+
+    // Cached lines are free replays. Only new provider work consumes the shared
+    // request and character budgets.
+    const guard = getSharedGuard(config);
+    const ownerId = authenticatedOwnerId(userId);
+    await guard.enforce(RATE_LIMIT_POLICIES.voiceGeneration, ownerId);
+    await guard.enforce(RATE_LIMIT_POLICIES.voiceCharacters, ownerId, parsed.data.text.length);
 
     const upstream = await synthesize({ text: parsed.data.text, model, apiKey });
     if (!upstream.body) {

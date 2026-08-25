@@ -31,10 +31,25 @@ describe("MemorySessionStore", () => {
     const created = state("11111111-1111-4111-8111-111111111111", Date.now());
 
     await store.create(created, "user-1");
-    await store.save({ ...created, phase: "done" });
+    await store.save({ ...created, phase: "done" }, 0);
 
     await expect(store.get(created.id)).resolves.toMatchObject({ phase: "done" });
     await expect(store.countStartedSince("user-1", Date.now() - HOUR_MS)).resolves.toBe(1);
+  });
+
+  it("rejects a stale session version instead of overwriting newer state", async () => {
+    const store = new MemorySessionStore();
+    const created = state("55555555-5555-4555-8555-555555555555", Date.now());
+    await store.create(created, "user-1");
+
+    await expect(store.save({ ...created, phase: "done" }, 0)).resolves.toBe(1);
+    await expect(store.save({ ...created, phase: "wrap" }, 0)).rejects.toMatchObject({
+      name: "SessionVersionConflictError"
+    });
+    await expect(store.getVersioned(created.id)).resolves.toMatchObject({
+      version: 1,
+      state: { phase: "done" }
+    });
   });
 
   it("expires inactive session state", async () => {
@@ -62,5 +77,16 @@ describe("MemorySessionStore", () => {
     });
     await expect(store.getOwned(created.id, "user-2")).resolves.toBeNull();
     await expect(store.listByOwner("user-1", 10)).resolves.toHaveLength(1);
+  });
+
+  it("owner-scopes active session reads", async () => {
+    const store = new MemorySessionStore();
+    const created = state("44444444-4444-4444-8444-444444444444", Date.now());
+    await store.create(created, "user-1");
+
+    await expect(store.getActiveOwned(created.id, "user-1")).resolves.toMatchObject({
+      id: created.id
+    });
+    await expect(store.getActiveOwned(created.id, "user-2")).resolves.toBeNull();
   });
 });

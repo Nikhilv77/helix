@@ -47,6 +47,9 @@ describe("validateEnvironment", () => {
       retrievalDefaultTopK: 7,
       retrievalMinSimilarity: 0.35,
       clerkSecretKey: undefined,
+      interviewAuthSecret: undefined,
+      upstashRedisRestUrl: undefined,
+      upstashRedisRestToken: undefined,
       groqDeciderModel: "openai/gpt-oss-20b",
       groqApiKey: undefined,
       interviewDailyLimit: 2,
@@ -78,5 +81,14 @@ describe("validateEnvironment", () => {
         CORS_ORIGINS: "http://localhost:3000,ftp://example.com"
       })
     ).toThrow("CORS_ORIGINS must be a comma-separated list of HTTP(S) origins or *");
+  });
+
+  it("requires both Upstash Redis REST credentials when either is configured", () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        UPSTASH_REDIS_REST_URL: "https://example.upstash.io"
+      })
+    ).toThrow("UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be configured together");
   });
 });

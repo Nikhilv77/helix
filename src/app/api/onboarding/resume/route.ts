@@ -26,6 +26,7 @@ import {
   detectExplicitResumeTechnologies,
   mergeResumeTechnologies
 } from "@/server/onboarding/resume/technology-detector";
+import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -43,16 +44,6 @@ const ROUTE_BUDGET_MS = 52_000;
 const VISUAL_EXTRACT_BUDGET_MS = 20_000;
 const RESERVED_FOR_RESPONSE_MS = 3_000;
 
-/**
- * Two model calls and a multi-megabyte upload per request make this the most
- * expensive endpoint in the app. The window is per instance, which is a floor
- * rather than a guarantee on serverless, but it stops a single tab from looping
- * uploads.
- */
-const UPLOAD_WINDOW_MS = 10 * 60 * 1000;
-const UPLOADS_PER_WINDOW = 6;
-const uploadHistory = new Map<string, number[]>();
-
 const logger = new Logger("ResumeUpload");
 
 const selectionSchema = z.object({
@@ -69,7 +60,8 @@ export async function POST(request: NextRequest) {
     if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
 
     const ownerId = authenticatedOwnerId(userId);
-    enforceUploadRate(ownerId);
+    const app = getAppContainer();
+    await getSharedGuard(app.config).enforce(RATE_LIMIT_POLICIES.resumeUpload, ownerId);
 
     const form = await request.formData();
     const file = form.get("resume");
@@ -105,7 +97,7 @@ export async function POST(request: NextRequest) {
       mimeType: file.type,
       buffer
     });
-    const resumeService = getAppContainer().resumeService;
+    const resumeService = app.resumeService;
 
     if (document.format === "pdf" && document.text.length < MIN_RESUME_TEXT_CHARACTERS) {
       try {
@@ -387,32 +379,6 @@ export async function POST(request: NextRequest) {
       );
     }
     return apiError(error, request.nextUrl.pathname);
-  }
-}
-
-function enforceUploadRate(ownerId: string): void {
-  const now = Date.now();
-  const recent = (uploadHistory.get(ownerId) ?? []).filter(
-    (timestamp) => now - timestamp < UPLOAD_WINDOW_MS
-  );
-
-  if (recent.length >= UPLOADS_PER_WINDOW) {
-    throw new ApiRouteError(
-      429,
-      "RESUME_UPLOAD_RATE_LIMITED",
-      "That is a lot of resume uploads in a short window. Try again in a few minutes."
-    );
-  }
-
-  recent.push(now);
-  uploadHistory.set(ownerId, recent);
-
-  if (uploadHistory.size > 5_000) {
-    for (const [key, timestamps] of uploadHistory) {
-      if (timestamps.every((timestamp) => now - timestamp >= UPLOAD_WINDOW_MS)) {
-        uploadHistory.delete(key);
-      }
-    }
   }
 }
 

@@ -1,10 +1,16 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { Logger } from "../common/logger";
 import { BadRequestErrorException } from "../common/exceptions/bad-request-error.exception";
+import { ConflictErrorException } from "../common/exceptions/conflict-error.exception";
 import { NotFoundErrorException } from "../common/exceptions/not-found-error.exception";
 import { InterviewDecider, normaliseMissing } from "./decider";
 import { InterviewPlanner } from "./planner";
-import { SessionStore } from "./session-store";
+import {
+  SessionStore,
+  SessionVersionConflictError,
+  type BeginAnswerResult,
+  type VersionedInterviewSession
+} from "./session-store";
 import { createHistoryItem, createInterviewReport, createWorkspaceInsights } from "./report";
 import { createReportsOverview } from "./reports-overview";
 import type { ReportsOverview } from "@/lib/reports/reports";
@@ -25,6 +31,7 @@ import {
   EvidenceDimension,
   EvidenceLedger,
   InterviewSetup,
+  InterviewAnswerResponse,
   InterviewState,
   MissingDimension,
   PlannedQuestion,
@@ -51,7 +58,11 @@ export interface StartResult {
 export interface AnswerResult {
   state: InterviewState;
   decision: Decision;
+  response: InterviewAnswerResponse;
 }
+
+const ANSWER_REPLAY_WAIT_MS = 5_000;
+const ANSWER_REPLAY_POLL_MS = 100;
 
 export class InterviewService {
   private readonly logger = new Logger(InterviewService.name);
@@ -167,14 +178,28 @@ export class InterviewService {
     return createInterviewReport(session, now);
   }
 
-  async get(sessionId: string): Promise<InterviewState> {
-    const state = await this.store.get(sessionId);
-    if (!state) {
+  /** Unowned lookup reserved for a route that already verified an agent capability. */
+  async get(sessionId: string, ownerId?: string): Promise<InterviewState> {
+    return (await this.versionedSession(sessionId, ownerId)).state;
+  }
+
+  private async versionedSession(
+    sessionId: string,
+    ownerId?: string
+  ): Promise<VersionedInterviewSession> {
+    const session = ownerId
+      ? await this.store.getActiveOwnedVersioned(sessionId, ownerId)
+      : await this.store.getVersioned(sessionId);
+    if (!session) {
       throw new NotFoundErrorException("SESSION_NOT_FOUND", "Interview session not found", {
         sessionId
       });
     }
-    return state;
+    return session;
+  }
+
+  async getOwnedActive(ownerId: string, sessionId: string): Promise<InterviewState> {
+    return this.get(sessionId, ownerId);
   }
 
   /** Records execution separately from correctness so reports never equate compiling with passing. */
@@ -184,7 +209,7 @@ export class InterviewService {
     questionIndex: number,
     execution: CodeExecutionEvidence
   ): Promise<InterviewState> {
-    const session = await this.store.getOwned(sessionId, ownerId);
+    const session = await this.store.getActiveOwnedVersioned(sessionId, ownerId);
     if (!session) {
       throw new NotFoundErrorException("SESSION_NOT_FOUND", "Interview session not found", {
         sessionId
@@ -206,7 +231,11 @@ export class InterviewService {
         [String(questionIndex)]: execution
       }
     };
-    await this.store.save(next);
+    try {
+      await this.store.save(next, session.version);
+    } catch (error) {
+      throw sessionMutationError(error, sessionId);
+    }
     return next;
   }
 
@@ -220,9 +249,65 @@ export class InterviewService {
   async answer(
     sessionId: string,
     answer: { text: string; startMs: number; endMs: number },
-    now = Date.now()
+    now = Date.now(),
+    turnId?: string
   ): Promise<AnswerResult> {
-    const existing = await this.get(sessionId);
+    return this.answerInternal(sessionId, answer, now, undefined, turnId);
+  }
+
+  async answerOwned(
+    ownerId: string,
+    sessionId: string,
+    answer: { text: string; startMs: number; endMs: number },
+    now = Date.now(),
+    turnId?: string
+  ): Promise<AnswerResult> {
+    return this.answerInternal(sessionId, answer, now, ownerId, turnId);
+  }
+
+  private async answerInternal(
+    sessionId: string,
+    answer: { text: string; startMs: number; endMs: number },
+    now: number,
+    ownerId?: string,
+    turnId?: string
+  ): Promise<AnswerResult> {
+    // Establish ownership/capability-backed access before creating an
+    // idempotency row, so a guessed UUID cannot cause writes to another user.
+    const session = await this.versionedSession(sessionId, ownerId);
+    const answerHash = turnId ? answerPayloadHash(answer) : null;
+    if (turnId && answerHash) {
+      const claim = await this.store.beginAnswer(sessionId, turnId, answerHash, now);
+      const replay = await this.resolveAnswerClaim(claim, sessionId, turnId, answerHash, ownerId);
+      if (replay) return replay;
+    }
+
+    try {
+      return await this.processAnswer(session, sessionId, answer, now, turnId);
+    } catch (error) {
+      if (turnId) {
+        if (error instanceof SessionVersionConflictError) {
+          const completed = await this.store.answerRequest(sessionId, turnId, answerHash!);
+          if (completed.status === "completed") {
+            return this.replayedAnswer(sessionId, completed.response, ownerId);
+          }
+          await this.store.conflictAnswer(sessionId, turnId);
+          throw sessionMutationError(error, sessionId);
+        }
+        await this.store.failAnswer(sessionId, turnId);
+      }
+      throw sessionMutationError(error, sessionId);
+    }
+  }
+
+  private async processAnswer(
+    session: VersionedInterviewSession,
+    sessionId: string,
+    answer: { text: string; startMs: number; endMs: number },
+    now: number,
+    turnId?: string
+  ): Promise<AnswerResult> {
+    const existing = session.state;
 
     if (existing.phase === "done") {
       throw new BadRequestErrorException("SESSION_COMPLETE", "This interview has ended", {
@@ -233,8 +318,10 @@ export class InterviewService {
     const question = currentQuestion(existing);
     if (!question) {
       const closed = finish(existing);
-      await this.store.save(closed);
-      return { state: closed, decision: closingDecision() };
+      const decision = closingDecision();
+      const response = answerResponse(closed, decision, now);
+      await this.persistAnswer(closed, session.version, turnId, response);
+      return { state: closed, decision, response };
     }
 
     const withAnswer = appendTurn(existing, {
@@ -249,7 +336,14 @@ export class InterviewService {
     // correct option and its explanation were written when the resume was read.
     const graded = gradeMultipleChoice(question, answer.text);
     if (graded) {
-      return this.completeGradedAnswer(withAnswer, question, graded.correct, now);
+      return this.completeGradedAnswer(
+        withAnswer,
+        question,
+        graded.correct,
+        now,
+        session.version,
+        turnId
+      );
     }
 
     const [raw, evaluation] = await Promise.all([
@@ -326,8 +420,6 @@ export class InterviewService {
     });
 
     const finalState = withReply;
-    await this.store.save(finalState);
-
     const decision: Decision = {
       action: result.action,
       missing: normaliseMissing(raw.missing),
@@ -335,6 +427,8 @@ export class InterviewService {
       utterance,
       forcedBy: result.forcedBy
     };
+    const response = answerResponse(finalState, decision, now);
+    await this.persistAnswer(finalState, session.version, turnId, response);
 
     this.logger.log(
       JSON.stringify({
@@ -350,7 +444,7 @@ export class InterviewService {
       })
     );
 
-    return { state: finalState, decision };
+    return { state: finalState, decision, response };
   }
 
   /**
@@ -361,7 +455,9 @@ export class InterviewService {
     state: InterviewState,
     question: PlannedQuestion,
     correct: boolean,
-    now: number
+    now: number,
+    expectedVersion: number,
+    turnId?: string
   ): Promise<AnswerResult> {
     const evaluatedState: InterviewState = {
       ...state,
@@ -389,7 +485,17 @@ export class InterviewService {
       gradedQuestionIndex: state.questionIndex
     });
 
-    await this.store.save(finalState);
+    const decision: Decision = {
+      action: result.action,
+      missing: correct ? "none" : "specificity",
+      reason: correct
+        ? "multiple choice answered correctly"
+        : "multiple choice answered incorrectly",
+      utterance,
+      forcedBy: result.forcedBy
+    };
+    const response = answerResponse(finalState, decision, now);
+    await this.persistAnswer(finalState, expectedVersion, turnId, response);
 
     this.logger.log(
       JSON.stringify({
@@ -403,22 +509,102 @@ export class InterviewService {
 
     return {
       state: finalState,
-      decision: {
-        action: result.action,
-        missing: correct ? "none" : "specificity",
-        reason: correct
-          ? "multiple choice answered correctly"
-          : "multiple choice answered incorrectly",
-        utterance,
-        forcedBy: result.forcedBy
-      }
+      decision,
+      response
     };
   }
 
-  async end(sessionId: string): Promise<InterviewState> {
-    const closed = finish(await this.get(sessionId));
-    await this.store.save(closed);
-    return closed;
+  async end(sessionId: string, ownerId?: string): Promise<InterviewState> {
+    const session = await this.versionedSession(sessionId, ownerId);
+    const closed = finish(session.state);
+    try {
+      await this.store.save(closed, session.version);
+      return closed;
+    } catch (error) {
+      throw sessionMutationError(error, sessionId);
+    }
+  }
+
+  async endOwned(ownerId: string, sessionId: string): Promise<InterviewState> {
+    return this.end(sessionId, ownerId);
+  }
+
+  private async persistAnswer(
+    state: InterviewState,
+    expectedVersion: number,
+    turnId: string | undefined,
+    response: InterviewAnswerResponse
+  ): Promise<void> {
+    if (turnId) {
+      await this.store.completeAnswer(state, expectedVersion, turnId, response);
+      return;
+    }
+    await this.store.save(state, expectedVersion);
+  }
+
+  private async resolveAnswerClaim(
+    claim: BeginAnswerResult,
+    sessionId: string,
+    turnId: string,
+    answerHash: string,
+    ownerId?: string
+  ): Promise<AnswerResult | null> {
+    if (claim.status === "claimed") return null;
+    if (claim.status === "completed") {
+      return this.replayedAnswer(sessionId, claim.response, ownerId);
+    }
+    if (claim.status === "payload-mismatch") {
+      throw new ConflictErrorException(
+        "TURN_ID_REUSED",
+        "That turn ID was already used for a different answer.",
+        { sessionId, turnId }
+      );
+    }
+    if (claim.status === "conflicted") {
+      throw concurrentTurnError(sessionId);
+    }
+
+    const deadline = Date.now() + ANSWER_REPLAY_WAIT_MS;
+    while (Date.now() < deadline) {
+      await delay(ANSWER_REPLAY_POLL_MS);
+      const latest = await this.store.answerRequest(sessionId, turnId, answerHash);
+      if (latest.status === "completed") {
+        return this.replayedAnswer(sessionId, latest.response, ownerId);
+      }
+      if (latest.status === "payload-mismatch") {
+        throw new ConflictErrorException(
+          "TURN_ID_REUSED",
+          "That turn ID was already used for a different answer.",
+          { sessionId, turnId }
+        );
+      }
+      if (latest.status === "conflicted") throw concurrentTurnError(sessionId);
+    }
+
+    throw new ConflictErrorException(
+      "ANSWER_IN_PROGRESS",
+      "That answer is still being processed. Retry with the same turn ID.",
+      { sessionId, turnId, retryable: true }
+    );
+  }
+
+  private async replayedAnswer(
+    sessionId: string,
+    response: InterviewAnswerResponse,
+    ownerId?: string
+  ): Promise<AnswerResult> {
+    const state = await this.get(sessionId, ownerId);
+    return {
+      state,
+      decision: {
+        action: response.action,
+        missing: response.missing,
+        reason: "idempotent answer replay",
+        utterance: response.utterance,
+        forcedBy: response.forcedBy
+      },
+      response
+    };
   }
 
   private async evaluateAnswer(
@@ -570,8 +756,7 @@ function multipleChoiceEvaluation(
   const answer = state.turns
     .filter((turn) => turn.speaker === "user" && turn.questionIndex === state.questionIndex)
     .at(-1)?.text;
-  const rubricKey =
-    question.rubricKeys?.[0] ?? question.competency ?? "technical-correctness";
+  const rubricKey = question.rubricKeys?.[0] ?? question.competency ?? "technical-correctness";
 
   return {
     source: "local-mcq",
@@ -819,6 +1004,44 @@ function evidenceDimensionForMissing(value: string): EvidenceDimension | null {
     default:
       return null;
   }
+}
+
+function answerResponse(
+  state: InterviewState,
+  decision: Decision,
+  now: number
+): InterviewAnswerResponse {
+  return {
+    action: decision.action,
+    utterance: decision.utterance,
+    missing: decision.missing,
+    forcedBy: decision.forcedBy,
+    phase: state.phase,
+    questionIndex: state.questionIndex,
+    questionCount: state.plan.length,
+    followUpCount: state.followUpCount,
+    elapsedMs: elapsedMs(state, now)
+  };
+}
+
+function answerPayloadHash(answer: { text: string; startMs: number; endMs: number }): string {
+  return createHash("sha256").update(answer.text).digest("hex");
+}
+
+function concurrentTurnError(sessionId: string): ConflictErrorException {
+  return new ConflictErrorException(
+    "SESSION_VERSION_CONFLICT",
+    "Another answer changed this interview first. Reload the session before continuing.",
+    { sessionId, retryable: false }
+  );
+}
+
+function sessionMutationError(error: unknown, sessionId: string): unknown {
+  return error instanceof SessionVersionConflictError ? concurrentTurnError(sessionId) : error;
+}
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 function introUtterance(state: InterviewState): string {

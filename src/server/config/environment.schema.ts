@@ -75,7 +75,13 @@ export const environmentSchema = z
     RETRIEVAL_DEFAULT_TOP_K: z.coerce.number().int().min(1).max(50).default(5),
     RETRIEVAL_MIN_SIMILARITY: z.coerce.number().min(0).max(1).default(0.2),
     CLERK_SECRET_KEY: z.string().optional(),
+    // Signs anonymous interview ownership cookies and the short-lived
+    // capability passed to the remote voice worker. A dedicated value keeps
+    // interview authorization independent from any third-party credential.
+    INTERVIEW_AUTH_SECRET: z.string().min(32).optional(),
     INTERVIEW_DAILY_LIMIT: z.coerce.number().int().min(1).max(100).default(2),
+    UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+    UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
     GROQ_API_KEY: z.string().optional(),
     GROQ_DECIDER_MODEL: z.string().min(1).default("openai/gpt-oss-20b"),
     LIVEKIT_URL: z.string().optional(),
@@ -93,6 +99,15 @@ export const environmentSchema = z
     JUDGE0_URL: z.string().url().default("https://judge0-ce.p.rapidapi.com"),
     RAPIDAPI_KEY: z.string().optional(),
     RAPIDAPI_HOST: z.string().min(1).default("judge0-ce.p.rapidapi.com")
+  })
+  .superRefine((env, context) => {
+    if (Boolean(env.UPSTASH_REDIS_REST_URL) !== Boolean(env.UPSTASH_REDIS_REST_TOKEN)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["UPSTASH_REDIS_REST_URL"],
+        message: "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be configured together"
+      });
+    }
   })
   .transform((env) => ({
     nodeEnv: env.NODE_ENV,
@@ -115,7 +130,10 @@ export const environmentSchema = z
     retrievalDefaultTopK: env.RETRIEVAL_DEFAULT_TOP_K,
     retrievalMinSimilarity: env.RETRIEVAL_MIN_SIMILARITY,
     clerkSecretKey: env.CLERK_SECRET_KEY,
+    interviewAuthSecret: env.INTERVIEW_AUTH_SECRET,
     interviewDailyLimit: env.INTERVIEW_DAILY_LIMIT,
+    upstashRedisRestUrl: env.UPSTASH_REDIS_REST_URL,
+    upstashRedisRestToken: env.UPSTASH_REDIS_REST_TOKEN,
     groqApiKey: env.GROQ_API_KEY,
     groqDeciderModel: env.GROQ_DECIDER_MODEL,
     livekitUrl: env.LIVEKIT_URL,
@@ -131,7 +149,7 @@ export const environmentSchema = z
 
 export type EnvironmentConfig = z.infer<typeof environmentSchema>;
 
-export function validateEnvironment(input: NodeJS.ProcessEnv): EnvironmentConfig {
+export function validateEnvironment(input: Record<string, string | undefined>): EnvironmentConfig {
   const result = environmentSchema.safeParse(input);
 
   if (result.success) {

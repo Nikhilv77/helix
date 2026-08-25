@@ -54,8 +54,18 @@ historical resume profile.
 - Exactly five blueprints are generated in the stable order above.
 - Topics and rubric weights must total 100.
 - Launch APIs resolve plan and blueprint IDs on the server.
+- Live session APIs require the signed-in owner, a signed anonymous-browser identity, or a
+  short-lived voice-worker capability bound to that session.
 - Questions and follow-ups stay inside the selected blueprint.
 - The state machine enforces question count, follow-up budgets, and time caps.
+- Session mutations use optimistic versions, so concurrent answers or code runs cannot overwrite
+  newer state.
+- Every answer carries a unique turn ID; completed retries replay the stored response, while
+  simultaneous different turns produce a conflict instead of double-advancing.
+- Shared Redis limits interview starts, answer evaluation, LiveKit tokens, code execution, resume
+  uploads, and uncached TTS generation across every web instance.
+- Distributed leases allow one answer evaluation and one code run at a time per scope. LiveKit
+  reconnects reuse one session room and candidate identity, preventing duplicate active rooms.
 - Provider failures use bounded in-topic fallbacks.
 
 ## Evaluation and adaptation

@@ -3,14 +3,15 @@ import type { NextRequest } from "next/server";
 import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
-import { anonymousOwnerId, authenticatedOwnerId } from "@/server/interview/owner";
+import {
+  anonymousOwnerIdFromRequest,
+  authenticatedOwnerId,
+  clearInterviewOwnerCookie
+} from "@/server/interview/owner";
 
 export const dynamic = "force-dynamic";
 
-/**
- * Repairs sessions created by a signed-in browser while the old owner resolver
- * incorrectly fell back to its anonymous browser fingerprint.
- */
+/** Moves only the sessions proven by this browser's signed anonymous cookie. */
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth();
@@ -18,12 +19,17 @@ export async function POST(request: NextRequest) {
       throw new ApiRouteError(401, "AUTH_REQUIRED", "Sign in to access interview history", {});
     }
 
-    const moved = await getAppContainer().interviewService.claimAnonymousHistory(
-      anonymousOwnerId(request),
-      authenticatedOwnerId(userId)
-    );
+    const app = getAppContainer();
+    const anonymousOwnerId = anonymousOwnerIdFromRequest(request, app.config);
+    const moved = anonymousOwnerId
+      ? await app.interviewService.claimAnonymousHistory(
+          anonymousOwnerId,
+          authenticatedOwnerId(userId)
+        )
+      : 0;
 
-    return apiSuccess({ moved });
+    const response = apiSuccess({ moved });
+    return anonymousOwnerId ? clearInterviewOwnerCookie(response, app.config) : response;
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   }

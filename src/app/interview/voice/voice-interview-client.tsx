@@ -754,7 +754,9 @@ export function VoiceInterviewClient({
 
     try {
       await room.localParticipant.publishData(
-        new TextEncoder().encode(JSON.stringify({ text: answer, startMs, endMs })),
+        new TextEncoder().encode(
+          JSON.stringify({ text: answer, startMs, endMs, turnId: crypto.randomUUID() })
+        ),
         { reliable: true, topic: TYPED_ANSWER_TOPIC }
       );
     } catch (caught) {
@@ -784,7 +786,9 @@ export function VoiceInterviewClient({
 
     try {
       await room.localParticipant.publishData(
-        new TextEncoder().encode(JSON.stringify({ text: option, startMs, endMs })),
+        new TextEncoder().encode(
+          JSON.stringify({ text: option, startMs, endMs, turnId: crypto.randomUUID() })
+        ),
         { reliable: true, topic: TYPED_ANSWER_TOPIC }
       );
     } catch (caught) {
@@ -815,7 +819,9 @@ export function VoiceInterviewClient({
 
     try {
       await room.localParticipant.publishData(
-        new TextEncoder().encode(JSON.stringify({ text: answer, startMs, endMs })),
+        new TextEncoder().encode(
+          JSON.stringify({ text: answer, startMs, endMs, turnId: crypto.randomUUID() })
+        ),
         { reliable: true, topic: TYPED_ANSWER_TOPIC }
       );
     } catch (caught) {

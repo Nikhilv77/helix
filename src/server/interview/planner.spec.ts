@@ -98,7 +98,7 @@ describe("InterviewPlanner", () => {
     const plan = createFallbackPlan(setup);
 
     expect(plan).toHaveLength(4);
-    expect(plan[1].text).toContain("reliability or data-flow");
+    expect(plan[1]?.text).toContain("reliability or data-flow");
     expect(plan.filter((question) => question.kind === "code")).toHaveLength(1);
     expect(plan[2]).toMatchObject({
       kind: "code",

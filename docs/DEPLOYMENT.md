@@ -92,9 +92,19 @@ LIVEKIT_URL=wss://trailgrad-km39wyh7.livekit.cloud
 LIVEKIT_API_KEY=...
 LIVEKIT_API_SECRET=...
 LIVEKIT_AGENT_NAME=helix-interviewer-v2
+INTERVIEW_AUTH_SECRET=...
+UPSTASH_REDIS_REST_URL=...
+UPSTASH_REDIS_REST_TOKEN=...
 ```
 
 `LIVEKIT_AGENT_NAME` should match the deployed LiveKit worker.
+Generate `INTERVIEW_AUTH_SECRET` independently with at least 32 random bytes;
+it is never needed by the browser or the LiveKit worker.
+
+Create a small Upstash Redis database in the app's nearest region and copy its REST URL and token
+into Vercel. These credentials back cross-instance rate limits, answer/code leases, and the single
+LiveKit room per interview. Protected production routes deliberately return
+`RATE_LIMIT_UNAVAILABLE` rather than spending provider credits without Redis protection.
 
 ## Required LiveKit Agent Secrets
 

@@ -2,7 +2,8 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useEffect } from "react";
-import { ApiClientError, getProfile } from "@/lib/api/api-client";
+import { ApiClientError } from "@/lib/api/api-client";
+import { loadPostAuthProfile } from "@/lib/auth/post-auth";
 
 export function ContinueClient() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -20,7 +21,7 @@ export function ContinueClient() {
 
       for (let attempt = 0; attempt < 8; attempt += 1) {
         try {
-          const profile = await getProfile();
+          const profile = await loadPostAuthProfile();
           if (cancelled) return;
           window.location.replace(profile.onboardingCompletedAt ? "/" : "/onboarding");
           return;

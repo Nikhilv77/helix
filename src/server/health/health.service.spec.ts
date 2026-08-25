@@ -22,7 +22,13 @@ describe("HealthService", () => {
     knowledgeEmbeddingDimensions: 32,
     knowledgeEmbeddingBatchSize: 4,
     retrievalDefaultTopK: 5,
-    retrievalMinSimilarity: 0.2
+    retrievalMinSimilarity: 0.2,
+    interviewDailyLimit: 2,
+    groqDeciderModel: "test-groq-model",
+    livekitAgentName: "test-agent",
+    judge0Url: "https://judge0.example.com",
+    rapidApiKey: undefined,
+    rapidApiHost: "judge0.example.com"
   });
 
   it("returns ok when the database responds", async () => {
