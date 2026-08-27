@@ -4,6 +4,7 @@ import { BadgeCheck, Blocks, BriefcaseBusiness, GraduationCap } from "lucide-rea
 import { useEffect, useState, type CSSProperties } from "react";
 import { BackButton } from "../shared/onboarding-ui";
 import type { ResumeExtractionResponse } from "@/lib/shared/types";
+import { formatResumeIdentitySummary } from "./resume-identity-copy";
 import {
   AUTO_SCROLL_IDLE_MS,
   IDENTITY_CONTINUE_MS,
@@ -26,6 +27,9 @@ export function ResumeIdentityStep({
   const { extraction } = result;
   const [phase, setPhase] = useState<0 | 1 | 2>(0);
   const displayName = extraction.fullName || "there";
+  const profileSummary = formatResumeIdentitySummary(
+    extraction.context.trim() ? extraction.context : extraction.headline
+  );
   const resumeThings = [
     {
       label: "Work",
@@ -61,7 +65,7 @@ export function ResumeIdentityStep({
       window.clearTimeout(finalTimer);
       window.clearTimeout(continueTimer);
     };
-  }, [displayName, extraction.headline, onContinue]);
+  }, [displayName, profileSummary, onContinue]);
 
   useEffect(() => {
     if (phase !== 2) return;
@@ -121,10 +125,7 @@ export function ResumeIdentityStep({
             <p
               className="mx-auto mt-5 max-w-3xl text-2xl font-semibold leading-snug text-cream sm:text-[2.7rem] sm:leading-tight"
             >
-              {extraction.headline}
-            </p>
-            <p className="thinking-shimmer mx-auto mt-6 max-w-xl text-base leading-7 text-cream/58 sm:text-lg">
-              We will use this to shape questions around what you can actually defend.
+              {profileSummary}
             </p>
           </section>
         ) : null}

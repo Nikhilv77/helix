@@ -6,7 +6,6 @@ import {
   Atom,
   BadgeCheck,
   CircleGauge,
-  Clock3,
   CodeXml,
   Cpu,
   FileCode2,
@@ -14,6 +13,7 @@ import {
   Rocket
 } from "lucide-react";
 import { DocumentTitle } from "@/components/document-title";
+import { RoadmapSessionCard as SharedRoadmapSessionCard } from "@/components/workspace/shared/roadmap-session-card";
 import {
   interviewRoadmapSessions,
   roadmapSessionHref,
@@ -75,10 +75,14 @@ export function InterviewsView({
       />
 
       <section className="interviews-intro-in mx-auto max-w-3xl text-center">
-        <p className="font-display text-[clamp(1.1rem,1.25vw,1.4rem)] font-medium leading-[1.55] tracking-normal text-cream">
+        <p
+          aria-label={introCopy}
+          className="font-display text-[clamp(1.1rem,1.25vw,1.4rem)] font-medium leading-[1.55] tracking-normal text-cream"
+        >
           {introWords.map((word, index) => (
             <span
               key={`${word}-${index}`}
+              aria-hidden="true"
               className="interviews-intro-word"
               style={{ "--interview-word-delay": `${index * 22}ms` } as CSSProperties}
             >
@@ -167,68 +171,18 @@ function RoadmapSessionCard({
           : "Start session";
 
   return (
-    <Link
-      href={disabled ? "#" : roadmapSessionHref(session)}
-      aria-disabled={disabled}
-      style={{ "--interview-delay": `${delay}ms` } as CSSProperties}
-      className={[
-        "interview-session-card group relative flex min-h-[28rem] flex-col rounded-[2rem] p-7 text-left transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/35 lg:p-8",
-        disabled ? "pointer-events-none opacity-45" : ""
-      ].join(" ")}
-    >
-      <span className="interview-session-icon flex h-20 w-20 items-center justify-center rounded-[1.45rem] lg:h-24 lg:w-24">
-        <SessionIcon size={40} strokeWidth={1.45} aria-hidden="true" />
-      </span>
-
-      <h2 className="mt-16 max-w-[17rem] font-display text-[1.5rem] font-semibold leading-[1.2] tracking-normal text-cream sm:text-[1.65rem]">
-        {session.title}
-      </h2>
-      <p className="mt-4 max-w-[19rem] text-base leading-7 text-cream/72">{session.purpose}</p>
-
-      {statusLabel ? (
-        <span className="mt-5 w-fit rounded-full border border-[color-mix(in_srgb,var(--workspace-accent)_28%,transparent)] bg-[color-mix(in_srgb,var(--workspace-accent)_9%,transparent)] px-3 py-1.5 text-[11px] font-medium text-cream/68">
-          {statusLabel}
-        </span>
-      ) : null}
-
-      {session.durationMinutes || session.difficulty ? (
-        <div className="mt-5 flex flex-wrap items-center gap-2">
-          {session.durationMinutes ? (
-            <span className="pill inline-flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-cream/55">
-              <Clock3 size={11} aria-hidden="true" /> {session.durationMinutes} min
-            </span>
-          ) : null}
-          {session.difficulty ? (
-            <span className="pill px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-cream/55">
-              {session.difficulty}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-
-      {session.covers.length ? (
-        <ul className="mt-5 flex flex-wrap gap-2" aria-label="Session topics">
-          {session.covers.slice(0, 4).map((topic) => (
-            <li
-              key={topic}
-              className="rounded-full border border-white/[0.08] bg-white/[0.035] px-2.5 py-1 text-[11px] text-cream/48"
-            >
-              {topic}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      <div className="relative z-10 mt-auto pt-9">
-        <span className="interview-session-link inline-flex items-center gap-2 text-base font-medium text-cream/88 transition-colors group-hover:text-cream">
-          {actionLabel}
-          <ArrowRight
-            size={17}
-            aria-hidden="true"
-            className="transition-transform duration-300 group-hover:translate-x-1"
-          />
-        </span>
-      </div>
-    </Link>
+    <SharedRoadmapSessionCard
+      href={disabled ? null : roadmapSessionHref(session)}
+      icon={SessionIcon}
+      title={session.title}
+      purpose={session.purpose}
+      covers={session.covers}
+      statusLabel={statusLabel}
+      actionLabel={actionLabel}
+      durationMinutes={session.durationMinutes}
+      difficulty={session.difficulty}
+      disabled={disabled}
+      delay={delay}
+    />
   );
 }

@@ -3,14 +3,10 @@
  * beside the feature they represent.
  */
 export function RouteProgress() {
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-0.5 overflow-hidden"
-    >
-      <div className="route-progress h-full w-full bg-gradient-to-r from-transparent via-cream to-transparent" />
-    </div>
-  );
+  // Route skeletons already communicate loading. The old fixed cream line
+  // flashed above the inset desktop sidebar during a hard refresh and looked
+  // like a stray white rendering artifact.
+  return null;
 }
 
 const waveHeights = Array.from(

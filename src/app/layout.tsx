@@ -158,6 +158,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const showWorkspaceShell = Boolean(userId && workspaceRoute && !welcomeHome);
   let initialWorkspaceAccent: WorkspaceAccent | undefined;
   let initialTeacherId: string | null = null;
+  let initialProfileImage: string | null = null;
 
   if (userId) {
     const profile = await getAppContainer()
@@ -166,6 +167,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     if (workspaceRoute && !welcomeHome && !profile?.onboardingCompletedAt) redirect("/onboarding");
     if (profile) {
       initialTeacherId = profile.teacherId;
+      initialProfileImage = profile.profileImage;
       if (workspaceRoute && !welcomeHome) initialWorkspaceAccent = profile.workspaceAccent;
     }
   }
@@ -175,7 +177,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <ScrollRestoration />
       {showWorkspaceShell ? (
         <WorkspaceTeacherProvider teacherId={initialTeacherId}>
-          <WorkspaceShell initialAccent={initialWorkspaceAccent}>{children}</WorkspaceShell>
+          <WorkspaceShell
+            initialAccent={initialWorkspaceAccent}
+            initialProfileImage={initialProfileImage}
+          >
+            {children}
+          </WorkspaceShell>
         </WorkspaceTeacherProvider>
       ) : userId ? (
         <WorkspaceTeacherProvider teacherId={initialTeacherId}>{children}</WorkspaceTeacherProvider>

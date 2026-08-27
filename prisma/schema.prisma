@@ -59,6 +59,17 @@ enum RoadmapProgressStatus {
   SKIPPED
 }
 
+enum PracticeSessionAvailability {
+  AVAILABLE
+  UNAVAILABLE
+}
+
+enum PrepQuestionPublicationStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 enum RoadmapQuestionSourceType {
   DSA
   PREP
@@ -70,6 +81,15 @@ enum RoadmapQuestionAttemptStatus {
   SUBMITTED
   COMPLETED
   SKIPPED
+}
+
+/// Whether an attempt is safe to consume as demonstrated ability.
+/// NOT_APPLICABLE covers navigation actions such as skip; UNVERIFIED preserves
+/// learner work when an evaluator is unavailable without treating it as proof.
+enum PracticeAttemptVerificationStatus {
+  VERIFIED
+  UNVERIFIED
+  NOT_APPLICABLE
 }
 
 enum MayaInsightKind {
@@ -220,45 +240,249 @@ model InterviewAnswerRequest {
 }
 
 model CandidateProfile {
-  ownerId                    String                               @id
-  targetRole                 String?
-  level                      String?
-  targetCompany              String?
-  targetDate                 DateTime?
-  headline                   String?
-  context                    String?
-  coverImage                 String?
-  profileImage               String?
-  workspaceAccent            String                               @default("ember")
+  ownerId                     String                               @id
+  targetRole                  String?
+  level                       String?
+  targetCompany               String?
+  targetDate                  DateTime?
+  headline                    String?
+  context                     String?
+  coverImage                  String?
+  profileImage                String?
+  workspaceAccent             String                               @default("ember")
   /// Persona id from src/lib/avatars/personas.ts — the teacher chosen at onboarding.
-  teacherId                  String?
-  focusAreas                 Json
-  stories                    Json
-  resumeFileName             String?
-  resumeMimeType             String?
-  resumeAnalysis             Json?
-  resumeUploadedAt           DateTime?
-  resumeVerifiedAt           DateTime?
-  resumeConfidence           Float?
-  onboardingCompletedAt      DateTime?
+  teacherId                   String?
+  /// False stops this candidate being asked to help with other people's questions.
+  helpNotificationsEnabled    Boolean                              @default(true)
+  /// False pauses the teacher's optional daily practice recommendations.
+  teacherNotificationsEnabled Boolean                              @default(true)
+  focusAreas                  Json
+  stories                     Json
+  resumeFileName              String?
+  resumeMimeType              String?
+  resumeAnalysis              Json?
+  resumeUploadedAt            DateTime?
+  resumeVerifiedAt            DateTime?
+  resumeConfidence            Float?
+  onboardingCompletedAt       DateTime?
   /// Maya's curated session plan for this candidate, generated from the resume.
-  curriculum                 Json?
-  curriculumBuiltAt          DateTime?
-  createdAt                  DateTime                             @default(now())
-  updatedAt                  DateTime                             @updatedAt
-  roadmaps                   UserRoadmap[]
-  questionAttempts           UserQuestionAttempt[]
-  mayaInsights               UserMayaInsight[]
-  dsaNotes                   UserDsaQuestionNote[]
-  interviewProfileVersions   CandidateInterviewProfileVersion[]   @relation("CandidateInterviewProfileVersions")
-  interviewPlanVersions      PersonalizedInterviewPlanVersion[]   @relation("CandidateInterviewPlanVersions")
-  performanceProfileVersions CandidatePerformanceProfileVersion[] @relation("CandidatePerformanceProfileVersions")
+  curriculum                  Json?
+  curriculumBuiltAt           DateTime?
+  createdAt                   DateTime                             @default(now())
+  updatedAt                   DateTime                             @updatedAt
+  roadmaps                    UserRoadmap[]
+  questionAttempts            UserQuestionAttempt[]
+  mayaInsights                UserMayaInsight[]
+  dsaNotes                    UserDsaQuestionNote[]
+  prepNotes                   UserPrepQuestionNote[]
+  interviewProfileVersions    CandidateInterviewProfileVersion[]   @relation("CandidateInterviewProfileVersions")
+  interviewPlanVersions       PersonalizedInterviewPlanVersion[]   @relation("CandidateInterviewPlanVersions")
+  performanceProfileVersions  CandidatePerformanceProfileVersion[] @relation("CandidatePerformanceProfileVersions")
+  practiceEvidenceVersions    CandidatePracticeEvidenceVersion[]   @relation("CandidatePracticeEvidenceVersions")
+  helpRequests                HelpRequest[]                        @relation("HelpRequestsAsked")
+  helpRequestDeclines         HelpRequestDecline[]                 @relation("HelpRequestsDeclined")
+  notifications               Notification[]                       @relation("CandidateNotifications")
 
   @@index([updatedAt])
 }
 
 /// Immutable aggregate of demonstrated skill evidence from completed
 /// personalized interview sessions.
+/// Status of a contextual peer-help request.
+///
+/// OPEN and CLAIMED are the only live states; the other three are terminal.
+/// A request in a terminal state is history and is never transitioned again.
+enum HelpRequestStatus {
+  OPEN
+  CLAIMED
+  RESOLVED
+  EXPIRED
+  CANCELLED
+}
+
+/// A learner asking for human help on a practice problem they are stuck on.
+///
+/// The request carries its own snapshot of the workspace rather than pointing
+/// at live state: a helper who accepts twenty minutes later needs to see where
+/// the learner was *when they asked*, and the learner keeps editing meanwhile.
+model HelpRequest {
+  id           String               @id @default(uuid()) @db.Uuid
+  learnerId    String
+  questionSlug String
+  /// Programming language of the attempt, used to match a helper who knows it.
+  language     String
+  status       HelpRequestStatus    @default(OPEN)
+  /// Workspace snapshot taken at the moment of asking — see HelpRequestContext.
+  context      Json
+  /// Maya's summary of where the learner appears to be stuck. Null until the
+  /// summary job fills it in, so the request is never blocked on the model.
+  summary      String?              @db.Text
+  helperId     String?
+  claimedAt    DateTime?
+  resolvedAt   DateTime?
+  /// Set when the learner withdraws or a sweep retires an unanswered request.
+  closedAt     DateTime?
+  /// After this, a sweep moves an unclaimed request to EXPIRED.
+  expiresAt    DateTime
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  learner      CandidateProfile     @relation("HelpRequestsAsked", fields: [learnerId], references: [ownerId], onDelete: Cascade)
+  question     DsaQuestion          @relation(fields: [questionSlug], references: [slug], onDelete: Cascade)
+  session      HelpSession?
+  declines     HelpRequestDecline[]
+
+  @@index([status, expiresAt])
+  @@index([questionSlug, status])
+  @@index([learnerId, createdAt])
+  @@index([helperId])
+}
+
+/// A helper passing on one request without changing it for anybody else.
+/// Persistent so the same request does not return on refresh or another device.
+model HelpRequestDecline {
+  id        String           @id @default(uuid()) @db.Uuid
+  requestId String           @db.Uuid
+  helperId  String
+  createdAt DateTime         @default(now())
+  request   HelpRequest      @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  helper    CandidateProfile @relation("HelpRequestsDeclined", fields: [helperId], references: [ownerId], onDelete: Cascade)
+
+  @@unique([requestId, helperId])
+  @@index([helperId, createdAt])
+}
+
+/// The live call for a claimed request. Created when either participant asks to
+/// join, not when the helper accepts — accepting is a promise, joining starts it.
+model HelpSession {
+  id                     String      @id @default(uuid()) @db.Uuid
+  requestId              String      @unique @db.Uuid
+  /// LiveKit room. Unique so a retry cannot open a second room for one request.
+  roomName               String      @unique
+  startedAt              DateTime    @default(now())
+  /// First successful token authorization for each seat. Both are required
+  /// before the conversation is eligible for learner feedback.
+  learnerJoinedAt        DateTime?
+  helperJoinedAt         DateTime?
+  endedAt                DateTime?
+  /// Why the call ended: "resolved", "left", "timeout", "reported".
+  endedReason            String?
+  /// 1-5, collected after the call. Null while the session is live or skipped.
+  learnerRating          Int?
+  /// Persisted so "Skip" remains skipped after a reload or another device.
+  learnerRatingSkippedAt DateTime?
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+  request                HelpRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([startedAt])
+}
+
+/// What a notification is about. The value is stable and stored, so renaming a
+/// member is a migration, not a refactor.
+enum NotificationKind {
+  /// One-time message from the selected teacher after onboarding completes.
+  TEACHER_WELCOME
+  /// Daily question or practice-path recommendation from the selected teacher.
+  TEACHER_RECOMMENDATION
+  /// A second, evidence-backed nudge for unfinished work; never sent by default.
+  TEACHER_REMINDER
+  /// Someone is stuck on a question you have already finished.
+  HELP_REQUEST_OPENED
+  /// A helper accepted the request you opened.
+  HELP_REQUEST_CLAIMED
+  /// Your request was answered and closed.
+  HELP_REQUEST_RESOLVED
+  /// Nobody picked your request up before it timed out.
+  HELP_REQUEST_EXPIRED
+}
+
+/// One item in a candidate's inbox.
+///
+/// Deliberately generic: help requests are the first thing to use it, but the
+/// shape carries no help-specific field so the next feature that needs to reach
+/// somebody does not get its own parallel table.
+model Notification {
+  id                 String           @id @default(uuid()) @db.Uuid
+  ownerId            String
+  kind               NotificationKind
+  title              String
+  body               String           @db.Text
+  /// In-app destination, e.g. /dsa-questions/lru-cache.
+  href               String?
+  /// What produced this — a HelpRequest id today. Paired with kind it makes a
+  /// repeat delivery a no-op instead of a second identical row in the inbox.
+  subjectId          String?
+  readAt             DateTime?
+  /// Non-null only when this event is urgent enough for email and email was
+  /// configured when it was recorded. The remaining fields form a durable,
+  /// leased retry state machine; they never affect the in-app record.
+  emailRequestedAt   DateTime?
+  emailAttempts      Int              @default(0)
+  emailLeaseToken    String?
+  emailLeaseUntil    DateTime?
+  emailNextAttemptAt DateTime?
+  emailSentAt        DateTime?
+  emailFailedAt      DateTime?
+  emailLastError     String?          @db.Text
+  /// Optional channel-specific copy persisted so retries send the same email.
+  emailSubject       String?
+  emailBody          String?          @db.Text
+  createdAt          DateTime         @default(now())
+  owner              CandidateProfile @relation("CandidateNotifications", fields: [ownerId], references: [ownerId], onDelete: Cascade)
+
+  @@unique([ownerId, kind, subjectId])
+  @@index([ownerId, readAt])
+  @@index([ownerId, createdAt])
+}
+
+/// Why somebody flagged a help interaction.
+enum HelpReportReason {
+  HARASSMENT
+  SPAM
+  OFF_TOPIC
+  /// The helper handed over the answer instead of explaining it.
+  SOLUTION_DUMPING
+  OTHER
+}
+
+/// One person never wanting to be paired with another again.
+///
+/// Stored one-directional but always enforced both ways: the person who blocked
+/// should not see the other, and the other must not be able to work out that
+/// they were blocked by noticing they can still see the first. Symmetry removes
+/// that oracle.
+model HelpBlock {
+  id        String   @id @default(uuid()) @db.Uuid
+  ownerId   String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  @@unique([ownerId, blockedId])
+  @@index([blockedId])
+}
+
+/// A flagged interaction, queued for a human to look at.
+///
+/// Deliberately not actioned automatically. An automated ban built on a report
+/// count is a weapon anybody can point at anybody; at this size a person can
+/// read every one of these.
+model HelpReport {
+  id         String           @id @default(uuid()) @db.Uuid
+  requestId  String           @db.Uuid
+  reporterId String
+  reportedId String
+  reason     HelpReportReason
+  detail     String?          @db.Text
+  createdAt  DateTime         @default(now())
+  /// Set when an operator has looked at it. Null means it is still waiting.
+  reviewedAt DateTime?
+
+  @@unique([requestId, reporterId])
+  @@index([reportedId])
+  @@index([reviewedAt, createdAt])
+  @@index([requestId])
+}
+
 model CandidatePerformanceProfileVersion {
   id                       String           @id @default(uuid()) @db.Uuid
   ownerId                  String
@@ -276,6 +500,27 @@ model CandidatePerformanceProfileVersion {
   @@unique([ownerId, sourceSessionFingerprint, schemaVersion])
   @@index([ownerId, generatedAt])
   @@index([sourceSessionFingerprint])
+}
+
+/// Immutable aggregate of server-verified Practice attempts. Interview-plan
+/// revisions may read this evidence; historical attempts and plans never move.
+model CandidatePracticeEvidenceVersion {
+  id                       String           @id @default(uuid()) @db.Uuid
+  ownerId                  String
+  revision                 Int
+  schemaVersion            Int
+  sourceAttemptFingerprint String
+  verifiedAttemptCount     Int
+  verifiedQuestionCount    Int
+  evidence                 Json
+  generatedAt              DateTime
+  createdAt                DateTime         @default(now())
+  owner                    CandidateProfile @relation("CandidatePracticeEvidenceVersions", fields: [ownerId], references: [ownerId], onDelete: Cascade)
+
+  @@unique([ownerId, revision])
+  @@unique([ownerId, sourceAttemptFingerprint, schemaVersion])
+  @@index([ownerId, generatedAt])
+  @@index([sourceAttemptFingerprint])
 }
 
 /// Immutable normalized resume/profile snapshot. A new source resume creates
@@ -357,6 +602,9 @@ model DsaPhase {
 
 model DsaQuestion {
   slug                 String                    @id
+  /// Incremented only when authored content changes in a way that should be
+  /// snapshotted or re-reviewed by downstream practice consumers.
+  contentVersion       Int                       @default(1)
   phaseSlug            String
   title                String
   source               String
@@ -390,6 +638,8 @@ model DsaQuestion {
   userQuestionAttempts UserQuestionAttempt[]
   userNotes            UserDsaQuestionNote[]
 
+  helpRequests HelpRequest[]
+
   @@unique([phaseSlug, recommendedOrder])
   @@index([phaseSlug])
   @@index([primaryPattern])
@@ -413,8 +663,11 @@ model UserDsaQuestionNote {
 }
 
 model PrepQuestionTemplate {
-  id                   String                    @id
+  id                   String                        @id
+  contentVersion       Int                           @default(1)
   bank                 String
+  sessionKey           String
+  chapterKey           String
   category             String
   title                String
   roles                String[]
@@ -423,8 +676,15 @@ model PrepQuestionTemplate {
   expectedMinutes      Int
   evidenceType         String
   competency           String
-  prompt               String                    @db.Text
-  promptTemplate       String?                   @db.Text
+  format               String                        @default("typed")
+  prompt               String                        @db.Text
+  promptTemplate       String?                       @db.Text
+  objective            String                        @db.Text
+  prerequisites        String[]                      @default([])
+  hints                String[]                      @default([])
+  explanation          String                        @db.Text
+  answerKey            Json?
+  publicationStatus    PrepQuestionPublicationStatus @default(DRAFT)
   tags                 String[]
   whatItTests          String[]
   goodAnswerSignals    String[]
@@ -434,13 +694,16 @@ model PrepQuestionTemplate {
   answerStructure      Json
   scoringRubric        Json
   sourceLinks          Json
-  createdAt            DateTime                  @default(now())
-  updatedAt            DateTime                  @updatedAt
+  createdAt            DateTime                      @default(now())
+  updatedAt            DateTime                      @updatedAt
   roadmapQuestions     RoadmapQuestionTemplate[]
   userQuestionProgress UserQuestionProgress[]
   userQuestionAttempts UserQuestionAttempt[]
+  userNotes            UserPrepQuestionNote[]
 
   @@index([bank])
+  @@index([sessionKey, publicationStatus])
+  @@index([chapterKey])
   @@index([category])
   @@index([competency])
   @@index([difficulty])
@@ -526,6 +789,7 @@ model RoadmapQuestionTemplate {
   userQuestionProgress   UserQuestionProgress[]
 
   @@unique([sessionTemplateId, order])
+  @@unique([sessionTemplateId, prepQuestionTemplateId])
   @@index([sessionTemplateId])
   @@index([chapterTemplateId])
   @@index([sourceType])
@@ -534,35 +798,41 @@ model RoadmapQuestionTemplate {
 }
 
 model UserRoadmap {
-  id                         String                 @id @default(uuid()) @db.Uuid
-  ownerId                    String
-  templateId                 String?                @db.Uuid
-  role                       String
-  status                     UserRoadmapStatus      @default(ACTIVE)
-  title                      String
-  templateVersion            Int?
-  currentSessionTemplateSlug String?
-  currentChapterTemplateSlug String?
-  nextQuestionKey            String?
-  totalSessions              Int                    @default(0)
-  completedSessions          Int                    @default(0)
-  totalQuestions             Int                    @default(0)
-  attemptedQuestions         Int                    @default(0)
-  completedQuestions         Int                    @default(0)
-  estimatedMinutesRemaining  Int?
-  overallProgressPercent     Float                  @default(0)
-  personalization            Json?
-  stats                      Json?
-  generatedAt                DateTime               @default(now())
-  recalculatedAt             DateTime?
-  createdAt                  DateTime               @default(now())
-  updatedAt                  DateTime               @updatedAt
-  owner                      CandidateProfile       @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
-  template                   RoadmapTemplate?       @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  sessionProgress            UserSessionProgress[]
-  chapterProgress            UserChapterProgress[]
-  questionProgress           UserQuestionProgress[]
-  insights                   UserMayaInsight[]
+  id                          String                      @id @default(uuid()) @db.Uuid
+  ownerId                     String
+  templateId                  String?                     @db.Uuid
+  role                        String
+  status                      UserRoadmapStatus           @default(ACTIVE)
+  title                       String
+  templateVersion             Int?
+  currentSessionTemplateSlug  String?
+  currentChapterTemplateSlug  String?
+  nextQuestionKey             String?
+  totalSessions               Int                         @default(0)
+  completedSessions           Int                         @default(0)
+  totalQuestions              Int                         @default(0)
+  attemptedQuestions          Int                         @default(0)
+  completedQuestions          Int                         @default(0)
+  estimatedMinutesRemaining   Int?
+  overallProgressPercent      Float                       @default(0)
+  personalization             Json?
+  stats                       Json?
+  sourceInterviewPlanId       String?                     @db.Uuid
+  sourceInterviewPlanRevision Int?
+  sourceProfileVersionId      String?                     @db.Uuid
+  sourceProfileRevision       Int?
+  practiceGenerationVersion   Int                         @default(1)
+  generatedAt                 DateTime                    @default(now())
+  recalculatedAt              DateTime?
+  createdAt                   DateTime                    @default(now())
+  updatedAt                   DateTime                    @updatedAt
+  owner                       CandidateProfile            @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  template                    RoadmapTemplate?            @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  sessionProgress             UserSessionProgress[]
+  chapterProgress             UserChapterProgress[]
+  questionProgress            UserQuestionProgress[]
+  insights                    UserMayaInsight[]
+  practiceQuestionPlacements  PracticeQuestionPlacement[]
 
   @@unique([ownerId, role])
   @@index([ownerId])
@@ -572,26 +842,38 @@ model UserRoadmap {
 }
 
 model UserSessionProgress {
-  id                 String                 @id @default(uuid()) @db.Uuid
-  roadmapId          String                 @db.Uuid
-  sessionTemplateId  String                 @db.Uuid
-  status             RoadmapProgressStatus  @default(LOCKED)
-  order              Int
-  startedAt          DateTime?
-  completedAt        DateTime?
-  totalQuestions     Int                    @default(0)
-  attemptedQuestions Int                    @default(0)
-  completedQuestions Int                    @default(0)
-  progressPercent    Float                  @default(0)
-  metadata           Json?
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
-  roadmap            UserRoadmap            @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
-  sessionTemplate    RoadmapSessionTemplate @relation(fields: [sessionTemplateId], references: [id], onDelete: Cascade)
-  chapters           UserChapterProgress[]
-  questions          UserQuestionProgress[]
+  id                      String                      @id @default(uuid()) @db.Uuid
+  roadmapId               String                      @db.Uuid
+  sessionTemplateId       String                      @db.Uuid
+  status                  RoadmapProgressStatus       @default(LOCKED)
+  order                   Int
+  startedAt               DateTime?
+  completedAt             DateTime?
+  totalQuestions          Int                         @default(0)
+  attemptedQuestions      Int                         @default(0)
+  completedQuestions      Int                         @default(0)
+  progressPercent         Float                       @default(0)
+  practiceSessionKey      String
+  availability            PracticeSessionAvailability @default(UNAVAILABLE)
+  titleSnapshot           String?
+  purposeSnapshot         String?                     @db.Text
+  coversSnapshot          String[]                    @default([])
+  difficultySnapshot      String?
+  durationMinutesSnapshot Int?
+  sourceBlueprintId       String?                     @db.Uuid
+  sourceBlueprintKind     String?
+  personalizedAt          DateTime?
+  metadata                Json?
+  createdAt               DateTime                    @default(now())
+  updatedAt               DateTime                    @updatedAt
+  roadmap                 UserRoadmap                 @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  sessionTemplate         RoadmapSessionTemplate      @relation(fields: [sessionTemplateId], references: [id], onDelete: Cascade)
+  chapters                UserChapterProgress[]
+  questions               UserQuestionProgress[]
+  practicePlacements      PracticeQuestionPlacement[]
 
   @@unique([roadmapId, sessionTemplateId])
+  @@unique([roadmapId, practiceSessionKey])
   @@index([roadmapId])
   @@index([sessionTemplateId])
   @@index([status])
@@ -626,32 +908,37 @@ model UserChapterProgress {
 }
 
 model UserQuestionProgress {
-  id                        String                    @id @default(uuid()) @db.Uuid
-  roadmapId                 String                    @db.Uuid
-  sessionProgressId         String                    @db.Uuid
-  chapterProgressId         String?                   @db.Uuid
-  roadmapQuestionTemplateId String?                   @db.Uuid
+  id                        String                      @id @default(uuid()) @db.Uuid
+  roadmapId                 String                      @db.Uuid
+  sessionProgressId         String                      @db.Uuid
+  chapterProgressId         String?                     @db.Uuid
+  roadmapQuestionTemplateId String?                     @db.Uuid
   sourceType                RoadmapQuestionSourceType
   dsaQuestionSlug           String?
   prepQuestionTemplateId    String?
-  status                    RoadmapProgressStatus     @default(LOCKED)
+  status                    RoadmapProgressStatus       @default(LOCKED)
   order                     Int
-  attemptCount              Int                       @default(0)
+  attemptCount              Int                         @default(0)
   bestScore                 Float?
   lastAttemptedAt           DateTime?
   completedAt               DateTime?
+  draftAnswer               String?                     @db.Text
+  draftUpdatedAt            DateTime?
+  revealedHintCount         Int                         @default(0)
   metadata                  Json?
-  createdAt                 DateTime                  @default(now())
-  updatedAt                 DateTime                  @updatedAt
-  roadmap                   UserRoadmap               @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
-  sessionProgress           UserSessionProgress       @relation(fields: [sessionProgressId], references: [id], onDelete: Cascade)
-  chapterProgress           UserChapterProgress?      @relation(fields: [chapterProgressId], references: [id], onDelete: SetNull)
-  roadmapQuestionTemplate   RoadmapQuestionTemplate?  @relation(fields: [roadmapQuestionTemplateId], references: [id], onDelete: SetNull)
-  dsaQuestion               DsaQuestion?              @relation(fields: [dsaQuestionSlug], references: [slug], onDelete: SetNull)
-  prepQuestionTemplate      PrepQuestionTemplate?     @relation(fields: [prepQuestionTemplateId], references: [id], onDelete: SetNull)
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime                    @updatedAt
+  roadmap                   UserRoadmap                 @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  sessionProgress           UserSessionProgress         @relation(fields: [sessionProgressId], references: [id], onDelete: Cascade)
+  chapterProgress           UserChapterProgress?        @relation(fields: [chapterProgressId], references: [id], onDelete: SetNull)
+  roadmapQuestionTemplate   RoadmapQuestionTemplate?    @relation(fields: [roadmapQuestionTemplateId], references: [id], onDelete: SetNull)
+  dsaQuestion               DsaQuestion?                @relation(fields: [dsaQuestionSlug], references: [slug], onDelete: SetNull)
+  prepQuestionTemplate      PrepQuestionTemplate?       @relation(fields: [prepQuestionTemplateId], references: [id], onDelete: SetNull)
   attempts                  UserQuestionAttempt[]
+  practicePlacements        PracticeQuestionPlacement[]
 
   @@unique([roadmapId, order])
+  @@unique([roadmapId, prepQuestionTemplateId])
   @@index([roadmapId])
   @@index([sessionProgressId])
   @@index([chapterProgressId])
@@ -662,32 +949,92 @@ model UserQuestionProgress {
   @@index([prepQuestionTemplateId])
 }
 
-model UserQuestionAttempt {
-  id                     String                       @id @default(uuid()) @db.Uuid
+model UserPrepQuestionNote {
+  id                     String               @id @default(uuid()) @db.Uuid
   ownerId                String
-  questionProgressId     String                       @db.Uuid
+  prepQuestionTemplateId String
+  content                String               @db.Text
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  owner                  CandidateProfile     @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  question               PrepQuestionTemplate @relation(fields: [prepQuestionTemplateId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, prepQuestionTemplateId])
+  @@index([ownerId])
+  @@index([prepQuestionTemplateId])
+}
+
+/// Candidate-specific placement of one canonical progress record into a
+/// Practice session. Final Mock can point at progress owned by an earlier
+/// session, so mixed review never duplicates mastery or attempt history.
+model PracticeQuestionPlacement {
+  id                          String               @id @default(uuid()) @db.Uuid
+  roadmapId                   String               @db.Uuid
+  sessionProgressId           String               @db.Uuid
+  questionProgressId          String               @db.Uuid
+  practiceSessionKey          String
+  order                       Int
+  selectionReason             String
+  contentVersion              Int
+  sourceInterviewPlanId       String?              @db.Uuid
+  sourceInterviewPlanRevision Int?
+  sourceProfileVersionId      String?              @db.Uuid
+  sourceProfileRevision       Int?
+  metadata                    Json?
+  createdAt                   DateTime             @default(now())
+  updatedAt                   DateTime             @updatedAt
+  roadmap                     UserRoadmap          @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  sessionProgress             UserSessionProgress  @relation(fields: [sessionProgressId], references: [id], onDelete: Cascade)
+  questionProgress            UserQuestionProgress @relation(fields: [questionProgressId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionProgressId, order])
+  @@unique([sessionProgressId, questionProgressId])
+  @@index([roadmapId, practiceSessionKey])
+  @@index([questionProgressId])
+  @@index([sourceInterviewPlanId])
+}
+
+model UserQuestionAttempt {
+  id                     String                             @id @default(uuid()) @db.Uuid
+  ownerId                String
+  /// Client-generated request identity. Null preserves legacy rows; new
+  /// practice writes use it so retries cannot create a second attempt event.
+  idempotencyKey         String?                            @db.Uuid
+  questionProgressId     String                             @db.Uuid
   sourceType             RoadmapQuestionSourceType
   dsaQuestionSlug        String?
   prepQuestionTemplateId String?
-  status                 RoadmapQuestionAttemptStatus @default(STARTED)
-  answer                 String?                      @db.Text
+  status                 RoadmapQuestionAttemptStatus       @default(STARTED)
+  /// Canonical editor language (javascript, python, cpp, java) when this
+  /// attempt came from the code runner. Null for non-code/manual attempts.
+  language               String?
+  answer                 String?                            @db.Text
   score                  Float?
   correctness            String?
+  /// Authored question/rubric revision evaluated for this immutable attempt.
+  questionContentVersion Int?
+  /// Versioned evaluator contract, independent of the provider/model name.
+  evaluatorVersion       String?
+  verificationStatus     PracticeAttemptVerificationStatus?
   durationMs             Int?
   feedback               Json?
-  createdAt              DateTime                     @default(now())
-  updatedAt              DateTime                     @updatedAt
-  owner                  CandidateProfile             @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
-  questionProgress       UserQuestionProgress         @relation(fields: [questionProgressId], references: [id], onDelete: Cascade)
-  dsaQuestion            DsaQuestion?                 @relation(fields: [dsaQuestionSlug], references: [slug], onDelete: SetNull)
-  prepQuestionTemplate   PrepQuestionTemplate?        @relation(fields: [prepQuestionTemplateId], references: [id], onDelete: SetNull)
+  createdAt              DateTime                           @default(now())
+  updatedAt              DateTime                           @updatedAt
+  owner                  CandidateProfile                   @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  questionProgress       UserQuestionProgress               @relation(fields: [questionProgressId], references: [id], onDelete: Cascade)
+  dsaQuestion            DsaQuestion?                       @relation(fields: [dsaQuestionSlug], references: [slug], onDelete: SetNull)
+  prepQuestionTemplate   PrepQuestionTemplate?              @relation(fields: [prepQuestionTemplateId], references: [id], onDelete: SetNull)
 
+  @@unique([ownerId, idempotencyKey])
   @@index([ownerId, createdAt])
   @@index([questionProgressId])
   @@index([sourceType])
   @@index([status])
   @@index([dsaQuestionSlug])
+  @@index([ownerId, dsaQuestionSlug, status, score])
+  @@index([dsaQuestionSlug, language, status, score])
   @@index([prepQuestionTemplateId])
+  @@index([sourceType, verificationStatus, createdAt])
 }
 
 model UserMayaInsight {

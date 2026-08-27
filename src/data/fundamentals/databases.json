@@ -6,11 +6,7 @@
     {
       "slug": "what-an-index-costs",
       "format": "mcq",
-      "levels": [
-        "0-2",
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["0-2", "3-5", "5-plus"],
       "prompt": "What does adding an index cost you?",
       "options": [
         "Nothing — it only speeds things up",
@@ -34,10 +30,7 @@
     {
       "slug": "n-plus-one",
       "format": "mcq",
-      "levels": [
-        "0-2",
-        "3-5"
-      ],
+      "levels": ["0-2", "3-5"],
       "prompt": "An endpoint returns 100 posts and issues 101 queries. What is happening?",
       "options": [
         "The connection pool is too small",
@@ -60,11 +53,9 @@
     },
     {
       "slug": "index-not-used",
+      "contentVersion": 2,
       "format": "mcq",
-      "levels": [
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["3-5", "5-plus"],
       "prompt": "A column is indexed but the query still does a full scan. Which of these explains it?",
       "options": [
         "The query returns more than one row",
@@ -73,12 +64,12 @@
         "The index was created after the rows were inserted"
       ],
       "answerIndex": 1,
-      "explanation": "Applying a function to the column means the indexed values no longer match what is being compared, so the index cannot be used.",
+      "explanation": "A plain index on the original column may not support a predicate on a transformed value such as LOWER(email). Depending on the database, an expression index or a rewritten predicate can make that access path available; EXPLAIN shows what the optimizer actually chose.",
       "concept": {
         "title": "When an index goes unused",
         "summary": "Usually the query, not the index, is the problem.",
         "points": [
-          "A function on the column defeats it — index the expression instead.",
+          "A transformed predicate may not use a plain column index; an expression index can support the transformed value.",
           "A composite index only helps if the query uses its leading column.",
           "A leading wildcard, LIKE '%term', cannot use a B-tree.",
           "EXPLAIN tells you what the planner actually chose. Read it."
@@ -87,13 +78,10 @@
     },
     {
       "slug": "transaction-atomicity",
+      "contentVersion": 2,
       "format": "mcq",
-      "levels": [
-        "fresher",
-        "0-2",
-        "3-5"
-      ],
-      "prompt": "Two updates run inside one transaction and the second fails. What happens?",
+      "levels": ["fresher", "0-2", "3-5"],
+      "prompt": "Two updates run inside one transaction. The second fails and the transaction is rolled back. What is the durable result?",
       "options": [
         "The first is kept and the second is retried",
         "Both are rolled back, as if neither happened",
@@ -101,7 +89,7 @@
         "The database decides based on isolation level"
       ],
       "answerIndex": 1,
-      "explanation": "Atomicity is all-or-nothing: a failed transaction leaves no partial writes behind.",
+      "explanation": "After rollback, atomicity makes the transaction's writes all-or-nothing, so neither update is committed. A statement error does not have identical automatic behavior in every database or client; the application or database still has to roll the transaction back rather than commit partial work.",
       "concept": {
         "title": "ACID, briefly",
         "summary": "Four guarantees, and they answer different questions.",
@@ -115,10 +103,9 @@
     },
     {
       "slug": "isolation-phantom",
+      "contentVersion": 2,
       "format": "mcq",
-      "levels": [
-        "5-plus"
-      ],
+      "levels": ["5-plus"],
       "prompt": "Read Committed prevents which of these?",
       "options": [
         "Reading a value another transaction has written but not committed",
@@ -127,14 +114,14 @@
         "All of the above"
       ],
       "answerIndex": 0,
-      "explanation": "Read Committed only rules out dirty reads. Non-repeatable reads and phantoms need stricter levels.",
+      "explanation": "In the SQL isolation model, Read Committed rules out dirty reads but allows a later statement to observe committed changes, including non-repeatable reads and phantoms. Exact guarantees at stronger named levels vary by database implementation, so production decisions must use that database's documentation.",
       "concept": {
         "title": "What each level rules out",
         "summary": "Stricter levels cost concurrency, so pick the weakest that is correct.",
         "points": [
           "Read Uncommitted: dirty reads allowed.",
           "Read Committed: no dirty reads; the same query can still change.",
-          "Repeatable Read: rows you read stay stable; new rows can still appear.",
+          "SQL-standard Repeatable Read disallows non-repeatable reads but may allow phantoms; some databases provide stronger snapshot behavior.",
           "Serializable: as if transactions ran one at a time."
         ]
       }
@@ -142,10 +129,7 @@
     {
       "slug": "explain-why-query-slow-in-prod",
       "format": "explain",
-      "levels": [
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["3-5", "5-plus"],
       "prompt": "A query is instant on your laptop and slow in production. What differs?",
       "expects": [
         "names data volume or distribution as the main difference",
@@ -167,11 +151,7 @@
     {
       "slug": "scenario-list-endpoint-slow",
       "format": "scenario",
-      "levels": [
-        "0-2",
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["0-2", "3-5", "5-plus"],
       "prompt": "A list endpoint got slower every week for a month with no code changes. What is your first move?",
       "expects": [
         "connects the gradual slowdown to growing data",
@@ -193,12 +173,7 @@
     {
       "slug": "explain-index-tradeoff",
       "format": "explain",
-      "levels": [
-        "fresher",
-        "0-2",
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["fresher", "0-2", "3-5", "5-plus"],
       "prompt": "Someone proposes indexing every column that appears in a WHERE clause. What is wrong with that?",
       "expects": [
         "names the write cost of maintaining each index",
@@ -220,10 +195,7 @@
     {
       "slug": "scenario-duplicate-rows",
       "format": "scenario",
-      "levels": [
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["3-5", "5-plus"],
       "prompt": "Users occasionally end up with two identical orders. Where do you start?",
       "expects": [
         "considers a double submit, a retry, or a race between two requests",

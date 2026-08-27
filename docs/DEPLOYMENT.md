@@ -18,6 +18,24 @@ git push
 
 Vercel auto-deploys after the push if the project is connected to the Git repo.
 
+## Practice Production Alerts
+
+Practice emits structured runtime logs from Vercel Functions. The two release alerts require a
+Vercel Log Drain connected to the team's log/alert provider; Vercel's built-in anomaly alerts do
+not provide content-specific thresholds for these application signals.
+
+Configure the drain for production `lambda` logs with 100% sampling on
+`/api/practice/state` and `/api/practice/attempt`, then create these count alerts:
+
+| Alert | Log field | Window | Fire when |
+| --- | --- | ---: | ---: |
+| Practice state-save outage | `alertSignal = practice-state-save-outage` | 5 minutes | count >= 10 |
+| Practice evaluator outage | `alertSignal = practice-evaluator-outage` | 5 minutes | count >= 5 |
+
+Route both alerts to the production on-call channel. After saving them, exercise each provider's
+test-notification function and record the provider, alert IDs, channel, and test time in
+`PRACTICE_ENGINE.md`. Never reduce sampling for these two API paths during the initial rollout.
+
 ## Vercel Analytics And Google Indexing
 
 Web Analytics is wired into the Next.js root layout with `@vercel/analytics`.

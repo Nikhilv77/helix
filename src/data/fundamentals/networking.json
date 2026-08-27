@@ -6,11 +6,7 @@
     {
       "slug": "no-cache-vs-no-store",
       "format": "mcq",
-      "levels": [
-        "0-2",
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["0-2", "3-5", "5-plus"],
       "prompt": "What does `Cache-Control: no-cache` tell the browser to do?",
       "options": [
         "Never store the response at all",
@@ -33,25 +29,23 @@
     },
     {
       "slug": "http2-head-of-line",
+      "contentVersion": 2,
       "format": "mcq",
-      "levels": [
-        "3-5",
-        "5-plus"
-      ],
-      "prompt": "What problem did HTTP/2 multiplexing solve compared to HTTP/1.1?",
+      "levels": ["3-5", "5-plus"],
+      "prompt": "What limitation did HTTP/2 multiplexing address compared with ordinary HTTP/1.1 browser connections?",
       "options": [
         "Responses could not be compressed",
-        "Only six requests could be in flight per connection, and each blocked the next",
+        "Each connection normally handled one active request at a time, so browsers opened several connections and queued excess work",
         "Requests could not be encrypted",
         "Cookies had to be sent on every request"
       ],
       "answerIndex": 1,
-      "explanation": "HTTP/1.1 needed one connection per in-flight request, so browsers capped at ~6 per origin and queued the rest.",
+      "explanation": "Without pipelining, an HTTP/1.1 connection normally carries one active request at a time. Browsers therefore open a small pool of connections per origin and queue excess work, while HTTP/2 multiplexes independent streams over one connection.",
       "concept": {
         "title": "Head-of-line blocking, twice",
         "summary": "Each HTTP version moved the queue somewhere else rather than removing it.",
         "points": [
-          "HTTP/1.1: one request per connection, browser opens ~6 per origin, rest queue.",
+          "Ordinary HTTP/1.1 browser use: one active request per connection, a small connection pool per origin, then queuing.",
           "HTTP/2: many streams on one TCP connection, so no application-level queue.",
           "But a lost TCP packet still stalls every stream, because TCP delivers in order.",
           "HTTP/3 moves to QUIC over UDP so one lost packet only stalls its own stream."
@@ -61,11 +55,7 @@
     {
       "slug": "cors-preflight-trigger",
       "format": "mcq",
-      "levels": [
-        "0-2",
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["0-2", "3-5", "5-plus"],
       "prompt": "Which request triggers a CORS preflight?",
       "options": [
         "A cross-origin GET with no custom headers",
@@ -88,12 +78,9 @@
     },
     {
       "slug": "tcp-vs-udp",
+      "contentVersion": 2,
       "format": "mcq",
-      "levels": [
-        "fresher",
-        "0-2",
-        "3-5"
-      ],
+      "levels": ["fresher", "0-2", "3-5"],
       "prompt": "What does TCP give you that UDP does not?",
       "options": [
         "Encryption of the payload",
@@ -102,13 +89,13 @@
         "Compression of the payload"
       ],
       "answerIndex": 1,
-      "explanation": "TCP guarantees ordering and retransmits what is lost; UDP does neither, which is why it is faster and lossier.",
+      "explanation": "TCP provides an ordered reliable byte stream with retransmission and congestion control. UDP provides independent datagrams without delivery or ordering guarantees; its smaller transport contract can reduce overhead, but application behavior and network conditions determine actual latency and loss handling.",
       "concept": {
         "title": "TCP vs UDP",
         "summary": "TCP trades latency for guarantees. Neither one encrypts anything.",
         "points": [
           "TCP: handshake, ordered delivery, retransmission, congestion control.",
-          "UDP: fire and forget, no ordering, no retransmission, no handshake.",
+          "UDP: datagrams with no transport-level ordering, retransmission, or connection handshake.",
           "Encryption is TLS, a separate layer, available over both.",
           "Video calls and QUIC pick UDP and rebuild only the guarantees they need."
         ]
@@ -116,20 +103,18 @@
     },
     {
       "slug": "tls-handshake-purpose",
+      "contentVersion": 2,
       "format": "mcq",
-      "levels": [
-        "3-5",
-        "5-plus"
-      ],
-      "prompt": "What is the certificate in a TLS handshake actually proving?",
+      "levels": ["3-5", "5-plus"],
+      "prompt": "What does validating a server certificate during a TLS handshake establish?",
       "options": [
         "That the connection is encrypted",
-        "That the server owns the domain it claims to be",
+        "That the presented public key is authorized for the requested hostname under a trusted certificate chain",
         "That the payload has not been compressed",
         "That the client is who it says it is"
       ],
       "answerIndex": 1,
-      "explanation": "The certificate binds a public key to a domain, vouched for by a CA. Encryption comes from the key exchange, not the certificate.",
+      "explanation": "Certificate validation checks a trusted chain, validity constraints, and whether the certificate identifies the requested hostname; the handshake also proves possession of the corresponding private key. This authenticates the service identity, not legal ownership of the domain. Traffic keys are established by the handshake.",
       "concept": {
         "title": "What TLS does in what order",
         "summary": "Identity first, then a shared secret, then encrypted traffic.",
@@ -144,10 +129,7 @@
     {
       "slug": "etag-conditional-request",
       "format": "mcq",
-      "levels": [
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["3-5", "5-plus"],
       "prompt": "A browser holds a response with an ETag. What does it send on the next request?",
       "options": [
         "The full response body for comparison",
@@ -170,27 +152,24 @@
     },
     {
       "slug": "status-301-vs-302",
+      "contentVersion": 2,
       "format": "mcq",
-      "levels": [
-        "fresher",
-        "0-2",
-        "3-5"
-      ],
+      "levels": ["fresher", "0-2", "3-5"],
       "prompt": "Why is shipping a 301 riskier than a 302?",
       "options": [
         "301 is slower to process",
-        "Browsers cache 301 permanently, so a mistake is hard to take back",
+        "301 declares a permanent move and can be cached, so clients and intermediaries may keep using a mistaken target",
         "301 drops query parameters",
         "301 cannot be used with HTTPS"
       ],
       "answerIndex": 1,
-      "explanation": "A 301 is a permanent redirect and browsers cache it aggressively, so a wrong target can persist long after the server is fixed.",
+      "explanation": "A 301 declares a permanent move and is cacheable unless cache controls say otherwise, so a wrong target can persist in clients or intermediaries. A 302 describes a temporary redirect, although its caching still depends on HTTP cache rules and response headers.",
       "concept": {
         "title": "Redirects you can and cannot undo",
         "summary": "The permanence is a promise to the client, not just a label.",
         "points": [
-          "301 / 308: permanent, cached by browsers, hard to reverse.",
-          "302 / 307: temporary, re-checked each time.",
+          "301 / 308: permanent redirects that can be cached and are harder to reverse once reused.",
+          "302 / 307: temporary redirects; cache behavior still follows response headers and HTTP caching rules.",
           "307 and 308 preserve the method; 301 and 302 historically did not.",
           "Use 302 while you are unsure, 301 once the move is final."
         ]
@@ -199,10 +178,7 @@
     {
       "slug": "dns-resolution-order",
       "format": "mcq",
-      "levels": [
-        "0-2",
-        "3-5"
-      ],
+      "levels": ["0-2", "3-5"],
       "prompt": "Where does a browser look first when resolving a hostname?",
       "options": [
         "The authoritative nameserver for the domain",
@@ -226,11 +202,7 @@
     {
       "slug": "same-origin-definition",
       "format": "mcq",
-      "levels": [
-        "fresher",
-        "0-2",
-        "3-5"
-      ],
+      "levels": ["fresher", "0-2", "3-5"],
       "prompt": "Which of these is a different origin from `https://app.example.com/dashboard`?",
       "options": [
         "https://app.example.com/settings",
@@ -254,10 +226,7 @@
     {
       "slug": "why-http3-udp",
       "format": "explain",
-      "levels": [
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["3-5", "5-plus"],
       "prompt": "HTTP/3 runs over UDP instead of TCP. What did that buy?",
       "expects": [
         "names TCP head-of-line blocking as the problem",
@@ -279,12 +248,7 @@
     {
       "slug": "explain-cache-still-network",
       "format": "explain",
-      "levels": [
-        "fresher",
-        "0-2",
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["fresher", "0-2", "3-5", "5-plus"],
       "prompt": "A response is in the browser cache but the request still hits the network. Why?",
       "expects": [
         "distinguishes fresh from stale",
@@ -306,11 +270,7 @@
     {
       "slug": "scenario-fast-in-postman",
       "format": "scenario",
-      "levels": [
-        "0-2",
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["0-2", "3-5", "5-plus"],
       "prompt": "The API is fast in Postman but slow in the browser. Where do you look?",
       "expects": [
         "separates server time from everything around it",
@@ -332,11 +292,7 @@
     {
       "slug": "explain-preflight-cost",
       "format": "explain",
-      "levels": [
-        "0-2",
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["0-2", "3-5", "5-plus"],
       "prompt": "Your team added an Authorization header and latency doubled. Why would that happen?",
       "expects": [
         "connects the custom header to a CORS preflight",
@@ -358,12 +314,7 @@
     {
       "slug": "scenario-works-for-me",
       "format": "scenario",
-      "levels": [
-        "fresher",
-        "0-2",
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["fresher", "0-2", "3-5", "5-plus"],
       "prompt": "You shipped a fix. It works for you but users still report the old behaviour. Where do you look?",
       "expects": [
         "names caching at some layer as the likely cause",

@@ -35,6 +35,7 @@
   "templates": [
     {
       "id": "behavioral-career-arc",
+      "contentVersion": 2,
       "category": "behavioral",
       "title": "Career arc and motivation",
       "roles": ["backend", "frontend", "fullstack", "data", "ai-ml", "pm"],
@@ -45,6 +46,12 @@
       "competency": "motivation",
       "prompt": "Walk me through your background and why this role is the right next step.",
       "promptTemplate": "Walk me through your background, especially {resume.primaryEvidence}, and why {targetRole} is the right next step.",
+      "hints": [
+        "Choose the two experiences that best support this role instead of replaying your full chronology.",
+        "For each experience, name a concrete strength or result that the interviewer can verify later.",
+        "Close by connecting those proof points to the work you want to do next."
+      ],
+      "explanation": "A strong career introduction is selective rather than exhaustive: state the direction, support it with two relevant and defensible proof points, and explain why they make this role a logical next step. Keep the answer concise enough that the interviewer can choose where to probe.",
       "tags": ["core", "intro", "motivation"],
       "whatItTests": ["clear story", "role fit", "relevant evidence"],
       "goodAnswerSignals": [
@@ -83,6 +90,7 @@
     },
     {
       "id": "behavioral-ownership-ambiguity",
+      "contentVersion": 2,
       "category": "behavioral",
       "title": "Ownership in ambiguity",
       "roles": ["backend", "frontend", "fullstack", "data", "ai-ml", "pm"],
@@ -93,6 +101,12 @@
       "competency": "ownership",
       "prompt": "Tell me about a time you owned something when the requirements were unclear.",
       "promptTemplate": "Tell me about a time in {resume.projectOrRole} where you owned progress even though the requirements were unclear.",
+      "hints": [
+        "Name the specific ambiguity and the responsibility that was yours, not the team's situation in general.",
+        "Identify the first decision or alignment step you personally drove to reduce uncertainty.",
+        "Finish with the observable result and what showed that proceeding was the right call."
+      ],
+      "explanation": "Ownership under ambiguity means making uncertainty explicit, gathering enough evidence to choose a safe next step, aligning the people affected, and remaining accountable for the result. The story should distinguish the candidate's decision from background team activity without pretending they acted alone.",
       "tags": ["core", "ownership", "ambiguity"],
       "whatItTests": ["initiative", "scope clarity", "decision-making"],
       "goodAnswerSignals": [
@@ -131,6 +145,7 @@
     },
     {
       "id": "behavioral-impact-with-metrics",
+      "contentVersion": 2,
       "category": "behavioral",
       "title": "Impact with metrics",
       "roles": ["backend", "frontend", "fullstack", "data", "ai-ml", "pm"],
@@ -141,6 +156,12 @@
       "competency": "impact",
       "prompt": "Tell me about your most measurable impact.",
       "promptTemplate": "Your resume mentions {resume.metricOrOutcome}. Tell me exactly how that impact was measured.",
+      "hints": [
+        "Define the metric and its baseline before stating the improvement.",
+        "Explain the measurement source and the action you personally took that could influence it.",
+        "Separate correlation from a defensible causal claim and acknowledge the team's contribution."
+      ],
+      "explanation": "A defensible impact claim includes a clear baseline, a comparable result, the measurement source and time window, and honest attribution. Strong answers explain why the candidate's action plausibly contributed while avoiding claims that the available evidence cannot support.",
       "tags": ["core", "impact", "metrics"],
       "whatItTests": ["measurable result", "baseline", "honest attribution"],
       "goodAnswerSignals": [
@@ -176,6 +197,7 @@
     },
     {
       "id": "behavioral-conflict-disagreement",
+      "contentVersion": 2,
       "category": "behavioral",
       "title": "Conflict or disagreement",
       "roles": ["backend", "frontend", "fullstack", "data", "ai-ml", "pm"],
@@ -186,6 +208,12 @@
       "competency": "collaboration",
       "prompt": "Tell me about a time you disagreed with someone on a technical or product decision.",
       "promptTemplate": "Tell me about a disagreement during {resume.projectOrRole}. What did you argue for, and what happened?",
+      "hints": [
+        "State the decision and present the strongest version of both positions before describing your response.",
+        "Show how evidence, constraints, or user impact moved the discussion toward a decision.",
+        "Explain how you supported the final choice and what you learned, including when your view did not win."
+      ],
+      "explanation": "A useful disagreement story demonstrates fairness, direct communication, and commitment to the shared outcome. The candidate should explain both positions, the decision process, and their behavior after resolution instead of turning the example into proof that another person was wrong.",
       "tags": ["core", "conflict", "collaboration"],
       "whatItTests": ["communication", "fairness", "decision maturity"],
       "goodAnswerSignals": [
@@ -224,6 +252,7 @@
     },
     {
       "id": "behavioral-failure-recovery",
+      "contentVersion": 2,
       "category": "behavioral",
       "title": "Failure and recovery",
       "roles": ["backend", "frontend", "fullstack", "data", "ai-ml", "pm"],
@@ -234,6 +263,12 @@
       "competency": "learning",
       "prompt": "Tell me about a time something failed. What was your role in fixing it?",
       "promptTemplate": "Tell me about something that failed in {resume.projectOrRole}. What was your role in fixing it?",
+      "hints": [
+        "Choose a real failure with consequences and name the part you owned before discussing recovery.",
+        "Walk through detection, containment, and the corrective action you personally drove.",
+        "End with a durable prevention or detection change and evidence that it improved the system."
+      ],
+      "explanation": "A credible failure answer combines accountability with effective recovery. It names the impact and the candidate's contribution to the failure, explains how the issue was contained and fixed, and identifies a lasting guardrail rather than presenting a low-stakes weakness disguised as success.",
       "tags": ["core", "failure", "learning"],
       "whatItTests": ["accountability", "recovery", "prevention"],
       "goodAnswerSignals": [
@@ -263,6 +298,7 @@
     },
     {
       "id": "resume-personal-ownership",
+      "contentVersion": 2,
       "category": "resume-deep-dive",
       "title": "Personal ownership in a resume claim",
       "roles": ["backend", "frontend", "fullstack", "data", "ai-ml", "pm"],
@@ -273,6 +309,12 @@
       "competency": "ownership",
       "prompt": "Pick one strong claim from your resume. What did you personally own?",
       "promptTemplate": "Your resume says: {resume.claim}. What did you personally own, and what did the team own?",
+      "hints": [
+        "Quote the claim, then divide the outcome into team scope and your own decisions or artifacts.",
+        "Name the work you personally performed and the collaborators or dependencies you relied on.",
+        "Support the boundary with a concrete review, deliverable, metric, or decision you can defend."
+      ],
+      "explanation": "Resume defense is strongest when ownership boundaries are precise. A candidate can take credit for meaningful work while clearly naming what teammates, managers, or partner teams owned; concrete actions and artifacts make the claim credible without erasing collaboration.",
       "tags": ["core", "resume", "ownership"],
       "whatItTests": ["personal contribution", "scope honesty", "resume defensibility"],
       "goodAnswerSignals": [
@@ -311,6 +353,7 @@
     },
     {
       "id": "resume-project-depth",
+      "contentVersion": 2,
       "category": "resume-deep-dive",
       "title": "Project depth and tradeoff",
       "roles": ["backend", "frontend", "fullstack", "data", "ai-ml", "pm"],
@@ -321,6 +364,12 @@
       "competency": "depth",
       "prompt": "Pick one project from your resume and explain the hardest decision or tradeoff.",
       "promptTemplate": "In {resume.project}, what was the hardest decision or tradeoff, and why did you choose that path?",
+      "hints": [
+        "Start with the constraint that made the decision difficult rather than listing the project's technologies.",
+        "Compare the chosen approach with at least one viable alternative using the same decision criteria.",
+        "State the downside you accepted, how you reduced its risk, and what evidence would make you reconsider."
+      ],
+      "explanation": "Project depth appears in decision reasoning, not technology names. A strong answer identifies the constraint, compares credible alternatives, explains the selected tradeoff and its downside, and shows how the team validated or revisited the choice as evidence changed.",
       "tags": ["core", "resume", "depth", "tradeoff"],
       "whatItTests": ["depth", "decision reasoning", "alternatives"],
       "goodAnswerSignals": [
@@ -354,6 +403,7 @@
     },
     {
       "id": "resume-metric-claim-audit",
+      "contentVersion": 2,
       "category": "resume-deep-dive",
       "title": "Metric claim audit",
       "roles": ["backend", "frontend", "fullstack", "data", "ai-ml", "pm"],
@@ -363,6 +413,12 @@
       "evidenceType": "metric",
       "competency": "impact",
       "prompt": "Your resume includes a metric. Explain how that number was produced and what you did to affect it.",
+      "hints": [
+        "Define the numerator, denominator, baseline, time window, and source behind the metric.",
+        "Describe the change you owned and any other factors that could have affected the result.",
+        "State the strongest attribution the evidence supports without turning correlation into certainty."
+      ],
+      "explanation": "A resume metric should be reproducible enough to withstand follow-up questions. Define how it was calculated and measured, compare it with a valid baseline, identify the candidate's action, and qualify attribution when experiments or controls cannot isolate that action from other changes.",
       "promptTemplate": "Your resume mentions {resume.metric}. Explain how that number was produced and what you did to affect it.",
       "tags": ["core", "resume", "metrics"],
       "whatItTests": ["measurement", "causality", "honest attribution"],

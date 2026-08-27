@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { CheckCircle2, Code2, Loader2, Play, XCircle } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2, Code2, Loader2, Play, RotateCcw, XCircle } from "lucide-react";
 import { DsaCodeEditor, type DsaEditorLanguage } from "@/components/interview/dsa/dsa-code-editor";
 import { DsaQuestionNotes } from "@/components/interview/dsa/dsa-question-notes";
-import { dsaStarterCode } from "@/lib/dsa/dsa-code-templates";
+import { AskSomeone } from "./ask-someone";
+import { dsaStarterCode, supportedDsaCodeLanguages } from "@/lib/dsa/dsa-code-templates";
+import { dsaCodeDraftKey, readDsaCodeDraft, writeDsaCodeDraft } from "@/lib/dsa/code-draft";
 import type { DsaQuestion } from "@/lib/dsa/dsa";
 
 type RunTest = {
@@ -36,16 +38,54 @@ const LANGUAGES: Array<{ value: DsaEditorLanguage; label: string }> = [
 
 export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
   const [language, setLanguage] = useState<DsaEditorLanguage>("javascript");
-  const [code, setCode] = useState(() => dsaStarterCode(question.slug, "javascript"));
+  const [code, setCode] = useState(() => dsaStarterCode(question, "javascript"));
   const [result, setResult] = useState<RunResult | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pendingRunId = useRef<string | null>(null);
+  const loadedDraftKey = useRef<string | null>(null);
 
   const examples = useMemo(() => question.examples?.slice(0, 10) ?? [], [question.examples]);
+  const languages = useMemo(() => {
+    const supported = new Set(supportedDsaCodeLanguages(question.slug));
+    return LANGUAGES.filter((item) => supported.has(item.value));
+  }, [question.slug]);
+  // When this attempt began, so a help request can report time spent. A ref, not
+  // state: it must not reset the clock on every keystroke.
+  const startedAt = useRef(Date.now());
+
+  useEffect(() => {
+    const key = dsaCodeDraftKey(question.slug, language);
+    const saved = readDsaCodeDraft(window.localStorage, question.slug, language);
+    setCode(saved ?? dsaStarterCode(question, language));
+    setResult(null);
+    setError(null);
+    loadedDraftKey.current = key;
+  }, [language, question]);
+
+  useEffect(() => {
+    const key = dsaCodeDraftKey(question.slug, language);
+    if (loadedDraftKey.current !== key) return;
+    const timer = window.setTimeout(() => {
+      writeDsaCodeDraft(window.localStorage, question.slug, language, code);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [code, language, question.slug]);
+
+  const failingTests = result ? result.tests.filter((test) => !test.passed).length : null;
+  const testOutput = result
+    ? [result.compileOutput, result.stderr, result.stdout].filter(Boolean).join("\n").trim() ||
+      `${result.status}: ${failingTests} of ${result.tests.length} failing`
+    : null;
 
   function changeLanguage(nextLanguage: DsaEditorLanguage) {
     setLanguage(nextLanguage);
-    setCode(dsaStarterCode(question.slug, nextLanguage));
+    setResult(null);
+    setError(null);
+  }
+
+  function resetCode() {
+    setCode(dsaStarterCode(question, language));
     setResult(null);
     setError(null);
   }
@@ -55,12 +95,14 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
     setRunning(true);
     setError(null);
     setResult(null);
+    const requestId = pendingRunId.current ?? crypto.randomUUID();
+    pendingRunId.current = requestId;
 
     try {
       const response = await fetch("/api/code/run", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code, language, slug: question.slug })
+        body: JSON.stringify({ requestId, code, language, slug: question.slug })
       });
       const payload = (await response.json().catch(() => null)) as {
         success?: boolean;
@@ -75,6 +117,7 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
       }
 
       setResult(payload.data);
+      pendingRunId.current = null;
     } catch (runError) {
       setError(runError instanceof Error ? runError.message : "Code execution failed.");
     } finally {
@@ -99,12 +142,22 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
             onChange={(event) => changeLanguage(event.target.value as DsaEditorLanguage)}
             className="h-10 rounded-xl border border-cream/10 bg-cream/[0.055] px-3.5 text-[13px] font-medium text-cream/80 outline-none transition focus:border-[var(--workspace-accent-border)] focus:bg-cream/[0.08]"
           >
-            {LANGUAGES.map((item) => (
+            {languages.map((item) => (
               <option key={item.value} value={item.value}>
                 {item.label}
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={resetCode}
+            disabled={running}
+            aria-label="Reset code to the starter template"
+            title="Reset starter code"
+            className="grid h-10 w-10 place-items-center rounded-xl bg-cream/[0.055] text-cream/55 transition hover:bg-cream/[0.1] hover:text-cream disabled:pointer-events-none disabled:opacity-45"
+          >
+            <RotateCcw size={14} aria-hidden="true" />
+          </button>
           <button
             type="button"
             onClick={() => void runCode()}
@@ -132,7 +185,23 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
 
       <RunOutput examples={examples} result={result} running={running} error={error} />
 
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-black/10 px-4 pb-3 sm:px-5">
+        <p className="text-[12.5px] text-cream/40">
+          Stuck after a few tries? Maya explains instantly — a person takes longer but explains it
+          their way.
+        </p>
+        <AskSomeone
+          slug={question.slug}
+          language={language}
+          code={code}
+          testOutput={testOutput}
+          failingTests={failingTests}
+          startedAt={startedAt.current}
+        />
+      </div>
+
       <div className="bg-black/10 px-4 pb-4 sm:px-5">
+        <p className="mb-3 text-[12px] text-cream/35">Code drafts save on this device.</p>
         <DsaQuestionNotes slug={question.slug} />
       </div>
     </section>
@@ -151,7 +220,7 @@ function RunOutput({
   error: string | null;
 }) {
   return (
-    <section className="bg-black/10 px-4 py-4 sm:px-5">
+    <section className="bg-black/10 px-4 py-4 sm:px-5" aria-live="polite" aria-busy={running}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h3 className="text-[15px] font-semibold text-cream">Test results</h3>
@@ -189,7 +258,11 @@ function RunOutput({
       </div>
 
       <div className="mt-4 max-h-72 overflow-y-auto pr-1">
-        {error ? <p className="text-sm leading-6 text-[#ffb4b4]">{error}</p> : null}
+        {error ? (
+          <p role="alert" className="text-sm leading-6 text-[#ffb4b4]">
+            {error}
+          </p>
+        ) : null}
         {result?.compileOutput || result?.stderr ? (
           <pre className="whitespace-pre-wrap font-mono text-xs leading-5 text-[#ffb4b4]">
             {result.compileOutput || result.stderr}

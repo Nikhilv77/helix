@@ -80,10 +80,43 @@ export const environmentSchema = z
     // interview authorization independent from any third-party credential.
     INTERVIEW_AUTH_SECRET: z.string().min(32).optional(),
     INTERVIEW_DAILY_LIMIT: z.coerce.number().int().min(1).max(100).default(2),
+    PRACTICE_NON_DSA_ENABLED: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
     UPSTASH_REDIS_REST_URL: z.string().url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
     GROQ_API_KEY: z.string().optional(),
     GROQ_DECIDER_MODEL: z.string().min(1).default("openai/gpt-oss-20b"),
+    /// Slack or Discord webhook that Milestone A routes help requests to. Unset
+    /// means requests are only recorded and logged.
+    HELP_REQUEST_WEBHOOK_URL: z.string().url().optional(),
+    /// Clerk user ids allowed to read the help report queue, comma-separated.
+    /// Empty means nobody — the queue is closed until somebody is named.
+    OPERATOR_USER_IDS: z
+      .string()
+      .default("")
+      .transform((value) =>
+        value
+          .split(",")
+          .map((entry) => entry.trim())
+          .filter(Boolean)
+      ),
+    /// Resend API key. Unset means notifications are recorded in-app only.
+    RESEND_API_KEY: z.string().optional(),
+    /// Deliberate launch switch. Credentials may be present while email remains
+    /// dormant until the product is ready to use the channel.
+    NOTIFICATION_EMAIL_ENABLED: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
+    /// Verified sender, e.g. "Trailgrad <hello@trailgrad.com>".
+    NOTIFICATION_FROM_EMAIL: z.string().optional(),
+    /// Protects scheduler endpoints. Vercel supplies it as a Bearer token.
+    CRON_SECRET: z.string().min(16).optional(),
+    /// Absolute origin used to build links inside emails. Shares the variable the
+    /// app already uses for canonical URLs rather than introducing a second one.
+    NEXT_PUBLIC_APP_URL: z.string().url().optional(),
     LIVEKIT_URL: z.string().optional(),
     LIVEKIT_API_KEY: z.string().optional(),
     LIVEKIT_API_SECRET: z.string().optional(),
@@ -107,6 +140,23 @@ export const environmentSchema = z
         path: ["UPSTASH_REDIS_REST_URL"],
         message: "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be configured together"
       });
+    }
+
+    if (env.NOTIFICATION_EMAIL_ENABLED) {
+      const required = [
+        ["RESEND_API_KEY", env.RESEND_API_KEY],
+        ["NOTIFICATION_FROM_EMAIL", env.NOTIFICATION_FROM_EMAIL],
+        ["NEXT_PUBLIC_APP_URL", env.NEXT_PUBLIC_APP_URL]
+      ] as const;
+
+      for (const [variable, value] of required) {
+        if (value) continue;
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [variable],
+          message: `${variable} is required when NOTIFICATION_EMAIL_ENABLED=true`
+        });
+      }
     }
   })
   .transform((env) => ({
@@ -132,10 +182,18 @@ export const environmentSchema = z
     clerkSecretKey: env.CLERK_SECRET_KEY,
     interviewAuthSecret: env.INTERVIEW_AUTH_SECRET,
     interviewDailyLimit: env.INTERVIEW_DAILY_LIMIT,
+    practiceNonDsaEnabled: env.PRACTICE_NON_DSA_ENABLED,
     upstashRedisRestUrl: env.UPSTASH_REDIS_REST_URL,
     upstashRedisRestToken: env.UPSTASH_REDIS_REST_TOKEN,
     groqApiKey: env.GROQ_API_KEY,
     groqDeciderModel: env.GROQ_DECIDER_MODEL,
+    helpRequestWebhookUrl: env.HELP_REQUEST_WEBHOOK_URL,
+    operatorUserIds: env.OPERATOR_USER_IDS,
+    resendApiKey: env.RESEND_API_KEY,
+    notificationEmailEnabled: env.NOTIFICATION_EMAIL_ENABLED,
+    notificationFromEmail: env.NOTIFICATION_FROM_EMAIL,
+    cronSecret: env.CRON_SECRET,
+    appOrigin: env.NEXT_PUBLIC_APP_URL,
     livekitUrl: env.LIVEKIT_URL,
     livekitApiKey: env.LIVEKIT_API_KEY,
     livekitApiSecret: env.LIVEKIT_API_SECRET,

@@ -294,6 +294,8 @@ export async function POST(request: NextRequest) {
       // The teacher is chosen before the resume step and written at completion;
       // this preview never carries one.
       teacherId: null,
+      helpNotificationsEnabled: true,
+      teacherNotificationsEnabled: true,
       targetCompany: "",
       targetDate: null,
       headline: extraction.headline,

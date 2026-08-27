@@ -4,11 +4,13 @@ import type {
   SessionBlueprint
 } from "@/lib/interviews/personalized-plan";
 import type { CandidatePerformanceProfile } from "@/lib/interviews/performance-profile";
+import type { CandidatePracticeEvidence } from "@/lib/practice/practice-evidence";
 import type { CandidateProfile } from "@/lib/shared/types";
 import { PersonalizedInterviewPlanningService } from "./personalized-interview-planning.service";
 import type { PersonalizedInterviewPlanGenerator } from "./personalized-plan-generator";
 import type { PersonalizedPlanningStore } from "./personalized-planning-store";
 import type { PersonalizedPerformanceStore } from "./personalized-performance-store";
+import type { PracticeEvidenceStore } from "../practice/practice-evidence-store";
 
 const NOW = Date.UTC(2026, 7, 24, 12);
 const OWNER_ID = "user:test";
@@ -64,6 +66,38 @@ function performanceProfile(): CandidatePerformanceProfile {
         rubricPerformance: [{ rubricKey: "reasoning", score: 46, sampleSize: 4 }]
       }
     ]
+  };
+}
+
+function practiceEvidence(): CandidatePracticeEvidence {
+  return {
+    schemaVersion: 1,
+    id: "88888888-8888-4888-8888-888888888888",
+    revision: 2,
+    sourceAttemptFingerprint: "sha256-verified-practice",
+    generatedAt: NOW,
+    verifiedAttemptCount: 2,
+    verifiedQuestionCount: 1,
+    sourceAttemptIds: ["attempt-1", "attempt-2"],
+    skills: [
+      {
+        skillKey: "typescript",
+        score: 42,
+        confidence: 0.64,
+        sampleSize: 2,
+        lastObservedAt: NOW,
+        trend: -10,
+        topicKeys: ["typescript"],
+        hintsUsed: 2,
+        hintDependenceRate: 0.5,
+        repeatedAttemptCount: 1,
+        retryDependenceRate: 0.5
+      }
+    ],
+    masteryTopics: [],
+    weakTopics: [{ topicKey: "typescript", score: 42, sampleSize: 2, lastObservedAt: NOW }],
+    recentQuestions: [],
+    codeEvidence: []
   };
 }
 
@@ -146,6 +180,7 @@ function dependencies(params: {
   generatedPlan?: PersonalizedInterviewPlan;
   workspaceProfile?: CandidateProfile;
   performance?: CandidatePerformanceProfile | null;
+  practice?: CandidatePracticeEvidence | null;
 }) {
   const store = {
     ensureCandidateProfile: jest.fn().mockResolvedValue(candidateProfile()),
@@ -166,13 +201,17 @@ function dependencies(params: {
   const performanceProfiles = {
     refresh: jest.fn().mockResolvedValue(params.performance ?? null)
   };
+  const practiceEvidenceStore = {
+    refresh: jest.fn().mockResolvedValue(params.practice ?? null)
+  };
   const service = new PersonalizedInterviewPlanningService(
     store as unknown as PersonalizedPlanningStore,
     generator as unknown as PersonalizedInterviewPlanGenerator,
     profiles,
-    performanceProfiles as unknown as PersonalizedPerformanceStore
+    performanceProfiles as unknown as PersonalizedPerformanceStore,
+    practiceEvidenceStore as unknown as PracticeEvidenceStore
   );
-  return { service, store, generator, performanceProfiles };
+  return { service, store, generator, performanceProfiles, practiceEvidenceStore };
 }
 
 describe("PersonalizedInterviewPlanningService", () => {
@@ -271,5 +310,33 @@ describe("PersonalizedInterviewPlanningService", () => {
 
     await expect(service.activePlan(OWNER_ID, NOW)).resolves.toBe(current);
     expect(generator.generate).not.toHaveBeenCalled();
+  });
+
+  it("publishes a future plan revision when verified Practice evidence changes", async () => {
+    const evidence = practiceEvidence();
+    const generated = activePlan({
+      status: "draft",
+      sourceSnapshot: {
+        ...activePlan().sourceSnapshot,
+        practiceEvidence: { id: evidence.id, revision: evidence.revision }
+      }
+    });
+    const { service, generator, store } = dependencies({
+      storedPlan: activePlan(),
+      generatedPlan: generated,
+      practice: evidence
+    });
+
+    await service.activePlan(OWNER_ID, NOW);
+
+    expect(generator.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        practiceEvidence: {
+          snapshot: { id: evidence.id, revision: 2 },
+          skills: evidence.skills
+        }
+      })
+    );
+    expect(store.saveReadyPlan).toHaveBeenCalledWith(OWNER_ID, generated);
   });
 });

@@ -1237,7 +1237,7 @@
         "time": "O(n)",
         "space": "O(1)"
       },
-      "problemStatement": "Given the head of a linked list, rotate the list to the right by k places.",
+      "problemStatement": "Given the head of a singly linked list, rotate the list to the right by k places so each rotation moves the final node to the front.",
       "constraints": [
         "Use the public problem constraints as the source of truth for bounds.",
         "Aim for the intended O(n) time and O(1) space target.",
@@ -1663,7 +1663,7 @@
         "Why is merge sort preferred over quicksort here?",
         "Sort a doubly linked list."
       ],
-      "promptSummary": "Sort a linked list in O(n log n) time.",
+      "promptSummary": "Sort a singly linked list in ascending order within O(n log n) time.",
       "highLevelApproach": "Split at the middle with fast and slow pointers, sort each half, and merge them; iterating over doubling run lengths bottom-up removes the recursion stack entirely.",
       "complexity": {
         "time": "O(n log n)",

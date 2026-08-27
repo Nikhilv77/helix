@@ -1,19 +1,6 @@
-import {
-  FileText,
-  LockKeyhole,
-  RotateCw,
-  Scale,
-  Server,
-  ShieldCheck,
-  User,
-  UserCheck
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-
 export type LegalSection = {
   title: string;
   body: string;
-  icon: LucideIcon;
 };
 
 export type LegalDocument = {
@@ -35,28 +22,23 @@ export const privacyPolicy: LegalDocument = {
   sections: [
     {
       title: "Information we process",
-      body: "Trailgrad processes profile details, resume text, interview answers, transcripts, progress, and reports so your practice can stay relevant to your goals.",
-      icon: FileText
+      body: "Trailgrad processes profile details, resume text, interview answers, transcripts, progress, and reports so your practice can stay relevant to your goals."
     },
     {
       title: "Resume handling",
-      body: "Resume files are used to extract interview evidence. The current flow reads the uploaded file in memory and does not store the original file.",
-      icon: User
+      body: "Resume files are used to extract interview evidence. The current flow reads the uploaded file in memory and does not store the original file."
     },
     {
       title: "Workspace data",
-      body: "Interview transcripts, reports, progress, and profile settings stay inside your private account workspace.",
-      icon: LockKeyhole
+      body: "Interview transcripts, reports, progress, and profile settings stay inside your private account workspace."
     },
     {
       title: "Service providers",
-      body: "Trailgrad may use authentication, infrastructure, database, voice, and AI providers. They process data only as needed to run product features.",
-      icon: Server
+      body: "Trailgrad may use authentication, infrastructure, database, voice, and AI providers. They process data only as needed to run product features."
     },
     {
       title: "Security",
-      body: "We use reasonable technical and organizational safeguards to protect your data. No internet service can be guaranteed perfectly secure.",
-      icon: ShieldCheck
+      body: "We use reasonable technical and organizational safeguards to protect your data. No internet service can be guaranteed perfectly secure."
     }
   ]
 };
@@ -69,29 +51,23 @@ export const termsOfService: LegalDocument = {
   sections: [
     {
       title: "Using Trailgrad",
-      body: "Trailgrad is an AI interview practice workspace. You are responsible for the information you provide and how you use practice feedback.",
-      icon: FileText
+      body: "Trailgrad is an AI interview practice workspace. You are responsible for the information you provide and how you use practice feedback."
     },
     {
       title: "AI feedback",
-      body: "Prompts, scores, reports, and suggestions are practice aids. They are not hiring decisions, employment advice, or a guarantee of interview performance.",
-      icon: Scale
+      body: "Prompts, scores, reports, and suggestions are practice aids. They are not hiring decisions, employment advice, or a guarantee of interview performance."
     },
     {
       title: "Your content",
-      body: "You keep ownership of your resume, answers, transcripts, and profile content. Trailgrad processes that content to provide and improve the product.",
-      icon: UserCheck
+      body: "You keep ownership of your resume, answers, transcripts, and profile content. Trailgrad processes that content to provide and improve the product."
     },
     {
       title: "Acceptable use",
-      body: "Do not misuse the service, disrupt the product, reverse engineer protected systems, upload harmful content, or use Trailgrad for unlawful activity.",
-      icon: ShieldCheck
+      body: "Do not misuse the service, disrupt the product, reverse engineer protected systems, upload harmful content, or use Trailgrad for unlawful activity."
     },
     {
       title: "Availability",
-      body: "Trailgrad may change, pause, or discontinue parts of the service. The product is provided without warranties to the fullest extent allowed by law.",
-      icon: RotateCw
+      body: "Trailgrad may change, pause, or discontinue parts of the service. The product is provided without warranties to the fullest extent allowed by law."
     }
   ]
 };
-

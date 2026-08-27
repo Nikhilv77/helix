@@ -13,7 +13,16 @@ export interface CodeTestCase {
   adapter?: TestAdapter;
 }
 
-type TestAdapter = "linked-list" | "linked-list-mutated" | "tree-input" | "tree-output" | "tree-mutated-output" | "tree-right-chain" | "tree-node-value" | "tree-target-value" | `operations:${string}`;
+type TestAdapter =
+  | "linked-list"
+  | "linked-list-mutated"
+  | "tree-input"
+  | "tree-output"
+  | "tree-mutated-output"
+  | "tree-right-chain"
+  | "tree-node-value"
+  | "tree-target-value"
+  | `operations:${string}`;
 
 export interface CodeTestResult {
   index: number;
@@ -52,7 +61,9 @@ export function buildTestHarness(
   if (testCases[0]?.adapter?.startsWith("operations:")) {
     if (language === "javascript") return javascriptOperationHarness(code, testCases);
     if (language === "python") return pythonOperationHarness(code, testCases);
-    throw new Error("Class-operation questions currently support JavaScript and Python. Java and C++ class runners are next.");
+    throw new Error(
+      "Class-operation questions currently support JavaScript and Python. Java and C++ class runners are next."
+    );
   }
   if (language === "javascript") return javascriptHarness(code, functionName, testCases);
   if (language === "python") return pythonHarness(code, functionName, testCases);
@@ -68,7 +79,10 @@ export function parseTestResults(stdout: string, testCases: CodeTestCase[]): Cod
     if (separator === -1) continue;
     const index = Number(line.slice(RESULT_MARKER.length, separator));
     try {
-      payloads.set(index, JSON.parse(line.slice(separator + 1)) as { ok?: boolean; value?: unknown; error?: string });
+      payloads.set(
+        index,
+        JSON.parse(line.slice(separator + 1)) as { ok?: boolean; value?: unknown; error?: string }
+      );
     } catch {
       payloads.set(index, { ok: false, error: "The test runner returned invalid output." });
     }
@@ -83,7 +97,8 @@ export function parseTestResults(stdout: string, testCases: CodeTestCase[]): Cod
       input: testCase.input,
       expectedOutput: testCase.expectedOutput,
       actualOutput: error ? "" : displayValue(actual),
-      passed: Boolean(payload?.ok) && equivalent(actual, testCase.expectedValue, testCase.comparison),
+      passed:
+        Boolean(payload?.ok) && equivalent(actual, testCase.expectedValue, testCase.comparison),
       error: payload ? error : "No result was returned for this test case."
     };
   });
@@ -178,46 +193,62 @@ function operationKind(adapter: TestAdapter | undefined): string {
 }
 
 function operationClassName(kind: string): string {
-  return {
-    "browser-history": "BrowserHistory",
-    "lru-cache": "LRUCache",
-    "min-stack": "MinStack",
-    queue: "MyQueue",
-    stack: "MyStack",
-    "circular-queue": "MyCircularQueue",
-    "stock-span": "StockSpanner",
-    "time-map": "TimeMap",
-    "median-finder": "MedianFinder",
-    trie: "Trie",
-    "word-dictionary": "WordDictionary"
-  }[kind] ?? "Solution";
+  return (
+    {
+      "browser-history": "BrowserHistory",
+      "lru-cache": "LRUCache",
+      "min-stack": "MinStack",
+      queue: "MyQueue",
+      stack: "MyStack",
+      "circular-queue": "MyCircularQueue",
+      "stock-span": "StockSpanner",
+      "time-map": "TimeMap",
+      "median-finder": "MedianFinder",
+      trie: "Trie",
+      "word-dictionary": "WordDictionary"
+    }[kind] ?? "Solution"
+  );
 }
 
 function javascriptOperationHarness(code: string, testCases: CodeTestCase[]): string {
-  const runs = testCases.map((testCase, index) => javascriptOperationCase(operationKind(testCase.adapter), testCase.arguments, index)).join("\n");
+  const runs = testCases
+    .map((testCase, index) =>
+      javascriptOperationCase(operationKind(testCase.adapter), testCase.arguments, index)
+    )
+    .join("\n");
   return `${code}\n\nfunction trailgradOperationValue(kind, operation, value) { if ((kind === "min-stack" && ["push", "pop"].includes(operation)) || (kind === "lru-cache" && operation === "put") || (["trie", "word-dictionary"].includes(kind) && ["insert", "addWord"].includes(operation)) || (kind === "time-map" && operation === "set")) return null; return value === undefined ? null : value; }\n\n${runs}\n`;
 }
 
 function javascriptOperationCase(kind: string, args: unknown[], index: number): string {
   const className = operationClassName(kind);
   const literal = JSON.stringify(args);
-  if (kind === "browser-history") return `try { const input = ${literal}; const instance = new ${className}(input[0][0]); const results = [null]; for (const page of input[0].slice(1)) { instance.visit(page); results.push(null); } for (const operation of input.slice(1)) results.push(trailgradOperationValue("${kind}", operation[0], instance[operation[0]](...operation.slice(1)))); console.log("${RESULT_MARKER}${index}:" + JSON.stringify({ ok: true, value: results })); } catch (error) { console.log("${RESULT_MARKER}${index}:" + JSON.stringify({ ok: false, error: String(error && error.message || error) })); }`;
-  if (kind === "lru-cache" || kind === "circular-queue") return `try { const input = ${literal}; const instance = new ${className}(...input[0]); const results = []; for (const operation of input.slice(1)) results.push(trailgradOperationValue("${kind}", operation[0], instance[operation[0]](...operation.slice(1)))); console.log("${RESULT_MARKER}${index}:" + JSON.stringify({ ok: true, value: results })); } catch (error) { console.log("${RESULT_MARKER}${index}:" + JSON.stringify({ ok: false, error: String(error && error.message || error) })); }`;
-  if (kind === "stock-span" || kind === "median-finder") return `try { const input = ${literal}; const instance = new ${className}(); const results = []; for (const value of input[0]) ${kind === "stock-span" ? "results.push(instance.next(value))" : "instance.addNum(value)"}; ${kind === "median-finder" ? "results.push(instance.findMedian())" : ""} console.log("${RESULT_MARKER}${index}:" + JSON.stringify({ ok: true, value: results.length === 1 && "${kind}" === "median-finder" ? results[0] : results })); } catch (error) { console.log("${RESULT_MARKER}${index}:" + JSON.stringify({ ok: false, error: String(error && error.message || error) })); }`;
+  if (kind === "browser-history")
+    return `try { const input = ${literal}; const instance = new ${className}(input[0][0]); const results = [null]; for (const page of input[0].slice(1)) { instance.visit(page); results.push(null); } for (const operation of input.slice(1)) results.push(trailgradOperationValue("${kind}", operation[0], instance[operation[0]](...operation.slice(1)))); console.log("${RESULT_MARKER}${index}:" + JSON.stringify({ ok: true, value: results })); } catch (error) { console.log("${RESULT_MARKER}${index}:" + JSON.stringify({ ok: false, error: String(error && error.message || error) })); }`;
+  if (kind === "lru-cache" || kind === "circular-queue")
+    return `try { const input = ${literal}; const instance = new ${className}(...input[0]); const results = []; for (const operation of input.slice(1)) results.push(trailgradOperationValue("${kind}", operation[0], instance[operation[0]](...operation.slice(1)))); console.log("${RESULT_MARKER}${index}:" + JSON.stringify({ ok: true, value: results })); } catch (error) { console.log("${RESULT_MARKER}${index}:" + JSON.stringify({ ok: false, error: String(error && error.message || error) })); }`;
+  if (kind === "stock-span" || kind === "median-finder")
+    return `try { const input = ${literal}; const instance = new ${className}(); const results = []; for (const value of input[0]) ${kind === "stock-span" ? "results.push(instance.next(value))" : "instance.addNum(value)"}; ${kind === "median-finder" ? "results.push(instance.findMedian())" : ""} console.log("${RESULT_MARKER}${index}:" + JSON.stringify({ ok: true, value: results.length === 1 && "${kind}" === "median-finder" ? results[0] : results })); } catch (error) { console.log("${RESULT_MARKER}${index}:" + JSON.stringify({ ok: false, error: String(error && error.message || error) })); }`;
   return `try { const input = ${literal}; const instance = new ${className}(); const results = []; for (const operation of input) results.push(trailgradOperationValue("${kind}", operation[0], instance[operation[0]](...operation.slice(1)))); console.log("${RESULT_MARKER}${index}:" + JSON.stringify({ ok: true, value: results })); } catch (error) { console.log("${RESULT_MARKER}${index}:" + JSON.stringify({ ok: false, error: String(error && error.message || error) })); }`;
 }
 
 function pythonOperationHarness(code: string, testCases: CodeTestCase[]): string {
-  const runs = testCases.map((testCase, index) => pythonOperationCase(operationKind(testCase.adapter), testCase.arguments, index)).join("\n");
+  const runs = testCases
+    .map((testCase, index) =>
+      pythonOperationCase(operationKind(testCase.adapter), testCase.arguments, index)
+    )
+    .join("\n");
   return `import json\n${code}\n\ndef trailgrad_operation_value(kind, operation, value):\n    if (kind == "min-stack" and operation in ("push", "pop")) or (kind == "lru-cache" and operation == "put") or (kind in ("trie", "word-dictionary") and operation in ("insert", "addWord")) or (kind == "time-map" and operation == "set"): return None\n    return value\n\n${runs}\n`;
 }
 
 function pythonOperationCase(kind: string, args: unknown[], index: number): string {
   const className = operationClassName(kind);
   const literal = pythonLiteral(args);
-  if (kind === "browser-history") return `try:\n    input_data = ${literal}\n    instance = ${className}(input_data[0][0])\n    results = [None]\n    for page in input_data[0][1:]: instance.visit(page); results.append(None)\n    for operation in input_data[1:]: results.append(trailgrad_operation_value("${kind}", operation[0], getattr(instance, operation[0])(*operation[1:])))\n    print("${RESULT_MARKER}${index}:" + json.dumps({"ok": True, "value": results}, separators=(",", ":")))\nexcept Exception as error:\n    print("${RESULT_MARKER}${index}:" + json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")))`;
-  if (kind === "lru-cache" || kind === "circular-queue") return `try:\n    input_data = ${literal}\n    instance = ${className}(*input_data[0])\n    results = [trailgrad_operation_value("${kind}", operation[0], getattr(instance, operation[0])(*operation[1:])) for operation in input_data[1:]]\n    print("${RESULT_MARKER}${index}:" + json.dumps({"ok": True, "value": results}, separators=(",", ":")))\nexcept Exception as error:\n    print("${RESULT_MARKER}${index}:" + json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")))`;
-  if (kind === "stock-span" || kind === "median-finder") return `try:\n    input_data = ${literal}\n    instance = ${className}()\n    results = [instance.next(value) for value in input_data[0]] if "${kind}" == "stock-span" else [instance.addNum(value) for value in input_data[0]]\n    ${kind === "median-finder" ? "results.append(instance.findMedian())" : ""}\n    output = results[-1] if "${kind}" == "median-finder" else results\n    print("${RESULT_MARKER}${index}:" + json.dumps({"ok": True, "value": output}, separators=(",", ":")))\nexcept Exception as error:\n    print("${RESULT_MARKER}${index}:" + json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")))`;
+  if (kind === "browser-history")
+    return `try:\n    input_data = ${literal}\n    instance = ${className}(input_data[0][0])\n    results = [None]\n    for page in input_data[0][1:]: instance.visit(page); results.append(None)\n    for operation in input_data[1:]: results.append(trailgrad_operation_value("${kind}", operation[0], getattr(instance, operation[0])(*operation[1:])))\n    print("${RESULT_MARKER}${index}:" + json.dumps({"ok": True, "value": results}, separators=(",", ":")))\nexcept Exception as error:\n    print("${RESULT_MARKER}${index}:" + json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")))`;
+  if (kind === "lru-cache" || kind === "circular-queue")
+    return `try:\n    input_data = ${literal}\n    instance = ${className}(*input_data[0])\n    results = [trailgrad_operation_value("${kind}", operation[0], getattr(instance, operation[0])(*operation[1:])) for operation in input_data[1:]]\n    print("${RESULT_MARKER}${index}:" + json.dumps({"ok": True, "value": results}, separators=(",", ":")))\nexcept Exception as error:\n    print("${RESULT_MARKER}${index}:" + json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")))`;
+  if (kind === "stock-span" || kind === "median-finder")
+    return `try:\n    input_data = ${literal}\n    instance = ${className}()\n    results = [instance.next(value) for value in input_data[0]] if "${kind}" == "stock-span" else [instance.addNum(value) for value in input_data[0]]\n    ${kind === "median-finder" ? "results.append(instance.findMedian())" : ""}\n    output = results[-1] if "${kind}" == "median-finder" else results\n    print("${RESULT_MARKER}${index}:" + json.dumps({"ok": True, "value": output}, separators=(",", ":")))\nexcept Exception as error:\n    print("${RESULT_MARKER}${index}:" + json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")))`;
   return `try:\n    input_data = ${literal}\n    instance = ${className}()\n    results = [trailgrad_operation_value("${kind}", operation[0], getattr(instance, operation[0])(*operation[1:])) for operation in input_data]\n    print("${RESULT_MARKER}${index}:" + json.dumps({"ok": True, "value": results}, separators=(",", ":")))\nexcept Exception as error:\n    print("${RESULT_MARKER}${index}:" + json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")))`;
 }
 
@@ -237,21 +268,42 @@ function adapterForSlug(slug: string): TestAdapter | undefined {
   };
   if (operationAdapters[slug]) return operationAdapters[slug];
   const linkedListSlugs = new Set([
-    "reverse-linked-list", "merge-two-sorted-lists", "remove-nth-node-from-end-of-list",
-    "swap-nodes-in-pairs", "odd-even-linked-list", "reverse-linked-list-ii", "rotate-list",
-    "sort-list", "reverse-nodes-in-k-group"
+    "reverse-linked-list",
+    "merge-two-sorted-lists",
+    "remove-nth-node-from-end-of-list",
+    "swap-nodes-in-pairs",
+    "odd-even-linked-list",
+    "reverse-linked-list-ii",
+    "rotate-list",
+    "sort-list",
+    "reverse-nodes-in-k-group"
   ]);
   const treeOutputSlugs = new Set(["invert-binary-tree"]);
   const treeNodeValueSlugs = new Set(["lowest-common-ancestor-of-a-binary-tree"]);
   const treeTargetValueSlugs = new Set(["all-nodes-distance-k-in-binary-tree"]);
   const treeInputSlugs = new Set([
-    "maximum-depth-of-binary-tree", "minimum-depth-of-binary-tree", "same-tree", "symmetric-tree",
-    "subtree-of-another-tree", "balanced-binary-tree", "diameter-of-binary-tree", "path-sum",
-    "sum-root-to-leaf-numbers", "path-sum-ii", "binary-tree-level-order-traversal",
-    "binary-tree-zigzag-level-order-traversal", "binary-tree-right-side-view",
-    "populating-next-right-pointers-in-each-node", "validate-binary-search-tree",
-    "kth-smallest-element-in-a-bst", "path-sum-iii", "house-robber-iii", "binary-tree-maximum-path-sum",
-    "binary-tree-cameras", "count-complete-tree-nodes", "vertical-order-traversal-of-a-binary-tree"
+    "maximum-depth-of-binary-tree",
+    "minimum-depth-of-binary-tree",
+    "same-tree",
+    "symmetric-tree",
+    "subtree-of-another-tree",
+    "balanced-binary-tree",
+    "diameter-of-binary-tree",
+    "path-sum",
+    "sum-root-to-leaf-numbers",
+    "path-sum-ii",
+    "binary-tree-level-order-traversal",
+    "binary-tree-zigzag-level-order-traversal",
+    "binary-tree-right-side-view",
+    "populating-next-right-pointers-in-each-node",
+    "validate-binary-search-tree",
+    "kth-smallest-element-in-a-bst",
+    "path-sum-iii",
+    "house-robber-iii",
+    "binary-tree-maximum-path-sum",
+    "binary-tree-cameras",
+    "count-complete-tree-nodes",
+    "vertical-order-traversal-of-a-binary-tree"
   ]);
   if (linkedListSlugs.has(slug)) return "linked-list";
   if (slug === "reorder-list") return "linked-list-mutated";
@@ -350,33 +402,78 @@ def trailgrad_adapt_output(value, adapter):
 function javaHarness(code: string, functionName: string, testCases: CodeTestCase[]): string {
   const candidateCode = code.replace(/\b(?:public\s+)?class\s+Main\b/, "class CandidateSolution");
   if (candidateCode === code) throw new Error("Java code must contain class Main.");
+  const argumentTypeHints = mergedArgumentShapes(testCases);
   const runs = testCases
     .map((testCase, index) => {
       if (testCase.adapter === "tree-right-chain") {
         const root = javaAdapterDeclaration(testCase.arguments[0], index, 0, "tree");
-        const argumentsList = testCase.arguments.map((argument, argumentIndex) => javaAdapterReference(testCase, argument, index, argumentIndex)).join(", ");
+        const argumentsList = testCase.arguments
+          .map((argument, argumentIndex) =>
+            javaAdapterReference(testCase, argument, index, argumentIndex)
+          )
+          .join(", ");
         return `${root}\n        runTreeMutation(${index}, argument${index}_0, () -> CandidateSolution.${functionName}(${argumentsList}), true);`;
       }
-      if ((testCase.adapter === "linked-list-mutated" || testCase.adapter === "tree-mutated-output") && testCase.mode !== "mutated-first-argument") {
-        const declarations = testCase.arguments.map((argument, argumentIndex) => javaAdapterDeclaration(argument, index, argumentIndex, testCase.adapter ?? "tree-input")).filter(Boolean).join("\n        ");
-        const argumentsList = testCase.arguments.map((argument, argumentIndex) => javaAdapterReference(testCase, argument, index, argumentIndex)).join(", ");
+      if (
+        (testCase.adapter === "linked-list-mutated" ||
+          testCase.adapter === "tree-mutated-output") &&
+        testCase.mode !== "mutated-first-argument"
+      ) {
+        const declarations = testCase.arguments
+          .map((argument, argumentIndex) =>
+            javaAdapterDeclaration(argument, index, argumentIndex, testCase.adapter ?? "tree-input")
+          )
+          .filter(Boolean)
+          .join("\n        ");
+        const argumentsList = testCase.arguments
+          .map((argument, argumentIndex) =>
+            javaAdapterReference(testCase, argument, index, argumentIndex)
+          )
+          .join(", ");
         return `${declarations}\n        runAdaptedMutation(${index}, argument${index}_0, () -> CandidateSolution.${functionName}(${argumentsList}), "${testCase.adapter}");`;
       }
       if (testCase.adapter && testCase.mode !== "mutated-first-argument") {
-        const declarations = testCase.arguments.map((argument, argumentIndex) => javaAdapterDeclaration(argument, index, argumentIndex, testCase.adapter ?? "tree-input")).filter(Boolean).join("\n        ");
-        const argumentsList = testCase.arguments.map((argument, argumentIndex) => javaAdapterReference(testCase, argument, index, argumentIndex)).join(", ");
+        const declarations = testCase.arguments
+          .map((argument, argumentIndex) =>
+            javaAdapterDeclaration(argument, index, argumentIndex, testCase.adapter ?? "tree-input")
+          )
+          .filter(Boolean)
+          .join("\n        ");
+        const argumentsList = testCase.arguments
+          .map((argument, argumentIndex) =>
+            javaAdapterReference(testCase, argument, index, argumentIndex)
+          )
+          .join(", ");
         const call = `CandidateSolution.${functionName}(${argumentsList})`;
-        const output = testCase.adapter === "linked-list" ? `javaListToArray(${call})` : testCase.adapter === "tree-output" ? `javaTreeToArray(${call})` : testCase.adapter === "tree-node-value" ? `javaNodeValue(${call})` : call;
+        const output =
+          testCase.adapter === "linked-list"
+            ? `javaListToArray(${call})`
+            : testCase.adapter === "tree-output"
+              ? `javaTreeToArray(${call})`
+              : testCase.adapter === "tree-node-value"
+                ? `javaNodeValue(${call})`
+                : call;
         return `${declarations}\n        runCase(${index}, () -> ${output});`;
       }
-      const declarations = testCase.mode === "mutated-first-argument"
-        ? testCase.arguments
-            .map((argument, argumentIndex) => `${javaType(argument)} argument${index}_${argumentIndex} = ${javaLiteral(argument)};`)
-            .join("\n        ")
-        : "";
-      const argumentsList = testCase.mode === "mutated-first-argument"
-        ? testCase.arguments.map((_, argumentIndex) => `argument${index}_${argumentIndex}`).join(", ")
-        : testCase.arguments.map(javaLiteral).join(", ");
+      const declarations =
+        testCase.mode === "mutated-first-argument"
+          ? testCase.arguments
+              .map(
+                (argument, argumentIndex) =>
+                  `${javaType(argument, argumentTypeHints[argumentIndex])} argument${index}_${argumentIndex} = ${javaLiteral(argument, argumentTypeHints[argumentIndex])};`
+              )
+              .join("\n        ")
+          : "";
+      const argumentsList =
+        testCase.mode === "mutated-first-argument"
+          ? testCase.arguments
+              .map((_, argumentIndex) => `argument${index}_${argumentIndex}`)
+              .join(", ")
+          : testCase.arguments
+              .map((argument, argumentIndex) =>
+                javaLiteral(argument, argumentTypeHints[argumentIndex])
+              )
+              .join(", ");
       if (testCase.mode === "mutated-first-argument") {
         return `${declarations}\n        runMutatingCase(${index}, argument${index}_0, () -> CandidateSolution.${functionName}(${argumentsList}));`;
       }
@@ -511,56 +608,120 @@ class TreeNode { int val; TreeNode left; TreeNode right; TreeNode(int val) { thi
 `;
 }
 
-function javaAdapterDeclaration(value: unknown, caseIndex: number, argumentIndex: number, adapter: TestAdapter | "tree"): string {
+function javaAdapterDeclaration(
+  value: unknown,
+  caseIndex: number,
+  argumentIndex: number,
+  adapter: TestAdapter | "tree"
+): string {
   if (!Array.isArray(value)) return "";
   const name = `argument${caseIndex}_${argumentIndex}`;
-  if (adapter === "linked-list" || adapter === "linked-list-mutated") return `ListNode ${name} = javaBuildList(${javaLiteral(value)});`;
-  if (adapter === "tree" || adapter === "tree-input" || adapter === "tree-output" || adapter === "tree-right-chain" || adapter === "tree-node-value" || adapter === "tree-target-value") return `TreeNode ${name} = javaBuildTree(${javaTreeLiteral(value)});`;
+  if (adapter === "linked-list" || adapter === "linked-list-mutated")
+    return `ListNode ${name} = javaBuildList(${javaLiteral(value)});`;
+  if (
+    adapter === "tree" ||
+    adapter === "tree-input" ||
+    adapter === "tree-output" ||
+    adapter === "tree-mutated-output" ||
+    adapter === "tree-right-chain" ||
+    adapter === "tree-node-value" ||
+    adapter === "tree-target-value"
+  )
+    return `TreeNode ${name} = javaBuildTree(${javaTreeLiteral(value)});`;
   return `${javaType(value)} ${name} = ${javaLiteral(value)};`;
 }
 
-function javaAdapterReference(testCase: CodeTestCase, value: unknown, caseIndex: number, argumentIndex: number): string {
-  if (testCase.adapter === "tree-node-value" && argumentIndex > 0) return `javaFindTreeNode(argument${caseIndex}_0, ${javaLiteral(value)})`;
-  if (testCase.adapter === "tree-target-value" && argumentIndex === 1) return `javaFindTreeNode(argument${caseIndex}_0, ${javaLiteral(value)})`;
+function javaAdapterReference(
+  testCase: CodeTestCase,
+  value: unknown,
+  caseIndex: number,
+  argumentIndex: number
+): string {
+  if (testCase.adapter === "tree-node-value" && argumentIndex > 0)
+    return `javaFindTreeNode(argument${caseIndex}_0, ${javaLiteral(value)})`;
+  if (testCase.adapter === "tree-target-value" && argumentIndex === 1)
+    return `javaFindTreeNode(argument${caseIndex}_0, ${javaLiteral(value)})`;
   if (Array.isArray(value) && testCase.adapter) return `argument${caseIndex}_${argumentIndex}`;
   return javaLiteral(value);
 }
 
 function javaTreeLiteral(value: unknown[]): string {
-  return `new Integer[]{${value.map((item) => item === null ? "null" : javaLiteral(item)).join(", ")}}`;
+  return `new Integer[]{${value.map((item) => (item === null ? "null" : javaLiteral(item))).join(", ")}}`;
 }
 
 function cppHarness(code: string, functionName: string, testCases: CodeTestCase[]): string {
   const candidateCode = code.replace(/\bint\s+main\s*\([^)]*\)/, "int trailgradCandidateMain()");
+  const argumentTypeHints = mergedArgumentShapes(testCases);
   const runs = testCases
     .map((testCase, index) => {
       if (testCase.adapter === "tree-right-chain") {
-        const declaration = cppAdapterDeclaration(testCase.arguments[0], index, 0, "tree-right-chain");
+        const declaration = cppAdapterDeclaration(
+          testCase.arguments[0],
+          index,
+          0,
+          "tree-right-chain"
+        );
         return `${declaration}\n    runTreeMutation(${index}, argument${index}_0, [&]() { ${functionName}(argument${index}_0); }, true);`;
       }
-      if ((testCase.adapter === "linked-list-mutated" || testCase.adapter === "tree-mutated-output") && testCase.mode !== "mutated-first-argument") {
-        const declarations = testCase.arguments.map((argument, argumentIndex) => cppAdapterDeclaration(argument, index, argumentIndex, testCase.adapter ?? "tree-input")).filter(Boolean).join("\n    ");
-        const argumentsList = testCase.arguments.map((argument, argumentIndex) => cppAdapterReference(testCase, argument, index, argumentIndex)).join(", ");
+      if (
+        (testCase.adapter === "linked-list-mutated" ||
+          testCase.adapter === "tree-mutated-output") &&
+        testCase.mode !== "mutated-first-argument"
+      ) {
+        const declarations = testCase.arguments
+          .map((argument, argumentIndex) =>
+            cppAdapterDeclaration(argument, index, argumentIndex, testCase.adapter ?? "tree-input")
+          )
+          .filter(Boolean)
+          .join("\n    ");
+        const argumentsList = testCase.arguments
+          .map((argument, argumentIndex) =>
+            cppAdapterReference(testCase, argument, index, argumentIndex)
+          )
+          .join(", ");
         return `${declarations}\n    runAdaptedMutation(${index}, argument${index}_0, [&]() { ${functionName}(${argumentsList}); }, "${testCase.adapter}");`;
       }
       if (testCase.adapter && testCase.mode !== "mutated-first-argument") {
-        const declarations = testCase.arguments.map((argument, argumentIndex) => cppAdapterDeclaration(argument, index, argumentIndex, testCase.adapter ?? "tree-input")).filter(Boolean).join("\n    ");
-        const argumentsList = testCase.arguments.map((argument, argumentIndex) => cppAdapterReference(testCase, argument, index, argumentIndex)).join(", ");
+        const declarations = testCase.arguments
+          .map((argument, argumentIndex) =>
+            cppAdapterDeclaration(argument, index, argumentIndex, testCase.adapter ?? "tree-input")
+          )
+          .filter(Boolean)
+          .join("\n    ");
+        const argumentsList = testCase.arguments
+          .map((argument, argumentIndex) =>
+            cppAdapterReference(testCase, argument, index, argumentIndex)
+          )
+          .join(", ");
         const call = `${functionName}(${argumentsList})`;
-        const output = testCase.adapter === "linked-list" ? `cppListToVector(${call})` : testCase.adapter === "tree-output" ? `cppTreeToVector(${call})` : testCase.adapter === "tree-node-value" ? `cppNodeValue(${call})` : call;
+        const output =
+          testCase.adapter === "linked-list"
+            ? `cppListToVector(${call})`
+            : testCase.adapter === "tree-output"
+              ? `cppTreeToVector(${call})`
+              : testCase.adapter === "tree-node-value"
+                ? `cppNodeValue(${call})`
+                : call;
         return `${declarations}\n    runCase(${index}, [&]() { return ${output}; });`;
       }
       const declarations = testCase.arguments
-        .map((argument, argumentIndex) => `${cppType(argument)} argument${index}_${argumentIndex} = ${cppLiteral(argument)};`)
+        .map(
+          (argument, argumentIndex) =>
+            `${cppType(argument, argumentTypeHints[argumentIndex])} argument${index}_${argumentIndex} = ${cppLiteral(argument)};`
+        )
         .join("\n    ");
-      const argumentsList = testCase.arguments.map((_, argumentIndex) => `argument${index}_${argumentIndex}`).join(", ");
-      const runner = testCase.mode === "mutated-first-argument"
-        ? `runMutatingCase(${index}, argument${index}_0, [&]() { ${functionName}(${argumentsList}); });`
-        : `runCase(${index}, [&]() { return ${functionName}(${argumentsList}); });`;
+      const argumentsList = testCase.arguments
+        .map((_, argumentIndex) => `argument${index}_${argumentIndex}`)
+        .join(", ");
+      const runner =
+        testCase.mode === "mutated-first-argument"
+          ? `runMutatingCase(${index}, argument${index}_0, [&]() { ${functionName}(${argumentsList}); });`
+          : `runCase(${index}, [&]() { return ${functionName}(${argumentsList}); });`;
       return `${declarations}\n    ${runner}`;
     })
     .join("\n    ");
-  const includes = candidateCode.match(/^(?:#include\s+[^\n]+\n|using\s+namespace\s+[^;]+;\s*)*/)?.[0] ?? "";
+  const includes =
+    candidateCode.match(/^(?:#include\s+[^\n]+\n|using\s+namespace\s+[^;]+;\s*)*/)?.[0] ?? "";
   const candidateBody = candidateCode.slice(includes.length);
   return `${includes}${cppAdapterTypes()}
 ${candidateBody}
@@ -637,16 +798,29 @@ struct TreeNode { int val; TreeNode* left; TreeNode* right; TreeNode(int value) 
 `;
 }
 
-function cppAdapterDeclaration(value: unknown, caseIndex: number, argumentIndex: number, adapter: TestAdapter): string {
+function cppAdapterDeclaration(
+  value: unknown,
+  caseIndex: number,
+  argumentIndex: number,
+  adapter: TestAdapter
+): string {
   if (!Array.isArray(value)) return "";
   const name = `argument${caseIndex}_${argumentIndex}`;
-  if (adapter === "linked-list" || adapter === "linked-list-mutated") return `ListNode* ${name} = cppBuildList(${cppVectorLiteral(value)});`;
+  if (adapter === "linked-list" || adapter === "linked-list-mutated")
+    return `ListNode* ${name} = cppBuildList(${cppVectorLiteral(value)});`;
   return `TreeNode* ${name} = cppBuildTree(${cppOptionalVectorLiteral(value)});`;
 }
 
-function cppAdapterReference(testCase: CodeTestCase, value: unknown, caseIndex: number, argumentIndex: number): string {
-  if (testCase.adapter === "tree-node-value" && argumentIndex > 0) return `cppFindTreeNode(argument${caseIndex}_0, ${cppLiteral(value)})`;
-  if (testCase.adapter === "tree-target-value" && argumentIndex === 1) return `cppFindTreeNode(argument${caseIndex}_0, ${cppLiteral(value)})`;
+function cppAdapterReference(
+  testCase: CodeTestCase,
+  value: unknown,
+  caseIndex: number,
+  argumentIndex: number
+): string {
+  if (testCase.adapter === "tree-node-value" && argumentIndex > 0)
+    return `cppFindTreeNode(argument${caseIndex}_0, ${cppLiteral(value)})`;
+  if (testCase.adapter === "tree-target-value" && argumentIndex === 1)
+    return `cppFindTreeNode(argument${caseIndex}_0, ${cppLiteral(value)})`;
   if (Array.isArray(value) && testCase.adapter) return `argument${caseIndex}_${argumentIndex}`;
   return cppLiteral(value);
 }
@@ -656,7 +830,7 @@ function cppVectorLiteral(value: unknown[]): string {
 }
 
 function cppOptionalVectorLiteral(value: unknown[]): string {
-  return `{${value.map((item) => item === null ? "nullopt" : `optional<int>(${cppLiteral(item)})`).join(", ")}}`;
+  return `{${value.map((item) => (item === null ? "nullopt" : `optional<int>(${cppLiteral(item)})`)).join(", ")}}`;
 }
 
 function jsLiteral(value: unknown): string {
@@ -671,32 +845,46 @@ function pythonLiteral(value: unknown): string {
   return String(value);
 }
 
-function javaLiteral(value: unknown): string {
+function javaLiteral(value: unknown, typeHint?: unknown): string {
   if (value === null) return "null";
   if (typeof value === "boolean") return String(value);
   if (typeof value === "string") return JSON.stringify(value);
-  if (typeof value === "number") return Number.isInteger(value) ? String(value) : `${value}d`;
+  if (typeof value === "number") {
+    return Number.isInteger(value) && !(typeof typeHint === "number" && !Number.isInteger(typeHint))
+      ? String(value)
+      : `${value}d`;
+  }
   if (Array.isArray(value)) {
-    const type = javaArrayType(value);
-    return `new ${type}{${value.map(javaLiteral).join(", ")}}`;
+    const type = javaArrayType(value, typeHint);
+    const nestedHint = Array.isArray(typeHint)
+      ? typeHint.find((item) => item !== null && item !== undefined)
+      : undefined;
+    return `new ${type}{${value.map((item) => javaLiteral(item, nestedHint)).join(", ")}}`;
   }
   throw new Error("Unsupported Java test value.");
 }
 
-function javaArrayType(value: unknown[]): string {
-  const sample = value.find((item) => item !== null);
-  if (Array.isArray(sample)) return `${javaArrayType(sample)}[]`;
+function javaArrayType(value: unknown[], typeHint?: unknown): string {
+  const hinted = Array.isArray(typeHint)
+    ? typeHint.find((item) => item !== null && item !== undefined)
+    : undefined;
+  const sample = mergeValueShapes([value.find((item) => item !== null), hinted]);
+  if (Array.isArray(sample)) return `${javaArrayType(sample, sample)}[]`;
   if (typeof sample === "string") return "String[]";
   if (typeof sample === "boolean") return "boolean[]";
   if (typeof sample === "number" && !Number.isInteger(sample)) return "double[]";
   return "int[]";
 }
 
-function javaType(value: unknown): string {
-  if (Array.isArray(value)) return javaArrayType(value).replace(/\[\]$/, "") + "[]";
+function javaType(value: unknown, typeHint?: unknown): string {
+  if (Array.isArray(value)) return javaArrayType(value, typeHint).replace(/\[\]$/, "") + "[]";
   if (typeof value === "string") return "String";
   if (typeof value === "boolean") return "boolean";
-  if (typeof value === "number") return Number.isInteger(value) ? "int" : "double";
+  if (typeof value === "number") {
+    return Number.isInteger(value) && !(typeof typeHint === "number" && !Number.isInteger(typeHint))
+      ? "int"
+      : "double";
+  }
   return "Object";
 }
 
@@ -709,15 +897,45 @@ function cppLiteral(value: unknown): string {
   throw new Error("Unsupported C++ test value.");
 }
 
-function cppType(value: unknown): string {
+function cppType(value: unknown, typeHint?: unknown): string {
   if (typeof value === "boolean") return "bool";
   if (typeof value === "string") return "string";
-  if (typeof value === "number") return Number.isInteger(value) ? "int" : "double";
+  if (typeof value === "number") {
+    return Number.isInteger(value) && !(typeof typeHint === "number" && !Number.isInteger(typeHint))
+      ? "int"
+      : "double";
+  }
   if (Array.isArray(value)) {
-    const sample = value.find((item) => item !== null);
-    return `vector<${sample === undefined ? "int" : cppType(sample)}>`;
+    const hinted = Array.isArray(typeHint)
+      ? typeHint.find((item) => item !== null && item !== undefined)
+      : undefined;
+    const sample = value.find((item) => item !== null) ?? hinted;
+    return `vector<${sample === undefined ? "int" : cppType(sample, hinted)}>`;
   }
   throw new Error("Unsupported C++ test value.");
+}
+
+function mergedArgumentShapes(testCases: CodeTestCase[]): unknown[] {
+  const width = testCases.reduce(
+    (largest, testCase) => Math.max(largest, testCase.arguments.length),
+    0
+  );
+  return Array.from({ length: width }, (_, index) =>
+    mergeValueShapes(testCases.map((testCase) => testCase.arguments[index]))
+  );
+}
+
+function mergeValueShapes(values: unknown[]): unknown {
+  const defined = values.filter((value) => value !== undefined && value !== null);
+  if (!defined.length) return undefined;
+  if (defined.every(Array.isArray)) {
+    const nested = mergeValueShapes(defined.flatMap((value) => value as unknown[]));
+    return [nested ?? 0];
+  }
+  if (defined.every((value) => typeof value === "number")) {
+    return defined.some((value) => !Number.isInteger(value as number)) ? 0.5 : 0;
+  }
+  return defined[0];
 }
 
 function equivalent(
@@ -729,7 +947,10 @@ function equivalent(
     return expected.some((candidate) => JSON.stringify(actual) === JSON.stringify(candidate));
   }
   if (comparison === "unordered" && Array.isArray(actual) && Array.isArray(expected)) {
-    return JSON.stringify(actual.map((item) => JSON.stringify(item)).sort()) === JSON.stringify(expected.map((item) => JSON.stringify(item)).sort());
+    return (
+      JSON.stringify(actual.map((item) => JSON.stringify(item)).sort()) ===
+      JSON.stringify(expected.map((item) => JSON.stringify(item)).sort())
+    );
   }
   if (comparison === "unordered-nested" && Array.isArray(actual) && Array.isArray(expected)) {
     return canonicalNested(actual) === canonicalNested(expected);

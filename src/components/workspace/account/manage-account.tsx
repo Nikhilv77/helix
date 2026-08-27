@@ -5,12 +5,14 @@ import { isReverificationCancelledError } from "@clerk/nextjs/errors";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
+  Bell,
   Check,
   ChevronLeft,
   ChevronRight,
   Loader2,
   LogOut,
   Trash2,
+  Users,
   Volume2,
   VolumeX,
   type LucideIcon
@@ -21,6 +23,7 @@ import { ALL_PERSONAS, MAYA, personaById, type InterviewerPersona } from "@/lib/
 import {
   ApiClientError,
   deleteAccount,
+  saveNotificationPreferences,
   saveWorkspaceAccent,
   saveWorkspaceTeacher
 } from "@/lib/api/api-client";
@@ -57,6 +60,13 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [accent, setAccent] = useState<WorkspaceAccent>(profile.workspaceAccent);
   const [savingAccent, setSavingAccent] = useState<WorkspaceAccent | null>(null);
+  const [notificationPreferences, setNotificationPreferences] = useState({
+    teacherNotificationsEnabled: profile.teacherNotificationsEnabled,
+    helpNotificationsEnabled: profile.helpNotificationsEnabled
+  });
+  const [savingPreference, setSavingPreference] = useState<
+    "teacherNotificationsEnabled" | "helpNotificationsEnabled" | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const name =
     profile.resume?.fullName?.trim() ||
@@ -130,6 +140,30 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
     }
   };
 
+  const onNotificationPreferenceChange = async (
+    key: "teacherNotificationsEnabled" | "helpNotificationsEnabled"
+  ) => {
+    if (savingPreference) return;
+    const previous = notificationPreferences[key];
+    const next = !previous;
+    setNotificationPreferences((current) => ({ ...current, [key]: next }));
+    setSavingPreference(key);
+    setError(null);
+
+    try {
+      await saveNotificationPreferences({ [key]: next });
+    } catch (caught) {
+      setNotificationPreferences((current) => ({ ...current, [key]: previous }));
+      setError(
+        caught instanceof ApiClientError
+          ? caught.message
+          : "Could not save your notification settings."
+      );
+    } finally {
+      setSavingPreference(null);
+    }
+  };
+
   return (
     <section className="profile-theme relative mx-auto flex min-h-screen w-full max-w-[84rem] flex-col px-4 pb-20 pt-6 text-cream sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
       <div className="relative z-10 mx-auto flex min-h-[calc(100svh-5rem)] w-full max-w-4xl flex-col items-center justify-center py-10 text-center">
@@ -179,7 +213,7 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
           </p>
 
           <section
-            className="manage-action-line report-glass-card order-3 mx-auto mt-4 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:p-6"
+            className="manage-action-line report-glass-card order-4 mx-auto mt-4 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:p-6"
             style={{ "--line-delay": "3200ms" } as CSSProperties}
           >
             <h2 className="text-base font-semibold text-cream">Account actions</h2>
@@ -247,8 +281,41 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
             </div>
           </section>
 
+          <section
+            id="notifications"
+            className="manage-action-line report-glass-card order-3 mx-auto mt-4 w-full max-w-6xl scroll-mt-24 rounded-[1.5rem] p-5 text-left sm:p-6"
+            style={{ "--line-delay": "3420ms" } as CSSProperties}
+          >
+            <div>
+              <h2 className="text-base font-semibold text-cream">Notifications</h2>
+              <p className="mt-1 text-sm leading-6 text-cream/52">
+                Choose which optional updates should reach your inbox. Your onboarding welcome and
+                updates about requests you opened remain available.
+              </p>
+            </div>
+
+            <div className="mt-4 divide-y divide-white/[0.07]">
+              <NotificationPreferenceRow
+                icon={Bell}
+                title="Teacher coaching"
+                description="One daily practice recommendation, with a second nudge only when unfinished work is waiting."
+                enabled={notificationPreferences.teacherNotificationsEnabled}
+                saving={savingPreference === "teacherNotificationsEnabled"}
+                onToggle={() => void onNotificationPreferenceChange("teacherNotificationsEnabled")}
+              />
+              <NotificationPreferenceRow
+                icon={Users}
+                title="Peer help requests"
+                description="Let learners ask for your help on questions you have already completed."
+                enabled={notificationPreferences.helpNotificationsEnabled}
+                saving={savingPreference === "helpNotificationsEnabled"}
+                onToggle={() => void onNotificationPreferenceChange("helpNotificationsEnabled")}
+              />
+            </div>
+          </section>
+
           {error ? (
-            <p className="manage-action-line order-4 mx-auto mt-5 max-w-xl text-[0.9rem] leading-6 text-cream/72">
+            <p className="manage-action-line order-5 mx-auto mt-5 max-w-xl text-[0.9rem] leading-6 text-cream/72">
               {error}
             </p>
           ) : null}
@@ -407,7 +474,11 @@ function ManageTeacherPicker({
           disabled={saving || selected}
           className="inline-flex h-10 min-w-40 items-center justify-center rounded-lg bg-cream px-5 text-sm font-medium text-[#171a16] transition hover:bg-white disabled:cursor-default disabled:bg-white/[0.07] disabled:text-cream/38"
         >
-          {saving ? "Saving teacher…" : selected ? `${focused.name} is selected` : `Choose ${focused.name}`}
+          {saving
+            ? "Saving teacher…"
+            : selected
+              ? `${focused.name} is selected`
+              : `Choose ${focused.name}`}
         </button>
       </div>
     </section>
@@ -481,6 +552,50 @@ function AccountActionRow({
         </div>
       </div>
       <div className="shrink-0">{action}</div>
+    </div>
+  );
+}
+
+function NotificationPreferenceRow({
+  icon: Icon,
+  title,
+  description,
+  enabled,
+  saving,
+  onToggle
+}: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  enabled: boolean;
+  saving: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-4 py-4 first:pt-2 last:pb-1">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-cream/62">
+        <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-cream/88">{title}</span>
+        <span className="mt-0.5 block text-[12.5px] leading-5 text-cream/48">{description}</span>
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        aria-label={`${enabled ? "Disable" : "Enable"} ${title}`}
+        disabled={saving}
+        onClick={onToggle}
+        className="relative h-7 w-12 shrink-0 rounded-full border border-white/[0.1] bg-white/[0.07] outline-none transition disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+      >
+        <span
+          aria-hidden="true"
+          className={`absolute top-1 h-5 w-5 rounded-full transition-[left,background-color] duration-200 ${
+            enabled ? "left-6 bg-[var(--workspace-accent)]" : "left-1 bg-cream/40"
+          }`}
+        />
+      </button>
     </div>
   );
 }

@@ -2,10 +2,13 @@ import {
   MayaInsightKind,
   Prisma,
   RoadmapProgressStatus,
+  RoadmapQuestionAttemptStatus,
   RoadmapQuestionSourceType,
   RoadmapTemplateStatus,
+  PracticeSessionAvailability,
   UserRoadmapStatus
 } from "@prisma/client";
+import { PRACTICE_KEY_BY_TEMPLATE_SLUG } from "@/lib/practice/practice-roadmap";
 import type {
   FrontendRoadmapChapter,
   FrontendRoadmapChapterDetail,
@@ -13,21 +16,17 @@ import type {
   FrontendRoadmapSession
 } from "@/lib/roadmap/roadmap";
 import type { PrismaService } from "../../database/prisma.service";
-import {
-  attemptStatus,
-  normalizedScore,
-  questionStatusAfterAction
-} from "./question-actions";
+import type { CodeRunnerLanguage } from "../../dsa/code-test-harness";
+import { Logger } from "../../common/logger";
+import type { PrepPracticeReview } from "@/lib/practice/prep-practice";
+import { attemptStatus, normalizedScore, questionStatusAfterAction } from "./question-actions";
 import { buildPersonalization } from "./personalization";
-import {
-  analyzeAttemptHistory,
-  displayPattern,
-  streakInsightBody
-} from "./insight-analysis";
+import { analyzeAttemptHistory, displayPattern, streakInsightBody } from "./insight-analysis";
 import type { EnsureFrontendRoadmapResult, RoadmapQuestionAttemptAction } from "./types";
 
 const FRONTEND_ROADMAP_ROLE = "fullstack";
 const FRONTEND_ROADMAP_SLUG = "frontend-roadmap";
+const practiceLogger = new Logger("PrepPractice");
 
 type RoadmapTransaction = Prisma.TransactionClient;
 export class FrontendRoadmapService {
@@ -36,11 +35,13 @@ export class FrontendRoadmapService {
   async recordQuestionAttempt(
     ownerId: string,
     input: {
+      idempotencyKey: string;
       action: RoadmapQuestionAttemptAction;
       dsaQuestionSlug: string;
       answer?: string | null;
       score?: number | null;
       durationMs?: number | null;
+      language?: CodeRunnerLanguage | null;
     },
     /**
      * Re-reading the whole roadmap costs about a third of this call. The UI
@@ -73,6 +74,17 @@ export class FrontendRoadmapService {
         // hash to different keys and never wait on each other.
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`frontend-roadmap:${ownerId}`}))`;
 
+        const replay = await tx.userQuestionAttempt.findUnique({
+          where: {
+            ownerId_idempotencyKey: {
+              ownerId,
+              idempotencyKey: input.idempotencyKey
+            }
+          },
+          select: { id: true }
+        });
+        if (replay) return;
+
         const roadmap = await tx.userRoadmap.findUniqueOrThrow({
           where: {
             ownerId_role: {
@@ -94,7 +106,8 @@ export class FrontendRoadmapService {
             dsaQuestionSlug: true,
             prepQuestionTemplateId: true,
             status: true,
-            bestScore: true
+            bestScore: true,
+            dsaQuestion: { select: { contentVersion: true } }
           }
         });
 
@@ -109,11 +122,13 @@ export class FrontendRoadmapService {
         await tx.userQuestionAttempt.create({
           data: {
             ownerId,
+            idempotencyKey: input.idempotencyKey,
             questionProgressId: progress.id,
             sourceType: progress.sourceType,
             dsaQuestionSlug: progress.dsaQuestionSlug,
             prepQuestionTemplateId: progress.prepQuestionTemplateId,
             status: attemptStatus(input.action),
+            language: input.language ?? null,
             answer: input.answer ?? null,
             score,
             correctness:
@@ -151,6 +166,234 @@ export class FrontendRoadmapService {
     const home =
       options.includeHome === false ? null : await readFrontendRoadmapHome(this.prisma, ownerId);
     return { recorded: true, home };
+  }
+
+  async recordPrepQuestionAttempt(
+    ownerId: string,
+    input: {
+      idempotencyKey: string;
+      sessionKey: string;
+      prepQuestionTemplateId: string;
+      action: "submit" | "skip";
+      answer: string;
+      selectedOptionIndex: number | null;
+      durationMs: number | null;
+      review: PrepPracticeReview;
+    }
+  ): Promise<{
+    recorded: boolean;
+    replayed: boolean;
+    status: RoadmapProgressStatus;
+    review: PrepPracticeReview;
+  }> {
+    return this.prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`frontend-roadmap:${ownerId}`}))`;
+
+        const replay = await tx.userQuestionAttempt.findUnique({
+          where: {
+            ownerId_idempotencyKey: { ownerId, idempotencyKey: input.idempotencyKey }
+          },
+          select: {
+            feedback: true,
+            questionProgress: { select: { status: true } }
+          }
+        });
+        const replayReview = prepReviewFromFeedback(replay?.feedback);
+        if (replay && replayReview) {
+          return {
+            recorded: true,
+            replayed: true,
+            status: replay.questionProgress.status,
+            review: replayReview
+          };
+        }
+
+        const progress = await tx.userQuestionProgress.findFirst({
+          where: {
+            prepQuestionTemplateId: input.prepQuestionTemplateId,
+            sourceType: RoadmapQuestionSourceType.PREP,
+            roadmap: { ownerId, role: FRONTEND_ROADMAP_ROLE },
+            practicePlacements: { some: { practiceSessionKey: input.sessionKey } }
+          },
+          include: { prepQuestionTemplate: true }
+        });
+        if (!progress?.prepQuestionTemplate) {
+          throw new Error("Practice question is not placed for this candidate");
+        }
+
+        const question = progress.prepQuestionTemplate;
+        const review = input.review;
+        if (review.questionContentVersion !== question.contentVersion) {
+          throw new Error("Practice evaluation content version does not match the placed question");
+        }
+        const verifiedScore = verifiedPrepScore(review);
+        const nextStatus = prepStatusAfterAttempt(progress.status, input.action, review);
+        const now = new Date();
+        const attemptStatusValue =
+          input.action === "skip"
+            ? RoadmapQuestionAttemptStatus.SKIPPED
+            : RoadmapQuestionAttemptStatus.SUBMITTED;
+
+        await tx.userQuestionAttempt.create({
+          data: {
+            ownerId,
+            idempotencyKey: input.idempotencyKey,
+            questionProgressId: progress.id,
+            sourceType: RoadmapQuestionSourceType.PREP,
+            prepQuestionTemplateId: question.id,
+            status: attemptStatusValue,
+            answer: input.answer || null,
+            score: verifiedScore,
+            correctness: review.correctness,
+            questionContentVersion: review.questionContentVersion,
+            evaluatorVersion: review.evaluatorVersion,
+            verificationStatus: review.verificationStatus,
+            durationMs: input.durationMs,
+            feedback: toJson({
+              source: "prep-practice",
+              action: input.action,
+              sessionKey: input.sessionKey,
+              hintsUsed: progress.revealedHintCount,
+              review
+            })
+          }
+        });
+        await tx.userQuestionProgress.update({
+          where: { id: progress.id },
+          data: {
+            status: nextStatus,
+            attemptCount: { increment: 1 },
+            bestScore:
+              verifiedScore === null
+                ? undefined
+                : Math.max(progress.bestScore ?? Number.NEGATIVE_INFINITY, verifiedScore),
+            lastAttemptedAt: now,
+            completedAt: nextStatus === RoadmapProgressStatus.COMPLETED ? now : null,
+            draftAnswer: input.answer || progress.draftAnswer,
+            draftUpdatedAt: input.answer ? now : progress.draftUpdatedAt
+          }
+        });
+        await recalculateRoadmap(tx, progress.roadmapId, ownerId, false, now);
+        practiceLogger.log({
+          event: "practice.prep_attempt_recorded",
+          ownerId,
+          questionId: question.id,
+          sessionKey: input.sessionKey,
+          action: input.action,
+          score: verifiedScore,
+          verificationStatus: review.verificationStatus,
+          attemptMetricDelta: 1,
+          unverifiedAttemptDelta: review.verificationStatus === "UNVERIFIED" ? 1 : 0,
+          status: nextStatus,
+          hintsUsed: progress.revealedHintCount
+        });
+
+        return { recorded: true, replayed: false, status: nextStatus, review };
+      },
+      { maxWait: 20_000, timeout: 120_000 }
+    );
+  }
+
+  /**
+   * Store lightweight, test-backed evidence from the DSA code runner.
+   *
+   * This deliberately skips the expensive roadmap-wide recalculation performed
+   * by a completion action. A code run changes attempt evidence and the current
+   * question's best score; it does not complete chapters or sessions.
+   */
+  async recordCodeRunEvidence(
+    ownerId: string,
+    input: {
+      idempotencyKey: string;
+      dsaQuestionSlug: string;
+      language: CodeRunnerLanguage;
+      score: number;
+      accepted: boolean;
+      testsPassed: number;
+      testCount: number;
+    }
+  ): Promise<boolean> {
+    const roadmap = await this.prisma.userRoadmap.findUnique({
+      where: { ownerId_role: { ownerId, role: FRONTEND_ROADMAP_ROLE } },
+      select: { id: true }
+    });
+    if (!roadmap) return false;
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`frontend-roadmap:${ownerId}`}))`;
+
+        const replay = await tx.userQuestionAttempt.findUnique({
+          where: {
+            ownerId_idempotencyKey: {
+              ownerId,
+              idempotencyKey: input.idempotencyKey
+            }
+          },
+          select: { id: true }
+        });
+        if (replay) return true;
+
+        const progress = await tx.userQuestionProgress.findFirst({
+          where: {
+            roadmapId: roadmap.id,
+            sourceType: RoadmapQuestionSourceType.DSA,
+            dsaQuestionSlug: input.dsaQuestionSlug
+          },
+          select: {
+            id: true,
+            sourceType: true,
+            dsaQuestionSlug: true,
+            prepQuestionTemplateId: true,
+            status: true,
+            bestScore: true,
+            dsaQuestion: { select: { contentVersion: true } }
+          }
+        });
+        if (!progress) return false;
+        if (!progress.dsaQuestion) return false;
+
+        const now = new Date();
+        const score = Math.max(0, Math.min(1, input.score));
+        await tx.userQuestionAttempt.create({
+          data: {
+            ownerId,
+            idempotencyKey: input.idempotencyKey,
+            questionProgressId: progress.id,
+            sourceType: progress.sourceType,
+            dsaQuestionSlug: progress.dsaQuestionSlug,
+            prepQuestionTemplateId: progress.prepQuestionTemplateId,
+            status: RoadmapQuestionAttemptStatus.SUBMITTED,
+            language: input.language,
+            score,
+            correctness: input.accepted ? "accepted" : "not-accepted",
+            questionContentVersion: progress.dsaQuestion.contentVersion,
+            evaluatorVersion: "dsa-code-run-v1",
+            verificationStatus: "VERIFIED",
+            feedback: toJson({
+              action: "submit",
+              source: "code-run",
+              testsPassed: input.testsPassed,
+              testCount: input.testCount
+            })
+          }
+        });
+
+        await tx.userQuestionProgress.update({
+          where: { id: progress.id },
+          data: {
+            status: questionStatusAfterAction(progress.status, "submit"),
+            attemptCount: { increment: 1 },
+            bestScore: Math.max(progress.bestScore ?? Number.NEGATIVE_INFINITY, score),
+            lastAttemptedAt: now
+          }
+        });
+
+        return true;
+      },
+      { maxWait: 20_000, timeout: 120_000 }
+    );
   }
 
   /**
@@ -292,36 +535,54 @@ export class FrontendRoadmapService {
           role: FRONTEND_ROADMAP_ROLE
         }
       },
-      select: { id: true, _count: { select: { sessionProgress: true } } }
+      select: {
+        id: true,
+        templateVersion: true,
+        _count: { select: { sessionProgress: true } }
+      }
     });
 
     if (!existing) {
       const created = await this.ensureFrontendRoadmap(ownerId);
       if (!created) return null;
-    } else if (await this.sessionsOutOfDate(existing._count.sessionProgress)) {
-      // The plan gained or lost a session since this roadmap was built, so the
-      // candidate would otherwise be missing a card until they re-onboarded.
-      // Reconciling is idempotent and only runs on the mismatch.
+    } else if (
+      await this.templateOutOfDate(existing._count.sessionProgress, existing.templateVersion)
+    ) {
+      // Template versions cover question/chapter publication as well as session
+      // count. Existing candidates therefore receive a new bank lazily without
+      // re-onboarding, while the stable-version happy path remains read-only.
       await this.ensureFrontendRoadmap(ownerId);
     }
 
     return readFrontendRoadmapHome(this.prisma, ownerId);
   }
 
-  /** One count against the active template, on the happy path only. */
-  private async sessionsOutOfDate(sessionCount: number): Promise<boolean> {
-    const templateSessions = await this.prisma.roadmapSessionTemplate.count({
+  /** One small template read against the active template on the happy path. */
+  private async templateOutOfDate(
+    sessionCount: number,
+    storedVersion: number | null
+  ): Promise<boolean> {
+    const template = await this.prisma.roadmapTemplate.findFirst({
       where: {
-        template: { slug: FRONTEND_ROADMAP_SLUG, status: RoadmapTemplateStatus.ACTIVE }
-      }
+        slug: FRONTEND_ROADMAP_SLUG,
+        status: RoadmapTemplateStatus.ACTIVE
+      },
+      select: { version: true, _count: { select: { sessions: true } } }
     });
 
-    return templateSessions > 0 && templateSessions !== sessionCount;
+    return Boolean(
+      template && (template.version !== storedVersion || template._count.sessions !== sessionCount)
+    );
   }
 
   async ensureFrontendRoadmap(ownerId: string): Promise<EnsureFrontendRoadmapResult | null> {
     return this.prisma.$transaction(
       async (tx) => {
+        // Concurrent first visits must converge on one provisioned roadmap.
+        // This is the same per-owner lock used by attempt writes, so seeding
+        // cannot race a completion/recalculation for the same candidate.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`frontend-roadmap:${ownerId}`}))`;
+
         const profile = await tx.candidateProfile.findUnique({
           where: { ownerId },
           select: {
@@ -340,10 +601,6 @@ export class FrontendRoadmapService {
           throw new Error(
             `Cannot create full-stack roadmap without a candidate profile: ${ownerId}`
           );
-        }
-
-        if (profile.targetRole !== FRONTEND_ROADMAP_ROLE) {
-          return null;
         }
 
         const template = await tx.roadmapTemplate.findFirst({
@@ -440,6 +697,15 @@ export class FrontendRoadmapService {
             return {
               roadmapId: roadmap.id,
               sessionTemplateId: session.id,
+              practiceSessionKey: PRACTICE_KEY_BY_TEMPLATE_SLUG[session.slug] ?? session.slug,
+              availability:
+                session.questions.length > 0
+                  ? PracticeSessionAvailability.AVAILABLE
+                  : PracticeSessionAvailability.UNAVAILABLE,
+              titleSnapshot: session.title,
+              purposeSnapshot: session.purpose,
+              coversSnapshot: session.covers,
+              personalizedAt: now,
               status: isFirstSession ? RoadmapProgressStatus.ACTIVE : RoadmapProgressStatus.LOCKED,
               order: session.order,
               startedAt: isFirstSession ? now : null,
@@ -484,6 +750,11 @@ export class FrontendRoadmapService {
               data: {
                 order: session.order,
                 totalQuestions: session.questions.length,
+                practiceSessionKey: PRACTICE_KEY_BY_TEMPLATE_SLUG[session.slug] ?? session.slug,
+                availability:
+                  session.questions.length > 0
+                    ? PracticeSessionAvailability.AVAILABLE
+                    : PracticeSessionAvailability.UNAVAILABLE,
                 metadata: toJson({
                   slug: session.slug,
                   title: session.title,
@@ -621,7 +892,10 @@ export class FrontendRoadmapService {
 
         return recalculateRoadmap(tx, roadmap.id, ownerId, created, now);
       },
-      { maxWait: 10_000, timeout: 30_000 }
+      // Concurrent first loads intentionally queue on the per-owner advisory
+      // lock. The timeout must include that queue, not only this transaction's
+      // own work.
+      { maxWait: 20_000, timeout: 120_000 }
     );
   }
 }
@@ -649,6 +923,7 @@ async function readFrontendRoadmapHome(
       questionProgress: {
         include: {
           roadmapQuestionTemplate: true,
+          sessionProgress: { select: { practiceSessionKey: true } },
           dsaQuestion: {
             select: {
               slug: true,
@@ -799,7 +1074,7 @@ function groupQuestionsBy<Row>(rows: Row[], key: (row: Row) => string | null): M
 }
 
 function sessionHref(slug: string, title: string): string {
-  if (slug === "frontend-dsa") return "/practice";
+  if (slug === "frontend-dsa") return "/practice/dsa";
 
   const params = new URLSearchParams({ focus: title });
   return `/interview?${params.toString()}`;
@@ -874,47 +1149,57 @@ async function recalculateRoadmap(
   created: boolean,
   now: Date
 ): Promise<EnsureFrontendRoadmapResult> {
-  const [roadmap, sessionProgress, chapterProgress, questionProgress] = await Promise.all([
-    tx.userRoadmap.findUniqueOrThrow({
-      where: { id: roadmapId },
-      select: { id: true, totalSessions: true }
-    }),
-    tx.userSessionProgress.findMany({
-      where: { roadmapId },
-      include: { sessionTemplate: { select: { slug: true, order: true } } },
-      orderBy: { order: "asc" }
-    }),
-    tx.userChapterProgress.findMany({
-      where: { roadmapId },
-      include: { chapterTemplate: { select: { slug: true, order: true } } },
-      orderBy: { order: "asc" }
-    }),
-    tx.userQuestionProgress.findMany({
-      where: { roadmapId },
-      include: {
-        sessionProgress: { include: { sessionTemplate: { select: { slug: true } } } },
-        chapterProgress: { include: { chapterTemplate: { select: { slug: true, title: true } } } },
-        dsaQuestion: {
-          select: {
-            title: true,
-            commonMistakes: true,
-            interviewSignals: true,
-            primaryPattern: true,
-            expectedTimeMinutes: true
+  const [roadmap, sessionProgress, chapterProgress, questionProgress, practicePlacements] =
+    await Promise.all([
+      tx.userRoadmap.findUniqueOrThrow({
+        where: { id: roadmapId },
+        select: { id: true, totalSessions: true }
+      }),
+      tx.userSessionProgress.findMany({
+        where: { roadmapId },
+        include: { sessionTemplate: { select: { slug: true, order: true } } },
+        orderBy: { order: "asc" }
+      }),
+      tx.userChapterProgress.findMany({
+        where: { roadmapId },
+        include: { chapterTemplate: { select: { slug: true, order: true } } },
+        orderBy: { order: "asc" }
+      }),
+      tx.userQuestionProgress.findMany({
+        where: { roadmapId },
+        include: {
+          sessionProgress: { include: { sessionTemplate: { select: { slug: true } } } },
+          chapterProgress: {
+            include: { chapterTemplate: { select: { slug: true, title: true } } }
+          },
+          dsaQuestion: {
+            select: {
+              title: true,
+              commonMistakes: true,
+              interviewSignals: true,
+              primaryPattern: true,
+              expectedTimeMinutes: true
+            }
+          },
+          roadmapQuestionTemplate: {
+            select: {
+              titleSnapshot: true,
+              expectedMinutes: true,
+              difficulty: true,
+              metadata: true
+            }
           }
         },
-        roadmapQuestionTemplate: {
-          select: {
-            titleSnapshot: true,
-            expectedMinutes: true,
-            difficulty: true,
-            metadata: true
-          }
+        orderBy: { order: "asc" }
+      }),
+      tx.practiceQuestionPlacement.findMany({
+        where: { roadmapId },
+        select: {
+          sessionProgressId: true,
+          questionProgress: { select: { status: true, attemptCount: true } }
         }
-      },
-      orderBy: { order: "asc" }
-    })
-  ]);
+      })
+    ]);
 
   const nextQuestion = questionProgress.find(
     (question) =>
@@ -932,6 +1217,29 @@ async function recalculateRoadmap(
 
   const totalsBySessionProgressId = countQuestionsBy(questionProgress, "sessionProgressId");
   const totalsByChapterProgressId = countQuestionsBy(questionProgress, "chapterProgressId");
+  // Candidate-facing PREP sessions are subsets of the canonical bank, while
+  // Final Mock reuses canonical progress owned by earlier sessions. Whenever a
+  // session has placements, its counters must follow those shared records.
+  const placementTotalsBySessionProgressId = new Map<string, QuestionCounts>();
+  for (const placement of practicePlacements) {
+    const totals =
+      placementTotalsBySessionProgressId.get(placement.sessionProgressId) ?? emptyCounts();
+    totals.total += 1;
+    if (
+      placement.questionProgress.attemptCount > 0 ||
+      placement.questionProgress.status === RoadmapProgressStatus.IN_PROGRESS ||
+      placement.questionProgress.status === RoadmapProgressStatus.COMPLETED
+    ) {
+      totals.attempted += 1;
+    }
+    if (placement.questionProgress.status === RoadmapProgressStatus.COMPLETED) {
+      totals.completed += 1;
+    }
+    placementTotalsBySessionProgressId.set(placement.sessionProgressId, totals);
+  }
+  for (const [sessionProgressId, totals] of placementTotalsBySessionProgressId) {
+    totalsBySessionProgressId.set(sessionProgressId, totals);
+  }
 
   // Every session and chapter row is rewritten on each attempt. Doing that one
   // update at a time cost 18 sequential round trips to a remote database —
@@ -985,9 +1293,9 @@ async function recalculateRoadmap(
   // next question and every remaining session stayed LOCKED forever — the
   // roadmap dead-ended instead of moving to JavaScript and React Core.
   //
-  // When no session is live, open the earliest unfinished one by order. A
-  // session with no content yet becomes ACTIVE rather than staying locked,
-  // which is what "the active session should move to the next one" means.
+  // When no session is live, open the earliest unfinished session that has a
+  // question bank. Empty Part 2 slots remain explicitly unavailable instead
+  // of appearing active before their content has been generated.
   const hasLiveSession = sessionRows.some(
     (row) =>
       row.status === RoadmapProgressStatus.ACTIVE ||
@@ -999,7 +1307,9 @@ async function recalculateRoadmap(
     const ordered = [...sessionProgress].sort((a, b) => a.order - b.order);
     for (const session of ordered) {
       const row = sessionRows.find((candidate) => candidate.id === session.id);
-      if (!row || row.status === RoadmapProgressStatus.COMPLETED) continue;
+      if (!row || row.status === RoadmapProgressStatus.COMPLETED || row.totalQuestions === 0) {
+        continue;
+      }
 
       row.status = RoadmapProgressStatus.ACTIVE;
       row.startedAt = row.startedAt ?? now;
@@ -1348,13 +1658,13 @@ async function replaceActiveMayaInsights(
   });
 }
 
-
 function nextQuestionHref(
   question:
     | {
         dsaQuestionSlug: string | null;
         prepQuestionTemplateId: string | null;
         roadmapQuestionTemplateId: string | null;
+        sessionProgress?: { practiceSessionKey: string };
       }
     | undefined
 ): string | null {
@@ -1363,8 +1673,10 @@ function nextQuestionHref(
   // finished user to Home instead of back to their session.
   if (!question) return null;
   if (question.dsaQuestionSlug) return `/dsa-questions/${question.dsaQuestionSlug}`;
-  if (question.prepQuestionTemplateId)
-    return `/practice?question=${question.prepQuestionTemplateId}`;
+  if (question.prepQuestionTemplateId) {
+    const sessionKey = question.sessionProgress?.practiceSessionKey;
+    return sessionKey ? `/practice/${sessionKey}/${question.prepQuestionTemplateId}` : "/practice";
+  }
   return question.roadmapQuestionTemplateId
     ? `/practice?roadmapQuestion=${question.roadmapQuestionTemplateId}`
     : "/";
@@ -1387,7 +1699,6 @@ function nextQuestionKey(
   );
 }
 
-
 function estimateRemainingMinutes(
   sessions: Array<{ questions: Array<{ expectedMinutes: number | null }> }>
 ): number {
@@ -1405,6 +1716,32 @@ function estimateRemainingMinutes(
 function percent(done: number, total: number): number {
   if (total <= 0) return 0;
   return Math.round((done / total) * 1000) / 10;
+}
+
+function prepReviewFromFeedback(
+  value: Prisma.JsonValue | null | undefined
+): PrepPracticeReview | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const review = (value as Prisma.JsonObject).review;
+  if (!review || typeof review !== "object" || Array.isArray(review)) return null;
+  return review as unknown as PrepPracticeReview;
+}
+
+export function verifiedPrepScore(review: PrepPracticeReview): number | null {
+  return review.verificationStatus === "VERIFIED" ? review.score : null;
+}
+
+export function prepStatusAfterAttempt(
+  current: RoadmapProgressStatus,
+  action: "submit" | "skip",
+  review: PrepPracticeReview
+): RoadmapProgressStatus {
+  if (current === RoadmapProgressStatus.COMPLETED) return RoadmapProgressStatus.COMPLETED;
+  if (action === "skip") return RoadmapProgressStatus.SKIPPED;
+  const score = verifiedPrepScore(review);
+  return score !== null && score >= 0.72
+    ? RoadmapProgressStatus.COMPLETED
+    : RoadmapProgressStatus.IN_PROGRESS;
 }
 
 function toJson(value: unknown): Prisma.InputJsonValue {

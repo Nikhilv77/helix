@@ -5,12 +5,14 @@ import type {
   SessionBlueprint
 } from "@/lib/interviews/personalized-plan";
 import type { CandidatePerformanceProfile } from "@/lib/interviews/performance-profile";
+import type { CandidatePracticeEvidence } from "@/lib/practice/practice-evidence";
 import type { CandidateProfile, Role } from "@/lib/shared/types";
 import { ConflictErrorException } from "../common/exceptions/conflict-error.exception";
 import { NotFoundErrorException } from "../common/exceptions/not-found-error.exception";
 import type { ProfileService } from "../profile/profile.service";
 import type { PersonalizedInterviewPlanGenerator } from "./personalized-plan-generator";
 import type { PersonalizedPerformanceStore } from "./personalized-performance-store";
+import type { PracticeEvidenceStore } from "../practice/practice-evidence-store";
 import type { PersonalizedPlanningStore } from "./personalized-planning-store";
 import type { TargetRoleRelevanceContext } from "./relevance-engine";
 
@@ -21,6 +23,7 @@ type PlanningStore = Pick<
 type PlanGenerator = Pick<PersonalizedInterviewPlanGenerator, "generate">;
 type ProfileReader = Pick<ProfileService, "get">;
 type PerformanceReader = Pick<PersonalizedPerformanceStore, "refresh">;
+type PracticeEvidenceReader = Pick<PracticeEvidenceStore, "refresh">;
 
 export interface PersonalizedBlueprintSelection {
   plan: PersonalizedInterviewPlan;
@@ -37,20 +40,28 @@ export class PersonalizedInterviewPlanningService {
     private readonly store: PlanningStore,
     private readonly generator: PlanGenerator,
     private readonly profiles: ProfileReader,
-    private readonly performanceProfiles?: PerformanceReader
+    private readonly performanceProfiles?: PerformanceReader,
+    private readonly practiceEvidence?: PracticeEvidenceReader
   ) {}
 
   async activePlan(ownerId: string, now = Date.now()): Promise<PersonalizedInterviewPlan> {
-    const [candidateProfile, profile, performanceProfile] = await Promise.all([
+    const [candidateProfile, profile, performanceProfile, practiceEvidence] = await Promise.all([
       this.store.ensureCandidateProfile(ownerId, now),
       this.profiles.get(ownerId),
-      this.performanceProfiles?.refresh(ownerId, now) ?? Promise.resolve(null)
+      this.performanceProfiles?.refresh(ownerId, now) ?? Promise.resolve(null),
+      this.practiceEvidence?.refresh(ownerId, now) ?? Promise.resolve(null)
     ]);
     const targetRole = targetRoleContext(profile, candidateProfile);
     const existing = await this.store.getActivePlan(ownerId);
     if (
       existing &&
-      matchesCurrentInputs(existing, candidateProfile, targetRole, performanceProfile)
+      matchesCurrentInputs(
+        existing,
+        candidateProfile,
+        targetRole,
+        performanceProfile,
+        practiceEvidence
+      )
     ) {
       return existing;
     }
@@ -67,6 +78,15 @@ export class PersonalizedInterviewPlanningService {
             skills: performanceProfile.skills
           }
         : null,
+      practiceEvidence: practiceEvidence
+        ? {
+            snapshot: {
+              id: practiceEvidence.id,
+              revision: practiceEvidence.revision
+            },
+            skills: practiceEvidence.skills
+          }
+        : null,
       generatedAt: now
     }).plan;
 
@@ -78,7 +98,13 @@ export class PersonalizedInterviewPlanningService {
       const winner = await this.store.getActivePlan(ownerId).catch(() => null);
       if (
         winner &&
-        matchesCurrentInputs(winner, candidateProfile, targetRole, performanceProfile)
+        matchesCurrentInputs(
+          winner,
+          candidateProfile,
+          targetRole,
+          performanceProfile,
+          practiceEvidence
+        )
       ) {
         return winner;
       }
@@ -152,7 +178,8 @@ function matchesCurrentInputs(
   plan: PersonalizedInterviewPlan,
   profile: CandidateInterviewProfile,
   targetRole: TargetRoleRelevanceContext,
-  performanceProfile: CandidatePerformanceProfile | null
+  performanceProfile: CandidatePerformanceProfile | null,
+  practiceEvidence: CandidatePracticeEvidence | null
 ): boolean {
   const source = plan.sourceSnapshot;
   return (
@@ -163,8 +190,17 @@ function matchesCurrentInputs(
     source.targetRole.family === targetRole.family &&
     source.targetRole.source === targetRole.source &&
     source.jobDescription === null &&
-    matchesPerformanceSnapshot(source.performanceProfile, performanceProfile)
+    matchesPerformanceSnapshot(source.performanceProfile, performanceProfile) &&
+    matchesPracticeSnapshot(source.practiceEvidence, practiceEvidence)
   );
+}
+
+function matchesPracticeSnapshot(
+  snapshot: PersonalizedInterviewPlan["sourceSnapshot"]["practiceEvidence"],
+  evidence: CandidatePracticeEvidence | null
+): boolean {
+  if (!snapshot || !evidence) return !snapshot && evidence === null;
+  return snapshot.id === evidence.id && snapshot.revision === evidence.revision;
 }
 
 function matchesPerformanceSnapshot(

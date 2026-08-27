@@ -46,6 +46,13 @@ export const RATE_LIMIT_POLICIES = {
     code: "ANSWER_RATE_LIMITED",
     message: "Answers are arriving too quickly. Wait a moment before trying again."
   },
+  practiceState: {
+    namespace: "practice-state",
+    limit: 90,
+    windowMs: 60_000,
+    code: "PRACTICE_STATE_RATE_LIMITED",
+    message: "Practice changes are being saved too quickly. Wait a moment and try again."
+  },
   livekitToken: {
     namespace: "livekit-token",
     limit: 3,
@@ -59,6 +66,29 @@ export const RATE_LIMIT_POLICIES = {
     windowMs: 60_000,
     code: "CODE_RUN_RATE_LIMITED",
     message: "Too many code runs were requested. Wait a moment before trying again."
+  },
+  /**
+   * Asking for a human is cheap to request and expensive to answer, so this is
+   * deliberately tighter than the AI-facing limits: every accepted request
+   * costs a volunteer's attention, not just inference.
+   */
+  helpRequest: {
+    namespace: "help-request",
+    limit: 3,
+    windowMs: 30 * 60_000,
+    code: "HELP_REQUEST_RATE_LIMITED",
+    message: "You have asked for help a few times recently. Give it a little while."
+  },
+  /**
+   * Independent from opening requests: somebody who has used their request
+   * quota must still be able to leave an unsafe interaction immediately.
+   */
+  helpSafety: {
+    namespace: "help-safety",
+    limit: 10,
+    windowMs: 60 * 60_000,
+    code: "HELP_SAFETY_RATE_LIMITED",
+    message: "Too many safety actions were submitted recently. Try again shortly."
   },
   resumeUpload: {
     namespace: "resume-upload",
@@ -80,6 +110,13 @@ export const RATE_LIMIT_POLICIES = {
     windowMs: 60_000,
     code: "VOICE_CHARACTER_LIMITED",
     message: "Too much speech was requested at once. Wait a moment before trying again."
+  },
+  workspaceSearch: {
+    namespace: "workspace-search",
+    limit: 180,
+    windowMs: 60_000,
+    code: "SEARCH_RATE_LIMITED",
+    message: "Search is being used too quickly. Wait a moment and try again."
   }
 } as const satisfies Record<string, RateLimitPolicy>;
 

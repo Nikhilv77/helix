@@ -6,6 +6,7 @@ import {
   DesignSessionStatus,
   KnowledgeDocumentStatus,
   KnowledgeSourceType,
+  PrepQuestionPublicationStatus,
   Prisma,
   PrismaClient,
   ProjectStatus,
@@ -17,6 +18,7 @@ import {
   FRONTEND_SESSIONS,
   type PlanQuestion
 } from "../src/lib/roadmap/frontend-plan";
+import { assertPrepQuestionBankPublishable } from "../src/server/practice/questions/prep-bank-audit";
 
 const prisma = new PrismaClient();
 
@@ -149,6 +151,7 @@ Designs should define delivery semantics, dead-letter handling, idempotency, and
 
   await seedDsaQuestionBank();
   await seedPrepQuestionTemplates();
+  assertPrepQuestionBankPublishable(await prisma.prepQuestionTemplate.findMany());
   await seedFrontendRoadmapTemplates();
 }
 
@@ -270,6 +273,7 @@ function estimateTokens(content: string): number {
 interface DsaQuestionSeed {
   title: string;
   slug: string;
+  contentVersion?: number;
   source: string;
   externalUrl: string;
   primaryPattern: string;
@@ -309,6 +313,9 @@ interface PrepSourceLinkSeed {
 
 interface PrepQuestionTemplateSeed {
   id: string;
+  contentVersion?: number;
+  sessionKey?: string;
+  chapterKey?: string;
   category: string;
   title: string;
   roles: string[];
@@ -317,8 +324,14 @@ interface PrepQuestionTemplateSeed {
   expectedMinutes: number;
   evidenceType: string;
   competency: string;
+  format?: "mcq" | "typed" | "spoken" | "diagram";
   prompt: string;
   promptTemplate?: string;
+  objective?: string;
+  prerequisites?: string[];
+  hints?: string[];
+  explanation?: string;
+  answerKey?: Prisma.InputJsonValue | null;
   tags: string[];
   whatItTests: string[];
   goodAnswerSignals: string[];
@@ -346,12 +359,18 @@ async function seedDsaQuestionBank(): Promise<void> {
   const phaseSlugs = phases.map((phase) => dsaPhaseSlug(phase.phase));
   const questionSlugs = phases.flatMap((phase) => phase.questions.map((question) => question.slug));
 
-  await prisma.dsaQuestion.deleteMany({
-    where: { slug: { notIn: questionSlugs } }
-  });
-  await prisma.dsaPhase.deleteMany({
-    where: { slug: { notIn: phaseSlugs } }
-  });
+  // DSA slugs are durable route and history identities. Content seeding is
+  // additive: a question or phase missing from today's source files is kept in
+  // the database instead of cascading into notes, progress, or attempts.
+  const [preservedQuestions, preservedPhases] = await Promise.all([
+    prisma.dsaQuestion.count({ where: { slug: { notIn: questionSlugs } } }),
+    prisma.dsaPhase.count({ where: { slug: { notIn: phaseSlugs } } })
+  ]);
+  if (preservedQuestions || preservedPhases) {
+    console.warn(
+      `Preserving ${preservedQuestions} DSA questions and ${preservedPhases} phases not present in the current seed source.`
+    );
+  }
 
   for (const phase of phases) {
     const phaseSlug = dsaPhaseSlug(phase.phase);
@@ -373,12 +392,19 @@ async function seedDsaQuestionBank(): Promise<void> {
     });
 
     for (const question of phase.questions) {
+      const data = dsaQuestionData(phaseSlug, question);
       await prisma.dsaQuestion.upsert({
         where: { slug: question.slug },
-        update: dsaQuestionData(phaseSlug, question),
+        update: {
+          ...data,
+          ...(question.contentVersion === undefined
+            ? {}
+            : { contentVersion: question.contentVersion })
+        },
         create: {
           slug: question.slug,
-          ...dsaQuestionData(phaseSlug, question)
+          contentVersion: question.contentVersion ?? 1,
+          ...data
         }
       });
     }
@@ -393,6 +419,7 @@ async function seedPrepQuestionTemplates(): Promise<void> {
     .filter((file) => file.endsWith(".json"))
     .sort()
     .map((file) => JSON.parse(readFileSync(join(prepDir, file), "utf8")) as PrepQuestionBankSeed);
+  banks.push(fundamentalsPrepBank());
 
   let totalTemplates = 0;
 
@@ -400,12 +427,14 @@ async function seedPrepQuestionTemplates(): Promise<void> {
     const sourceLinks = new Map(bank.sourceLinks.map((source) => [source.id, source]));
     const templateIds = bank.templates.map((template) => template.id);
 
-    await prisma.prepQuestionTemplate.deleteMany({
-      where: {
-        bank: bank.bank,
-        id: { notIn: templateIds }
-      }
+    const preservedTemplates = await prisma.prepQuestionTemplate.count({
+      where: { bank: bank.bank, id: { notIn: templateIds } }
     });
+    if (preservedTemplates > 0) {
+      console.warn(
+        `Preserving ${preservedTemplates} prep templates from ${bank.bank} that are absent from the current seed source.`
+      );
+    }
 
     for (const template of bank.templates) {
       const resolvedSourceLinks = template.sourceLinkIds
@@ -437,7 +466,7 @@ async function seedFrontendRoadmapTemplates(): Promise<void> {
       title: "Full-stack Interview Roadmap",
       description:
         "A six-session full-stack interview preparation path personalized per user after onboarding.",
-      version: 1,
+      version: 2,
       status: RoadmapTemplateStatus.ACTIVE,
       metadata: {
         source: "src/lib/roadmap/frontend-plan.ts",
@@ -450,7 +479,7 @@ async function seedFrontendRoadmapTemplates(): Promise<void> {
       title: "Full-stack Interview Roadmap",
       description:
         "A six-session full-stack interview preparation path personalized per user after onboarding.",
-      version: 1,
+      version: 2,
       status: RoadmapTemplateStatus.ACTIVE,
       metadata: {
         source: "src/lib/roadmap/frontend-plan.ts",
@@ -654,17 +683,214 @@ async function seedFrontendRoadmapTemplates(): Promise<void> {
     }
   });
 
-  const nonDsaSessionIds = sessionTemplateIds.filter((id) => id !== frontendDsaSession.id);
-  await prisma.roadmapQuestionTemplate.deleteMany({
-    where: { sessionTemplateId: { in: nonDsaSessionIds } }
-  });
-  await prisma.roadmapChapterTemplate.deleteMany({
-    where: { sessionTemplateId: { in: nonDsaSessionIds } }
-  });
+  await seedFrontendPrepRoadmapTemplates(frontendTemplate.id);
 
   console.log(
-    `Seeded full-stack roadmap template with ${FRONTEND_SESSIONS.length} sessions, ${plan.chapters.length} DSA chapters, and ${plan.totalQuestions} DSA question mappings.`
+    `Seeded full-stack roadmap template with ${FRONTEND_SESSIONS.length} sessions, ${plan.chapters.length} DSA chapters, and ${plan.totalQuestions} DSA question mappings plus published prep placements.`
   );
+}
+
+const PREP_CHAPTER_TITLES: Record<string, { title: string; purpose: string }> = {
+  "javascript-runtime": {
+    title: "JavaScript Runtime & Type Safety",
+    purpose: "Reason about the language mechanisms behind production UI behavior."
+  },
+  "react-engineering": {
+    title: "React Engineering",
+    purpose: "Model rendering, state, effects, forms, and component boundaries accurately."
+  },
+  "testing-and-reliability": {
+    title: "Testing & Reliability",
+    purpose: "Prove user-visible behavior across success, failure, and recovery."
+  },
+  networking: {
+    title: "Networking",
+    purpose: "Understand the protocols, caching, and failure paths underneath a web request."
+  },
+  "browser-os": {
+    title: "Browser & OS",
+    purpose: "Connect browser behavior to processes, threads, memory, and scheduling."
+  },
+  databases: {
+    title: "Databases",
+    purpose: "Reason about indexes, transactions, consistency, and query cost."
+  },
+  systems: {
+    title: "Systems Basics",
+    purpose: "Use latency, queues, capacity, and failure models in practical diagnosis."
+  },
+  "frontend-systems": {
+    title: "Frontend Systems",
+    purpose: "Choose rendering, data, caching, and performance boundaries at product scale."
+  },
+  "data-and-consistency": {
+    title: "Data & Consistency",
+    purpose: "Keep cached, optimistic, retried, and concurrent client state correct."
+  },
+  "design-system-scale": {
+    title: "Design Systems at Scale",
+    purpose: "Evolve shared UI contracts safely across many consumers."
+  },
+  "performance-and-resilience": {
+    title: "Performance & Resilience",
+    purpose: "Design responsive interfaces that recover from load, failure, and disconnection."
+  },
+  "ui-quality": {
+    title: "UI Quality",
+    purpose: "Make accessibility, responsive behavior, and browser correctness architectural."
+  },
+  "behavioral-stories": {
+    title: "Behavioral Stories",
+    purpose: "Build concise, evidence-backed stories about ownership, impact, conflict, and growth."
+  },
+  "resume-claims": {
+    title: "Resume Claim Defense",
+    purpose: "Defend project decisions, personal contribution, metrics, and technical depth."
+  }
+};
+
+async function seedFrontendPrepRoadmapTemplates(templateId: string): Promise<void> {
+  const sessions = await prisma.roadmapSessionTemplate.findMany({
+    where: { templateId },
+    select: { id: true, slug: true }
+  });
+  const slugByPracticeKey: Record<string, string> = {
+    "core-technical": "javascript-react-core",
+    "applied-engineering": "computer-fundamentals",
+    "architecture-system-design": "production-ui-quality",
+    "resume-behavioral-defense": "resume-behavioral-defense"
+  };
+  const sessionBySlug = new Map(sessions.map((session) => [session.slug, session]));
+
+  for (const [practiceSessionKey, sessionSlug] of Object.entries(slugByPracticeKey)) {
+    const session = sessionBySlug.get(sessionSlug);
+    if (!session) throw new Error(`Missing roadmap session template: ${sessionSlug}`);
+    const questions = await prisma.prepQuestionTemplate.findMany({
+      where: {
+        sessionKey: practiceSessionKey,
+        publicationStatus: PrepQuestionPublicationStatus.PUBLISHED
+      },
+      orderBy: [{ chapterKey: "asc" }, { difficulty: "asc" }, { id: "asc" }]
+    });
+    const chapterKeys = [...new Set(questions.map((question) => question.chapterKey))];
+    const chapterIds = new Map<string, string>();
+    await prisma.roadmapChapterTemplate.deleteMany({
+      where: { sessionTemplateId: session.id, slug: { notIn: chapterKeys } }
+    });
+    await prisma.$executeRaw`
+      UPDATE "RoadmapChapterTemplate"
+      SET "order" = -"order"
+      WHERE "sessionTemplateId" = ${session.id}::uuid AND "order" > 0
+    `;
+    for (const [index, chapterKey] of chapterKeys.entries()) {
+      const copy = PREP_CHAPTER_TITLES[chapterKey] ?? {
+        title: chapterKey,
+        purpose: "Practice the canonical questions in this topic."
+      };
+      const chapter = await prisma.roadmapChapterTemplate.upsert({
+        where: {
+          sessionTemplateId_slug: { sessionTemplateId: session.id, slug: chapterKey }
+        },
+        update: { order: index + 1, title: copy.title, purpose: copy.purpose },
+        create: {
+          sessionTemplateId: session.id,
+          slug: chapterKey,
+          order: index + 1,
+          title: copy.title,
+          purpose: copy.purpose,
+          metadata: { source: "published-prep-bank", practiceSessionKey }
+        }
+      });
+      chapterIds.set(chapterKey, chapter.id);
+    }
+    await prisma.roadmapChapterTemplate.deleteMany({
+      where: { sessionTemplateId: session.id, slug: { notIn: chapterKeys } }
+    });
+
+    await prisma.$executeRaw`
+      UPDATE "RoadmapQuestionTemplate"
+      SET "order" = -"order"
+      WHERE "sessionTemplateId" = ${session.id}::uuid AND "order" > 0
+    `;
+    const keptQuestionIds: string[] = [];
+    for (const [index, question] of questions.entries()) {
+      const placement = await prisma.roadmapQuestionTemplate.upsert({
+        where: {
+          sessionTemplateId_prepQuestionTemplateId: {
+            sessionTemplateId: session.id,
+            prepQuestionTemplateId: question.id
+          }
+        },
+        update: {
+          chapterTemplateId: chapterIds.get(question.chapterKey) ?? null,
+          order: index + 1,
+          sourceType: RoadmapQuestionSourceType.PREP,
+          dsaQuestionSlug: null,
+          titleSnapshot: question.title,
+          difficulty: question.difficulty,
+          expectedMinutes: question.expectedMinutes,
+          metadata: {
+            practiceSessionKey,
+            chapterKey: question.chapterKey,
+            selectionReason: "published-role-bank",
+            contentVersion: question.contentVersion
+          }
+        },
+        create: {
+          sessionTemplateId: session.id,
+          chapterTemplateId: chapterIds.get(question.chapterKey) ?? null,
+          order: index + 1,
+          sourceType: RoadmapQuestionSourceType.PREP,
+          dsaQuestionSlug: null,
+          prepQuestionTemplateId: question.id,
+          titleSnapshot: question.title,
+          difficulty: question.difficulty,
+          expectedMinutes: question.expectedMinutes,
+          metadata: {
+            practiceSessionKey,
+            chapterKey: question.chapterKey,
+            selectionReason: "published-role-bank",
+            contentVersion: question.contentVersion
+          }
+        }
+      });
+      keptQuestionIds.push(placement.id);
+    }
+    await prisma.roadmapQuestionTemplate.deleteMany({
+      where: { sessionTemplateId: session.id, id: { notIn: keptQuestionIds } }
+    });
+  }
+
+  const finalSession = sessionBySlug.get("final-frontend-mock");
+  if (finalSession) {
+    await prisma.roadmapQuestionTemplate.deleteMany({
+      where: { sessionTemplateId: finalSession.id }
+    });
+    await prisma.roadmapChapterTemplate.deleteMany({
+      where: { sessionTemplateId: finalSession.id, slug: { not: "mixed-review" } }
+    });
+    await prisma.roadmapChapterTemplate.upsert({
+      where: {
+        sessionTemplateId_slug: {
+          sessionTemplateId: finalSession.id,
+          slug: "mixed-review"
+        }
+      },
+      update: {
+        order: 1,
+        title: "Mixed Review",
+        purpose: "Revisit canonical progress from the earlier Practice sessions."
+      },
+      create: {
+        sessionTemplateId: finalSession.id,
+        slug: "mixed-review",
+        order: 1,
+        title: "Mixed Review",
+        purpose: "Revisit canonical progress from the earlier Practice sessions.",
+        metadata: { composition: "reuse-earlier-canonical-progress" }
+      }
+    });
+  }
 }
 
 function prepTemplateData(
@@ -672,8 +898,32 @@ function prepTemplateData(
   template: PrepQuestionTemplateSeed,
   sourceLinks: PrepSourceLinkSeed[]
 ) {
+  const sessionKey = template.sessionKey ?? prepSessionKey(bank, template.competency);
+  const chapterKey = template.chapterKey ?? prepChapterKey(sessionKey, template);
+  const answerSteps = answerStructureSteps(template.answerStructure);
+  const objective =
+    template.objective ??
+    `Demonstrate ${template.whatItTests.join(", ")} through a concrete answer.`;
+  const hints = template.hints?.length
+    ? template.hints
+    : answerSteps.map((step) => `Start with this part: ${step}`).slice(0, 3);
+  const explanation =
+    template.explanation ??
+    `A strong answer follows ${answerStructureFramework(template.answerStructure)} and covers ${template.whatItTests.join(", ")}.`;
+  const publicationErrors = validatePrepPublication({
+    ...template,
+    sessionKey,
+    chapterKey,
+    objective,
+    hints,
+    explanation
+  });
+
   return {
+    contentVersion: template.contentVersion ?? 1,
     bank,
+    sessionKey,
+    chapterKey,
     category: template.category,
     title: template.title,
     roles: template.roles,
@@ -682,8 +932,18 @@ function prepTemplateData(
     expectedMinutes: template.expectedMinutes,
     evidenceType: template.evidenceType,
     competency: template.competency,
+    format: template.format ?? (sessionKey === "resume-behavioral-defense" ? "spoken" : "typed"),
     prompt: template.prompt,
     promptTemplate: template.promptTemplate ?? null,
+    objective,
+    prerequisites: template.prerequisites ?? [],
+    hints,
+    explanation,
+    answerKey: template.answerKey ?? Prisma.JsonNull,
+    publicationStatus:
+      publicationErrors.length === 0
+        ? PrepQuestionPublicationStatus.PUBLISHED
+        : PrepQuestionPublicationStatus.DRAFT,
     tags: template.tags,
     whatItTests: template.whatItTests,
     goodAnswerSignals: template.goodAnswerSignals,
@@ -693,6 +953,177 @@ function prepTemplateData(
     answerStructure: template.answerStructure,
     scoringRubric: template.scoringRubric,
     sourceLinks: JSON.parse(JSON.stringify(sourceLinks)) as Prisma.InputJsonValue
+  };
+}
+
+function prepSessionKey(bank: string, competency: string): string {
+  if (bank === "computer-fundamentals") return "applied-engineering";
+  if (bank === "behavioral-resume-deep-dive" || competency === "frontend-depth") {
+    return "resume-behavioral-defense";
+  }
+  if (
+    ["frontend-system-design", "performance", "accessibility-browser", "css-layout"].includes(
+      competency
+    )
+  ) {
+    return "architecture-system-design";
+  }
+  return "core-technical";
+}
+
+function prepChapterKey(
+  sessionKey: string,
+  template: Pick<PrepQuestionTemplateSeed, "category" | "competency">
+): string {
+  if (sessionKey === "applied-engineering") return template.category;
+  if (sessionKey === "resume-behavioral-defense") {
+    return template.category === "resume-deep-dive" ? "resume-claims" : "behavioral-stories";
+  }
+  if (template.competency.startsWith("javascript-")) return "javascript-runtime";
+  if (["react-core", "component-design", "forms"].includes(template.competency)) {
+    return "react-engineering";
+  }
+  if (template.competency === "frontend-testing") return "testing-and-reliability";
+  if (["frontend-system-design", "performance"].includes(template.competency)) {
+    return "frontend-systems";
+  }
+  return "ui-quality";
+}
+
+function answerStructureSteps(value: Prisma.InputJsonValue): string[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const steps = (value as Record<string, unknown>).steps;
+  return Array.isArray(steps)
+    ? steps.filter((step): step is string => typeof step === "string")
+    : [];
+}
+
+function answerStructureFramework(value: Prisma.InputJsonValue): string {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "the authored structure";
+  const framework = (value as Record<string, unknown>).framework;
+  return typeof framework === "string" ? framework : "the authored structure";
+}
+
+function validatePrepPublication(
+  template: PrepQuestionTemplateSeed & {
+    sessionKey: string;
+    chapterKey: string;
+    objective: string;
+    hints: string[];
+    explanation: string;
+  }
+): string[] {
+  const errors: string[] = [];
+  if (!template.sessionKey || !template.chapterKey) errors.push("classification");
+  if (template.prompt.trim().length < (template.format === "mcq" ? 20 : 30)) {
+    errors.push("prompt");
+  }
+  if (template.objective.trim().length < 20) errors.push("objective");
+  if (template.hints.length < 2 || template.hints.some((hint) => hint.trim().length < 12)) {
+    errors.push("hints");
+  }
+  if (template.explanation.trim().length < 40) errors.push("explanation");
+  if (template.goodAnswerSignals.length < 2) errors.push("good-signals");
+  if (template.weakAnswerSignals.length < 2) errors.push("weak-signals");
+  if (template.format === "mcq") {
+    const answerKey = template.answerKey;
+    const valid =
+      answerKey !== null &&
+      typeof answerKey === "object" &&
+      !Array.isArray(answerKey) &&
+      typeof (answerKey as Record<string, unknown>).correctOptionIndex === "number";
+    if (!valid) errors.push("answer-key");
+  }
+  return errors;
+}
+
+function fundamentalsPrepBank(): PrepQuestionBankSeed {
+  const fundamentalsDir = join(process.cwd(), "src/data/fundamentals");
+  const files = readdirSync(fundamentalsDir)
+    .filter((file) => file.endsWith(".json"))
+    .sort()
+    .map(
+      (file) =>
+        JSON.parse(readFileSync(join(fundamentalsDir, file), "utf8")) as {
+          area: string;
+          title: string;
+          questions: Array<{
+            slug: string;
+            contentVersion?: number;
+            format: "mcq" | "explain" | "scenario";
+            levels: string[];
+            prompt: string;
+            options?: string[];
+            answerIndex?: number;
+            explanation: string;
+            expects?: string[];
+            probeIfMissing?: string;
+            concept: { title: string; summary: string; points: string[] };
+          }>;
+        }
+    );
+
+  return {
+    bank: "computer-fundamentals",
+    sourceLinks: [],
+    templates: files.flatMap((area) =>
+      area.questions.map((question): PrepQuestionTemplateSeed => {
+        const isMcq = question.format === "mcq";
+        const strongSignals = question.expects?.length
+          ? question.expects
+          : question.concept.points.slice(0, 3);
+        return {
+          id: `fundamentals-${question.slug}`,
+          contentVersion: question.contentVersion ?? 1,
+          sessionKey: "applied-engineering",
+          chapterKey: area.area,
+          category: area.area,
+          title: question.concept.title,
+          roles: ["backend", "frontend", "fullstack", "data", "ai-ml"],
+          levels: question.levels,
+          difficulty: isMcq ? "easy" : question.format === "scenario" ? "hard" : "medium",
+          expectedMinutes: isMcq ? 4 : question.format === "scenario" ? 10 : 7,
+          evidenceType: question.format === "scenario" ? "diagnosis" : "fundamental",
+          competency: area.area,
+          format: isMcq ? "mcq" : "typed",
+          prompt: question.prompt,
+          objective: `Explain ${question.concept.title.toLowerCase()} accurately and connect it to engineering behavior.`,
+          prerequisites: [],
+          tags: ["applied-engineering", area.area, question.format],
+          whatItTests: [question.concept.title, ...question.concept.points.slice(0, 2)],
+          goodAnswerSignals: strongSignals,
+          weakAnswerSignals: [
+            "Names a term or option without explaining the mechanism",
+            "Misses the operational consequence or trade-off"
+          ],
+          followUpPrompts: question.probeIfMissing ? [question.probeIfMissing] : [],
+          mayaPushbacks: question.probeIfMissing ? [question.probeIfMissing] : [],
+          hints: question.concept.points.slice(0, 3),
+          explanation: `${question.explanation} ${question.concept.summary}`,
+          answerKey: isMcq
+            ? {
+                kind: "mcq",
+                correctOptionIndex: question.answerIndex ?? 0,
+                options: question.options ?? []
+              }
+            : null,
+          answerStructure: {
+            framework: "Mechanism → consequence → example",
+            steps: [
+              "Name the mechanism",
+              "Explain the consequence",
+              "Give a concrete engineering example"
+            ]
+          },
+          scoringRubric: {
+            strong: "Mechanism, consequence, and example are technically correct.",
+            developing: "Core idea is present but one link is missing.",
+            weak: "Term recognition without a correct mechanism."
+          },
+          sourceLinkIds: []
+        };
+      })
+    )
   };
 }
 

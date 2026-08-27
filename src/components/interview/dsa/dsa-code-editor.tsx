@@ -103,7 +103,14 @@ export function DsaCodeEditor({
       beforeMount={registerTrailgradTheme}
       onMount={handleMount}
       theme="trailgrad-modern"
-      loading={<div className="h-full w-full bg-[#0b0d10]" />}
+      loading={
+        <div
+          role="status"
+          className="flex h-full w-full items-center justify-center bg-[#0b0d10] text-sm text-cream/45"
+        >
+          Loading code editor…
+        </div>
+      }
       options={{
         automaticLayout: true,
         fontFamily: "Geist Mono, ui-monospace, SFMono-Regular, Menlo, monospace",

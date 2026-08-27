@@ -72,6 +72,8 @@ function candidateProfile(candidateResume: CandidateResume | null = resume()): C
     profileImage: null,
     workspaceAccent: "ember",
     teacherId: null,
+    helpNotificationsEnabled: true,
+    teacherNotificationsEnabled: true,
     updatedAt: NOW,
     completeness: 80,
     onboardingCompletedAt: NOW,
@@ -197,6 +199,9 @@ function createPrismaMock() {
       create: jest.fn()
     },
     candidatePerformanceProfileVersion: {
+      findFirst: jest.fn()
+    },
+    candidatePracticeEvidenceVersion: {
       findFirst: jest.fn()
     },
     $transaction: jest.fn()
@@ -352,6 +357,24 @@ describe("PersonalizedPlanningStore plan versions", () => {
 
     await expect(store.saveReadyPlan(OWNER_ID, adaptive)).rejects.toMatchObject({
       code: "PERFORMANCE_PROFILE_VERSION_NOT_FOUND"
+    });
+    expect(mock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a plan whose Practice evidence revision is not owner scoped", async () => {
+    const mock = createPrismaMock();
+    const profile = compiledProfile();
+    mock.candidateInterviewProfileVersion.findFirst.mockResolvedValue(profileRecord(profile));
+    mock.candidatePracticeEvidenceVersion.findFirst.mockResolvedValue(null);
+    const adaptive = plan(profile);
+    adaptive.sourceSnapshot.practiceEvidence = {
+      id: "88888888-8888-4888-8888-888888888888",
+      revision: 2
+    };
+    const store = storeWith(mock);
+
+    await expect(store.saveReadyPlan(OWNER_ID, adaptive)).rejects.toMatchObject({
+      code: "PRACTICE_EVIDENCE_VERSION_NOT_FOUND"
     });
     expect(mock.$transaction).not.toHaveBeenCalled();
   });

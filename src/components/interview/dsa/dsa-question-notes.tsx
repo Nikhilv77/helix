@@ -75,7 +75,9 @@ export function DsaQuestionNotes({ slug }: { slug: string }) {
           <NotebookPen size={17} aria-hidden="true" className="text-[var(--workspace-accent)]" />
           Notes
         </div>
-        <span className="text-sm text-cream/38">{statusLabel}</span>
+        <span aria-live="polite" className="text-sm text-cream/38">
+          {statusLabel}
+        </span>
       </div>
       <ResizableTextarea
         value={content}

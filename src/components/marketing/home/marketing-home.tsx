@@ -1,13 +1,12 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
 import { SiteFooter, SiteNav } from "../chrome/site-chrome";
-import { Delivery } from "./delivery-section";
+import { Begin } from "./begin-section";
+import { Practice } from "./practice-section";
 import { Hero } from "./hero";
-import { LearningPath } from "./learning-path-section";
 import { PrimaryAction } from "./primary-action";
-import { QuestionLab } from "./question-lab-section";
-import { TheInterview } from "./interview-section";
+import { Pushback } from "./pushback-section";
+import { Stuck } from "./stuck-section";
 
 export function MarketingHome() {
   return (
@@ -15,27 +14,21 @@ export function MarketingHome() {
       <SiteNav
         actionKind="button"
         action={
-          <PrimaryAction ariaLabel="Start" className="outline-none">
-            Start
+          <PrimaryAction ariaLabel="Start free" className="outline-none">
+            Start free
           </PrimaryAction>
         }
       />
 
       <main className="relative">
         <Hero />
-        <LearningPath />
-        <QuestionLab />
-        <TheInterview />
-        <Delivery />
+        <Pushback />
+        <Practice />
+        <Stuck />
+        <Begin />
       </main>
 
-      <SiteFooter
-        action={
-          <PrimaryAction className="inline-flex items-center gap-2 text-sm font-semibold text-[#13234f] transition hover:gap-3 hover:text-[#0d1b44]">
-            Start free <ArrowRight size={15} aria-hidden="true" />
-          </PrimaryAction>
-        }
-      />
+      <SiteFooter />
     </div>
   );
 }

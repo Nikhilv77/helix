@@ -13,6 +13,7 @@ import type {
   WorkspaceAccent
 } from "../shared/types";
 import type { PersonalizedInterviewPlan } from "../interviews/personalized-plan";
+import type { WorkspaceSearchResponse } from "../search/workspace-search";
 
 export class ApiClientError extends Error {
   readonly code: string;
@@ -39,12 +40,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 async function request<TData>(
   path: string,
-  options: { method?: "GET" | "POST" | "PUT" | "DELETE"; body?: unknown } = {}
+  options: {
+    method?: "GET" | "POST" | "PUT" | "DELETE";
+    body?: unknown;
+    signal?: AbortSignal;
+  } = {}
 ): Promise<TData> {
   const response = await fetch(path, {
     method: options.method ?? "GET",
     headers: options.body ? { "content-type": "application/json" } : undefined,
     body: options.body ? JSON.stringify(options.body) : undefined,
+    signal: options.signal,
     cache: "no-store"
   });
 
@@ -164,6 +170,28 @@ export function saveWorkspaceTeacher(teacherId: string): Promise<{ teacherId: st
     method: "PUT",
     body: { teacherId }
   });
+}
+
+export interface NotificationPreferences {
+  helpNotificationsEnabled: boolean;
+  teacherNotificationsEnabled: boolean;
+}
+
+export function saveNotificationPreferences(
+  preferences: Partial<NotificationPreferences>
+): Promise<Partial<NotificationPreferences>> {
+  return request<Partial<NotificationPreferences>>("/api/notifications/preferences", {
+    method: "PUT",
+    body: preferences
+  });
+}
+
+export function searchWorkspace(
+  query: string,
+  signal?: AbortSignal
+): Promise<WorkspaceSearchResponse> {
+  const params = new URLSearchParams({ q: query });
+  return request<WorkspaceSearchResponse>(`/api/search?${params.toString()}`, { signal });
 }
 
 export async function uploadResume(input: {

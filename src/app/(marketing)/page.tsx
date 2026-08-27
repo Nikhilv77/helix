@@ -6,6 +6,8 @@ import { MarketingHome } from "@/components/marketing/home/marketing-home";
 import { Dashboard } from "@/components/workspace/dashboard/dashboard";
 import { DashboardSkeleton } from "@/components/workspace/dashboard/dashboard-skeleton";
 import { MayaWelcomeLoading } from "@/components/workspace/dashboard/maya-welcome-loading";
+import { buildDashboardOverview } from "@/lib/dashboard/dashboard-overview";
+import type { ProgressInterview } from "@/lib/roadmap/progress";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared/seo";
 import type { CandidateProfile } from "@/lib/shared/types";
 import { getAppContainer } from "@/server/app-container";
@@ -29,19 +31,9 @@ export const metadata: Metadata = {
 };
 
 /**
- * Decided on the server. Gating this on the client meant a signed-in user
- * rendered the marketing page until Clerk's hooks resolved.
- */
-/**
- * `/` serves two entirely different pages, so the work is split across two
- * boundaries.
- *
- * The outer component does nothing but resolve auth, which is quick, and its
- * fallback (app/loading.tsx) is deliberately brand-neutral — it renders before
- * `auth()` settles, so it cannot know whether marketing or the workspace is
- * coming. Marketing then returns immediately; the workspace's slower profile
- * and roadmap reads suspend behind their own boundary, inside the shell —
- * so the sidebar stays put and only the content area shows the loader.
+ * `/` is the public marketing page for signed-out visitors and the Overview
+ * screen for onboarded users. Resolve that distinction on the server so the
+ * wrong surface never flashes during authentication.
  */
 export default async function HomePage({
   searchParams
@@ -67,9 +59,7 @@ export default async function HomePage({
     );
   }
 
-  const query = await searchParams;
-  const showMayaWelcome = query.welcome === "maya";
-  let profile: CandidateProfile;
+  let profile;
 
   try {
     profile = await getAppContainer().profileService.get(authenticatedOwnerId(userId));
@@ -79,50 +69,84 @@ export default async function HomePage({
 
   if (!profile.onboardingCompletedAt) redirect("/onboarding");
 
+  const query = await searchParams;
+  const showMayaWelcome = query.welcome === "maya";
+
+  if (!showMayaWelcome) {
+    return (
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardOverviewHome userId={userId} profile={profile} />
+      </Suspense>
+    );
+  }
+
   return (
-    <Suspense fallback={showMayaWelcome ? <MayaWelcomeLoading /> : <DashboardSkeleton />}>
-      <WorkspaceHome
-        userId={userId}
-        profile={profile}
-        showMayaWelcome={showMayaWelcome}
-      />
+    <Suspense fallback={<MayaWelcomeLoading />}>
+      <MayaWelcomeHome userId={userId} profile={profile} />
     </Suspense>
   );
 }
 
-/** The signed-in half: everything that needs a database read. */
-async function WorkspaceHome({
+const EMPTY_PROGRESS_INTERVIEW: ProgressInterview = {
+  readinessScore: null,
+  completedSessions: 0,
+  sessionsThisWeek: 0,
+  answeredQuestions: 0,
+  competencies: [],
+  strongest: null,
+  focus: null
+};
+
+async function DashboardOverviewHome({
   userId,
-  profile,
-  showMayaWelcome
+  profile
 }: {
   userId: string;
   profile: CandidateProfile;
-  showMayaWelcome: boolean;
 }) {
-  let dashboardData;
-  try {
-    const ownerId = authenticatedOwnerId(userId);
-    // Home renders the preparation plan only, so it loads the profile it is
-    // keyed on and the plan itself — nothing else. Quota, history, insights and
-    // the generated curriculum still power Practice, Progress and Reports.
-    const [frontendRoadmap, frontendPlan] =
-      profile.targetRole === "fullstack"
-        ? await Promise.all([
-            getAppContainer()
-              .frontendRoadmapService.home(ownerId)
-              .catch(() => null),
-            getAppContainer()
-              .dsaService.frontendPlan()
-              .catch(() => null)
-          ])
-        : [null, null];
-    dashboardData = { profile, frontendRoadmap, frontendPlan };
-  } catch {
-    redirect("/onboarding");
-  }
+  const ownerId = authenticatedOwnerId(userId);
+  const container = getAppContainer();
+  const [reports, practice] = await Promise.all([
+    container.interviewService.reportsOverview(ownerId).catch(() => null),
+    container.progressService.overview(ownerId, EMPTY_PROGRESS_INTERVIEW).catch(() => null)
+  ]);
 
-  return <Dashboard {...dashboardData} showMayaWelcome={showMayaWelcome} />;
+  return (
+    <Dashboard
+      profile={profile}
+      overviewData={buildDashboardOverview(profile, reports, practice)}
+    />
+  );
+}
+
+async function MayaWelcomeHome({
+  userId,
+  profile
+}: {
+  userId: string;
+  profile: CandidateProfile;
+}) {
+  const ownerId = authenticatedOwnerId(userId);
+  const [frontendRoadmap, frontendPlan] =
+    profile.targetRole === "fullstack"
+      ? await Promise.all([
+          getAppContainer()
+            .frontendRoadmapService.home(ownerId)
+            .catch(() => null),
+          getAppContainer()
+            .dsaService.frontendPlan()
+            .catch(() => null)
+        ])
+      : [null, null];
+
+  return (
+    <Dashboard
+      profile={profile}
+      showMayaWelcome
+      frontendRoadmap={frontendRoadmap}
+      frontendPlan={frontendPlan}
+    />
+  );
 }
 
 function SoftwareJsonLd() {

@@ -4,7 +4,7 @@ function Line({ className = "" }: { className?: string }) {
   return <div className={`skeleton h-3 ${className}`} />;
 }
 
-/** Mirrors the preparation-path dashboard while roadmap data is loading. */
+/** Mirrors the three compact Overview cards while evidence is loading. */
 export function DashboardSkeleton() {
   return (
     <div
@@ -13,11 +13,15 @@ export function DashboardSkeleton() {
       aria-label="Loading home"
     >
       <RouteProgress />
-      <section className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,0.78fr)_minmax(17rem,0.92fr)_minmax(0,1.1fr)] lg:gap-5">
+      <section className="grid min-w-0 gap-4 lg:grid-cols-3 lg:gap-5">
         {Array.from({ length: 3 }, (_, index) => (
           <div
             key={index}
-            className="flex min-h-[17rem] flex-col rounded-2xl border border-white/[0.08] bg-[#1b1d20] p-5 sm:min-h-[20rem] lg:min-h-[23rem]"
+            className={`flex min-h-[17rem] flex-col p-5 ${
+              index < 2
+                ? "rounded-[1.4rem] border border-white/[0.08] bg-[#17181b]"
+                : "bg-transparent"
+            }`}
           >
             <div className="flex items-center justify-between">
               <Line className="w-24" />
@@ -33,21 +37,6 @@ export function DashboardSkeleton() {
               <div className="skeleton h-10 w-28 !rounded-xl" />
               <div className="skeleton h-10 w-20 !rounded-xl" />
             </div>
-          </div>
-        ))}
-      </section>
-      <section className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 6 }, (_, index) => (
-          <div key={index} className="min-h-40 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4">
-            <div className="flex items-start gap-3">
-              <div className="skeleton h-10 w-10 !rounded-xl" />
-              <div className="min-w-0 flex-1 space-y-2.5">
-                <Line className="w-3/4" />
-                <Line className="w-full" />
-                <Line className="w-2/3" />
-              </div>
-            </div>
-            <div className="skeleton mt-5 h-8 w-full !rounded-lg" />
           </div>
         ))}
       </section>

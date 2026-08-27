@@ -33,6 +33,7 @@ import { rankCandidateInterviewRelevance } from "./relevance-engine";
 
 type JobDescriptionSnapshot = NonNullable<InterviewPlanSourceSnapshot["jobDescription"]>;
 type PerformanceProfileSnapshot = NonNullable<InterviewPlanSourceSnapshot["performanceProfile"]>;
+type PracticeEvidenceSnapshot = NonNullable<InterviewPlanSourceSnapshot["practiceEvidence"]>;
 
 export interface PersonalizedPlanJobDescriptionInput {
   relevance: JobDescriptionRelevanceContext;
@@ -44,11 +45,17 @@ export interface PersonalizedPlanPerformanceInput {
   snapshot: PerformanceProfileSnapshot;
 }
 
+export interface PersonalizedPlanPracticeEvidenceInput {
+  skills: DemonstratedSkillPerformance[];
+  snapshot: PracticeEvidenceSnapshot;
+}
+
 export interface GeneratePersonalizedInterviewPlanInput {
   profile: CandidateInterviewProfile;
   targetRole: TargetRoleRelevanceContext;
   jobDescription?: PersonalizedPlanJobDescriptionInput | null;
   performance?: PersonalizedPlanPerformanceInput | null;
+  practiceEvidence?: PersonalizedPlanPracticeEvidenceInput | null;
   generatedAt?: number;
   /** Injectable so tests and replay jobs can produce deterministic identities. */
   idFactory?: () => string;
@@ -136,14 +143,18 @@ export class PersonalizedInterviewPlanGenerator {
   generate(input: GeneratePersonalizedInterviewPlanInput): PersonalizedInterviewPlanGeneration {
     const generatedAt = input.generatedAt ?? Date.now();
     const idFactory = input.idFactory ?? randomUUID;
+    const demonstratedSkills = mergeDemonstratedSkills(
+      input.performance?.skills ?? [],
+      input.practiceEvidence?.skills ?? []
+    );
     const relevance = rankCandidateInterviewRelevance({
       profile: input.profile,
       targetRole: input.targetRole,
       jobDescription: input.jobDescription?.relevance ?? null,
-      performance: input.performance?.skills ?? [],
+      performance: demonstratedSkills,
       now: generatedAt
     });
-    const context = generationContext(relevance, input.targetRole, input.performance?.skills ?? []);
+    const context = generationContext(relevance, input.targetRole, demonstratedSkills);
     const sessions = INTERVIEW_SESSION_KINDS.map((kind, index) =>
       buildSession(kind, index + 1, idFactory(), context)
     );
@@ -166,7 +177,8 @@ export class PersonalizedInterviewPlanGenerator {
           source: input.targetRole.source
         },
         jobDescription: input.jobDescription?.snapshot ?? null,
-        performanceProfile: input.performance?.snapshot ?? null
+        performanceProfile: input.performance?.snapshot ?? null,
+        practiceEvidence: input.practiceEvidence?.snapshot ?? null
       },
       rationale: planRationale(context, input),
       sessions
@@ -997,7 +1009,8 @@ function planRationale(
   const sourceSignals = [
     input.jobDescription ? "the target job description" : "the target role",
     "substantial resume evidence",
-    input.performance ? "demonstrated interview performance" : null
+    input.performance ? "demonstrated interview performance" : null,
+    input.practiceEvidence ? "verified Practice evidence" : null
   ].filter((value): value is string => Boolean(value));
   const focus = [...skills, ...(domain ? [domain] : [])];
   return `Built for ${context.targetRole.title} from ${sourceSignals.join(", ")}. ${
@@ -1005,6 +1018,33 @@ function planRationale(
       ? `The five-session progression prioritizes ${focus.join(", ")}.`
       : "The five-session progression starts with role-level fundamentals because technical evidence is sparse."
   }`;
+}
+
+/** Combines independent immutable evidence sources without double-counting a source row. */
+export function mergeDemonstratedSkills(
+  interviewSkills: DemonstratedSkillPerformance[],
+  practiceSkills: DemonstratedSkillPerformance[]
+): DemonstratedSkillPerformance[] {
+  const grouped = new Map<string, DemonstratedSkillPerformance[]>();
+  for (const skill of [...interviewSkills, ...practiceSkills]) {
+    const values = grouped.get(skill.skillKey) ?? [];
+    values.push(skill);
+    grouped.set(skill.skillKey, values);
+  }
+  return [...grouped.entries()]
+    .map(([skillKey, values]) => {
+      const sampleSize = values.reduce((total, value) => total + value.sampleSize, 0);
+      const weighted = (key: "score" | "confidence") =>
+        values.reduce((total, value) => total + value[key] * value.sampleSize, 0) / sampleSize;
+      return {
+        skillKey,
+        score: Math.round(weighted("score") * 100) / 100,
+        confidence: Math.round(weighted("confidence") * 1_000) / 1_000,
+        sampleSize,
+        lastObservedAt: Math.max(...values.map((value) => value.lastObservedAt))
+      };
+    })
+    .sort((left, right) => left.skillKey.localeCompare(right.skillKey));
 }
 
 function displayLabel(skill: Pick<RankedSkillRelevance, "key" | "label">): string {

@@ -25,6 +25,7 @@ export function DsaQuestionActions({
 }) {
   const router = useRouter();
   const opened = useRef(false);
+  const requestIds = useRef<Partial<Record<AttemptAction, string>>>({});
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [marked, setMarked] = useState<Marked>(
@@ -34,7 +35,9 @@ export function DsaQuestionActions({
   useEffect(() => {
     if (opened.current) return;
     opened.current = true;
-    void recordAttempt(slug, "open").catch(() => {
+    const requestId = requestIds.current.open ?? crypto.randomUUID();
+    requestIds.current.open = requestId;
+    void recordAttempt(slug, "open", requestId).catch(() => {
       // Opening a question page should never fail the page itself.
     });
   }, [slug]);
@@ -48,9 +51,11 @@ export function DsaQuestionActions({
     // that did not persist.
     const previous = marked;
     setMarked(action === "complete" ? "complete" : "skip");
+    const requestId = requestIds.current[action] ?? crypto.randomUUID();
+    requestIds.current[action] = requestId;
 
     startTransition(async () => {
-      const ok = await recordAttempt(slug, action)
+      const ok = await recordAttempt(slug, action, requestId)
         .then(() => true)
         .catch(() => false);
 
@@ -70,7 +75,11 @@ export function DsaQuestionActions({
 
   return (
     <div className="mt-6">
-      <div className="practice-glass-soft flex flex-col gap-3 rounded-2xl p-3 sm:flex-row sm:items-center">
+      <div
+        aria-live="polite"
+        aria-busy={pending}
+        className="practice-glass-soft flex flex-col gap-3 rounded-2xl p-3 sm:flex-row sm:items-center"
+      >
         {done || skipped ? (
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <span
@@ -157,12 +166,16 @@ export function DsaQuestionActions({
   );
 }
 
-async function recordAttempt(slug: string, action: AttemptAction): Promise<void> {
+async function recordAttempt(
+  slug: string,
+  action: AttemptAction,
+  requestId: string
+): Promise<void> {
   const response = await fetch("/api/roadmap/question-attempt", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
-    body: JSON.stringify({ dsaQuestionSlug: slug, action })
+    body: JSON.stringify({ requestId, dsaQuestionSlug: slug, action })
   });
 
   if (!response.ok) {

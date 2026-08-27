@@ -302,6 +302,53 @@ describe("PersonalizedInterviewPlanGenerator source and adaptation policy", () =
     expectValidBlueprintWeights(plan);
   });
 
+  it("uses verified Practice weakness to change coverage and starting difficulty", () => {
+    const candidate = profile(
+      resume({
+        skills: ["React", "TypeScript"],
+        experience: [
+          {
+            organization: "Product Co",
+            role: "Frontend Engineer",
+            period: "Jan 2024 - Present",
+            location: "",
+            summary: "Built React interfaces.",
+            achievements: [],
+            skills: ["React", "TypeScript"]
+          }
+        ]
+      }),
+      "frontend"
+    );
+    const { plan, relevance } = generate({
+      profile: candidate,
+      targetRole: { title: "Frontend Engineer", family: "frontend", source: "declared" },
+      practiceEvidence: {
+        snapshot: { id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", revision: 2 },
+        skills: [
+          {
+            skillKey: "react",
+            score: 38,
+            confidence: 0.9,
+            sampleSize: 4,
+            lastObservedAt: NOW
+          }
+        ]
+      }
+    });
+
+    expect(plan.sourceSnapshot.practiceEvidence).toEqual({
+      id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      revision: 2
+    });
+    expect(plan.rationale).toContain("verified Practice evidence");
+    expect(relevance.rankedSkills.find((skill) => skill.key === "react")).toMatchObject({
+      difficultyAdjustment: "decrease",
+      demonstratedScore: 38
+    });
+    expect(plan.sessions[1]?.difficulty).toBe("foundational");
+  });
+
   it("carries DSA and behavioral weaknesses into the final mock", () => {
     const candidate = profile(
       resume({

@@ -56,6 +56,8 @@ export interface CandidateProfile extends CandidateProfileInput {
   workspaceAccent: import("@/lib/workspace/accent").WorkspaceAccent;
   /** Persona id chosen at onboarding; null falls back to the default teacher. */
   teacherId: string | null;
+  helpNotificationsEnabled: boolean;
+  teacherNotificationsEnabled: boolean;
   updatedAt: number | null;
   completeness: number;
   onboardingCompletedAt: number | null;
@@ -356,11 +358,7 @@ export interface InterviewCompetencyReport {
     source: "semantic-evaluator" | "local-mcq" | "evaluation-unavailable";
     score: number;
     verdict:
-      | "correct"
-      | "mostly-correct"
-      | "partially-correct"
-      | "incorrect"
-      | "insufficient-evidence";
+      "correct" | "mostly-correct" | "partially-correct" | "incorrect" | "insufficient-evidence";
     confidence: number;
     summary: string;
     strengths: string[];

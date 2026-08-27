@@ -317,7 +317,15 @@ export const interviewPlanSourceSnapshotSchema = z.object({
       id: identifier,
       revision: z.number().int().positive()
     })
+    .nullable(),
+  /** Verified Practice evidence that influenced this plan. Optional for v1 history. */
+  practiceEvidence: z
+    .object({
+      id: identifier,
+      revision: z.number().int().positive()
+    })
     .nullable()
+    .optional()
 });
 
 export const personalizedInterviewPlanSchema = z

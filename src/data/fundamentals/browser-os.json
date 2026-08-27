@@ -5,12 +5,9 @@
   "questions": [
     {
       "slug": "process-vs-thread",
+      "contentVersion": 2,
       "format": "mcq",
-      "levels": [
-        "fresher",
-        "0-2",
-        "3-5"
-      ],
+      "levels": ["fresher", "0-2", "3-5"],
       "prompt": "What do two threads in the same process share that two processes do not?",
       "options": [
         "The CPU core they run on",
@@ -27,18 +24,14 @@
           "Each process has its own address space; a crash cannot corrupt another.",
           "Threads inside a process share the heap, so they need locks.",
           "Each thread still gets its own stack and registers.",
-          "Chrome puts tabs in separate processes so one tab cannot read another."
+          "Modern browsers isolate renderer work across processes, often by site, to limit the impact of crashes and compromised pages."
         ]
       }
     },
     {
       "slug": "microtask-ordering",
       "format": "mcq",
-      "levels": [
-        "0-2",
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["0-2", "3-5", "5-plus"],
       "prompt": "A click handler schedules `setTimeout(f, 0)` and then resolves a promise with `.then(g)`. Which runs first?",
       "options": [
         "f, because it was scheduled first",
@@ -62,10 +55,7 @@
     {
       "slug": "reflow-vs-repaint",
       "format": "mcq",
-      "levels": [
-        "0-2",
-        "3-5"
-      ],
+      "levels": ["0-2", "3-5"],
       "prompt": "Which change forces layout (reflow) rather than only paint?",
       "options": [
         "Changing an element's background-color",
@@ -89,11 +79,7 @@
     {
       "slug": "main-thread-blocking",
       "format": "mcq",
-      "levels": [
-        "0-2",
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["0-2", "3-5", "5-plus"],
       "prompt": "Why does a long synchronous loop freeze the page rather than just delaying itself?",
       "options": [
         "The browser deprioritises long-running scripts",
@@ -117,10 +103,7 @@
     {
       "slug": "worker-structured-clone",
       "format": "mcq",
-      "levels": [
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["3-5", "5-plus"],
       "prompt": "What actually happens to an object you `postMessage` to a Web Worker?",
       "options": [
         "The worker receives a reference to the same object",
@@ -144,10 +127,7 @@
     {
       "slug": "stack-vs-heap",
       "format": "mcq",
-      "levels": [
-        "fresher",
-        "0-2"
-      ],
+      "levels": ["fresher", "0-2"],
       "prompt": "What lives on the stack rather than the heap?",
       "options": [
         "Every object your program allocates",
@@ -171,10 +151,7 @@
     {
       "slug": "gc-reachability",
       "format": "mcq",
-      "levels": [
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["3-5", "5-plus"],
       "prompt": "What makes an object eligible for garbage collection?",
       "options": [
         "Its variable went out of scope",
@@ -198,12 +175,7 @@
     {
       "slug": "explain-event-loop-under-js",
       "format": "explain",
-      "levels": [
-        "fresher",
-        "0-2",
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["fresher", "0-2", "3-5", "5-plus"],
       "prompt": "JavaScript is single-threaded, so how does a fetch happen at the same time as your code?",
       "expects": [
         "separates the JS thread from the browser's other threads",
@@ -225,10 +197,7 @@
     {
       "slug": "explain-process-isolation",
       "format": "explain",
-      "levels": [
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["3-5", "5-plus"],
       "prompt": "Why does a browser put each tab in its own process when threads would be cheaper?",
       "expects": [
         "names crash isolation",
@@ -250,12 +219,7 @@
     {
       "slug": "scenario-page-janky-scroll",
       "format": "scenario",
-      "levels": [
-        "fresher",
-        "0-2",
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["fresher", "0-2", "3-5", "5-plus"],
       "prompt": "A list scrolls smoothly with 50 rows and stutters at 5000. Walk me through where you look.",
       "expects": [
         "distinguishes work per frame from work per item",
@@ -277,10 +241,7 @@
     {
       "slug": "explain-memory-leak-spa",
       "format": "explain",
-      "levels": [
-        "3-5",
-        "5-plus"
-      ],
+      "levels": ["3-5", "5-plus"],
       "prompt": "A single-page app grows to a gigabyte of memory after an hour of navigation. What are you looking for?",
       "expects": [
         "names something still holding references after unmount",

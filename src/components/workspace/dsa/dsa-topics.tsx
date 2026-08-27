@@ -57,11 +57,11 @@ export function DsaTopics({
   return (
     <section id="plan" className="scroll-mt-20 lg:scroll-mt-8">
       <Link
-        href="/"
+        href="/practice"
         className="inline-flex items-center gap-2 text-xs font-medium text-cream/45 transition hover:text-cream"
       >
-        <ArrowLeft size={13} />
-        Preparation path
+        <ArrowLeft size={13} aria-hidden="true" />
+        Practice sessions
       </Link>
 
       <PracticeIntro

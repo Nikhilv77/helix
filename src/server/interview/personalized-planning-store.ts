@@ -166,6 +166,7 @@ export class PersonalizedPlanningStore {
     const profile = profileFromRecord(storedProfile);
     requireMatchingProfileSnapshot(parsed, profile);
     await this.requireOwnedPerformanceSnapshot(ownerId, parsed);
+    await this.requireOwnedPracticeEvidenceSnapshot(ownerId, parsed);
 
     const stored = await this.prisma.$transaction(async (transaction) => {
       const latest = await transaction.personalizedInterviewPlanVersion.findFirst({
@@ -251,6 +252,32 @@ export class PersonalizedPlanningStore {
         "PERFORMANCE_PROFILE_SNAPSHOT_MISMATCH",
         "The plan does not reference the exact demonstrated performance revision.",
         { performanceProfileVersionId: snapshot.id }
+      );
+    }
+  }
+
+  private async requireOwnedPracticeEvidenceSnapshot(
+    ownerId: string,
+    plan: PersonalizedInterviewPlan
+  ): Promise<void> {
+    const snapshot = plan.sourceSnapshot.practiceEvidence;
+    if (!snapshot) return;
+    const stored = await this.prisma.candidatePracticeEvidenceVersion.findFirst({
+      where: { id: snapshot.id, ownerId },
+      select: { id: true, revision: true }
+    });
+    if (!stored) {
+      throw new NotFoundErrorException(
+        "PRACTICE_EVIDENCE_VERSION_NOT_FOUND",
+        "The verified Practice evidence revision for this plan was not found.",
+        { practiceEvidenceVersionId: snapshot.id }
+      );
+    }
+    if (stored.revision !== snapshot.revision) {
+      throw new ConflictErrorException(
+        "PRACTICE_EVIDENCE_SNAPSHOT_MISMATCH",
+        "The plan does not reference the exact verified Practice evidence revision.",
+        { practiceEvidenceVersionId: snapshot.id }
       );
     }
   }

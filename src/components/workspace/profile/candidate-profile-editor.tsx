@@ -42,6 +42,7 @@ import {
 import { ResumeTab } from "./candidate-profile-editor-resume";
 import { SaveBar, SavedFooter } from "./candidate-profile-editor-ui";
 import { toInput } from "./candidate-profile-editor-utils";
+import { ProfileHelpCard } from "./profile-help-card";
 
 export function CandidateProfileEditor({ initialProfile }: { initialProfile: CandidateProfile }) {
   const [profile, setProfile] = useState<CandidateProfileInput>(toInput(initialProfile));
@@ -66,6 +67,8 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
 
   useEffect(() => {
     if (mode !== "view" || saved.profileImage || saving || imagePicker) return;
+    const query = new URLSearchParams(window.location.search);
+    if (query.get("help") === "1" || query.has("request")) return;
 
     const timer = window.setTimeout(() => setImagePicker("avatar"), 520);
     return () => window.clearTimeout(timer);
@@ -175,6 +178,8 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
           onCoverChange={(coverImage) => void saveImagePatch({ coverImage })}
           onAvatarChange={(profileImage) => void saveImagePatch({ profileImage })}
         />
+
+        <ProfileHelpCard />
 
         <SignatureStoryCard story={profile.stories[0]} />
       </div>

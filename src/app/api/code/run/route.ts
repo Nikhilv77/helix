@@ -1,7 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
+import { after } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { findQuestion } from "@/lib/dsa/dsa";
+import { dsaFunctionName } from "@/lib/dsa/dsa-code-templates";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { getAppContainer } from "@/server/app-container";
@@ -20,6 +22,8 @@ export const maxDuration = 20;
 
 const runSchema = z
   .object({
+    /** Required for standalone practice runs so evidence writes are idempotent. */
+    requestId: z.string().uuid().optional(),
     code: z.string().trim().min(1).max(20_000),
     language: z.enum(["python", "javascript", "cpp", "java"]),
     /**
@@ -40,13 +44,22 @@ const runSchema = z
         message: "sessionId and questionIndex must be supplied together"
       });
     }
+    if (value.slug && value.sessionId === undefined && value.requestId === undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["requestId"],
+        message: "requestId is required for standalone DSA runs"
+      });
+    }
   });
 
-// Verified against Judge0 CE's RapidAPI /languages response on 2026-08-19.
+// Verified against Judge0 CE's RapidAPI /languages response on 2026-08-27.
+// Node 20 supports the syntax taught by the current editor, and GCC 14
+// supports the C++17 optional values used by the tree harness.
 const languages: Record<z.infer<typeof runSchema>["language"], { id: number; name: string }> = {
-  cpp: { id: 54, name: "C++ (GCC 9.2.0)" },
+  cpp: { id: 105, name: "C++ (GCC 14.1.0)" },
   java: { id: 62, name: "Java (OpenJDK 13.0.1)" },
-  javascript: { id: 63, name: "JavaScript (Node.js 12.14.0)" },
+  javascript: { id: 97, name: "JavaScript (Node.js 20.17.0)" },
   python: { id: 71, name: "Python (3.8.1)" }
 };
 
@@ -92,9 +105,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const functionName = question.slug.replace(/-([a-z])/g, (_, letter: string) =>
-        letter.toUpperCase()
-      );
+      const functionName = dsaFunctionName(question.slug);
       try {
         testCases = buildTestCases(question.examples, slug);
         sourceCode = buildTestHarness(
@@ -175,6 +186,25 @@ export async function POST(request: NextRequest) {
         memory: result.memory ?? null,
         tests
       };
+
+      // Matching needs evidence from the runner, not a self-reported "I solved
+      // this" click. Persist after the response so roadmap bookkeeping never
+      // adds latency to code execution. Interview runs keep their own evidence.
+      if (slug && parsed.data.sessionId === undefined) {
+        after(() =>
+          app.frontendRoadmapService
+            .recordCodeRunEvidence(ownerId, {
+              idempotencyKey: parsed.data.requestId!,
+              dsaQuestionSlug: slug,
+              language: parsed.data.language,
+              score: tests.length > 0 ? passedCount / tests.length : data.accepted ? 1 : 0,
+              accepted: data.accepted,
+              testsPassed: passedCount,
+              testCount: tests.length
+            })
+            .catch(() => false)
+        );
+      }
 
       if (parsed.data.sessionId !== undefined && parsed.data.questionIndex !== undefined) {
         await app.interviewService.recordCodeExecution(

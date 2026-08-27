@@ -20,10 +20,7 @@ import type {
   WorkspaceAccent
 } from "@/lib/shared/types";
 import type { Curriculum, CurriculumSession } from "@/lib/curriculum/curriculum";
-import {
-  DEFAULT_WORKSPACE_ACCENT,
-  isWorkspaceAccent
-} from "@/lib/workspace/accent";
+import { DEFAULT_WORKSPACE_ACCENT, isWorkspaceAccent } from "@/lib/workspace/accent";
 import type { PrismaService } from "../database/prisma.service";
 
 const roles = new Set<Role>(["backend", "frontend", "fullstack", "data", "ai-ml", "pm"]);
@@ -84,6 +81,8 @@ export class ProfileService {
         ? stored.workspaceAccent
         : DEFAULT_WORKSPACE_ACCENT,
       teacherId: stored.teacherId,
+      helpNotificationsEnabled: stored.helpNotificationsEnabled,
+      teacherNotificationsEnabled: stored.teacherNotificationsEnabled,
       focusAreas: stringArray(stored.focusAreas),
       stories: storyArray(stored.stories),
       updatedAt: stored.updatedAt.getTime(),
@@ -290,6 +289,8 @@ function emptyProfile(): CandidateProfile {
     profileImage: null,
     workspaceAccent: DEFAULT_WORKSPACE_ACCENT,
     teacherId: null,
+    helpNotificationsEnabled: true,
+    teacherNotificationsEnabled: true,
     focusAreas: [],
     stories: [],
     updatedAt: null,
@@ -386,7 +387,9 @@ function resumeFromJson(
   };
 }
 
-function resumeInterviewKitFromJson(value: Prisma.JsonValue | undefined): ResumeInterviewKit | null {
+function resumeInterviewKitFromJson(
+  value: Prisma.JsonValue | undefined
+): ResumeInterviewKit | null {
   if (value === undefined || value === null || !isRecord(value)) return null;
   const record = value;
 

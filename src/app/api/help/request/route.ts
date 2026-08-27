@@ -1,0 +1,235 @@
+import { auth } from "@clerk/nextjs/server";
+import { after } from "next/server";
+import type { NextRequest } from "next/server";
+import { z } from "zod";
+
+import { findQuestion } from "@/lib/dsa/dsa";
+import { getAppContainer } from "@/server/app-container";
+import { Logger } from "@/server/common/logger";
+import { HelpRequestError } from "@/server/help/help-request.types";
+import { NotificationKind } from "@/server/notifications/notification.service";
+import { ApiRouteError } from "@/server/http/api-error";
+import { apiError, apiSuccess } from "@/server/http/api-response";
+import { authenticatedOwnerId } from "@/server/interview/owner";
+import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const logger = new Logger("HelpRequest");
+
+/**
+ * How many helpers hear about one request.
+ *
+ * Notifying everyone who ever solved a problem is how a helper pool learns to
+ * ignore the notifications. The best few get asked; if none of them accept, a
+ * later re-fan can widen it.
+ */
+const HELPERS_TO_NOTIFY = 3;
+
+const openSchema = z.object({
+  slug: z.string().min(1).max(140),
+  language: z.enum(["python", "javascript", "cpp", "java"]),
+  code: z.string().max(40_000),
+  testOutput: z.string().max(20_000).nullable().optional(),
+  failingTests: z.number().int().min(0).max(10_000).nullable().optional(),
+  hintsUsed: z.number().int().min(0).max(100).default(0),
+  timeSpentMs: z
+    .number()
+    .int()
+    .min(0)
+    .max(24 * 60 * 60 * 1000)
+    .default(0)
+});
+
+/** How a failed lifecycle call maps onto the wire. */
+const FAILURE_STATUS: Record<string, { status: number; message: string }> = {
+  ALREADY_LIVE: { status: 409, message: "You already have an open request for this problem." },
+  NOT_FOUND: { status: 404, message: "That help request no longer exists." },
+  NOT_THE_LEARNER: { status: 403, message: "That request is not yours to cancel." }
+};
+
+export async function POST(request: NextRequest) {
+  try {
+    const ownerId = await requireOwner();
+    const parsed = openSchema.safeParse(await request.json().catch(() => null));
+
+    if (!parsed.success) {
+      throw new ApiRouteError(400, "BAD_REQUEST", "Help request payload is invalid", {
+        messages: parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+      });
+    }
+
+    const detail = findQuestion(parsed.data.slug);
+    if (!detail) throw new ApiRouteError(404, "DSA_QUESTION_NOT_FOUND", "Question not found");
+    const question = detail.question;
+
+    // Asking for a human is cheap for the learner and expensive for whoever
+    // answers, so it is throttled like any other outbound-effect endpoint.
+    const app = getAppContainer();
+    await getSharedGuard(app.config).enforce(RATE_LIMIT_POLICIES.helpRequest, ownerId);
+
+    const context = {
+      code: parsed.data.code,
+      testOutput: parsed.data.testOutput ?? null,
+      failingTests: parsed.data.failingTests ?? null,
+      hintsUsed: parsed.data.hintsUsed,
+      timeSpentMs: parsed.data.timeSpentMs
+    };
+
+    const helpRequest = await app.helpRequestService.open({
+      learnerId: ownerId,
+      questionSlug: parsed.data.slug,
+      language: parsed.data.language,
+      context
+    });
+
+    // AI enrichment is useful context, never a prerequisite for reaching a
+    // human. Keep it in its own task so a model timeout cannot suppress every
+    // helper notification for an otherwise valid request.
+    after(async () => {
+      try {
+        const summary = await app.stuckSummaryService.summarize(question, context);
+        await app.helpRequestService.attachSummary(helpRequest.id, JSON.stringify(summary));
+
+        await app.conciergeNotifier.notify({
+          requestId: helpRequest.id,
+          questionTitle: question.title,
+          questionSlug: question.slug,
+          language: parsed.data.language,
+          difficulty: question.difficulty,
+          summary,
+          timeSpentMs: context.timeSpentMs,
+          hintsUsed: context.hintsUsed
+        });
+      } catch (error) {
+        // A request that never got summarised is still a request worth having.
+        logger.error(
+          JSON.stringify({
+            event: "help.request.enrichment.failed",
+            requestId: helpRequest.id,
+            reason: error instanceof Error ? error.message : String(error)
+          })
+        );
+      }
+    });
+
+    // Route independently of Gemini. Dispatch is idempotent per recipient,
+    // kind and request, so replaying this task never duplicates an inbox row.
+    after(async () => {
+      try {
+        const helpers = await app.helperMatchingService.findHelpers(
+          question.slug,
+          ownerId,
+          parsed.data.language,
+          HELPERS_TO_NOTIFY
+        );
+
+        const failing = context.failingTests;
+        const body =
+          failing === null
+            ? `They are working in ${parsed.data.language} and shared their current code.`
+            : `They are working in ${parsed.data.language} with ${failing} failing ${
+                failing === 1 ? "test" : "tests"
+              }.`;
+        const deliveries = await Promise.allSettled(
+          helpers.map((helper) =>
+            app.notificationDispatcher.dispatch({
+              ownerId: helper.ownerId,
+              kind: NotificationKind.HELP_REQUEST_OPENED,
+              title: `Someone needs help with ${question.title}`,
+              body,
+              href: `/profile?help=1&request=${helpRequest.id}`,
+              subjectId: helpRequest.id
+            })
+          )
+        );
+        const failed = deliveries.filter((delivery) => delivery.status === "rejected").length;
+        if (failed > 0) throw new Error(`${failed} helper notifications failed`);
+      } catch (error) {
+        logger.error(
+          JSON.stringify({
+            event: "help.request.fanout.failed",
+            requestId: helpRequest.id,
+            reason: error instanceof Error ? error.message : String(error)
+          })
+        );
+      }
+    });
+
+    return apiSuccess({
+      id: helpRequest.id,
+      status: helpRequest.status,
+      createdAt: helpRequest.createdAt.getTime()
+    });
+  } catch (error) {
+    return apiError(translate(error), request.nextUrl.pathname);
+  }
+}
+
+/** The learner's own live request for a question, so the UI can resume its state. */
+export async function GET(request: NextRequest) {
+  try {
+    const ownerId = await requireOwner();
+    const slug = request.nextUrl.searchParams.get("slug") ?? "";
+    const language = request.nextUrl.searchParams.get("language") ?? "javascript";
+    if (!slug || !findQuestion(slug)) {
+      throw new ApiRouteError(404, "DSA_QUESTION_NOT_FOUND", "Question not found");
+    }
+    if (!openSchema.shape.language.safeParse(language).success) {
+      throw new ApiRouteError(400, "BAD_REQUEST", "Programming language is invalid");
+    }
+
+    const app = getAppContainer();
+    const [live, helperCount, pendingRating] = await Promise.all([
+      app.helpRequestService.liveForLearner(ownerId, slug),
+      app.helperMatchingService.countHelpers(slug, ownerId, language),
+      app.helpSessionService.pendingRatingForLearner(ownerId, slug)
+    ]);
+
+    // helperCount is who *could* answer, not who will. Describe the pool without
+    // promising that one of them is online or will accept.
+    return apiSuccess({
+      id: live?.id ?? null,
+      status: live?.status ?? null,
+      createdAt: live?.createdAt.getTime() ?? null,
+      helperCount,
+      ratingRequestId: live ? null : (pendingRating?.requestId ?? null)
+    });
+  } catch (error) {
+    return apiError(translate(error), request.nextUrl.pathname);
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const ownerId = await requireOwner();
+    const id = request.nextUrl.searchParams.get("id") ?? "";
+    if (!z.string().uuid().safeParse(id).success) {
+      throw new ApiRouteError(400, "BAD_REQUEST", "A valid request id is required");
+    }
+
+    const cancelled = await getAppContainer().helpRequestService.cancel(id, ownerId);
+    return apiSuccess({ id: cancelled.id, status: cancelled.status });
+  } catch (error) {
+    return apiError(translate(error), request.nextUrl.pathname);
+  }
+}
+
+async function requireOwner(): Promise<string> {
+  const { userId } = await auth();
+  if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
+  return authenticatedOwnerId(userId);
+}
+
+/** Lifecycle failures carry a reason, not an HTTP status. This bridges the two. */
+function translate(error: unknown): unknown {
+  if (!(error instanceof HelpRequestError)) return error;
+
+  const mapped = FAILURE_STATUS[error.reason] ?? {
+    status: 409,
+    message: "That help request cannot change right now."
+  };
+
+  return new ApiRouteError(mapped.status, `HELP_${error.reason}`, mapped.message);
+}

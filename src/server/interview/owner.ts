@@ -89,6 +89,14 @@ export function authenticatedOwnerId(userId: string): string {
   return `user:${userId}`;
 }
 
+/**
+ * Inverse of {@link authenticatedOwnerId}. Null for anonymous owners, which
+ * have no Clerk user behind them and so cannot be looked up or emailed.
+ */
+export function ownerIdToUserId(ownerId: string): string | null {
+  return ownerId.startsWith("user:") ? ownerId.slice("user:".length) : null;
+}
+
 async function authenticatedOwnerFromRequest(
   request: NextRequest,
   config: AppConfigService

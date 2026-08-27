@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
+import { after } from "next/server";
 import { z } from "zod";
 import { personaById } from "@/lib/avatars/personas";
 import { getAppContainer } from "@/server/app-container";
@@ -76,7 +77,7 @@ const completeSchema = z.object({
     .trim()
     .max(60)
     .nullish()
-    .transform((id) => (personaById(id)?.id ?? null)),
+    .transform((id) => personaById(id)?.id ?? null),
   resumeFile: z.object({
     fileName: z.string().trim().min(1).max(160),
     mimeType: z.string().trim().min(1).max(200)
@@ -168,6 +169,28 @@ export async function POST(request: NextRequest) {
         level,
         frontendRoadmapId: frontendRoadmap?.roadmapId ?? null
       })
+    );
+
+    // Welcome delivery is durable and idempotent, but it must never hold the
+    // onboarding response hostage to Clerk or the email provider.
+    after(() =>
+      app.teacherNotificationService
+        .welcome({
+          ownerId,
+          teacherId,
+          candidateName: extraction.fullName,
+          targetRole,
+          focusAreas: extraction.focusAreas
+        })
+        .catch((error) =>
+          logger.error(
+            JSON.stringify({
+              event: "teacher.welcome.failed",
+              ownerId,
+              reason: error instanceof Error ? error.message : String(error)
+            })
+          )
+        )
     );
 
     return apiSuccess({

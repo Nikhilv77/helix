@@ -648,7 +648,7 @@ export function VoiceInterviewClient({
   useEffect(() => {
     if (setup?.templateTitle !== "DSA practice interview" || !dsaQuestionSlug) return;
     const question = findQuestion(dsaQuestionSlug)?.question;
-    setTypedDraft(question ? dsaStarterCode(question.slug, dsaLanguage) : "");
+    setTypedDraft(question ? dsaStarterCode(question, dsaLanguage) : "");
     setTypedNotes("");
     setTypedError(null);
     setDsaRunResult(null);

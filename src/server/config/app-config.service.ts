@@ -10,8 +10,16 @@ type AppConfigInput = Omit<
   | "livekitUrl"
   | "livekitApiKey"
   | "livekitApiSecret"
+  | "helpRequestWebhookUrl"
+  | "operatorUserIds"
+  | "resendApiKey"
+  | "notificationEmailEnabled"
+  | "notificationFromEmail"
+  | "cronSecret"
+  | "appOrigin"
   | "deepgramApiKey"
   | "deepgramTtsModel"
+  | "practiceNonDsaEnabled"
 > & {
   clerkSecretKey?: EnvironmentConfig["clerkSecretKey"];
   interviewAuthSecret?: EnvironmentConfig["interviewAuthSecret"];
@@ -21,8 +29,16 @@ type AppConfigInput = Omit<
   livekitUrl?: EnvironmentConfig["livekitUrl"];
   livekitApiKey?: EnvironmentConfig["livekitApiKey"];
   livekitApiSecret?: EnvironmentConfig["livekitApiSecret"];
+  helpRequestWebhookUrl?: EnvironmentConfig["helpRequestWebhookUrl"];
+  operatorUserIds?: EnvironmentConfig["operatorUserIds"];
+  resendApiKey?: EnvironmentConfig["resendApiKey"];
+  notificationEmailEnabled?: EnvironmentConfig["notificationEmailEnabled"];
+  notificationFromEmail?: EnvironmentConfig["notificationFromEmail"];
+  cronSecret?: EnvironmentConfig["cronSecret"];
+  appOrigin?: EnvironmentConfig["appOrigin"];
   deepgramApiKey?: EnvironmentConfig["deepgramApiKey"];
   deepgramTtsModel?: EnvironmentConfig["deepgramTtsModel"];
+  practiceNonDsaEnabled?: EnvironmentConfig["practiceNonDsaEnabled"];
 };
 
 export class AppConfigService {
@@ -108,6 +124,10 @@ export class AppConfigService {
     return this.config.interviewDailyLimit;
   }
 
+  get practiceNonDsaEnabled(): EnvironmentConfig["practiceNonDsaEnabled"] {
+    return this.config.practiceNonDsaEnabled ?? false;
+  }
+
   get upstashRedisRestUrl(): EnvironmentConfig["upstashRedisRestUrl"] {
     return this.config.upstashRedisRestUrl;
   }
@@ -153,6 +173,35 @@ export class AppConfigService {
 
   get deepgramApiKey(): string | undefined {
     return this.config.deepgramApiKey;
+  }
+
+  /** Empty means the report queue is closed to everyone — the safe default. */
+  get operatorUserIds(): string[] {
+    return this.config.operatorUserIds ?? [];
+  }
+
+  get helpRequestWebhookUrl(): string | undefined {
+    return this.config.helpRequestWebhookUrl;
+  }
+
+  get resendApiKey(): string | undefined {
+    return this.config.resendApiKey;
+  }
+
+  get notificationEmailEnabled(): EnvironmentConfig["notificationEmailEnabled"] {
+    return this.config.notificationEmailEnabled ?? false;
+  }
+
+  get notificationFromEmail(): string | undefined {
+    return this.config.notificationFromEmail;
+  }
+
+  get cronSecret(): string | undefined {
+    return this.config.cronSecret;
+  }
+
+  get appOrigin(): string | undefined {
+    return this.config.appOrigin;
   }
 
   get deepgramTtsModel(): string {

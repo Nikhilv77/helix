@@ -154,6 +154,7 @@ export default async function DsaQuestionPage({ params }: { params: Promise<{ sl
             >
               <QuestionCoach
                 key={question.slug}
+                slug={question.slug}
                 title={question.title}
                 pattern={question.primaryPattern}
                 promptSummary={question.promptSummary}

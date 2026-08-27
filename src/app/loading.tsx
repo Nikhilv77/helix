@@ -1,21 +1,11 @@
-import { auth } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
 import { ManageSkeleton } from "@/components/workspace/account/manage-skeleton";
-import { DashboardSkeleton } from "@/components/workspace/dashboard/dashboard-skeleton";
 import { MayaWelcomeLoading } from "@/components/workspace/dashboard/maya-welcome-loading";
 import { InterviewsSkeleton } from "@/components/workspace/interviews/interviews-skeleton";
 import { ProfileSkeleton } from "@/components/workspace/profile/profile-skeleton";
 import { RouteProgress, Waveform } from "@/components/workspace/shared/loading/primitives";
-import { getAppContainer } from "@/server/app-container";
-import { authenticatedOwnerId } from "@/server/interview/owner";
 
-const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-
-/**
- * Root fallback. `/` is both marketing and dashboard, so route alone is not
- * enough: signed-out users should never see dashboard cards while the marketing
- * home resolves.
- */
+/** Root fallback shared by the public home and signed-in workspace routes. */
 export default async function RootLoading() {
   const requestHeaders = await headers();
   const pathname = requestHeaders.get("x-trailgrad-pathname") ?? "";
@@ -26,7 +16,8 @@ export default async function RootLoading() {
   const profileRoute = pathname === "/profile";
   const workspaceRoute = isWorkspaceLoadingRoute(pathname);
   const welcomeHome = pathname === "/" && new URLSearchParams(search).get("welcome") === "maya";
-  const dashboardHome = pathname === "/" && (await shouldShowDashboardSkeleton());
+
+  if (welcomeHome) return <MayaWelcomeLoading />;
 
   if (interviewRoute || progressRoute) return null;
 
@@ -53,15 +44,10 @@ export default async function RootLoading() {
     );
   }
 
-  if (workspaceRoute || dashboardHome) {
-    if (welcomeHome) return <MayaWelcomeLoading />;
-
+  if (workspaceRoute) {
     return (
       <div className="blueprint relative min-h-[100svh]" aria-busy="true" aria-label="Loading">
-        <div className="blueprint-glow" />
-        <div className="relative z-10">
-          <DashboardSkeleton />
-        </div>
+        <RouteProgress />
       </div>
     );
   }
@@ -88,17 +74,4 @@ function isWorkspaceLoadingRoute(pathname: string): boolean {
     pathname.startsWith("/sessions/") ||
     pathname.startsWith("/session/")
   );
-}
-
-async function shouldShowDashboardSkeleton() {
-  if (!clerkPublishableKey) return false;
-
-  const { userId } = await auth();
-  if (!userId) return false;
-
-  const profile = await getAppContainer()
-    .profileService.get(authenticatedOwnerId(userId))
-    .catch(() => null);
-
-  return Boolean(profile?.onboardingCompletedAt);
 }

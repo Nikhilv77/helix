@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useSyncExternalStore } from "react";
 
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
@@ -12,11 +13,7 @@ const AvatarStage = dynamic(
   () => import("@/components/interview/voice/avatar-stage").then((module) => module.AvatarStage),
   {
     ssr: false,
-    loading: () => (
-      <div className="flex h-full w-full items-center justify-center">
-        <span className="h-10 w-10 animate-pulse rounded-full bg-cream/[0.08] shadow-[0_0_36px_rgba(239,232,214,0.12)]" />
-      </div>
-    )
+    loading: () => <AvatarPlaceholder />
   }
 );
 
@@ -28,6 +25,16 @@ const TransparentAvatarStage = dynamic(
   }
 );
 
+const subscribeToHydration = () => () => undefined;
+
+function AvatarPlaceholder() {
+  return (
+    <div className="flex h-full w-full items-center justify-center">
+      <span className="h-10 w-10 animate-pulse rounded-full bg-cream/[0.08] shadow-[0_0_36px_rgba(239,232,214,0.12)]" />
+    </div>
+  );
+}
+
 export function MayaStage({
   speaking = false,
   transparent = false
@@ -36,6 +43,17 @@ export function MayaStage({
   transparent?: boolean;
 }) {
   const teacher = useWorkspaceTeacher();
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false
+  );
+
+  // Do not reach Next's `ssr: false` dynamic boundary during the server pass.
+  // Inside a streamed dashboard Suspense boundary that bailout is reported as
+  // a server-render failure even though the client can recover successfully.
+  if (!hydrated) return transparent ? null : <AvatarPlaceholder />;
+
   const Stage = transparent ? TransparentAvatarStage : AvatarStage;
 
   return (

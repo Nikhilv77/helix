@@ -3,46 +3,24 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { ChartNoAxesCombined, GraduationCap, Mic, Menu, PlayCircle, X } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { TrailgradMark } from "@/components/brand/blueprint-art";
 
-// Every href below resolves to a section that exists on this page. A dead
-// anchor ("#product") and a column of links that all pointed at the same
-// section used to sit here.
-const navLinks: Array<{ label: string; href: string; icon: LucideIcon }> = [
-  { label: "Learn", href: "#learn", icon: GraduationCap },
-  { label: "Interview", href: "#interview", icon: Mic },
-  { label: "Reports", href: "#report", icon: ChartNoAxesCombined },
-  { label: "Begin", href: "#flow", icon: PlayCircle }
+// Every href below resolves to a section that exists on this page, in the
+// order those sections appear — the previous set listed Interview before
+// Practice while the page rendered them the other way round.
+const navLinks: Array<{ label: string; href: string }> = [
+  { label: "Learn", href: "#learn" },
+  { label: "Interview", href: "#interview" },
+  { label: "Practice", href: "#practice" },
+  { label: "Help", href: "#help" }
 ];
 
-const footerColumns = [
-  {
-    heading: "Product",
-    links: [
-      { label: "Learn", href: "#learn" },
-      { label: "Interview", href: "#interview" },
-      { label: "Reports", href: "#report" },
-      { label: "Blog", href: "/blog" },
-      { label: "Begin", href: "#flow" }
-    ]
-  },
-  {
-    heading: "Practice",
-    links: [
-      { label: "Learning trail", href: "#learn" },
-      { label: "Voice rounds", href: "#interview" },
-      { label: "Progress reports", href: "#report" }
-    ]
-  },
-  {
-    heading: "Legal",
-    links: [
-      { label: "Terms of Service", href: "/terms" },
-      { label: "Privacy Policy", href: "/privacy" }
-    ]
-  }
+const footerLinks: Array<{ label: string; href: string }> = [
+  { label: "Interview", href: "#interview" },
+  { label: "Practice", href: "#practice" },
+  { label: "Help", href: "#help" },
+  { label: "Blog", href: "/blog" }
 ];
 
 /**
@@ -84,6 +62,15 @@ function sectionHref(href: string, prefix: string): string {
   return href.startsWith("#") ? `${prefix}${href}` : href;
 }
 
+/**
+ * A rule and some type.
+ *
+ * The bar carries no surface of its own until you scroll — over the hero's
+ * ember a floating slab reads as a lid on the light, so at rest there is
+ * nothing here but the mark, four words and the action. Past the fold it
+ * earns a blur and a single hairline, which is all the separation it needs
+ * against the flat sections below.
+ */
 export function SiteNav({
   action,
   actionKind = "icon",
@@ -96,14 +83,16 @@ export function SiteNav({
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const activeSection = useActiveSection(navSectionIds);
+
   const desktopActionClass =
     actionKind === "button"
-      ? "hidden sm:flex [&>*]:inline-flex [&>*]:h-12 [&>*]:min-w-28 [&>*]:items-center [&>*]:justify-center [&>*]:rounded-[1.1rem] [&>*]:border [&>*]:border-cream/75 [&>*]:bg-cream [&>*]:px-7 [&>*]:text-base [&>*]:font-semibold [&>*]:tracking-wide [&>*]:text-[#13234f] [&>*]:shadow-[0_18px_44px_-26px_rgba(3,10,31,0.78),inset_0_-1px_0_rgba(19,35,79,0.12)] [&>*]:outline-none [&>*]:transition [&>*]:duration-300 [&>*]:ease-[cubic-bezier(0.16,1,0.3,1)] [&>*]:hover:-translate-y-0.5 [&>*]:hover:bg-cream-soft [&>*]:hover:text-[#0d1b44] [&>*]:hover:shadow-[0_22px_52px_-24px_rgba(3,10,31,0.8),inset_0_-1px_0_rgba(19,35,79,0.14)] [&>*]:active:translate-y-0 [&>*]:active:scale-[0.98] [&>*]:focus-visible:ring-2 [&>*]:focus-visible:ring-cream/65"
-      : "hidden sm:block [&>*]:grid [&>*]:h-11 [&>*]:w-12 [&>*]:place-items-center [&>*]:rounded-xl [&>*]:p-0 [&>*]:text-cream [&>*]:hover:bg-cream/[0.08]";
+      ? "site-nav-action hidden sm:block [&>*]:inline-flex [&>*]:h-11 [&>*]:items-center [&>*]:rounded-xl [&>*]:px-5 [&>*]:text-sm [&>*]:font-semibold [&>*]:tracking-tight [&>*]:outline-none"
+      : "hidden sm:block [&>*]:grid [&>*]:h-10 [&>*]:w-10 [&>*]:place-items-center [&>*]:rounded-full [&>*]:p-0 [&>*]:text-cream/70 [&>*]:transition [&>*]:hover:text-cream";
   const mobileActionClass =
     actionKind === "button"
-      ? "mt-2 border-t border-cream/[0.06] pt-2 [&>*]:inline-flex [&>*]:h-12 [&>*]:w-full [&>*]:items-center [&>*]:justify-center [&>*]:rounded-[1rem] [&>*]:border [&>*]:border-transparent [&>*]:bg-cream/[0.9] [&>*]:px-4 [&>*]:text-sm [&>*]:font-semibold [&>*]:tracking-wide [&>*]:text-[#13234f] [&>*]:shadow-none [&>*]:outline-none [&>*]:transition [&>*]:duration-200 [&>*]:hover:bg-cream [&>*]:hover:text-[#0d1b44] [&>*]:active:scale-[0.98] [&>*]:focus-visible:ring-2 [&>*]:focus-visible:ring-cream/35"
-      : "mt-2 border-t border-cream/[0.08] pt-2 [&>*]:grid [&>*]:h-11 [&>*]:w-full [&>*]:place-items-center [&>*]:rounded-xl [&>*]:p-0 [&>*]:text-cream [&>*]:hover:bg-cream/[0.05]";
+      ? "site-nav-action px-5 pb-5 pt-3 [&>*]:inline-flex [&>*]:h-11 [&>*]:w-full [&>*]:items-center [&>*]:justify-center [&>*]:rounded-xl [&>*]:text-sm [&>*]:font-semibold [&>*]:outline-none"
+      : "px-5 pb-5 pt-3 [&>*]:grid [&>*]:h-11 [&>*]:w-full [&>*]:place-items-center [&>*]:rounded-full [&>*]:p-0 [&>*]:text-cream";
+
   useEffect(() => {
     // Coalesced into rAF: touch scrolling fires this far faster than the
     // compositor paints, and every raw event was reading scrollY — a forced
@@ -137,198 +126,145 @@ export function SiteNav({
   }, [menuOpen]);
 
   return (
-    <header className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4 sm:top-5">
-      <div className="pointer-events-auto relative w-full max-w-[68rem]">
-        <nav
-          className={[
-            "grid grid-cols-[auto_1fr_auto] items-center overflow-hidden rounded-[1.35rem] border border-transparent bg-[#18191c] px-2.5 py-2.5 shadow-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:border-white/10 sm:bg-[#18191c]/95 sm:shadow-[0_20px_54px_-40px_rgba(0,0,0,0.28)] sm:backdrop-blur-md",
-            scrolled
-              ? "bg-[#18191c] sm:border-white/14 sm:bg-[#202126] sm:shadow-[0_24px_64px_-42px_rgba(0,0,0,0.32)]"
-              : ""
-          ].join(" ")}
+    <header
+      className={[
+        "fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        scrolled || menuOpen
+          ? "border-white/[0.07] bg-[#060607]/72 backdrop-blur-xl"
+          : "border-transparent bg-transparent"
+      ].join(" ")}
+    >
+      {/* Three tracks rather than justify-between: the mark and the action are
+            different widths, so a flex row centres the links on the gap between
+            them instead of on the page. */}
+      <div className="mx-auto grid h-16 w-full max-w-[72rem] grid-cols-[1fr_auto_1fr] items-center gap-6 px-5 sm:h-[4.5rem] sm:px-8">
+        <Link
+          href="/"
+          aria-label="Trailgrad home"
+          className="shrink-0 rounded-lg text-cream outline-none transition-opacity duration-300 hover:opacity-70 focus-visible:ring-2 focus-visible:ring-cream/40"
         >
-          <Link
-            href="/"
-            aria-label="Trailgrad home"
-            title="Home"
-            className="grid h-12 w-12 shrink-0 place-items-center justify-self-start rounded-[1rem] text-cream outline-none transition duration-300 hover:bg-cream/[0.08] focus-visible:ring-2 focus-visible:ring-cream/50"
-          >
-            <TrailgradMark className="h-[2rem] w-[2rem]" />
-          </Link>
+          <TrailgradMark className="h-8 w-8" />
+        </Link>
 
-          <div className="hidden min-w-0 items-center justify-center gap-1.5 px-2 sm:flex">
-            {navLinks.map((link) => {
-              const id = link.href.slice(1);
-              const active = activeSection === id;
-              const Icon = link.icon;
-              return (
-                <a
-                  key={link.label}
-                  href={sectionHref(link.href, sectionHrefPrefix)}
-                  aria-label={link.label}
-                  aria-current={active ? "true" : undefined}
-                  title={link.label}
-                  className={[
-                    "group relative flex h-12 min-w-0 items-center justify-center gap-2.5 rounded-[1rem] border px-4 text-[15px] font-semibold outline-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] focus-visible:ring-2 focus-visible:ring-cream/50 md:px-5",
-                    active
-                      ? "border-transparent bg-cream/[0.04] text-cream shadow-none"
-                      : "border-transparent text-cream/[0.66] hover:bg-cream/[0.04] hover:text-cream"
-                  ].join(" ")}
-                >
-                  <Icon
-                    size={21}
-                    strokeWidth={active ? 2 : 1.6}
-                    aria-hidden="true"
-                    className="transition-transform duration-200 group-hover:scale-105"
-                  />
-                  <span className="whitespace-nowrap leading-none">{link.label}</span>
-                </a>
-              );
-            })}
-          </div>
-
-          <div className="flex shrink-0 items-center gap-1.5 justify-self-end">
-            <div className={desktopActionClass}>{action}</div>
-            <button
-              type="button"
-              onClick={() => setMenuOpen((open) => !open)}
-              aria-label={menuOpen ? "Close menu" : "Open menu"}
-              aria-expanded={menuOpen}
-              className="grid h-12 w-12 place-items-center rounded-[1rem] border border-transparent bg-cream/[0.035] text-cream outline-none transition hover:bg-cream/[0.06] focus-visible:ring-2 focus-visible:ring-cream/40 sm:hidden"
-            >
-              {menuOpen ? (
-                <X size={20} aria-hidden="true" />
-              ) : (
-                <Menu size={20} aria-hidden="true" />
-              )}
-            </button>
-          </div>
+        <nav aria-label="Sections" className="hidden items-center justify-center gap-9 sm:flex">
+          {navLinks.map((link) => {
+            const active = activeSection === link.href.slice(1);
+            return (
+              <a
+                key={link.label}
+                href={sectionHref(link.href, sectionHrefPrefix)}
+                aria-current={active ? "true" : undefined}
+                className={[
+                  "relative text-[0.9rem] font-medium tracking-tight outline-none transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-cream/40",
+                  active ? "text-cream" : "text-cream/55 hover:text-cream/90"
+                ].join(" ")}
+              >
+                {link.label}
+                <span
+                  aria-hidden="true"
+                  className={["site-nav-rule", active ? "is-active" : ""].join(" ")}
+                />
+              </a>
+            );
+          })}
         </nav>
 
-        <div
-          aria-hidden={!menuOpen}
-          inert={menuOpen ? undefined : true}
-          className={[
-            "overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#18191c] text-cream shadow-none transition-[max-height,opacity,transform,margin-top,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[max-height,opacity,transform] sm:hidden",
-            menuOpen
-              ? "mt-2 max-h-[26rem] translate-y-0 p-2 opacity-100"
-              : "mt-0 max-h-0 -translate-y-2 p-0 opacity-0"
-          ].join(" ")}
-        >
-          <div className="flex items-center justify-between px-3 py-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cream/[0.46]">
-              Menu
-            </p>
-            <button
-              type="button"
-              onClick={() => setMenuOpen(false)}
-              aria-label="Close menu"
-              className="grid h-8 w-8 place-items-center rounded-lg text-cream/[0.7] transition hover:bg-cream/[0.08] hover:text-cream"
-            >
-              <X size={17} aria-hidden="true" />
-            </button>
-          </div>
-
-          <div className="space-y-1">
-            {navLinks.map((link, index) => {
-              const active = activeSection === link.href.slice(1);
-              const Icon = link.icon;
-              return (
-                <a
-                  key={link.label}
-                  href={sectionHref(link.href, sectionHrefPrefix)}
-                  onClick={() => setMenuOpen(false)}
-                  aria-label={link.label}
-                  aria-current={active ? "true" : undefined}
-                  title={link.label}
-                  className={[
-                    "relative flex min-h-12 items-center gap-3 rounded-[1rem] border px-3 text-sm font-semibold transition-[background-color,border-color,color,opacity,transform] duration-300",
-                    menuOpen ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0",
-                    active
-                      ? "border-transparent bg-cream/[0.045] text-cream"
-                      : "border-transparent text-cream/[0.68] hover:bg-cream/[0.045] hover:text-cream"
-                  ].join(" ")}
-                  style={{ transitionDelay: menuOpen ? `${70 + index * 38}ms` : "0ms" }}
-                >
-                  <Icon size={19} strokeWidth={active ? 2 : 1.6} aria-hidden="true" />
-                  <span>{link.label}</span>
-                </a>
-              );
-            })}
-          </div>
-
-          <div className={mobileActionClass}>{action}</div>
+        <div className="col-start-3 flex shrink-0 items-center justify-self-end">
+          <div className={desktopActionClass}>{action}</div>
+          <button
+            type="button"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={menuOpen}
+            className="-mr-2 grid h-10 w-10 place-items-center rounded-full text-cream/75 outline-none transition hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/40 sm:hidden"
+          >
+            {menuOpen ? <X size={19} aria-hidden="true" /> : <Menu size={19} aria-hidden="true" />}
+          </button>
         </div>
+      </div>
+
+      <div
+        aria-hidden={!menuOpen}
+        inert={menuOpen ? undefined : true}
+        className={[
+          "overflow-hidden transition-[max-height,opacity] duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] sm:hidden",
+          menuOpen ? "max-h-[24rem] opacity-100" : "max-h-0 opacity-0"
+        ].join(" ")}
+      >
+        <div className="border-t border-white/[0.06] px-5 pt-2">
+          {navLinks.map((link, index) => {
+            const active = activeSection === link.href.slice(1);
+            return (
+              <a
+                key={link.label}
+                href={sectionHref(link.href, sectionHrefPrefix)}
+                onClick={() => setMenuOpen(false)}
+                aria-current={active ? "true" : undefined}
+                className={[
+                  "flex min-h-12 items-center text-[0.95rem] font-medium tracking-tight transition-[color,opacity,transform] duration-300",
+                  menuOpen ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0",
+                  active ? "text-cream" : "text-cream/60"
+                ].join(" ")}
+                style={{ transitionDelay: menuOpen ? `${60 + index * 34}ms` : "0ms" }}
+              >
+                {link.label}
+              </a>
+            );
+          })}
+        </div>
+
+        <div className={mobileActionClass}>{action}</div>
       </div>
     </header>
   );
 }
 
-export function SiteFooter({
-  action,
-  sectionHrefPrefix = ""
-}: {
-  action?: ReactNode;
-  sectionHrefPrefix?: string;
-}) {
+/**
+ * Same language as the bar at the top: a hairline, plain type, nothing
+ * enclosed. The cream CTA that used to sit here is gone — the closing section
+ * directly above it already makes that ask, and two in a row read as nagging.
+ */
+export function SiteFooter({ sectionHrefPrefix = "" }: { sectionHrefPrefix?: string }) {
   return (
-    <footer className="relative z-10 px-6 py-12 text-cream sm:px-10 sm:py-14">
-      <div className="mx-auto w-full max-w-[78rem]">
-        <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-sm">
-            <Link
-              href="/"
-              aria-label="Trailgrad home"
-              className="inline-flex items-center gap-2 rounded-xl text-cream outline-none focus-visible:ring-2 focus-visible:ring-cream/35"
-            >
-              <span className="grid h-11 w-11 place-items-center rounded-[1rem] border border-cream/10 bg-cream/[0.025]">
-                <TrailgradMark className="h-8 w-8" />
-              </span>
-              <span className="text-2xl font-semibold tracking-tight text-cream">Trailgrad</span>
-            </Link>
-            <p className="mt-4 text-base leading-7 text-cream/62">
-              Practice with Maya, follow a simple trail, and see what to improve next.
-            </p>
-            <div className="mt-5 [&>*]:inline-flex [&>*]:items-center [&>*]:gap-2 [&>*]:rounded-lg [&>*]:border [&>*]:border-cream/75 [&>*]:bg-cream [&>*]:px-5 [&>*]:py-2.5 [&>*]:text-base [&>*]:font-semibold [&>*]:text-[#13234f] [&>*]:shadow-[0_16px_34px_-24px_rgba(3,10,31,0.72),inset_0_-1px_0_rgba(19,35,79,0.12)] [&>*]:transition [&>*]:hover:-translate-y-0.5 [&>*]:hover:bg-cream-soft [&>*]:hover:text-[#0d1b44]">
-              {action}
-            </div>
-          </div>
+    <footer className="relative z-10 border-t border-white/[0.06] px-5 py-10 sm:px-8">
+      <div className="mx-auto flex w-full max-w-[72rem] flex-col gap-8">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <Link
+            href="/"
+            aria-label="Trailgrad home"
+            className="inline-flex items-center gap-2.5 rounded-lg text-cream outline-none transition-opacity duration-300 hover:opacity-70 focus-visible:ring-2 focus-visible:ring-cream/40"
+          >
+            <TrailgradMark className="h-5 w-5" />
+            <span className="text-[0.95rem] font-medium tracking-tight">Trailgrad</span>
+          </Link>
 
-          <div className="grid gap-8 sm:grid-cols-3 lg:min-w-[34rem]">
-            {footerColumns.map((column) => (
-              <div key={column.heading}>
-                <p className="blueprint-label text-sm text-cream/45">{column.heading}</p>
-                <ul className="mt-4 space-y-3">
-                  {column.links.map((link) => (
-                    <li key={link.label}>
-                      <Link
-                        href={sectionHref(link.href, sectionHrefPrefix)}
-                        className="text-base font-semibold text-cream/68 transition hover:text-cream"
-                      >
-                        {link.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+          <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-7 gap-y-3">
+            {footerLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={sectionHref(link.href, sectionHrefPrefix)}
+                className="text-sm text-cream/50 outline-none transition-colors duration-300 hover:text-cream/90 focus-visible:ring-2 focus-visible:ring-cream/40"
+              >
+                {link.label}
+              </Link>
             ))}
-          </div>
+          </nav>
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t border-cream/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="blueprint-label text-sm text-cream/42">
+        <div className="flex flex-col gap-3 border-t border-white/[0.05] pt-7 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-cream/30">
             © {new Date().getFullYear()} Trailgrad · AI interview practice
           </p>
-          <div className="flex gap-4">
+          <div className="flex gap-6">
             <Link
               href="/terms"
-              className="blueprint-label text-sm text-cream/58 transition hover:text-cream"
+              className="text-xs text-cream/40 transition-colors duration-300 hover:text-cream/80"
             >
               Terms
             </Link>
             <Link
               href="/privacy"
-              className="blueprint-label text-sm text-cream/58 transition hover:text-cream"
+              className="text-xs text-cream/40 transition-colors duration-300 hover:text-cream/80"
             >
               Privacy
             </Link>

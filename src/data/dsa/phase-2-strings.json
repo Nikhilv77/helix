@@ -1097,7 +1097,7 @@
         "time": "O(n^2)",
         "space": "O(1)"
       },
-      "problemStatement": "Given a string s, return the longest palindromic substring in s.",
+      "problemStatement": "Given a string s, return its longest contiguous substring that reads the same forward and backward. If several answers have the same maximum length, any one is valid.",
       "constraints": ["1 <= s.length <= 1000.", "s consists of only English letters and digits."],
       "examples": [
         {

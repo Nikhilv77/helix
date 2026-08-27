@@ -9,6 +9,7 @@ import { authenticatedOwnerId } from "@/server/interview/owner";
 export const dynamic = "force-dynamic";
 
 const attemptSchema = z.object({
+  requestId: z.string().uuid(),
   action: z.enum(["open", "submit", "complete", "skip"]),
   dsaQuestionSlug: z.string().trim().min(1).max(140),
   answer: z.string().trim().max(10_000).optional(),
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
     // time on every "mark complete" click.
     const result = await getAppContainer().frontendRoadmapService.recordQuestionAttempt(
       ownerId,
-      parsed.data,
+      { ...parsed.data, idempotencyKey: parsed.data.requestId },
       { includeHome: false }
     );
     if (!result.recorded) {

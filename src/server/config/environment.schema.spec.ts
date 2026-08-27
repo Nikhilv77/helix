@@ -1,3 +1,4 @@
+import { AppConfigService } from "./app-config.service";
 import { validateEnvironment } from "./environment.schema";
 
 describe("validateEnvironment", () => {
@@ -53,6 +54,16 @@ describe("validateEnvironment", () => {
       groqDeciderModel: "openai/gpt-oss-20b",
       groqApiKey: undefined,
       interviewDailyLimit: 2,
+      practiceNonDsaEnabled: false,
+      // Defaults to an empty list rather than undefined: the report queue is
+      // closed to everyone until somebody is explicitly named.
+      operatorUserIds: [],
+      helpRequestWebhookUrl: undefined,
+      resendApiKey: undefined,
+      notificationEmailEnabled: false,
+      notificationFromEmail: undefined,
+      cronSecret: undefined,
+      appOrigin: undefined,
       livekitUrl: undefined,
       livekitApiKey: undefined,
       livekitApiSecret: undefined,
@@ -63,6 +74,44 @@ describe("validateEnvironment", () => {
       rapidApiKey: undefined,
       rapidApiHost: "judge0-ce.p.rapidapi.com"
     });
+    expect(config.notificationEmailEnabled).toBe(false);
+    expect(config.practiceNonDsaEnabled).toBe(false);
+  });
+
+  it("enables non-DSA Practice only through its explicit launch switch", () => {
+    expect(
+      validateEnvironment({ ...validEnvironment, PRACTICE_NON_DSA_ENABLED: "true" })
+        .practiceNonDsaEnabled
+    ).toBe(true);
+  });
+
+  it("keeps the application-config fallback launch-safe", () => {
+    const parsed = validateEnvironment(validEnvironment);
+    expect(
+      new AppConfigService({ ...parsed, practiceNonDsaEnabled: undefined }).practiceNonDsaEnabled
+    ).toBe(false);
+  });
+
+  it("enables notification email only through an explicit launch switch", () => {
+    expect(
+      validateEnvironment({
+        ...validEnvironment,
+        NOTIFICATION_EMAIL_ENABLED: "true",
+        RESEND_API_KEY: "re_test",
+        NOTIFICATION_FROM_EMAIL: "Trailgrad <hello@trailgrad.com>",
+        NEXT_PUBLIC_APP_URL: "https://app.trailgrad.com"
+      }).notificationEmailEnabled
+    ).toBe(true);
+  });
+
+  it("refuses to enable email without its sender and actionable app origin", () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        NOTIFICATION_EMAIL_ENABLED: "true",
+        RESEND_API_KEY: "re_test"
+      })
+    ).toThrow("NOTIFICATION_FROM_EMAIL is required when NOTIFICATION_EMAIL_ENABLED=true");
   });
 
   it("throws a clear error when DATABASE_URL is missing", () => {

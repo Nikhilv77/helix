@@ -1,8 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight, BookOpen, CalendarDays, Clock, Sparkles } from "lucide-react";
-import { TrailgradMark } from "@/components/brand/blueprint-art";
+import { ArrowRight } from "lucide-react";
 import { SiteFooter, SiteNav } from "@/components/marketing/chrome/site-chrome";
 import { PrimaryAction } from "@/components/marketing/home/primary-action";
 import { blogPosts } from "@/content/marketing/blog";
@@ -26,165 +24,99 @@ export function BlogIndexPage() {
 
   return (
     <div
-      className="marketing-theme editorial-theme blueprint min-h-screen overflow-x-clip"
+      className="blueprint marketing-theme min-h-screen overflow-x-clip"
       data-marketing-accent="orange"
     >
       <SiteNav
         actionKind="button"
         sectionHrefPrefix="/"
         action={
-          <PrimaryAction ariaLabel="Start" className="outline-none">
-            Start
+          <PrimaryAction ariaLabel="Start free" className="outline-none">
+            Start free
           </PrimaryAction>
         }
       />
 
-      <main className="relative z-10 px-5 pb-14 pt-32 sm:px-10 sm:pb-20 sm:pt-36">
-        <section className="relative mx-auto w-full max-w-[78rem]">
-          <div className="blog-rise mx-auto max-w-4xl text-center">
-            <span className="inline-flex items-center gap-2.5 rounded-full border border-cream/18 bg-cream/[0.045] px-3.5 py-1.5 sm:backdrop-blur-sm">
-              <TrailgradMark className="h-3.5 w-3.5 text-cream" />
-              <span className="blueprint-label whitespace-nowrap text-cream/78">
-                Trailgrad notes
-              </span>
-            </span>
-            <h1 className="display-heading mt-6 text-4xl text-cream sm:text-5xl lg:text-6xl">
+      <main className="marketing-theme-section relative z-10 px-5 pb-24 pt-36 sm:px-10 sm:pb-28 sm:pt-40">
+        <div className="mx-auto w-full max-w-[58rem]">
+          <header className="text-center">
+            <p className="blueprint-label text-[color:var(--dm-accent-soft)]">Trailgrad notes</p>
+            <h1
+              className="display-heading mt-5 text-cream"
+              style={{ fontSize: "clamp(2rem, 4.4vw, 3.6rem)" }}
+            >
               Clearer practice starts here.
             </h1>
-            <p className="mx-auto mt-7 max-w-2xl text-lg leading-relaxed text-cream/76 sm:text-xl">
-              Short reads on resumes, interview answers, and the small fixes that make practice feel
-              easier to use.
+            <p className="mx-auto mt-6 max-w-md text-lg leading-relaxed text-cream/70">
+              Short reads on resumes, interview answers, and the small fixes that make practice
+              easier.
             </p>
-          </div>
+          </header>
 
+          {/* The lead note gets the panel; the rest are rows, the way the home
+              page separates one artifact from a list. */}
           <Link
             href={`/blog/${featured.slug}`}
-            className="public-glass blog-feature group mt-14 grid gap-8 rounded-[1.75rem] p-5 transition lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:items-center lg:p-8"
+            className="public-glass group mt-14 block rounded-[1.5rem] px-6 py-7 transition-colors duration-300 hover:border-white/[0.16] sm:px-9 sm:py-9"
           >
-            <div className="relative order-2 lg:order-1">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="blueprint-label rounded-full border border-cream/18 bg-cream/[0.045] px-3 py-1 text-cream/64">
-                  Featured note
-                </span>
-                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-cream/56">
-                  <Clock size={15} aria-hidden="true" />
-                  {featured.readTime}
-                </span>
-              </div>
-              <h2 className="mt-6 max-w-xl text-3xl font-semibold tracking-tight text-cream sm:text-[2.15rem]">
-                {featured.title}
-              </h2>
-              <p className="mt-5 max-w-xl text-base leading-7 text-cream/68 sm:text-lg">
-                {featured.dek}
-              </p>
-
-              <div className="mt-7 grid gap-4 py-2">
-                {featured.summary.map((item) => (
-                  <span
-                    key={item}
-                    className="inline-flex items-start gap-3 text-base font-semibold leading-7 text-cream/72 sm:text-lg"
-                  >
-                    <span className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-cream/70" />
-                    {item}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-6 flex items-center justify-between gap-6">
-                <div>
-                  <p className="blueprint-label text-cream/38">{featured.metricLabel}</p>
-                  <p className="mt-1 font-mono text-3xl font-semibold text-cream">
-                    {featured.metric}
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-2 text-sm font-bold text-cream transition group-hover:gap-3">
-                  Read note <ArrowRight size={16} aria-hidden="true" />
-                </span>
-              </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="blueprint-label text-[color:var(--dm-accent-soft)]">
+                {featured.category}
+              </span>
+              <span className="text-cream/20">·</span>
+              <span className="text-sm text-cream/35">{featured.readTime}</span>
             </div>
 
-            <div className="relative order-1 min-h-[19rem] rounded-[1.4rem] lg:order-2 lg:min-h-[31rem]">
-              <Image
-                src={featured.coverImage}
-                alt={featured.coverAlt}
-                fill
-                priority
-                sizes="(min-width: 1024px) 43rem, 92vw"
-                className="object-contain p-2 transition duration-700 group-hover:scale-[1.025] sm:p-4"
-              />
-            </div>
+            <h2 className="mt-5 max-w-2xl text-2xl font-medium tracking-tight text-cream sm:text-3xl">
+              {featured.title}
+            </h2>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-cream/60">{featured.dek}</p>
+
+            <ul className="mt-7 grid gap-3 border-t border-white/[0.06] pt-7">
+              {featured.summary.map((item) => (
+                <li key={item} className="flex gap-3 text-sm leading-6 text-cream/55">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[color:var(--dm-accent)]" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+
+            <span className="mt-7 inline-flex items-center gap-2 text-sm font-medium text-cream transition-[gap] duration-300 group-hover:gap-3">
+              Read note <ArrowRight size={15} aria-hidden="true" />
+            </span>
           </Link>
 
-          <section className="mt-14 grid gap-6">
-            {rest.map((post, index) => (
+          <div className="mt-4">
+            {rest.map((post) => (
               <Link
                 key={post.slug}
                 href={`/blog/${post.slug}`}
-                className="public-glass blog-note-card group grid gap-5 rounded-[1.25rem] p-4 transition sm:grid-cols-[13rem_1fr_auto] sm:items-center"
-                style={{ animationDelay: `${180 + index * 130}ms` }}
+                className="group flex items-baseline gap-6 border-b border-white/[0.06] py-7"
               >
-                <div className="relative min-h-[12rem] rounded-[1.15rem] border border-cream/[0.04] sm:min-h-[8.5rem]">
-                  <Image
-                    src={post.coverImage}
-                    alt={post.coverAlt}
-                    fill
-                    sizes="(min-width: 1024px) 13rem, 92vw"
-                    className="object-contain p-2 transition duration-700 group-hover:scale-[1.035]"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex flex-wrap items-center gap-3 text-sm font-semibold text-cream/48">
-                    <span className="inline-flex items-center gap-1.5">
-                      <BookOpen size={15} aria-hidden="true" />
-                      {post.category}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <CalendarDays size={15} aria-hidden="true" />
-                      {post.readTime}
-                    </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="blueprint-label text-cream/35">{post.category}</span>
+                    <span className="text-cream/15">·</span>
+                    <span className="text-sm text-cream/30">{post.readTime}</span>
                   </div>
-                  <h3 className="mt-3 text-xl font-semibold tracking-tight text-cream sm:text-2xl">
+                  <h3 className="mt-3 text-xl font-medium tracking-tight text-cream sm:text-2xl">
                     {post.title}
                   </h3>
-                  <p className="mt-2 max-w-2xl text-base leading-7 text-cream/62">{post.dek}</p>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-cream/50">{post.dek}</p>
                 </div>
 
-                <span className="inline-flex items-center gap-2 text-sm font-bold text-cream transition group-hover:gap-3 sm:justify-self-end">
-                  Read <ArrowRight size={15} aria-hidden="true" />
-                </span>
+                <ArrowRight
+                  size={16}
+                  aria-hidden="true"
+                  className="shrink-0 text-cream/25 transition-[color,transform] duration-300 group-hover:translate-x-1 group-hover:text-cream/70"
+                />
               </Link>
             ))}
-          </section>
-
-          <section className="blog-rise mt-14 grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
-            <div>
-              <Sparkles size={34} strokeWidth={1.7} className="text-cream" aria-hidden="true" />
-              <h2 className="mt-5 max-w-lg text-2xl font-semibold tracking-tight text-cream sm:text-3xl">
-                Notes you can use in the next round.
-              </h2>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              {["Resume stories", "Live answers", "Next fixes"].map((item) => (
-                <div key={item} className="public-subtle-card rounded-[1.1rem] p-5">
-                  <p className="blueprint-label text-cream/40">{item}</p>
-                  <p className="mt-3 text-base leading-7 text-cream/64">
-                    Small, practical ideas you can turn into one better practice session.
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-        </section>
+          </div>
+        </div>
       </main>
-      <SiteFooter
-        sectionHrefPrefix="/"
-        action={
-          <PrimaryAction className="inline-flex items-center gap-2">
-            Start free <ArrowRight size={15} aria-hidden="true" />
-          </PrimaryAction>
-        }
-      />
+
+      <SiteFooter sectionHrefPrefix="/" />
     </div>
   );
 }

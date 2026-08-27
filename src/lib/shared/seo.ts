@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const siteName = "Trailgrad";
-export const defaultTitle = "Trailgrad | AI Interview Practice Built From Your Resume";
+export const defaultTitle = "Trailgrad | Software Engineering Interview Prep Built Around You";
 export const defaultDescription =
-  "Turn your resume into a focused interview prep path, practice live AI mock interviews with Maya, and get reports that show what you can defend.";
+  "Prepare for software engineering interviews with resume-based practice, realistic mock interviews, clear feedback, and help when you get stuck.";
 export const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://trailgrad.com";
 
 export function pageTitle(title: string): string {

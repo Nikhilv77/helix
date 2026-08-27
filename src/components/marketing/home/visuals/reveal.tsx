@@ -230,3 +230,52 @@ export function TypeOut({
   );
 }
 
+/**
+ * Drives a set of panels that fade in, hold, fade out, and hand over to the
+ * next — the hero's pitches, the roadmap and the ask all run on this.
+ *
+ * There is deliberately no pause. Hover-to-pause was stalling the cascade
+ * whenever a pointer crossed the section, and on touch it stranded outright:
+ * `mouseenter` is emulated with no matching leave, so one tap stopped the
+ * rotation for the rest of the session. Reduced motion still holds everything
+ * on the first panel, which is the escape hatch that actually matters.
+ */
+export function useRotator({
+  length,
+  holdMs,
+  exitMs,
+  enabled = true
+}: {
+  length: number;
+  holdMs: number;
+  exitMs: number;
+  /** Gate for panels below the fold: hold at the first until scrolled to. */
+  enabled?: boolean;
+}): { index: number; phase: "in" | "out" } {
+  const [index, setIndex] = useState(0);
+  const [phase, setPhase] = useState<"in" | "out">("in");
+  const [rotating, setRotating] = useState(false);
+
+  // Off until the client confirms motion is welcome. Rotation is the one thing
+  // here that cannot be honoured by simply shortening a duration.
+  useEffect(() => {
+    if (!prefersReducedMotion()) setRotating(true);
+  }, []);
+
+  useEffect(() => {
+    if (!rotating || !enabled) return;
+
+    if (phase === "in") {
+      const timer = window.setTimeout(() => setPhase("out"), holdMs);
+      return () => window.clearTimeout(timer);
+    }
+
+    const timer = window.setTimeout(() => {
+      setIndex((current) => (current + 1) % length);
+      setPhase("in");
+    }, exitMs);
+    return () => window.clearTimeout(timer);
+  }, [rotating, enabled, phase, index, length, holdMs, exitMs]);
+
+  return { index, phase };
+}

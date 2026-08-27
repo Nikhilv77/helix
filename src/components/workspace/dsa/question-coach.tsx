@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { recordHintsUsed } from "@/lib/dsa/hint-tracker";
 import {
   ChevronDown,
   Lightbulb,
@@ -25,6 +26,7 @@ import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
  */
 export function QuestionCoach({
   title,
+  slug,
   pattern,
   promptSummary,
   concepts,
@@ -33,6 +35,8 @@ export function QuestionCoach({
   approachNames
 }: {
   title: string;
+  /** Identifies the question in the hint tracker the editor reads. */
+  slug: string;
   pattern: string;
   promptSummary: string;
   concepts: string[];
@@ -49,6 +53,12 @@ export function QuestionCoach({
   const introduced = useRef(false);
 
   const patternLabel = pattern.replace(/-/g, " ");
+
+  // Published for the editor beside this panel: a help request reports how many
+  // hints were taken before a human was asked for.
+  useEffect(() => {
+    recordHintsUsed(slug, revealed);
+  }, [revealed, slug]);
 
   // Safe to hear before attempting: names the shape of the problem and how to
   // start, without any part of the answer.
