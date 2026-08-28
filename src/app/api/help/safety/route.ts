@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       return apiSuccess({ unblocked: true });
     }
 
-    // Its own quota is intentional: exhausting "Ask someone" must never remove
+    // Its own quota is intentional: exhausting "Ask a mate" must never remove
     // the ability to end and report an unsafe conversation.
     await getSharedGuard(app.config).enforce(RATE_LIMIT_POLICIES.helpSafety, ownerId);
 

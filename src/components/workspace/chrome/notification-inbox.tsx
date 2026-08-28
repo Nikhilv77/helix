@@ -69,31 +69,31 @@ function notificationPresentation(kind: string, teacherName: string): Notificati
     case "HELP_REQUEST_OPENED":
       return {
         icon: HandHelping,
-        label: "Help request",
+        label: "Trailmate request",
         iconClass: "bg-[#71d6a5]/10 text-[#9be8c1]"
       };
     case "HELP_REQUEST_CLAIMED":
       return {
         icon: UserCheck,
-        label: "Help accepted",
+        label: "Trailmate joined",
         iconClass: "bg-[#8fd6ff]/10 text-[#a8e1ff]"
       };
     case "HELP_REQUEST_RESOLVED":
       return {
         icon: CircleCheckBig,
-        label: "Help completed",
+        label: "Session completed",
         iconClass: "bg-[#71d6a5]/10 text-[#9be8c1]"
       };
     case "HELP_REQUEST_EXPIRED":
       return {
         icon: TimerOff,
-        label: "Help request closed",
+        label: "Trailmate request closed",
         iconClass: "bg-cream/[0.055] text-cream/48"
       };
     case "HELP_FEEDBACK_RECEIVED":
       return {
         icon: Heart,
-        label: "Peer thank-you",
+        label: "Mate thank-you",
         iconClass: "bg-[#f6b98a]/10 text-[#f6c9a6]"
       };
     default:

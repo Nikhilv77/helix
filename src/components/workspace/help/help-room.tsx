@@ -88,7 +88,7 @@ export function HelpRoom({ requestId, returnTo }: { requestId: string; returnTo:
       .then(async (response) => {
         const payload = await response.json().catch(() => null);
         if (!response.ok || !payload?.success || !payload.data) {
-          throw new Error(payload?.error?.message ?? "Could not open this help room.");
+          throw new Error(payload?.error?.message ?? "Could not open this Trailmate room.");
         }
         return payload.data as HelpRoomData;
       })
@@ -116,7 +116,9 @@ export function HelpRoom({ requestId, returnTo }: { requestId: string; returnTo:
       })
       .catch((caught) => {
         if (!cancelled) {
-          setError(caught instanceof Error ? caught.message : "Could not open this help room.");
+          setError(
+            caught instanceof Error ? caught.message : "Could not open this Trailmate room."
+          );
         }
       })
       .finally(() => {
@@ -239,7 +241,7 @@ export function HelpRoom({ requestId, returnTo }: { requestId: string; returnTo:
     return (
       <div className="grid min-h-[calc(100dvh-4.25rem)] place-items-center">
         <span className="inline-flex items-center gap-2 text-sm text-cream/45">
-          <Loader2 size={15} className="animate-spin" /> Opening help room…
+          <Loader2 size={15} className="animate-spin" /> Opening Trailmate room…
         </span>
       </div>
     );
@@ -252,7 +254,7 @@ export function HelpRoom({ requestId, returnTo }: { requestId: string; returnTo:
           <p className="text-lg font-semibold text-cream">Room unavailable</p>
           <p className="mt-2 text-sm leading-6 text-cream/45">{error}</p>
           <Link href="/help" className="mt-5 inline-block text-sm text-[var(--workspace-accent)]">
-            Back to Help
+            Back to Trailmate
           </Link>
         </div>
       </div>
@@ -281,14 +283,14 @@ export function HelpRoom({ requestId, returnTo }: { requestId: string; returnTo:
         )}
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
-            Live pair help
+            Live Trailmate
           </p>
           <h1 className="truncate text-[15px] font-semibold text-cream">
             {room.title} with {room.peer?.label ?? "your peer"}
           </h1>
         </div>
         <span className="rounded-full bg-white/[0.045] px-2.5 py-1 text-[11px] text-cream/44 ring-1 ring-inset ring-white/[0.045]">
-          {room.seat === "learner" ? "Candidate" : "Helper"}
+          {room.seat === "learner" ? "Candidate" : "Trailmate"}
         </span>
         <span className="flex-1" />
         <HelpCall

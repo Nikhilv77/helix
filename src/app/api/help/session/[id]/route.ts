@@ -108,8 +108,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
               await app.notificationDispatcher.dispatch({
                 ownerId: helpRequest.helperId,
                 kind: NotificationKind.HELP_FEEDBACK_RECEIVED,
-                title: `${learner.label} thanked you for helping`,
-                body: `Your peer-help conversation made a difference.`,
+                title: `${learner.label} thanked you for your support`,
+                body: `Your Trailmate session made a difference.`,
                 href: "/help",
                 subjectId: helpRequest.id
               });
@@ -173,7 +173,7 @@ function notifyConversationEnded(
         request.helperId!
       ]);
       const learnerName = profiles.get(request.learnerId)?.label ?? "Your peer";
-      const helperName = profiles.get(request.helperId!)?.label ?? "Your helper";
+      const helperName = profiles.get(request.helperId!)?.label ?? "Your Trailmate";
       const title = findQuestion(request.questionSlug)?.question.title ?? request.questionSlug;
       await Promise.allSettled([
         app.notificationDispatcher.dispatch({
@@ -188,7 +188,7 @@ function notifyConversationEnded(
           ownerId: request.helperId!,
           kind: NotificationKind.HELP_REQUEST_RESOLVED,
           title: `Your session with ${learnerName} is complete`,
-          body: `Thanks for helping ${learnerName} with ${title}.`,
+          body: `Thanks for supporting ${learnerName} with ${title}.`,
           href: "/help",
           subjectId: request.id
         })

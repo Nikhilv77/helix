@@ -45,7 +45,7 @@ describe("HelpRequestToast", () => {
 
     render(<HelpRequestToast />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Accept & join" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Join them" }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -80,7 +80,7 @@ describe("HelpRequestToast", () => {
           body: JSON.stringify({ action: "decline" })
         })
       );
-      expect(screen.queryByRole("complementary", { name: "New help request" })).toBeNull();
+      expect(screen.queryByRole("complementary", { name: "New Trailmate request" })).toBeNull();
     });
     expect(routerPush).not.toHaveBeenCalled();
   });

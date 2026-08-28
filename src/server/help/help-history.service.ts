@@ -38,7 +38,8 @@ export class HelpHistoryService {
       positiveHelps,
       availabilityCredits,
       activeConversation,
-      topHelpers
+      topHelpers,
+      viewer
     ] = await Promise.all([
       this.prisma.helpRequest.count({ where: { learnerId: ownerId } }),
       this.prisma.helpRequest.findMany({
@@ -67,10 +68,12 @@ export class HelpHistoryService {
         }
       }),
       this.activeConversation(ownerId),
-      this.topHelpers()
+      this.topHelpers(),
+      this.participant(ownerId)
     ]);
 
     return {
+      viewer,
       helpReceived,
       peopleHelped: new Set(helpedPeople.map((row) => row.learnerId)).size,
       activeReceived,
@@ -295,7 +298,7 @@ export class HelpHistoryService {
         resolvedAt: row.resolvedAt?.getTime() ?? null,
         closedAt: row.closedAt?.getTime() ?? null,
         sessionDurationMs: duration,
-        learnerRating: input.side === "given" ? (row.session?.learnerRating ?? null) : null,
+        learnerRating: row.session?.learnerRating ?? null,
         canReportOrBlock: Boolean(participantId && row.status === HelpRequestStatus.CLAIMED)
       };
     });

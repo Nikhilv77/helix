@@ -53,7 +53,7 @@ const openSchema = z.object({
   code: z
     .string()
     .max(40_000)
-    .refine((value) => value.trim().length > 0, "Write an attempt before asking for help"),
+    .refine((value) => value.trim().length > 0, "Write an attempt before asking a mate"),
   testOutput: z.string().max(20_000).nullable().optional(),
   failingTests: z.number().int().min(0).max(10_000).nullable().optional(),
   runStatus: z.string().max(160).nullable().optional(),
@@ -73,9 +73,9 @@ const FAILURE_STATUS: Record<string, { status: number; message: string }> = {
   ALREADY_LIVE: { status: 409, message: "You already have an open request for this problem." },
   ENGAGEMENT_ACTIVE: {
     status: 409,
-    message: "Finish, withdraw, or hand back your current peer-help engagement first."
+    message: "Finish, withdraw, or hand back your current Trailmate session first."
   },
-  NOT_FOUND: { status: 404, message: "That help request no longer exists." },
+  NOT_FOUND: { status: 404, message: "That Trailmate request no longer exists." },
   NOT_THE_LEARNER: { status: 403, message: "That request is not yours to cancel." }
 };
 
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     const parsed = openSchema.safeParse(await request.json().catch(() => null));
 
     if (!parsed.success) {
-      throw new ApiRouteError(400, "BAD_REQUEST", "Help request payload is invalid", {
+      throw new ApiRouteError(400, "BAD_REQUEST", "Trailmate request payload is invalid", {
         messages: parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`)
       });
     }
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       throw new ApiRouteError(
         409,
         "HELP_NO_AVAILABLE_HELPERS",
-        "No qualified helpers are available right now, so your invitation was not sent."
+        "No Trailmates are available right now, so your invitation was not sent."
       );
     }
 
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
         app.notificationDispatcher.dispatch({
           ownerId: helper.ownerId,
           kind: NotificationKind.HELP_REQUEST_OPENED,
-          title: `${learner.label} needs help with ${question.title}`,
+          title: `${learner.label} asked for a mate for ${question.title}`,
           body,
           href: `/help?request=${helpRequest.id}`,
           subjectId: helpRequest.id
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
       throw new ApiRouteError(
         503,
         "HELP_INVITATION_NOT_SENT",
-        "We could not send a helper invitation. Your request was not left waiting; please try again."
+        "We could not send a Trailmate invitation. Your request was not left waiting; please try again."
       );
     }
 
@@ -293,7 +293,7 @@ function translate(error: unknown): unknown {
 
   const mapped = FAILURE_STATUS[error.reason] ?? {
     status: 409,
-    message: "That help request cannot change right now."
+    message: "That Trailmate request cannot change right now."
   };
 
   return new ApiRouteError(mapped.status, `HELP_${error.reason}`, mapped.message);

@@ -16,7 +16,7 @@ describe("HelperReadyToast", () => {
       />
     );
 
-    const button = screen.getByRole("button", { name: /join help room/i });
+    const button = screen.getByRole("button", { name: /join trailmate room/i });
     const toast = button.closest("aside");
     expect(toast?.parentElement).toBe(document.body);
     expect(toast?.className).toContain("top-1/2");

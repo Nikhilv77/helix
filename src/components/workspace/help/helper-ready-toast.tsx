@@ -54,7 +54,7 @@ export function HelperReadyToast({
             </span>
           )}
           <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
-            {helper.label} accepted
+            {helper.label} is your Trailmate
           </p>
           <h2 className="mt-1.5 text-xl font-semibold tracking-[-0.02em] text-cream">
             Meet {helper.label}
@@ -70,7 +70,7 @@ export function HelperReadyToast({
             className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-cream px-4 text-[13px] font-semibold text-[#17181a] transition hover:bg-white"
           >
             <Mic size={14} aria-hidden="true" />
-            Join help room
+            Join Trailmate room
             <ArrowRight size={14} aria-hidden="true" />
           </button>
         </div>

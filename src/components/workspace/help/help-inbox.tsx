@@ -87,7 +87,7 @@ export function HelpInbox({
         helpedPeople: payload.data.helpedPeopleCount ?? 0
       });
     } catch {
-      setError("Could not load the help inbox.");
+      setError("Could not load the Trailmate inbox.");
     } finally {
       setLoading(false);
     }
@@ -182,14 +182,14 @@ export function HelpInbox({
 
       {claimed.length > 0 ? (
         <section>
-          <h2 className="text-[15px] font-semibold text-cream">You said you would help</h2>
+          <h2 className="text-[15px] font-semibold text-cream">Your active Trailmate session</h2>
           <div className="mt-3 space-y-3">
             {claimed.map((item) => (
               <RequestCard
                 key={item.id}
                 request={item}
                 busy={busy === item.id}
-                primary={{ label: "Mark as helped", action: "resolve" }}
+                primary={{ label: "Mark complete", action: "resolve" }}
                 secondary={{ label: "Hand back", action: "release" }}
                 onAct={act}
                 onCallEnded={() => void load()}
@@ -204,7 +204,7 @@ export function HelpInbox({
       {showOpen || visibleOpen.length > 0 ? (
         <section>
           <h2 className="text-[15px] font-semibold text-cream">
-            {showOpen ? "People you may be able to help" : "Help request"}
+            {showOpen ? "People looking for a mate" : "Trailmate request"}
           </h2>
 
           {visibleOpen.length === 0 ? (
@@ -218,7 +218,7 @@ export function HelpInbox({
                   key={item.id}
                   request={item}
                   busy={busy === item.id}
-                  primary={{ label: showOpen ? "Help them" : "Accept & join", action: "claim" }}
+                  primary={{ label: "Join them", action: "claim" }}
                   secondary={{ label: "Not this one", action: "decline" }}
                   onAct={act}
                   onCallEnded={() => void load()}
@@ -230,7 +230,7 @@ export function HelpInbox({
         </section>
       ) : claimed.length === 0 ? (
         <p className="rounded-xl border border-cream/10 bg-cream/[0.03] px-4 py-8 text-center text-[13px] text-cream/45">
-          No live help conversation right now.
+          No live Trailmate session right now.
         </p>
       ) : null}
     </div>

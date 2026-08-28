@@ -24,7 +24,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     const seat = participantSeat(helpRequest, ownerId);
     if (!seat) throw new ApiRouteError(403, "HELP_ROOM_FORBIDDEN", "This room is private");
     if (helpRequest.status !== HelpRequestStatus.CLAIMED) {
-      throw new ApiRouteError(409, "HELP_ROOM_CLOSED", "This help room is no longer active");
+      throw new ApiRouteError(409, "HELP_ROOM_CLOSED", "This Trailmate room is no longer active");
     }
 
     const session = await app.helpSessionService.forRequest(id);
@@ -108,7 +108,7 @@ function participantSeat(
 function translate(error: unknown): unknown {
   if (!(error instanceof HelpRequestError)) return error;
   if (error.reason === "NOT_FOUND") {
-    return new ApiRouteError(404, "HELP_NOT_FOUND", "That help room does not exist");
+    return new ApiRouteError(404, "HELP_NOT_FOUND", "That Trailmate room does not exist");
   }
   if (error.reason === "NOT_THE_HELPER" || error.reason === "NOT_THE_LEARNER") {
     return new ApiRouteError(403, "HELP_ROOM_FORBIDDEN", "This room is private");

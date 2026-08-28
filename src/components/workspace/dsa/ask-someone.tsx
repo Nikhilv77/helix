@@ -179,7 +179,7 @@ export function AskSomeone({
     if (helperCount === 0) {
       setNotice({
         kind: "error",
-        title: "No qualified helpers are available",
+        title: "No Trailmates are available",
         message: "Your invitation was not sent. Keep working with Maya and try again shortly."
       });
       return;
@@ -232,7 +232,7 @@ export function AskSomeone({
         }
         if (payload?.error?.code === "HELP_REQUEST_RATE_LIMITED") {
           beginCooldown(payload.error.details?.retryAfterMs ?? DEFAULT_COOLDOWN_MS);
-          setNotice({ kind: "cooldown", title: "Ask Someone is cooling down" });
+          setNotice({ kind: "cooldown", title: "Ask a mate is cooling down" });
           return;
         }
         if (
@@ -243,7 +243,7 @@ export function AskSomeone({
             kind: "error",
             title:
               payload.error.code === "HELP_NO_AVAILABLE_HELPERS"
-                ? "No qualified helpers are available"
+                ? "No Trailmates are available"
                 : "We couldn’t send the invitation",
             message: payload.error.message ?? "No invitation was sent. Please try again."
           });
@@ -323,12 +323,12 @@ export function AskSomeone({
         <div className="flex w-full flex-wrap items-center gap-2.5">
           <span className="inline-flex h-10 items-center gap-2 rounded-xl border border-cream/12 bg-cream/[0.05] px-3.5 text-[13px] font-medium text-cream/75">
             <Check size={13} aria-hidden="true" style={{ color: "var(--workspace-accent)" }} />
-            {live.helper?.label ?? "Your helper"} is ready to help
+            {live.helper?.label ?? "Your Trailmate"} is ready
           </span>
           <SafetyControls requestId={live.id} onActioned={() => void refresh()} />
           <HelperReadyToast
             title={title}
-            helper={live.helper ?? { label: "Your helper", headline: null, profileImage: null }}
+            helper={live.helper ?? { label: "Your Trailmate", headline: null, profileImage: null }}
             onJoin={() =>
               router.push(peerHelpRoomHref(live.id, `/dsa-questions/${encodeURIComponent(slug)}`))
             }
@@ -364,8 +364,8 @@ export function AskSomeone({
               <>
                 <Check size={13} aria-hidden="true" style={{ color: "var(--workspace-accent)" }} />
                 {invitationsSent === 1
-                  ? "Invitation sent to 1 qualified helper — waiting"
-                  : `Invitations sent to ${invitationsSent} qualified helpers — waiting`}
+                  ? "Invitation sent to 1 Trailmate — waiting"
+                  : `Invitations sent to ${invitationsSent} Trailmates — waiting`}
               </>
             )}
           </span>
@@ -391,7 +391,7 @@ export function AskSomeone({
           type="button"
           onClick={() => void ask()}
           disabled={pending || !code.trim() || cooldownSeconds > 0}
-          title="Ask a person who has already solved this"
+          title="Ask a Trailmate who has already solved this"
           className="inline-flex h-10 items-center gap-2 rounded-xl border border-cream/12 bg-cream/[0.05] px-3.5 text-[13px] font-medium text-cream/80 transition hover:border-cream/25 hover:text-cream disabled:pointer-events-none disabled:opacity-45"
         >
           {pending ? (
@@ -399,15 +399,13 @@ export function AskSomeone({
           ) : (
             <UserRound size={13} aria-hidden="true" />
           )}
-          {cooldownSeconds > 0
-            ? `Ask again in ${formatCooldown(cooldownSeconds)}`
-            : "Ask someone"}
+          {cooldownSeconds > 0 ? `Ask again in ${formatCooldown(cooldownSeconds)}` : "Ask a mate"}
         </button>
         {helperCount === null ? null : (
           <span className="text-[12.5px] text-cream/40">
             {helperCount === 0
-              ? "No qualified helpers are available right now. An invitation will not be sent."
-              : `${helperCount} qualified ${helperCount === 1 ? "helper is" : "helpers are"} available.`}
+              ? "No Trailmates are available right now. An invitation will not be sent."
+              : `${helperCount} ${helperCount === 1 ? "Trailmate is" : "Trailmates are"} available.`}
           </span>
         )}
       </div>

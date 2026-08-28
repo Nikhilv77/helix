@@ -31,7 +31,7 @@ const FAILURE_STATUS: Record<string, { status: number; message: string }> = {
   },
   HELPER_UNAVAILABLE: {
     status: 409,
-    message: "Resume, withdraw, or hand back your current peer-help engagement first."
+    message: "Resume, withdraw, or hand back your current Trailmate session first."
   },
   SESSION_ALREADY_STARTED: {
     status: 409,
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         try {
           const profiles = await app.helpHistoryService.participants([updated.learnerId, helperId]);
           const learnerName = profiles.get(updated.learnerId)?.label ?? "Your peer";
-          const helperName = profiles.get(helperId)?.label ?? "Your helper";
+          const helperName = profiles.get(helperId)?.label ?? "Your Trailmate";
           const deliveries = [
             app.notificationDispatcher.dispatch({
               ownerId: updated.learnerId,
@@ -98,8 +98,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
                 ? `${helperName} accepted your ${title} request`
                 : `Your session with ${helperName} is complete`,
               body: claimed
-                ? `${helperName} is ready to meet you in the private peer-help room.`
-                : `You can review this conversation anytime from Peer Help.`,
+                ? `${helperName} is ready to meet you in the private Trailmate room.`
+                : `You can review this conversation anytime from Trailmate.`,
               href: claimed
                 ? `/help?request=${updated.id}&join=1`
                 : `/dsa-questions/${updated.questionSlug}`,
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
                 ownerId: helperId,
                 kind: NotificationKind.HELP_REQUEST_RESOLVED,
                 title: `Your session with ${learnerName} is complete`,
-                body: `Thanks for helping ${learnerName} with ${title}.`,
+                body: `Thanks for supporting ${learnerName} with ${title}.`,
                 href: "/help",
                 subjectId: updated.id
               })

@@ -61,6 +61,7 @@ export interface HelpHistoryPage {
 }
 
 export interface HelpOverview {
+  viewer: HelpHistoryParticipant;
   helpReceived: number;
   peopleHelped: number;
   activeReceived: number;

@@ -44,7 +44,7 @@ describe("ActivePeerHelpToast", () => {
 
     render(<ActivePeerHelpToast />);
 
-    expect(await screen.findByText("Peer help with Asha Verma")).toBeTruthy();
+    expect(await screen.findByText("Trailmate with Asha Verma")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Join" }));
     await waitFor(() =>
       expect(routerPush).toHaveBeenCalledWith(
@@ -69,8 +69,8 @@ describe("ActivePeerHelpToast", () => {
       </>
     );
 
-    expect(await screen.findByRole("button", { name: /join help room/i })).toBeTruthy();
-    await waitFor(() => expect(screen.queryByText("Peer help with Asha Verma")).toBeNull());
+    expect(await screen.findByRole("button", { name: /join trailmate room/i })).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText("Trailmate with Asha Verma")).toBeNull());
   });
 
   it("removes the room nudge immediately when either participant ends the meeting", async () => {
@@ -83,9 +83,9 @@ describe("ActivePeerHelpToast", () => {
     );
 
     render(<ActivePeerHelpToast />);
-    expect(await screen.findByText("Peer help with Asha Verma")).toBeTruthy();
+    expect(await screen.findByText("Trailmate with Asha Verma")).toBeTruthy();
 
     act(() => announcePeerHelpEnded(activeMeeting.requestId));
-    await waitFor(() => expect(screen.queryByText("Peer help with Asha Verma")).toBeNull());
+    await waitFor(() => expect(screen.queryByText("Trailmate with Asha Verma")).toBeNull());
   });
 });

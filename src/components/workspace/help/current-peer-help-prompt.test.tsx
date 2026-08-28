@@ -48,7 +48,9 @@ describe("CurrentPeerHelpPrompt", () => {
     render(<CurrentPeerHelpPrompt />);
     act(() => showCurrentPeerHelp());
 
-    expect(await screen.findByText("You’re waiting for help with Contains Duplicate")).toBeTruthy();
+    expect(
+      await screen.findByText("You’ve already asked a mate about Contains Duplicate")
+    ).toBeTruthy();
     const backdrop = screen.getByTestId("current-peer-help-backdrop");
     expect(backdrop.className).toContain("backdrop-blur-[5px]");
     expect(backdrop.className).toContain("bg-black/25");
@@ -86,7 +88,7 @@ describe("CurrentPeerHelpPrompt", () => {
     render(<CurrentPeerHelpPrompt />);
     act(() => showCurrentPeerHelp());
 
-    const join = await screen.findByRole("button", { name: "Join room" });
+    const join = await screen.findByRole("button", { name: "Join Trailmate room" });
     expect(screen.getByRole("button", { name: "Hand back" })).toBeTruthy();
     fireEvent.click(join);
     expect(routerPush).toHaveBeenCalledWith(`/help/room/${requestId}?from=%2Fpractice`);

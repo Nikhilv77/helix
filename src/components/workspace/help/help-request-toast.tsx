@@ -118,7 +118,7 @@ export function HelpRequestToast() {
 
   return (
     <aside
-      aria-label="New help request"
+      aria-label="New Trailmate request"
       aria-live="polite"
       className="fixed inset-x-3 top-16 z-[75] ml-auto max-w-[24rem] overflow-hidden rounded-2xl  bg-[#18191c]/[0.98] shadow-[0_24px_80px_-28px_rgba(0,0,0,0.95)] backdrop-blur-xl sm:right-5 sm:top-5"
     >
@@ -144,7 +144,7 @@ export function HelpRequestToast() {
           )}
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--workspace-accent)]">
-              {request.learner?.label ?? "A candidate"} needs help
+              {request.learner?.label ?? "A candidate"} asked for a mate
             </p>
             <p className="mt-1 truncate text-[14px] font-semibold text-cream">{request.title}</p>
             <p className="mt-1 text-[12px] text-cream/45">
@@ -168,7 +168,7 @@ export function HelpRequestToast() {
             ) : (
               <Mic size={13} aria-hidden="true" />
             )}
-            Accept & join
+            Join them
           </button>
           <button
             type="button"

@@ -5,8 +5,8 @@ import { safePeerHelpReturnTo } from "@/lib/help/help-room-navigation";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
-  "Help room",
-  "A private voice and live-code room for focused peer help."
+  "Trailmate room",
+  "A private voice and live-code room for a focused Trailmate session."
 );
 
 export default async function HelpRoomPage({

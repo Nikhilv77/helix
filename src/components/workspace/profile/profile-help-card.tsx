@@ -8,8 +8,8 @@ import { HelpInbox, type HelpInboxStats } from "@/components/workspace/help/help
 const EMPTY_STATS: HelpInboxStats = { available: 0, claimed: 0, helpedPeople: 0 };
 
 function peopleLabel(count: number): string {
-  if (count === 0) return "Help someone";
-  return `Helped ${count} ${count === 1 ? "person" : "people"}`;
+  if (count === 0) return "Become a Trailmate";
+  return `Supported ${count} ${count === 1 ? "person" : "people"}`;
 }
 
 /** Compact profile entry point for helping, with the full inbox in a dialog. */
@@ -105,7 +105,7 @@ export function ProfileHelpCard() {
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-2">
               <span className="text-[15px] font-semibold text-cream">
-                {loading ? "Your helper activity" : peopleLabel(stats.helpedPeople)}
+                {loading ? "Your Trailmate activity" : peopleLabel(stats.helpedPeople)}
               </span>
               {active > 0 ? (
                 <span className="rounded-full bg-[var(--workspace-accent)] px-2 py-0.5 text-[10.5px] font-bold text-[#17191a]">
@@ -115,12 +115,12 @@ export function ProfileHelpCard() {
             </span>
             <span className="mt-1 block text-xs leading-5 text-cream/45">
               {loading
-                ? "Checking for people you can help…"
+                ? "Checking for people you can support…"
                 : stats.claimed > 0
                   ? `${stats.claimed} accepted ${stats.claimed === 1 ? "request" : "requests"} waiting for you.`
                   : stats.available > 0
-                    ? `${stats.available} ${stats.available === 1 ? "person may" : "people may"} need your help.`
-                    : "Open Peer Help when a candidate needs help."}
+                    ? `${stats.available} ${stats.available === 1 ? "person is" : "people are"} looking for a mate.`
+                    : "Open Trailmate when someone asks for a mate."}
             </span>
           </span>
 
@@ -152,17 +152,17 @@ export function ProfileHelpCard() {
             <header className="flex shrink-0 items-start justify-between gap-5 border-b border-cream/8 px-5 py-4 sm:px-6 sm:py-5">
               <div>
                 <h2 id="profile-help-title" className="text-xl font-semibold text-cream">
-                  Helper inbox
+                  Trailmate inbox
                 </h2>
                 <p className="mt-1 text-[13px] leading-5 text-cream/45">
-                  Helping is optional. Take a request when you have a few minutes.
+                  Joining is optional. Pick up a request when you have a few minutes.
                 </p>
               </div>
               <button
                 ref={closeButton}
                 type="button"
                 onClick={close}
-                aria-label="Close helper inbox"
+                aria-label="Close Trailmate inbox"
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-cream/50 transition hover:bg-cream/[0.07] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
               >
                 <X size={18} aria-hidden="true" />

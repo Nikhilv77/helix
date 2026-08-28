@@ -74,7 +74,7 @@ describe("AskSomeone", () => {
     );
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Ask someone" }));
+      fireEvent.click(screen.getByRole("button", { name: "Ask a mate" }));
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -90,7 +90,7 @@ describe("AskSomeone", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(14_000);
     });
-    expect(screen.getByText("Invitations sent to 2 qualified helpers — waiting")).toBeTruthy();
+    expect(screen.getByText("Invitations sent to 2 Trailmates — waiting")).toBeTruthy();
   });
 
   it("shows a blurred toast and does not send when no helper is available", async () => {
@@ -116,10 +116,10 @@ describe("AskSomeone", () => {
 
     expect(
       await screen.findByText(
-        "No qualified helpers are available right now. An invitation will not be sent."
+        "No Trailmates are available right now. An invitation will not be sent."
       )
     ).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Ask someone" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ask a mate" }));
 
     expect(await screen.findByRole("alertdialog")).toBeTruthy();
     expect(screen.getByText("Your invitation was not sent.", { exact: false })).toBeTruthy();
@@ -129,7 +129,7 @@ describe("AskSomeone", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the server cooldown as a live timer on Ask Someone", async () => {
+  it("shows the server cooldown as a live timer on Ask a mate", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       if (input === "/api/help/request" && init?.method === "POST") {
@@ -169,12 +169,12 @@ describe("AskSomeone", () => {
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();
-      fireEvent.click(screen.getByRole("button", { name: "Ask someone" }));
+      fireEvent.click(screen.getByRole("button", { name: "Ask a mate" }));
       await Promise.resolve();
       await Promise.resolve();
     });
 
-    expect(screen.getByText("Ask Someone is cooling down")).toBeTruthy();
+    expect(screen.getByText("Ask a mate is cooling down")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Ask again in 10:00" })).toBeDisabled();
 
     await act(async () => {
@@ -185,7 +185,7 @@ describe("AskSomeone", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(590_000);
     });
-    expect(screen.getByRole("button", { name: "Ask someone" })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Ask a mate" })).not.toBeDisabled();
   });
 
   it("opens the current-engagement prompt instead of showing a generic conflict error", async () => {
@@ -225,7 +225,7 @@ describe("AskSomeone", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Ask someone" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ask a mate" }));
     await waitFor(() => expect(showPrompt).toHaveBeenCalledOnce());
     expect(screen.queryByText("Finish your current engagement first.")).toBeNull();
     window.removeEventListener(SHOW_CURRENT_PEER_HELP_EVENT, showPrompt);

@@ -78,7 +78,7 @@ export function ActivePeerHelpToast() {
 
   return (
     <aside
-      aria-label={`Active peer help with ${active.peer.label}`}
+      aria-label={`Active Trailmate session with ${active.peer.label}`}
       className="fixed bottom-4 left-3 right-3 z-[80] ml-auto max-w-[25rem] overflow-hidden rounded-2xl bg-[#18191c]/[0.98] shadow-[0_24px_80px_-28px_rgba(0,0,0,0.95)] backdrop-blur-xl sm:bottom-5 sm:left-auto sm:right-5"
     >
       <div className="h-0.5 bg-[var(--workspace-accent)]" />
@@ -102,10 +102,10 @@ export function ActivePeerHelpToast() {
         )}
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
-            {active.started ? "Meeting in progress" : "Room ready"}
+            {active.started ? "Trailmate in progress" : "Trailmate room ready"}
           </p>
           <p className="mt-0.5 truncate text-[13px] font-semibold text-cream">
-            Peer help with {active.peer.label}
+            Trailmate with {active.peer.label}
           </p>
           <p className="mt-0.5 truncate text-[11.5px] text-cream/42">{active.title}</p>
         </div>

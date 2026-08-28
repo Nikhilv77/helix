@@ -1,4 +1,8 @@
-import { ConciergeNotifier, formatConciergeMessage, type ConciergeRequest } from "./concierge-notifier";
+import {
+  ConciergeNotifier,
+  formatConciergeMessage,
+  type ConciergeRequest
+} from "./concierge-notifier";
 
 const request: ConciergeRequest = {
   requestId: "req-42",
@@ -22,12 +26,12 @@ describe("concierge message", () => {
   it("leads with what a helper decides on", () => {
     const message = formatConciergeMessage(request);
 
-    expect(message).toContain("Priya Shah needs help");
+    expect(message).toContain("Priya Shah asked for a mate");
     expect(message).toContain("LRU Cache");
     expect(message).toContain("medium, java");
     expect(message).toContain(request.summary.headline);
     expect(message).toContain(request.summary.blockedOn);
-    expect(message).toContain("~6 min to help");
+    expect(message).toContain("~6 min to support");
     expect(message).toContain("18 min on the problem");
     expect(message).toContain("3 AI hints taken");
     expect(message).toContain("/dsa-questions/lru-cache");

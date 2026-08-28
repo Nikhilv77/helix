@@ -236,7 +236,7 @@ export function SharedHelpBoard({
           id="shared-help-notes"
           value={notes}
           onChange={(event) => updateNotes(event.target.value)}
-          aria-label="Shared help notes"
+          aria-label="Shared Trailmate notes"
           placeholder="Write an edge case or next step…"
           className="thin-scroll mt-2 h-24 w-full resize-none overflow-y-auto rounded-xl border-0 bg-black/20 px-3 py-2.5 text-xs leading-5 text-cream/74 outline-none ring-1 ring-inset ring-white/[0.045] transition placeholder:text-cream/24 focus:bg-black/30 focus:ring-white/[0.1]"
         />

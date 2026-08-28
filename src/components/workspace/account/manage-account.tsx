@@ -307,8 +307,8 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
               />
               <NotificationPreferenceRow
                 icon={Users}
-                title="Peer help requests"
-                description="Let learners ask for your help on questions you have already completed."
+                title="Trailmate requests"
+                description="Let learners ask you to join questions you have already completed."
                 enabled={notificationPreferences.helpNotificationsEnabled}
                 saving={savingPreference === "helpNotificationsEnabled"}
                 onToggle={() => void onNotificationPreferenceChange("helpNotificationsEnabled")}

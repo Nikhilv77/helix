@@ -10,8 +10,8 @@ import { authenticatedOwnerId } from "@/server/interview/owner";
 export const dynamic = "force-dynamic";
 
 export const metadata = privatePageMetadata(
-  "Help Reports",
-  "Reports filed on peer help conversations, waiting for review."
+  "Trailmate Reports",
+  "Reports filed on Trailmate sessions, waiting for review."
 );
 
 /**
@@ -35,8 +35,8 @@ export default async function HelpReportsPage() {
           Reports
         </h1>
         <p className="mt-2 max-w-xl text-[14.5px] leading-6 text-cream/60">
-          Filed on peer help conversations, most severe first. Nothing here is actioned
-          automatically — reading them is the whole job.
+          Filed on Trailmate sessions, most severe first. Nothing here is actioned automatically —
+          reading them is the whole job.
         </p>
       </header>
 

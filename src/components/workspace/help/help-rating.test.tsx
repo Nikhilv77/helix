@@ -19,7 +19,7 @@ describe("HelpRating", () => {
   });
 
   it.each([
-    ["Yes, it helped", 5],
+    ["Yes, it did", 5],
     ["No", 1]
   ])("stores the %s answer as the compatible rating %i", async (label, rating) => {
     const onCompleted = vi.fn();
@@ -30,7 +30,7 @@ describe("HelpRating", () => {
 
     render(<HelpRating requestId={requestId} onCompleted={onCompleted} />);
 
-    expect(screen.getByRole("dialog", { name: "Did that help?" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "Did that session get you unstuck?" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: label }));
 
     await waitFor(() => {
@@ -48,7 +48,7 @@ describe("HelpRating", () => {
 
     render(<HelpRating requestId={requestId} />);
 
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Yes, it helped" }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Yes, it did" }));
   });
 
   it("renders in a centered portal with a blurred backdrop", () => {
@@ -56,7 +56,7 @@ describe("HelpRating", () => {
 
     render(<HelpRating requestId={requestId} />);
 
-    const dialog = screen.getByRole("dialog", { name: "Did that help?" });
+    const dialog = screen.getByRole("dialog", { name: "Did that session get you unstuck?" });
     const toast = dialog.closest("aside");
     expect(toast?.parentElement).toBe(document.body);
     expect(toast?.className).toContain("top-1/2");

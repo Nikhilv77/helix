@@ -32,7 +32,7 @@ export function CurrentPeerHelpPrompt() {
       setError(null);
       setEngagement((payload.data as CurrentPeerHelpEngagement | null) ?? null);
     } catch {
-      setError("Could not load your current peer-help engagement.");
+      setError("Could not load your current Trailmate session.");
     }
   }, []);
 
@@ -102,10 +102,10 @@ export function CurrentPeerHelpPrompt() {
   const eyebrow = waiting
     ? "Request already active"
     : engagement.started
-      ? "Meeting in progress"
-      : "Room already ready";
+      ? "Trailmate in progress"
+      : "Trailmate room ready";
   const heading = waiting
-    ? `You’re waiting for help with ${engagement.title}`
+    ? `You’ve already asked a mate about ${engagement.title}`
     : `${engagement.title} with ${peerName}`;
 
   return createPortal(
@@ -144,7 +144,7 @@ export function CurrentPeerHelpPrompt() {
           ) : (
             <span className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-2xl bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]">
               <ProfileAvatar
-                name={engagement.peer?.label ?? "Peer help"}
+                name={engagement.peer?.label ?? "Trailmate"}
                 className="absolute inset-0 h-full w-full object-cover opacity-30"
               />
               <HandHelping size={18} className="relative" aria-hidden="true" />
@@ -162,12 +162,12 @@ export function CurrentPeerHelpPrompt() {
           </h2>
           <p className="mt-2 text-[13px] leading-5 text-cream/48">
             {waiting
-              ? "View or withdraw this request before asking for help with another problem."
+              ? "View or withdraw this request before asking a mate about another problem."
               : engagement.started
-                ? `Resume your room with ${peerName} before starting another peer-help engagement.`
+                ? `Resume your room with ${peerName} before starting another Trailmate session.`
                 : engagement.seat === "helper"
-                  ? `Join ${peerName} now, or hand the request back so another helper can take it.`
-                  : `${peerName} is ready. Join this room before starting another peer-help engagement.`}
+                  ? `Join ${peerName} now, or hand the request back so another mate can take it.`
+                  : `${peerName} is ready. Join this room before starting another Trailmate session.`}
           </p>
 
           {error ? <p className="mt-3 text-[12px] text-[#ffb4b4]">{error}</p> : null}
@@ -188,8 +188,8 @@ export function CurrentPeerHelpPrompt() {
               {waiting
                 ? "View current request"
                 : engagement.started
-                  ? "Resume meeting"
-                  : "Join room"}
+                  ? "Resume session"
+                  : "Join Trailmate room"}
               {!waiting ? <ArrowRight size={14} aria-hidden="true" /> : null}
             </button>
             {canFreeSeat ? (

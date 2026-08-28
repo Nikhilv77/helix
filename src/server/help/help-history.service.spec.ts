@@ -127,10 +127,32 @@ describe("help history", () => {
       },
       helpSession: {
         count: jest.fn().mockResolvedValue(1)
+      },
+      candidateProfile: {
+        findMany: jest.fn().mockImplementation(({ where }) => {
+          const ownerIds = where.ownerId.in as string[];
+          return Promise.resolve(
+            ownerIds.includes("owner-1")
+              ? [
+                  {
+                    ownerId: "owner-1",
+                    headline: "Frontend candidate",
+                    profileImage: "/images/profile/avatars/avatar-01.jpg",
+                    resumeAnalysis: { fullName: "Asha Verma" }
+                  }
+                ]
+              : []
+          );
+        })
       }
     } as unknown as PrismaService;
 
     await expect(new HelpHistoryService(prisma).overview("owner-1")).resolves.toEqual({
+      viewer: {
+        label: "Asha Verma",
+        headline: "Frontend candidate",
+        profileImage: "/images/profile/avatars/avatar-01.jpg"
+      },
       helpReceived: 4,
       peopleHelped: 1,
       activeReceived: 1,

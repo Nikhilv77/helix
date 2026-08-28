@@ -11,6 +11,7 @@ import {
   Target
 } from "lucide-react";
 import type { Level, Role } from "@/lib/shared/types";
+export { profileAvatars } from "@/lib/profile/profile-images";
 
 export const roleOptions: Array<{ value: Role; label: string; detail: string; icon: typeof Code2 }> = [
   { value: "backend", label: "Backend", detail: "APIs, data, reliability", icon: Database },
@@ -69,39 +70,6 @@ export const focusAreaIcons: Record<string, typeof Code2> = {
 /** One input treatment for the page, so nothing drifts field to field. */
 export const fieldClass =
   "w-full rounded-xl bg-[#1a1b1f] text-cream outline-none ring-1 ring-inset ring-white/[0.08] transition placeholder:text-cream/35 hover:bg-[#202126] focus:bg-[#202126] focus:ring-2 focus:ring-[#F26E01]/30";
-
-export const profileAvatars = [
-  {
-    src: "/images/profile/avatars/avatar-01.jpg",
-    displaySrc: "/images/profile/avatars/avatar-01.jpg?v=7bc1f6d0",
-    width: 1024,
-    height: 1024
-  },
-  {
-    src: "/images/profile/avatars/avatar-02.jpg",
-    displaySrc: "/images/profile/avatars/avatar-02.jpg?v=8f147db2",
-    width: 1024,
-    height: 1024
-  },
-  {
-    src: "/images/profile/avatars/avatar-03.jpg",
-    displaySrc: "/images/profile/avatars/avatar-03.jpg?v=54f51d79",
-    width: 1024,
-    height: 1024
-  },
-  {
-    src: "/images/profile/avatars/avatar-04.jpg",
-    displaySrc: "/images/profile/avatars/avatar-04.jpg?v=62bce4f4",
-    width: 1024,
-    height: 1024
-  },
-  {
-    src: "/images/profile/avatars/avatar-05.jpg",
-    displaySrc: "/images/profile/avatars/avatar-05.jpg?v=bf8776bd",
-    width: 1024,
-    height: 1024
-  }
-] as const;
 
 export const profileCovers = [
   {

@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       limit: request.nextUrl.searchParams.get("limit") ?? undefined
     });
     if (!parsed.success) {
-      throw new ApiRouteError(400, "BAD_REQUEST", "Help history filters are invalid");
+      throw new ApiRouteError(400, "BAD_REQUEST", "Trailmate history filters are invalid");
     }
 
     return apiSuccess(
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return apiError(
       error instanceof InvalidHelpHistoryCursorError
-        ? new ApiRouteError(400, "BAD_REQUEST", "Help history cursor is invalid")
+        ? new ApiRouteError(400, "BAD_REQUEST", "Trailmate history cursor is invalid")
         : error,
       request.nextUrl.pathname
     );

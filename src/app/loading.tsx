@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { ManageSkeleton } from "@/components/workspace/account/manage-skeleton";
 import { MayaWelcomeLoading } from "@/components/workspace/dashboard/maya-welcome-loading";
+import { HelpHubSkeleton } from "@/components/workspace/help/help-hub-skeleton";
 import { InterviewsSkeleton } from "@/components/workspace/interviews/interviews-skeleton";
 import { ProfileSkeleton } from "@/components/workspace/profile/profile-skeleton";
 import { RouteProgress, Waveform } from "@/components/workspace/shared/loading/primitives";
@@ -22,6 +23,8 @@ export default async function RootLoading() {
   if (interviewRoute || progressRoute) return null;
 
   if (pathname === "/interviews") return <InterviewsSkeleton />;
+
+  if (pathname === "/help") return <HelpHubSkeleton />;
 
   if (manageRoute) {
     return (

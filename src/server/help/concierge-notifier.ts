@@ -101,7 +101,7 @@ export function formatConciergeMessage(request: ConciergeRequest): string {
     : "  • (nothing recorded)";
 
   return [
-    `${request.learnerName} needs help — ${request.questionTitle} (${request.difficulty}, ${request.language})`,
+    `${request.learnerName} asked for a mate — ${request.questionTitle} (${request.difficulty}, ${request.language})`,
     "",
     request.summary.headline,
     "",
@@ -112,7 +112,7 @@ export function formatConciergeMessage(request: ConciergeRequest): string {
     "",
     `Open with: ${request.summary.opener}`,
     "",
-    `${minutes} min on the problem · ${request.hintsUsed} AI hints taken · ~${request.summary.estimatedMinutes} min to help`,
+    `${minutes} min on the problem · ${request.hintsUsed} AI hints taken · ~${request.summary.estimatedMinutes} min to support`,
     `Request ${request.requestId} · /dsa-questions/${request.questionSlug}`
   ].join("\n");
 }

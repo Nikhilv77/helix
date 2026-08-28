@@ -5,17 +5,24 @@ import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
-  "Help",
-  "Review the help you have received, the people you have helped, and focused requests you can answer."
+  "Trailmate",
+  "See the peers you have supported, the people who supported you, and community contributors."
 );
 
 export default async function HelpPage() {
   const { ownerId } = await requireOnboardedProfile();
   const service = getAppContainer().helpHistoryService;
-  const [overview, history] = await Promise.all([
+  const [overview, receivedHistory, givenHistory] = await Promise.all([
     service.overview(ownerId),
-    service.history({ ownerId, side: "received", filter: "all" })
+    service.history({ ownerId, side: "received", filter: "resolved" }),
+    service.history({ ownerId, side: "given", filter: "resolved" })
   ]);
 
-  return <HelpHub initialOverview={overview} initialHistory={history} />;
+  return (
+    <HelpHub
+      initialOverview={overview}
+      initialReceivedHistory={receivedHistory}
+      initialGivenHistory={givenHistory}
+    />
+  );
 }

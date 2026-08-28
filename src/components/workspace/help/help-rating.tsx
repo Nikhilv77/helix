@@ -78,10 +78,10 @@ export function HelpRating({
                   Conversation ended
                 </p>
                 <h2 id="help-outcome-title" className="mt-1 text-[14px] font-semibold text-cream">
-                  Did that help?
+                  Did that session get you unstuck?
                 </h2>
                 <p className="mt-1 text-[12px] leading-5 text-cream/45">
-                  Your answer improves helper recognition and future matching.
+                  Your answer improves Trailmate recognition and future matching.
                 </p>
               </div>
             </div>
@@ -102,7 +102,7 @@ export function HelpRating({
                 ) : (
                   <Check size={13} aria-hidden="true" />
                 )}
-                Yes, it helped
+                Yes, it did
               </button>
               <button
                 type="button"

@@ -47,7 +47,7 @@ describe("SharedHelpBoard", () => {
       />
     );
 
-    fireEvent.change(screen.getByRole("textbox", { name: "Shared help notes" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Shared Trailmate notes" }), {
       target: { value: "Try a hash set first." }
     });
 

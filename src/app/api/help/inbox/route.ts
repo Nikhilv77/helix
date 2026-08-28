@@ -83,7 +83,7 @@ function notifyReconciled(
           title: `Your ${
             findQuestion(entry.questionSlug)?.question.title ?? entry.questionSlug
           } conversation ended`,
-          body: "The help room reached its time limit.",
+          body: "The Trailmate room reached its time limit.",
           href: `/dsa-questions/${entry.questionSlug}`,
           subjectId: entry.id
         })

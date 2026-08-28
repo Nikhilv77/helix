@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { isProfileAvatarSource } from "@/lib/profile/profile-images";
 import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
@@ -43,13 +44,8 @@ const profileSchema = z.object({
     ])
     .nullable(),
   profileImage: z
-    .enum([
-      "/images/profile/avatars/avatar-01.jpg",
-      "/images/profile/avatars/avatar-02.jpg",
-      "/images/profile/avatars/avatar-03.jpg",
-      "/images/profile/avatars/avatar-04.jpg",
-      "/images/profile/avatars/avatar-05.jpg"
-    ])
+    .string()
+    .refine(isProfileAvatarSource, "Choose one of the available profile images")
     .nullable()
 });
 

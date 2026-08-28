@@ -5,14 +5,17 @@ import Link from "next/link";
 import {
   ArrowRight,
   Award,
+  Check,
+  ChevronRight,
   Clock3,
   HandHelping,
   Loader2,
-  MessageCircleQuestion,
   Star,
-  UsersRound
+  UsersRound,
+  X
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { DocumentTitle } from "@/components/document-title";
 import { ProfileAvatar } from "@/components/workspace/profile/profile-avatar";
@@ -25,85 +28,88 @@ import type {
   TopPeerHelper
 } from "@/lib/help/help-history";
 import { peerHelpRoomHref } from "@/lib/help/help-room-navigation";
-import { HelpInbox, type HelpInboxStats } from "./help-inbox";
 import { SafetyControls } from "./safety-controls";
 
 const STATUS_COPY: Record<HelpHistoryItem["status"], string> = {
-  OPEN: "Waiting for a helper",
-  CLAIMED: "Accepted",
-  RESOLVED: "Resolved",
+  OPEN: "Waiting for a peer",
+  CLAIMED: "In progress",
+  RESOLVED: "Completed",
   EXPIRED: "Expired",
-  CANCELLED: "Cancelled"
+  CANCELLED: "Withdrawn"
 };
+
+const BADGE_LEVELS = [
+  { label: "New Trailmate", threshold: 0, description: "Your starting place in the community." },
+  { label: "First Assist", threshold: 1, description: "One positive conversation." },
+  {
+    label: "Trusted Mate",
+    threshold: 10,
+    description: "Ten conversations that made a difference."
+  },
+  { label: "Trail Guide", threshold: 25, description: "Twenty-five positive conversations." }
+] as const;
+
+type HistoryCollection = Record<HelpHistorySide, HelpHistoryPage>;
+type HistoryErrors = Record<HelpHistorySide, string | null>;
 
 export function HelpHub({
   initialOverview,
-  initialHistory
+  initialReceivedHistory,
+  initialGivenHistory
 }: {
   initialOverview: HelpOverview;
-  initialHistory: HelpHistoryPage;
+  initialReceivedHistory: HelpHistoryPage;
+  initialGivenHistory: HelpHistoryPage;
 }) {
   const [overview, setOverview] = useState(initialOverview);
-  const [side, setSide] = useState<HelpHistorySide>("received");
-  const [history, setHistory] = useState(initialHistory);
-  const [loading, setLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [historyError, setHistoryError] = useState<string | null>(null);
-  const historyRequest = useRef(0);
+  const [histories, setHistories] = useState<HistoryCollection>({
+    received: initialReceivedHistory,
+    given: initialGivenHistory
+  });
+  const [loadingMore, setLoadingMore] = useState<HelpHistorySide | null>(null);
+  const [historyErrors, setHistoryErrors] = useState<HistoryErrors>({
+    received: null,
+    given: null
+  });
+  const [badgeOpen, setBadgeOpen] = useState(false);
+  const historyRequests = useRef<Record<HelpHistorySide, number>>({ received: 0, given: 0 });
   const activeRequestId = overview.activeConversation?.requestId ?? null;
 
-  const loadHistory = useCallback(
-    async (nextSide: HelpHistorySide, cursor: string | null = null) => {
-      const requestId = ++historyRequest.current;
-      if (cursor) setLoadingMore(true);
-      else setLoading(true);
-      setHistoryError(null);
+  const loadHistory = useCallback(async (side: HelpHistorySide, cursor: string | null = null) => {
+    const requestId = ++historyRequests.current[side];
+    if (cursor) setLoadingMore(side);
+    setHistoryErrors((current) => ({ ...current, [side]: null }));
 
-      try {
-        const query = new URLSearchParams({ side: nextSide });
-        if (cursor) query.set("cursor", cursor);
-        const response = await fetch(`/api/help/history?${query.toString()}`);
-        const payload = await response.json().catch(() => null);
-        if (!response.ok || !payload?.success || !payload.data) {
-          throw new Error(payload?.error?.message ?? "Could not load help history.");
-        }
-        if (requestId !== historyRequest.current) return;
-
-        const nextPage = payload.data as HelpHistoryPage;
-        setHistory((current) =>
-          cursor
-            ? { items: [...current.items, ...nextPage.items], nextCursor: nextPage.nextCursor }
-            : nextPage
-        );
-      } catch (error) {
-        if (requestId !== historyRequest.current) return;
-        setHistoryError(error instanceof Error ? error.message : "Could not load help history.");
-      } finally {
-        if (requestId === historyRequest.current) {
-          setLoading(false);
-          setLoadingMore(false);
-        }
+    try {
+      const query = new URLSearchParams({ side });
+      query.set("status", "resolved");
+      if (cursor) query.set("cursor", cursor);
+      const response = await fetch(`/api/help/history?${query.toString()}`);
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.success || !payload.data) {
+        throw new Error(payload?.error?.message ?? "Could not load Trailmate history.");
       }
-    },
-    []
-  );
+      if (requestId !== historyRequests.current[side]) return;
 
-  const chooseSide = (nextSide: HelpHistorySide) => {
-    if (nextSide === side) return;
-    setSide(nextSide);
-    void loadHistory(nextSide);
-  };
-
-  const refreshHistory = useCallback(() => {
-    void loadHistory(side);
-  }, [loadHistory, side]);
-
-  const syncOpportunityStats = useCallback((stats: HelpInboxStats) => {
-    setOverview((current) => ({
-      ...current,
-      peopleHelped: stats.helpedPeople,
-      activeGiven: stats.claimed
-    }));
+      const nextPage = payload.data as HelpHistoryPage;
+      setHistories((current) => ({
+        ...current,
+        [side]: cursor
+          ? {
+              items: [...current[side].items, ...nextPage.items],
+              nextCursor: nextPage.nextCursor
+            }
+          : nextPage
+      }));
+    } catch (error) {
+      if (requestId !== historyRequests.current[side]) return;
+      setHistoryErrors((current) => ({
+        ...current,
+        [side]: error instanceof Error ? error.message : "Could not load Trailmate history."
+      }));
+    } finally {
+      if (requestId === historyRequests.current[side]) setLoadingMore(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -117,145 +123,196 @@ export function HelpHub({
     return () => window.clearInterval(timer);
   }, [activeRequestId]);
 
+  useEffect(() => {
+    if (!badgeOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setBadgeOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [badgeOpen]);
+
   if (overview.activeConversation) {
     return <ActiveConversationView conversation={overview.activeConversation} />;
   }
 
   return (
-    <main className="relative isolate mx-auto w-full max-w-[92rem] px-4 pb-24 pt-9 sm:px-8 sm:pt-12 lg:px-10">
-      <DocumentTitle title="Help" />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-[30rem] w-[48rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(242,110,1,0.1),transparent_68%)]"
-      />
+    <main className="mx-auto w-full max-w-[88rem] px-4 pb-24 pt-8 sm:px-8 sm:pt-10 lg:px-10">
+      <DocumentTitle title="Trailmate" />
+      <h1 className="sr-only">Trailmate</h1>
 
-      <header className="mx-auto max-w-3xl text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--workspace-accent)]">
-          Peer help
-        </p>
-        <h1 className="mt-3 font-display text-[clamp(2rem,5vw,4.3rem)] font-semibold tracking-[-0.04em] text-cream">
-          Ask. Talk. Keep moving.
-        </h1>
-        <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-cream/55 sm:text-[15px]">
-          Your received and given help stays here. New matching requests arrive as a small,
-          actionable notification.
-        </p>
-      </header>
-
-      <section aria-label="Help overview" className="mt-10 grid gap-3 sm:grid-cols-3">
-        <SummaryCard
-          icon={MessageCircleQuestion}
-          label="Help received"
-          value={overview.helpReceived}
-          detail={
-            overview.activeReceived ? `${overview.activeReceived} active now` : "Questions asked"
-          }
-        />
-        <SummaryCard
-          icon={UsersRound}
-          label="People helped"
-          value={overview.peopleHelped}
-          detail={overview.activeGiven ? `${overview.activeGiven} accepted now` : "Unique learners"}
-        />
-        <SummaryCard
-          icon={Award}
-          label="Helper badge"
-          value={helperBadge(overview.positiveHelps).label}
-          detail={
-            overview.availabilityCredits
-              ? `${helperBadge(overview.positiveHelps).detail} · ${overview.availabilityCredits} waiting credit${overview.availabilityCredits === 1 ? "" : "s"}`
-              : helperBadge(overview.positiveHelps).detail
-          }
-        />
-      </section>
+      <UserRecognition overview={overview} onBadgeClick={() => setBadgeOpen(true)} />
 
       <TopHelpers helpers={overview.topHelpers} />
 
-      <section className="mt-12" aria-labelledby="my-help-title">
-        <div className="flex flex-col gap-5 border-b border-cream/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cream/35">
-              Your activity
-            </p>
-            <h2 id="my-help-title" className="mt-1.5 text-2xl font-semibold text-cream">
-              My help
-            </h2>
-          </div>
-          <div
-            role="tablist"
-            aria-label="Help history"
-            className="flex rounded-xl bg-cream/[0.045] p-1"
-          >
-            <HistoryTab active={side === "received"} onClick={() => chooseSide("received")}>
-              Help received
-            </HistoryTab>
-            <HistoryTab active={side === "given"} onClick={() => chooseSide("given")}>
-              Help given
-            </HistoryTab>
-          </div>
-        </div>
+      <RelationshipHistory
+        id="people-helped"
+        eyebrow="Your contribution"
+        title="People you’ve supported"
+        description="The peers you showed up for, and the problems you worked through together."
+        side="given"
+        page={histories.given}
+        error={historyErrors.given}
+        loadingMore={loadingMore === "given"}
+        onLoadMore={() => void loadHistory("given", histories.given.nextCursor)}
+        onSafetyAction={() => void loadHistory("given")}
+      />
 
-        <div className="mt-4 min-h-48" aria-live="polite">
-          {historyError ? (
-            <div
-              role="alert"
-              className="rounded-2xl border border-[#ffb4b4]/20 bg-[#ffb4b4]/[0.05] px-5 py-4 text-sm text-[#ffb4b4]"
-            >
-              {historyError}
-            </div>
-          ) : loading ? (
-            <div className="flex items-center gap-2 py-16 text-sm text-cream/40">
-              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-              Loading {side === "received" ? "help received" : "help given"}…
-            </div>
-          ) : history.items.length ? (
-            <div className="grid gap-3 lg:grid-cols-2">
-              {history.items.map((item) => (
-                <HistoryCard
-                  key={item.id}
-                  item={item}
-                  side={side}
-                  onSafetyAction={refreshHistory}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyHistory side={side} />
-          )}
-        </div>
+      <RelationshipHistory
+        id="people-supported-you"
+        eyebrow="Your circle"
+        title="People who supported you"
+        description="The peers who joined you when a problem needed another perspective."
+        side="received"
+        page={histories.received}
+        error={historyErrors.received}
+        loadingMore={loadingMore === "received"}
+        onLoadMore={() => void loadHistory("received", histories.received.nextCursor)}
+        onSafetyAction={() => void loadHistory("received")}
+      />
 
-        {history.nextCursor && !loading ? (
+      {badgeOpen ? (
+        <BadgeRankingToast overview={overview} onClose={() => setBadgeOpen(false)} />
+      ) : null}
+    </main>
+  );
+}
+
+function UserRecognition({
+  overview,
+  onBadgeClick
+}: {
+  overview: HelpOverview;
+  onBadgeClick: () => void;
+}) {
+  const badge = helperBadge(overview.positiveHelps);
+  return (
+    <header className="flex flex-col items-center border-b border-white/[0.14] pb-10 text-center sm:pb-12">
+      <div className="relative grid h-24 w-24 place-items-center overflow-hidden rounded-full bg-black shadow-[0_18px_50px_-24px_rgba(0,0,0,0.9)] sm:h-28 sm:w-28">
+        <PeerAvatar participant={overview.viewer} className="h-full w-full rounded-full" />
+      </div>
+      <p className="mt-4 text-base font-semibold tracking-[-0.01em] text-cream">
+        {overview.viewer.label}
+      </p>
+      <p className="mt-1 text-[12px] text-cream/42">
+        Supported {overview.peopleHelped} {overview.peopleHelped === 1 ? "person" : "people"}
+      </p>
+      <button
+        type="button"
+        onClick={onBadgeClick}
+        aria-haspopup="dialog"
+        className="group mt-4 inline-flex items-center gap-2 rounded-full border border-white/[0.2] bg-black px-3.5 py-2 text-[12px] font-semibold text-cream/75 transition hover:border-white/35 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/40"
+      >
+        <Award size={14} className="text-[#efcf84]" aria-hidden="true" />
+        {badge.label}
+        <ChevronRight
+          size={13}
+          className="text-cream/35 transition group-hover:translate-x-0.5 group-hover:text-cream/60"
+          aria-hidden="true"
+        />
+      </button>
+    </header>
+  );
+}
+
+function BadgeRankingToast({ overview, onClose }: { overview: HelpOverview; onClose: () => void }) {
+  const current = helperBadge(overview.positiveHelps);
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex min-h-dvh items-center justify-center overflow-y-auto bg-black/[0.82] px-4 py-6"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target) onClose();
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="badge-ranking-title"
+        className="my-auto w-full max-w-md rounded-[1.5rem] bg-[rgba(20,21,24,0.94)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_30px_100px_rgba(0,0,0,0.85)] backdrop-blur-2xl sm:p-6"
+      >
+        <div className="flex items-start justify-between gap-5">
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 place-items-center rounded-full border border-[#efcf84]/25 bg-[#efcf84]/[0.07] text-[#efcf84]">
+              <Award size={19} aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cream/35">
+                Your badge
+              </p>
+              <h2 id="badge-ranking-title" className="mt-1 text-xl font-semibold text-cream">
+                {current.label}
+              </h2>
+            </div>
+          </div>
           <button
             type="button"
-            disabled={loadingMore}
-            onClick={() => void loadHistory(side, history.nextCursor)}
-            className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl border border-cream/12 px-4 text-[13px] font-semibold text-cream/65 transition hover:border-cream/22 hover:text-cream disabled:opacity-50"
+            onClick={onClose}
+            aria-label="Close badge ranking"
+            className="grid h-9 w-9 place-items-center rounded-full border border-white/[0.09] text-cream/45 transition hover:border-white/20 hover:text-cream"
           >
-            {loadingMore ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : null}
-            Load more
+            <X size={15} aria-hidden="true" />
           </button>
+        </div>
+
+        <p className="mt-5 text-[13px] leading-5 text-cream/52">{current.detail}</p>
+
+        <ol className="mt-5 space-y-1.5">
+          {BADGE_LEVELS.map((level) => {
+            const earned = overview.positiveHelps >= level.threshold;
+            const active = level.label === current.label;
+            return (
+              <li
+                key={level.label}
+                className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 ${
+                  active
+                    ? "border-[#efcf84]/25 bg-[#efcf84]/[0.055]"
+                    : "border-white/[0.13] bg-black"
+                }`}
+              >
+                <span
+                  className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-[11px] font-semibold ${
+                    earned
+                      ? "border-cream/25 bg-cream text-black"
+                      : "border-white/[0.1] text-cream/35"
+                  }`}
+                >
+                  {earned ? <Check size={13} aria-hidden="true" /> : level.threshold}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={`text-[12.5px] font-semibold ${active ? "text-cream" : "text-cream/65"}`}
+                  >
+                    {level.label}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-cream/35">{level.description}</p>
+                </div>
+                {active ? (
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#efcf84]">
+                    Current
+                  </span>
+                ) : null}
+              </li>
+            );
+          })}
+        </ol>
+
+        {overview.availabilityCredits ? (
+          <p className="mt-4 border-t border-white/[0.07] pt-4 text-[11px] leading-5 text-cream/35">
+            You also have {overview.availabilityCredits} waiting credit
+            {overview.availabilityCredits === 1 ? "" : "s"} for showing up when a learner did not
+            join.
+          </p>
         ) : null}
       </section>
-
-      <section className="mt-16" aria-labelledby="opportunities-title">
-        <div className="max-w-2xl">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cream/35">
-            Live help
-          </p>
-          <h2 id="opportunities-title" className="mt-1.5 text-2xl font-semibold text-cream">
-            Your accepted conversation
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-cream/50">
-            Accept or decline new requests from the small notification. Once accepted, the secure
-            voice room appears here.
-          </p>
-        </div>
-
-        <div className="mt-6 rounded-[1.5rem] border border-cream/10 bg-[#141518]/70 p-4 shadow-[0_28px_80px_-48px_rgba(0,0,0,0.95)] sm:p-6">
-          <HelpInbox onStatsChange={syncOpportunityStats} showOpen={false} />
-        </div>
-      </section>
-    </main>
+    </div>,
+    document.body
   );
 }
 
@@ -265,19 +322,18 @@ function ActiveConversationView({
   conversation: NonNullable<HelpOverview["activeConversation"]>;
 }) {
   return (
-    <main className="relative isolate mx-auto grid min-h-[calc(100dvh-4rem)] w-full max-w-[76rem] place-items-center px-4 py-12 sm:px-8">
-      <DocumentTitle title="Peer help" />
-      <section className="w-full overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#151619]/90 shadow-[0_34px_110px_-48px_rgba(0,0,0,0.98)]">
-        <div className="h-1 bg-[var(--workspace-accent)]" />
-        <div className="grid gap-8 p-6 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center">
+    <main className="mx-auto grid min-h-[calc(100dvh-4rem)] w-full max-w-[76rem] place-items-center px-4 py-12 sm:px-8">
+      <DocumentTitle title="Trailmate" />
+      <section className="w-full rounded-[1.5rem] border border-white/[0.18] bg-black p-6 sm:p-9">
+        <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="flex min-w-0 items-start gap-4">
-            <PeerAvatar participant={conversation.peer} className="h-14 w-14 rounded-2xl" />
+            <PeerAvatar participant={conversation.peer} className="h-14 w-14 rounded-full" />
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--workspace-accent)]">
-                {conversation.started ? "Meeting in progress" : "Private room ready"}
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cream/38">
+                {conversation.started ? "Session in progress" : "Private room ready"}
               </p>
               <h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-cream sm:text-3xl">
-                Peer help with {conversation.peer.label}
+                With {conversation.peer.label}
               </h1>
               <p className="mt-2 text-sm leading-6 text-cream/48">
                 {conversation.title} · {conversation.language}
@@ -294,7 +350,7 @@ function ActiveConversationView({
             className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#17181a] transition hover:bg-white"
           >
             <UsersRound size={16} aria-hidden="true" />
-            {conversation.started ? "Resume meeting" : "Join meeting"}
+            {conversation.started ? "Resume session" : "Join session"}
             <ArrowRight size={15} aria-hidden="true" />
           </Link>
         </div>
@@ -305,43 +361,252 @@ function ActiveConversationView({
 
 function TopHelpers({ helpers }: { helpers: TopPeerHelper[] }) {
   return (
-    <section className="mt-12" aria-labelledby="top-helpers-title">
-      <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cream/35">
-          Community
-        </p>
-        <h2 id="top-helpers-title" className="mt-1.5 text-2xl font-semibold text-cream">
-          Top peer helpers
-        </h2>
-      </div>
+    <section className="mt-12 sm:mt-14" aria-labelledby="top-helpers-title">
+      <SectionHeading
+        eyebrow="Community"
+        id="top-helpers-title"
+        title="Top Trailmates"
+        description="People consistently making practice easier for others."
+      />
       {helpers.length ? (
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {helpers.map((helper, index) => (
-            <article
-              key={`${helper.participant.label}-${index}`}
-              className="rounded-[1.2rem] border border-cream/10 bg-[#151619]/80 p-4"
-            >
-              <div className="flex items-center gap-3">
-                <PeerAvatar participant={helper.participant} className="h-10 w-10 rounded-xl" />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-cream/82">
-                    {helper.participant.label}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-cream/38">#{index + 1} this community</p>
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {helpers.map((helper, index) => {
+            const appreciation = helper.helpedCount
+              ? Math.round((helper.thankedCount / helper.helpedCount) * 100)
+              : 0;
+            return (
+              <article
+                key={`${helper.participant.label}-${index}`}
+                className="group rounded-[1.25rem] bg-[rgba(20,21,24,0.72)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_20px_60px_-40px_rgba(0,0,0,0.9)] backdrop-blur-xl transition hover:bg-[rgba(24,25,28,0.8)] sm:p-5"
+              >
+                <div className="flex items-start gap-3.5">
+                  <PeerAvatar
+                    participant={helper.participant}
+                    className="h-12 w-12 rounded-full ring-1 ring-white/10"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-cream">
+                          {helper.participant.label}
+                        </p>
+                        <p className="mt-1 line-clamp-2 min-h-8 text-[11.5px] leading-4 text-cream/38">
+                          {helper.participant.headline ??
+                            "A dependable peer in the practice community."}
+                        </p>
+                      </div>
+                      <span className="grid h-7 min-w-7 shrink-0 place-items-center rounded-full border border-white/[0.11] px-2 text-[10px] font-semibold text-cream/55">
+                        #{index + 1}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <p className="mt-4 text-[12px] text-cream/48">
-                {helper.helpedCount} helped · {helper.thankedCount} thanked
-              </p>
-            </article>
+                <div className="mt-4 grid grid-cols-3 border-t border-white/[0.14] pt-4">
+                  <HelperStat value={helper.helpedCount} label="People" />
+                  <HelperStat value={helper.thankedCount} label="Thanks" bordered />
+                  <HelperStat value={`${appreciation}%`} label="Impact" bordered />
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <CleanEmptyState message="Community rankings appear after completed peer sessions." />
+      )}
+    </section>
+  );
+}
+
+function HelperStat({
+  value,
+  label,
+  bordered = false
+}: {
+  value: number | string;
+  label: string;
+  bordered?: boolean;
+}) {
+  return (
+    <div className={`text-center ${bordered ? "border-l border-white/[0.13]" : ""}`}>
+      <p className="text-[13px] font-semibold text-cream/78">{value}</p>
+      <p className="mt-0.5 text-[9px] uppercase tracking-[0.12em] text-cream/28">{label}</p>
+    </div>
+  );
+}
+
+function RelationshipHistory({
+  id,
+  eyebrow,
+  title,
+  description,
+  side,
+  page,
+  error,
+  loadingMore,
+  onLoadMore,
+  onSafetyAction
+}: {
+  id: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  side: HelpHistorySide;
+  page: HelpHistoryPage;
+  error: string | null;
+  loadingMore: boolean;
+  onLoadMore: () => void;
+  onSafetyAction: () => void;
+}) {
+  return (
+    <section className="mt-14 sm:mt-16" aria-labelledby={id}>
+      <SectionHeading eyebrow={eyebrow} id={id} title={title} description={description} />
+
+      {error ? (
+        <div
+          role="alert"
+          className="mt-5 rounded-2xl border border-[#ffb4b4]/35 bg-black px-5 py-4 text-sm text-[#ffb4b4]"
+        >
+          {error}
+        </div>
+      ) : page.items.length ? (
+        <div className="mt-5 grid gap-3 lg:grid-cols-2">
+          {page.items.map((item) => (
+            <HistoryCard key={item.id} item={item} side={side} onSafetyAction={onSafetyAction} />
           ))}
         </div>
       ) : (
-        <p className="mt-5 rounded-2xl border border-dashed border-cream/12 px-5 py-8 text-sm text-cream/42">
-          Top helpers will appear as peer conversations are completed.
-        </p>
+        <CleanEmptyState
+          message={
+            side === "given"
+              ? "The people you support will appear here."
+              : "The people who support you will appear here."
+          }
+        />
       )}
+
+      {page.nextCursor ? (
+        <button
+          type="button"
+          disabled={loadingMore}
+          onClick={onLoadMore}
+          className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl border border-white/[0.18] bg-black px-4 text-[12px] font-semibold text-cream/60 transition hover:border-white/30 hover:text-cream disabled:opacity-50"
+        >
+          {loadingMore ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : null}
+          Show more
+        </button>
+      ) : null}
     </section>
+  );
+}
+
+function SectionHeading({
+  eyebrow,
+  id,
+  title,
+  description
+}: {
+  eyebrow: string;
+  id: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="max-w-2xl">
+      <p className="text-[9px] font-semibold uppercase tracking-[0.17em] text-cream/28">
+        {eyebrow}
+      </p>
+      <h2
+        id={id}
+        className="mt-1.5 text-xl font-semibold tracking-[-0.02em] text-cream sm:text-2xl"
+      >
+        {title}
+      </h2>
+      <p className="mt-1.5 text-[12.5px] leading-5 text-cream/38">{description}</p>
+    </div>
+  );
+}
+
+function HistoryCard({
+  item,
+  side,
+  onSafetyAction
+}: {
+  item: HelpHistoryItem;
+  side: HelpHistorySide;
+  onSafetyAction: () => void;
+}) {
+  const participantLabel = item.participant?.label ?? "Trailgrad candidate";
+  const relationship = side === "given" ? "You supported" : "Supported you";
+  return (
+    <article className="rounded-[1.25rem] bg-[rgba(16,17,20,0.78)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_20px_60px_-40px_rgba(0,0,0,0.9)] backdrop-blur-xl transition hover:bg-[rgba(20,21,24,0.86)] sm:p-5">
+      <div className="flex items-start gap-4">
+        <ParticipantAvatar item={item} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] font-semibold tracking-[-0.01em] text-cream">
+            {participantLabel}
+          </p>
+          {item.participant?.headline ? (
+            <p className="mt-1 line-clamp-2 text-[11.5px] leading-4 text-cream/42">
+              {item.participant.headline}
+            </p>
+          ) : null}
+        </div>
+        <span className="shrink-0 rounded-full border border-white/[0.17] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.11em] text-cream/48">
+          {relationship}
+        </span>
+      </div>
+
+      <div className="mt-5 rounded-xl border border-white/[0.13] bg-white/[0.018] p-3.5">
+        <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-cream/30">
+          Worked through
+        </p>
+        <div className="mt-2 flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="truncate text-[13.5px] font-semibold text-cream/82">
+              {item.question.title}
+            </p>
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[10.5px] text-cream/36">
+              <span>{item.question.topic}</span>
+              <span aria-hidden="true">·</span>
+              <span>{item.language}</span>
+            </p>
+          </div>
+          <Link
+            href={item.question.href}
+            aria-label={`Open ${item.question.title}`}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/[0.18] text-cream/48 transition hover:border-white/35 hover:text-cream"
+          >
+            <ArrowRight size={14} aria-hidden="true" />
+          </Link>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-[10.5px] text-cream/38">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <span className="inline-flex items-center gap-1.5 text-cream/52">
+            <Check size={11} aria-hidden="true" /> {STATUS_COPY[item.status]}
+          </span>
+          <span>{formatDate(item.resolvedAt ?? item.askedAt)}</span>
+          {item.sessionDurationMs !== null ? (
+            <span className="inline-flex items-center gap-1">
+              <Clock3 size={10} aria-hidden="true" /> {formatDuration(item.sessionDurationMs)}
+            </span>
+          ) : null}
+        </div>
+        {item.learnerRating ? (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#efcf84]/[0.08] px-2 py-1 font-semibold text-[#efcf84]">
+            <Star size={10} fill="currentColor" aria-hidden="true" />
+            {side === "given" ? `${item.learnerRating}/5` : "Thanked"}
+          </span>
+        ) : null}
+      </div>
+
+      {item.canReportOrBlock ? (
+        <div className="mt-4 border-t border-white/[0.12] pt-3">
+          <SafetyControls requestId={item.id} onActioned={onSafetyAction} />
+        </div>
+      ) : null}
+    </article>
   );
 }
 
@@ -357,8 +622,8 @@ function PeerAvatar({
       <Image
         src={participant.profileImage}
         alt=""
-        width={56}
-        height={56}
+        width={112}
+        height={112}
         className={`${className} shrink-0 object-cover`}
       />
     );
@@ -368,197 +633,48 @@ function PeerAvatar({
   );
 }
 
-function SummaryCard({
-  icon: Icon,
-  label,
-  value,
-  detail
-}: {
-  icon: typeof HandHelping;
-  label: string;
-  value: number | string;
-  detail: string;
-}) {
-  return (
-    <article className="rounded-[1.2rem] border border-cream/10 bg-[#151619]/80 p-4 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.9)] sm:p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[12px] font-medium text-cream/45">{label}</p>
-          <p className="mt-2 font-mono text-3xl font-semibold tracking-[-0.04em] text-cream">
-            {value}
-          </p>
-        </div>
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]">
-          <Icon size={17} aria-hidden="true" />
-        </span>
-      </div>
-      <p className="mt-3 text-[11.5px] text-cream/35">{detail}</p>
-    </article>
-  );
-}
-
-function HistoryTab({
-  active,
-  onClick,
-  children
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className={[
-        "rounded-lg px-3.5 py-2 text-[12.5px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]",
-        active ? "bg-cream text-[#17181a]" : "text-cream/48 hover:text-cream/78"
-      ].join(" ")}
-    >
-      {children}
-    </button>
-  );
-}
-
-function HistoryCard({
-  item,
-  side,
-  onSafetyAction
-}: {
-  item: HelpHistoryItem;
-  side: HelpHistorySide;
-  onSafetyAction: () => void;
-}) {
-  return (
-    <article className="rounded-[1.15rem] border border-cream/10 bg-[linear-gradient(145deg,#1a1b1e,#141517)] p-4 sm:p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2 text-[11px] text-cream/38">
-            <span className="rounded-full border border-cream/10 px-2 py-0.5 font-medium text-cream/55">
-              {STATUS_COPY[item.status]}
-            </span>
-            <span>{item.question.topic}</span>
-            <span>·</span>
-            <span>{item.language}</span>
-          </div>
-          <Link
-            href={item.question.href}
-            className="mt-2 block truncate text-[16px] font-semibold text-cream transition hover:text-white hover:underline"
-          >
-            {item.question.title}
-          </Link>
-        </div>
-        <Link
-          href={item.question.href}
-          aria-label={`Open ${item.question.title}`}
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-cream/10 text-cream/40 transition hover:border-cream/20 hover:text-cream"
-        >
-          <ArrowRight size={15} aria-hidden="true" />
-        </Link>
-      </div>
-
-      <div className="mt-4 flex items-center gap-3 border-t border-cream/8 pt-4">
-        <ParticipantAvatar item={item} />
-        <div className="min-w-0 flex-1">
-          <p className="text-[12.5px] font-semibold text-cream/72">
-            {item.participant?.label ?? (side === "received" ? "No helper accepted" : "Learner")}
-          </p>
-          {item.participant?.headline ? (
-            <p className="mt-0.5 truncate text-[11.5px] text-cream/38">
-              {item.participant.headline}
-            </p>
-          ) : null}
-        </div>
-        {side === "given" && item.learnerRating ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#efcf84]/10 px-2 py-1 text-[11px] font-semibold text-[#efcf84]">
-            <Star size={11} fill="currentColor" aria-hidden="true" /> {item.learnerRating}/5
-          </span>
-        ) : null}
-      </div>
-
-      <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-cream/38">
-        <div className="flex gap-1.5">
-          <dt>Asked</dt>
-          <dd className="text-cream/58">{formatDate(item.askedAt)}</dd>
-        </div>
-        {item.claimedAt ? (
-          <div className="flex gap-1.5">
-            <dt>Accepted</dt>
-            <dd className="text-cream/58">{formatDate(item.claimedAt)}</dd>
-          </div>
-        ) : null}
-        {item.resolvedAt ? (
-          <div className="flex gap-1.5">
-            <dt>Resolved</dt>
-            <dd className="text-cream/58">{formatDate(item.resolvedAt)}</dd>
-          </div>
-        ) : null}
-        {item.sessionDurationMs !== null ? (
-          <div className="flex items-center gap-1.5">
-            <Clock3 size={11} aria-hidden="true" />
-            <dt className="sr-only">Session duration</dt>
-            <dd className="text-cream/58">{formatDuration(item.sessionDurationMs)}</dd>
-          </div>
-        ) : null}
-      </dl>
-
-      {item.canReportOrBlock ? (
-        <div className="mt-4 border-t border-cream/8 pt-3">
-          <SafetyControls requestId={item.id} onActioned={onSafetyAction} />
-        </div>
-      ) : null}
-    </article>
-  );
-}
-
 function ParticipantAvatar({ item }: { item: HelpHistoryItem }) {
-  if (item.participant?.profileImage) {
+  if (item.participant) {
     return (
-      <Image
-        src={item.participant.profileImage}
-        alt=""
-        width={36}
-        height={36}
-        className="h-9 w-9 rounded-full object-cover"
+      <PeerAvatar
+        participant={item.participant}
+        className="h-12 w-12 rounded-full ring-1 ring-white/20"
       />
     );
   }
 
   return (
-    <ProfileAvatar
-      name={item.participant?.label ?? "Trailgrad candidate"}
-      className="h-9 w-9 shrink-0 rounded-full object-cover"
-    />
+    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-white/[0.18] text-cream/30">
+      <HandHelping size={17} aria-hidden="true" />
+    </span>
   );
 }
 
-function EmptyHistory({ side }: { side: HelpHistorySide }) {
+function CleanEmptyState({ message }: { message: string }) {
   return (
-    <div className="rounded-[1.2rem] border border-dashed border-cream/12 px-5 py-12 text-center">
-      <HandHelping size={24} className="mx-auto text-cream/25" aria-hidden="true" />
-      <p className="mt-3 text-sm font-semibold text-cream/65">
-        No {side === "received" ? "help received" : "help given"} yet
-      </p>
-      <p className="mx-auto mt-1 max-w-md text-[12.5px] leading-5 text-cream/38">
-        {side === "received"
-          ? "When you ask for human help from a DSA question, its progress will stay here."
-          : "Qualified requests you accept and resolve will build your private helper history."}
-      </p>
-    </div>
+    <p className="mt-5 rounded-[1.2rem] border border-dashed border-white/[0.17] bg-black px-5 py-9 text-center text-[12.5px] text-cream/42">
+      {message}
+    </p>
   );
 }
 
 function helperBadge(positiveHelps: number): { label: string; detail: string } {
-  if (positiveHelps >= 25) return { label: "Practice Mentor", detail: "25+ helpful conversations" };
+  if (positiveHelps >= 25) {
+    return { label: "Trail Guide", detail: "Highest community rank earned." };
+  }
   if (positiveHelps >= 10) {
-    return { label: "Reliable Helper", detail: `${25 - positiveHelps} more to Practice Mentor` };
+    return {
+      label: "Trusted Mate",
+      detail: `${25 - positiveHelps} more positive ${25 - positiveHelps === 1 ? "conversation" : "conversations"} to Trail Guide.`
+    };
   }
   if (positiveHelps >= 1) {
-    return { label: "First Assist", detail: `${10 - positiveHelps} more to Reliable Helper` };
+    return {
+      label: "First Assist",
+      detail: `${10 - positiveHelps} more positive ${10 - positiveHelps === 1 ? "conversation" : "conversations"} to Trusted Mate.`
+    };
   }
-  return { label: "New helper", detail: "One helpful conversation earns First Assist" };
+  return { label: "New Trailmate", detail: "One positive conversation earns First Assist." };
 }
 
 function formatDate(timestamp: number): string {

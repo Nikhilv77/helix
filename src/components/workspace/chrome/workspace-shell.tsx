@@ -56,7 +56,7 @@ const navGroups = [
   },
   {
     label: "Community",
-    items: [{ label: "Peer help", href: "/help", icon: HandHelping }]
+    items: [{ label: "Trailmate", href: "/help", icon: HandHelping }]
   },
   {
     label: "Account",
