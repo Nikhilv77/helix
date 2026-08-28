@@ -31,15 +31,13 @@ export interface OpenHelpRequestInput {
 /**
  * Lifecycle of a contextual peer-help request.
  *
- * Every transition here is guarded on the status the caller believes the
- * request is in, and performed as a single conditional UPDATE. That is the
- * whole concurrency story: two helpers pressing "Help them" at the same instant
- * both issue `UPDATE ... WHERE status = 'OPEN'`, Postgres serialises them, and
- * the loser updates zero rows and is told the request was already claimed.
+ * Every row transition is guarded on its current status. Cross-row ownership
+ * also uses a short per-person advisory transaction lock, because asking on one
+ * request while claiming another cannot be protected by either row alone.
  *
- * Read-then-write would need a transaction and a version column to be safe.
- * Guarding on status inside the write makes the row its own lock, which is why
- * there is no `version` field on this model.
+ * Two helpers pressing "Help them" at the same instant still converge through
+ * `UPDATE ... WHERE status = 'OPEN'`: one updates the row and the other gets a
+ * clear already-claimed result.
  */
 export class HelpRequestService {
   /**
@@ -52,43 +50,63 @@ export class HelpRequestService {
     private readonly eligibility: Pick<HelperEligibilityService, "score" | "scoresForRequests">
   ) {}
 
-  /**
-   * Open a request. Fails with ALREADY_LIVE if this learner already has an open
-   * or claimed request for the same question — enforced by a partial unique
-   * index, so it holds even when two clicks race.
-   */
+  /** Open a request only when this person is not already using either help seat. */
   async open(input: OpenHelpRequestInput) {
     const ttl = input.ttlMs ?? DEFAULT_TTL_MS;
     const now = new Date();
 
-    // A request must be renewable at the end of its window even if no inbox or
-    // status poll happened to run the general expiry sweep first.
-    await this.prisma.helpRequest.updateMany({
-      where: {
-        learnerId: input.learnerId,
-        questionSlug: input.questionSlug,
-        status: HelpRequestStatus.OPEN,
-        expiresAt: { lte: now }
-      },
-      data: { status: HelpRequestStatus.EXPIRED, closedAt: now }
-    });
-
     try {
-      return await this.prisma.helpRequest.create({
-        data: {
-          learnerId: input.learnerId,
-          questionSlug: input.questionSlug,
-          language: input.language,
-          context: clampContext(input.context) as unknown as Prisma.InputJsonValue,
-          expiresAt: new Date(now.getTime() + ttl)
-        }
+      return await this.prisma.$transaction(async (transaction) => {
+        // Claiming and asking take this same per-person lock. Without it, two
+        // requests reaching different rows could each observe the other role as
+        // free and commit together.
+        await this.lockOwner(transaction, input.learnerId);
+
+        // A request must be renewable at the end of its window even if no inbox
+        // or status poll happened to run the general expiry sweep first.
+        await transaction.helpRequest.updateMany({
+          where: {
+            learnerId: input.learnerId,
+            status: HelpRequestStatus.OPEN,
+            expiresAt: { lte: now }
+          },
+          data: { status: HelpRequestStatus.EXPIRED, closedAt: now }
+        });
+
+        const [ownRequest, helping] = await Promise.all([
+          transaction.helpRequest.findFirst({
+            where: {
+              learnerId: input.learnerId,
+              OR: [
+                { status: HelpRequestStatus.CLAIMED },
+                { status: HelpRequestStatus.OPEN, expiresAt: { gt: now } }
+              ]
+            },
+            select: { id: true }
+          }),
+          transaction.helpRequest.findFirst({
+            where: { helperId: input.learnerId, status: HelpRequestStatus.CLAIMED },
+            select: { id: true }
+          })
+        ]);
+        if (ownRequest || helping) throw new HelpRequestError("ENGAGEMENT_ACTIVE");
+
+        return transaction.helpRequest.create({
+          data: {
+            learnerId: input.learnerId,
+            questionSlug: input.questionSlug,
+            language: input.language,
+            context: clampContext(input.context) as unknown as Prisma.InputJsonValue,
+            expiresAt: new Date(now.getTime() + ttl)
+          }
+        });
       });
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === UNIQUE_VIOLATION
       ) {
-        throw new HelpRequestError("ALREADY_LIVE");
+        throw new HelpRequestError("ENGAGEMENT_ACTIVE");
       }
       throw error;
     }
@@ -157,40 +175,43 @@ export class HelpRequestService {
      */
     let claimed: number;
     try {
-      claimed = await this.prisma.$executeRaw`
-        UPDATE "HelpRequest" AS request
-        SET "status" = 'CLAIMED'::"HelpRequestStatus",
-            "helperId" = ${helperId},
-            "claimedAt" = CURRENT_TIMESTAMP,
-            "updatedAt" = CURRENT_TIMESTAMP
-        WHERE request."id" = ${requestId}::uuid
-          AND request."status" = 'OPEN'::"HelpRequestStatus"
-          AND request."expiresAt" > CURRENT_TIMESTAMP
-          AND request."learnerId" <> ${helperId}
-          AND "helpHelperEligibilityScore"(
-            ${helperId},
-            request."questionSlug",
-            request."language"
-          ) > ${MIN_HELPER_ELIGIBILITY_SCORE}
-          AND NOT EXISTS (
-            SELECT 1 FROM "HelpRequest" AS own_request
-            WHERE own_request."learnerId" = ${helperId}
-              AND (own_request."status" = 'CLAIMED'::"HelpRequestStatus"
-                OR (own_request."status" = 'OPEN'::"HelpRequestStatus"
-                  AND own_request."expiresAt" > CURRENT_TIMESTAMP))
-          )
-          AND NOT EXISTS (
-            SELECT 1 FROM "HelpRequest" AS active_help
-            WHERE active_help."helperId" = ${helperId}
-              AND active_help."status" = 'CLAIMED'::"HelpRequestStatus"
-          )
-          AND NOT EXISTS (
-            SELECT 1
-            FROM "HelpBlock" AS block
-            WHERE (block."ownerId" = request."learnerId" AND block."blockedId" = ${helperId})
-               OR (block."ownerId" = ${helperId} AND block."blockedId" = request."learnerId")
-          )
-      `;
+      claimed = await this.prisma.$transaction(async (transaction) => {
+        await this.lockOwner(transaction, helperId);
+        return transaction.$executeRaw`
+          UPDATE "HelpRequest" AS request
+          SET "status" = 'CLAIMED'::"HelpRequestStatus",
+              "helperId" = ${helperId},
+              "claimedAt" = CURRENT_TIMESTAMP,
+              "updatedAt" = CURRENT_TIMESTAMP
+          WHERE request."id" = ${requestId}::uuid
+            AND request."status" = 'OPEN'::"HelpRequestStatus"
+            AND request."expiresAt" > CURRENT_TIMESTAMP
+            AND request."learnerId" <> ${helperId}
+            AND "helpHelperEligibilityScore"(
+              ${helperId},
+              request."questionSlug",
+              request."language"
+            ) > ${MIN_HELPER_ELIGIBILITY_SCORE}
+            AND NOT EXISTS (
+              SELECT 1 FROM "HelpRequest" AS own_request
+              WHERE own_request."learnerId" = ${helperId}
+                AND (own_request."status" = 'CLAIMED'::"HelpRequestStatus"
+                  OR (own_request."status" = 'OPEN'::"HelpRequestStatus"
+                    AND own_request."expiresAt" > CURRENT_TIMESTAMP))
+            )
+            AND NOT EXISTS (
+              SELECT 1 FROM "HelpRequest" AS active_help
+              WHERE active_help."helperId" = ${helperId}
+                AND active_help."status" = 'CLAIMED'::"HelpRequestStatus"
+            )
+            AND NOT EXISTS (
+              SELECT 1
+              FROM "HelpBlock" AS block
+              WHERE (block."ownerId" = request."learnerId" AND block."blockedId" = ${helperId})
+                 OR (block."ownerId" = ${helperId} AND block."blockedId" = request."learnerId")
+            )
+        `;
+      });
     } catch (error) {
       if (isClaimedHelperUniqueViolation(error)) {
         throw new HelpRequestError("HELPER_UNAVAILABLE");
@@ -572,6 +593,15 @@ export class HelpRequestService {
     const request = await transaction.helpRequest.findUnique({ where: { id: requestId } });
     if (!request) throw new HelpRequestError("NOT_FOUND");
     return request;
+  }
+
+  /** Cross-row serialization for the one-engagement-per-person invariant. */
+  private async lockOwner(transaction: Prisma.TransactionClient, ownerId: string): Promise<void> {
+    // PostgreSQL returns `void`; cast it because Prisma cannot deserialize a
+    // raw `void` result even though the transaction lock was acquired.
+    await transaction.$queryRaw`
+      SELECT pg_advisory_xact_lock(hashtextextended(${ownerId}, 17091))::text AS "lock"
+    `;
   }
 
   /**

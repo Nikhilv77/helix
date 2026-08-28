@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -12,6 +12,7 @@ vi.mock("../help/help-rating", () => ({ HelpRating: () => null }));
 vi.mock("../help/safety-controls", () => ({ SafetyControls: () => null }));
 
 import { AskSomeone } from "./ask-someone";
+import { SHOW_CURRENT_PEER_HELP_EVENT } from "@/lib/help/help-ui-events";
 
 function jsonResponse(payload: unknown, ok = true) {
   return {
@@ -36,7 +37,12 @@ describe("AskSomeone", () => {
         return Promise.resolve(
           jsonResponse({
             success: true,
-            data: { id: "00000000-0000-4000-8000-000000000001", status: "OPEN" }
+            data: {
+              id: "00000000-0000-4000-8000-000000000001",
+              status: "OPEN",
+              invitationsSent: 2,
+              cooldownMs: 10 * 60_000
+            }
           })
         );
       }
@@ -84,6 +90,144 @@ describe("AskSomeone", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(14_000);
     });
-    expect(screen.getByText("Request delivered — waiting for a helper")).toBeTruthy();
+    expect(screen.getByText("Invitations sent to 2 qualified helpers — waiting")).toBeTruthy();
+  });
+
+  it("shows a blurred toast and does not send when no helper is available", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ success: true, data: { id: null, status: null, helperCount: 0 } })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <AskSomeone
+        slug="contains-duplicate"
+        title="Contains Duplicate"
+        language="javascript"
+        code="return true;"
+        testOutput={null}
+        failingTests={null}
+        selection={null}
+        startedAt={Date.now() - 10_000}
+      />
+    );
+
+    expect(
+      await screen.findByText(
+        "No qualified helpers are available right now. An invitation will not be sent."
+      )
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Ask someone" }));
+
+    expect(await screen.findByRole("alertdialog")).toBeTruthy();
+    expect(screen.getByText("Your invitation was not sent.", { exact: false })).toBeTruthy();
+    expect(screen.getByTestId("help-flow-notice-backdrop").className).toContain(
+      "backdrop-blur-[5px]"
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the server cooldown as a live timer on Ask Someone", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (input === "/api/help/request" && init?.method === "POST") {
+        return Promise.resolve(
+          jsonResponse(
+            {
+              success: false,
+              error: {
+                code: "HELP_REQUEST_RATE_LIMITED",
+                message: "Please wait.",
+                details: { retryAfterMs: 10 * 60_000 }
+              }
+            },
+            false
+          )
+        );
+      }
+      return Promise.resolve(
+        jsonResponse({ success: true, data: { id: null, status: null, helperCount: 2 } })
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <AskSomeone
+        slug="contains-duplicate"
+        title="Contains Duplicate"
+        language="javascript"
+        code="return true;"
+        testOutput={null}
+        failingTests={null}
+        selection={null}
+        startedAt={Date.now() - 10_000}
+      />
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      fireEvent.click(screen.getByRole("button", { name: "Ask someone" }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText("Ask Someone is cooling down")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Ask again in 10:00" })).toBeDisabled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(screen.getByRole("button", { name: "Ask again in 9:50" })).toBeDisabled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(590_000);
+    });
+    expect(screen.getByRole("button", { name: "Ask someone" })).not.toBeDisabled();
+  });
+
+  it("opens the current-engagement prompt instead of showing a generic conflict error", async () => {
+    const showPrompt = vi.fn();
+    window.addEventListener(SHOW_CURRENT_PEER_HELP_EVENT, showPrompt);
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (input === "/api/help/request" && init?.method === "POST") {
+        return Promise.resolve(
+          jsonResponse(
+            {
+              success: false,
+              error: {
+                code: "HELP_ENGAGEMENT_ACTIVE",
+                message: "Finish your current engagement first."
+              }
+            },
+            false
+          )
+        );
+      }
+      return Promise.resolve(
+        jsonResponse({ success: true, data: { id: null, status: null, helperCount: 2 } })
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <AskSomeone
+        slug="contains-duplicate"
+        title="Contains Duplicate"
+        language="javascript"
+        code="return true;"
+        testOutput={null}
+        failingTests={null}
+        selection={null}
+        startedAt={Date.now() - 10_000}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Ask someone" }));
+    await waitFor(() => expect(showPrompt).toHaveBeenCalledOnce());
+    expect(screen.queryByText("Finish your current engagement first.")).toBeNull();
+    window.removeEventListener(SHOW_CURRENT_PEER_HELP_EVENT, showPrompt);
   });
 });

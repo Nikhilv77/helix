@@ -1,7 +1,7 @@
 "use client";
 
 import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 export type DsaEditorLanguage = "python" | "javascript" | "cpp" | "java";
 
@@ -81,25 +81,41 @@ export function DsaCodeEditor({
   value,
   onChange,
   onRun,
-  onSelectionChange
+  onSelectionChange,
+  readOnly = false,
+  selection = null,
+  ariaLabel
 }: {
   language: DsaEditorLanguage;
   value: string;
-  onChange: (value: string) => void;
-  onRun: () => void;
+  onChange?: (value: string) => void;
+  onRun?: () => void;
   onSelectionChange?: (selection: DsaEditorSelection) => void;
+  readOnly?: boolean;
+  selection?: DsaEditorSelection | null;
+  ariaLabel?: string;
 }) {
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || !selection) return;
+    editor.setSelection(selection);
+    editor.revealRangeInCenterIfOutsideViewport(selection);
+  }, [selection]);
 
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     monaco.editor.setTheme("trailgrad-modern");
-    editor.addAction({
-      id: "trailgrad-run-code",
-      label: "Run code",
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
-      run: onRun
-    });
+    if (!readOnly && onRun) {
+      editor.addAction({
+        id: "trailgrad-run-code",
+        label: "Run code",
+        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
+        run: onRun
+      });
+    }
+    if (selection) editor.setSelection(selection);
     if (onSelectionChange) {
       const publishSelection = () => {
         const selection = editor.getSelection();
@@ -121,7 +137,7 @@ export function DsaCodeEditor({
         })
       );
     }
-    editor.focus();
+    if (!readOnly) editor.focus();
   };
 
   return (
@@ -129,7 +145,9 @@ export function DsaCodeEditor({
       height="100%"
       language={language}
       value={value}
-      onChange={(next) => onChange(next ?? "")}
+      onChange={(next) => {
+        if (!readOnly) onChange?.(next ?? "");
+      }}
       beforeMount={registerTrailgradTheme}
       onMount={handleMount}
       theme="trailgrad-modern"
@@ -142,13 +160,17 @@ export function DsaCodeEditor({
         </div>
       }
       options={{
+        ariaLabel: ariaLabel ?? (readOnly ? "Code editor, read only" : "Code editor"),
         automaticLayout: true,
+        readOnly,
+        domReadOnly: readOnly,
         fontFamily: "Geist Mono, ui-monospace, SFMono-Regular, Menlo, monospace",
         fontSize: 13.5,
         lineHeight: 23,
         minimap: { enabled: false },
         padding: { top: 16, bottom: 20 },
-        renderLineHighlight: "line",
+        renderLineHighlight: readOnly ? "all" : "line",
+        renderLineHighlightOnlyWhenFocus: false,
         roundedSelection: false,
         scrollBeyondLastLine: false,
         smoothScrolling: true,
@@ -173,7 +195,8 @@ export function DsaCodeEditor({
           horizontalScrollbarSize: 8,
           useShadows: false
         },
-        suggest: { showMethods: true, showFunctions: true }
+        suggest: readOnly ? undefined : { showMethods: true, showFunctions: true },
+        contextmenu: !readOnly
       }}
     />
   );

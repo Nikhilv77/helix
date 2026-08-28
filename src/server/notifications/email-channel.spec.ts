@@ -19,8 +19,8 @@ describe("email channel", () => {
 
     await expect(
       channel.send("helper-1", {
-        subject: "Someone needs help",
-        text: "Open Trailgrad",
+        subject: "Your practice path is ready",
+        text: "Start your first Trailgrad practice question.",
         idempotencyKey: "notification/123"
       })
     ).resolves.toBe(true);

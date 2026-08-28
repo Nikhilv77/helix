@@ -13,19 +13,8 @@ export interface DispatchResult {
   emailed: boolean;
 }
 
-/**
- * Kinds worth interrupting somebody's day for.
- *
- * A request to help is time-sensitive — a learner waiting six hours has moved
- * on — so it earns an email. The rest can wait until the recipient next opens
- * the app, and emailing them anyway is how an inbox becomes something people
- * filter out.
- */
-const EMAIL_KINDS: ReadonlySet<NotificationKind> = new Set([
-  NotificationKind.TEACHER_WELCOME,
-  NotificationKind.HELP_REQUEST_OPENED,
-  NotificationKind.HELP_REQUEST_CLAIMED
-]);
+/** Email is intentionally reserved for the one onboarding welcome. */
+const EMAIL_KINDS: ReadonlySet<NotificationKind> = new Set([NotificationKind.TEACHER_WELCOME]);
 
 /**
  * Fans one notification out across the channels.
@@ -88,6 +77,12 @@ export class NotificationDispatcher {
     if (!claim) return null;
 
     const notification = claim.notification;
+    // Also protects against Help or coaching rows queued before email was
+    // narrowed to onboarding-only delivery.
+    if (!EMAIL_KINDS.has(notification.kind)) {
+      await this.notifications.cancelEmailDelivery(claim, "Email disabled for notification kind");
+      return false;
+    }
     if (!(await this.notifications.recipientAllowsKind(notification.ownerId, notification.kind))) {
       await this.notifications.cancelEmailDelivery(claim);
       return false;

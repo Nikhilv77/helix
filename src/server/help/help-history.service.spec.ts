@@ -2,6 +2,53 @@ import type { PrismaService } from "../database/prisma.service";
 import { HelpHistoryService, InvalidHelpHistoryCursorError } from "./help-history.service";
 
 describe("help history", () => {
+  it("presents a learner's waiting request as their current engagement", async () => {
+    const prisma = {
+      helpRequest: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: "00000000-0000-4000-8000-000000000001",
+          learnerId: "owner-1",
+          helperId: null,
+          status: "OPEN",
+          questionSlug: "contains-duplicate",
+          language: "javascript",
+          question: { title: "Contains Duplicate" },
+          session: null
+        })
+      }
+    } as unknown as PrismaService;
+
+    await expect(new HelpHistoryService(prisma).activeEngagement("owner-1")).resolves.toEqual({
+      requestId: "00000000-0000-4000-8000-000000000001",
+      seat: "learner",
+      status: "OPEN",
+      slug: "contains-duplicate",
+      title: "Contains Duplicate",
+      language: "javascript",
+      started: false,
+      peer: null
+    });
+  });
+
+  it("never presents an ended room as resumable", async () => {
+    const prisma = {
+      helpRequest: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: "00000000-0000-4000-8000-000000000001",
+          learnerId: "owner-1",
+          helperId: "helper-1",
+          status: "CLAIMED",
+          questionSlug: "contains-duplicate",
+          language: "javascript",
+          question: { title: "Contains Duplicate" },
+          session: { endedAt: new Date() }
+        })
+      }
+    } as unknown as PrismaService;
+
+    await expect(new HelpHistoryService(prisma).activeEngagement("owner-1")).resolves.toBeNull();
+  });
+
   it("returns owner-scoped help-given history without exposing internal participant ids", async () => {
     const helpRequestFindMany = jest.fn().mockResolvedValue([
       {

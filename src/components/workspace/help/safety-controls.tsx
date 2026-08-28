@@ -2,6 +2,7 @@
 
 import { Flag, ShieldBan } from "lucide-react";
 import { useCallback, useState } from "react";
+import { announcePeerHelpEnded } from "@/lib/help/help-ui-events";
 
 const REASONS = [
   { value: "HARASSMENT", label: "Harassment or abuse" },
@@ -50,6 +51,7 @@ export function SafetyControls({
         setDone(confirmation);
         setReporting(false);
         setBlocking(false);
+        announcePeerHelpEnded(requestId);
         onActioned?.();
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "That did not go through. Try again.");
@@ -57,7 +59,7 @@ export function SafetyControls({
         setBusy(false);
       }
     },
-    [onActioned]
+    [onActioned, requestId]
   );
 
   if (done) {

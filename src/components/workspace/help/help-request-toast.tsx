@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { HelpHistoryParticipant } from "@/lib/help/help-history";
 import { peerHelpRoomHref } from "@/lib/help/help-room-navigation";
+import { showCurrentPeerHelp } from "@/lib/help/help-ui-events";
 import { ProfileAvatar } from "../profile/profile-avatar";
 
 /** Near-live without adding a socket or service-worker delivery layer. */
@@ -90,6 +91,11 @@ export function HelpRequestToast() {
         });
         const payload = await response.json().catch(() => null);
         if (!response.ok || !payload?.success) {
+          if (action === "claim" && payload?.error?.code === "HELP_HELPER_UNAVAILABLE") {
+            setRequest(null);
+            showCurrentPeerHelp();
+            return;
+          }
           throw new Error(payload?.error?.message ?? "That request is no longer available.");
         }
 

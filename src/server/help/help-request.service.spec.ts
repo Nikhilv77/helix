@@ -397,7 +397,36 @@ describe("help request lifecycle", () => {
     const { service } = serviceUnderTest();
     await openRequest(service);
 
-    await expect(openRequest(service)).rejects.toMatchObject({ reason: "ALREADY_LIVE" });
+    await expect(openRequest(service)).rejects.toMatchObject({ reason: "ENGAGEMENT_ACTIVE" });
+  });
+
+  it("refuses another question while the learner is already waiting", async () => {
+    const { service } = serviceUnderTest();
+    await openRequest(service);
+
+    await expect(
+      service.open({
+        learnerId: "learner-1",
+        questionSlug: "two-sum",
+        language: "java",
+        context
+      })
+    ).rejects.toMatchObject({ reason: "ENGAGEMENT_ACTIVE" });
+  });
+
+  it("refuses an own request while the person is already helping", async () => {
+    const { service } = serviceUnderTest();
+    const request = await openRequest(service, "learner-1");
+    await service.claim(request.id, "helper-1");
+
+    await expect(
+      service.open({
+        learnerId: "helper-1",
+        questionSlug: "two-sum",
+        language: "java",
+        context
+      })
+    ).rejects.toMatchObject({ reason: "ENGAGEMENT_ACTIVE" });
   });
 
   it("lets the learner ask again once the previous request is resolved", async () => {

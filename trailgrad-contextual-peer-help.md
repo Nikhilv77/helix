@@ -309,8 +309,10 @@ only before a help room has started.
 
 Claims are concurrency-safe. If two helpers click **Help them** together, the
 database updates the row only while it is still `OPEN`. One helper wins and
-the other receives **Someone else got there first**. The same database layer
-also prevents duplicate live requests for the same learner and question.
+the other receives **Someone else got there first**. A per-person transaction
+lock also allows only one live peer-help engagement across every question and
+both roles, preventing a person from waiting for help while simultaneously
+accepting or opening another request.
 
 A `HelpSession` is separate from the request. It is created only when one of
 the two participants joins the conversation, so merely claiming a request does
@@ -356,10 +358,15 @@ The learner can:
 - Resume the request state after refreshing or returning to the question
 - See when somebody has claimed it and join the conversation
 
+If the learner tries to ask again, or either role tries to accept another
+request, Trailgrad opens a centered blurred prompt for the existing engagement.
+It offers **View/Withdraw** while waiting, **Join/Hand back** for an unstarted
+helper claim, or **Resume meeting** once a room has started.
+
 The button requires a non-empty attempt. Opening is rate-limited, and the
 server independently validates the question, language, code size, test data,
-and ownership. At the current limit, one learner may open three requests in a
-30-minute window.
+and ownership. At the current limit, one learner may open one request every ten
+minutes.
 
 An optional concierge notification can also alert the product operator during
 the early-liquidity stage. This does not replace the real matching flow.
@@ -374,18 +381,20 @@ one evidence path:
 - Strong results on multiple questions using the same DSA pattern
 - Demonstrated DSA-pattern or general problem-solving performance in Trailgrad
   interviews
-- A verified, credible profile showing external DSA-platform experience, or
-  substantial experience in the learner's programming language
+- A verified, credible profile showing external DSA-platform experience
+- A verified mid/senior engineering profile, as a lower-confidence evidence
+  lane than demonstrated DSA results
 
 Every helper must still have help notifications enabled, be currently
 available, and have no block relationship with the learner in either direction.
 
 Eligible helpers are ranked using the strength of their qualification evidence,
-how recently that evidence was demonstrated, performance in the learner's
-language, experience with the same DSA pattern, and overall problem-solving
-breadth. An exact Trailgrad solve normally ranks highest, but it is an advantage
-rather than a hard gate. Matching language also improves rank without excluding
-cross-language helpers.
+how recently that evidence was demonstrated, experience with the same DSA
+pattern, overall problem-solving breadth, and—only as a small affinity
+bonus—performance in the learner's language. An exact Trailgrad solve normally
+ranks highest, but it is an advantage rather than a hard gate. Programming
+language never determines eligibility; a helper who qualifies in one language
+qualifies for the same DSA request in every supported language.
 
 The top three candidates receive the first notification. Eligibility is checked
 again inside the claim operation, so an old inbox page cannot bypass a new
@@ -412,11 +421,9 @@ The in-app inbox is the active delivery mechanism. It polls quietly so a
 temporary connection failure becomes a delayed notification rather than a lost
 one.
 
-Resend email support is implemented as dormant infrastructure for later use. It
-includes recipient opt-out checks, idempotency, leased delivery attempts,
-bounded retries, and backoff, but it sends nothing when `RESEND_API_KEY` and the
-sender address are not configured. This preserves the future email path without
-requiring email now.
+Resend email infrastructure is reserved for the onboarding welcome. Peer-help
+invitations, acceptance, expiry, feedback, and completion notifications remain
+in-app only even when Resend is configured.
 
 ### Part 6 --- Profile helper activity, inbox modal, decline, and safe claim
 

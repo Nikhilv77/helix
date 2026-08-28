@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const { userId } = await auth();
     if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
     const ownerId = authenticatedOwnerId(userId);
-    return apiSuccess(await getAppContainer().helpHistoryService.activeConversation(ownerId));
+    return apiSuccess(await getAppContainer().helpHistoryService.activeEngagement(ownerId));
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   }

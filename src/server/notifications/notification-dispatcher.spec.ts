@@ -7,24 +7,42 @@ import {
 } from "./notification.service";
 import type { EmailChannel } from "./email-channel";
 
-const opened = {
-  ownerId: "helper-1",
-  kind: NotificationKind.HELP_REQUEST_OPENED,
-  title: "Someone needs help with LRU Cache",
-  body: "Reads are not affecting their eviction order.",
-  href: "/dsa-questions/lru-cache",
-  subjectId: "req-1"
+const onboarding = {
+  ownerId: "candidate-1",
+  kind: NotificationKind.TEACHER_WELCOME,
+  title: "Your first practice path is ready",
+  body: "Start with one focused question.",
+  href: "/practice",
+  subjectId: "onboarding-v1"
 };
 
-function harness(options: { recorded?: boolean; emailed?: boolean; allowed?: boolean } = {}) {
+const IN_APP_ONLY_KINDS: NotificationKind[] = [
+  NotificationKind.TEACHER_RECOMMENDATION,
+  NotificationKind.TEACHER_ENCOURAGEMENT,
+  NotificationKind.TEACHER_REMINDER,
+  NotificationKind.HELP_REQUEST_OPENED,
+  NotificationKind.HELP_REQUEST_CLAIMED,
+  NotificationKind.HELP_REQUEST_RESOLVED,
+  NotificationKind.HELP_REQUEST_EXPIRED,
+  NotificationKind.HELP_FEEDBACK_RECEIVED
+];
+
+function harness(
+  options: {
+    recorded?: boolean;
+    emailed?: boolean;
+    allowed?: boolean;
+    pendingKind?: NotificationKind;
+  } = {}
+) {
   let notification: EmailDeliveryRecord = {
     id: "n-1",
-    ownerId: opened.ownerId,
-    kind: opened.kind,
-    title: opened.title,
-    body: opened.body,
-    href: opened.href,
-    subjectId: opened.subjectId,
+    ownerId: onboarding.ownerId,
+    kind: options.pendingKind ?? onboarding.kind,
+    title: onboarding.title,
+    body: onboarding.body,
+    href: onboarding.href,
+    subjectId: onboarding.subjectId,
     emailSubject: null as string | null,
     emailBody: null as string | null,
     emailHtml: null as string | null,
@@ -86,7 +104,7 @@ function harness(options: { recorded?: boolean; emailed?: boolean; allowed?: boo
 describe("dispatch", () => {
   it("writes the inbox row before it emails", async () => {
     const { dispatcher, recordForDispatch, send } = harness();
-    const result = await dispatcher.dispatch(opened);
+    const result = await dispatcher.dispatch(onboarding);
 
     expect(recordForDispatch).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledTimes(1);
@@ -98,7 +116,7 @@ describe("dispatch", () => {
     // duplicate email is worse than a duplicate row because it cannot be undone.
     const { dispatcher, send } = harness({ recorded: false });
 
-    await expect(dispatcher.dispatch(opened)).resolves.toEqual({
+    await expect(dispatcher.dispatch(onboarding)).resolves.toEqual({
       recorded: false,
       emailed: false
     });
@@ -109,7 +127,7 @@ describe("dispatch", () => {
     const { dispatcher, completeEmailDelivery } = harness({ emailed: false });
 
     // The durable record must not depend on a third party being up.
-    await expect(dispatcher.dispatch(opened)).resolves.toEqual({
+    await expect(dispatcher.dispatch(onboarding)).resolves.toEqual({
       recorded: true,
       emailed: false
     });
@@ -119,10 +137,12 @@ describe("dispatch", () => {
     );
   });
 
-  it("leaves low-urgency kinds to the inbox", async () => {
-    const { dispatcher, claimEmailDelivery, send } = harness();
+  it.each(IN_APP_ONLY_KINDS)("keeps %s in-app only", async (kind) => {
+    const { dispatcher, recordForDispatch, claimEmailDelivery, send } = harness();
 
-    await dispatcher.dispatch({ ...opened, kind: NotificationKind.HELP_REQUEST_RESOLVED });
+    await dispatcher.dispatch({ ...onboarding, kind, subjectId: `${kind}-1` });
+
+    expect(recordForDispatch).toHaveBeenCalledWith(expect.objectContaining({ kind }), false);
     expect(send).not.toHaveBeenCalled();
     expect(claimEmailDelivery).not.toHaveBeenCalled();
   });
@@ -135,19 +155,24 @@ describe("dispatch", () => {
     expect(send).toHaveBeenCalledTimes(1);
   });
 
-  it("emails a claim, because a waiting learner is time-sensitive", async () => {
-    const { dispatcher, send } = harness();
+  it("cancels a peer-help email queued before email became onboarding-only", async () => {
+    const { dispatcher, send, cancelEmailDelivery } = harness({
+      pendingKind: NotificationKind.HELP_REQUEST_OPENED
+    });
 
-    await dispatcher.dispatch({ ...opened, kind: NotificationKind.HELP_REQUEST_CLAIMED });
-    expect(send).toHaveBeenCalledTimes(1);
+    await expect(dispatcher.retryPending()).resolves.toEqual({ attempted: 1, emailed: 0 });
+    expect(send).not.toHaveBeenCalled();
+    expect(cancelEmailDelivery).toHaveBeenCalledWith(
+      expect.objectContaining({ token: "lease-1" }),
+      "Email disabled for notification kind"
+    );
   });
 
   it("reuses persisted HTML and sender identity during delivery", async () => {
     const { dispatcher, send } = harness();
 
     await dispatcher.dispatch({
-      ...opened,
-      kind: NotificationKind.TEACHER_WELCOME,
+      ...onboarding,
       email: {
         subject: "Ethan from Trailgrad — your path is ready",
         body: "Your path is ready.",
@@ -157,7 +182,7 @@ describe("dispatch", () => {
     });
 
     expect(send).toHaveBeenCalledWith(
-      "helper-1",
+      "candidate-1",
       expect.objectContaining({
         subject: "Ethan from Trailgrad — your path is ready",
         html: "<html>Welcome</html>",
@@ -166,10 +191,10 @@ describe("dispatch", () => {
     );
   });
 
-  it("cancels an optional email lease when the recipient has opted out", async () => {
+  it("cancels an email lease when the recipient cannot receive its kind", async () => {
     const { dispatcher, send, cancelEmailDelivery } = harness({ allowed: false });
 
-    await expect(dispatcher.dispatch(opened)).resolves.toEqual({
+    await expect(dispatcher.dispatch(onboarding)).resolves.toEqual({
       recorded: true,
       emailed: false
     });
@@ -179,35 +204,25 @@ describe("dispatch", () => {
 });
 
 describe("email body", () => {
-  it("absolutises the link and offers a way out of optional mail", async () => {
+  it("absolutises the onboarding link without coaching settings copy", async () => {
     const { dispatcher, send } = harness();
-    await dispatcher.dispatch(opened);
+    await dispatcher.dispatch(onboarding);
 
     const [, message] = send.mock.calls[0] as [string, { subject: string; text: string }];
-    expect(message.subject).toBe(opened.title);
-    expect(message.text).toContain("https://app.trailgrad.com/dsa-questions/lru-cache");
-    // Without an unsubscribe path the only lever left is marking it as spam.
-    expect(message.text).toContain("Notification settings:");
-    expect(message.text).toContain("/manage#notifications");
-  });
-
-  it("omits the opt-out line on transactional mail", async () => {
-    const { dispatcher, send } = harness();
-    await dispatcher.dispatch({ ...opened, kind: NotificationKind.HELP_REQUEST_CLAIMED });
-
-    const [, message] = send.mock.calls[0] as [string, { text: string }];
-    expect(message.text).not.toContain("Stop these:");
+    expect(message.subject).toBe(onboarding.title);
+    expect(message.text).toContain("https://app.trailgrad.com/practice");
+    expect(message.text).not.toContain("Notification settings:");
   });
 
   it("skips links entirely when no origin is configured", async () => {
     const notification = {
       id: "n-1",
-      ownerId: opened.ownerId,
-      kind: opened.kind,
-      title: opened.title,
-      body: opened.body,
-      href: opened.href,
-      subjectId: opened.subjectId,
+      ownerId: onboarding.ownerId,
+      kind: onboarding.kind,
+      title: onboarding.title,
+      body: onboarding.body,
+      href: onboarding.href,
+      subjectId: onboarding.subjectId,
       emailSubject: null,
       emailBody: null,
       emailHtml: null,
@@ -229,11 +244,11 @@ describe("email body", () => {
       undefined
     );
 
-    await dispatcher.dispatch(opened);
+    await dispatcher.dispatch(onboarding);
     const [, message] = send.mock.calls[0] as [string, { text: string }];
 
     // A relative path in an email goes nowhere; better to send none.
-    expect(message.text).not.toContain("/dsa-questions");
-    expect(message.text).toBe(opened.body);
+    expect(message.text).not.toContain("/practice");
+    expect(message.text).toBe(onboarding.body);
   });
 });

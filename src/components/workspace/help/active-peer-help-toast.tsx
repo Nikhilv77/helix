@@ -5,8 +5,13 @@ import { ArrowRight, Mic2, UsersRound } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import type { ActivePeerHelp } from "@/lib/help/help-history";
+import type { CurrentPeerHelpEngagement } from "@/lib/help/help-history";
 import { peerHelpRoomHref } from "@/lib/help/help-room-navigation";
+import {
+  isPeerHelpPromptVisible,
+  PEER_HELP_ENDED_EVENT,
+  PEER_HELP_PROMPT_VISIBILITY_EVENT
+} from "@/lib/help/help-ui-events";
 import { ProfileAvatar } from "../profile/profile-avatar";
 
 const POLL_MS = 15_000;
@@ -15,14 +20,18 @@ const POLL_MS = 15_000;
 export function ActivePeerHelpToast() {
   const pathname = usePathname();
   const router = useRouter();
-  const [active, setActive] = useState<ActivePeerHelp | null>(null);
+  const [active, setActive] = useState<CurrentPeerHelpEngagement | null>(null);
+  const [promptVisible, setPromptVisible] = useState(isPeerHelpPromptVisible);
 
   const load = useCallback(async () => {
     try {
       const response = await fetch("/api/help/active");
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.success) return;
-      setActive((payload.data as ActivePeerHelp | null) ?? null);
+      const next = (payload.data as CurrentPeerHelpEngagement | null) ?? null;
+      // Waiting requests have their own inline status. This nudge is only a way
+      // back to a room that both people can actually join.
+      setActive(next?.status === "CLAIMED" ? next : null);
     } catch {
       // The room remains reachable from Peer Help if a quiet poll misses.
     }
@@ -43,7 +52,24 @@ export function ActivePeerHelpToast() {
     };
   }, [load]);
 
-  if (!active || pathname?.startsWith("/help/room/")) return null;
+  useEffect(() => {
+    const onPromptVisibility = (event: Event) => {
+      setPromptVisible((event as CustomEvent<{ visible: boolean }>).detail.visible);
+    };
+    const onEnded = (event: Event) => {
+      const requestId = (event as CustomEvent<{ requestId: string }>).detail.requestId;
+      setActive((current) => (current?.requestId === requestId ? null : current));
+    };
+    window.addEventListener(PEER_HELP_PROMPT_VISIBILITY_EVENT, onPromptVisibility);
+    window.addEventListener(PEER_HELP_ENDED_EVENT, onEnded);
+    setPromptVisible(isPeerHelpPromptVisible());
+    return () => {
+      window.removeEventListener(PEER_HELP_PROMPT_VISIBILITY_EVENT, onPromptVisibility);
+      window.removeEventListener(PEER_HELP_ENDED_EVENT, onEnded);
+    };
+  }, []);
+
+  if (!active?.peer || promptVisible || pathname?.startsWith("/help/room/")) return null;
 
   const resume = () => {
     const returnTo = `${pathname ?? "/help"}${window.location.search}`;

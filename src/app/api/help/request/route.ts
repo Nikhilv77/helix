@@ -71,6 +71,10 @@ const openSchema = z.object({
 /** How a failed lifecycle call maps onto the wire. */
 const FAILURE_STATUS: Record<string, { status: number; message: string }> = {
   ALREADY_LIVE: { status: 409, message: "You already have an open request for this problem." },
+  ENGAGEMENT_ACTIVE: {
+    status: 409,
+    message: "Finish, withdraw, or hand back your current peer-help engagement first."
+  },
   NOT_FOUND: { status: 404, message: "That help request no longer exists." },
   NOT_THE_LEARNER: { status: 403, message: "That request is not yours to cancel." }
 };
@@ -95,6 +99,20 @@ export async function POST(request: NextRequest) {
     const app = getAppContainer();
     await getSharedGuard(app.config).enforce(RATE_LIMIT_POLICIES.helpRequest, ownerId);
 
+    const helpers = await app.helperMatchingService.findHelpers(
+      question.slug,
+      ownerId,
+      parsed.data.language,
+      HELPERS_TO_NOTIFY
+    );
+    if (helpers.length === 0) {
+      throw new ApiRouteError(
+        409,
+        "HELP_NO_AVAILABLE_HELPERS",
+        "No qualified helpers are available right now, so your invitation was not sent."
+      );
+    }
+
     const context = {
       code: parsed.data.code,
       language: parsed.data.language,
@@ -114,12 +132,66 @@ export async function POST(request: NextRequest) {
       context
     });
 
+    // Help invitations are in-app-only database writes. Await them so the UI
+    // never says "delivered" when no invitation row was actually recorded.
+    const learner = await app.helpHistoryService.participant(ownerId);
+    const failing = context.failingTests;
+    const body =
+      failing === null
+        ? `They are working in ${parsed.data.language} and shared their current code.`
+        : `They are working in ${parsed.data.language} with ${failing} failing ${
+            failing === 1 ? "test" : "tests"
+          }.`;
+    const deliveries = await Promise.allSettled(
+      helpers.map((helper) =>
+        app.notificationDispatcher.dispatch({
+          ownerId: helper.ownerId,
+          kind: NotificationKind.HELP_REQUEST_OPENED,
+          title: `${learner.label} needs help with ${question.title}`,
+          body,
+          href: `/help?request=${helpRequest.id}`,
+          subjectId: helpRequest.id
+        })
+      )
+    );
+    const invitationsSent = deliveries.filter(
+      (delivery) => delivery.status === "fulfilled" && delivery.value.recorded
+    ).length;
+    const failed = deliveries.filter((delivery) => delivery.status === "rejected").length;
+
+    if (failed > 0) {
+      logger.error(
+        JSON.stringify({
+          event: "help.request.fanout.partial_failure",
+          requestId: helpRequest.id,
+          failed,
+          invitationsSent
+        })
+      );
+    }
+
+    if (invitationsSent === 0) {
+      await app.helpRequestService.cancel(helpRequest.id, ownerId).catch((error) => {
+        logger.error(
+          JSON.stringify({
+            event: "help.request.unrouted_cancel.failed",
+            requestId: helpRequest.id,
+            reason: error instanceof Error ? error.message : String(error)
+          })
+        );
+      });
+      throw new ApiRouteError(
+        503,
+        "HELP_INVITATION_NOT_SENT",
+        "We could not send a helper invitation. Your request was not left waiting; please try again."
+      );
+    }
+
     // AI enrichment is useful context, never a prerequisite for reaching a
-    // human. Keep it in its own task so a model timeout cannot suppress every
-    // helper notification for an otherwise valid request.
+    // human. Schedule it only after at least one invitation is durably routed,
+    // so a cancelled unroutable request does not produce background work.
     after(async () => {
       try {
-        const learner = await app.helpHistoryService.participant(ownerId);
         const summary = await app.stuckSummaryService.summarize(question, context);
         await app.helpRequestService.attachSummary(helpRequest.id, JSON.stringify(summary));
 
@@ -146,54 +218,12 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Route independently of Gemini. Dispatch is idempotent per recipient,
-    // kind and request, so replaying this task never duplicates an inbox row.
-    after(async () => {
-      try {
-        const learner = await app.helpHistoryService.participant(ownerId);
-        const helpers = await app.helperMatchingService.findHelpers(
-          question.slug,
-          ownerId,
-          parsed.data.language,
-          HELPERS_TO_NOTIFY
-        );
-
-        const failing = context.failingTests;
-        const body =
-          failing === null
-            ? `They are working in ${parsed.data.language} and shared their current code.`
-            : `They are working in ${parsed.data.language} with ${failing} failing ${
-                failing === 1 ? "test" : "tests"
-              }.`;
-        const deliveries = await Promise.allSettled(
-          helpers.map((helper) =>
-            app.notificationDispatcher.dispatch({
-              ownerId: helper.ownerId,
-              kind: NotificationKind.HELP_REQUEST_OPENED,
-              title: `${learner.label} needs help with ${question.title}`,
-              body,
-              href: `/help?request=${helpRequest.id}`,
-              subjectId: helpRequest.id
-            })
-          )
-        );
-        const failed = deliveries.filter((delivery) => delivery.status === "rejected").length;
-        if (failed > 0) throw new Error(`${failed} helper notifications failed`);
-      } catch (error) {
-        logger.error(
-          JSON.stringify({
-            event: "help.request.fanout.failed",
-            requestId: helpRequest.id,
-            reason: error instanceof Error ? error.message : String(error)
-          })
-        );
-      }
-    });
-
     return apiSuccess({
       id: helpRequest.id,
       status: helpRequest.status,
-      createdAt: helpRequest.createdAt.getTime()
+      createdAt: helpRequest.createdAt.getTime(),
+      invitationsSent,
+      cooldownMs: RATE_LIMIT_POLICIES.helpRequest.windowMs
     });
   } catch (error) {
     return apiError(translate(error), request.nextUrl.pathname);

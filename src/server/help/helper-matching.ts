@@ -33,9 +33,9 @@ export interface RankedHelper extends HelperCandidate {
  * Weights for the five signals that exist. They sum to 1 so the score stays
  * readable as a fraction.
  *
- * Qualification and recency are the strongest signals. Language is meaningful
- * but deliberately not a hard gate: the algorithm transfers across languages,
- * while matching syntax still makes an explanation easier to follow.
+ * Qualification and recency are the strongest signals. Language is only a
+ * ranking affinity: DSA competence transfers across languages, while matching
+ * syntax can still make an explanation easier to follow.
  */
 const QUALIFICATION_WEIGHT = 0.4;
 const LANGUAGE_WEIGHT = 0.15;
@@ -142,7 +142,7 @@ export class HelperMatchingService {
             FROM "UserQuestionAttempt" exact
             WHERE exact."ownerId" = profile."ownerId"
               AND exact."dsaQuestionSlug" = $1
-              AND exact."status" = 'SUBMITTED'
+              AND exact."status" IN ('SUBMITTED', 'COMPLETED')
           ), 0) AS "exactQuestionScore",
           COALESCE((
             SELECT MAX(language_attempt."score")::float

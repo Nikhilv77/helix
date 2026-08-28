@@ -3,6 +3,7 @@
 import { Check, Loader2, Mic, MicOff, PhoneOff, Send, Volume2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Room } from "livekit-client";
+import { announcePeerHelpEnded } from "@/lib/help/help-ui-events";
 import {
   SNAPSHOT_TOPIC,
   SnapshotAssembler,
@@ -146,6 +147,7 @@ export function HelpCall({
     }
 
     setState("ended");
+    announcePeerHelpEnded(requestId);
     onEnded?.(closeResult);
   }, [disconnectRoom, onEnded, requestId]);
 
@@ -260,6 +262,7 @@ export function HelpCall({
           setAudioBlocked(false);
           setRemaining(0);
           setState("ended");
+          announcePeerHelpEnded(requestId);
           onEnded?.({ canRate: status.canRate });
           return;
         }

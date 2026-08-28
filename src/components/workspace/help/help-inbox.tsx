@@ -9,6 +9,7 @@ import { SafetyControls } from "./safety-controls";
 import type { HelpSnapshot, WorkspaceState } from "@/lib/help/snapshot";
 import type { HelpHistoryParticipant } from "@/lib/help/help-history";
 import { peerHelpRoomHref } from "@/lib/help/help-room-navigation";
+import { announcePeerHelpEnded, showCurrentPeerHelp } from "@/lib/help/help-ui-events";
 import { useCallback, useEffect, useState } from "react";
 
 interface InboxRequest {
@@ -133,6 +134,10 @@ export function HelpInbox({
         const payload = await response.json().catch(() => null);
 
         if (!response.ok || !payload?.success) {
+          if (action === "claim" && payload?.error?.code === "HELP_HELPER_UNAVAILABLE") {
+            showCurrentPeerHelp();
+            return;
+          }
           // An already-accepted request is the common one and is not a bug —
           // it is the claim race resolving, so it reads as information.
           throw new Error(payload?.error?.message ?? "That did not work.");
@@ -142,6 +147,7 @@ export function HelpInbox({
           router.push(peerHelpRoomHref(id, `${window.location.pathname}${window.location.search}`));
           return;
         }
+        if (action === "release" || action === "resolve") announcePeerHelpEnded(id);
         await load();
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "That did not work.");

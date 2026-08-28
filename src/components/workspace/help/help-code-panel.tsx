@@ -47,9 +47,7 @@ export function HelpCodePanel({
   }, [seat, snapshot]);
 
   const stale = snapshot ? isStale(snapshot) : true;
-  const selected = workspace
-    ? normalizedSelectedLines(workspace.selection, workspace.code.split("\n").length)
-    : null;
+  const helperLanguage = editorLanguage(workspace?.language, language);
 
   return (
     <section
@@ -131,37 +129,14 @@ export function HelpCodePanel({
               </span>
             ) : null}
           </div>
-          <div
-            aria-label="Candidate code, read only"
-            className="thin-scroll min-h-[32rem] flex-1 overflow-auto py-4 font-mono text-[13px] leading-[1.7] text-cream/82"
-          >
-            {(workspace?.code || "// Waiting for the candidate’s code")
-              .split("\n")
-              .map((line, index) => {
-                const lineNumber = index + 1;
-                const highlighted =
-                  selected !== null && lineNumber >= selected.start && lineNumber <= selected.end;
-                return (
-                  <div
-                    key={lineNumber}
-                    className={`grid min-w-max grid-cols-[3.5rem_minmax(0,1fr)] border-l-2 pr-7 ${
-                      highlighted
-                        ? "border-[var(--workspace-accent)] bg-[var(--workspace-accent-soft)]"
-                        : "border-transparent"
-                    }`}
-                  >
-                    <span
-                      className={`select-none pr-4 text-right ${
-                        highlighted ? "text-[var(--workspace-accent)]" : "text-cream/22"
-                      }`}
-                      aria-hidden="true"
-                    >
-                      {lineNumber}
-                    </span>
-                    <code className="whitespace-pre">{line || " "}</code>
-                  </div>
-                );
-              })}
+          <div className="min-h-[32rem] flex-1 overflow-hidden bg-[#0b0d10]">
+            <DsaCodeEditor
+              language={helperLanguage}
+              value={workspace?.code || "// Waiting for the candidate’s code"}
+              readOnly
+              selection={workspace?.selection ?? null}
+              ariaLabel="Candidate code, read only"
+            />
           </div>
         </div>
       )}
@@ -169,14 +144,11 @@ export function HelpCodePanel({
   );
 }
 
-function normalizedSelectedLines(
-  selection: WorkspaceState["selection"],
-  lineCount: number
-): { start: number; end: number } | null {
-  if (!selection || lineCount < 1) return null;
-  const start = Math.min(Math.max(selection.startLineNumber, 1), lineCount);
-  const end = Math.min(Math.max(selection.endLineNumber, start), lineCount);
-  return { start, end };
+function editorLanguage(value: string | undefined, fallback: DsaEditorLanguage): DsaEditorLanguage {
+  if (value === "python" || value === "javascript" || value === "cpp" || value === "java") {
+    return value;
+  }
+  return fallback;
 }
 
 function selectionLabel(selection: NonNullable<WorkspaceState["selection"]>): string {

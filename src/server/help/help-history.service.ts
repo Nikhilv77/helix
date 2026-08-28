@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 
 import type {
   ActivePeerHelp,
+  CurrentPeerHelpEngagement,
   HelpHistoryFilter,
   HelpHistoryItem,
   HelpHistoryPage,
@@ -110,6 +111,51 @@ export class HelpHistoryService {
       language: request.language,
       started: Boolean(request.session && !request.session.endedAt),
       peer: await this.participant(peerId)
+    };
+  }
+
+  /** The one waiting request or accepted conversation currently occupying this person. */
+  async activeEngagement(ownerId: string): Promise<CurrentPeerHelpEngagement | null> {
+    const request = await this.prisma.helpRequest.findFirst({
+      where: {
+        OR: [
+          {
+            learnerId: ownerId,
+            status: HelpRequestStatus.OPEN,
+            expiresAt: { gt: new Date() }
+          },
+          { learnerId: ownerId, status: HelpRequestStatus.CLAIMED },
+          { helperId: ownerId, status: HelpRequestStatus.CLAIMED }
+        ]
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        learnerId: true,
+        helperId: true,
+        status: true,
+        questionSlug: true,
+        language: true,
+        question: { select: { title: true } },
+        session: { select: { endedAt: true } }
+      }
+    });
+
+    // A room that either participant ended must never be advertised as resumable,
+    // even during a short reconciliation window before its request row is closed.
+    if (!request || request.session?.endedAt) return null;
+
+    const seat = request.learnerId === ownerId ? "learner" : "helper";
+    const peerId = seat === "learner" ? request.helperId : request.learnerId;
+    return {
+      requestId: request.id,
+      seat,
+      status: request.status as "OPEN" | "CLAIMED",
+      slug: request.questionSlug,
+      title: request.question.title,
+      language: request.language,
+      started: Boolean(request.session),
+      peer: peerId ? await this.participant(peerId) : null
     };
   }
 

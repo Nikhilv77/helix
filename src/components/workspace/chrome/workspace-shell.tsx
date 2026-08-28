@@ -28,6 +28,7 @@ import {
 import { ProfileAvatar } from "@/components/workspace/profile/profile-avatar";
 import { HelpRequestToast } from "@/components/workspace/help/help-request-toast";
 import { ActivePeerHelpToast } from "@/components/workspace/help/active-peer-help-toast";
+import { CurrentPeerHelpPrompt } from "@/components/workspace/help/current-peer-help-prompt";
 import { getWorkspaceAccent, searchWorkspace } from "@/lib/api/api-client";
 import {
   WORKSPACE_SEARCH_GROUPS,
@@ -454,6 +455,7 @@ export function WorkspaceShell({
 
       <HelpRequestToast />
       <ActivePeerHelpToast />
+      <CurrentPeerHelpPrompt />
 
       {menuOpen ? (
         <button

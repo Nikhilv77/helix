@@ -5,6 +5,7 @@ import { ArrowRight, Mic, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { HelpHistoryParticipant } from "@/lib/help/help-history";
+import { holdPeerHelpPrompt } from "@/lib/help/help-ui-events";
 import { ProfileAvatar } from "../profile/profile-avatar";
 
 export function HelperReadyToast({
@@ -20,6 +21,7 @@ export function HelperReadyToast({
 
   useEffect(() => {
     setPortalTarget(document.querySelector<HTMLElement>(".workspace-black") ?? document.body);
+    return holdPeerHelpPrompt();
   }, []);
 
   if (!portalTarget) return null;

@@ -31,7 +31,7 @@ describe("HelpTestResults", () => {
       />
     );
 
-    expect(screen.getByText("1/1 tests passed")).toBeInTheDocument();
+    expect(screen.getByText("1/1 tests passed")).toHaveClass("text-[1.35rem]");
     expect(screen.getByText("Case 1")).toBeInTheDocument();
     expect(screen.getByText("Passed")).toBeInTheDocument();
     expect(screen.getByText("checked 1 case")).toBeInTheDocument();

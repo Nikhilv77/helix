@@ -31,7 +31,7 @@ const FAILURE_STATUS: Record<string, { status: number; message: string }> = {
   },
   HELPER_UNAVAILABLE: {
     status: 409,
-    message: "Finish your current help request or session before taking another one."
+    message: "Resume, withdraw, or hand back your current peer-help engagement first."
   },
   SESSION_ALREADY_STARTED: {
     status: 409,

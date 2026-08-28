@@ -18,6 +18,17 @@ export interface ActivePeerHelp {
   peer: HelpHistoryParticipant;
 }
 
+export interface CurrentPeerHelpEngagement {
+  requestId: string;
+  seat: "learner" | "helper";
+  status: "OPEN" | "CLAIMED";
+  slug: string;
+  title: string;
+  language: string;
+  started: boolean;
+  peer: HelpHistoryParticipant | null;
+}
+
 export interface TopPeerHelper {
   participant: HelpHistoryParticipant;
   helpedCount: number;

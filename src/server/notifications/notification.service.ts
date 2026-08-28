@@ -408,25 +408,5 @@ export class NotificationService {
       where: { ownerId },
       data: { helpNotificationsEnabled: enabled }
     });
-
-    if (!enabled) {
-      const now = new Date();
-      await this.prisma.notification.updateMany({
-        where: {
-          ownerId,
-          kind: NotificationKind.HELP_REQUEST_OPENED,
-          emailRequestedAt: { not: null },
-          emailSentAt: null,
-          emailFailedAt: null
-        },
-        data: {
-          emailFailedAt: now,
-          emailNextAttemptAt: null,
-          emailLeaseToken: null,
-          emailLeaseUntil: null,
-          emailLastError: "Recipient opted out"
-        }
-      });
-    }
   }
 }

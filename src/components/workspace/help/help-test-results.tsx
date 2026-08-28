@@ -49,7 +49,7 @@ export function HelpTestResults({
         ) : hasRun ? (
           <>
             <p
-              className={`text-[1.7rem] font-semibold tracking-[-0.04em] ${
+              className={`text-[1.35rem] font-semibold tracking-[-0.035em] ${
                 accepted ? "text-[var(--workspace-accent)]" : "text-[#ffb4b4]"
               }`}
             >
@@ -68,7 +68,9 @@ export function HelpTestResults({
           </>
         ) : (
           <>
-            <p className="text-[1.7rem] font-semibold tracking-[-0.04em] text-cream/30">Not run</p>
+            <p className="text-[1.35rem] font-semibold tracking-[-0.035em] text-cream/30">
+              Not run
+            </p>
             <p className="mt-1.5 text-xs text-cream/34">Results appear after the candidate runs.</p>
           </>
         )}

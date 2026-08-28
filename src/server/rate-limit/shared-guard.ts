@@ -73,8 +73,8 @@ export const RATE_LIMIT_POLICIES = {
    * costs a volunteer's attention, not just inference.
    */
   helpRequest: {
-    // Version the key so counters created by the previous 3-per-30m policy do
-    // not keep somebody blocked after this shorter window ships.
+    // Versioned separately from the retired 3-per-30m and temporary 30-second
+    // policies so their counters cannot distort this production window.
     namespace: "help-request-10m",
     limit: 1,
     windowMs: 10 * 60_000,

@@ -440,19 +440,6 @@ describe("preferences", () => {
     ).resolves.toBeNull();
   });
 
-  it("cancels pending help-request email when the recipient opts out", async () => {
-    const { prisma, rows } = fakePrisma({ "helper-1": true });
-    const service = new NotificationService(prisma);
-    await service.recordForDispatch(opened, true);
-
-    await service.setHelpNotifications("helper-1", false);
-    expect(rows[0]).toMatchObject({
-      emailFailedAt: expect.any(Date),
-      emailLastError: "Recipient opted out",
-      emailLeaseToken: null
-    });
-  });
-
   it("classifies daily teacher coaching and being-asked-to-help as optional", () => {
     expect(isOptional(NotificationKind.TEACHER_RECOMMENDATION)).toBe(true);
     expect(isOptional(NotificationKind.TEACHER_ENCOURAGEMENT)).toBe(true);

@@ -187,11 +187,9 @@ The application sends email through Resend's REST API. Email delivery includes:
 - A settings link for optional notification categories
 - Graceful degradation when Resend is not configured
 
-Email is intentionally limited to events worth interrupting the candidate for:
-
-- Teacher welcome after onboarding
-- A qualified peer receiving a new help request
-- A learner being told that a helper accepted
+Email is intentionally reserved for the teacher welcome after onboarding.
+Peer-help invitations, helper acceptance, lifecycle results, and ongoing
+coaching remain in-app only so the help flow does not create email noise.
 
 Daily teacher recommendations and reminders are currently in-app only. Do not
 turn every coaching notification into email without a separate product
@@ -256,6 +254,10 @@ The primary peer-help experience is intentionally small:
 1. A learner with a non-empty attempt chooses **Ask someone**.
    The learner sees a non-blocking fifteen-second delivery countdown and can
    continue editing while the request reaches available helpers.
+   If no qualified helper is currently available, no request is left waiting:
+   a centered blurred toast says that the invitation was not sent. The
+   ten-minute request cooldown is shown as a live countdown on the Ask Someone
+   button.
 2. Qualified helpers receive the durable in-app notification plus a compact,
    non-modal toast in the workspace. The visible workspace checks every fifteen
    seconds and immediately on focus, so no page refresh is required.
@@ -272,10 +274,23 @@ The primary peer-help experience is intentionally small:
    badge. The Help page remains a lightweight record of Help received, Help
    given, the current milestone, and an accepted live conversation.
 
+One person can occupy only one live peer-help engagement across both roles and
+all questions. A second ask or claim opens a centered, blurred prompt for the
+existing engagement: waiting learners can view or withdraw their request;
+helpers with an unstarted claim can join or hand it back; participants in a
+started room can resume it. A small bottom-right room nudge is shown only after
+the centered helper-ready prompt is no longer visible, and disappears as soon
+as either participant ends, blocks, reports, resolves, or hands back the room.
+
 An unanswered request and its helper notifications last ten minutes. When that
 window closes, the request becomes expired, its helper alerts are removed, and
 the learner may send one new request. The waiting UI checks this automatically;
 no manual Withdraw or page reload is required.
+
+Helper eligibility is language-agnostic: exact-question evidence, same-pattern
+evidence, demonstrated problem-solving performance, and verified profile
+evidence transfer across JavaScript, Python, Java, and C++. Language is only a
+small ranking affinity and never hides an otherwise qualified helper.
 
 The eligibility re-check, atomic claim, private room authorization, source-code
 privacy, block/report controls, call limit, and idempotent notification storage
@@ -311,7 +326,7 @@ The current implementation includes:
 - Read-only shared learner workspace context
 - Leave, block, report, timeout, and operator-review controls
 - Optional post-session learner rating
-- In-app and selected email notifications
+- In-app peer-help notifications; email remains reserved for onboarding
 
 ## Dedicated live help room — implemented
 
@@ -700,6 +715,8 @@ Do not reproduce the entire desktop dashboard grid inside a narrow viewport.
 
 - Completing onboarding creates exactly one teacher welcome notification even
   when the completion request or background dispatch is retried
+- Email delivery is reserved for the onboarding welcome; peer-help and ongoing
+  coaching notifications are in-app only
 - With email disabled, onboarding and help actions still create in-app items and
   never fail because email is unavailable
 - With Resend configured, welcome email uses the selected teacher and contains
