@@ -5,6 +5,13 @@ import { useRef } from "react";
 
 export type DsaEditorLanguage = "python" | "javascript" | "cpp" | "java";
 
+export interface DsaEditorSelection {
+  startLineNumber: number;
+  startColumn: number;
+  endLineNumber: number;
+  endColumn: number;
+}
+
 const registerTrailgradTheme: BeforeMount = (monaco) => {
   monaco.editor.defineTheme("trailgrad-modern", {
     base: "vs-dark",
@@ -73,12 +80,14 @@ export function DsaCodeEditor({
   language,
   value,
   onChange,
-  onRun
+  onRun,
+  onSelectionChange
 }: {
   language: DsaEditorLanguage;
   value: string;
   onChange: (value: string) => void;
   onRun: () => void;
+  onSelectionChange?: (selection: DsaEditorSelection) => void;
 }) {
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
 
@@ -91,6 +100,27 @@ export function DsaCodeEditor({
       keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
       run: onRun
     });
+    if (onSelectionChange) {
+      const publishSelection = () => {
+        const selection = editor.getSelection();
+        if (!selection) return;
+        onSelectionChange({
+          startLineNumber: selection.startLineNumber,
+          startColumn: selection.startColumn,
+          endLineNumber: selection.endLineNumber,
+          endColumn: selection.endColumn
+        });
+      };
+      publishSelection();
+      editor.onDidChangeCursorSelection((event) =>
+        onSelectionChange({
+          startLineNumber: event.selection.startLineNumber,
+          startColumn: event.selection.startColumn,
+          endLineNumber: event.selection.endLineNumber,
+          endColumn: event.selection.endColumn
+        })
+      );
+    }
     editor.focus();
   };
 

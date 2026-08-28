@@ -2,6 +2,7 @@ import { ConciergeNotifier, formatConciergeMessage, type ConciergeRequest } from
 
 const request: ConciergeRequest = {
   requestId: "req-42",
+  learnerName: "Priya Shah",
   questionTitle: "LRU Cache",
   questionSlug: "lru-cache",
   language: "java",
@@ -21,6 +22,7 @@ describe("concierge message", () => {
   it("leads with what a helper decides on", () => {
     const message = formatConciergeMessage(request);
 
+    expect(message).toContain("Priya Shah needs help");
     expect(message).toContain("LRU Cache");
     expect(message).toContain("medium, java");
     expect(message).toContain(request.summary.headline);

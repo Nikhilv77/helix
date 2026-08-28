@@ -303,7 +303,7 @@ The lifecycle is:
 
 `OPEN -> CLAIMED -> RESOLVED`
 
-An `OPEN` request can also become `EXPIRED` after 24 hours or `CANCELLED` when
+An `OPEN` request can also become `EXPIRED` after 10 minutes or `CANCELLED` when
 the learner withdraws it. A helper can return a `CLAIMED` request to `OPEN`
 only before a help room has started.
 
@@ -539,7 +539,7 @@ having asked.
    edit the learner's code.
 9. Either person leaves, or the 30-minute cap ends the room. The request becomes
    `RESOLVED`, and the learner can optionally rate whether the help was useful.
-10. If nobody claims the request within 24 hours, it becomes `EXPIRED`, the
+10. If nobody claims the request within 10 minutes, it becomes `EXPIRED`, the
     learner is notified, and Maya remains available as the guaranteed fallback.
 
 ## Intentionally Deferred

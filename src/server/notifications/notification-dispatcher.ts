@@ -95,6 +95,8 @@ export class NotificationDispatcher {
 
     const emailed = await this.email.send(notification.ownerId, {
       subject: notification.emailSubject ?? notification.title,
+      html: notification.emailHtml ?? undefined,
+      fromName: notification.emailFromName ?? undefined,
       // Resend retains the key across retries, covering the narrow crash window
       // after the provider accepted a send but before our SENT write committed.
       idempotencyKey: `notification/${notification.id}`,

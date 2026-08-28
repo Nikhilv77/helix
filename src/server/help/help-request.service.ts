@@ -24,7 +24,7 @@ export interface OpenHelpRequestInput {
   questionSlug: string;
   language: string;
   context: HelpRequestContext;
-  /** Overrides the default 24h window. Used by tests and by shorter-lived asks. */
+  /** Overrides the default ten-minute window. Used by lifecycle tests. */
   ttlMs?: number;
 }
 
@@ -59,6 +59,19 @@ export class HelpRequestService {
    */
   async open(input: OpenHelpRequestInput) {
     const ttl = input.ttlMs ?? DEFAULT_TTL_MS;
+    const now = new Date();
+
+    // A request must be renewable at the end of its window even if no inbox or
+    // status poll happened to run the general expiry sweep first.
+    await this.prisma.helpRequest.updateMany({
+      where: {
+        learnerId: input.learnerId,
+        questionSlug: input.questionSlug,
+        status: HelpRequestStatus.OPEN,
+        expiresAt: { lte: now }
+      },
+      data: { status: HelpRequestStatus.EXPIRED, closedAt: now }
+    });
 
     try {
       return await this.prisma.helpRequest.create({
@@ -67,7 +80,7 @@ export class HelpRequestService {
           questionSlug: input.questionSlug,
           language: input.language,
           context: clampContext(input.context) as unknown as Prisma.InputJsonValue,
-          expiresAt: new Date(Date.now() + ttl)
+          expiresAt: new Date(now.getTime() + ttl)
         }
       });
     } catch (error) {

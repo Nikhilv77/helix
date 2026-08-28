@@ -1,11 +1,13 @@
 /** Live, read-only learner workspace packets carried over the help room. */
 
-export const SNAPSHOT_VERSION = 2;
-export const SNAPSHOT_TOPIC = "help.workspace.v2";
+export const SNAPSHOT_VERSION = 3;
+export const SNAPSHOT_TOPIC = "help.workspace.v3";
 export const MAX_PACKET_BYTES = 12_000;
 export const STALE_AFTER_MS = 15_000;
 
 const TEST_OUTPUT_LIMIT = 2_000;
+const MAX_VISIBLE_TESTS = 6;
+const TEST_VALUE_LIMIT = 180;
 const MAX_CHUNKS = 32;
 const MAX_CODE_BYTES = 160_000;
 const ASSEMBLY_TTL_MS = 30_000;
@@ -14,11 +16,30 @@ const MAX_ASSEMBLIES = 4;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+export interface CodeSelection {
+  startLineNumber: number;
+  startColumn: number;
+  endLineNumber: number;
+  endColumn: number;
+}
+
+export interface WorkspaceTestCase {
+  index: number;
+  input: string;
+  expectedOutput: string;
+  actualOutput: string;
+  passed: boolean;
+  error: string | null;
+}
+
 export interface WorkspaceState {
   code: string;
   language: string;
   testOutput: string | null;
   failingTests: number | null;
+  selection: CodeSelection | null;
+  runStatus?: string | null;
+  tests?: WorkspaceTestCase[] | null;
 }
 
 export interface HelpSnapshot extends WorkspaceState {
@@ -80,6 +101,9 @@ export function encodeSnapshotPackets(
     language: input.language,
     testOutput: input.testOutput?.slice(0, TEST_OUTPUT_LIMIT) ?? null,
     failingTests: input.failingTests,
+    selection: input.selection,
+    runStatus: input.runStatus?.slice(0, 160) ?? null,
+    tests: normalizeTests(input.tests),
     at: input.at
   };
 
@@ -163,7 +187,18 @@ function decodeChunk(payload: Uint8Array): SnapshotChunk | null {
   ) {
     return null;
   }
+  const selection = decodeSelection(value.selection);
+  if (value.selection !== undefined && value.selection !== null && !selection) return null;
   if (!Number.isInteger(value.part) || !Number.isInteger(value.total)) return null;
+  const tests = decodeTests(value.tests);
+  if (value.tests !== undefined && value.tests !== null && !tests) return null;
+  if (
+    value.runStatus !== null &&
+    value.runStatus !== undefined &&
+    typeof value.runStatus !== "string"
+  ) {
+    return null;
+  }
   const part = value.part as number;
   const total = value.total as number;
   if (total < 1 || total > MAX_CHUNKS || part < 0 || part >= total) return null;
@@ -179,7 +214,10 @@ function decodeChunk(payload: Uint8Array): SnapshotChunk | null {
     code: value.code,
     language: value.language,
     testOutput: (value.testOutput as string | null) ?? null,
-    failingTests: (value.failingTests as number | null) ?? null
+    failingTests: (value.failingTests as number | null) ?? null,
+    selection,
+    runStatus: typeof value.runStatus === "string" ? value.runStatus : null,
+    tests
   };
 }
 
@@ -225,6 +263,9 @@ export class SnapshotAssembler {
       language: chunk.language,
       testOutput: chunk.testOutput,
       failingTests: chunk.failingTests,
+      selection: chunk.selection,
+      runStatus: chunk.runStatus ?? null,
+      tests: chunk.tests ?? null,
       at: chunk.at,
       receivedAt
     };
@@ -257,6 +298,9 @@ function sameRevision(a: SnapshotChunk, b: SnapshotChunk): boolean {
     a.language === b.language &&
     a.testOutput === b.testOutput &&
     a.failingTests === b.failingTests &&
+    sameSelection(a.selection, b.selection) &&
+    a.runStatus === b.runStatus &&
+    sameTests(a.tests, b.tests) &&
     a.at === b.at
   );
 }
@@ -278,6 +322,95 @@ export function hasChanged(next: WorkspaceState, previous: WorkspaceState | null
     next.code !== previous.code ||
     next.language !== previous.language ||
     next.testOutput !== previous.testOutput ||
-    next.failingTests !== previous.failingTests
+    next.failingTests !== previous.failingTests ||
+    next.runStatus !== previous.runStatus ||
+    !sameTests(next.tests, previous.tests) ||
+    !sameSelection(next.selection, previous.selection)
+  );
+}
+
+function normalizeTests(tests: WorkspaceState["tests"]): WorkspaceTestCase[] | null {
+  if (!tests?.length) return null;
+  return tests.slice(0, MAX_VISIBLE_TESTS).map((test, index) => ({
+    index: Number.isInteger(test.index) && test.index >= 0 ? test.index : index,
+    input: test.input.slice(0, TEST_VALUE_LIMIT),
+    expectedOutput: test.expectedOutput.slice(0, TEST_VALUE_LIMIT),
+    actualOutput: test.actualOutput.slice(0, TEST_VALUE_LIMIT),
+    passed: test.passed,
+    error: test.error?.slice(0, TEST_VALUE_LIMIT) ?? null
+  }));
+}
+
+function decodeTests(value: unknown): WorkspaceTestCase[] | null {
+  if (value === null || value === undefined) return null;
+  if (!Array.isArray(value) || value.length > MAX_VISIBLE_TESTS) return null;
+  const tests: WorkspaceTestCase[] = [];
+  for (const candidate of value) {
+    if (!candidate || typeof candidate !== "object") return null;
+    const test = candidate as Record<string, unknown>;
+    if (
+      !Number.isInteger(test.index) ||
+      (test.index as number) < 0 ||
+      typeof test.input !== "string" ||
+      test.input.length > TEST_VALUE_LIMIT ||
+      typeof test.expectedOutput !== "string" ||
+      test.expectedOutput.length > TEST_VALUE_LIMIT ||
+      typeof test.actualOutput !== "string" ||
+      test.actualOutput.length > TEST_VALUE_LIMIT ||
+      typeof test.passed !== "boolean" ||
+      (test.error !== null && typeof test.error !== "string") ||
+      (typeof test.error === "string" && test.error.length > TEST_VALUE_LIMIT)
+    ) {
+      return null;
+    }
+    tests.push({
+      index: test.index as number,
+      input: test.input,
+      expectedOutput: test.expectedOutput,
+      actualOutput: test.actualOutput,
+      passed: test.passed,
+      error: test.error as string | null
+    });
+  }
+  return tests;
+}
+
+function sameTests(a: WorkspaceState["tests"], b: WorkspaceState["tests"]): boolean {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+}
+
+function decodeSelection(value: unknown): CodeSelection | null {
+  if (value === undefined || value === null || typeof value !== "object") return null;
+  const selection = value as Record<string, unknown>;
+  const fields = [
+    selection.startLineNumber,
+    selection.startColumn,
+    selection.endLineNumber,
+    selection.endColumn
+  ];
+  if (
+    fields.some(
+      (field) => !Number.isInteger(field) || (field as number) < 1 || (field as number) > 1_000_000
+    )
+  ) {
+    return null;
+  }
+
+  return {
+    startLineNumber: selection.startLineNumber as number,
+    startColumn: selection.startColumn as number,
+    endLineNumber: selection.endLineNumber as number,
+    endColumn: selection.endColumn as number
+  };
+}
+
+function sameSelection(left: CodeSelection | null, right: CodeSelection | null): boolean {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return (
+    left.startLineNumber === right.startLineNumber &&
+    left.startColumn === right.startColumn &&
+    left.endLineNumber === right.endLineNumber &&
+    left.endColumn === right.endColumn
   );
 }

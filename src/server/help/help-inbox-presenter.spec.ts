@@ -42,7 +42,10 @@ describe("help inbox presentation", () => {
       code: "export function solve() { return []; }",
       language: "typescript",
       testOutput: "Expected [0, 1], received []",
-      failingTests: 1
+      failingTests: 1,
+      selection: null,
+      runStatus: null,
+      tests: null
     });
   });
 
@@ -59,7 +62,10 @@ describe("help inbox presentation", () => {
       code: "",
       language: "typescript",
       testOutput: null,
-      failingTests: null
+      failingTests: null,
+      selection: null,
+      runStatus: null,
+      tests: null
     });
   });
 });

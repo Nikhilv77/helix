@@ -1,6 +1,7 @@
 import { ApiRouteError } from "../http/api-error";
 import {
   MemorySharedGuardBackend,
+  RATE_LIMIT_POLICIES,
   SharedGuard,
   type LockPolicy,
   type RateLimitPolicy
@@ -43,6 +44,14 @@ describe("SharedGuard", () => {
 
     now += 10_001;
     await expect(guard.enforce(ratePolicy, "user-a")).resolves.toBeUndefined();
+  });
+
+  it("allows one new peer-help request every ten minutes", () => {
+    expect(RATE_LIMIT_POLICIES.helpRequest).toMatchObject({
+      namespace: "help-request-10m",
+      limit: 1,
+      windowMs: 10 * 60_000
+    });
   });
 
   it("supports weighted limits such as TTS characters", async () => {

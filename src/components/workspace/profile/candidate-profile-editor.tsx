@@ -14,6 +14,7 @@ import {
 import { ApiClientError, saveProfile } from "@/lib/api/api-client";
 import { pageTitle } from "@/lib/shared/seo";
 import type { CandidateProfile, CandidateProfileInput, CandidateStory } from "@/lib/shared/types";
+import { publishWorkspaceProfileImage } from "@/lib/workspace/profile-image";
 import {
   EDIT_SECTIONS,
   AvatarPicker,
@@ -42,7 +43,6 @@ import {
 import { ResumeTab } from "./candidate-profile-editor-resume";
 import { SaveBar, SavedFooter } from "./candidate-profile-editor-ui";
 import { toInput } from "./candidate-profile-editor-utils";
-import { ProfileHelpCard } from "./profile-help-card";
 
 export function CandidateProfileEditor({ initialProfile }: { initialProfile: CandidateProfile }) {
   const [profile, setProfile] = useState<CandidateProfileInput>(toInput(initialProfile));
@@ -108,6 +108,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
       const next = await saveProfile(nextInput);
       setSaved(next);
       setProfile(toInput(next));
+      if ("profileImage" in patch) publishWorkspaceProfileImage(next.profileImage);
     } catch (caught) {
       setProfile(toInput(saved));
       setError(
@@ -178,8 +179,6 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
           onCoverChange={(coverImage) => void saveImagePatch({ coverImage })}
           onAvatarChange={(profileImage) => void saveImagePatch({ profileImage })}
         />
-
-        <ProfileHelpCard />
 
         <SignatureStoryCard story={profile.stories[0]} />
       </div>

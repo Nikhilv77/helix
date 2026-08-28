@@ -12,6 +12,7 @@ import {
 } from "./candidate-profile-editor-data";
 import { ProfileResumeAnchors } from "./candidate-profile-editor-resume-anchors";
 import { HeroChip, ProfileHeroSidePatterns } from "./candidate-profile-editor-visuals";
+import { PROFILE_FALLBACK_IMAGE } from "./profile-avatar";
 
 export function ProfileHero({
   profile,
@@ -34,8 +35,12 @@ export function ProfileHero({
       .join("|") || "trailgrad-profile"
   );
   const selectedAvatar = profileAvatars.find((avatar) => avatar.src === profile.profileImage);
-  const avatar =
-    selectedAvatar ?? profileAvatars[profileSeed % profileAvatars.length] ?? profileAvatars[0];
+  const avatar = selectedAvatar ?? {
+    src: PROFILE_FALLBACK_IMAGE,
+    displaySrc: PROFILE_FALLBACK_IMAGE,
+    width: 1254,
+    height: 1254
+  };
   const selectedCover = profileCovers.find((cover) => cover.src === profile.coverImage);
   const cover =
     selectedCover ??

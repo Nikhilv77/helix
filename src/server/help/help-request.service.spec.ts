@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { HelpRequestService } from "./help-request.service";
 import {
   CODE_LIMIT,
+  DEFAULT_TTL_MS,
   HelpRequestError,
   HelpRequestStatus,
   clampContext,
@@ -383,11 +384,13 @@ async function openRequest(service: HelpRequestService, learnerId = "learner-1")
 describe("help request lifecycle", () => {
   it("opens a request in the OPEN state with an expiry", async () => {
     const { service } = serviceUnderTest();
+    const openedAt = Date.now();
     const request = await openRequest(service);
 
     expect(request.status).toBe(HelpRequestStatus.OPEN);
     expect(request.helperId).toBeNull();
-    expect(request.expiresAt.getTime()).toBeGreaterThan(Date.now());
+    expect(request.expiresAt.getTime()).toBeGreaterThanOrEqual(openedAt + DEFAULT_TTL_MS);
+    expect(request.expiresAt.getTime()).toBeLessThanOrEqual(Date.now() + DEFAULT_TTL_MS);
   });
 
   it("refuses a second live request for the same learner and question", async () => {
@@ -405,6 +408,17 @@ describe("help request lifecycle", () => {
 
     await expect(openRequest(service)).resolves.toMatchObject({
       status: HelpRequestStatus.OPEN
+    });
+  });
+
+  it("lets the learner ask again when the previous ten-minute window elapsed", async () => {
+    const { service, rows } = serviceUnderTest();
+    const first = await openRequest(service);
+    rows[0]!.expiresAt = new Date(Date.now() - 1);
+
+    await expect(openRequest(service)).resolves.toMatchObject({ status: HelpRequestStatus.OPEN });
+    await expect(service.byId(first.id)).resolves.toMatchObject({
+      status: HelpRequestStatus.EXPIRED
     });
   });
 

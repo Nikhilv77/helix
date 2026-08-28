@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 
+import { DEFAULT_TTL_MS } from "../help/help-request.types";
 import { NotificationKind, NotificationService, isOptional } from "./notification.service";
 import type { PrismaService } from "../database/prisma.service";
 
@@ -20,6 +21,10 @@ interface Row {
   emailSentAt: Date | null;
   emailFailedAt: Date | null;
   emailLastError: string | null;
+  emailSubject: string | null;
+  emailBody: string | null;
+  emailHtml: string | null;
+  emailFromName: string | null;
   createdAt: Date;
 }
 
@@ -29,8 +34,7 @@ interface Row {
  * cross-owner id matches nothing here for the same reason it would live.
  */
 type ProfilePreference =
-  | boolean
-  | { helpNotificationsEnabled: boolean; teacherNotificationsEnabled: boolean };
+  boolean | { helpNotificationsEnabled: boolean; teacherNotificationsEnabled: boolean };
 
 function fakePrisma(profiles: Record<string, ProfilePreference> = {}) {
   const rows: Row[] = [];
@@ -66,6 +70,10 @@ function fakePrisma(profiles: Record<string, ProfilePreference> = {}) {
     }: {
       data: Pick<Row, "ownerId" | "kind" | "title" | "body" | "href" | "subjectId"> & {
         emailRequestedAt?: Date | null;
+        emailSubject?: string | null;
+        emailBody?: string | null;
+        emailHtml?: string | null;
+        emailFromName?: string | null;
       };
     }) {
       const clash = rows.find(
@@ -92,6 +100,10 @@ function fakePrisma(profiles: Record<string, ProfilePreference> = {}) {
         emailSentAt: null,
         emailFailedAt: null,
         emailLastError: null,
+        emailSubject: null,
+        emailBody: null,
+        emailHtml: null,
+        emailFromName: null,
         createdAt: new Date(Date.now() + next),
         ...data
       };
@@ -128,6 +140,11 @@ function fakePrisma(profiles: Record<string, ProfilePreference> = {}) {
           }
         }
       }
+      return { count: hits.length };
+    },
+    async deleteMany({ where }: { where: Record<string, unknown> }) {
+      const hits = rows.filter((row) => matches(row, where));
+      for (const row of hits) rows.splice(rows.indexOf(row), 1);
       return { count: hits.length };
     }
   };
@@ -240,6 +257,31 @@ describe("notification delivery", () => {
     expect(rows[0]!.emailRequestedAt).not.toBeNull();
   });
 
+  it("persists HTML and the teacher sender label for identical retries", async () => {
+    const { prisma, rows } = fakePrisma({ "helper-1": true });
+    const service = new NotificationService(prisma);
+
+    await service.recordForDispatch(
+      {
+        ...opened,
+        email: {
+          subject: "Ethan from Trailgrad — your path is ready",
+          body: "Your path is ready.",
+          html: "<html>Welcome</html>",
+          fromName: "Ethan from Trailgrad"
+        }
+      },
+      true
+    );
+
+    expect(rows[0]).toMatchObject({
+      emailSubject: "Ethan from Trailgrad — your path is ready",
+      emailBody: "Your path is ready.",
+      emailHtml: "<html>Welcome</html>",
+      emailFromName: "Ethan from Trailgrad"
+    });
+  });
+
   it("leases one sender and schedules a failed attempt for retry", async () => {
     const { prisma, rows } = fakePrisma({ "helper-1": true });
     const service = new NotificationService(prisma);
@@ -289,6 +331,25 @@ describe("notification delivery", () => {
 });
 
 describe("inbox", () => {
+  it("removes help-request alerts after their ten-minute window", async () => {
+    const { prisma, rows } = fakePrisma({ "helper-1": true });
+    const service = new NotificationService(prisma);
+    const now = new Date("2026-08-28T04:00:00.000Z");
+
+    await service.deliver(opened);
+    await service.deliver({
+      ...opened,
+      kind: NotificationKind.TEACHER_WELCOME,
+      subjectId: "welcome"
+    });
+    rows.find((row) => row.kind === NotificationKind.HELP_REQUEST_OPENED)!.createdAt = new Date(
+      now.getTime() - DEFAULT_TTL_MS
+    );
+
+    await expect(service.purgeExpiredHelpRequestNotifications("helper-1", now)).resolves.toBe(1);
+    expect(rows.map((row) => row.kind)).toEqual([NotificationKind.TEACHER_WELCOME]);
+  });
+
   it("counts only unread and clears them together", async () => {
     const { prisma } = fakePrisma({ "helper-1": true });
     const service = new NotificationService(prisma);
@@ -394,10 +455,12 @@ describe("preferences", () => {
 
   it("classifies daily teacher coaching and being-asked-to-help as optional", () => {
     expect(isOptional(NotificationKind.TEACHER_RECOMMENDATION)).toBe(true);
+    expect(isOptional(NotificationKind.TEACHER_ENCOURAGEMENT)).toBe(true);
     expect(isOptional(NotificationKind.TEACHER_REMINDER)).toBe(true);
     expect(isOptional(NotificationKind.TEACHER_WELCOME)).toBe(false);
     expect(isOptional(NotificationKind.HELP_REQUEST_OPENED)).toBe(true);
     expect(isOptional(NotificationKind.HELP_REQUEST_CLAIMED)).toBe(false);
     expect(isOptional(NotificationKind.HELP_REQUEST_RESOLVED)).toBe(false);
+    expect(isOptional(NotificationKind.HELP_FEEDBACK_RECEIVED)).toBe(false);
   });
 });

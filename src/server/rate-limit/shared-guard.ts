@@ -73,11 +73,13 @@ export const RATE_LIMIT_POLICIES = {
    * costs a volunteer's attention, not just inference.
    */
   helpRequest: {
-    namespace: "help-request",
-    limit: 3,
-    windowMs: 30 * 60_000,
+    // Version the key so counters created by the previous 3-per-30m policy do
+    // not keep somebody blocked after this shorter window ships.
+    namespace: "help-request-10m",
+    limit: 1,
+    windowMs: 10 * 60_000,
     code: "HELP_REQUEST_RATE_LIMITED",
-    message: "You have asked for help a few times recently. Give it a little while."
+    message: "You can send a new help request ten minutes after the previous one."
   },
   /**
    * Independent from opening requests: somebody who has used their request

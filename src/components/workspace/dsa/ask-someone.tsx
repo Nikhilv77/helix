@@ -1,13 +1,19 @@
 "use client";
 
 import { Check, Loader2, UserRound, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { hintsUsedFor } from "@/lib/dsa/hint-tracker";
-import { HelpCall } from "../help/help-call";
+import { HelperReadyToast } from "../help/helper-ready-toast";
 import { HelpRating } from "../help/help-rating";
 import { SafetyControls } from "../help/safety-controls";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CodeSelection, WorkspaceTestCase } from "@/lib/help/snapshot";
+import type { HelpHistoryParticipant } from "@/lib/help/help-history";
+import { peerHelpRoomHref } from "@/lib/help/help-room-navigation";
 
-type LiveRequest = { id: string; status: string | null };
+type LiveRequest = { id: string; status: string | null; helper: HelpHistoryParticipant | null };
+
+const DELIVERY_SECONDS = 15;
 
 /**
  * The human-help escalation, sitting beside Run code.
@@ -20,20 +26,29 @@ type LiveRequest = { id: string; status: string | null };
  */
 export function AskSomeone({
   slug,
+  title,
   language,
   code,
   testOutput,
   failingTests,
+  runStatus = null,
+  tests = null,
+  selection,
   startedAt
 }: {
   slug: string;
+  title: string;
   language: string;
   code: string;
   testOutput: string | null;
   failingTests: number | null;
+  runStatus?: string | null;
+  tests?: WorkspaceTestCase[] | null;
+  selection: CodeSelection | null;
   /** When this attempt began, so the request can report time spent. */
   startedAt: number;
 }) {
+  const router = useRouter();
   const [live, setLive] = useState<LiveRequest | null>(null);
   /** How many people have finished this problem. Null until the check returns. */
   const [helperCount, setHelperCount] = useState<number | null>(null);
@@ -41,10 +56,19 @@ export function AskSomeone({
   const [rateFor, setRateFor] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deliverySeconds, setDeliverySeconds] = useState<number | null>(null);
   // Read inside callbacks so a slow request still reports the code as it was
   // when the learner pressed the button, not a stale closure.
-  const snapshot = useRef({ code, language, testOutput, failingTests });
-  snapshot.current = { code, language, testOutput, failingTests };
+  const snapshot = useRef({
+    code,
+    language,
+    testOutput,
+    failingTests,
+    runStatus,
+    tests,
+    selection
+  });
+  snapshot.current = { code, language, testOutput, failingTests, runStatus, tests, selection };
 
   // A request outlives the page, so resume its state rather than offering to
   // open a second one that the server would reject.
@@ -59,7 +83,11 @@ export function AskSomeone({
         if (cancelled || !payload?.success || !payload.data) return;
         setHelperCount(payload.data.helperCount ?? 0);
         if (payload.data.id) {
-          setLive({ id: payload.data.id, status: payload.data.status });
+          setLive({
+            id: payload.data.id,
+            status: payload.data.status,
+            helper: payload.data.helper ?? null
+          });
         } else if (payload.data.ratingRequestId) {
           setRateFor(payload.data.ratingRequestId);
         }
@@ -78,12 +106,43 @@ export function AskSomeone({
     const payload = await response?.json().catch(() => null);
     if (!payload?.success || !payload.data) return;
     setHelperCount(payload.data.helperCount ?? 0);
-    const nextLive = payload.data.id ? { id: payload.data.id, status: payload.data.status } : null;
+    const nextLive = payload.data.id
+      ? {
+          id: payload.data.id,
+          status: payload.data.status,
+          helper: payload.data.helper ?? null
+        }
+      : null;
     setLive(nextLive);
     if (!nextLive && payload.data.ratingRequestId) {
       setRateFor(payload.data.ratingRequestId);
     }
   }, [language, slug]);
+
+  // Keep every live transition authoritative. A helper claim can return to OPEN
+  // if they never enter the room, so CLAIMED must keep polling too.
+  useEffect(() => {
+    if (!live) return;
+    const refreshOnFocus = () => void refresh();
+    const timer = window.setInterval(refreshOnFocus, 15_000);
+    window.addEventListener("focus", refreshOnFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshOnFocus);
+    };
+  }, [live?.status, refresh]);
+
+  const isDelivering = live?.status === "OPEN" && deliverySeconds !== null;
+
+  // Match the helper's delivery window with a small, honest countdown. The
+  // learner can keep editing throughout; this is status, not a blocking modal.
+  useEffect(() => {
+    if (!isDelivering) return;
+    const timer = window.setInterval(() => {
+      setDeliverySeconds((current) => (current === null || current <= 1 ? null : current - 1));
+    }, 1_000);
+    return () => window.clearInterval(timer);
+  }, [isDelivering]);
 
   const ask = useCallback(async () => {
     if (pending || live) return;
@@ -100,6 +159,9 @@ export function AskSomeone({
           code: snapshot.current.code,
           testOutput: snapshot.current.testOutput,
           failingTests: snapshot.current.failingTests,
+          runStatus: snapshot.current.runStatus,
+          tests: snapshot.current.tests,
+          selection: snapshot.current.selection,
           // Read at click time, not render time: the coach may hand out more
           // hints between this component mounting and the button being pressed.
           hintsUsed: hintsUsedFor(slug),
@@ -117,7 +179,8 @@ export function AskSomeone({
         throw new Error(payload?.error?.message ?? "Could not send that request.");
       }
 
-      setLive({ id: payload.data.id, status: payload.data.status });
+      setLive({ id: payload.data.id, status: payload.data.status, helper: null });
+      setDeliverySeconds(DELIVERY_SECONDS);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not send that request.");
     } finally {
@@ -130,18 +193,25 @@ export function AskSomeone({
     setPending(true);
 
     try {
-      await fetch(`/api/help/request?id=${encodeURIComponent(live.id)}`, { method: "DELETE" });
+      const response = await fetch(`/api/help/request?id=${encodeURIComponent(live.id)}`, {
+        method: "DELETE"
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.error?.message ?? "Could not withdraw that request.");
+      }
       setLive(null);
+      setDeliverySeconds(null);
       setError(null);
-    } catch {
-      setError("Could not withdraw that request.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not withdraw that request.");
     } finally {
       setPending(false);
     }
   }, [live, pending]);
 
   if (rateFor) {
-    return <HelpRating requestId={rateFor} onSkipped={() => setRateFor(null)} />;
+    return <HelpRating requestId={rateFor} onCompleted={() => setRateFor(null)} />;
   }
 
   if (live?.status === "CLAIMED") {
@@ -149,24 +219,15 @@ export function AskSomeone({
       <div className="flex w-full flex-wrap items-center gap-2.5">
         <span className="inline-flex h-10 items-center gap-2 rounded-xl border border-cream/12 bg-cream/[0.05] px-3.5 text-[13px] font-medium text-cream/75">
           <Check size={13} aria-hidden="true" style={{ color: "var(--workspace-accent)" }} />
-          Someone is ready to help
+          {live.helper?.label ?? "Your helper"} is ready to help
         </span>
         <SafetyControls requestId={live.id} onActioned={() => void refresh()} />
-        <HelpCall
-          requestId={live.id}
-          // Asking for a rating only makes sense once they have actually talked.
-          onEnded={() => {
-            setRateFor(live.id);
-            void refresh();
-          }}
-          // Reads the ref rather than the props closure, so the helper always
-          // sees the buffer as it is now, not as it was when the call started.
-          snapshot={() => ({
-            code: snapshot.current.code,
-            language: snapshot.current.language,
-            testOutput: snapshot.current.testOutput,
-            failingTests: snapshot.current.failingTests
-          })}
+        <HelperReadyToast
+          title={title}
+          helper={live.helper ?? { label: "Your helper", headline: null, profileImage: null }}
+          onJoin={() =>
+            router.push(peerHelpRoomHref(live.id, `/dsa-questions/${encodeURIComponent(slug)}`))
+          }
         />
       </div>
     );
@@ -176,8 +237,28 @@ export function AskSomeone({
     return (
       <div className="flex flex-wrap items-center gap-2.5">
         <span className="inline-flex h-10 items-center gap-2 rounded-xl border border-cream/12 bg-cream/[0.05] px-3.5 text-[13px] font-medium text-cream/75">
-          <Check size={13} aria-hidden="true" style={{ color: "var(--workspace-accent)" }} />
-          {live.status === "CLAIMED" ? "Someone is on the way" : "We'll notify someone"}
+          {isDelivering ? (
+            <>
+              <Loader2
+                size={13}
+                className="animate-spin"
+                aria-hidden="true"
+                style={{ color: "var(--workspace-accent)" }}
+              />
+              <span>Delivering your request</span>
+              <span
+                aria-label={`${deliverySeconds} seconds remaining`}
+                className="min-w-7 rounded-md bg-cream/[0.07] px-1.5 py-0.5 text-center text-[11px] tabular-nums text-cream/55"
+              >
+                {deliverySeconds}s
+              </span>
+            </>
+          ) : (
+            <>
+              <Check size={13} aria-hidden="true" style={{ color: "var(--workspace-accent)" }} />
+              Request delivered — waiting for a helper
+            </>
+          )}
         </span>
         <button
           type="button"

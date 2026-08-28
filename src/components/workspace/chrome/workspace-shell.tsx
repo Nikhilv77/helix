@@ -14,6 +14,7 @@ import {
   ClipboardList,
   FileQuestion,
   House,
+  HandHelping,
   Loader2,
   LogOut,
   Menu,
@@ -25,6 +26,8 @@ import {
   X
 } from "lucide-react";
 import { ProfileAvatar } from "@/components/workspace/profile/profile-avatar";
+import { HelpRequestToast } from "@/components/workspace/help/help-request-toast";
+import { ActivePeerHelpToast } from "@/components/workspace/help/active-peer-help-toast";
 import { getWorkspaceAccent, searchWorkspace } from "@/lib/api/api-client";
 import {
   WORKSPACE_SEARCH_GROUPS,
@@ -37,6 +40,7 @@ import {
   WORKSPACE_ACCENT_CHANGE_EVENT
 } from "@/lib/workspace/accent";
 import { isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
+import { useWorkspaceProfileImage } from "@/lib/workspace/profile-image";
 
 const navGroups = [
   {
@@ -48,6 +52,10 @@ const navGroups = [
       { label: "Progress", href: "/progress", icon: ChartNoAxesCombined },
       { label: "Reports", href: "/reports", icon: ClipboardList }
     ]
+  },
+  {
+    label: "Community",
+    items: [{ label: "Peer help", href: "/help", icon: HandHelping }]
   },
   {
     label: "Account",
@@ -351,6 +359,7 @@ export function WorkspaceShell({
   const [collapsed, setCollapsed] = useState(false);
   const [workspaceAccent, setWorkspaceAccent] = useState<WorkspaceAccent>(initialAccent);
   const [accentShimmerKey, setAccentShimmerKey] = useState(0);
+  const profileImage = useWorkspaceProfileImage(initialProfileImage);
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true");
   }, []);
@@ -442,6 +451,9 @@ export function WorkspaceShell({
           className="workspace-accent-change-shimmer pointer-events-none fixed z-[60]"
         />
       ) : null}
+
+      <HelpRequestToast />
+      <ActivePeerHelpToast />
 
       {menuOpen ? (
         <button
@@ -628,7 +640,7 @@ export function WorkspaceShell({
 
         <div className="absolute inset-x-0 bottom-0 flex h-16 items-center gap-2 border-t border-white/[0.07] bg-[#151619] px-3 md:hidden">
           <AvatarMenu
-            profileImage={initialProfileImage}
+            profileImage={profileImage}
             name={userName}
             size="small"
             placement="sidebar"
@@ -643,7 +655,7 @@ export function WorkspaceShell({
             </span>
             <span className="block text-[0.72rem] text-cream/42">Profile</span>
           </Link>
-          <NotificationInbox />
+          <NotificationInbox onOpen={() => setMenuOpen(false)} />
         </div>
       </aside>
 
@@ -664,7 +676,7 @@ export function WorkspaceShell({
         <WorkspaceSearch />
         <div className="flex items-center gap-1.5">
           <NotificationInbox />
-          <AvatarMenu profileImage={initialProfileImage} name={userName} size="small" />
+          <AvatarMenu profileImage={profileImage} name={userName} size="small" />
         </div>
       </div>
 
@@ -740,7 +752,7 @@ function AvatarMenu({
         aria-label="Open account menu"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="relative z-[60] rounded-full outline-none transition hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+        className="relative z-[60] rounded-full outline-none transition hover:scale-[1.03] focus-visible:opacity-75"
       >
         <PlainAvatar profileImage={profileImage} name={name} size={size} />
       </button>
@@ -814,16 +826,13 @@ function PlainAvatar({
       <img
         src={profileImage}
         alt={name ? `${name} avatar` : "Account avatar"}
-        className={`${dimension} rounded-full object-cover ring-1 ring-inset ring-white/12`}
+        className={`${dimension} rounded-full object-cover`}
       />
     );
   }
 
   return (
-    <ProfileAvatar
-      name={name || "Trailgrad learner"}
-      className={`${dimension} rounded-full ring-1 ring-inset ring-white/12`}
-    />
+    <ProfileAvatar name={name || "Trailgrad learner"} className={`${dimension} rounded-full`} />
   );
 }
 

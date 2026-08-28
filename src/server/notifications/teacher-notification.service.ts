@@ -1,9 +1,34 @@
 import { MAYA, personaById } from "@/lib/avatars/personas";
 import type { PrismaService } from "../database/prisma.service";
 import type { NotificationDispatcher } from "./notification-dispatcher";
+import { teacherWelcomeEmailHtml } from "./email-template";
 import { NotificationKind } from "./notification.service";
 
 const DAILY_BATCH_LIMIT = 250;
+const ENCOURAGEMENT_INTERVAL_DAYS = 3;
+
+const ENCOURAGEMENTS = [
+  {
+    title: "You’re closer than you were yesterday",
+    body: "“Confidence follows practice; it doesn’t have to come first.” Show up as you are today. That is enough."
+  },
+  {
+    title: "A gentle reminder for today",
+    body: "Be kind to yourself. Hard questions are not a verdict on your ability—they’re where that ability gets built."
+  },
+  {
+    title: "I’m cheering for you",
+    body: "Your pace is allowed to be your own. One thoughtful step is still progress, and I’m proud of you for staying with it."
+  },
+  {
+    title: "You belong in the rooms you’re preparing for",
+    body: "You do not need to prove everything today. Keep building the evidence one honest attempt at a time—I’m right here with you."
+  },
+  {
+    title: "A small note before you continue",
+    body: "The work you’re doing quietly now will become confidence later. Breathe, trust the repetition, and keep going."
+  }
+] as const;
 
 export interface WelcomeNotificationInput {
   ownerId: string;
@@ -29,13 +54,15 @@ export interface DailyDispatchSummary {
 export class TeacherNotificationService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly dispatcher: NotificationDispatcher
+    private readonly dispatcher: NotificationDispatcher,
+    private readonly appOrigin = "https://trailgrad.com"
   ) {}
 
   async welcome(input: WelcomeNotificationInput) {
     const teacher = personaById(input.teacherId) ?? MAYA;
     const focus = input.focusAreas[0]?.trim() || humanizeRole(input.targetRole);
-    const candidate = firstName(input.candidateName) || "there";
+    const candidate = displayFirstName(input.candidateName) || "there";
+    const practiceUrl = new URL("/practice", this.appOrigin).toString();
 
     return this.dispatcher.dispatch({
       ownerId: input.ownerId,
@@ -46,6 +73,7 @@ export class TeacherNotificationService {
       subjectId: "onboarding-v1",
       email: {
         subject: `${teacher.name} from Trailgrad — your practice path is ready`,
+        fromName: `${teacher.name} from Trailgrad`,
         body: [
           `Hi ${candidate},`,
           "",
@@ -62,7 +90,13 @@ export class TeacherNotificationService {
           "See you inside,",
           teacher.name,
           "Your teacher at Trailgrad"
-        ].join("\n")
+        ].join("\n"),
+        html: teacherWelcomeEmailHtml({
+          teacherName: teacher.name,
+          candidateName: candidate,
+          focus,
+          practiceUrl
+        })
       }
     });
   }
@@ -155,8 +189,18 @@ export class TeacherNotificationService {
       .sort((left, right) => activityTime(right) - activityTime(left))[0];
     const primary = questions.find((question) => question.id !== unfinished?.id) ?? null;
     let recorded = 0;
+    const encouragement = encouragementFor(ownerId, dateKey, teacher.name);
 
-    if (primary) {
+    if (encouragement) {
+      const result = await this.dispatcher.dispatch({
+        ownerId,
+        kind: NotificationKind.TEACHER_ENCOURAGEMENT,
+        title: encouragement.title,
+        body: encouragement.body,
+        subjectId: `${dateKey}:encouragement`
+      });
+      if (result.recorded) recorded += 1;
+    } else if (primary) {
       const detail = questionDetail(primary);
       const result = await this.dispatcher.dispatch({
         ownerId,
@@ -253,6 +297,12 @@ function firstName(value: string): string {
   return value.trim().split(/\s+/)[0] ?? "";
 }
 
+function displayFirstName(value: string): string {
+  const name = firstName(value);
+  if (!name || name !== name.toUpperCase()) return name;
+  return name[0]!.toUpperCase() + name.slice(1).toLowerCase();
+}
+
 function humanizeRole(role: string): string {
   return (
     {
@@ -273,4 +323,31 @@ function sentenceFragment(value: string): string {
 
 function utcDateKey(value: Date): string {
   return value.toISOString().slice(0, 10);
+}
+
+function encouragementFor(
+  ownerId: string,
+  dateKey: string,
+  teacherName: string
+): { title: string; body: string } | null {
+  const day = Math.floor(Date.parse(`${dateKey}T00:00:00.000Z`) / 86_400_000);
+  const candidateSeed = stableHash(ownerId);
+  if ((day + candidateSeed) % ENCOURAGEMENT_INTERVAL_DAYS !== 0) return null;
+
+  const index = Math.floor((day + candidateSeed) / ENCOURAGEMENT_INTERVAL_DAYS);
+  const message = ENCOURAGEMENTS[index % ENCOURAGEMENTS.length]!;
+
+  return {
+    title: `${teacherName}: ${message.title}`,
+    body: message.body
+  };
+}
+
+function stableHash(value: string): number {
+  let result = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    result ^= value.charCodeAt(index);
+    result = Math.imul(result, 16777619);
+  }
+  return result >>> 0;
 }

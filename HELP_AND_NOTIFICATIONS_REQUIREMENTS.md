@@ -38,6 +38,8 @@ The product promise tying these systems together is:
 - **Shipped** means code and migrations exist in the repository.
 - **Configuration required** means the code exists but an external service or
   environment value must be configured.
+- **Implemented, verification pending** means the code exists and automated
+  gates pass, but production-like account/browser checks are still outstanding.
 - **Planned** means this document specifies the next implementation; it is not
   evidence that the feature exists.
 
@@ -65,18 +67,27 @@ The notification:
 The current welcome email introduces the teacher as being from Trailgrad,
 mentions that the resume and projects were reviewed, explains that a focused
 practice path is ready, and directs the candidate to begin one question.
+It is delivered as a responsive, single-column HTML template with a plain-text
+fallback, an inline Trailgrad logo, and a dark Practice call-to-action. The
+visible sender is the selected teacher (for example, `Ethan from Trailgrad`),
+while the verified Resend mailbox configured in `NOTIFICATION_FROM_EMAIL`
+remains the actual sender address.
 
 Primary implementation:
 
 - `src/app/api/onboarding/complete/route.ts`
 - `src/server/notifications/teacher-notification.service.ts`
+- `src/server/notifications/email-template.ts`
 
 ### Daily teacher coaching — shipped
 
 An authenticated cron route creates one or two in-app coaching notifications
-per candidate per day:
+per candidate per day. The primary message alternates between focused practice
+and warmth so the teacher does not feel like a question-delivery bot:
 
-- A primary recommendation for an active, incomplete roadmap question
+- A recommendation for an active, incomplete roadmap question on practice days
+- An occasional short encouragement or motivational thought from the selected
+  teacher, deterministically scheduled about once every three days
 - An optional reminder when the candidate has an unfinished draft or attempt
 
 The copy is deterministic and uses saved roadmap/question evidence. It does
@@ -89,6 +100,8 @@ Supported candidate states include:
 - Active question plus unfinished work: recommend one question and remind the
   candidate about the saved unfinished question
 - No eligible question: give one small, general Practice action
+- Encouragement day: replace the primary Practice action with a warm note; an
+  evidence-backed unfinished-work reminder may still appear separately
 
 Notifications link directly to the relevant DSA or non-DSA workspace whenever
 possible. Stable per-day subject ids prevent duplicate rows if cron is retried.
@@ -131,6 +144,7 @@ The Prisma `NotificationKind` enum currently contains:
 
 - `TEACHER_WELCOME`
 - `TEACHER_RECOMMENDATION`
+- `TEACHER_ENCOURAGEMENT`
 - `TEACHER_REMINDER`
 - `HELP_REQUEST_OPENED`
 - `HELP_REQUEST_CLAIMED`
@@ -167,6 +181,9 @@ The application sends email through Resend's REST API. Email delivery includes:
 - A durable lease so multiple app instances cannot send the same row together
 - Bounded retry attempts and backoff
 - Persisted subject/body so a retry sends identical content
+- Persisted HTML and visible sender label so styled retries are also identical
+- Inline CID logo delivery, avoiding dependence on a publicly reachable image
+  URL during local testing
 - A settings link for optional notification categories
 - Graceful degradation when Resend is not configured
 
@@ -186,6 +203,7 @@ Primary implementation:
 - `src/server/notifications/notification-dispatcher.ts`
 - `src/server/notifications/clerk-address-book.ts`
 - `prisma/migrations/20260826050000_notification_email_delivery/`
+- `prisma/migrations/20260828020000_notification_email_template/`
 - `prisma/migrations/20260828010000_teacher_coaching_notifications/`
 
 Required production environment variables:
@@ -231,6 +249,45 @@ Do not describe these as shipped.
 
 # Part B — Existing contextual peer help
 
+## Simplified interaction revision — active
+
+The primary peer-help experience is intentionally small:
+
+1. A learner with a non-empty attempt chooses **Ask someone**.
+   The learner sees a non-blocking fifteen-second delivery countdown and can
+   continue editing while the request reaches available helpers.
+2. Qualified helpers receive the durable in-app notification plus a compact,
+   non-modal toast in the workspace. The visible workspace checks every fifteen
+   seconds and immediately on focus, so no page refresh is required.
+3. The toast offers exactly **Accept & join** and **Decline**.
+4. Accepting performs the guarded claim and opens the dedicated private help
+   room. The learner receives a centered, portal-rendered **Helper joined**
+   toast with an explicit **Join help room** action. Declining hides the request
+   for that helper without affecting others.
+5. When the voice conversation ends, the learner sees one small **Did that
+   help?** dialog. **Yes** is the primary/default action; **No** is the only
+   alternative. These remain stored as compatible positive/negative rating
+   values for existing history and helper evidence.
+6. Helpful conversations increase the helper's count and simple milestone
+   badge. The Help page remains a lightweight record of Help received, Help
+   given, the current milestone, and an accepted live conversation.
+
+An unanswered request and its helper notifications last ten minutes. When that
+window closes, the request becomes expired, its helper alerts are removed, and
+the learner may send one new request. The waiting UI checks this automatically;
+no manual Withdraw or page reload is required.
+
+The eligibility re-check, atomic claim, private room authorization, source-code
+privacy, block/report controls, call limit, and idempotent notification storage
+remain in place. They are security and lifecycle boundaries rather than extra
+steps shown to the user.
+
+Inbox polling also reconciles abandoned conversations before matching. A claim
+that never begins joining is returned to the open pool after a short grace
+period, while a room past the normal call limit is closed and its two accounts
+are made available again. This prevents an old `CLAIMED` row from silently
+suppressing every later helper notification.
+
 ## Current behavior — shipped
 
 The existing system begins inside a DSA question. A learner with a non-empty
@@ -256,30 +313,64 @@ The current implementation includes:
 - Optional post-session learner rating
 - In-app and selected email notifications
 
+## Dedicated live help room — implemented
+
+Accepted conversations open at `/help/room/<request-id>`. The route is private
+to the request's learner and assigned helper and keeps the existing two-seat,
+audio-only LiveKit room. It does not publish screen video.
+
+The room contains:
+
+- Voice connection state, mute, leave, and the existing call timer
+- A large learner editor: editable for the learner and read-only for the helper
+- Live code, selected range, language, test output, and failing-test updates
+- An explicit learner-side **Send latest state** action
+- Shared typed notes plus a shared drawing canvas on the left
+- Existing block and report controls
+- The learner's **Did that help?** toast after a real two-person conversation
+
+Shared notes and completed drawing strokes use a local Yjs document. Yjs
+updates travel through LiveKit's reliable data channel and are periodically
+stored as a bounded binary state in `HelpSession` for reconnects. This requires
+no additional hosted collaboration product or subscription: the only variable
+usage remains the existing LiveKit traffic and ordinary database storage.
+
+If a helper connected but the learner never joined, ending the abandoned room
+after the two-minute minimum wait records one capped availability credit. A
+server-enforced timeout preserves the same credit. A no-show cannot be rated as
+a completed helpful conversation and therefore cannot manufacture positive
+ratings.
+
 The detailed contracts and security decisions live in
 `trailgrad-contextual-peer-help.md`.
 
-## Current Help destination — important migration context
+## Current Help destination — implemented, verification pending
 
-`/help` is not presently a real Help page. It redirects to the Profile helper
-modal so older notifications and bookmarks remain valid:
+`/help` is now an authenticated, lightweight Help destination inside the
+workspace shell. It shows Help received/Help given history, helper milestones,
+and an accepted live conversation. Open requests are handled by the compact
+workspace toast instead of requiring the helper to monitor this page:
 
 - `src/app/help/page.tsx`
+- `src/components/workspace/help/help-hub.tsx`
+- `src/app/api/help/history/route.ts`
+- `src/app/api/help/overview/route.ts`
+- `src/server/help/help-history.service.ts`
 - `src/components/workspace/profile/profile-help-card.tsx`
 - `src/components/workspace/help/help-inbox.tsx`
 
-The next implementation must replace that redirect with the Help Hub described
-below while preserving legacy query links such as `/help?request=<uuid>`.
+New helper-request notifications link to `/help?request=<uuid>`. Existing
+`/profile?help=1&request=<uuid>` links remain valid because the Profile modal
+has intentionally not been removed.
 
-Do not delete the existing Profile entry point immediately. It can become a
-compact shortcut to `/help`, and old `/profile?help=1&request=<uuid>` links
-should redirect or resolve cleanly during the transition.
+The Profile entry point can become a compact shortcut to `/help` in a later UI
+cleanup, after legacy links have had enough time to age out.
 
 ---
 
 # Part C — Dedicated Help Hub requirement
 
-## Product goal — planned
+## Product goal — foundation implemented, reputation and conversations planned
 
 Create a separate Help page where a candidate can understand both sides of
 their peer-help activity, discover trustworthy helpers, recognise useful
@@ -299,22 +390,20 @@ Recommended route:
 
 The page should contain four primary areas:
 
-### 1. Help overview
+### 1. Help overview — implemented, verification pending
 
-Compact summary cards can show:
+The current compact summary cards show:
 
 - Help received
 - People helped
-- Accepted/resolved sessions
-- Average helpfulness rating when enough ratings exist
-- Current badge or mentor level
+- A simple milestone badge based on conversations explicitly marked helpful
 
-Do not show an average from a single rating as though it were reliable. Use a
-minimum sample threshold before displaying comparative rating metrics.
+Advanced, durably awarded badges and comparative helper reputation remain
+planned. The current milestone is deliberately lightweight.
 
-### 2. My help
+### 2. My help — implemented for current DSA requests, verification pending
 
-Provide two clear tabs:
+The page provides two clear tabs:
 
 - **Help received** — requests the candidate created
 - **Help given** — requests the candidate claimed or resolved as helper
@@ -330,25 +419,28 @@ Each history item should show:
 - A direct link back to the relevant question
 - Report/block controls where still applicable
 
-Status filters should include active, resolved, expired, cancelled, and
-declined/released where relevant. Pagination should be server-side; do not load
-unbounded help history into the browser.
+Each item keeps its status label, while the simplified page avoids a separate
+filter toolbar. History uses stable server-side cursor pagination and a bounded
+page size. Declined requests remain excluded because declining does not make
+the candidate a participant; released history needs an additive audit record
+before it can be represented honestly.
+
+Participant disclosure is intentionally limited to a generic role label,
+profile avatar, and headline. No raw participant identifier is returned.
 
 The phrase **help taken** should be rendered as **Help received** in product
 copy. It is clearer and sounds more natural.
 
-### 3. Open opportunities
+### 3. Open opportunities — simplified and shipped
 
-Move the existing helper inbox into the dedicated page without weakening its
-eligibility or privacy boundaries. It should continue to separate:
+New requests appear as a compact workspace toast with **Accept & join** and
+**Decline**. The Profile helper inbox remains as a fallback during the
+transition, while `/help` displays only a request the helper already accepted.
 
-- Requests the candidate may be qualified to help with
-- Requests they already accepted
+Raw learner code and test output remain hidden until the authenticated helper
+has successfully claimed the request.
 
-Raw learner code and test output must remain hidden until the authenticated
-helper has successfully claimed the request.
-
-### 4. Top helpers
+### 4. Top helpers — planned
 
 Show a small, high-quality set of profiles rather than an endless leaderboard.
 Allow filters such as:
@@ -413,15 +505,15 @@ Badges should recognise sustained, helpful behavior rather than activity spam.
 
 Suggested first badge set:
 
-| Badge | Initial rule |
-| --- | --- |
-| First Assist | First valid, positively completed help interaction |
-| Reliable Helper | 10 valid resolved interactions with acceptable reliability |
-| Practice Mentor | Helped 25 unique candidates |
-| Clear Explainer | Strong adjusted helpfulness after a meaningful sample size |
-| DSA Guide | Strong valid help evidence across DSA questions/patterns |
-| System Design Guide | Strong valid help evidence in system-design questions |
-| Community Pillar | Sustained high-quality help across multiple periods |
+| Badge               | Initial rule                                               |
+| ------------------- | ---------------------------------------------------------- |
+| First Assist        | First valid, positively completed help interaction         |
+| Reliable Helper     | 10 valid resolved interactions with acceptable reliability |
+| Practice Mentor     | Helped 25 unique candidates                                |
+| Clear Explainer     | Strong adjusted helpfulness after a meaningful sample size |
+| DSA Guide           | Strong valid help evidence across DSA questions/patterns   |
+| System Design Guide | Strong valid help evidence in system-design questions      |
+| Community Pillar    | Sustained high-quality help across multiple periods        |
 
 Badge thresholds are product configuration, not UI constants.
 
@@ -563,13 +655,13 @@ Do not reproduce the entire desktop dashboard grid inside a narrow viewport.
 
 # Recommended implementation sequence
 
-## Phase 1 — Help Hub foundation
+## Phase 1 — Help Hub foundation — implemented, verification pending
 
-- Replace the `/help` redirect with an authenticated dedicated page
-- Add Help received and Help given paginated history APIs
-- Move/reuse the current helper inbox on the page
-- Preserve old Profile-modal and notification deep links
-- Add summary counts derived from authorized server queries
+- Replaced the `/help` redirect with an authenticated dedicated page
+- Added Help received and Help given paginated history APIs
+- Reused the current helper inbox on the page
+- Preserved old Profile-modal and notification deep links
+- Added summary counts derived from authorized server queries
 
 ## Phase 2 — Reputation and badges
 
@@ -662,6 +754,22 @@ Before calling any Help Hub phase complete:
 9. Update this document's **Shipped** versus **Planned** labels and record any
    intentionally deferred scope.
 
+## Phase 1 verification record — 2026-08-28
+
+- No Prisma migration was required; Phase 1 reads existing additive help data.
+- `prisma validate` and Prisma client generation passed.
+- Focused history/API/privacy tests passed.
+- Full lint passed.
+- Full test suite passed: 141 Vitest tests and 477 Jest tests, with the existing
+  10 Jest tests skipped by their configured environment gates.
+- Production build passed with `/help`, `/api/help/history`, and
+  `/api/help/overview` emitted as dynamic routes.
+- Automated tests cover owner scoping, malformed filters/cursors, internal-id
+  non-disclosure, and the minimum rating sample.
+- A two-candidate production-like browser exercise, blocked-pair UI exercise,
+  and Resend sandbox/domain delivery still require configured external accounts
+  and should be completed before production rollout.
+
 # Non-goals
 
 Do not add these as part of the Help Hub unless the product direction changes:
@@ -676,4 +784,3 @@ Do not add these as part of the Help Hub unless the product direction changes:
 - A leaderboard based only on volume
 - Candidate-to-candidate badge granting
 - Automatic bans based only on report count
-

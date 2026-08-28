@@ -32,10 +32,29 @@ export type HelpRequestStatus = (typeof HelpRequestStatus)[keyof typeof HelpRequ
 export interface HelpRequestContext {
   /** The learner's code at the moment of asking. Truncated to CODE_LIMIT. */
   code: string;
+  /** Language paired with that captured source. It remains fixed for the room. */
+  language?: string;
   /** stdout/stderr from the last run, or null if they never ran it. */
   testOutput: string | null;
   /** Failing test count from the last run, or null if never run. */
   failingTests: number | null;
+  /** Bounded visible case details used by the room's results column. */
+  runStatus?: string | null;
+  tests?: Array<{
+    index: number;
+    input: string;
+    expectedOutput: string;
+    actualOutput: string;
+    passed: boolean;
+    error: string | null;
+  }> | null;
+  /** Cursor or selected code range when the learner asked. */
+  selection?: {
+    startLineNumber: number;
+    startColumn: number;
+    endLineNumber: number;
+    endColumn: number;
+  } | null;
   /** How many AI hints they had already taken. High counts mean AI did not land. */
   hintsUsed: number;
   /** Time on this problem before asking. */
@@ -50,8 +69,8 @@ export interface HelpRequestContext {
 export const CODE_LIMIT = 20_000;
 export const TEST_OUTPUT_LIMIT = 4_000;
 
-/** How long an unclaimed request stays live before a sweep retires it. */
-export const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
+/** One ask window: after this the learner may send a fresh request. */
+export const DEFAULT_TTL_MS = 10 * 60_000;
 
 /**
  * Legal transitions.
@@ -114,8 +133,20 @@ export class HelpRequestError extends Error {
 export function clampContext(context: HelpRequestContext): HelpRequestContext {
   return {
     code: context.code.slice(0, CODE_LIMIT),
+    ...(context.language ? { language: context.language.slice(0, 40) } : {}),
     testOutput: context.testOutput ? context.testOutput.slice(0, TEST_OUTPUT_LIMIT) : null,
     failingTests: context.failingTests,
+    runStatus: context.runStatus?.slice(0, 160) ?? null,
+    tests:
+      context.tests?.slice(0, 6).map((test, index) => ({
+        index: Number.isInteger(test.index) && test.index >= 0 ? test.index : index,
+        input: test.input.slice(0, 180),
+        expectedOutput: test.expectedOutput.slice(0, 180),
+        actualOutput: test.actualOutput.slice(0, 180),
+        passed: test.passed,
+        error: test.error?.slice(0, 180) ?? null
+      })) ?? null,
+    selection: context.selection ?? null,
     hintsUsed: context.hintsUsed,
     timeSpentMs: context.timeSpentMs
   };

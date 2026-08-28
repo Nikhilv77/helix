@@ -48,8 +48,9 @@ export async function createHelpRoomToken(input: HelpRoomTokenInput): Promise<st
     canPublish: true,
     canPublishSources: [TrackSource.MICROPHONE],
     canSubscribe: true,
-    // The learner publishes workspace snapshots; the helper is read-only.
-    canPublishData: input.seat === "learner",
+    // Both seats publish collaboration data. Code snapshots are still accepted
+    // only from the learner identity and the helper editor remains read-only.
+    canPublishData: true,
     canUpdateOwnMetadata: false
   });
 

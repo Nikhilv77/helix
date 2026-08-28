@@ -23,7 +23,7 @@ const actionSchema = z.object({
 
 const FAILURE_STATUS: Record<string, { status: number; message: string }> = {
   NOT_FOUND: { status: 404, message: "That request no longer exists." },
-  ALREADY_CLAIMED: { status: 409, message: "Someone else got there first." },
+  ALREADY_CLAIMED: { status: 409, message: "This request has already been accepted." },
   NOT_QUALIFIED: {
     status: 403,
     message:
@@ -83,33 +83,53 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       const claimed = parsed.data.action === "claim";
       const title = findQuestion(updated.questionSlug)?.question.title ?? updated.questionSlug;
 
-      after(() =>
-        app.notificationDispatcher
-          .dispatch({
-            ownerId: updated.learnerId,
-            kind: claimed
-              ? NotificationKind.HELP_REQUEST_CLAIMED
-              : NotificationKind.HELP_REQUEST_RESOLVED,
-            title: claimed
-              ? `Someone is ready to help with ${title}`
-              : `Your ${title} request was closed`,
-            body: claimed
-              ? "They have seen where you are stuck and are ready to talk it through."
-              : "Your helper marked this one as answered.",
-            href: `/dsa-questions/${updated.questionSlug}`,
-            subjectId: updated.id
-          })
-          .catch((error) =>
-            logger.error(
-              JSON.stringify({
-                event: "help.transition.notification.failed",
-                requestId: updated.id,
-                action: parsed.data.action,
-                reason: error instanceof Error ? error.message : String(error)
+      after(async () => {
+        try {
+          const profiles = await app.helpHistoryService.participants([updated.learnerId, helperId]);
+          const learnerName = profiles.get(updated.learnerId)?.label ?? "Your peer";
+          const helperName = profiles.get(helperId)?.label ?? "Your helper";
+          const deliveries = [
+            app.notificationDispatcher.dispatch({
+              ownerId: updated.learnerId,
+              kind: claimed
+                ? NotificationKind.HELP_REQUEST_CLAIMED
+                : NotificationKind.HELP_REQUEST_RESOLVED,
+              title: claimed
+                ? `${helperName} accepted your ${title} request`
+                : `Your session with ${helperName} is complete`,
+              body: claimed
+                ? `${helperName} is ready to meet you in the private peer-help room.`
+                : `You can review this conversation anytime from Peer Help.`,
+              href: claimed
+                ? `/help?request=${updated.id}&join=1`
+                : `/dsa-questions/${updated.questionSlug}`,
+              subjectId: updated.id
+            })
+          ];
+          if (!claimed) {
+            deliveries.push(
+              app.notificationDispatcher.dispatch({
+                ownerId: helperId,
+                kind: NotificationKind.HELP_REQUEST_RESOLVED,
+                title: `Your session with ${learnerName} is complete`,
+                body: `Thanks for helping ${learnerName} with ${title}.`,
+                href: "/help",
+                subjectId: updated.id
               })
-            )
-          )
-      );
+            );
+          }
+          await Promise.allSettled(deliveries);
+        } catch (error) {
+          logger.error(
+            JSON.stringify({
+              event: "help.transition.notification.failed",
+              requestId: updated.id,
+              action: parsed.data.action,
+              reason: error instanceof Error ? error.message : String(error)
+            })
+          );
+        }
+      });
     }
 
     return apiSuccess({ id: updated.id, status: updated.status });

@@ -12,6 +12,10 @@ import { HelpRequestError, HelpRequestStatus } from "./help-request.types";
  * leaked one cannot outlive the cap it enforces.
  */
 export const SESSION_CAP_MS = 30 * 60_000;
+/** An accepted request must begin joining promptly or return to the helper pool. */
+export const CLAIM_JOIN_GRACE_MS = 2 * 60_000;
+export const MAX_COLLABORATION_STATE_BYTES = 512_000;
+export const HELPER_NO_SHOW_CREDIT_WAIT_MS = 2 * 60_000;
 export const RATABLE_END_REASONS = ["left", "timeout", "resolved"] as const;
 
 export type Seat = "learner" | "helper";
@@ -27,7 +31,8 @@ export interface LeaveResult {
   ended: boolean;
   /** True only for the call that moved CLAIMED -> RESOLVED. */
   resolved: boolean;
-  request: { id: string; learnerId: string; questionSlug: string };
+  canRate: boolean;
+  request: { id: string; learnerId: string; helperId: string | null; questionSlug: string };
 }
 
 export interface SessionStatus {
@@ -37,7 +42,14 @@ export interface SessionStatus {
   remainingMs: number | null;
   /** True only for the poll that moved a timed-out request to RESOLVED. */
   resolved: boolean;
-  request: { id: string; learnerId: string; questionSlug: string };
+  canRate: boolean;
+  request: { id: string; learnerId: string; helperId: string | null; questionSlug: string };
+}
+
+export interface ReconciledHelpConversation {
+  id: string;
+  learnerId: string;
+  questionSlug: string;
 }
 
 interface LockedRequest {
@@ -57,6 +69,71 @@ interface LockedRequest {
  */
 export class HelpSessionService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Repair conversations whose browser disappeared before it could close them.
+   *
+   * A helper claim with no room is released after a short grace period. A room
+   * that reached the normal call cap is ended and resolved. This runs before an
+   * inbox is listed, so abandoned rows cannot leave both people permanently
+   * "busy" and silently suppress future notifications.
+   */
+  async reconcileStale(now = new Date()): Promise<ReconciledHelpConversation[]> {
+    const sessionCutoff = new Date(now.getTime() - SESSION_CAP_MS);
+    const claimCutoff = new Date(now.getTime() - CLAIM_JOIN_GRACE_MS);
+
+    return this.prisma.$queryRaw<ReconciledHelpConversation[]>`
+      WITH released AS (
+        UPDATE "HelpRequest" AS request
+        SET "status" = 'OPEN'::"HelpRequestStatus",
+            "helperId" = NULL,
+            "claimedAt" = NULL,
+            "updatedAt" = ${now}
+        WHERE request."status" = 'CLAIMED'::"HelpRequestStatus"
+          AND request."claimedAt" <= ${claimCutoff}
+          AND request."expiresAt" > ${now}
+          AND NOT EXISTS (
+            SELECT 1 FROM "HelpSession" AS session
+            WHERE session."requestId" = request."id"
+          )
+        RETURNING request."id"
+      ),
+      resolved AS (
+        UPDATE "HelpRequest" AS request
+        SET "status" = 'RESOLVED'::"HelpRequestStatus",
+            "resolvedAt" = ${now},
+            "updatedAt" = ${now}
+        WHERE request."status" = 'CLAIMED'::"HelpRequestStatus"
+          AND EXISTS (
+            SELECT 1 FROM "HelpSession" AS session
+            WHERE session."requestId" = request."id"
+              AND session."endedAt" IS NULL
+              AND session."startedAt" <= ${sessionCutoff}
+          )
+        RETURNING request."id", request."learnerId", request."questionSlug"
+      ),
+      ended AS (
+        UPDATE "HelpSession" AS session
+        SET "endedAt" = ${now},
+            "endedReason" = 'timeout',
+            "helperWaitCreditAt" = CASE
+              WHEN session."helperJoinedAt" IS NOT NULL
+                AND session."learnerJoinedAt" IS NULL
+                AND session."helperJoinedAt" <= ${new Date(now.getTime() - HELPER_NO_SHOW_CREDIT_WAIT_MS)}
+              THEN COALESCE(session."helperWaitCreditAt", ${now})
+              ELSE session."helperWaitCreditAt"
+            END,
+            "updatedAt" = ${now}
+        FROM resolved
+        WHERE session."requestId" = resolved."id"
+          AND session."endedAt" IS NULL
+        RETURNING session."requestId"
+      )
+      SELECT resolved."id", resolved."learnerId", resolved."questionSlug"
+      FROM resolved
+      WHERE EXISTS (SELECT 1 FROM ended WHERE ended."requestId" = resolved."id")
+    `;
+  }
 
   /**
    * Resolve the caller's seat and hand back the room, creating it on first join.
@@ -88,9 +165,14 @@ export class HelpSessionService {
       const remainingMs = SESSION_CAP_MS - (Date.now() - session.startedAt.getTime());
       if (remainingMs <= 0) {
         const now = new Date();
+        const helperWaitCredit = this.earnedNoShowCredit(session, now);
         await transaction.helpSession.updateMany({
           where: { id: session.id, endedAt: null },
-          data: { endedAt: now, endedReason: "timeout" }
+          data: {
+            endedAt: now,
+            endedReason: "timeout",
+            ...(helperWaitCredit ? { helperWaitCreditAt: now } : {})
+          }
         });
         await transaction.helpRequest.update({
           where: { id: requestId },
@@ -176,14 +258,20 @@ export class HelpSessionService {
         return {
           ended: false,
           resolved: false,
+          canRate: false,
           request: this.presentRequest(request)
         };
       }
 
       const now = new Date();
+      const learnerNoShow = request.helperId === userId && this.earnedNoShowCredit(session, now);
       await transaction.helpSession.update({
         where: { id: session.id },
-        data: { endedAt: now, endedReason: "left" }
+        data: {
+          endedAt: now,
+          endedReason: learnerNoShow ? "learner_no_show" : "left",
+          ...(learnerNoShow ? { helperWaitCreditAt: now } : {})
+        }
       });
 
       const resolved = request.status === HelpRequestStatus.CLAIMED;
@@ -194,7 +282,12 @@ export class HelpSessionService {
         });
       }
 
-      return { ended: true, resolved, request: this.presentRequest(request) };
+      return {
+        ended: true,
+        resolved,
+        canRate: this.canRate(session),
+        request: this.presentRequest(request)
+      };
     });
   }
 
@@ -221,6 +314,7 @@ export class HelpSessionService {
           ended: false,
           remainingMs: null,
           resolved: false,
+          canRate: false,
           request: presented
         };
       }
@@ -231,6 +325,7 @@ export class HelpSessionService {
           ended: true,
           remainingMs: 0,
           resolved: false,
+          canRate: this.canRate(session),
           request: presented
         };
       }
@@ -247,6 +342,7 @@ export class HelpSessionService {
           ended: true,
           remainingMs: 0,
           resolved: false,
+          canRate: this.canRate(session),
           request: presented
         };
       }
@@ -258,14 +354,20 @@ export class HelpSessionService {
           ended: false,
           remainingMs,
           resolved: false,
+          canRate: this.canRate(session),
           request: presented
         };
       }
 
       const now = new Date();
+      const helperWaitCredit = this.earnedNoShowCredit(session, now);
       await transaction.helpSession.updateMany({
         where: { id: session.id, endedAt: null },
-        data: { endedAt: now, endedReason: "timeout" }
+        data: {
+          endedAt: now,
+          endedReason: "timeout",
+          ...(helperWaitCredit ? { helperWaitCreditAt: now } : {})
+        }
       });
       await transaction.helpRequest.update({
         where: { id: requestId },
@@ -277,6 +379,7 @@ export class HelpSessionService {
         ended: true,
         remainingMs: 0,
         resolved: true,
+        canRate: this.canRate(session),
         request: presented
       };
     });
@@ -318,7 +421,7 @@ export class HelpSessionService {
    * attached, which is the opposite of what makes people ask.
    */
   async rate(requestId: string, learnerId: string, rating: number): Promise<boolean> {
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    if (rating !== 1 && rating !== 5) {
       throw new HelpRequestError("ILLEGAL_TRANSITION");
     }
 
@@ -346,33 +449,7 @@ export class HelpSessionService {
     return count > 0;
   }
 
-  /** Persist dismissal so "Skip" does not turn into a prompt on every reload. */
-  async skipRating(requestId: string, learnerId: string): Promise<boolean> {
-    const request = await this.prisma.helpRequest.findUnique({
-      where: { id: requestId },
-      select: { learnerId: true }
-    });
-
-    if (!request) throw new HelpRequestError("NOT_FOUND");
-    if (request.learnerId !== learnerId) throw new HelpRequestError("NOT_THE_LEARNER");
-
-    const { count } = await this.prisma.helpSession.updateMany({
-      where: {
-        requestId,
-        endedAt: { not: null },
-        endedReason: { in: [...RATABLE_END_REASONS] },
-        learnerJoinedAt: { not: null },
-        helperJoinedAt: { not: null },
-        learnerRating: null,
-        learnerRatingSkippedAt: null
-      },
-      data: { learnerRatingSkippedAt: new Date() }
-    });
-
-    return count > 0;
-  }
-
-  /** Latest normal conversation this learner has neither rated nor skipped. */
+  /** Latest normal conversation this learner has not answered yet. */
   async pendingRatingForLearner(learnerId: string, questionSlug: string) {
     const latest = await this.prisma.helpSession.findFirst({
       where: {
@@ -396,6 +473,35 @@ export class HelpSessionService {
     return this.prisma.helpSession.findUnique({ where: { requestId } });
   }
 
+  /** Persist the bounded Yjs room document for reconnects and later review. */
+  async saveCollaborationState(
+    requestId: string,
+    userId: string,
+    state: Uint8Array
+  ): Promise<boolean> {
+    if (state.byteLength > MAX_COLLABORATION_STATE_BYTES) {
+      throw new HelpRequestError("ILLEGAL_TRANSITION");
+    }
+
+    return this.prisma.$transaction(async (transaction) => {
+      const request = await this.lockRequest(transaction, requestId);
+      if (!request) throw new HelpRequestError("NOT_FOUND");
+      if (request.learnerId !== userId && request.helperId !== userId) {
+        throw new HelpRequestError("NOT_THE_HELPER");
+      }
+      if (request.status !== HelpRequestStatus.CLAIMED) return false;
+
+      const { count } = await transaction.helpSession.updateMany({
+        where: { requestId, endedAt: null },
+        data: {
+          collaborationState: Buffer.from(state),
+          collaborationUpdatedAt: new Date()
+        }
+      });
+      return count > 0;
+    });
+  }
+
   private async lockRequest(
     transaction: Prisma.TransactionClient,
     requestId: string
@@ -413,7 +519,23 @@ export class HelpSessionService {
     return {
       id: request.id,
       learnerId: request.learnerId,
+      helperId: request.helperId,
       questionSlug: request.questionSlug
     };
+  }
+
+  private earnedNoShowCredit(
+    session: { helperJoinedAt: Date | null; learnerJoinedAt: Date | null },
+    now: Date
+  ): boolean {
+    return Boolean(
+      session.helperJoinedAt &&
+      !session.learnerJoinedAt &&
+      now.getTime() - session.helperJoinedAt.getTime() >= HELPER_NO_SHOW_CREDIT_WAIT_MS
+    );
+  }
+
+  private canRate(session: { learnerJoinedAt: Date | null; helperJoinedAt: Date | null }): boolean {
+    return Boolean(session.learnerJoinedAt && session.helperJoinedAt);
   }
 }

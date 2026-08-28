@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Mic, MicOff, PhoneOff, Volume2 } from "lucide-react";
+import { Check, Loader2, Mic, MicOff, PhoneOff, Send, Volume2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Room } from "livekit-client";
 import {
@@ -15,6 +15,10 @@ import {
 
 type CallState = "idle" | "connecting" | "live" | "ended" | "failed";
 
+export interface HelpDataChannel {
+  publish(payload: Uint8Array, topic: string): Promise<void>;
+}
+
 interface Connection {
   token: string;
   url: string;
@@ -27,6 +31,7 @@ interface SessionStatus {
   active: boolean;
   ended: boolean;
   remainingMs: number | null;
+  canRate: boolean;
 }
 
 function clock(ms: number): string {
@@ -48,10 +53,14 @@ export function HelpCall({
   requestId,
   onEnded,
   snapshot,
-  onSnapshot
+  onSnapshot,
+  autoJoin = false,
+  onDataChannel,
+  onDataMessage,
+  peerName = "your peer"
 }: {
   requestId: string;
-  onEnded?: () => void;
+  onEnded?: (result: { canRate: boolean }) => void;
   /**
    * Learner seat only: read the current workspace. Called on a timer, so it
    * must be cheap and must not allocate anything it does not have to.
@@ -59,12 +68,19 @@ export function HelpCall({
   snapshot?: () => WorkspaceState;
   /** Helper seat only: a newer view of the learner's workspace arrived. */
   onSnapshot?: (incoming: HelpSnapshot) => void;
+  /** Used after the helper explicitly chose “Accept & join” in the toast. */
+  autoJoin?: boolean;
+  /** Shared notes/canvas transport. Null is emitted whenever the room disconnects. */
+  onDataChannel?: (channel: HelpDataChannel | null) => void;
+  onDataMessage?: (payload: Uint8Array, topic: string) => void;
+  peerName?: string;
 }) {
   const [state, setState] = useState<CallState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [peerPresent, setPeerPresent] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
+  const [snapshotSent, setSnapshotSent] = useState(false);
   const [remaining, setRemaining] = useState(0);
   const room = useRef<Room | null>(null);
   const audio = useRef<HTMLAudioElement | null>(null);
@@ -76,6 +92,10 @@ export function HelpCall({
   snapshotRef.current = snapshot;
   const onSnapshotRef = useRef(onSnapshot);
   onSnapshotRef.current = onSnapshot;
+  const onDataChannelRef = useRef(onDataChannel);
+  onDataChannelRef.current = onDataChannel;
+  const onDataMessageRef = useRef(onDataMessage);
+  onDataMessageRef.current = onDataMessage;
   const lastSent = useRef<WorkspaceState | null>(null);
   const lastSeen = useRef<HelpSnapshot | null>(null);
   const assembler = useRef(new SnapshotAssembler());
@@ -83,6 +103,8 @@ export function HelpCall({
   const sequence = useRef(0);
   const publishing = useRef(false);
   const forcePublishPending = useRef(false);
+  const autoJoinAttempted = useRef(false);
+  const snapshotSentTimer = useRef<number | null>(null);
 
   const disconnectRoom = useCallback(async () => {
     // Clear the flag before disconnecting so RoomEvent.Disconnected does not
@@ -90,6 +112,7 @@ export function HelpCall({
     connected.current = false;
     const active = room.current;
     room.current = null;
+    onDataChannelRef.current?.(null);
     await active?.disconnect().catch(() => undefined);
     audio.current?.remove();
     audio.current = null;
@@ -103,19 +126,19 @@ export function HelpCall({
     setPeerPresent(false);
     setAudioBlocked(false);
 
-    const closed = await fetch(`/api/help/session/${encodeURIComponent(requestId)}`, {
+    const closeResult = await fetch(`/api/help/session/${encodeURIComponent(requestId)}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ action: "leave" })
     })
       .then(async (response) => {
-        if (!response.ok) return false;
+        if (!response.ok) return null;
         const payload = await response.json().catch(() => null);
-        return payload?.success === true;
+        return payload?.success === true ? { canRate: payload.data?.canRate === true } : null;
       })
-      .catch(() => false);
+      .catch(() => null);
 
-    if (!closed) {
+    if (!closeResult) {
       leaving.current = false;
       setState("failed");
       setError("You left the room, but we could not close the conversation. Try again.");
@@ -123,7 +146,7 @@ export function HelpCall({
     }
 
     setState("ended");
-    onEnded?.();
+    onEnded?.(closeResult);
   }, [disconnectRoom, onEnded, requestId]);
 
   // Disconnecting on unmount matters more here than usual: a room left open
@@ -133,8 +156,10 @@ export function HelpCall({
       // Page navigation is not the same as pressing Leave: the user may come
       // straight back and rejoin the still-live session.
       connected.current = false;
+      onDataChannelRef.current?.(null);
       void room.current?.disconnect().catch(() => undefined);
       audio.current?.remove();
+      if (snapshotSentTimer.current !== null) window.clearTimeout(snapshotSentTimer.current);
     };
   }, []);
 
@@ -179,6 +204,13 @@ export function HelpCall({
     },
     [requestId]
   );
+
+  const sendLatestState = useCallback(async () => {
+    await publishWorkspace(true);
+    setSnapshotSent(true);
+    if (snapshotSentTimer.current !== null) window.clearTimeout(snapshotSentTimer.current);
+    snapshotSentTimer.current = window.setTimeout(() => setSnapshotSent(false), 2_000);
+  }, [publishWorkspace]);
 
   /*
    * Publish immediately, then only when something visible changes. A forced
@@ -228,7 +260,7 @@ export function HelpCall({
           setAudioBlocked(false);
           setRemaining(0);
           setState("ended");
-          onEnded?.();
+          onEnded?.({ canRate: status.canRate });
           return;
         }
 
@@ -296,22 +328,26 @@ export function HelpCall({
         setPeerPresent(false);
       });
       active.on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
-        const receive = onSnapshotRef.current;
-        if (
-          connection.seat !== "helper" ||
-          !receive ||
-          topic !== SNAPSHOT_TOPIC ||
-          participant?.identity !== `learner-${requestId}`
-        ) {
+        const expectedPeer =
+          connection.seat === "learner" ? `helper-${requestId}` : `learner-${requestId}`;
+        if (participant?.identity !== expectedPeer) return;
+
+        if (topic === SNAPSHOT_TOPIC) {
+          const receive = onSnapshotRef.current;
+          if (connection.seat !== "helper" || !receive) return;
+
+          // Everything off the wire is untrusted: a bad packet reads as nothing.
+          const incoming = assembler.current.accept(payload);
+          if (!incoming || !isNewer(incoming, lastSeen.current)) return;
+
+          lastSeen.current = incoming;
+          receive(incoming);
           return;
         }
 
-        // Everything off the wire is untrusted: a bad packet reads as nothing.
-        const incoming = assembler.current.accept(payload);
-        if (!incoming || !isNewer(incoming, lastSeen.current)) return;
-
-        lastSeen.current = incoming;
-        receive(incoming);
+        if (topic?.startsWith("help.collaboration.")) {
+          onDataMessageRef.current?.(payload, topic);
+        }
       });
       active.on(RoomEvent.ParticipantConnected, () => {
         setPeerPresent(true);
@@ -331,6 +367,19 @@ export function HelpCall({
       });
 
       await active.connect(connection.url, connection.token);
+      const peerIdentity =
+        connection.seat === "learner" ? `helper-${requestId}` : `learner-${requestId}`;
+      onDataChannelRef.current?.({
+        publish: (payload, topic) => {
+          const packet = new Uint8Array(new ArrayBuffer(payload.byteLength));
+          packet.set(payload);
+          return active.localParticipant.publishData(packet, {
+            reliable: true,
+            topic,
+            destinationIdentities: [peerIdentity]
+          });
+        }
+      });
       await active.localParticipant.setMicrophoneEnabled(true);
       await active.startAudio().catch(() => undefined);
 
@@ -357,6 +406,12 @@ export function HelpCall({
     }
   }, [disconnectRoom, leave, publishWorkspace, requestId]);
 
+  useEffect(() => {
+    if (!autoJoin || autoJoinAttempted.current) return;
+    autoJoinAttempted.current = true;
+    void join();
+  }, [autoJoin, join]);
+
   const toggleMute = useCallback(async () => {
     const active = room.current;
     if (!active) return;
@@ -378,7 +433,7 @@ export function HelpCall({
 
   if (state === "live") {
     return (
-      <div className="flex flex-wrap items-center gap-2.5 rounded-xl border border-cream/12 bg-cream/[0.04] px-3.5 py-2.5">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="flex items-center gap-2 text-[13px] font-medium text-cream">
           <span
             aria-hidden="true"
@@ -387,7 +442,7 @@ export function HelpCall({
               peerPresent ? "bg-[#8be6bd]" : "animate-pulse bg-[#f4d58b]"
             ].join(" ")}
           />
-          {peerPresent ? "Connected" : "Waiting for them to join"}
+          {peerPresent ? `Connected with ${peerName}` : `Waiting for ${peerName} to join`}
         </span>
 
         <span className="text-[12.5px] tabular-nums text-cream/45">{clock(remaining)} left</span>
@@ -398,10 +453,25 @@ export function HelpCall({
           <button
             type="button"
             onClick={() => void enableAudio()}
-            className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#f4d58b]/25 px-3 text-[12.5px] font-semibold text-[#f4d58b] transition hover:bg-[#f4d58b]/10"
+            className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#f4d58b]/10 px-3 text-[12.5px] font-semibold text-[#f4d58b] transition hover:bg-[#f4d58b]/15"
           >
             <Volume2 size={13} aria-hidden="true" />
             Enable audio
+          </button>
+        ) : null}
+
+        {snapshot ? (
+          <button
+            type="button"
+            onClick={() => void sendLatestState()}
+            className="inline-flex h-9 items-center gap-2 rounded-xl bg-white/[0.055] px-3 text-[12.5px] font-semibold text-cream/68 transition hover:bg-white/[0.09] hover:text-cream"
+          >
+            {snapshotSent ? (
+              <Check size={13} aria-hidden="true" />
+            ) : (
+              <Send size={13} aria-hidden="true" />
+            )}
+            {snapshotSent ? "State sent" : "Send latest state"}
           </button>
         ) : null}
 
@@ -409,7 +479,7 @@ export function HelpCall({
           type="button"
           onClick={() => void toggleMute()}
           aria-label={muted ? "Unmute" : "Mute"}
-          className="grid h-9 w-9 place-items-center rounded-xl border border-cream/12 text-cream/70 transition hover:text-cream"
+          className="grid h-9 w-9 place-items-center rounded-xl bg-white/[0.055] text-cream/65 transition hover:bg-white/[0.09] hover:text-cream"
         >
           {muted ? <MicOff size={14} /> : <Mic size={14} />}
         </button>

@@ -120,7 +120,7 @@ export function ProfileHelpCard() {
                   ? `${stats.claimed} accepted ${stats.claimed === 1 ? "request" : "requests"} waiting for you.`
                   : stats.available > 0
                     ? `${stats.available} ${stats.available === 1 ? "person may" : "people may"} need your help.`
-                    : "Open your helper inbox and see when someone needs you."}
+                    : "Open Peer Help when a candidate needs help."}
             </span>
           </span>
 

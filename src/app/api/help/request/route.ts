@@ -27,12 +27,38 @@ const logger = new Logger("HelpRequest");
  */
 const HELPERS_TO_NOTIFY = 3;
 
+const selectionSchema = z
+  .object({
+    startLineNumber: z.number().int().min(1).max(1_000_000),
+    startColumn: z.number().int().min(1).max(1_000_000),
+    endLineNumber: z.number().int().min(1).max(1_000_000),
+    endColumn: z.number().int().min(1).max(1_000_000)
+  })
+  .strict();
+
+const testCaseSchema = z
+  .object({
+    index: z.number().int().min(0).max(10_000),
+    input: z.string().max(500),
+    expectedOutput: z.string().max(500),
+    actualOutput: z.string().max(500),
+    passed: z.boolean(),
+    error: z.string().max(500).nullable()
+  })
+  .strict();
+
 const openSchema = z.object({
   slug: z.string().min(1).max(140),
   language: z.enum(["python", "javascript", "cpp", "java"]),
-  code: z.string().max(40_000),
+  code: z
+    .string()
+    .max(40_000)
+    .refine((value) => value.trim().length > 0, "Write an attempt before asking for help"),
   testOutput: z.string().max(20_000).nullable().optional(),
   failingTests: z.number().int().min(0).max(10_000).nullable().optional(),
+  runStatus: z.string().max(160).nullable().optional(),
+  tests: z.array(testCaseSchema).max(10).nullable().optional(),
+  selection: selectionSchema.nullable().optional(),
   hintsUsed: z.number().int().min(0).max(100).default(0),
   timeSpentMs: z
     .number()
@@ -71,8 +97,12 @@ export async function POST(request: NextRequest) {
 
     const context = {
       code: parsed.data.code,
+      language: parsed.data.language,
       testOutput: parsed.data.testOutput ?? null,
       failingTests: parsed.data.failingTests ?? null,
+      runStatus: parsed.data.runStatus ?? null,
+      tests: parsed.data.tests ?? null,
+      selection: parsed.data.selection ?? null,
       hintsUsed: parsed.data.hintsUsed,
       timeSpentMs: parsed.data.timeSpentMs
     };
@@ -89,11 +119,13 @@ export async function POST(request: NextRequest) {
     // helper notification for an otherwise valid request.
     after(async () => {
       try {
+        const learner = await app.helpHistoryService.participant(ownerId);
         const summary = await app.stuckSummaryService.summarize(question, context);
         await app.helpRequestService.attachSummary(helpRequest.id, JSON.stringify(summary));
 
         await app.conciergeNotifier.notify({
           requestId: helpRequest.id,
+          learnerName: learner.label,
           questionTitle: question.title,
           questionSlug: question.slug,
           language: parsed.data.language,
@@ -118,6 +150,7 @@ export async function POST(request: NextRequest) {
     // kind and request, so replaying this task never duplicates an inbox row.
     after(async () => {
       try {
+        const learner = await app.helpHistoryService.participant(ownerId);
         const helpers = await app.helperMatchingService.findHelpers(
           question.slug,
           ownerId,
@@ -137,9 +170,9 @@ export async function POST(request: NextRequest) {
             app.notificationDispatcher.dispatch({
               ownerId: helper.ownerId,
               kind: NotificationKind.HELP_REQUEST_OPENED,
-              title: `Someone needs help with ${question.title}`,
+              title: `${learner.label} needs help with ${question.title}`,
               body,
-              href: `/profile?help=1&request=${helpRequest.id}`,
+              href: `/help?request=${helpRequest.id}`,
               subjectId: helpRequest.id
             })
           )
@@ -186,12 +219,14 @@ export async function GET(request: NextRequest) {
       app.helperMatchingService.countHelpers(slug, ownerId, language),
       app.helpSessionService.pendingRatingForLearner(ownerId, slug)
     ]);
+    const helper = live?.helperId ? await app.helpHistoryService.participant(live.helperId) : null;
 
     // helperCount is who *could* answer, not who will. Describe the pool without
     // promising that one of them is online or will accept.
     return apiSuccess({
       id: live?.id ?? null,
       status: live?.status ?? null,
+      helper,
       createdAt: live?.createdAt.getTime() ?? null,
       helperCount,
       ratingRequestId: live ? null : (pendingRating?.requestId ?? null)

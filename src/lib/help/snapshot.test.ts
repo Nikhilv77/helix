@@ -16,6 +16,12 @@ const base = {
   language: "java",
   testOutput: "FAILED: expected 5 but was 0",
   failingTests: 2,
+  selection: {
+    startLineNumber: 1,
+    startColumn: 12,
+    endLineNumber: 1,
+    endColumn: 21
+  },
   streamId: "stream-1",
   seq: 1,
   at: 1_700_000_000_000
@@ -35,13 +41,30 @@ function assemble(
 
 describe("snapshot packets", () => {
   it("round trips one revision", () => {
-    expect(assemble()).toMatchObject({ ...base, v: 2, receivedAt: base.at + 50 });
+    expect(assemble()).toMatchObject({ ...base, v: 3, receivedAt: base.at + 50 });
   });
 
   it("keeps null output and failure count values", () => {
     expect(assemble({ ...base, testOutput: null, failingTests: null })).toMatchObject({
       testOutput: null,
       failingTests: null
+    });
+  });
+
+  it("carries bounded visible test-case details to the helper", () => {
+    const tests = [
+      {
+        index: 0,
+        input: "nums = [1, 2, 3, 1]",
+        expectedOutput: "true",
+        actualOutput: "true",
+        passed: true,
+        error: null
+      }
+    ];
+    expect(assemble({ ...base, runStatus: "1/1 tests passed", tests })).toMatchObject({
+      runStatus: "1/1 tests passed",
+      tests
     });
   });
 
@@ -82,7 +105,7 @@ describe("snapshot packets", () => {
 });
 
 describe("ordering and staleness", () => {
-  const current = { ...base, v: 2, receivedAt: base.at + 100 };
+  const current = { ...base, v: 3, receivedAt: base.at + 100 };
 
   it("orders a stream by sequence, not a potentially skewed wall clock", () => {
     expect(isNewer({ ...current, seq: 2, at: 1 }, current)).toBe(true);
@@ -97,10 +120,30 @@ describe("ordering and staleness", () => {
 
 describe("change detection", () => {
   it("publishes only when something visible moved", () => {
-    const previous = { code: "a", language: "java", testOutput: null, failingTests: null };
+    const previous = {
+      code: "a",
+      language: "java",
+      testOutput: null,
+      failingTests: null,
+      selection: null
+    };
     expect(hasChanged(previous, null)).toBe(true);
     expect(hasChanged(previous, previous)).toBe(false);
     expect(hasChanged({ ...previous, code: "b" }, previous)).toBe(true);
     expect(hasChanged({ ...previous, testOutput: "failed" }, previous)).toBe(true);
+    expect(
+      hasChanged(
+        {
+          ...previous,
+          selection: {
+            startLineNumber: 1,
+            startColumn: 1,
+            endLineNumber: 1,
+            endColumn: 1
+          }
+        },
+        previous
+      )
+    ).toBe(true);
   });
 });

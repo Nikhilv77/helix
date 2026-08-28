@@ -1,8 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, CheckCheck, Sparkles } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { FaStar } from "react-icons/fa6";
+import {
+  Bell,
+  BellRing,
+  CheckCheck,
+  ChevronRight,
+  CircleCheckBig,
+  Clock3,
+  HandHelping,
+  Heart,
+  Inbox,
+  Target,
+  TimerOff,
+  UserCheck,
+  X
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type ElementType } from "react";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
 interface InboxItem {
@@ -16,7 +32,78 @@ interface InboxItem {
 }
 
 /** Quiet enough not to nag, frequent enough that a waiting learner is not stale. */
-const POLL_MS = 60_000;
+const POLL_MS = 15_000;
+
+interface NotificationPresentation {
+  icon: ElementType;
+  label: string;
+  iconClass: string;
+}
+
+function notificationPresentation(kind: string, teacherName: string): NotificationPresentation {
+  switch (kind) {
+    case "TEACHER_WELCOME":
+      return {
+        icon: FaStar,
+        label: `Welcome from ${teacherName}`,
+        iconClass: "bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]"
+      };
+    case "TEACHER_RECOMMENDATION":
+      return {
+        icon: Target,
+        label: `Practice from ${teacherName}`,
+        iconClass: "bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]"
+      };
+    case "TEACHER_ENCOURAGEMENT":
+      return {
+        icon: Heart,
+        label: `A note from ${teacherName}`,
+        iconClass: "bg-[#f6b98a]/10 text-[#f6c9a6]"
+      };
+    case "TEACHER_REMINDER":
+      return {
+        icon: Clock3,
+        label: `Reminder from ${teacherName}`,
+        iconClass: "bg-[#efcf84]/10 text-[#efdba8]"
+      };
+    case "HELP_REQUEST_OPENED":
+      return {
+        icon: HandHelping,
+        label: "Help request",
+        iconClass: "bg-[#71d6a5]/10 text-[#9be8c1]"
+      };
+    case "HELP_REQUEST_CLAIMED":
+      return {
+        icon: UserCheck,
+        label: "Help accepted",
+        iconClass: "bg-[#8fd6ff]/10 text-[#a8e1ff]"
+      };
+    case "HELP_REQUEST_RESOLVED":
+      return {
+        icon: CircleCheckBig,
+        label: "Help completed",
+        iconClass: "bg-[#71d6a5]/10 text-[#9be8c1]"
+      };
+    case "HELP_REQUEST_EXPIRED":
+      return {
+        icon: TimerOff,
+        label: "Help request closed",
+        iconClass: "bg-cream/[0.055] text-cream/48"
+      };
+    case "HELP_FEEDBACK_RECEIVED":
+      return {
+        icon: Heart,
+        label: "Peer thank-you",
+        iconClass: "bg-[#f6b98a]/10 text-[#f6c9a6]"
+      };
+    default:
+      return {
+        icon: BellRing,
+        label: "Trailgrad update",
+        iconClass: "bg-cream/[0.055] text-cream/58"
+      };
+  }
+}
 
 function relativeTime(createdAt: number): string {
   const minutes = Math.max(1, Math.floor((Date.now() - createdAt) / 60_000));
@@ -29,16 +116,17 @@ function relativeTime(createdAt: number): string {
 /**
  * The inbox, in the workspace header.
  *
- * Polls rather than holding a socket open. At the volume notifications actually
- * arrive, a request a minute costs less than the connection it would replace,
- * and it degrades to "slightly late" instead of "silently disconnected".
+ * Polls while the workspace is visible rather than holding a socket open, and
+ * refreshes immediately when the window regains focus. Delivery therefore
+ * degrades to "slightly late" instead of "silently disconnected".
  */
-export function NotificationInbox() {
+export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
   const teacher = useWorkspaceTeacher();
   const [items, setItems] = useState<InboxItem[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
-  const panel = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLDivElement>(null);
+  const dialog = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -56,8 +144,17 @@ export function NotificationInbox() {
 
   useEffect(() => {
     void load();
-    const timer = window.setInterval(() => void load(), POLL_MS);
-    return () => window.clearInterval(timer);
+    const refreshVisible = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    const timer = window.setInterval(refreshVisible, POLL_MS);
+    window.addEventListener("focus", refreshVisible);
+    document.addEventListener("visibilitychange", refreshVisible);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshVisible);
+      document.removeEventListener("visibilitychange", refreshVisible);
+    };
   }, [load]);
 
   // Opening the panel acknowledges only the rows actually rendered. This is
@@ -92,7 +189,8 @@ export function NotificationInbox() {
     if (!open) return;
 
     function onClick(event: MouseEvent) {
-      if (!panel.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (!trigger.current?.contains(target) && !dialog.current?.contains(target)) setOpen(false);
     }
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") setOpen(false);
@@ -103,6 +201,16 @@ export function NotificationInbox() {
     return () => {
       document.removeEventListener("mousedown", onClick);
       document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !window.matchMedia("(max-width: 767px)").matches) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
     };
   }, [open]);
 
@@ -123,16 +231,21 @@ export function NotificationInbox() {
     }
   }, [unread]);
 
+  const toggleOpen = () => {
+    if (!open) onOpen?.();
+    setOpen((current) => !current);
+  };
+
   return (
-    <div ref={panel} className="relative">
+    <div ref={trigger} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((current) => !current)}
+        onClick={toggleOpen}
         aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
         aria-expanded={open}
         className="relative grid h-11 w-11 place-items-center rounded-xl text-cream/58 transition hover:bg-cream/[0.055] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
       >
-        <Bell size={19} strokeWidth={1.75} aria-hidden="true" />
+        <Bell size={22} strokeWidth={1.8} aria-hidden="true" />
         {unread > 0 ? (
           <span
             aria-hidden="true"
@@ -144,101 +257,167 @@ export function NotificationInbox() {
         ) : null}
       </button>
 
-      {open ? (
-        <div className="fixed inset-x-3 top-16 z-50 overflow-hidden rounded-2xl border border-cream/12 bg-[#16171a] shadow-[0_30px_70px_-40px_rgba(0,0,0,0.95)] md:absolute md:inset-x-auto md:right-0 md:top-auto md:mt-2 md:w-[21rem]">
-          <div className="flex items-center justify-between gap-3 border-b border-cream/8 px-4 py-3">
-            <span className="text-[13.5px] font-semibold text-cream">Notifications</span>
-            {unread ? (
-              <button
-                type="button"
-                onClick={() => void markAllRead()}
-                className="inline-flex items-center gap-1.5 text-[11.5px] text-cream/48 transition hover:text-cream/82"
+      {open && typeof document !== "undefined"
+        ? createPortal(
+            <div className="fixed inset-0 z-[80] bg-black/65 backdrop-blur-[3px] md:pointer-events-none md:bg-transparent md:backdrop-blur-none">
+              <div
+                ref={dialog}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Notifications"
+                className="pointer-events-auto fixed inset-2 flex flex-col overflow-hidden rounded-[1.5rem] bg-[#151619]/[0.99] shadow-[0_36px_110px_-32px_rgba(0,0,0,0.98),0_12px_38px_-24px_rgba(0,0,0,0.9)] ring-1 ring-inset ring-white/[0.075] backdrop-blur-2xl md:inset-auto md:right-6 md:top-[4.75rem] md:h-[min(42rem,calc(100vh-6rem))] md:w-[32rem] md:rounded-[1.75rem] lg:w-[36rem]"
               >
-                <CheckCheck size={13} aria-hidden="true" />
-                Mark all read
-              </button>
-            ) : null}
-          </div>
+                <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-[var(--workspace-accent)] opacity-[0.14] blur-[90px]" />
 
-          <div className="max-h-[24rem] overflow-y-auto">
-            {items.length === 0 ? (
-              <p className="px-4 py-7 text-center text-[13px] text-cream/40">Nothing yet.</p>
-            ) : (
-              items.map((item) => {
-                const teacherAuthored = item.kind.startsWith("TEACHER_");
-                const content = (
-                  <div className="flex gap-2.5">
-                    {teacherAuthored ? (
-                      <span className="relative mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]">
-                        <Sparkles size={14} strokeWidth={1.8} aria-hidden="true" />
-                        {!item.read ? (
-                          <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--workspace-accent)]" />
-                        ) : null}
-                      </span>
-                    ) : (
-                      <span
-                        aria-hidden="true"
-                        className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
-                          item.read ? "bg-transparent" : "bg-[var(--workspace-accent)]"
-                        }`}
-                      />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      {teacherAuthored ? (
-                        <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
-                          From {teacher.name}
-                        </p>
-                      ) : null}
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-[13.5px] font-semibold leading-5 text-cream">
-                          {item.title}
-                        </p>
-                        <time
-                          dateTime={new Date(item.createdAt).toISOString()}
-                          className="shrink-0 text-[10.5px] text-cream/35"
-                        >
-                          {relativeTime(item.createdAt)}
-                        </time>
-                      </div>
-                      <p className="mt-1 text-[12.5px] leading-5 text-cream/60">{item.body}</p>
+                <header className="relative flex shrink-0 items-center justify-between gap-3 px-4 pb-4 pt-4 sm:gap-5 sm:px-6 sm:pb-5 sm:pt-6">
+                  <div className="flex min-w-0 items-center gap-3 sm:gap-3.5">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)] shadow-soft-inset sm:h-11 sm:w-11">
+                      <BellRing size={19} strokeWidth={1.7} aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0">
+                      <h2 className="truncate text-[16px] font-semibold tracking-[-0.015em] text-cream sm:text-[17px]">
+                        Notifications
+                      </h2>
+                      <p className="mt-0.5 truncate text-[11.5px] text-cream/42 sm:text-[12px]">
+                        Coaching, reminders, and help activity
+                      </p>
                     </div>
                   </div>
-                );
 
-                return item.href ? (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    onClick={() => setOpen(false)}
-                    className={`block border-b border-cream/[0.05] px-4 py-3 transition hover:bg-cream/[0.04] ${
-                      item.read ? "" : "bg-cream/[0.025]"
-                    }`}
-                  >
-                    {content}
-                  </Link>
-                ) : (
-                  <div
-                    key={item.id}
-                    className={`border-b border-cream/[0.05] px-4 py-3 ${
-                      item.read ? "" : "bg-cream/[0.025]"
-                    }`}
-                  >
-                    {content}
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {unread ? (
+                      <button
+                        type="button"
+                        onClick={() => void markAllRead()}
+                        aria-label="Mark all notifications as read"
+                        className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-cream/[0.045] px-2.5 text-[11.5px] font-medium text-cream/58 transition hover:bg-cream/[0.075] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/25 sm:px-3"
+                      >
+                        <CheckCheck size={14} aria-hidden="true" />
+                        <span className="hidden sm:inline">Mark all read</span>
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => setOpen(false)}
+                      aria-label="Close notifications"
+                      className="grid h-9 w-9 place-items-center rounded-xl text-cream/42 transition hover:bg-cream/[0.055] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/25"
+                    >
+                      <X size={17} aria-hidden="true" />
+                    </button>
                   </div>
-                );
-              })
-            )}
-          </div>
+                </header>
 
-          <Link
-            href="/manage#notifications"
-            onClick={() => setOpen(false)}
-            className="flex h-10 items-center justify-center border-t border-cream/[0.07] text-[11.5px] font-medium text-cream/42 transition hover:bg-cream/[0.035] hover:text-cream/72"
-          >
-            Notification settings
-          </Link>
-        </div>
-      ) : null}
+                <div className="thin-scroll relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-2.5 pb-2.5 [scrollbar-gutter:stable] sm:px-4 sm:pb-4">
+                  {items.length === 0 ? (
+                    <div className="grid min-h-64 place-items-center rounded-[1.4rem] bg-cream/[0.022] px-6 py-12 text-center">
+                      <div>
+                        <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-cream/[0.05] text-cream/38">
+                          <Inbox size={21} strokeWidth={1.6} aria-hidden="true" />
+                        </span>
+                        <p className="mt-4 text-[14px] font-semibold text-cream/70">
+                          You’re all caught up
+                        </p>
+                        <p className="mx-auto mt-1 max-w-xs text-[12.5px] leading-5 text-cream/38">
+                          New coaching notes and help activity will appear here.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between px-2 pb-2 pt-1 sm:px-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cream/32">
+                          Recent
+                        </p>
+                        <p className="text-[10.5px] text-cream/28">
+                          {items.length} {items.length === 1 ? "update" : "updates"}
+                        </p>
+                      </div>
+
+                      <div className="grid gap-2">
+                        {items.map((item) => {
+                          const presentation = notificationPresentation(item.kind, teacher.name);
+                          const NotificationIcon = presentation.icon;
+                          const content = (
+                            <div className="relative flex min-w-0 gap-3 p-3.5 sm:gap-4 sm:p-[1.125rem]">
+                              {!item.read ? (
+                                <span className="absolute left-1 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-full bg-[var(--workspace-accent)]" />
+                              ) : null}
+                              <span
+                                className={`relative grid h-10 w-10 shrink-0 place-items-center rounded-2xl shadow-soft-inset sm:h-11 sm:w-11 ${presentation.iconClass}`}
+                              >
+                                <NotificationIcon size={18} strokeWidth={1.7} aria-hidden="true" />
+                                {!item.read ? (
+                                  <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_0_3px_#18191c]" />
+                                ) : null}
+                              </span>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="truncate text-[9.5px] font-semibold uppercase tracking-[0.145em] text-[var(--workspace-accent)]">
+                                    {presentation.label}
+                                  </p>
+                                  <time
+                                    dateTime={new Date(item.createdAt).toISOString()}
+                                    className="inline-flex shrink-0 items-center gap-1 text-[10.5px] text-cream/30"
+                                  >
+                                    <Clock3 size={11} strokeWidth={1.6} aria-hidden="true" />
+                                    {relativeTime(item.createdAt)}
+                                  </time>
+                                </div>
+                                <div className="mt-1 flex items-start gap-3">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-[14px] font-semibold leading-5.5 tracking-[-0.01em] text-cream/92">
+                                      {item.title}
+                                    </p>
+                                    <p className="mt-1.5 text-[12.75px] leading-[1.6] text-cream/52">
+                                      {item.body}
+                                    </p>
+                                  </div>
+                                  {item.href ? (
+                                    <ChevronRight
+                                      size={16}
+                                      className="mt-0.5 shrink-0 text-cream/20 transition duration-200 group-hover:translate-x-0.5 group-hover:text-cream/55"
+                                      aria-hidden="true"
+                                    />
+                                  ) : null}
+                                </div>
+                              </div>
+                            </div>
+                          );
+
+                          return item.href ? (
+                            <Link
+                              key={item.id}
+                              href={item.href}
+                              onClick={() => setOpen(false)}
+                              className={`group block overflow-hidden rounded-2xl outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)] ${
+                                item.read
+                                  ? "bg-cream/[0.024] hover:bg-cream/[0.045]"
+                                  : "bg-[var(--workspace-accent-soft)] hover:brightness-110"
+                              }`}
+                            >
+                              {content}
+                            </Link>
+                          ) : (
+                            <div
+                              key={item.id}
+                              className={`overflow-hidden rounded-2xl ${
+                                item.read ? "bg-cream/[0.024]" : "bg-[var(--workspace-accent-soft)]"
+                              }`}
+                            >
+                              {content}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>,
+            trigger.current?.closest(".workspace-black") ?? document.body
+          )
+        : null}
     </div>
   );
 }

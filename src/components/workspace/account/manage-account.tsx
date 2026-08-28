@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { ProfileAvatar } from "@/components/workspace/profile/profile-avatar";
 import { ALL_PERSONAS, MAYA, personaById, type InterviewerPersona } from "@/lib/avatars/personas";
 import {
   ApiClientError,
@@ -188,9 +189,10 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
               className="relative h-full w-full rounded-full object-cover object-center"
             />
           ) : (
-            <span className="relative grid h-full w-full place-items-center rounded-full bg-cream/[0.12] text-3xl font-semibold text-[#171a16]">
-              {initialsOf(name)}
-            </span>
+            <ProfileAvatar
+              name={name}
+              className="relative h-full w-full rounded-full object-cover object-center"
+            />
           )}
         </div>
 
@@ -760,17 +762,6 @@ function parseOrigin(value: string): { x: number; y: number } | null {
   } catch {
     return null;
   }
-}
-
-function initialsOf(name: string): string {
-  return (
-    name
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? "")
-      .join("") || "TG"
-  );
 }
 
 function DeleteAccountWarningModal({

@@ -33,17 +33,17 @@ describe("help room token", () => {
       canPublish: true,
       canPublishSources: ["microphone"],
       canSubscribe: true,
-      canPublishData: false,
+      canPublishData: true,
       canUpdateOwnMetadata: false
     });
   });
 
-  it("lets only the learner publish workspace data", async () => {
+  it("lets both seats publish collaboration data", async () => {
     const learner = await claims("learner");
     const helper = await claims("helper");
 
     expect(learner.video?.canPublishData).toBe(true);
-    expect(helper.video?.canPublishData).toBe(false);
+    expect(helper.video?.canPublishData).toBe(true);
   });
 
   it("auto-creates a two-person room with bounded empty time and no agents", async () => {

@@ -1,4 +1,8 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
 import { Logger } from "../common/logger";
+import { TRAILGRAD_LOGO_CID, TRAILGRAD_LOGO_CONTENT_ID } from "./email-template";
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 const TIMEOUT_MS = 8_000;
@@ -6,8 +10,12 @@ const TIMEOUT_MS = 8_000;
 export interface EmailMessage {
   to: string;
   subject: string;
-  /** Plain text. No template engine, no HTML — these are short and functional. */
+  /** Plain text remains the accessibility and graceful-degradation fallback. */
   text: string;
+  /** Optional materialized HTML, persisted with the notification before send. */
+  html?: string;
+  /** Visible label only; the configured verified email address never changes. */
+  fromName?: string;
   /** Stable across retries so Resend can suppress a post-send crash replay. */
   idempotencyKey?: string;
 }
@@ -18,9 +26,8 @@ export type AddressBook = (ownerId: string) => Promise<string | null>;
 /**
  * Email delivery through Resend's REST API.
  *
- * Called over `fetch` rather than through the SDK on purpose: the request is
- * one POST with three fields, and a dependency that exists to build that POST
- * costs more to carry than it saves.
+ * Called over `fetch` rather than through the SDK on purpose. This keeps the
+ * delivery path small while still supporting HTML and one inline brand asset.
  *
  * Unconfigured is a supported state, not a broken one. Most environments —
  * local, preview, CI — have no API key, and notifications must still be
@@ -65,28 +72,29 @@ export class EmailChannel {
     const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
     try {
+      const attachments = message.html?.includes(TRAILGRAD_LOGO_CID)
+        ? await trailgradLogoAttachment()
+        : [];
       const response = await fetch(RESEND_ENDPOINT, {
         method: "POST",
         headers: {
           authorization: `Bearer ${this.apiKey}`,
           "content-type": "application/json",
-          ...(message.idempotencyKey
-            ? { "idempotency-key": message.idempotencyKey }
-            : {})
+          ...(message.idempotencyKey ? { "idempotency-key": message.idempotencyKey } : {})
         },
         body: JSON.stringify({
-          from: this.from,
+          from: senderAddress(this.from!, message.fromName),
           to: [to],
           subject: message.subject,
-          text: message.text
+          text: message.text,
+          ...(message.html ? { html: message.html } : {}),
+          ...(attachments.length ? { attachments } : {})
         }),
         signal: controller.signal
       });
 
       if (!response.ok) {
-        this.logger.error(
-          JSON.stringify({ event: "email.send.failed", status: response.status })
-        );
+        this.logger.error(JSON.stringify({ event: "email.send.failed", status: response.status }));
         return false;
       }
 
@@ -103,4 +111,46 @@ export class EmailChannel {
       clearTimeout(timeout);
     }
   }
+}
+
+let logoContent: Promise<string | null> | null = null;
+
+function trailgradLogoAttachment(): Promise<
+  | Array<{
+      content: string;
+      filename: string;
+      content_id: string;
+      content_type: string;
+    }>
+  | []
+> {
+  logoContent ??= readFile(join(process.cwd(), "public", "brand", "trailgrad-icon.png"))
+    .then((content) => content.toString("base64"))
+    .catch(() => null);
+
+  return logoContent.then((content) =>
+    content
+      ? [
+          {
+            content,
+            filename: "trailgrad-logo.png",
+            content_id: TRAILGRAD_LOGO_CONTENT_ID,
+            content_type: "image/png"
+          }
+        ]
+      : []
+  );
+}
+
+/** Keep the verified mailbox and replace only the human-readable label. */
+function senderAddress(configured: string, requestedName?: string): string {
+  if (!requestedName) return configured;
+
+  const match = configured.match(/<\s*([^<>\s]+@[^<>\s]+)\s*>\s*$/);
+  const address = match?.[1] ?? configured.trim();
+  const safeName = requestedName
+    .replace(/[<>"\r\n]/g, "")
+    .trim()
+    .slice(0, 80);
+  return safeName ? `${safeName} <${address}>` : configured;
 }

@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
     const helperId = authenticatedOwnerId(userId);
 
     const app = getAppContainer();
+    const reconciled = await app.helpSessionService.reconcileStale();
 
     // Fetched first: the listing has to exclude blocked pairs, not just the
     // claim path, or a blocked learner's request still shows up to be clicked.
@@ -44,19 +45,51 @@ export async function GET(request: NextRequest) {
       app.helpRequestService.claimedByHelper(helperId),
       app.helpRequestService.helpedPeopleCount(helperId)
     ]);
+    const learnerProfiles = await app.helpHistoryService.participants(
+      [...open, ...claimed].map((row) => row.learnerId)
+    );
 
     sweepExpired();
+    notifyReconciled(reconciled);
 
     return apiSuccess({
       // Current source code is disclosed only after this helper owns the
       // request. Eligible helpers may preview the summary before claiming.
-      open: open.map((row) => presentHelpInboxRequest(row, false)),
-      claimed: claimed.map((row) => presentHelpInboxRequest(row, true)),
+      open: open.map((row) =>
+        presentHelpInboxRequest(row, false, learnerProfiles.get(row.learnerId) ?? null)
+      ),
+      claimed: claimed.map((row) =>
+        presentHelpInboxRequest(row, true, learnerProfiles.get(row.learnerId) ?? null)
+      ),
       helpedPeopleCount
     });
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   }
+}
+
+function notifyReconciled(
+  reconciled: Array<{ id: string; learnerId: string; questionSlug: string }>
+): void {
+  if (reconciled.length === 0) return;
+
+  after(async () => {
+    const app = getAppContainer();
+    await Promise.allSettled(
+      reconciled.map((entry) =>
+        app.notificationDispatcher.dispatch({
+          ownerId: entry.learnerId,
+          kind: NotificationKind.HELP_REQUEST_RESOLVED,
+          title: `Your ${
+            findQuestion(entry.questionSlug)?.question.title ?? entry.questionSlug
+          } conversation ended`,
+          body: "The help room reached its time limit.",
+          href: `/dsa-questions/${entry.questionSlug}`,
+          subjectId: entry.id
+        })
+      )
+    );
+  });
 }
 
 /**

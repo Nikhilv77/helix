@@ -5,6 +5,7 @@ const TIMEOUT_MS = 5_000;
 
 export interface ConciergeRequest {
   requestId: string;
+  learnerName: string;
   questionTitle: string;
   questionSlug: string;
   language: string;
@@ -100,7 +101,7 @@ export function formatConciergeMessage(request: ConciergeRequest): string {
     : "  • (nothing recorded)";
 
   return [
-    `Someone needs help — ${request.questionTitle} (${request.difficulty}, ${request.language})`,
+    `${request.learnerName} needs help — ${request.questionTitle} (${request.difficulty}, ${request.language})`,
     "",
     request.summary.headline,
     "",

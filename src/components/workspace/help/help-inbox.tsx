@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Clock, Loader2, MessageSquare, UserRound } from "lucide-react";
 import { HelpCall } from "./help-call";
 import { LearnerWorkspaceView } from "./learner-workspace-view";
 import { SafetyControls } from "./safety-controls";
 import type { HelpSnapshot, WorkspaceState } from "@/lib/help/snapshot";
+import type { HelpHistoryParticipant } from "@/lib/help/help-history";
+import { peerHelpRoomHref } from "@/lib/help/help-room-navigation";
 import { useCallback, useEffect, useState } from "react";
 
 interface InboxRequest {
@@ -26,6 +29,7 @@ interface InboxRequest {
   timeSpentMs: number;
   askedAt: number;
   capturedWorkspace: WorkspaceState | null;
+  learner: HelpHistoryParticipant | null;
 }
 
 type Action = "claim" | "decline" | "release" | "resolve";
@@ -45,19 +49,26 @@ function waitedFor(askedAt: number): string {
 }
 
 export function HelpInbox({
-  onStatsChange
+  onStatsChange,
+  showOpen = true
 }: {
   onStatsChange?: (stats: HelpInboxStats) => void;
+  showOpen?: boolean;
 } = {}) {
+  const router = useRouter();
   const [open, setOpen] = useState<InboxRequest[]>([]);
   const [claimed, setClaimed] = useState<InboxRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [targetRequestId, setTargetRequestId] = useState<string | null>(null);
+  const [autoJoinRequestId, setAutoJoinRequestId] = useState<string | null>(null);
 
   useEffect(() => {
-    setTargetRequestId(new URLSearchParams(window.location.search).get("request"));
+    const query = new URLSearchParams(window.location.search);
+    const target = query.get("request");
+    setTargetRequestId(target);
+    setAutoJoinRequestId(query.get("join") === "1" ? target : null);
   }, []);
 
   const load = useCallback(async () => {
@@ -102,6 +113,12 @@ export function HelpInbox({
     return () => window.cancelAnimationFrame(frame);
   }, [claimed, loading, open, targetRequestId]);
 
+  useEffect(() => {
+    if (!autoJoinRequestId) return;
+    if (!claimed.some((item) => item.id === autoJoinRequestId)) return;
+    router.replace(peerHelpRoomHref(autoJoinRequestId, "/help"));
+  }, [autoJoinRequestId, claimed, router]);
+
   const act = useCallback(
     async (id: string, action: Action) => {
       setBusy(id);
@@ -116,11 +133,15 @@ export function HelpInbox({
         const payload = await response.json().catch(() => null);
 
         if (!response.ok || !payload?.success) {
-          // "Someone else got there first" is the common one and is not a bug —
+          // An already-accepted request is the common one and is not a bug —
           // it is the claim race resolving, so it reads as information.
           throw new Error(payload?.error?.message ?? "That did not work.");
         }
 
+        if (action === "claim") {
+          router.push(peerHelpRoomHref(id, `${window.location.pathname}${window.location.search}`));
+          return;
+        }
         await load();
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "That did not work.");
@@ -129,8 +150,12 @@ export function HelpInbox({
         setBusy(null);
       }
     },
-    [load]
+    [load, router]
   );
+
+  const visibleOpen = showOpen
+    ? open
+    : open.filter((item) => item.id === targetRequestId).slice(0, 1);
 
   if (loading) {
     return (
@@ -163,36 +188,45 @@ export function HelpInbox({
                 onAct={act}
                 onCallEnded={() => void load()}
                 highlighted={targetRequestId === item.id}
+                autoJoin={autoJoinRequestId === item.id}
               />
             ))}
           </div>
         </section>
       ) : null}
 
-      <section>
-        <h2 className="text-[15px] font-semibold text-cream">People you may be able to help</h2>
+      {showOpen || visibleOpen.length > 0 ? (
+        <section>
+          <h2 className="text-[15px] font-semibold text-cream">
+            {showOpen ? "People you may be able to help" : "Help request"}
+          </h2>
 
-        {open.length === 0 ? (
-          <p className="mt-3 rounded-xl border border-cream/10 bg-cream/[0.03] px-4 py-8 text-center text-[13px] text-cream/45">
-            Nothing right now. This fills up when your problem-solving evidence matches a request.
-          </p>
-        ) : (
-          <div className="mt-3 space-y-3">
-            {open.map((item) => (
-              <RequestCard
-                key={item.id}
-                request={item}
-                busy={busy === item.id}
-                primary={{ label: "Help them", action: "claim" }}
-                secondary={{ label: "Not this one", action: "decline" }}
-                onAct={act}
-                onCallEnded={() => void load()}
-                highlighted={targetRequestId === item.id}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+          {visibleOpen.length === 0 ? (
+            <p className="mt-3 rounded-xl border border-cream/10 bg-cream/[0.03] px-4 py-8 text-center text-[13px] text-cream/45">
+              Nothing right now. New matching requests will appear as a small notification.
+            </p>
+          ) : (
+            <div className="mt-3 space-y-3">
+              {visibleOpen.map((item) => (
+                <RequestCard
+                  key={item.id}
+                  request={item}
+                  busy={busy === item.id}
+                  primary={{ label: showOpen ? "Help them" : "Accept & join", action: "claim" }}
+                  secondary={{ label: "Not this one", action: "decline" }}
+                  onAct={act}
+                  onCallEnded={() => void load()}
+                  highlighted={targetRequestId === item.id}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      ) : claimed.length === 0 ? (
+        <p className="rounded-xl border border-cream/10 bg-cream/[0.03] px-4 py-8 text-center text-[13px] text-cream/45">
+          No live help conversation right now.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -204,7 +238,8 @@ function RequestCard({
   secondary,
   onAct,
   onCallEnded,
-  highlighted = false
+  highlighted = false,
+  autoJoin = false
 }: {
   request: InboxRequest;
   busy: boolean;
@@ -213,6 +248,7 @@ function RequestCard({
   onAct: (id: string, action: Action) => void;
   onCallEnded: () => void;
   highlighted?: boolean;
+  autoJoin?: boolean;
 }) {
   const [snapshot, setSnapshot] = useState<HelpSnapshot | null>(null);
 
@@ -226,6 +262,9 @@ function RequestCard({
           : "border-cream/10"
       ].join(" ")}
     >
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+        {request.learner?.label ?? "Trailgrad candidate"}
+      </p>
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[12.5px] text-cream/50">
         <Link
           href={`/dsa-questions/${request.slug}`}
@@ -305,7 +344,13 @@ function RequestCard({
 
       {request.status === "CLAIMED" ? (
         <div className="mt-3.5 space-y-3">
-          <HelpCall requestId={request.id} onSnapshot={setSnapshot} onEnded={onCallEnded} />
+          <HelpCall
+            requestId={request.id}
+            peerName={request.learner?.label ?? "the candidate"}
+            onSnapshot={setSnapshot}
+            onEnded={onCallEnded}
+            autoJoin={autoJoin}
+          />
           <LearnerWorkspaceView snapshot={snapshot} captured={request.capturedWorkspace} />
           <SafetyControls requestId={request.id} onActioned={onCallEnded} />
         </div>

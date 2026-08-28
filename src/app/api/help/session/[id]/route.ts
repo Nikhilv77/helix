@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 
 import { findQuestion } from "@/lib/dsa/dsa";
-import { getAppContainer } from "@/server/app-container";
+import { getAppContainer, type AppContainer } from "@/server/app-container";
 import { Logger } from "@/server/common/logger";
 import { HelpRequestError } from "@/server/help/help-request.types";
 import { createHelpRoomToken } from "@/server/help/help-room-token";
@@ -20,8 +20,8 @@ export const runtime = "nodejs";
 const logger = new Logger("HelpSessionAction");
 
 const actionSchema = z.object({
-  action: z.enum(["join", "connected", "leave", "rate", "skip_rating"]),
-  rating: z.number().int().min(1).max(5).optional()
+  action: z.enum(["join", "connected", "leave", "rate"]),
+  rating: z.union([z.literal(1), z.literal(5)]).optional()
 });
 
 const FAILURE_STATUS: Record<string, { status: number; message: string }> = {
@@ -46,26 +46,14 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     const result = await app.helpSessionService.status(id, ownerId);
 
     if (result.resolved) {
-      const title =
-        findQuestion(result.request.questionSlug)?.question.title ?? result.request.questionSlug;
-      after(() =>
-        app.notificationDispatcher
-          .dispatch({
-            ownerId: result.request.learnerId,
-            kind: NotificationKind.HELP_REQUEST_RESOLVED,
-            title: `Your ${title} request was closed`,
-            body: "The 30-minute help conversation has ended.",
-            href: `/dsa-questions/${result.request.questionSlug}`,
-            subjectId: result.request.id
-          })
-          .catch((error) => logNotificationFailure(result.request.id, error))
-      );
+      notifyConversationEnded(app, result.request);
     }
 
     return apiSuccess({
       active: result.active,
       ended: result.ended,
-      remainingMs: result.remainingMs
+      remainingMs: result.remainingMs,
+      canRate: result.canRate
     });
   } catch (error) {
     return apiError(translate(error), request.nextUrl.pathname);
@@ -100,34 +88,38 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       const result = await sessions.leave(id, ownerId);
 
       if (result.resolved) {
-        const title =
-          findQuestion(result.request.questionSlug)?.question.title ?? result.request.questionSlug;
-        after(() =>
-          app.notificationDispatcher
-            .dispatch({
-              ownerId: result.request.learnerId,
-              kind: NotificationKind.HELP_REQUEST_RESOLVED,
-              title: `Your ${title} request was closed`,
-              body: "Your help conversation has ended.",
-              href: `/dsa-questions/${result.request.questionSlug}`,
-              subjectId: result.request.id
-            })
-            .catch((error) => logNotificationFailure(result.request.id, error))
-        );
+        notifyConversationEnded(app, result.request);
       }
 
-      return apiSuccess({ ended: result.ended });
+      return apiSuccess({ ended: result.ended, canRate: result.canRate });
     }
 
     if (parsed.data.action === "rate") {
       if (parsed.data.rating === undefined) {
         throw new ApiRouteError(400, "BAD_REQUEST", "A rating is required");
       }
-      return apiSuccess({ rated: await sessions.rate(id, ownerId, parsed.data.rating) });
-    }
-
-    if (parsed.data.action === "skip_rating") {
-      return apiSuccess({ skipped: await sessions.skipRating(id, ownerId) });
+      const rated = await sessions.rate(id, ownerId, parsed.data.rating);
+      if (rated && parsed.data.rating === 5) {
+        after(async () => {
+          try {
+            const helpRequest = await app.helpRequestService.byId(id);
+            if (helpRequest.helperId) {
+              const learner = await app.helpHistoryService.participant(helpRequest.learnerId);
+              await app.notificationDispatcher.dispatch({
+                ownerId: helpRequest.helperId,
+                kind: NotificationKind.HELP_FEEDBACK_RECEIVED,
+                title: `${learner.label} thanked you for helping`,
+                body: `Your peer-help conversation made a difference.`,
+                href: "/help",
+                subjectId: helpRequest.id
+              });
+            }
+          } catch (error) {
+            logNotificationFailure(id, error);
+          }
+        });
+      }
+      return apiSuccess({ rated });
     }
 
     if (parsed.data.action === "connected") {
@@ -162,6 +154,49 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   } catch (error) {
     return apiError(translate(error), request.nextUrl.pathname);
   }
+}
+
+function notifyConversationEnded(
+  app: AppContainer,
+  request: {
+    id: string;
+    learnerId: string;
+    helperId: string | null;
+    questionSlug: string;
+  }
+): void {
+  if (!request.helperId) return;
+  after(async () => {
+    try {
+      const profiles = await app.helpHistoryService.participants([
+        request.learnerId,
+        request.helperId!
+      ]);
+      const learnerName = profiles.get(request.learnerId)?.label ?? "Your peer";
+      const helperName = profiles.get(request.helperId!)?.label ?? "Your helper";
+      const title = findQuestion(request.questionSlug)?.question.title ?? request.questionSlug;
+      await Promise.allSettled([
+        app.notificationDispatcher.dispatch({
+          ownerId: request.learnerId,
+          kind: NotificationKind.HELP_REQUEST_RESOLVED,
+          title: `Your session with ${helperName} is complete`,
+          body: `Thanks for working through ${title} together.`,
+          href: `/dsa-questions/${request.questionSlug}`,
+          subjectId: request.id
+        }),
+        app.notificationDispatcher.dispatch({
+          ownerId: request.helperId!,
+          kind: NotificationKind.HELP_REQUEST_RESOLVED,
+          title: `Your session with ${learnerName} is complete`,
+          body: `Thanks for helping ${learnerName} with ${title}.`,
+          href: "/help",
+          subjectId: request.id
+        })
+      ]);
+    } catch (error) {
+      logNotificationFailure(request.id, error);
+    }
+  });
 }
 
 function logNotificationFailure(requestId: string, error: unknown): void {

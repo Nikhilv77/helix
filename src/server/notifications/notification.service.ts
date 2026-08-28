@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 
+import { DEFAULT_TTL_MS } from "../help/help-request.types";
 import type { PrismaService } from "../database/prisma.service";
 
 /**
@@ -12,11 +13,13 @@ import type { PrismaService } from "../database/prisma.service";
 export const NotificationKind = {
   TEACHER_WELCOME: "TEACHER_WELCOME",
   TEACHER_RECOMMENDATION: "TEACHER_RECOMMENDATION",
+  TEACHER_ENCOURAGEMENT: "TEACHER_ENCOURAGEMENT",
   TEACHER_REMINDER: "TEACHER_REMINDER",
   HELP_REQUEST_OPENED: "HELP_REQUEST_OPENED",
   HELP_REQUEST_CLAIMED: "HELP_REQUEST_CLAIMED",
   HELP_REQUEST_RESOLVED: "HELP_REQUEST_RESOLVED",
-  HELP_REQUEST_EXPIRED: "HELP_REQUEST_EXPIRED"
+  HELP_REQUEST_EXPIRED: "HELP_REQUEST_EXPIRED",
+  HELP_FEEDBACK_RECEIVED: "HELP_FEEDBACK_RECEIVED"
 } as const;
 
 export type NotificationKind = (typeof NotificationKind)[keyof typeof NotificationKind];
@@ -47,6 +50,8 @@ export interface DeliverInput {
   email?: {
     subject: string;
     body: string;
+    html?: string;
+    fromName?: string;
   };
 }
 
@@ -65,6 +70,8 @@ export interface EmailDeliveryRecord {
   subjectId: string | null;
   emailSubject: string | null;
   emailBody: string | null;
+  emailHtml: string | null;
+  emailFromName: string | null;
   emailAttempts: number;
   emailSentAt: Date | null;
 }
@@ -80,6 +87,7 @@ export interface EmailDeliveryClaim {
  */
 const OPTIONAL_KINDS: ReadonlySet<NotificationKind> = new Set([
   NotificationKind.TEACHER_RECOMMENDATION,
+  NotificationKind.TEACHER_ENCOURAGEMENT,
   NotificationKind.TEACHER_REMINDER,
   NotificationKind.HELP_REQUEST_OPENED
 ]);
@@ -140,7 +148,9 @@ export class NotificationService {
           subjectId: input.subjectId ?? null,
           emailRequestedAt: requestedAt,
           emailSubject: input.email?.subject ?? null,
-          emailBody: input.email?.body ?? null
+          emailBody: input.email?.body ?? null,
+          emailHtml: input.email?.html ?? null,
+          emailFromName: input.email?.fromName ?? null
         }
       });
       return { notification, created: true };
@@ -317,6 +327,19 @@ export class NotificationService {
 
   async unreadCount(ownerId: string): Promise<number> {
     return this.prisma.notification.count({ where: { ownerId, readAt: null } });
+  }
+
+  /** Remove helper alerts once the ten-minute request window has passed. */
+  async purgeExpiredHelpRequestNotifications(ownerId: string, now = new Date()): Promise<number> {
+    const { count } = await this.prisma.notification.deleteMany({
+      where: {
+        ownerId,
+        kind: NotificationKind.HELP_REQUEST_OPENED,
+        createdAt: { lte: new Date(now.getTime() - DEFAULT_TTL_MS) }
+      }
+    });
+
+    return count;
   }
 
   /**

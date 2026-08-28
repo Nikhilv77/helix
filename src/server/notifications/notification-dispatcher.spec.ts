@@ -1,5 +1,10 @@
 import { NotificationDispatcher } from "./notification-dispatcher";
-import { NotificationKind, type NotificationService } from "./notification.service";
+import {
+  NotificationKind,
+  type DeliverInput,
+  type EmailDeliveryRecord,
+  type NotificationService
+} from "./notification.service";
 import type { EmailChannel } from "./email-channel";
 
 const opened = {
@@ -12,7 +17,7 @@ const opened = {
 };
 
 function harness(options: { recorded?: boolean; emailed?: boolean; allowed?: boolean } = {}) {
-  let notification = {
+  let notification: EmailDeliveryRecord = {
     id: "n-1",
     ownerId: opened.ownerId,
     kind: opened.kind,
@@ -20,10 +25,14 @@ function harness(options: { recorded?: boolean; emailed?: boolean; allowed?: boo
     body: opened.body,
     href: opened.href,
     subjectId: opened.subjectId,
+    emailSubject: null as string | null,
+    emailBody: null as string | null,
+    emailHtml: null as string | null,
+    emailFromName: null as string | null,
     emailAttempts: 1,
     emailSentAt: null
   };
-  const recordForDispatch = jest.fn().mockImplementation(async (input: typeof opened) => {
+  const recordForDispatch = jest.fn().mockImplementation(async (input: DeliverInput) => {
     if (options.recorded === false) return null;
     notification = {
       ...notification,
@@ -31,8 +40,12 @@ function harness(options: { recorded?: boolean; emailed?: boolean; allowed?: boo
       kind: input.kind,
       title: input.title,
       body: input.body,
-      href: input.href,
-      subjectId: input.subjectId
+      href: input.href ?? null,
+      subjectId: input.subjectId ?? null,
+      emailSubject: input.email?.subject ?? null,
+      emailBody: input.email?.body ?? null,
+      emailHtml: input.email?.html ?? null,
+      emailFromName: input.email?.fromName ?? null
     };
     return { notification, created: true };
   });
@@ -129,6 +142,30 @@ describe("dispatch", () => {
     expect(send).toHaveBeenCalledTimes(1);
   });
 
+  it("reuses persisted HTML and sender identity during delivery", async () => {
+    const { dispatcher, send } = harness();
+
+    await dispatcher.dispatch({
+      ...opened,
+      kind: NotificationKind.TEACHER_WELCOME,
+      email: {
+        subject: "Ethan from Trailgrad — your path is ready",
+        body: "Your path is ready.",
+        html: "<html>Welcome</html>",
+        fromName: "Ethan from Trailgrad"
+      }
+    });
+
+    expect(send).toHaveBeenCalledWith(
+      "helper-1",
+      expect.objectContaining({
+        subject: "Ethan from Trailgrad — your path is ready",
+        html: "<html>Welcome</html>",
+        fromName: "Ethan from Trailgrad"
+      })
+    );
+  });
+
   it("cancels an optional email lease when the recipient has opted out", async () => {
     const { dispatcher, send, cancelEmailDelivery } = harness({ allowed: false });
 
@@ -171,6 +208,10 @@ describe("email body", () => {
       body: opened.body,
       href: opened.href,
       subjectId: opened.subjectId,
+      emailSubject: null,
+      emailBody: null,
+      emailHtml: null,
+      emailFromName: null,
       emailAttempts: 1,
       emailSentAt: null
     };

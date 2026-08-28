@@ -370,6 +370,11 @@ model HelpSession {
   learnerRating          Int?
   /// Persisted so "Skip" remains skipped after a reload or another device.
   learnerRatingSkippedAt DateTime?
+  /// Yjs document containing the shared notes and completed drawing strokes.
+  collaborationState     Bytes?
+  collaborationUpdatedAt DateTime?
+  /// Small capped recognition when a helper waited but the learner never joined.
+  helperWaitCreditAt     DateTime?
   createdAt              DateTime    @default(now())
   updatedAt              DateTime    @updatedAt
   request                HelpRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
@@ -384,6 +389,8 @@ enum NotificationKind {
   TEACHER_WELCOME
   /// Daily question or practice-path recommendation from the selected teacher.
   TEACHER_RECOMMENDATION
+  /// An occasional warm note or motivational thought from the selected teacher.
+  TEACHER_ENCOURAGEMENT
   /// A second, evidence-backed nudge for unfinished work; never sent by default.
   TEACHER_REMINDER
   /// Someone is stuck on a question you have already finished.
@@ -394,6 +401,8 @@ enum NotificationKind {
   HELP_REQUEST_RESOLVED
   /// Nobody picked your request up before it timed out.
   HELP_REQUEST_EXPIRED
+  /// The learner explicitly thanked their helper after a completed conversation.
+  HELP_FEEDBACK_RECEIVED
 }
 
 /// One item in a candidate's inbox.
@@ -427,6 +436,9 @@ model Notification {
   /// Optional channel-specific copy persisted so retries send the same email.
   emailSubject       String?
   emailBody          String?          @db.Text
+  /// Materialized HTML and sender label keep retries identical across deploys.
+  emailHtml          String?          @db.Text
+  emailFromName      String?
   createdAt          DateTime         @default(now())
   owner              CandidateProfile @relation("CandidateNotifications", fields: [ownerId], references: [ownerId], onDelete: Cascade)
 

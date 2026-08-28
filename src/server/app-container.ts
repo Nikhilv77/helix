@@ -22,6 +22,7 @@ import { HelperMatchingService } from "./help/helper-matching";
 import { HelperEligibilityService } from "./help/helper-eligibility";
 import { HelpSessionService } from "./help/help-session.service";
 import { HelpSafetyService } from "./help/help-safety.service";
+import { HelpHistoryService } from "./help/help-history.service";
 import { NotificationService } from "./notifications/notification.service";
 import { NotificationDispatcher } from "./notifications/notification-dispatcher";
 import { EmailChannel } from "./notifications/email-channel";
@@ -58,6 +59,7 @@ export interface AppContainer {
   helperMatchingService: HelperMatchingService;
   helpSessionService: HelpSessionService;
   helpSafetyService: HelpSafetyService;
+  helpHistoryService: HelpHistoryService;
   notificationService: NotificationService;
   notificationDispatcher: NotificationDispatcher;
   teacherNotificationService: TeacherNotificationService;
@@ -132,9 +134,14 @@ export function getAppContainer(): AppContainer {
     helperMatchingService: new HelperMatchingService(prisma),
     helpSessionService: new HelpSessionService(prisma),
     helpSafetyService: helpSafety,
+    helpHistoryService: new HelpHistoryService(prisma),
     notificationService: notifications,
     notificationDispatcher,
-    teacherNotificationService: new TeacherNotificationService(prisma, notificationDispatcher),
+    teacherNotificationService: new TeacherNotificationService(
+      prisma,
+      notificationDispatcher,
+      config.appOrigin
+    ),
     dsaInterviewEvaluator: new DsaInterviewEvaluator(interviewAi),
     frontendRoadmapService,
     // Read-only aggregate over roadmap progress and attempt history.

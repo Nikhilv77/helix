@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
   try {
     const ownerId = await requireOwner();
     const app = getAppContainer();
+    await app.notificationService.purgeExpiredHelpRequestNotifications(ownerId);
 
     const [items, unread, helpEnabled, teacherEnabled] = await Promise.all([
       app.notificationService.list(ownerId),

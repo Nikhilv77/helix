@@ -1,6 +1,10 @@
 import { Prisma } from "@prisma/client";
 
-import { HelpSessionService, SESSION_CAP_MS } from "./help-session.service";
+import {
+  HELPER_NO_SHOW_CREDIT_WAIT_MS,
+  HelpSessionService,
+  SESSION_CAP_MS
+} from "./help-session.service";
 import { HelpRequestStatus } from "./help-request.types";
 import type { PrismaService } from "../database/prisma.service";
 
@@ -23,6 +27,9 @@ interface SessionRow {
   helperJoinedAt: Date | null;
   learnerRating: number | null;
   learnerRatingSkippedAt: Date | null;
+  collaborationState: Buffer | null;
+  collaborationUpdatedAt: Date | null;
+  helperWaitCreditAt: Date | null;
 }
 
 function fakePrisma(seedRequests: RequestRow[]) {
@@ -64,6 +71,9 @@ function fakePrisma(seedRequests: RequestRow[]) {
         helperJoinedAt: null,
         learnerRating: null,
         learnerRatingSkippedAt: null,
+        collaborationState: null,
+        collaborationUpdatedAt: null,
+        helperWaitCreditAt: null,
         ...data
       };
       sessions.push(row);
@@ -309,6 +319,20 @@ describe("ending a call", () => {
     );
   });
 
+  it("records a capped availability credit when the helper waits for a learner no-show", async () => {
+    const { prisma, sessions } = fakePrisma([claimed]);
+    const service = new HelpSessionService(prisma);
+    await service.join("req-1", "helper-1");
+    await service.connected("req-1", "helper-1");
+    sessions[0]!.helperJoinedAt = new Date(Date.now() - HELPER_NO_SHOW_CREDIT_WAIT_MS - 1);
+
+    await service.leave("req-1", "helper-1");
+
+    expect(sessions[0]!.endedReason).toBe("learner_no_show");
+    expect(sessions[0]!.helperWaitCreditAt).not.toBeNull();
+    await expect(service.rate("req-1", "learner-1", 5)).resolves.toBe(false);
+  });
+
   it("terminates both the room and request after a safety action", async () => {
     const { prisma, requests, sessions } = fakePrisma([claimed]);
     const service = new HelpSessionService(prisma);
@@ -345,7 +369,41 @@ describe("recording connected seats", () => {
   });
 });
 
+describe("shared room collaboration", () => {
+  it("persists a bounded Yjs state only for a room participant", async () => {
+    const { prisma, sessions } = fakePrisma([claimed]);
+    const service = new HelpSessionService(prisma);
+    await service.join("req-1", "helper-1");
+
+    await expect(
+      service.saveCollaborationState("req-1", "helper-1", new Uint8Array([1, 2, 3]))
+    ).resolves.toBe(true);
+    expect(Buffer.from(sessions[0]!.collaborationState ?? []).toString("hex")).toBe("010203");
+
+    await expect(
+      service.saveCollaborationState("req-1", "stranger", new Uint8Array([4]))
+    ).rejects.toMatchObject({ reason: "NOT_THE_HELPER" });
+  });
+});
+
 describe("reconciling a call", () => {
+  it("returns timed-out conversations so their learners can be notified", async () => {
+    const reconciled = [
+      {
+        id: "00000000-0000-4000-8000-000000000001",
+        learnerId: "learner-1",
+        questionSlug: "contains-duplicate"
+      }
+    ];
+    const queryRaw = jest.fn().mockResolvedValue(reconciled);
+    const service = new HelpSessionService({ $queryRaw: queryRaw } as unknown as PrismaService);
+
+    await expect(service.reconcileStale(new Date("2026-08-28T03:00:00.000Z"))).resolves.toEqual(
+      reconciled
+    );
+    expect(queryRaw).toHaveBeenCalledTimes(1);
+  });
+
   it("returns authoritative remaining time to either participant", async () => {
     const { prisma, sessions } = fakePrisma([claimed]);
     const service = new HelpSessionService(prisma);
@@ -394,6 +452,18 @@ describe("reconciling a call", () => {
     });
   });
 
+  it("keeps the helper's no-show credit when the server closes an abandoned room", async () => {
+    const { prisma, sessions } = fakePrisma([claimed]);
+    const service = new HelpSessionService(prisma);
+    await service.join("req-1", "helper-1");
+    sessions[0]!.startedAt = new Date(Date.now() - SESSION_CAP_MS - 1);
+    sessions[0]!.helperJoinedAt = new Date(Date.now() - SESSION_CAP_MS - 1);
+
+    await service.status("req-1", "helper-1");
+
+    expect(sessions[0]!.helperWaitCreditAt).not.toBeNull();
+  });
+
   it("lets the other participant observe a completed leave", async () => {
     const { prisma } = fakePrisma([claimed]);
     const service = new HelpSessionService(prisma);
@@ -431,39 +501,22 @@ describe("rating", () => {
     await service.connected("req-1", "learner-1");
     await service.connected("req-1", "helper-1");
 
-    await expect(service.rate("req-1", "learner-1", 4)).resolves.toBe(false);
+    await expect(service.rate("req-1", "learner-1", 5)).resolves.toBe(false);
     await service.leave("req-1", "learner-1");
-    await expect(service.rate("req-1", "learner-1", 4)).resolves.toBe(true);
-    await expect(service.rate("req-1", "learner-1", 2)).resolves.toBe(false);
+    await expect(service.rate("req-1", "learner-1", 5)).resolves.toBe(true);
+    await expect(service.rate("req-1", "learner-1", 1)).resolves.toBe(false);
   });
 
-  it("rejects a rating outside one to five", async () => {
+  it("accepts only the binary Yes or No rating values", async () => {
     const { prisma } = fakePrisma([claimed]);
     const service = new HelpSessionService(prisma);
     await service.join("req-1", "learner-1");
 
-    for (const rating of [0, 6, 2.5, -1]) {
+    for (const rating of [0, 2, 3, 4, 6, 2.5, -1]) {
       await expect(service.rate("req-1", "learner-1", rating)).rejects.toMatchObject({
         reason: "ILLEGAL_TRANSITION"
       });
     }
-  });
-
-  it("persists skip and does not prompt or accept a rating afterward", async () => {
-    const { prisma, sessions } = fakePrisma([claimed]);
-    const service = new HelpSessionService(prisma);
-    await service.join("req-1", "learner-1");
-    await service.connected("req-1", "learner-1");
-    await service.connected("req-1", "helper-1");
-    await service.leave("req-1", "helper-1");
-
-    await expect(service.pendingRatingForLearner("learner-1", "lru-cache")).resolves.toEqual({
-      requestId: "req-1"
-    });
-    await expect(service.skipRating("req-1", "learner-1")).resolves.toBe(true);
-    expect(sessions[0]!.learnerRatingSkippedAt).not.toBeNull();
-    await expect(service.pendingRatingForLearner("learner-1", "lru-cache")).resolves.toBeNull();
-    await expect(service.rate("req-1", "learner-1", 5)).resolves.toBe(false);
   });
 
   it("never prompts for or accepts ratings after a safety termination", async () => {
@@ -474,7 +527,6 @@ describe("rating", () => {
 
     await expect(service.pendingRatingForLearner("learner-1", "lru-cache")).resolves.toBeNull();
     await expect(service.rate("req-1", "learner-1", 1)).resolves.toBe(false);
-    await expect(service.skipRating("req-1", "learner-1")).resolves.toBe(false);
   });
 
   it("does not ask for feedback when only one seat ever connected", async () => {
@@ -486,18 +538,5 @@ describe("rating", () => {
 
     await expect(service.pendingRatingForLearner("learner-1", "lru-cache")).resolves.toBeNull();
     await expect(service.rate("req-1", "learner-1", 5)).resolves.toBe(false);
-  });
-
-  it("lets only the learner skip their own rating", async () => {
-    const { prisma } = fakePrisma([claimed]);
-    const service = new HelpSessionService(prisma);
-    await service.join("req-1", "learner-1");
-    await service.connected("req-1", "learner-1");
-    await service.connected("req-1", "helper-1");
-    await service.leave("req-1", "learner-1");
-
-    await expect(service.skipRating("req-1", "helper-1")).rejects.toMatchObject({
-      reason: "NOT_THE_LEARNER"
-    });
   });
 });

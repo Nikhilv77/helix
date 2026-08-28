@@ -2,9 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Code2, Loader2, Play, RotateCcw, XCircle } from "lucide-react";
-import { DsaCodeEditor, type DsaEditorLanguage } from "@/components/interview/dsa/dsa-code-editor";
+import {
+  DsaCodeEditor,
+  type DsaEditorLanguage,
+  type DsaEditorSelection
+} from "@/components/interview/dsa/dsa-code-editor";
 import { DsaQuestionNotes } from "@/components/interview/dsa/dsa-question-notes";
 import { AskSomeone } from "./ask-someone";
+import { PracticeLanguagePicker } from "./practice-language-picker";
 import { dsaStarterCode, supportedDsaCodeLanguages } from "@/lib/dsa/dsa-code-templates";
 import { dsaCodeDraftKey, readDsaCodeDraft, writeDsaCodeDraft } from "@/lib/dsa/code-draft";
 import type { DsaQuestion } from "@/lib/dsa/dsa";
@@ -40,6 +45,7 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
   const [language, setLanguage] = useState<DsaEditorLanguage>("javascript");
   const [code, setCode] = useState(() => dsaStarterCode(question, "javascript"));
   const [result, setResult] = useState<RunResult | null>(null);
+  const [selection, setSelection] = useState<DsaEditorSelection | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pendingRunId = useRef<string | null>(null);
@@ -60,6 +66,7 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
     setCode(saved ?? dsaStarterCode(question, language));
     setResult(null);
     setError(null);
+    setSelection(null);
     loadedDraftKey.current = key;
   }, [language, question]);
 
@@ -133,21 +140,7 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
           Solution
         </div>
         <div className="flex items-center gap-2">
-          <label htmlFor="question-language" className="sr-only">
-            Programming language
-          </label>
-          <select
-            id="question-language"
-            value={language}
-            onChange={(event) => changeLanguage(event.target.value as DsaEditorLanguage)}
-            className="h-10 rounded-xl border border-cream/10 bg-cream/[0.055] px-3.5 text-[13px] font-medium text-cream/80 outline-none transition focus:border-[var(--workspace-accent-border)] focus:bg-cream/[0.08]"
-          >
-            {languages.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
+          <PracticeLanguagePicker value={language} options={languages} onChange={changeLanguage} />
           <button
             type="button"
             onClick={resetCode}
@@ -180,6 +173,7 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
           value={code}
           onChange={setCode}
           onRun={() => void runCode()}
+          onSelectionChange={setSelection}
         />
       </div>
 
@@ -192,10 +186,23 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
         </p>
         <AskSomeone
           slug={question.slug}
+          title={question.title}
           language={language}
           code={code}
           testOutput={testOutput}
           failingTests={failingTests}
+          runStatus={result?.status ?? null}
+          tests={
+            result?.tests.map((test) => ({
+              index: test.index,
+              input: test.input,
+              expectedOutput: test.expectedOutput,
+              actualOutput: test.actualOutput ?? "",
+              passed: test.passed,
+              error: test.error ?? null
+            })) ?? null
+          }
+          selection={selection}
           startedAt={startedAt.current}
         />
       </div>

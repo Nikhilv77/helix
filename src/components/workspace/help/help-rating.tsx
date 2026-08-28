@@ -1,125 +1,127 @@
 "use client";
 
-import { Star } from "lucide-react";
-import { useCallback, useState } from "react";
+import { Check, Loader2, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
- * Rating a finished conversation.
+ * One lightweight outcome question after a learner leaves the voice room.
  *
- * The learner rates; the helper is never rated by anyone they helped in the
- * other direction. Attaching a score to the person who asked for help would make
- * asking feel like being assessed, which is exactly what stops people asking.
- *
- * Skippable, and skipping is not nagged: a conversation that went badly enough
- * to leave without rating has already told you something.
+ * The existing 1–5 storage remains compatible with historical data: Yes is
+ * stored as 5 and No as 1. Yes is intentionally the primary/default action.
  */
 export function HelpRating({
   requestId,
-  onSkipped
+  onCompleted
 }: {
   requestId: string;
-  onSkipped?: () => void;
+  onCompleted?: () => void;
 }) {
-  const [hovered, setHovered] = useState(0);
-  const [sent, setSent] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<"yes" | "no" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const yesButton = useRef<HTMLButtonElement>(null);
 
-  const rate = useCallback(
-    async (rating: number) => {
+  useEffect(() => {
+    setPortalTarget(document.querySelector<HTMLElement>(".workspace-black") ?? document.body);
+  }, []);
+
+  const answer = useCallback(
+    async (helped: boolean) => {
       if (pending) return;
-      setPending(true);
+      setPending(helped ? "yes" : "no");
       setError(null);
 
       try {
         const response = await fetch(`/api/help/session/${encodeURIComponent(requestId)}`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ action: "rate", rating })
+          body: JSON.stringify({ action: "rate", rating: helped ? 5 : 1 })
         });
         const payload = await response.json().catch(() => null);
-
         if (!response.ok || !payload?.success || payload.data?.rated !== true) {
-          throw new Error("Could not save that rating.");
+          throw new Error("Could not save that answer.");
         }
 
-        setSent(true);
+        onCompleted?.();
       } catch {
-        setError("Could not save that rating. Please try again.");
-      } finally {
-        setPending(false);
+        setError("Could not save that answer. Please try again.");
+        setPending(null);
+        window.requestAnimationFrame(() => yesButton.current?.focus());
       }
     },
-    [pending, requestId]
+    [onCompleted, pending, requestId]
   );
 
-  const skip = useCallback(async () => {
-    if (pending) return;
-    setPending(true);
-    setError(null);
+  if (!portalTarget) return null;
 
-    try {
-      const response = await fetch(`/api/help/session/${encodeURIComponent(requestId)}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "skip_rating" })
-      });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload?.success || payload.data?.skipped !== true) {
-        throw new Error("Could not skip that rating.");
-      }
-
-      setDismissed(true);
-      onSkipped?.();
-    } catch {
-      setError("Could not skip that rating. Please try again.");
-    } finally {
-      setPending(false);
-    }
-  }, [onSkipped, pending, requestId]);
-
-  if (dismissed) return null;
-
-  if (sent) {
-    return <p className="text-[12.5px] text-cream/50">Thanks — that helps us match better.</p>;
-  }
-
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <span className="text-[12.5px] text-cream/55">Was that useful?</span>
-
-      <div className="flex items-center gap-0.5" onMouseLeave={() => setHovered(0)}>
-        {[1, 2, 3, 4, 5].map((value) => (
-          <button
-            key={value}
-            type="button"
-            aria-label={`${value} out of 5`}
-            disabled={pending}
-            onMouseEnter={() => setHovered(value)}
-            onClick={() => void rate(value)}
-            className="p-0.5 transition"
-          >
-            <Star
-              size={16}
-              aria-hidden="true"
-              className={value <= hovered ? "text-[#F26E01]" : "text-cream/25"}
-              fill={value <= hovered ? "currentColor" : "none"}
-            />
-          </button>
-        ))}
-      </div>
-
-      <button
-        type="button"
-        onClick={() => void skip()}
-        disabled={pending}
-        className="text-[12px] text-cream/30 transition hover:text-cream/60"
+  return createPortal(
+    <>
+      <div
+        aria-hidden="true"
+        data-testid="help-rating-backdrop"
+        className="pointer-events-none fixed inset-0 z-[99] bg-black/25 backdrop-blur-[5px]"
+      />
+      <aside
+        aria-live="polite"
+        className="fixed left-1/2 top-1/2 z-[100] w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[1.5rem] bg-[#18191c]/[0.99] shadow-[0_32px_110px_-28px_rgba(0,0,0,0.98)] backdrop-blur-xl"
       >
-        Skip
-      </button>
+        <div className="h-0.5 w-full bg-[var(--workspace-accent)]" />
+        <div className="p-4 sm:p-[1.125rem]">
+          <section role="dialog" aria-labelledby="help-outcome-title" className="text-left">
+            <div className="flex items-start gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]">
+                <Check size={17} aria-hidden="true" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--workspace-accent)]">
+                  Conversation ended
+                </p>
+                <h2 id="help-outcome-title" className="mt-1 text-[14px] font-semibold text-cream">
+                  Did that help?
+                </h2>
+                <p className="mt-1 text-[12px] leading-5 text-cream/45">
+                  Your answer improves helper recognition and future matching.
+                </p>
+              </div>
+            </div>
 
-      {error ? <span className="text-[12px] text-[#ffb4b4]">{error}</span> : null}
-    </div>
+            {error ? <p className="mt-3 text-[12px] text-[#ffb4b4]">{error}</p> : null}
+
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                ref={yesButton}
+                autoFocus
+                type="button"
+                disabled={pending !== null}
+                onClick={() => void answer(true)}
+                className="inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-cream px-3 text-[12.5px] font-semibold text-[#17181a] transition hover:bg-white disabled:opacity-50"
+              >
+                {pending === "yes" ? (
+                  <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <Check size={13} aria-hidden="true" />
+                )}
+                Yes, it helped
+              </button>
+              <button
+                type="button"
+                disabled={pending !== null}
+                onClick={() => void answer(false)}
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-cream/10 px-4 text-[12.5px] font-medium text-cream/55 transition hover:border-cream/20 hover:text-cream disabled:opacity-50"
+              >
+                {pending === "no" ? (
+                  <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <X size={13} aria-hidden="true" />
+                )}
+                No
+              </button>
+            </div>
+          </section>
+        </div>
+      </aside>
+    </>,
+    portalTarget
   );
 }
