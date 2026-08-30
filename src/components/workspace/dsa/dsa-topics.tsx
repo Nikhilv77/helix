@@ -2,12 +2,12 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
+  BookOpen,
   Check,
   ChevronDown,
   Circle,
   Clock,
-  SkipForward,
-  Sparkles
+  SkipForward
 } from "lucide-react";
 import { PracticeIntro } from "@/components/workspace/practice/practice-intro";
 import type { DsaChapter, FrontendDsaPlan, PlanQuestion } from "@/lib/roadmap/frontend-plan";
@@ -41,13 +41,7 @@ export function DsaTopics({
     roadmap?.sessions[0] ??
     null;
   const fallback = FRONTEND_SESSIONS.find((session) => session.status === "active");
-  const title = activeSession?.title ?? fallback?.title ?? "Full-stack DSA";
   const purpose = activeSession?.purpose ?? fallback?.purpose ?? "";
-
-  const hours = roadmap
-    ? Math.round(roadmap.totalMinutes / 60)
-    : Math.round(plan.totalMinutes / 60);
-  const mix = roadmap?.questionMix ?? plan.counts;
 
   // Per-chapter progress, keyed by slug, so each block can show real state.
   const progressByChapter = new Map(
@@ -55,17 +49,16 @@ export function DsaTopics({
   );
 
   return (
-    <section id="plan" className="scroll-mt-20 lg:scroll-mt-8">
+    <section id="plan" className="relative scroll-mt-20 lg:scroll-mt-8">
       <Link
         href="/practice"
-        className="inline-flex items-center gap-2 text-xs font-medium text-cream/45 transition hover:text-cream"
+        aria-label="Back to Practice sessions"
+        className="absolute left-0 top-0 z-20 grid h-9 w-9 place-items-center rounded-xl bg-[#17181b] text-cream/52 transition hover:bg-[#202126] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/35"
       >
         <ArrowLeft size={13} aria-hidden="true" />
-        Practice sessions
       </Link>
 
       <PracticeIntro
-        sessionTitle={title}
         purpose={purpose}
         roadmap={roadmap}
         nextHref={
@@ -75,43 +68,27 @@ export function DsaTopics({
         nextLabel={
           (roadmap?.completedQuestions ?? 0) > 0 ? "Continue practising" : "Start the first pattern"
         }
-        stats={[
-          {
-            label: "Questions",
-            value: String(roadmap?.totalQuestions ?? plan.totalQuestions)
-          },
-          { label: "Chapters", value: String(roadmap?.totalChapters ?? plan.chapters.length) },
-          { label: "Estimated", value: `~${hours}h` },
-          { label: "Mix", value: `${mix.easy}E · ${mix.medium}M · ${mix.hard}H` }
-        ]}
       />
 
-      <div className="mt-8">
+      <div className="mt-12 sm:mt-14">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.22em] text-cream/42">
-              Pattern library
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cream/32">
+              DSA patterns
             </p>
-            <h2 className="mt-2 max-w-2xl font-display text-2xl font-semibold tracking-[-0.035em] text-cream sm:text-[2rem]">
-              Build the instincts that make a solution feel obvious.
+            <h2 className="mt-2 max-w-2xl text-2xl font-semibold tracking-[-0.035em] text-cream sm:text-[2rem]">
+              Work through one pattern at a time
             </h2>
-            <p className="mt-2 max-w-2xl text-[15px] leading-7 text-cream/55">
-              Open a chapter for your teacher&apos;s briefing or go directly to a problem. Your
-              progress stays attached to every pattern.
+            <p className="mt-2 max-w-2xl text-[13.5px] leading-6 text-cream/44">
+              Each chapter keeps its briefing, questions, and progress together.
             </p>
           </div>
-          <div className="practice-glass-soft flex shrink-0 items-center gap-3 rounded-2xl px-4 py-3">
-            <span
-              className="h-2 w-2 rounded-full shadow-[0_0_14px_var(--workspace-accent)]"
-              style={{ backgroundColor: "var(--workspace-accent)" }}
-            />
-            <p className="text-[14px] text-cream/58">
-              <strong className="font-semibold text-cream">
-                {roadmap?.completedQuestions ?? 0}
-              </strong>{" "}
-              of {roadmap?.totalQuestions ?? plan.totalQuestions} complete
-            </p>
-          </div>
+          <p className="shrink-0 text-[12px] text-cream/36">
+            <strong className="font-semibold text-cream/72">
+              {roadmap?.completedQuestions ?? 0}
+            </strong>{" "}
+            of {roadmap?.totalQuestions ?? plan.totalQuestions} complete
+          </p>
         </div>
       </div>
 
@@ -147,18 +124,11 @@ function ChapterBlock({
 
   return (
     <details
-      className={`practice-chapter-card group overflow-hidden ${current ? "is-current" : ""}`}
+      className="group overflow-hidden rounded-[1.45rem] bg-[#17181b] transition duration-300 open:bg-[#1b1c20]"
       open={index === 0}
     >
       <summary className="flex cursor-pointer list-none items-start gap-4 p-5 [&::-webkit-details-marker]:hidden sm:gap-5 sm:p-6">
-        <span
-          className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-cream/[0.1] bg-black/25 font-mono text-[12px] font-semibold text-cream/52"
-          style={
-            done
-              ? { color: "var(--workspace-accent)", borderColor: "var(--workspace-accent-border)" }
-              : undefined
-          }
-        >
+        <span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-black/35 font-mono text-[12px] font-semibold text-cream/48">
           {done ? <Check size={16} aria-hidden="true" /> : String(index + 1).padStart(2, "0")}
         </span>
 
@@ -174,15 +144,8 @@ function ChapterBlock({
               · ~{Math.round(chapter.minutes / 60)}h
             </span>
             {current ? (
-              <span
-                className="rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]"
-                style={{
-                  color: "var(--workspace-accent)",
-                  borderColor: "var(--workspace-accent-border)",
-                  backgroundColor: "var(--workspace-accent-soft)"
-                }}
-              >
-                Current
+              <span className="rounded-full bg-white/[0.055] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.13em] text-cream/56">
+                In progress
               </span>
             ) : null}
           </span>
@@ -194,12 +157,8 @@ function ChapterBlock({
             <span className="mt-4 flex items-center gap-3">
               <span className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-cream/[0.08]">
                 <span
-                  className="block h-full rounded-full"
-                  style={{
-                    width: `${percent}%`,
-                    backgroundColor: "var(--workspace-accent)",
-                    boxShadow: "0 0 12px var(--workspace-accent)"
-                  }}
+                  className="block h-full rounded-full bg-cream/72"
+                  style={{ width: `${percent}%` }}
                 />
               </span>
               <span className="shrink-0 text-[11.5px] font-semibold text-cream/50">{percent}%</span>
@@ -220,28 +179,20 @@ function ChapterBlock({
         />
       </summary>
 
-      <div className="border-t border-cream/[0.07] px-5 pt-4 sm:px-6 sm:pl-[5.5rem]">
+      <div className="mt-1 bg-black/[0.12] px-5 sm:px-6 sm:pl-[5.5rem]">
         <Link
           href={`/practice/${chapter.id}`}
-          className="group/session flex items-center gap-3 rounded-2xl border p-4 transition duration-300 hover:-translate-y-0.5"
-          style={{
-            borderColor: "var(--workspace-accent-border)",
-            background:
-              "linear-gradient(120deg, var(--workspace-accent-soft), rgba(255,255,255,0.025) 72%)"
-          }}
+          className="group/session flex items-center gap-3 py-4 transition hover:bg-white/[0.018]"
         >
-          <span
-            className="grid h-9 w-9 shrink-0 place-items-center"
-            style={{ color: "var(--workspace-accent)" }}
-          >
-            <Sparkles size={16} aria-hidden="true" />
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-black/45 text-cream/48">
+            <BookOpen size={15} aria-hidden="true" />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold text-cream">
-              Take this session with your teacher
+              Open the pattern briefing
             </span>
             <span className="mt-0.5 block text-[13px] leading-5 text-cream/50">
-              She sets up the pattern and the traps, then you solve.
+              Review the idea, common traps, and the questions that follow.
             </span>
           </span>
           <ArrowRight
@@ -252,7 +203,7 @@ function ChapterBlock({
         </Link>
       </div>
 
-      <ul className="grid gap-2 p-5 sm:px-6 sm:pl-[5.5rem] lg:grid-cols-2">
+      <ul className="mt-px divide-y divide-white/[0.055] bg-black/[0.12] px-5 sm:px-6 sm:pl-[5.5rem]">
         {chapter.questions.map((question, position) => (
           <li key={question.slug}>
             <QuestionRow
@@ -270,7 +221,7 @@ function ChapterBlock({
 function MixChip({ tone, count }: { tone: "easy" | "medium" | "hard"; count: number }) {
   if (count === 0) return null;
   return (
-    <span className="rounded-full border border-cream/[0.08] bg-black/20 px-2.5 py-1 text-[11px] font-semibold capitalize text-cream/48">
+    <span className="rounded-full bg-black/45 px-2.5 py-1 text-[10.5px] font-medium capitalize text-cream/42">
       {count} {tone}
     </span>
   );
@@ -291,20 +242,9 @@ function QuestionRow({
   return (
     <Link
       href={`/dsa-questions/${question.slug}`}
-      className="practice-question-row group/row flex min-h-[4.75rem] items-center gap-3 rounded-2xl px-3.5 py-3 transition sm:gap-4"
+      className="group/row -mx-2 flex min-h-[4.5rem] items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-white/[0.03] sm:gap-4 sm:px-3"
     >
-      <span
-        className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-cream/[0.08] bg-black/20 text-cream/30 transition group-hover/row:text-cream/60"
-        style={
-          done
-            ? {
-                color: "var(--workspace-accent)",
-                borderColor: "var(--workspace-accent-border)",
-                backgroundColor: "var(--workspace-accent-soft)"
-              }
-            : undefined
-        }
-      >
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-black/45 text-cream/30 transition group-hover/row:text-cream/60">
         {done ? (
           <Check size={13} aria-hidden="true" />
         ) : skipped ? (
@@ -335,7 +275,7 @@ function QuestionRow({
       <span className="hidden shrink-0 items-center gap-1 text-[11px] text-cream/35 sm:flex">
         <Clock size={11} aria-hidden="true" /> {question.expectedTimeMinutes}m
       </span>
-      <span className="shrink-0 rounded-full border border-cream/[0.08] bg-black/20 px-2 py-1 text-[10px] font-semibold capitalize text-cream/45">
+      <span className="shrink-0 rounded-full bg-black/45 px-2 py-1 text-[10px] font-medium capitalize text-cream/42">
         {question.difficulty}
       </span>
     </Link>

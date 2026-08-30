@@ -1,10 +1,20 @@
+import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Atom, BadgeCheck, CircleGauge, CodeXml, Cpu, FileCode2, Rocket } from "lucide-react";
+import {
+  ArrowRight,
+  Atom,
+  BadgeCheck,
+  CircleGauge,
+  Clock3,
+  CodeXml,
+  Cpu,
+  FileCode2,
+  Rocket
+} from "lucide-react";
 import { DocumentTitle } from "@/components/document-title";
-import { RoadmapSessionCard } from "@/components/workspace/shared/roadmap-session-card";
-import type { PracticeRoadmapHome } from "@/lib/practice/practice-roadmap";
-import type { CandidateProfile } from "@/lib/shared/types";
+import type { PracticeRoadmapHome, PracticeRoadmapSession } from "@/lib/practice/practice-roadmap";
+import type { WorkspaceInsights } from "@/lib/shared/types";
 
 const sessionIcons: Record<string, LucideIcon> = {
   "frontend-dsa": CodeXml,
@@ -16,97 +26,299 @@ const sessionIcons: Record<string, LucideIcon> = {
 };
 
 export function PracticeSessionsView({
-  profile,
   practiceRoadmap,
+  insights = null,
+  activity = [],
   generationFailed = false
 }: {
-  profile: CandidateProfile;
   practiceRoadmap: PracticeRoadmapHome | null;
+  insights?: WorkspaceInsights | null;
+  activity?: Array<{ date: string; solved: number }>;
   generationFailed?: boolean;
 }) {
-  const firstName = profile.resume?.fullName?.trim().split(/\s+/)[0] ?? "";
-  const introCopy = firstName
-    ? `${firstName}, choose the practice session that feels most useful right now. Each session follows the same preparation path as your interviews, so what you learn here carries directly into the room.`
-    : "Choose the practice session that feels most useful right now. Each session follows the same preparation path as your interviews, so what you learn here carries directly into the room.";
-  const introWords = introCopy.split(" ");
   const sessions = practiceRoadmap?.sessions ?? [];
-
+  const totalQuestions = sessions.reduce((total, session) => total + session.totalQuestions, 0);
+  const completedQuestions = sessions.reduce(
+    (total, session) => total + session.completedQuestions,
+    0
+  );
   return (
-    <main className="relative isolate mx-auto w-full max-w-[92rem] overflow-x-clip px-4 pb-20 pt-10 sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
+    <main className="relative isolate mx-auto flex w-full max-w-[92rem] flex-col overflow-x-clip px-4 pb-20 pt-10 sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
       <DocumentTitle title="Practice" />
-      <span
-        aria-hidden="true"
-        className="interviews-accent-glow interviews-accent-glow-top pointer-events-none absolute -top-32 left-1/2 -z-10 h-[34rem] w-[48rem] -translate-x-1/2 rounded-full"
-      />
 
-      <section className="interviews-intro-in mx-auto max-w-3xl text-center">
-        <p
-          aria-label={introCopy}
-          className="font-display text-[clamp(1.1rem,1.25vw,1.4rem)] font-medium leading-[1.55] tracking-normal text-cream"
-        >
-          {introWords.map((word, index) => (
-            <span
-              key={`${word}-${index}`}
-              aria-hidden="true"
-              className="interviews-intro-word"
-              style={{ "--interview-word-delay": `${index * 22}ms` } as CSSProperties}
-            >
-              {word}
-            </span>
-          ))}
-        </p>
+      <section
+        className="interviews-intro-in order-2 mt-12 md:order-1 md:mt-0"
+        aria-label="Practice overview"
+      >
+        <div className="grid gap-4 sm:grid-cols-2 lg:gap-5 xl:grid-cols-4">
+          <PracticeActivityCard
+            activity={activity}
+            hasCompletedQuestions={completedQuestions > 0}
+          />
+          <PracticeSummaryCard
+            text={
+              completedQuestions
+                ? "Keep your practice momentum going"
+                : "Start your practice momentum"
+            }
+            detail={
+              totalQuestions
+                ? completedQuestions
+                  ? `You’ve solved ${completedQuestions} question${completedQuestions === 1 ? "" : "s"} so far. ${Math.max(totalQuestions - completedQuestions, 0)} questions are waiting in your practice path.`
+                  : `${totalQuestions} questions are waiting in your practice path. Your first completed question starts the momentum.`
+                : null
+            }
+          />
+          <PracticeSummaryCard
+            text={
+              insights?.strongest
+                ? `Strongest point: ${insights.strongest.label}`
+                : "Finish an interview to see your strongest point"
+            }
+            detail={
+              insights?.strongest
+                ? "This is the signal you demonstrate most consistently."
+                : "Your interview reports will surface the strength you show most consistently."
+            }
+          />
+          <PracticeSummaryCard
+            text={
+              insights?.recommendedFocus
+                ? `Weakest point: ${insights.recommendedFocus.label}`
+                : "Finish an interview to see your weakest point"
+            }
+            detail={
+              insights?.recommendedFocus
+                ? "Keep working on this to make your answers land more clearly."
+                : "Your interview reports will highlight the point to focus on next."
+            }
+          />
+        </div>
       </section>
 
-      <section className="relative isolate mt-12 sm:mt-14" aria-label="Practice sessions">
-        {sessions.length === 0 ? (
-          <div
-            className="mx-auto max-w-xl rounded-[1.5rem] border border-white/10 bg-graphite-900/65 px-6 py-7 text-center shadow-[0_20px_70px_rgba(0,0,0,0.22)]"
-            role={generationFailed ? "alert" : "status"}
-          >
-            <p className="font-display text-lg font-semibold text-cream">
+      <section
+        className="relative isolate order-1 md:order-2 md:mt-12 lg:mt-14"
+        aria-label="Practice sessions"
+      >
+        <div className="relative z-10 grid gap-y-4">
+          {sessions.length ? (
+            sessions.map((session, index) => (
+              <PracticeSessionCard key={session.key} session={session} delay={index * 70} />
+            ))
+          ) : (
+            <p
+              className="col-span-full rounded-2xl bg-[#17181b] px-5 py-8 text-center text-sm leading-6 text-cream/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]"
+              role={generationFailed ? "alert" : "status"}
+            >
               {generationFailed
-                ? "We couldn't prepare your Practice roadmap"
-                : "Your Practice roadmap is being prepared"}
+                ? "We couldn’t prepare your practice path. Your saved progress is safe; refresh to try again."
+                : "Your teacher is still preparing your practice path. Please check back in a moment."}
             </p>
-            <p className="mt-2 text-sm leading-6 text-cream/60">
-              {generationFailed
-                ? "Your saved progress is safe. Refresh to try generating the roadmap again."
-                : "Refresh this page in a moment."}
-            </p>
-          </div>
-        ) : null}
-        <div className="relative z-10 grid gap-x-8 gap-y-12 md:grid-cols-2 xl:grid-cols-3">
-          {sessions.map((session, index) => {
-            const completed = session.completedQuestions;
-            const total = session.totalQuestions;
-            const available = session.availability === "available" && Boolean(session.href);
-            const progressLabel = available
-              ? completed > 0
-                ? `${completed}/${total} complete`
-                : `${total} questions`
-              : session.availability === "available"
-                ? `${total} questions · workspace coming next`
-                : "Question bank coming next";
-
-            return (
-              <RoadmapSessionCard
-                key={session.key}
-                href={available ? session.href : null}
-                icon={sessionIcons[session.key] ?? FileCode2}
-                title={session.title}
-                purpose={session.purpose}
-                covers={session.covers}
-                statusLabel={progressLabel}
-                actionLabel={
-                  available ? (completed > 0 ? "Continue session" : "Start session") : "Coming soon"
-                }
-                disabled={!available}
-                delay={index * 70}
-              />
-            );
-          })}
+          )}
         </div>
       </section>
     </main>
+  );
+}
+
+function PracticeActivityCard({
+  activity,
+  hasCompletedQuestions
+}: {
+  activity: Array<{ date: string; solved: number }>;
+  hasCompletedQuestions: boolean;
+}) {
+  if (!hasCompletedQuestions) {
+    return (
+      <div className="flex min-h-52 flex-col items-start justify-center gap-3 rounded-[1.45rem] bg-[#17181b] px-5 py-6 sm:px-6">
+        <p className="font-display text-lg font-semibold leading-snug text-cream">
+          Your weekly rhythm starts with one solved question.
+        </p>
+        <p className="text-sm leading-5 text-cream/54">
+          Finish any Practice question and your activity will appear here.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-52 items-center rounded-[1.45rem] bg-[#17181b] px-5 py-6 sm:px-6">
+      <PracticeWeeklyActivityChart activity={activity} />
+    </div>
+  );
+}
+
+function PracticeSummaryCard({ text, detail = null }: { text: string; detail?: string | null }) {
+  return (
+    <div className="flex min-h-52 flex-col items-start justify-center gap-5 rounded-[1.45rem] bg-[#17181b] px-5 py-6 sm:px-6">
+      <p className="font-display text-lg font-semibold leading-snug text-cream">{text}</p>
+      {detail ? <p className="text-sm leading-5 text-cream/54">{detail}</p> : null}
+    </div>
+  );
+}
+
+function PracticeWeeklyActivityChart({
+  activity
+}: {
+  activity: Array<{ date: string; solved: number }>;
+}) {
+  const dailyTarget = Math.max(3, ...activity.map((day) => day.solved));
+  const totalSolved = activity.reduce((total, day) => total + day.solved, 0);
+  const weekday = new Intl.DateTimeFormat("en", { weekday: "short", timeZone: "UTC" });
+  const fullDate = new Intl.DateTimeFormat("en", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC"
+  });
+
+  return (
+    <div
+      className="w-full"
+      role="img"
+      aria-label={`${totalSolved} question${totalSolved === 1 ? "" : "s"} solved in the last ${activity.length || 7} days`}
+    >
+      <div className="grid grid-cols-7 gap-3 sm:gap-4">
+        {activity.map((day, index) => {
+          const date = new Date(`${day.date}T00:00:00.000Z`);
+          const tooltipId = `practice-activity-${day.date}`;
+          return (
+            <div
+              key={day.date}
+              className="group relative min-w-0"
+              style={{ gridColumnStart: 8 - activity.length + index }}
+              tabIndex={0}
+              aria-describedby={tooltipId}
+            >
+              <div className="flex h-32 items-end overflow-hidden rounded-[1.45rem] bg-white/[0.07]">
+                <span
+                  className="w-full rounded-b-[1.45rem] rounded-t-[0.7rem] bg-[var(--workspace-accent)] transition-[height] duration-500 ease-out"
+                  style={{ height: `${Math.min(100, (day.solved / dailyTarget) * 100)}%` }}
+                />
+              </div>
+              <span className="mt-2 block text-center text-[10px] font-medium text-cream/42">
+                {weekday.format(date)}
+              </span>
+              <span
+                id={tooltipId}
+                role="tooltip"
+                className="pointer-events-none absolute bottom-[calc(100%+0.65rem)] left-1/2 z-10 w-max max-w-40 -translate-x-1/2 rounded-md bg-[#0e0f11] px-2.5 py-2 text-center text-[11px] leading-4 text-cream opacity-0 shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-opacity duration-150 group-hover:opacity-100 group-focus:opacity-100"
+              >
+                <span className="block text-cream/58">{fullDate.format(date)}</span>
+                <span className="block font-medium">
+                  {day.solved} question{day.solved === 1 ? "" : "s"} solved
+                </span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PracticeSessionCard({
+  session,
+  delay
+}: {
+  session: PracticeRoadmapSession;
+  delay: number;
+}) {
+  const SessionIcon = sessionIcons[session.key] ?? FileCode2;
+  const href = session.href;
+  const available = session.availability === "available" && Boolean(href);
+  const statusLabel = available
+    ? session.completedQuestions > 0
+      ? `${session.completedQuestions}/${session.totalQuestions} complete`
+      : `${session.totalQuestions} questions`
+    : session.availability === "available"
+      ? `${session.totalQuestions} questions · workspace coming next`
+      : "Question bank coming next";
+  const actionLabel = available
+    ? session.completedQuestions > 0
+      ? "Continue session"
+      : "Start session"
+    : "Coming soon";
+
+  const unavailable = !available || !href;
+  const content = (
+    <>
+      <span className="interview-session-icon flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.45rem] lg:h-24 lg:w-24">
+        <SessionIcon size={40} strokeWidth={1.45} aria-hidden="true" />
+      </span>
+
+      <div className="min-w-0">
+        <h2 className="max-w-[28rem] font-display text-[1.5rem] font-semibold leading-[1.2] tracking-normal text-cream sm:text-[1.65rem]">
+          {session.title}
+        </h2>
+        <p className="mt-4 max-w-[42rem] text-base leading-7 text-cream/72">{session.purpose}</p>
+
+        {statusLabel ? (
+          <span className="mt-5 inline-block rounded-full border border-[color-mix(in_srgb,var(--workspace-accent)_28%,transparent)] bg-[color-mix(in_srgb,var(--workspace-accent)_9%,transparent)] px-3 py-1.5 text-[11px] font-medium text-cream/68">
+            {statusLabel}
+          </span>
+        ) : null}
+
+        {session.covers.length ? (
+          <ul className="mt-5 flex flex-wrap gap-2" aria-label="Session topics">
+            {session.covers.slice(0, 4).map((topic) => (
+              <li
+                key={topic}
+                className="rounded-full border border-white/[0.08] bg-white/[0.035] px-2.5 py-1 text-[11px] text-cream/48"
+              >
+                {topic}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+
+      <div className="flex shrink-0 flex-wrap items-end gap-5 md:flex-col md:items-end md:justify-between md:self-stretch">
+        {session.durationMinutes || session.difficulty ? (
+          <div className="flex flex-wrap items-center gap-2 md:justify-end">
+            {session.durationMinutes ? (
+              <span className="pill inline-flex items-center gap-1.5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-cream/55">
+                <Clock3 size={11} aria-hidden="true" /> {session.durationMinutes} min
+              </span>
+            ) : null}
+            {session.difficulty ? (
+              <span className="pill px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-cream/55">
+                {session.difficulty}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+
+        <span className="interview-session-link inline-flex items-center gap-2 text-base font-medium text-cream/88 transition-colors group-hover:text-cream">
+          {actionLabel}
+          {!unavailable ? (
+            <ArrowRight
+              size={17}
+              aria-hidden="true"
+              className="transition-transform duration-300 group-hover:translate-x-1"
+            />
+          ) : null}
+        </span>
+      </div>
+    </>
+  );
+  const className = [
+    "interview-session-card group relative grid min-h-[13rem] gap-6 rounded-[2rem] p-7 text-left transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/35 md:grid-cols-[5rem_minmax(0,1fr)_auto] md:gap-7 lg:grid-cols-[6rem_minmax(0,1fr)_auto] lg:p-8",
+    unavailable ? "cursor-not-allowed opacity-45" : ""
+  ].join(" ");
+  const style = { "--interview-delay": `${delay}ms` } as CSSProperties;
+
+  if (unavailable || !href) {
+    return (
+      <article aria-disabled="true" className={className} style={style}>
+        {content}
+      </article>
+    );
+  }
+
+  return (
+    <Link href={href} className={className} style={style}>
+      {content}
+    </Link>
   );
 }

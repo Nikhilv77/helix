@@ -125,7 +125,7 @@ export class AppConfigService {
   }
 
   get practiceNonDsaEnabled(): EnvironmentConfig["practiceNonDsaEnabled"] {
-    return this.config.practiceNonDsaEnabled ?? false;
+    return this.config.practiceNonDsaEnabled ?? true;
   }
 
   get upstashRedisRestUrl(): EnvironmentConfig["upstashRedisRestUrl"] {

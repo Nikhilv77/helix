@@ -3,10 +3,9 @@ import { ArrowRight, Compass } from "lucide-react";
 
 export default function ChapterNotFound() {
   return (
-    <div className="relative mx-auto flex min-h-[72svh] w-full max-w-[94rem] items-center px-5 py-16 sm:px-8 lg:px-10">
-      <div className="practice-accent-glow absolute left-8 top-1/2 h-80 w-80 -translate-y-1/2 opacity-60" />
-      <section className="practice-glass relative w-full max-w-xl rounded-[1.75rem] p-7 sm:p-9">
-        <Compass size={24} aria-hidden="true" className="text-[var(--workspace-accent)]" />
+    <div className="mx-auto flex min-h-[72svh] w-full max-w-[94rem] items-center bg-black px-5 py-16 sm:px-8 lg:px-10">
+      <section className="w-full max-w-xl">
+        <Compass size={24} aria-hidden="true" className="text-cream/48" />
         <h1 className="mt-6 font-display text-[clamp(2rem,5vw,3.2rem)] font-semibold leading-[1.04] tracking-[-0.04em] text-cream">
           This session isn&apos;t in your path.
         </h1>

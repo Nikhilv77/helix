@@ -47,7 +47,7 @@ describe("PracticePage", () => {
     render(await PracticePage());
 
     expect(screen.getByRole("alert").textContent).toContain(
-      "We couldn't prepare your Practice roadmap"
+      "We couldn’t prepare your practice path"
     );
     expect(screen.getByRole("alert").textContent).toContain("Your saved progress is safe");
     expect(mocks.home).toHaveBeenCalledWith("owner-1");

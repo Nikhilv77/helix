@@ -13,23 +13,28 @@ const logger = new Logger("PracticePage");
 
 /** The six-session Practice entry point, visually paired with Interviews. */
 export default async function PracticePage() {
-  const { ownerId, profile } = await requireOnboardedProfile();
+  const { ownerId } = await requireOnboardedProfile();
   const container = getAppContainer();
   let generationFailed = false;
-  const practiceRoadmap = await container.practiceRoadmapService.home(ownerId).catch((error) => {
-    generationFailed = true;
-    logger.error({
-      event: "practice.roadmap_generation_failed",
-      ownerId,
-      reason: error instanceof Error ? error.message : "unknown"
-    });
-    return null;
-  });
+  const [practiceRoadmap, insights, activity] = await Promise.all([
+    container.practiceRoadmapService.home(ownerId).catch((error) => {
+      generationFailed = true;
+      logger.error({
+        event: "practice.roadmap_generation_failed",
+        ownerId,
+        reason: error instanceof Error ? error.message : "unknown"
+      });
+      return null;
+    }),
+    container.interviewService.insights(ownerId).catch(() => null),
+    container.practiceRoadmapService.activity(ownerId, 7).catch(() => [])
+  ]);
 
   return (
     <PracticeSessionsView
-      profile={profile}
       practiceRoadmap={practiceRoadmap}
+      insights={insights}
+      activity={activity}
       generationFailed={generationFailed}
     />
   );

@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { PracticeRoadmapHome } from "@/lib/practice/practice-roadmap";
-import type { CandidateProfile } from "@/lib/shared/types";
+import type { WorkspaceInsights } from "@/lib/shared/types";
 import { PracticeSessionsView } from "./practice-sessions-view";
 
 const practiceRoadmap: PracticeRoadmapHome = {
@@ -45,19 +45,19 @@ const practiceRoadmap: PracticeRoadmapHome = {
 describe("PracticeSessionsView", () => {
   afterEach(cleanup);
   it("renders the same six-slot roadmap shape while only enabling an implemented bank", () => {
-    render(
-      <PracticeSessionsView
-        profile={{ resume: { fullName: "Asha Verma" } } as CandidateProfile}
-        practiceRoadmap={practiceRoadmap}
-      />
-    );
+    render(<PracticeSessionsView practiceRoadmap={practiceRoadmap} />);
 
     expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(6);
+    expect(screen.queryByText(/readiness/i)).toBeNull();
     expect(
       screen.getByRole("link", { name: /DSA · Arrays.*Start session/i }).getAttribute("href")
     ).toBe("/practice/dsa");
     expect(screen.getAllByRole("article")).toHaveLength(5);
     expect(screen.getAllByText("Coming soon")).toHaveLength(5);
+    expect(
+      screen.getByText("Your weekly rhythm starts with one solved question.")
+    ).toBeInTheDocument();
+    expect(screen.getByText("Start your practice momentum")).toBeInTheDocument();
   });
 
   it("enables every published Part 4 workspace when the service supplies its href", () => {
@@ -71,17 +71,62 @@ describe("PracticeSessionsView", () => {
       }))
     };
 
-    render(
-      <PracticeSessionsView
-        profile={{ resume: { fullName: "Asha Verma" } } as CandidateProfile}
-        practiceRoadmap={launched}
-      />
-    );
+    render(<PracticeSessionsView practiceRoadmap={launched} />);
 
     expect(screen.getAllByText("Start session")).toHaveLength(6);
     expect(screen.queryByText("Coming soon")).toBeNull();
     expect(
       screen.getByRole("link", { name: /Final Mock.*Start session/i }).getAttribute("href")
     ).toBe("/practice/final-mock");
+  });
+
+  it("switches from the first-time message to the weekly chart after the first solve", () => {
+    const started = {
+      ...practiceRoadmap,
+      sessions: practiceRoadmap.sessions.map((session, index) =>
+        index === 0 ? { ...session, completedQuestions: 1, progressPercent: 1 } : session
+      )
+    };
+
+    render(
+      <PracticeSessionsView
+        practiceRoadmap={started}
+        activity={[
+          { date: "2026-08-23", solved: 0 },
+          { date: "2026-08-24", solved: 0 },
+          { date: "2026-08-25", solved: 0 },
+          { date: "2026-08-26", solved: 0 },
+          { date: "2026-08-27", solved: 0 },
+          { date: "2026-08-28", solved: 0 },
+          { date: "2026-08-29", solved: 1 }
+        ]}
+      />
+    );
+
+    expect(
+      screen.getByRole("img", { name: /1 question solved in the last 7 days/i })
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Your weekly rhythm starts with one solved question.")).toBeNull();
+  });
+
+  it("uses completed interview evidence for the strongest and weakest signals", () => {
+    const insights: WorkspaceInsights = {
+      readinessScore: 72,
+      completedSessions: 3,
+      sessionsThisWeek: 1,
+      answeredQuestions: 12,
+      competencyMap: [
+        { label: "Technical depth", score: 81, attempts: 3, trend: 4 },
+        { label: "Concise communication", score: 54, attempts: 3, trend: -2 }
+      ],
+      strongest: { label: "Technical depth", score: 81, attempts: 3, trend: 4 },
+      recommendedFocus: { label: "Concise communication", score: 54, attempts: 3, trend: -2 }
+    };
+
+    render(<PracticeSessionsView practiceRoadmap={practiceRoadmap} insights={insights} />);
+
+    expect(screen.getByText("Strongest point: Technical depth")).toBeInTheDocument();
+    expect(screen.getByText("Weakest point: Concise communication")).toBeInTheDocument();
+    expect(screen.queryByText("No signal yet")).toBeNull();
   });
 });

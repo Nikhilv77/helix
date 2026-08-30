@@ -54,7 +54,7 @@ describe("validateEnvironment", () => {
       groqDeciderModel: "openai/gpt-oss-20b",
       groqApiKey: undefined,
       interviewDailyLimit: 2,
-      practiceNonDsaEnabled: false,
+      practiceNonDsaEnabled: true,
       // Defaults to an empty list rather than undefined: the report queue is
       // closed to everyone until somebody is explicitly named.
       operatorUserIds: [],
@@ -75,21 +75,21 @@ describe("validateEnvironment", () => {
       rapidApiHost: "judge0-ce.p.rapidapi.com"
     });
     expect(config.notificationEmailEnabled).toBe(false);
-    expect(config.practiceNonDsaEnabled).toBe(false);
+    expect(config.practiceNonDsaEnabled).toBe(true);
   });
 
-  it("enables non-DSA Practice only through its explicit launch switch", () => {
+  it("keeps non-DSA Practice enabled by default while allowing an emergency opt-out", () => {
     expect(
-      validateEnvironment({ ...validEnvironment, PRACTICE_NON_DSA_ENABLED: "true" })
+      validateEnvironment({ ...validEnvironment, PRACTICE_NON_DSA_ENABLED: "false" })
         .practiceNonDsaEnabled
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it("keeps the application-config fallback launch-safe", () => {
+  it("keeps the application-config fallback aligned with the published workspaces", () => {
     const parsed = validateEnvironment(validEnvironment);
     expect(
       new AppConfigService({ ...parsed, practiceNonDsaEnabled: undefined }).practiceNonDsaEnabled
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("enables notification email only through an explicit launch switch", () => {

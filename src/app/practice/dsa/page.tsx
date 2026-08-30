@@ -20,13 +20,13 @@ export default async function DsaPracticePage() {
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-[94rem] px-4 pb-20 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
+    <div className="mx-auto w-full max-w-[92rem] px-4 pb-20 pt-10 sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
       {plan ? (
         <DsaTopics plan={plan} roadmap={roadmap} questionStatuses={questionStatuses} />
       ) : (
         <div
           role="alert"
-          className="workspace-accent-card-glow mt-10 rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_24%,transparent)] px-5 py-6 text-sm text-cream/62"
+          className="mt-10 rounded-2xl border border-white/[0.1] bg-black px-5 py-6 text-sm text-cream/62"
         >
           The question bank is unavailable right now. Refresh in a moment.
         </div>

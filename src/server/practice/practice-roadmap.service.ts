@@ -17,6 +17,8 @@ import {
 } from "./practice-question-placement";
 
 const PRACTICE_ROADMAP_ROLE = "fullstack";
+const DAY_MS = 86_400_000;
+const DEFAULT_ACTIVITY_DAYS = 7;
 
 type RoadmapProvisioner = Pick<FrontendRoadmapService, "home">;
 type PlanReader = Pick<PersonalizedInterviewPlanningService, "activePlan">;
@@ -67,6 +69,43 @@ export class PracticeRoadmapService {
     if (!provisioned) return null;
 
     return this.reconcile(ownerId, plan);
+  }
+
+  /** Completed Practice questions, bucketed by UTC day for the entry-page chart. */
+  async activity(
+    ownerId: string,
+    days = DEFAULT_ACTIVITY_DAYS,
+    now: Date = new Date()
+  ): Promise<Array<{ date: string; solved: number }>> {
+    const dayCount = Math.max(1, Math.min(days, 126));
+    const today = startOfUtcDay(now);
+    const windowStart = new Date(today.getTime() - (dayCount - 1) * DAY_MS);
+    const profile = await this.prisma.candidateProfile.findUnique({
+      where: { ownerId },
+      select: { createdAt: true }
+    });
+    const accountStart = profile ? startOfUtcDay(profile.createdAt) : windowStart;
+    const start = accountStart > windowStart ? accountStart : windowStart;
+    const completed = await this.prisma.userQuestionProgress.findMany({
+      where: {
+        roadmap: { ownerId, role: PRACTICE_ROADMAP_ROLE },
+        status: RoadmapProgressStatus.COMPLETED,
+        completedAt: { gte: start }
+      },
+      select: { completedAt: true }
+    });
+    const solvedByDay = new Map<string, number>();
+    for (const question of completed) {
+      if (!question.completedAt) continue;
+      const date = dayKey(question.completedAt);
+      solvedByDay.set(date, (solvedByDay.get(date) ?? 0) + 1);
+    }
+
+    return Array.from({ length: dayCount }, (_, index) => {
+      const date = new Date(start.getTime() + index * DAY_MS);
+      const key = dayKey(date);
+      return { date: key, solved: solvedByDay.get(key) ?? 0 };
+    });
   }
 
   private async reconcile(
@@ -314,6 +353,14 @@ export class PracticeRoadmapService {
 
 function sameStrings(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function startOfUtcDay(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function dayKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
 }
 
 function mergePracticePersonalization(

@@ -1,10 +1,19 @@
 import { headers } from "next/headers";
+import { auth } from "@clerk/nextjs/server";
 import { ManageSkeleton } from "@/components/workspace/account/manage-skeleton";
+import { DashboardSkeleton } from "@/components/workspace/dashboard/dashboard-skeleton";
 import { MayaWelcomeLoading } from "@/components/workspace/dashboard/maya-welcome-loading";
 import { HelpHubSkeleton } from "@/components/workspace/help/help-hub-skeleton";
 import { InterviewsSkeleton } from "@/components/workspace/interviews/interviews-skeleton";
+import {
+  DsaPracticeSkeleton,
+  PracticeSkeleton
+} from "@/components/workspace/practice/practice-skeleton";
 import { ProfileSkeleton } from "@/components/workspace/profile/profile-skeleton";
 import { RouteProgress, Waveform } from "@/components/workspace/shared/loading/primitives";
+import { isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
+
+const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
 /** Root fallback shared by the public home and signed-in workspace routes. */
 export default async function RootLoading() {
@@ -15,14 +24,24 @@ export default async function RootLoading() {
   const progressRoute = pathname === "/progress";
   const manageRoute = pathname === "/manage";
   const profileRoute = pathname === "/profile";
-  const workspaceRoute = isWorkspaceLoadingRoute(pathname);
+  const workspaceRoute = isWorkspaceChromeRoute(pathname) && pathname !== "/";
   const welcomeHome = pathname === "/" && new URLSearchParams(search).get("welcome") === "maya";
+  const workspaceHome =
+    pathname === "/" && !welcomeHome && clerkEnabled && Boolean((await auth()).userId);
 
   if (welcomeHome) return <MayaWelcomeLoading />;
+
+  if (workspaceHome) return <DashboardSkeleton />;
 
   if (interviewRoute || progressRoute) return null;
 
   if (pathname === "/interviews") return <InterviewsSkeleton />;
+
+  if (pathname === "/practice") {
+    return <PracticeSkeleton />;
+  }
+
+  if (pathname.startsWith("/practice/")) return <DsaPracticeSkeleton />;
 
   if (pathname === "/help") return <HelpHubSkeleton />;
 
@@ -65,16 +84,5 @@ export default async function RootLoading() {
       <RouteProgress />
       <Waveform className="relative z-10" />
     </div>
-  );
-}
-
-function isWorkspaceLoadingRoute(pathname: string): boolean {
-  return (
-    pathname === "/practice" ||
-    pathname.startsWith("/practice/") ||
-    pathname === "/interviews" ||
-    pathname === "/profile" ||
-    pathname.startsWith("/sessions/") ||
-    pathname.startsWith("/session/")
   );
 }
