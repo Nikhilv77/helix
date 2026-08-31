@@ -250,6 +250,8 @@ model CandidateProfile {
   coverImage                  String?
   profileImage                String?
   workspaceAccent             String                               @default("ember")
+  /// Preferred language for standalone DSA practice editor sessions.
+  dsaEditorLanguage           String                               @default("javascript")
   /// Persona id from src/lib/avatars/personas.ts — the teacher chosen at onboarding.
   teacherId                   String?
   /// False stops this candidate being asked to help with other people's questions.
@@ -664,6 +666,8 @@ model UserDsaQuestionNote {
   ownerId   String
   slug      String
   content   String           @db.Text
+  /// Editable normalized pen strokes for this question's drawing canvas.
+  drawing   Json?
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
   owner     CandidateProfile @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)

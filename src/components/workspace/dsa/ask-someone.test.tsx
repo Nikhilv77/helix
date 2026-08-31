@@ -114,11 +114,8 @@ describe("AskSomeone", () => {
       />
     );
 
-    expect(
-      await screen.findByText(
-        "No Trailmates are available right now. An invitation will not be sent."
-      )
-    ).toBeTruthy();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(/Trailmates are available right now/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Ask a mate" }));
 
     expect(await screen.findByRole("alertdialog")).toBeTruthy();

@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, Loader2, RotateCcw, SkipForward } from "lucide-react";
+import { Check, Loader2, SkipForward } from "lucide-react";
 
-type AttemptAction = "open" | "complete" | "skip";
+type AttemptAction = "open" | "skip";
 type Marked = "none" | "complete" | "skip";
 
 /**
@@ -33,6 +32,12 @@ export function DsaQuestionActions({
   );
 
   useEffect(() => {
+    setMarked(
+      initialStatus === "COMPLETED" ? "complete" : initialStatus === "SKIPPED" ? "skip" : "none"
+    );
+  }, [initialStatus]);
+
+  useEffect(() => {
     if (opened.current) return;
     opened.current = true;
     const requestId = requestIds.current.open ?? crypto.randomUUID();
@@ -42,7 +47,7 @@ export function DsaQuestionActions({
     });
   }, [slug]);
 
-  function run(action: Exclude<AttemptAction, "open">) {
+  function skip() {
     setError(null);
 
     // The write recalculates the whole roadmap and takes seconds against a
@@ -50,12 +55,12 @@ export function DsaQuestionActions({
     // failure keeps the click feeling instant without ever claiming progress
     // that did not persist.
     const previous = marked;
-    setMarked(action === "complete" ? "complete" : "skip");
-    const requestId = requestIds.current[action] ?? crypto.randomUUID();
-    requestIds.current[action] = requestId;
+    setMarked("skip");
+    const requestId = requestIds.current.skip ?? crypto.randomUUID();
+    requestIds.current.skip = requestId;
 
     startTransition(async () => {
-      const ok = await recordAttempt(slug, action, requestId)
+      const ok = await recordAttempt(slug, "skip", requestId)
         .then(() => true)
         .catch(() => false);
 
@@ -65,8 +70,11 @@ export function DsaQuestionActions({
         return;
       }
 
-      router.refresh();
-      if (nextHref) router.prefetch(nextHref);
+      if (nextHref) {
+        router.push(nextHref);
+      } else {
+        router.refresh();
+      }
     });
   }
 
@@ -74,87 +82,42 @@ export function DsaQuestionActions({
   const skipped = marked === "skip";
 
   return (
-    <div className="mt-6">
-      <div
-        aria-live="polite"
-        aria-busy={pending}
-        className="practice-glass-soft flex flex-col gap-3 rounded-2xl p-3 sm:flex-row sm:items-center"
-      >
+    <div>
+      <div aria-live="polite" aria-busy={pending} className="flex flex-wrap items-center gap-2">
         {done || skipped ? (
-          <div className="flex min-w-0 flex-1 items-center gap-3">
+          <>
             <span
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cream/[0.055]"
-              style={{ color: done ? "var(--workspace-accent)" : undefined }}
+              className={[
+                "inline-flex h-9 items-center gap-2 rounded-lg px-3 text-[12.5px] font-semibold",
+                done
+                  ? "bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]"
+                  : "bg-white/[0.05] text-cream/58"
+              ].join(" ")}
             >
               {done ? (
-                <Check size={18} aria-hidden="true" />
+                <Check size={14} aria-hidden="true" />
               ) : (
-                <SkipForward size={16} aria-hidden="true" />
+                <SkipForward size={13} aria-hidden="true" />
               )}
+              {done ? "Solved" : "Skipped"}
+              {pending ? <Loader2 size={12} aria-hidden="true" className="animate-spin" /> : null}
             </span>
-            <div className="min-w-0">
-              <p className="text-[14.5px] font-semibold text-cream">
-                {done ? "Marked complete" : "Skipped for now"}
-              </p>
-              <p className="mt-0.5 flex items-center gap-1.5 text-[12.5px] font-medium text-cream/45">
-                {pending ? (
-                  <>
-                    <Loader2 size={11} aria-hidden="true" className="animate-spin" />
-                    Saving your progress…
-                  </>
-                ) : done ? (
-                  "Your teacher moved your path to the next question."
-                ) : (
-                  "You can come back to this one any time."
-                )}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => run("complete")}
-              disabled={pending || done}
-              className="ml-auto hidden shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold text-cream/45 transition hover:bg-cream/[0.08] hover:text-cream disabled:pointer-events-none disabled:opacity-40 sm:inline-flex"
-            >
-              <RotateCcw size={12} aria-hidden="true" />
-              {done ? "Done" : "Mark complete"}
-            </button>
-          </div>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => run("complete")}
-              disabled={pending}
-              className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-[14px] font-semibold text-[#171a16] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
-            >
-              {pending ? (
-                <Loader2 size={16} aria-hidden="true" className="animate-spin" />
-              ) : (
-                <Check size={16} aria-hidden="true" />
-              )}
-              I solved this
-            </button>
-            <button
-              type="button"
-              onClick={() => run("skip")}
-              disabled={pending}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-cream/[0.07] px-4 text-[14px] font-semibold text-cream/70 transition hover:bg-cream/[0.13] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/35 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <SkipForward size={15} aria-hidden="true" />
-              Skip
-            </button>
           </>
-        )}
-
-        {nextHref ? (
-          <Link
-            href={nextHref}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14px] font-semibold text-cream/60 transition hover:bg-cream/[0.08] hover:text-cream sm:ml-auto"
+        ) : (
+          <button
+            type="button"
+            onClick={skip}
+            disabled={pending}
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-white/[0.05] px-3 text-[12.5px] font-semibold text-cream/58 transition hover:bg-white/[0.09] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/35 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Next question
-            <ArrowRight size={15} aria-hidden="true" />
-          </Link>
-        ) : null}
+            {pending ? (
+              <Loader2 size={13} aria-hidden="true" className="animate-spin" />
+            ) : (
+              <SkipForward size={13} aria-hidden="true" />
+            )}
+            {pending ? "Skipping" : "Skip question"}
+          </button>
+        )}
       </div>
 
       {error ? (

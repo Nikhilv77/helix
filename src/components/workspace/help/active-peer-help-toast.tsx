@@ -69,10 +69,10 @@ export function ActivePeerHelpToast() {
     };
   }, []);
 
-  if (!active?.peer || promptVisible || pathname?.startsWith("/help/room/")) return null;
+  if (!active?.peer || promptVisible || pathname?.startsWith("/trailmate/room/")) return null;
 
   const resume = () => {
-    const returnTo = `${pathname ?? "/help"}${window.location.search}`;
+    const returnTo = `${pathname ?? "/trailmate"}${window.location.search}`;
     router.push(peerHelpRoomHref(active.requestId, returnTo));
   };
 

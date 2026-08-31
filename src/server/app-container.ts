@@ -28,6 +28,7 @@ import { NotificationDispatcher } from "./notifications/notification-dispatcher"
 import { EmailChannel } from "./notifications/email-channel";
 import { clerkAddressBook } from "./notifications/clerk-address-book";
 import { DsaInterviewEvaluator } from "./dsa/interview-evaluator";
+import { DsaPracticeFeedbackService } from "./dsa/practice-feedback.service";
 import { ProfileService } from "./profile/profile.service";
 import { ProgressService } from "./progress/progress.service";
 import { FrontendRoadmapService } from "./roadmap/frontend-roadmap.service";
@@ -64,6 +65,7 @@ export interface AppContainer {
   notificationDispatcher: NotificationDispatcher;
   teacherNotificationService: TeacherNotificationService;
   dsaInterviewEvaluator: DsaInterviewEvaluator;
+  dsaPracticeFeedbackService: DsaPracticeFeedbackService;
   frontendRoadmapService: FrontendRoadmapService;
   progressService: ProgressService;
   personalizedPlanningStore: PersonalizedPlanningStore;
@@ -143,6 +145,7 @@ export function getAppContainer(): AppContainer {
       config.appOrigin
     ),
     dsaInterviewEvaluator: new DsaInterviewEvaluator(interviewAi),
+    dsaPracticeFeedbackService: new DsaPracticeFeedbackService(geminiAi),
     frontendRoadmapService,
     // Read-only aggregate over roadmap progress and attempt history.
     progressService: new ProgressService(prisma),

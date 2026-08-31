@@ -75,30 +75,89 @@ export function DsaPracticeSkeleton() {
       aria-busy="true"
       aria-label="Loading DSA practice"
     >
-      <div className="mx-auto w-full max-w-[92rem] animate-pulse px-4 pb-20 pt-10 sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
-        <span className="block h-9 w-9 rounded-xl bg-[#17181b]" />
-        <div className="mx-auto mt-4 flex min-h-[30rem] w-full max-w-3xl flex-col items-center justify-center py-4 sm:min-h-[34rem]">
-          <div className="h-[16rem] w-full max-w-[27rem] rounded-[50%] bg-white/[0.035] sm:h-[19rem]" />
-          <div className="-mt-7 w-full max-w-2xl sm:-mt-10">
-            <div className="rounded-[1.45rem] bg-[#17181b] px-5 py-5 sm:px-7 sm:py-6">
-              <SkeletonLine className="h-3 w-full" />
-              <SkeletonLine className="mt-2 h-3 w-5/6" />
-              <SkeletonLine className="mt-2 h-3 w-2/3" />
+      <div className="mx-auto w-full max-w-[86rem] animate-pulse px-4 pb-20 pt-7 sm:px-7 sm:pt-9 lg:px-8 lg:pt-8">
+        <div className="grid min-w-0 gap-7 xl:grid-cols-[minmax(0,1fr)_17rem] xl:items-start xl:gap-x-14 xl:gap-y-7">
+          <div className="min-w-0 xl:col-start-1 xl:row-start-1">
+            <header className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <SkeletonLine className="h-8 w-44" />
+                <SkeletonLine className="mt-4 h-3 w-80 max-w-full" />
+              </div>
+              <div className="w-full rounded-xl border border-white/[0.08] bg-[#141619] px-5 py-4 sm:max-w-[19rem]">
+                <SkeletonLine className="h-4 w-52 max-w-full" />
+                <SkeletonLine className="mt-3 h-1.5 w-full" />
+              </div>
+            </header>
+
+            <section className="relative mt-6 flex flex-col overflow-hidden rounded-2xl bg-[#17181b] sm:mt-7 md:block md:min-h-[13.5rem]">
+              <div aria-hidden className="order-1 h-[17rem] w-full shrink-0 md:hidden" />
+              <div className="order-2 flex max-w-none flex-col justify-center px-5 py-7 sm:px-7 md:min-h-[13.5rem] md:max-w-[48%]">
+                <SkeletonLine className="h-3 w-40" />
+                <SkeletonLine className="mt-5 h-7 w-52" />
+                <SkeletonLine className="mt-4 h-3 w-full" />
+                <SkeletonLine className="mt-2 h-3 w-4/5" />
+                <SkeletonLine className="mt-5 h-11 w-60" />
+              </div>
+            </section>
+          </div>
+
+          <aside className="rounded-[1.45rem] bg-[#17181b] p-5 xl:sticky xl:top-24 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:mt-[9.3rem]">
+            <SkeletonLine className="h-3 w-24" />
+            <SkeletonLine className="mt-4 h-5 w-40" />
+            <div className="mt-5 space-y-4">
+              {Array.from({ length: 3 }, (_, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <SkeletonLine className="h-3 w-6 shrink-0" />
+                  <SkeletonLine className="h-3 w-4/5" />
+                </div>
+              ))}
             </div>
-            <div className="mt-6 flex justify-center gap-3">
-              <SkeletonLine className="h-12 w-44" />
-              <SkeletonLine className="h-12 w-28" />
-              <span className="h-12 w-12 rounded-xl bg-white/[0.055]" />
+          </aside>
+
+          <div className="min-w-0 xl:col-start-1 xl:row-start-2">
+            <SkeletonLine className="h-3 w-20" />
+            <div className="mt-4 space-y-3">
+              {Array.from({ length: 5 }, (_, index) => (
+                <div key={index}>
+                  <div
+                    className={`overflow-hidden rounded-[1.35rem] bg-[#17181b] ${index === 0 ? "min-h-[25rem]" : "min-h-[4.75rem]"}`}
+                  >
+                    <div className="flex min-h-[4.75rem] items-center gap-4 px-4 py-4 sm:px-5">
+                      <SkeletonLine className="h-9 w-9 shrink-0 rounded-xl" />
+                      <div className="flex-1">
+                        <SkeletonLine className="h-4 w-40" />
+                        <SkeletonLine className="mt-3 h-3 w-20" />
+                      </div>
+                      <SkeletonLine className="hidden h-8 w-24 sm:block" />
+                    </div>
+                    {index === 0 ? (
+                      <>
+                        <div className="bg-black/10 px-4 py-5 sm:px-5">
+                          <SkeletonLine className="h-3 w-28" />
+                          <SkeletonLine className="mt-3 h-2 w-full rounded-full" />
+                        </div>
+                        <div className="grid gap-2.5 p-3 sm:p-4 lg:grid-cols-2">
+                          {Array.from({ length: 4 }, (_, rowIndex) => (
+                            <div
+                              key={rowIndex}
+                              className="flex min-h-[5.4rem] items-start gap-3 rounded-2xl bg-black/20 p-3.5"
+                            >
+                              <SkeletonLine className="h-8 w-8 shrink-0 rounded-xl" />
+                              <div className="flex-1">
+                                <SkeletonLine className="h-4 w-3/4" />
+                                <SkeletonLine className="mt-3 h-3 w-4/5" />
+                              </div>
+                              <SkeletonLine className="h-7 w-7 shrink-0" />
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-        <div className="mt-12 space-y-4">
-          {Array.from({ length: 4 }, (_, index) => (
-            <div key={index} className="min-h-28 rounded-[1.45rem] bg-[#17181b] p-5 sm:p-6">
-              <SkeletonLine className="h-5 w-52" />
-              <SkeletonLine className="mt-4 h-3 w-4/5" />
-            </div>
-          ))}
         </div>
       </div>
     </main>

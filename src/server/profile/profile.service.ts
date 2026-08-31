@@ -25,6 +25,8 @@ import type { PrismaService } from "../database/prisma.service";
 
 const roles = new Set<Role>(["backend", "frontend", "fullstack", "data", "ai-ml", "pm"]);
 const levels = new Set<Level>(["fresher", "0-2", "3-5", "5-plus"]);
+const dsaEditorLanguages = new Set(["javascript", "python", "cpp", "java"]);
+export type DsaEditorLanguagePreference = "javascript" | "python" | "cpp" | "java";
 
 export class ProfileService {
   constructor(private readonly prisma: PrismaService) {}
@@ -150,6 +152,27 @@ export class ProfileService {
     });
 
     return accent;
+  }
+
+  async dsaEditorLanguage(ownerId: string): Promise<DsaEditorLanguagePreference> {
+    const profile = await this.prisma.candidateProfile.findUnique({
+      where: { ownerId },
+      select: { dsaEditorLanguage: true }
+    });
+    return isDsaEditorLanguage(profile?.dsaEditorLanguage)
+      ? profile.dsaEditorLanguage
+      : "javascript";
+  }
+
+  async saveDsaEditorLanguage(
+    ownerId: string,
+    language: DsaEditorLanguagePreference
+  ): Promise<DsaEditorLanguagePreference> {
+    await this.prisma.candidateProfile.update({
+      where: { ownerId },
+      data: { dsaEditorLanguage: language }
+    });
+    return language;
   }
 
   async saveTeacher(ownerId: string, teacherId: string): Promise<string> {
@@ -307,6 +330,12 @@ function clean(value: string): string | null {
 
 function cleanNullable(value: string | null): string | null {
   return value ? clean(value) : null;
+}
+
+function isDsaEditorLanguage(
+  value: string | null | undefined
+): value is DsaEditorLanguagePreference {
+  return typeof value === "string" && dsaEditorLanguages.has(value);
 }
 
 function isRole(value: string | null): value is Role {

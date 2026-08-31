@@ -392,7 +392,7 @@ export function AskSomeone({
           onClick={() => void ask()}
           disabled={pending || !code.trim() || cooldownSeconds > 0}
           title="Ask a Trailmate who has already solved this"
-          className="inline-flex h-10 items-center gap-2 rounded-xl border border-cream/12 bg-cream/[0.05] px-3.5 text-[13px] font-medium text-cream/80 transition hover:border-cream/25 hover:text-cream disabled:pointer-events-none disabled:opacity-45"
+          className="inline-flex h-10 items-center gap-2 rounded-xl bg-cream/[0.05] px-3.5 text-[13px] font-medium text-cream/80 transition hover:bg-cream/[0.09] hover:text-cream disabled:pointer-events-none disabled:opacity-45"
         >
           {pending ? (
             <Loader2 size={13} className="animate-spin" aria-hidden="true" />
@@ -401,13 +401,6 @@ export function AskSomeone({
           )}
           {cooldownSeconds > 0 ? `Ask again in ${formatCooldown(cooldownSeconds)}` : "Ask a mate"}
         </button>
-        {helperCount === null ? null : (
-          <span className="text-[12.5px] text-cream/40">
-            {helperCount === 0
-              ? "No Trailmates are available right now. An invitation will not be sent."
-              : `${helperCount} ${helperCount === 1 ? "Trailmate is" : "Trailmates are"} available.`}
-          </span>
-        )}
       </div>
       {noticeToast}
     </>

@@ -10,6 +10,16 @@ const nextConfig: NextConfig = {
     // keeps working.
     qualities: [72, 75, 76]
   },
+  async redirects() {
+    return [
+      // Trailmate moved from /help. Notification rows persist their href, so
+      // links already sent to users still point at the old path — this keeps
+      // them working. `/help/:path*` cannot catch `/api/help/*`, which is
+      // matched from the root and stays where it is.
+      { source: "/help", destination: "/trailmate", permanent: true },
+      { source: "/help/:path*", destination: "/trailmate/:path*", permanent: true }
+    ];
+  },
   async headers() {
     return [
       {

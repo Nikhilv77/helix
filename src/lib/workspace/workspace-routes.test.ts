@@ -7,7 +7,7 @@ describe("workspace routes", () => {
     "/practice/dsa",
     "/practice/arrays-hashing",
     "/dsa-questions/two-sum",
-    "/help"
+    "/trailmate"
   ])("keeps the complete practice journey inside the workspace shell: %s", (pathname) => {
     expect(isWorkspaceChromeRoute(pathname)).toBe(true);
   });

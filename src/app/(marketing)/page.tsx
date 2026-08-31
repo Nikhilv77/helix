@@ -106,26 +106,21 @@ async function DashboardOverviewHome({
 }) {
   const ownerId = authenticatedOwnerId(userId);
   const container = getAppContainer();
-  const [reports, practice] = await Promise.all([
+  const [reports, practice, trailmate] = await Promise.all([
     container.interviewService.reportsOverview(ownerId).catch(() => null),
-    container.progressService.overview(ownerId, EMPTY_PROGRESS_INTERVIEW).catch(() => null)
+    container.progressService.overview(ownerId, EMPTY_PROGRESS_INTERVIEW).catch(() => null),
+    container.helpHistoryService.dashboardOverview(ownerId).catch(() => null)
   ]);
 
   return (
     <Dashboard
       profile={profile}
-      overviewData={buildDashboardOverview(profile, reports, practice)}
+      overviewData={buildDashboardOverview(profile, reports, practice, Date.now(), trailmate)}
     />
   );
 }
 
-async function MayaWelcomeHome({
-  userId,
-  profile
-}: {
-  userId: string;
-  profile: CandidateProfile;
-}) {
+async function MayaWelcomeHome({ userId, profile }: { userId: string; profile: CandidateProfile }) {
   const ownerId = authenticatedOwnerId(userId);
   const [frontendRoadmap, frontendPlan] =
     profile.targetRole === "fullstack"

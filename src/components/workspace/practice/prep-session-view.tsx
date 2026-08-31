@@ -2,173 +2,259 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
+  Check,
   CheckCircle2,
-  Circle,
+  ChevronDown,
   Clock3,
-  RotateCcw,
-  Sparkles
+  RotateCcw
 } from "lucide-react";
 import type {
   PrepPracticeQuestionSummary,
   PrepPracticeSession
 } from "@/lib/practice/prep-practice";
 
+/** The non-DSA sessions use the same calm, compact practice surface as DSA. */
 export function PrepSessionView({ session }: { session: PrepPracticeSession }) {
+  const next = session.recommendedQuestion;
+
   return (
-    <main className="mx-auto w-full max-w-[94rem] px-4 pb-20 pt-8 sm:px-6 lg:px-8">
-      <nav className="mb-7 flex items-center gap-2 text-sm text-cream/45" aria-label="Breadcrumb">
-        <Link
-          href="/practice"
-          className="inline-flex items-center gap-2 transition hover:text-cream"
-        >
-          <ArrowLeft size={14} aria-hidden="true" /> Practice
-        </Link>
-        <span aria-hidden="true">/</span>
-        <span className="text-cream/75">{session.title}</span>
-      </nav>
+    <main className="mx-auto w-full max-w-[86rem] px-4 pb-20 pt-7 sm:px-7 sm:pt-9 lg:px-8 lg:pt-8">
+      <Link
+        href="/practice"
+        className="mb-5 inline-flex h-9 items-center gap-2 rounded-lg px-2.5 text-[12.5px] font-semibold text-cream/52 transition hover:bg-white/[0.055] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+      >
+        <ArrowLeft size={14} aria-hidden="true" />
+        Back to Practice
+      </Link>
 
-      <section className="workspace-accent-card-glow overflow-hidden rounded-[1.75rem] border border-[color-mix(in_srgb,var(--workspace-accent)_22%,transparent)] bg-graphite-900/72 p-6 shadow-[0_26px_90px_rgba(0,0,0,0.3)] sm:p-8">
-        <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
-          <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--workspace-accent)_25%,transparent)] bg-[color-mix(in_srgb,var(--workspace-accent)_8%,transparent)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
-              <Sparkles size={13} aria-hidden="true" /> Personalized practice
-            </div>
-            <h1 className="font-display text-3xl font-semibold tracking-[-0.025em] text-cream sm:text-4xl">
-              {session.title}
-            </h1>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-cream/62 sm:text-base">
-              {session.purpose}
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              {session.covers.map((item) => (
-                <span
-                  key={item}
-                  className="rounded-full border border-white/8 bg-white/[0.035] px-3 py-1.5 text-xs text-cream/55"
-                >
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-            <div className="flex items-end justify-between gap-3">
-              <span className="text-xs font-semibold uppercase tracking-[0.13em] text-cream/38">
-                Progress
-              </span>
-              <span className="font-display text-2xl font-semibold text-cream">
-                {session.progressPercent}%
-              </span>
-            </div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/7">
-              <div
-                className="h-full rounded-full bg-[var(--workspace-accent)] transition-all"
-                style={{ width: `${session.progressPercent}%` }}
-              />
-            </div>
-            <p className="mt-3 text-xs text-cream/45">
-              {session.completedQuestions} complete · {session.attemptedQuestions} attempted ·{" "}
-              {session.totalQuestions} total
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {session.recommendedQuestion ? (
-        <section className="mt-6 rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_20%,transparent)] bg-[color-mix(in_srgb,var(--workspace-accent)_6%,transparent)] p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
-            Recommended next
-          </p>
-          <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <section className="grid min-w-0 gap-7 xl:grid-cols-[minmax(0,1fr)_17rem] xl:items-start xl:gap-x-14">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h2 className="font-display text-xl font-semibold text-cream">
-                {session.recommendedQuestion.title}
-              </h2>
-              <p className="mt-1 text-sm text-cream/52">
-                {session.recommendedQuestion.recommendationReason}
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+                Practice session
+              </p>
+              <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.035em] text-cream sm:text-[36px]">
+                {session.title}
+              </h1>
+              <p className="mt-2 max-w-3xl text-[15px] leading-6 text-cream/55">
+                {session.purpose}
               </p>
             </div>
-            <Link
-              href={session.recommendedQuestion.href}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--workspace-accent)] px-4 py-2.5 text-sm font-semibold text-graphite-950 transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)]"
-            >
-              Continue <ArrowRight size={15} aria-hidden="true" />
-            </Link>
+            <ProgressSummary session={session} />
           </div>
-        </section>
-      ) : (
-        <section className="mt-6 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.06] p-5 text-sm text-emerald-100/80">
-          This session is complete. You can still open any question below and retry it.
-        </section>
-      )}
 
-      <div className="mt-10 space-y-8">
-        {session.chapters.map((chapter) => (
-          <section key={chapter.key} aria-labelledby={`chapter-${chapter.key}`}>
-            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2
-                  id={`chapter-${chapter.key}`}
-                  className="font-display text-2xl font-semibold text-cream"
-                >
-                  {chapter.title}
-                </h2>
-                <p className="mt-1 max-w-3xl text-sm leading-6 text-cream/48">{chapter.purpose}</p>
+          <section className="mt-7 overflow-hidden rounded-[1.45rem] border border-white/[0.08] bg-[#17191b]">
+            <div className="flex flex-col gap-5 p-5 sm:p-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+                {next ? "Continue where you left off" : "Session complete"}
+              </p>
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                <div className="min-w-0">
+                  <h2 className="text-[24px] font-semibold tracking-[-0.03em] text-cream">
+                    {next?.title ?? "You finished this session"}
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-[14px] leading-6 text-cream/55">
+                    {next?.recommendationReason ??
+                      "Return to any question below whenever you want a focused retry."}
+                  </p>
+                </div>
+                {next ? (
+                  <Link
+                    href={next.href}
+                    className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-cream px-4 text-[12.5px] font-semibold text-[#171a16] transition hover:bg-white"
+                  >
+                    Continue <ArrowRight size={14} aria-hidden="true" />
+                  </Link>
+                ) : null}
               </div>
-              <span className="text-xs font-medium text-cream/38">
-                {chapter.completedQuestions}/{chapter.totalQuestions} complete
-              </span>
+              <div className="flex flex-wrap gap-2">
+                {session.covers.slice(0, 5).map((item) => (
+                  <span
+                    key={item}
+                    className="rounded-md bg-white/[0.045] px-2.5 py-1 text-[11.5px] font-medium text-cream/48"
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
             </div>
-            <div className="grid gap-3">
-              {chapter.questions.map((question) => (
-                <QuestionRow key={`${question.progressId}-${question.order}`} question={question} />
+          </section>
+
+          <section className="mt-8" aria-labelledby="session-path-heading">
+            <h2
+              id="session-path-heading"
+              className="text-[12px] font-semibold uppercase tracking-[0.14em] text-cream/52"
+            >
+              Your path
+            </h2>
+            <div className="mt-4 space-y-3">
+              {session.chapters.map((chapter, index) => (
+                <ChapterBlock key={chapter.key} chapter={chapter} index={index} />
               ))}
             </div>
           </section>
-        ))}
-      </div>
+        </div>
+
+        <aside className="rounded-[1.4rem] border border-white/[0.08] bg-[#17191b] p-5 xl:sticky xl:top-24">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+            How to practice
+          </p>
+          <h2 className="mt-2 text-[21px] font-semibold tracking-[-0.025em] text-cream">
+            Use this simple loop.
+          </h2>
+          <ol className="mt-5 space-y-4 text-[13px] leading-5 text-cream/60">
+            {[
+              "Read the prompt before looking for an answer.",
+              "Write or say your reasoning in your own words.",
+              "Use the review, then retry what needs work."
+            ].map((item, index) => (
+              <li key={item} className="flex gap-3">
+                <span className="font-mono text-[11px] font-semibold text-[var(--workspace-accent)]">
+                  0{index + 1}
+                </span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ol>
+        </aside>
+      </section>
     </main>
   );
 }
 
-function QuestionRow({ question }: { question: PrepPracticeQuestionSummary }) {
-  const complete = question.status === "COMPLETED";
-  const retry = question.attemptCount > 0 && !complete;
+function ProgressSummary({ session }: { session: PrepPracticeSession }) {
+  return (
+    <div className="w-full max-w-[20rem] rounded-xl border border-white/[0.08] bg-[#17191b] p-4 sm:w-[20rem]">
+      <p className="text-[14px] font-medium text-cream/76">
+        You&apos;ve completed {session.completedQuestions} of {session.totalQuestions} questions.
+      </p>
+      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/[0.09]">
+        <span
+          className="block h-full rounded-full bg-[var(--workspace-accent)]"
+          style={{ width: `${session.progressPercent}%` }}
+        />
+      </div>
+      <p className="mt-2 text-[11.5px] text-cream/38">
+        {session.attemptedQuestions} attempted · {session.progressPercent}% complete
+      </p>
+    </div>
+  );
+}
+
+function ChapterBlock({
+  chapter,
+  index
+}: {
+  chapter: PrepPracticeSession["chapters"][number];
+  index: number;
+}) {
+  const completed = chapter.completedQuestions === chapter.totalQuestions;
+  const percent = chapter.totalQuestions
+    ? Math.round((chapter.completedQuestions / chapter.totalQuestions) * 100)
+    : 0;
+  return (
+    <details
+      className="group overflow-hidden rounded-[1.4rem] bg-[#17191b] transition-colors hover:bg-[#1a1b1e]"
+      open={index === 0}
+    >
+      <summary className="flex min-h-[4.75rem] cursor-pointer list-none items-center gap-3.5 px-4 py-4 [&::-webkit-details-marker]:hidden sm:gap-4 sm:px-5">
+        <span
+          className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/[0.045] text-[13px] font-semibold ${completed ? "text-[var(--workspace-accent)]" : "text-cream/48"}`}
+        >
+          {completed ? <Check size={14} aria-hidden="true" /> : index + 1}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="text-[17px] font-semibold tracking-[-0.02em] text-cream sm:text-[18px]">
+            {chapter.title}
+          </span>
+          <span className="mt-1.5 block text-[12px] text-cream/42">{chapter.purpose}</span>
+        </span>
+        <span className="hidden w-32 shrink-0 sm:block">
+          <span className="flex items-baseline justify-between text-[13px] font-semibold tabular-nums">
+            <span className="text-cream/72">{chapter.completedQuestions} complete</span>
+            <span className="text-[var(--workspace-accent)]">{percent}%</span>
+          </span>
+          <span className="mt-2 block h-1 overflow-hidden rounded-full bg-white/[0.07]">
+            <span
+              className="block h-full rounded-full bg-[var(--workspace-accent)]"
+              style={{ width: `${percent}%` }}
+            />
+          </span>
+        </span>
+        <ChevronDown
+          size={16}
+          aria-hidden="true"
+          className="shrink-0 text-cream/40 transition-transform duration-200 group-open:rotate-180"
+        />
+      </summary>
+      <div className="grid gap-2.5 px-3 pb-3 sm:px-4 sm:pb-4 lg:grid-cols-2">
+        {chapter.questions.map((question, questionIndex) => (
+          <QuestionRow
+            key={`${question.progressId}-${question.order}`}
+            question={question}
+            index={questionIndex}
+          />
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function QuestionRow({
+  question,
+  index
+}: {
+  question: PrepPracticeQuestionSummary;
+  index: number;
+}) {
+  const completed = question.status === "COMPLETED";
+  const retry = question.attemptCount > 0 && !completed;
   return (
     <Link
       href={question.href}
-      className="group grid gap-3 rounded-2xl border border-white/8 bg-graphite-900/60 px-4 py-4 transition hover:border-[color-mix(in_srgb,var(--workspace-accent)_28%,transparent)] hover:bg-graphite-900/82 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)] sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:px-5"
+      className="group flex min-h-[5.25rem] items-center gap-3 rounded-xl bg-black/[0.28] p-3.5 transition hover:bg-black/[0.42]"
     >
-      <span className={complete ? "text-emerald-300" : retry ? "text-amber-300" : "text-cream/25"}>
-        {complete ? (
-          <CheckCircle2 size={20} aria-hidden="true" />
+      <span
+        className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[12px] font-semibold ${completed ? "bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]" : "bg-white/[0.045] text-cream/45"}`}
+      >
+        {completed ? (
+          <CheckCircle2 size={15} aria-hidden="true" />
         ) : retry ? (
-          <RotateCcw size={19} aria-hidden="true" />
+          <RotateCcw size={14} aria-hidden="true" />
         ) : (
-          <Circle size={19} aria-hidden="true" />
+          index + 1
         )}
       </span>
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="font-semibold text-cream/88 transition group-hover:text-cream">
+      <span className="min-w-0 flex-1">
+        <span className="flex flex-wrap items-center gap-2">
+          <span
+            className={`truncate text-[14px] font-semibold ${completed ? "text-cream/55" : "text-cream/88"}`}
+          >
             {question.title}
-          </h3>
-          <span className="rounded-full bg-white/[0.045] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.11em] text-cream/38">
-            {question.format}
           </span>
-          <span className="text-[11px] capitalize text-cream/35">{question.difficulty}</span>
-        </div>
-        <p className="mt-1 line-clamp-1 text-sm text-cream/43">{question.objective}</p>
-      </div>
-      <div className="flex items-center gap-3 text-xs text-cream/38">
-        <span className="inline-flex items-center gap-1">
-          <Clock3 size={13} aria-hidden="true" /> {question.expectedMinutes}m
+          {completed ? (
+            <span className="rounded-full bg-[var(--workspace-accent-soft)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.11em] text-[var(--workspace-accent)]">
+              Solved
+            </span>
+          ) : null}
         </span>
-        <ArrowRight
-          size={16}
-          className="transition group-hover:translate-x-0.5 group-hover:text-[var(--workspace-accent)]"
-          aria-hidden="true"
-        />
-      </div>
+        <span className="mt-1.5 flex items-center gap-2 text-[11.5px] text-cream/42">
+          <span className="capitalize">{question.format}</span>
+          <span>·</span>
+          <span className="capitalize">{question.difficulty}</span>
+          <span>·</span>
+          <span className="inline-flex items-center gap-1">
+            <Clock3 size={11} aria-hidden="true" />
+            {question.expectedMinutes} min
+          </span>
+        </span>
+      </span>
+      <ArrowRight
+        size={15}
+        aria-hidden="true"
+        className="shrink-0 text-cream/30 transition group-hover:translate-x-0.5 group-hover:text-cream/70"
+      />
     </Link>
   );
 }

@@ -43,7 +43,7 @@ export default async function RootLoading() {
 
   if (pathname.startsWith("/practice/")) return <DsaPracticeSkeleton />;
 
-  if (pathname === "/help") return <HelpHubSkeleton />;
+  if (pathname === "/trailmate") return <HelpHubSkeleton />;
 
   if (manageRoute) {
     return (

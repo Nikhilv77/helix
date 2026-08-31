@@ -117,7 +117,7 @@ export function HelpInbox({
   useEffect(() => {
     if (!autoJoinRequestId) return;
     if (!claimed.some((item) => item.id === autoJoinRequestId)) return;
-    router.replace(peerHelpRoomHref(autoJoinRequestId, "/help"));
+    router.replace(peerHelpRoomHref(autoJoinRequestId, "/trailmate"));
   }, [autoJoinRequestId, claimed, router]);
 
   const act = useCallback(

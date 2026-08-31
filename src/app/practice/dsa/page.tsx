@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { DsaTopics } from "@/components/workspace/dsa/dsa-topics";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
@@ -20,7 +22,14 @@ export default async function DsaPracticePage() {
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-[92rem] px-4 pb-20 pt-10 sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
+    <div className="mx-auto w-full max-w-[86rem] px-4 pb-20 pt-7 sm:px-7 sm:pt-9 lg:px-8 lg:pt-8">
+      <Link
+        href="/practice"
+        className="mb-5 inline-flex h-9 items-center gap-2 rounded-lg px-2.5 text-[12.5px] font-semibold text-cream/52 transition hover:bg-white/[0.055] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+      >
+        <ArrowLeft size={14} aria-hidden="true" />
+        Back to Practice
+      </Link>
       {plan ? (
         <DsaTopics plan={plan} roadmap={roadmap} questionStatuses={questionStatuses} />
       ) : (

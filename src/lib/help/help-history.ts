@@ -73,3 +73,8 @@ export interface HelpOverview {
   activeConversation: ActivePeerHelp | null;
   topHelpers: TopPeerHelper[];
 }
+
+export type HelpDashboardOverview = Pick<
+  HelpOverview,
+  "helpReceived" | "peopleHelped" | "activeConversation"
+>;

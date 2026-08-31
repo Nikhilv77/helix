@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import type {
   ActivePeerHelp,
   CurrentPeerHelpEngagement,
+  HelpDashboardOverview,
   HelpHistoryFilter,
   HelpHistoryItem,
   HelpHistoryPage,
@@ -82,6 +83,25 @@ export class HelpHistoryService {
       availabilityCredits,
       activeConversation,
       topHelpers
+    };
+  }
+
+  /** Lightweight read for the home dashboard; skips rankings and recognition queries. */
+  async dashboardOverview(ownerId: string): Promise<HelpDashboardOverview> {
+    const [helpReceived, helpedPeople, activeConversation] = await Promise.all([
+      this.prisma.helpRequest.count({ where: { learnerId: ownerId } }),
+      this.prisma.helpRequest.findMany({
+        where: { helperId: ownerId, status: HelpRequestStatus.RESOLVED },
+        select: { learnerId: true },
+        distinct: ["learnerId"]
+      }),
+      this.activeConversation(ownerId)
+    ]);
+
+    return {
+      helpReceived,
+      peopleHelped: new Set(helpedPeople.map((row) => row.learnerId)).size,
+      activeConversation
     };
   }
 

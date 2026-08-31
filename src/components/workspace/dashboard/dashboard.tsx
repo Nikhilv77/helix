@@ -2,6 +2,9 @@ import { DocumentTitle } from "@/components/document-title";
 import { MayaWelcome } from "./maya-welcome";
 import { MayaWelcomeLoading } from "./maya-welcome-loading";
 import { DashboardFirstRow } from "./dashboard-first-row";
+import { DashboardSecondRow } from "./dashboard-second-row";
+import { DashboardThirdRow } from "./dashboard-third-row";
+import { DashboardFourthRow } from "./dashboard-fourth-row";
 import type { DashboardOverviewData } from "@/lib/dashboard/dashboard-overview";
 import type { FrontendDsaPlan } from "@/lib/roadmap/frontend-plan";
 import type { CandidateProfile, Role } from "@/lib/shared/types";
@@ -44,9 +47,16 @@ export function Dashboard({
   if (!overviewData) return null;
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-[84rem] px-4 pb-20 pt-7 text-cream sm:px-6 sm:pt-9 lg:px-8 lg:pt-11">
+    <main className="min-h-screen w-full overflow-hidden bg-black text-cream">
       <DocumentTitle title="Overview" />
-      <DashboardFirstRow data={overviewData} />
+      <div className="mx-auto w-full max-w-[84rem] px-4 pb-20 pt-7 sm:px-6 sm:pt-9 lg:px-8 lg:pt-11">
+        <DashboardFirstRow
+          data={{ coaching: overviewData.coaching, readiness: overviewData.readiness }}
+        />
+        <DashboardFourthRow data={overviewData.direction} />
+        <DashboardSecondRow data={overviewData.continuation} />
+        <DashboardThirdRow data={overviewData.explore} />
+      </div>
     </main>
   );
 }

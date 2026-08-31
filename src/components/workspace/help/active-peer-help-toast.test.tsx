@@ -48,7 +48,7 @@ describe("ActivePeerHelpToast", () => {
     fireEvent.click(screen.getByRole("button", { name: "Join" }));
     await waitFor(() =>
       expect(routerPush).toHaveBeenCalledWith(
-        "/help/room/00000000-0000-4000-8000-000000000001?from=%2Fpractice"
+        "/trailmate/room/00000000-0000-4000-8000-000000000001?from=%2Fpractice"
       )
     );
   });

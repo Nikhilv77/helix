@@ -55,7 +55,7 @@ describe("HelpRequestToast", () => {
           body: JSON.stringify({ action: "claim" })
         })
       );
-      expect(routerPush).toHaveBeenCalledWith(`/help/room/${request.id}?from=%2F`);
+      expect(routerPush).toHaveBeenCalledWith(`/trailmate/room/${request.id}?from=%2F`);
     });
   });
 

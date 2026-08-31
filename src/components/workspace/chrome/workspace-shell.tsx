@@ -6,6 +6,7 @@ import { ReactNode, useEffect, useRef, useState } from "react";
 import { useLinkStatus } from "next/link";
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import { GoSidebarCollapse } from "react-icons/go";
+import { UpgradeCard, UpgradeRailButton } from "@/components/workspace/chrome/upgrade-card";
 import { NotificationInbox } from "./notification-inbox";
 import {
   Braces,
@@ -56,7 +57,7 @@ const navGroups = [
   },
   {
     label: "Community",
-    items: [{ label: "Trailmate", href: "/help", icon: HandHelping }]
+    items: [{ label: "Trailmate", href: "/trailmate", icon: HandHelping }]
   },
   {
     label: "Account",
@@ -538,6 +539,10 @@ export function WorkspaceShell({
 
           <span className="flex-1" />
 
+          {/* Only when the panel is collapsed: expanded, the panel already
+              carries the full card and two of them would shout. */}
+          {collapsed ? <UpgradeRailButton onNavigate={() => setMenuOpen(false)} /> : null}
+
           <Link
             href="/manage"
             aria-label="Settings"
@@ -623,6 +628,8 @@ export function WorkspaceShell({
               );
             })}
           </nav>
+
+          <UpgradeCard onNavigate={() => setMenuOpen(false)} />
 
           <div className="mt-3 hidden shrink-0 items-center rounded-xl bg-black/15 px-3 py-2.5 md:flex">
             <Link

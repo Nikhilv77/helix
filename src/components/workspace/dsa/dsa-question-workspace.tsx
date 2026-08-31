@@ -1,17 +1,28 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, Code2, Loader2, Play, RotateCcw, XCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  CheckCircle2,
+  ChevronDown,
+  Code2,
+  FlaskConical,
+  Loader2,
+  Play,
+  RotateCcw,
+  XCircle
+} from "lucide-react";
 import {
   DsaCodeEditor,
   type DsaEditorLanguage,
   type DsaEditorSelection
 } from "@/components/interview/dsa/dsa-code-editor";
-import { DsaQuestionNotes } from "@/components/interview/dsa/dsa-question-notes";
 import { AskSomeone } from "./ask-someone";
+import { DsaTeacherFeedback, type DsaTeacherFeedbackState } from "./dsa-teacher-feedback";
 import { PracticeLanguagePicker } from "./practice-language-picker";
 import { dsaStarterCode, supportedDsaCodeLanguages } from "@/lib/dsa/dsa-code-templates";
 import { dsaCodeDraftKey, readDsaCodeDraft, writeDsaCodeDraft } from "@/lib/dsa/code-draft";
+import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import type { DsaQuestion } from "@/lib/dsa/dsa";
 
 type RunTest = {
@@ -41,15 +52,42 @@ const LANGUAGES: Array<{ value: DsaEditorLanguage; label: string }> = [
   { value: "java", label: "Java" }
 ];
 
-export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
-  const [language, setLanguage] = useState<DsaEditorLanguage>("javascript");
-  const [code, setCode] = useState(() => dsaStarterCode(question, "javascript"));
+export function DsaQuestionWorkspace({
+  question,
+  initialStatus = null,
+  initialLanguage = "javascript"
+}: {
+  question: DsaQuestion;
+  initialStatus?: string | null;
+  initialLanguage?: DsaEditorLanguage;
+}) {
+  const router = useRouter();
+  const teacher = useWorkspaceTeacher();
+  const [language, setLanguage] = useState<DsaEditorLanguage>(() =>
+    preferredLanguageFor(question.slug, initialLanguage)
+  );
+  const [code, setCode] = useState(() =>
+    dsaStarterCode(question, preferredLanguageFor(question.slug, initialLanguage))
+  );
   const [result, setResult] = useState<RunResult | null>(null);
   const [selection, setSelection] = useState<DsaEditorSelection | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [outputOpen, setOutputOpen] = useState(false);
+  const [teacherFeedback, setTeacherFeedback] = useState<DsaTeacherFeedbackState>({
+    status: "idle"
+  });
   const pendingRunId = useRef<string | null>(null);
   const loadedDraftKey = useRef<string | null>(null);
+  const completionRecorded = useRef(initialStatus === "COMPLETED");
+  const feedbackShownForQuestion = useRef(initialStatus === "COMPLETED");
+  const lastAcceptedRun = useRef<{
+    code: string;
+    language: DsaEditorLanguage;
+    testsPassed: number;
+    testCount: number;
+  } | null>(null);
+  const feedbackSignature = useRef<string | null>(null);
 
   const examples = useMemo(() => question.examples?.slice(0, 10) ?? [], [question.examples]);
   const languages = useMemo(() => {
@@ -61,12 +99,18 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
   const startedAt = useRef(Date.now());
 
   useEffect(() => {
+    completionRecorded.current = initialStatus === "COMPLETED";
+    feedbackShownForQuestion.current = initialStatus === "COMPLETED";
+  }, [initialStatus, question.slug]);
+
+  useEffect(() => {
     const key = dsaCodeDraftKey(question.slug, language);
     const saved = readDsaCodeDraft(window.localStorage, question.slug, language);
     setCode(saved ?? dsaStarterCode(question, language));
     setResult(null);
     setError(null);
     setSelection(null);
+    setOutputOpen(false);
     loadedDraftKey.current = key;
   }, [language, question]);
 
@@ -84,17 +128,44 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
     ? [result.compileOutput, result.stderr, result.stdout].filter(Boolean).join("\n").trim() ||
       `${result.status}: ${failingTests} of ${result.tests.length} failing`
     : null;
+  const askSomeone = (
+    <AskSomeone
+      slug={question.slug}
+      title={question.title}
+      language={language}
+      code={code}
+      testOutput={testOutput}
+      failingTests={failingTests}
+      runStatus={result?.status ?? null}
+      tests={
+        result?.tests.map((test) => ({
+          index: test.index,
+          input: test.input,
+          expectedOutput: test.expectedOutput,
+          actualOutput: test.actualOutput ?? "",
+          passed: test.passed,
+          error: test.error ?? null
+        })) ?? null
+      }
+      selection={selection}
+      startedAt={startedAt.current}
+    />
+  );
 
   function changeLanguage(nextLanguage: DsaEditorLanguage) {
+    if (nextLanguage === language) return;
     setLanguage(nextLanguage);
     setResult(null);
     setError(null);
+    setOutputOpen(false);
+    void saveDsaEditorLanguage(nextLanguage).catch(() => undefined);
   }
 
   function resetCode() {
     setCode(dsaStarterCode(question, language));
     setResult(null);
     setError(null);
+    setOutputOpen(false);
   }
 
   async function runCode() {
@@ -102,6 +173,8 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
     setRunning(true);
     setError(null);
     setResult(null);
+    setOutputOpen(true);
+    setTeacherFeedback({ status: "idle" });
     const requestId = pendingRunId.current ?? crypto.randomUUID();
     pendingRunId.current = requestId;
 
@@ -125,6 +198,27 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
 
       setResult(payload.data);
       pendingRunId.current = null;
+      if (payload.data.accepted && !feedbackShownForQuestion.current) {
+        // One debrief belongs to the first successful solve. Subsequent runs
+        // remain available for practice, without repeatedly interrupting it.
+        feedbackShownForQuestion.current = true;
+        const acceptedRun = {
+          code,
+          language,
+          testsPassed: payload.data.tests.filter((test) => test.passed).length,
+          testCount: payload.data.tests.length
+        };
+        lastAcceptedRun.current = acceptedRun;
+        void requestTeacherFeedback(acceptedRun);
+      }
+      if (payload.data.accepted && !completionRecorded.current) {
+        completionRecorded.current = true;
+        void recordSolved(question.slug)
+          .then(() => router.refresh())
+          .catch(() => {
+            completionRecorded.current = false;
+          });
+      }
     } catch (runError) {
       setError(runError instanceof Error ? runError.message : "Code execution failed.");
     } finally {
@@ -132,11 +226,65 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
     }
   }
 
+  async function requestTeacherFeedback(run: NonNullable<typeof lastAcceptedRun.current>) {
+    const signature = `${question.slug}:${run.language}:${run.code}`;
+    if (feedbackSignature.current === signature) return;
+    feedbackSignature.current = signature;
+    setTeacherFeedback({ status: "loading", code: run.code, language: run.language });
+
+    try {
+      const response = await fetch("/api/dsa/practice-feedback", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          slug: question.slug,
+          code: run.code,
+          language: run.language,
+          testsPassed: run.testsPassed,
+          testCount: run.testCount,
+          teacherId: teacher.id
+        })
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        success?: boolean;
+        data?: { headline: string; markdown: string; voiceScript: string; followUp: string };
+        error?: { message?: string };
+      } | null;
+      if (!response.ok || !payload?.success || !payload.data) {
+        throw new Error(
+          payload?.error?.message ?? "Your teacher could not review this run just now."
+        );
+      }
+      setTeacherFeedback({
+        status: "ready",
+        feedback: payload.data,
+        code: run.code,
+        language: run.language
+      });
+    } catch (feedbackError) {
+      feedbackSignature.current = null;
+      setTeacherFeedback({
+        status: "error",
+        code: run.code,
+        language: run.language,
+        message:
+          feedbackError instanceof Error
+            ? feedbackError.message
+            : "Your teacher could not review this run just now."
+      });
+    }
+  }
+
   return (
-    <section className="practice-editor-shell mt-0 min-w-0 overflow-hidden rounded-[1.5rem]">
-      <div className="practice-editor-header flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
-        <div className="flex items-center gap-2.5 text-[15px] font-semibold text-cream">
-          <Code2 size={17} aria-hidden="true" style={{ color: "var(--workspace-accent)" }} />
+    <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#101214] xl:h-full">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 bg-[#141619] px-3 py-2 sm:px-4">
+        <p className="text-[13.5px] text-cream/38 font-semibold">Need another perspective?</p>
+        {askSomeone}
+      </div>
+
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/[0.07] px-3 py-2 sm:px-4">
+        <div className="flex items-center gap-2 text-[13.5px] font-semibold text-cream/88">
+          <Code2 size={15} aria-hidden="true" className="text-[var(--workspace-accent)]" />
           Solution
         </div>
         <div className="flex items-center gap-2">
@@ -147,7 +295,7 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
             disabled={running}
             aria-label="Reset code to the starter template"
             title="Reset starter code"
-            className="grid h-10 w-10 place-items-center rounded-xl bg-cream/[0.055] text-cream/55 transition hover:bg-cream/[0.1] hover:text-cream disabled:pointer-events-none disabled:opacity-45"
+            className="grid h-9 w-9 place-items-center rounded-lg bg-white/[0.05] text-cream/48 transition hover:bg-white/[0.085] hover:text-cream disabled:pointer-events-none disabled:opacity-45"
           >
             <RotateCcw size={14} aria-hidden="true" />
           </button>
@@ -155,7 +303,7 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
             type="button"
             onClick={() => void runCode()}
             disabled={running || !code.trim()}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[13px] font-semibold text-[#171a16] transition hover:bg-white disabled:pointer-events-none disabled:opacity-45"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-cream px-3.5 text-[12.5px] font-semibold text-[#171a16] transition hover:bg-white disabled:pointer-events-none disabled:opacity-45"
           >
             {running ? (
               <Loader2 size={13} className="animate-spin" aria-hidden="true" />
@@ -167,7 +315,7 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
         </div>
       </div>
 
-      <div className="h-[31rem] min-h-0 overflow-hidden bg-[#0b0d10] sm:h-[37rem] lg:h-[calc(100svh-19rem)] lg:min-h-[34rem] lg:max-h-[48rem]">
+      <div className="h-[32rem] min-h-0 overflow-hidden bg-[#0b0d10] sm:h-[38rem] xl:h-auto xl:flex-1">
         <DsaCodeEditor
           language={language}
           value={code}
@@ -177,42 +325,73 @@ export function DsaQuestionWorkspace({ question }: { question: DsaQuestion }) {
         />
       </div>
 
-      <RunOutput examples={examples} result={result} running={running} error={error} />
+      {outputOpen ? (
+        <RunOutput examples={examples} result={result} running={running} error={error} />
+      ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-black/10 px-4 pb-3 sm:px-5">
-        <p className="text-[12.5px] text-cream/40">
-          Stuck after a few tries? Maya explains instantly — a person takes longer but explains it
-          their way.
-        </p>
-        <AskSomeone
-          slug={question.slug}
-          title={question.title}
-          language={language}
-          code={code}
-          testOutput={testOutput}
-          failingTests={failingTests}
-          runStatus={result?.status ?? null}
-          tests={
-            result?.tests.map((test) => ({
-              index: test.index,
-              input: test.input,
-              expectedOutput: test.expectedOutput,
-              actualOutput: test.actualOutput ?? "",
-              passed: test.passed,
-              error: test.error ?? null
-            })) ?? null
-          }
-          selection={selection}
-          startedAt={startedAt.current}
-        />
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-white/[0.07] bg-[#141619] px-3 py-2 sm:px-4">
+        <button
+          type="button"
+          onClick={() => setOutputOpen((open) => !open)}
+          aria-expanded={outputOpen}
+          className="inline-flex h-9 items-center gap-2 rounded-lg px-2.5 text-[12.5px] font-semibold text-cream/58 transition hover:bg-white/[0.05] hover:text-cream"
+        >
+          <FlaskConical size={13} aria-hidden="true" />
+          Test cases
+          {result ? (
+            <span
+              className={[
+                "h-1.5 w-1.5 rounded-full",
+                result.accepted ? "bg-[var(--workspace-accent)]" : "bg-[#ff8f8f]"
+              ].join(" ")}
+            />
+          ) : null}
+          <ChevronDown
+            size={13}
+            aria-hidden="true"
+            className={`transition-transform ${outputOpen ? "rotate-180" : ""}`}
+          />
+        </button>
       </div>
 
-      <div className="bg-black/10 px-4 pb-4 sm:px-5">
-        <p className="mb-3 text-[12px] text-cream/35">Code drafts save on this device.</p>
-        <DsaQuestionNotes slug={question.slug} />
-      </div>
+      <DsaTeacherFeedback
+        state={teacherFeedback}
+        onClose={() => setTeacherFeedback({ status: "idle" })}
+        onRetry={() => {
+          if (lastAcceptedRun.current) void requestTeacherFeedback(lastAcceptedRun.current);
+        }}
+      />
     </section>
   );
+}
+
+async function recordSolved(slug: string): Promise<void> {
+  const response = await fetch("/api/roadmap/question-attempt", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({
+      requestId: crypto.randomUUID(),
+      dsaQuestionSlug: slug,
+      action: "complete"
+    })
+  });
+
+  if (!response.ok) throw new Error("Could not save completion");
+}
+
+async function saveDsaEditorLanguage(language: DsaEditorLanguage): Promise<void> {
+  await fetch("/api/account/dsa-language", {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    keepalive: true,
+    body: JSON.stringify({ language })
+  });
+}
+
+function preferredLanguageFor(slug: string, preferred: DsaEditorLanguage): DsaEditorLanguage {
+  const supported = supportedDsaCodeLanguages(slug);
+  return supported.includes(preferred) ? preferred : (supported[0] ?? "javascript");
 }
 
 function RunOutput({
@@ -227,7 +406,11 @@ function RunOutput({
   error: string | null;
 }) {
   return (
-    <section className="bg-black/10 px-4 py-4 sm:px-5" aria-live="polite" aria-busy={running}>
+    <section
+      className="thin-scroll max-h-[16rem] shrink-0 overflow-y-auto border-t border-white/[0.07] bg-black/10 px-4 py-4 sm:px-5"
+      aria-live="polite"
+      aria-busy={running}
+    >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h3 className="text-[15px] font-semibold text-cream">Test results</h3>
@@ -264,7 +447,7 @@ function RunOutput({
         )}
       </div>
 
-      <div className="mt-4 max-h-72 overflow-y-auto pr-1">
+      <div className="mt-4 pr-1">
         {error ? (
           <p role="alert" className="text-sm leading-6 text-[#ffb4b4]">
             {error}

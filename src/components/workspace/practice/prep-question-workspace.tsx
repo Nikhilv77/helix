@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
-  ChevronDown,
+  CheckCircle2,
   Clock3,
   Lightbulb,
   Loader2,
@@ -39,7 +39,7 @@ export function PrepQuestionWorkspace({ question }: { question: PrepPracticeQues
   const [submitting, setSubmitting] = useState<"submit" | "skip" | null>(null);
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [noteOpen, setNoteOpen] = useState(Boolean(question.note));
+  const [panel, setPanel] = useState<"description" | "hints" | "review" | "notes">("description");
   const [dictationState, setDictationState] = useState<"idle" | "listening" | "stopping">("idle");
   const startedAt = useRef(Date.now());
   const mounted = useRef(true);
@@ -173,6 +173,7 @@ export function PrepQuestionWorkspace({ question }: { question: PrepPracticeQues
       };
       setReview(payload.data.review);
       setStatus(payload.data.status);
+      setPanel("review");
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Your answer could not be saved.");
@@ -296,130 +297,355 @@ export function PrepQuestionWorkspace({ question }: { question: PrepPracticeQues
   }
 
   const complete = status === "COMPLETED";
-  return (
-    <main className="mx-auto w-full max-w-[96rem] px-4 pb-20 pt-6 sm:px-6 lg:px-8">
-      <nav
-        className="mb-5 flex flex-wrap items-center gap-2 text-sm text-cream/45"
-        aria-label="Breadcrumb"
-      >
-        <Link
-          href="/practice"
-          onClick={(event) => void navigateAfterSave(event, "/practice")}
-          className="transition hover:text-cream"
-        >
-          Practice
-        </Link>
-        <span>/</span>
-        <Link
-          href={question.sessionHref}
-          onClick={(event) => void navigateAfterSave(event, question.sessionHref)}
-          className="transition hover:text-cream"
-        >
-          {question.sessionTitle}
-        </Link>
-        <span>/</span>
-        <span className="text-cream/75">Question {question.order}</span>
-      </nav>
+  const nextHref = question.nextHref ?? question.sessionHref;
+  const nextLabel = question.nextHref ? "Next question" : "Review session";
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(21rem,0.8fr)]">
-        <section className="workspace-accent-card-glow rounded-[1.6rem] border border-[color-mix(in_srgb,var(--workspace-accent)_22%,transparent)] bg-graphite-900/75 p-5 shadow-[0_26px_90px_rgba(0,0,0,0.28)] sm:p-7">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/7 pb-5">
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="rounded-full bg-[color-mix(in_srgb,var(--workspace-accent)_10%,transparent)] px-2.5 py-1 font-semibold uppercase tracking-[0.12em] text-[var(--workspace-accent)]">
-                {question.format}
+  return (
+    <main className="w-full bg-black p-2 sm:p-3 xl:h-[calc(100svh-4.25rem)] xl:overflow-hidden">
+      <div className="mx-auto flex w-full max-w-[112rem] flex-col gap-2 xl:h-full">
+        <header className="flex shrink-0 flex-wrap items-center gap-3 rounded-xl border border-white/[0.08] bg-[#141619] px-3 py-2.5 sm:px-4">
+          <Link
+            href={question.sessionHref}
+            onClick={(event) => void navigateAfterSave(event, question.sessionHref)}
+            aria-label={`Back to ${question.sessionTitle}`}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-cream/58 transition hover:bg-white/[0.055] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+          >
+            <ArrowLeft size={16} aria-hidden="true" />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="truncate text-[16px] font-semibold tracking-[-0.02em] text-cream sm:text-[18px]">
+                {question.title}
+              </h1>
+              <span className="rounded-md bg-white/[0.06] px-2 py-1 text-[10.5px] font-semibold text-cream/54 capitalize">
+                {question.difficulty}
               </span>
-              <span className="capitalize text-cream/42">{question.difficulty}</span>
-              <span className="inline-flex items-center gap-1 text-cream/42">
-                <Clock3 size={13} /> {question.expectedMinutes} min
+              <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-2 py-1 text-[10.5px] font-medium text-cream/52">
+                <Clock3 size={11} aria-hidden="true" /> {question.expectedMinutes} min
+              </span>
+              <span className="hidden rounded-md bg-white/[0.06] px-2 py-1 text-[10.5px] font-medium text-cream/52 sm:inline">
+                {question.chapterTitle}
               </span>
             </div>
-            <span className="text-xs text-cream/35">
-              {question.order} of {question.totalInSession}
-            </span>
           </div>
-          <p className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-cream/38">
-            {question.chapterTitle}
-          </p>
-          <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.025em] text-cream">
-            {question.title}
-          </h1>
-          <p className="mt-5 whitespace-pre-wrap text-base leading-8 text-cream/78">
-            {question.prompt}
-          </p>
-          <div className="mt-6 rounded-xl border border-white/7 bg-black/18 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-cream/36">
-              What this practices
-            </p>
-            <p className="mt-2 text-sm leading-6 text-cream/58">{question.objective}</p>
-          </div>
-
-          <div className="mt-7">
-            {question.format === "mcq" ? (
-              <fieldset className="space-y-3">
-                <legend className="mb-3 text-sm font-semibold text-cream/72">
-                  Choose one answer
-                </legend>
-                {question.options.map((option, index) => {
-                  const selected = selectedOption === index;
-                  const correctAfterReview = review?.correctOptionIndex === index;
-                  return (
-                    <label
-                      key={option}
-                      className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition ${correctAfterReview ? "border-emerald-400/35 bg-emerald-400/[0.07]" : selected ? "border-[var(--workspace-accent)]/50 bg-[color-mix(in_srgb,var(--workspace-accent)_7%,transparent)]" : "border-white/8 bg-black/15 hover:border-white/15"}`}
-                    >
-                      <input
-                        type="radio"
-                        name="practice-option"
-                        checked={selected}
-                        onChange={() => {
-                          setSelectedOption(index);
-                          scheduleDraftSave(`option:${index}`);
-                        }}
-                        className="mt-1 accent-[var(--workspace-accent)]"
-                      />
-                      <span className="text-sm leading-6 text-cream/72">{option}</span>
-                    </label>
-                  );
-                })}
-              </fieldset>
+          <div className="ml-auto flex items-center gap-2">
+            {complete ? (
+              <span className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--workspace-accent-soft)] px-3 text-[12px] font-semibold text-[var(--workspace-accent)]">
+                <CheckCircle2 size={14} aria-hidden="true" /> Solved
+              </span>
             ) : (
-              <div>
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <label htmlFor="practice-answer" className="text-sm font-semibold text-cream/72">
+              <button
+                type="button"
+                onClick={() => void attempt("skip")}
+                disabled={Boolean(submitting)}
+                aria-label="Skip for now"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/[0.065] px-3 text-[12px] font-semibold text-cream/72 transition hover:bg-white/[0.1] hover:text-cream disabled:opacity-60"
+              >
+                {submitting === "skip" ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <SkipForward size={14} />
+                )}
+                <span className="hidden sm:inline">Skip question</span>
+                <span className="sm:hidden">Skip</span>
+              </button>
+            )}
+            <Link
+              href={nextHref}
+              onClick={(event) => void navigateAfterSave(event, nextHref)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/[0.065] px-3 text-[12px] font-semibold text-cream/72 transition hover:bg-white/[0.1] hover:text-cream"
+            >
+              {navigatingTo === nextHref ? <Loader2 size={14} className="animate-spin" /> : null}
+              <span className="hidden sm:inline">{nextLabel}</span>
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+          </div>
+        </header>
+
+        <div className="grid min-h-0 flex-1 gap-2 xl:grid-cols-[minmax(22rem,0.82fr)_minmax(34rem,1.18fr)]">
+          <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#141619]">
+            <div
+              role="tablist"
+              aria-label="Question reference"
+              className="thin-scroll flex shrink-0 items-center gap-1 overflow-x-auto border-b border-white/[0.07] px-2 pt-2"
+            >
+              {[
+                ["description", "Description"],
+                ["hints", "Hints"],
+                ["review", "Review"],
+                ["notes", "Notes"]
+              ].map(([id, label]) => {
+                const selected = panel === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setPanel(id as typeof panel)}
+                    className={`relative h-10 shrink-0 rounded-t-lg px-3 text-[13px] font-semibold transition-colors ${selected ? "text-cream" : "text-cream/42 hover:bg-white/[0.035] hover:text-cream/72"}`}
+                  >
+                    {label}
+                    {id === "hints" && question.hints.length ? (
+                      <span className="ml-1.5 text-[11px] tabular-nums text-cream/34">
+                        {revealedHints}/{question.hints.length}
+                      </span>
+                    ) : null}
+                    {selected ? (
+                      <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-[var(--workspace-accent)]" />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="thin-scroll min-h-[26rem] flex-1 overflow-y-auto px-5 py-5 sm:px-6 xl:min-h-0">
+              {panel === "description" ? (
+                <div className="space-y-7">
+                  <section>
+                    <p className="text-[13px] font-semibold text-cream/88">
+                      Question {question.order} of {question.totalInSession}
+                    </p>
+                    <p className="mt-3 whitespace-pre-wrap text-[14.5px] leading-7 text-cream/72">
+                      {question.prompt}
+                    </p>
+                  </section>
+                  <section className="rounded-xl border border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] p-4">
+                    <div className="flex items-center gap-2 text-[13px] font-semibold text-cream">
+                      <Sparkles
+                        size={15}
+                        aria-hidden="true"
+                        className="text-[var(--workspace-accent)]"
+                      />
+                      What this practices
+                    </div>
+                    <p className="mt-3 text-[13.5px] leading-6 text-cream/72">
+                      {question.objective}
+                    </p>
+                  </section>
+                  {review ? (
+                    <ReviewSummary review={review} />
+                  ) : (
+                    <section className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
+                      <div className="flex items-center gap-2 text-[13px] font-semibold text-cream">
+                        <Sparkles
+                          size={15}
+                          aria-hidden="true"
+                          className="text-[var(--workspace-accent)]"
+                        />
+                        Review
+                      </div>
+                      <p className="mt-3 text-[13.5px] leading-6 text-cream/62">
+                        Submit your answer to unlock rubric feedback and the authored explanation.
+                      </p>
+                    </section>
+                  )}
+                </div>
+              ) : null}
+
+              {panel === "hints" ? (
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <Lightbulb
+                      size={16}
+                      aria-hidden="true"
+                      className="text-[var(--workspace-accent)]"
+                    />
+                    <div>
+                      <h2 className="text-[14px] font-semibold text-cream">Progressive hints</h2>
+                      <p className="mt-0.5 text-[12.5px] text-cream/42">
+                        Reveal only what you need.
+                      </p>
+                    </div>
+                  </div>
+                  {question.hints.length ? (
+                    <div className="mt-5 space-y-3">
+                      {question.hints.slice(0, revealedHints).map((hint, index) => (
+                        <div
+                          key={`${hint}-${index}`}
+                          className="fade-slide flex gap-3 rounded-xl bg-white/[0.035] p-4"
+                        >
+                          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--workspace-accent-soft)] text-[12px] font-semibold text-[var(--workspace-accent)]">
+                            {index + 1}
+                          </span>
+                          <p className="text-[14px] leading-6 text-cream/72">{hint}</p>
+                        </div>
+                      ))}
+                      {revealedHints < question.hints.length ? (
+                        <button
+                          type="button"
+                          onClick={() => void revealHint()}
+                          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.035] text-[13px] font-semibold text-cream/72 transition hover:bg-white/[0.065] hover:text-cream"
+                        >
+                          <Lightbulb size={14} aria-hidden="true" />
+                          {revealedHints === 0
+                            ? "Show first hint"
+                            : `Show next hint · ${revealedHints}/${question.hints.length}`}
+                        </button>
+                      ) : (
+                        <p className="text-[13px] text-cream/42">All hints revealed.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-5 text-[13px] text-cream/42">
+                      No hints are available for this question.
+                    </p>
+                  )}
+                </div>
+              ) : null}
+
+              {panel === "review" ? (
+                review ? (
+                  <ReviewPanel review={review} />
+                ) : (
+                  <div className="rounded-xl border border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] p-4">
+                    <div className="flex items-center gap-2 text-[13px] font-semibold text-cream">
+                      <Sparkles
+                        size={15}
+                        aria-hidden="true"
+                        className="text-[var(--workspace-accent)]"
+                      />{" "}
+                      Review
+                    </div>
+                    <p className="mt-3 text-[13.5px] leading-6 text-cream/62">
+                      Submit your answer to unlock the rubric feedback and authored explanation.
+                    </p>
+                  </div>
+                )
+              ) : null}
+
+              {panel === "notes" ? (
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <NotebookPen
+                      size={16}
+                      aria-hidden="true"
+                      className="text-[var(--workspace-accent)]"
+                    />
+                    <div>
+                      <h2 className="text-[14px] font-semibold text-cream">Notes</h2>
+                      <p className="mt-0.5 text-[12.5px] text-cream/42">
+                        Saved automatically while you work.
+                      </p>
+                    </div>
+                  </div>
+                  <textarea
+                    value={note}
+                    onChange={(event) => {
+                      setNote(event.target.value);
+                      scheduleNoteSave(event.target.value);
+                    }}
+                    rows={14}
+                    placeholder="Capture the mechanism, trade-off, or story you want to remember…"
+                    className="mt-5 w-full resize-y rounded-xl border border-white/[0.08] bg-black/20 px-3 py-3 text-[14px] leading-6 text-cream outline-none placeholder:text-cream/24 focus:border-[color-mix(in_srgb,var(--workspace-accent)_35%,transparent)]"
+                  />
+                  <p
+                    className={`mt-2 text-[12px] ${saveState === "error" ? "text-red-300" : "text-cream/32"}`}
+                  >
+                    {saveState === "saving"
+                      ? "Saving notes…"
+                      : saveState === "dirty"
+                        ? "Unsaved changes"
+                        : saveState === "saved"
+                          ? "Notes saved"
+                          : saveState === "error"
+                            ? "Notes save failed — retry by editing"
+                            : "Saved across devices"}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </section>
+
+          <section className="flex min-h-[34rem] flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#101214] xl:min-h-0">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-3">
+              <div className="flex items-center gap-2.5">
+                <NotebookPen
+                  size={16}
+                  aria-hidden="true"
+                  className="text-[var(--workspace-accent)]"
+                />
+                <div>
+                  <h2 className="text-[14px] font-semibold text-cream">Your answer</h2>
+                  <p className="text-[12px] text-cream/40 capitalize">{question.format} practice</p>
+                </div>
+              </div>
+              {question.format === "spoken" ? (
+                <button
+                  type="button"
+                  onClick={toggleDictation}
+                  disabled={dictationState === "stopping"}
+                  className="inline-flex h-9 items-center gap-2 rounded-lg bg-white/[0.055] px-3 text-[12px] font-semibold text-cream/65 transition hover:bg-white/[0.09] hover:text-cream disabled:opacity-60"
+                >
+                  {dictationState === "idle" ? <Mic size={14} /> : <MicOff size={14} />}
+                  {dictationState === "listening"
+                    ? "Stop dictation"
+                    : dictationState === "stopping"
+                      ? "Stopping dictation…"
+                      : "Dictate"}
+                </button>
+              ) : null}
+            </div>
+            <div className="thin-scroll min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+              {question.format === "mcq" ? (
+                <fieldset className="space-y-3">
+                  <legend className="mb-3 text-[13px] font-semibold text-cream/72">
+                    Choose one answer
+                  </legend>
+                  {question.options.map((option, index) => {
+                    const selected = selectedOption === index;
+                    const correctAfterReview = review?.correctOptionIndex === index;
+                    return (
+                      <label
+                        key={option}
+                        className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition ${correctAfterReview ? "border-emerald-400/35 bg-emerald-400/[0.07]" : selected ? "border-[var(--workspace-accent)]/50 bg-[var(--workspace-accent-soft)]" : "border-white/[0.08] bg-black/20 hover:border-white/[0.16]"}`}
+                      >
+                        <input
+                          type="radio"
+                          name="practice-option"
+                          checked={selected}
+                          onChange={() => {
+                            setSelectedOption(index);
+                            scheduleDraftSave(`option:${index}`);
+                          }}
+                          className="mt-1 accent-[var(--workspace-accent)]"
+                        />
+                        <span className="text-[14px] leading-6 text-cream/72">{option}</span>
+                      </label>
+                    );
+                  })}
+                </fieldset>
+              ) : (
+                <div className="flex h-full min-h-[24rem] flex-col">
+                  <label
+                    htmlFor="practice-answer"
+                    className="mb-3 text-[13px] font-semibold text-cream/72"
+                  >
                     {answerLabel(question.format)}
                   </label>
-                  {question.format === "spoken" ? (
-                    <button
-                      type="button"
-                      onClick={toggleDictation}
-                      disabled={dictationState === "stopping"}
-                      className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-cream/60 transition hover:border-white/20 hover:text-cream"
-                    >
-                      {dictationState === "idle" ? <Mic size={14} /> : <MicOff size={14} />}
-                      {dictationState === "listening"
-                        ? "Stop dictation"
-                        : dictationState === "stopping"
-                          ? "Stopping dictation…"
-                          : "Dictate"}
-                    </button>
-                  ) : null}
+                  <textarea
+                    id="practice-answer"
+                    value={answer}
+                    onChange={(event) => {
+                      answerRef.current = event.target.value;
+                      setAnswer(event.target.value);
+                      scheduleDraftSave(event.target.value);
+                    }}
+                    placeholder={answerPlaceholder(question.format)}
+                    className={`min-h-[21rem] flex-1 resize-none rounded-xl border border-white/[0.08] bg-[#0d0f10] px-4 py-3 font-mono text-[13px] leading-6 text-cream outline-none placeholder:font-sans placeholder:text-cream/25 focus:border-[color-mix(in_srgb,var(--workspace-accent)_45%,transparent)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--workspace-accent)_12%,transparent)] ${question.format === "diagram" ? "" : "font-sans text-[14px] leading-7"}`}
+                  />
                 </div>
-                <textarea
-                  id="practice-answer"
-                  value={answer}
-                  onChange={(event) => {
-                    answerRef.current = event.target.value;
-                    setAnswer(event.target.value);
-                    scheduleDraftSave(event.target.value);
-                  }}
-                  rows={question.format === "diagram" ? 15 : 11}
-                  placeholder={answerPlaceholder(question.format)}
-                  className={`w-full resize-y rounded-xl border border-white/9 bg-black/25 px-4 py-3 text-sm leading-7 text-cream outline-none transition placeholder:text-cream/25 focus:border-[color-mix(in_srgb,var(--workspace-accent)_45%,transparent)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--workspace-accent)_12%,transparent)] ${question.format === "diagram" ? "font-mono" : ""}`}
-                />
-              </div>
-            )}
-            <div className="mt-2 flex items-center justify-between gap-3 text-xs">
-              <span className={saveState === "error" ? "text-red-300" : "text-cream/32"}>
+              )}
+              {error ? (
+                <p
+                  role="alert"
+                  className="mt-4 rounded-xl border border-red-400/20 bg-red-400/[0.06] px-4 py-3 text-[13px] text-red-100/80"
+                >
+                  {error}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] px-4 py-3">
+              <div className="text-[12px] text-cream/32">
                 {saveState === "saving"
                   ? "Saving draft…"
                   : saveState === "dirty"
@@ -429,160 +655,49 @@ export function PrepQuestionWorkspace({ question }: { question: PrepPracticeQues
                       : saveState === "error"
                         ? "Draft save failed — retry by editing"
                         : "Saved across devices"}
-              </span>
-              <span className="text-cream/28">{answer.length.toLocaleString()} characters</span>
-            </div>
-          </div>
-
-          {error ? (
-            <p
-              role="alert"
-              className="mt-4 rounded-xl border border-red-400/20 bg-red-400/[0.06] px-4 py-3 text-sm text-red-100/80"
-            >
-              {error}
-            </p>
-          ) : null}
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => void attempt("submit")}
-              disabled={Boolean(submitting)}
-              className="inline-flex items-center gap-2 rounded-xl bg-[var(--workspace-accent)] px-4 py-2.5 text-sm font-semibold text-graphite-950 transition hover:brightness-110 disabled:cursor-wait disabled:opacity-60"
-            >
-              {submitting === "submit" ? (
-                <Loader2 size={15} className="animate-spin" />
-              ) : complete ? (
-                <RotateCcw size={15} />
-              ) : (
-                <Send size={15} />
-              )}
-              {complete ? "Retry answer" : "Submit answer"}
-            </button>
-            <button
-              type="button"
-              onClick={() => void attempt("skip")}
-              disabled={Boolean(submitting) || complete}
-              className="inline-flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-cream/42 transition hover:bg-white/[0.04] hover:text-cream/70"
-            >
-              <SkipForward size={15} /> Skip for now
-            </button>
-          </div>
-        </section>
-
-        <aside className="space-y-4">
-          <section className="rounded-[1.4rem] border border-white/8 bg-graphite-900/66 p-5">
-            <div className="flex items-center gap-2">
-              <Lightbulb size={17} className="text-amber-300" />
-              <h2 className="font-display text-lg font-semibold text-cream">Progressive hints</h2>
-            </div>
-            <div className="mt-4 space-y-3">
-              {question.hints.slice(0, revealedHints).map((hint, index) => (
-                <div
-                  key={`${hint}-${index}`}
-                  className="rounded-xl border border-amber-300/12 bg-amber-300/[0.045] p-3 text-sm leading-6 text-cream/62"
-                >
-                  <span className="mr-2 font-semibold text-amber-200/75">{index + 1}.</span>
-                  {hint}
-                </div>
-              ))}
-            </div>
-            {revealedHints < question.hints.length ? (
+                {question.format !== "mcq" ? (
+                  <span className="ml-2 text-cream/24">
+                    · {answer.length.toLocaleString()} characters
+                  </span>
+                ) : null}
+              </div>
               <button
                 type="button"
-                onClick={() => void revealHint()}
-                className="mt-4 inline-flex items-center gap-2 rounded-lg border border-amber-300/15 px-3 py-2 text-xs font-semibold text-amber-100/65 transition hover:border-amber-300/30 hover:text-amber-100"
+                onClick={() => void attempt("submit")}
+                disabled={Boolean(submitting)}
+                className="inline-flex h-10 items-center gap-2 rounded-lg bg-cream px-4 text-[12.5px] font-semibold text-[#171a16] transition hover:bg-white disabled:cursor-wait disabled:opacity-60"
               >
-                <Lightbulb size={14} /> Reveal hint {revealedHints + 1}
+                {submitting === "submit" ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : complete ? (
+                  <RotateCcw size={15} />
+                ) : (
+                  <Send size={15} />
+                )}
+                {complete ? "Retry answer" : "Submit answer"}
               </button>
-            ) : (
-              <p className="mt-4 text-xs text-cream/32">All hints revealed.</p>
-            )}
+            </div>
           </section>
-
-          <section className="rounded-[1.4rem] border border-white/8 bg-graphite-900/66 p-5">
-            <button
-              type="button"
-              onClick={() => setNoteOpen((open) => !open)}
-              className="flex w-full items-center justify-between gap-3 text-left"
-            >
-              <span className="inline-flex items-center gap-2 font-display text-lg font-semibold text-cream">
-                <NotebookPen size={17} className="text-[var(--workspace-accent)]" /> Notes
-              </span>
-              <ChevronDown
-                size={16}
-                className={`text-cream/40 transition ${noteOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-            {noteOpen ? (
-              <textarea
-                value={note}
-                onChange={(event) => {
-                  setNote(event.target.value);
-                  scheduleNoteSave(event.target.value);
-                }}
-                rows={7}
-                placeholder="Capture the mechanism, trade-off, or story you want to remember…"
-                className="mt-4 w-full resize-y rounded-xl border border-white/8 bg-black/20 px-3 py-3 text-sm leading-6 text-cream outline-none placeholder:text-cream/24 focus:border-[color-mix(in_srgb,var(--workspace-accent)_35%,transparent)]"
-              />
-            ) : null}
-          </section>
-
-          {review ? (
-            <ReviewPanel review={review} />
-          ) : (
-            <section className="rounded-[1.4rem] border border-white/8 bg-graphite-900/66 p-5">
-              <div className="flex items-center gap-2">
-                <Sparkles size={17} className="text-[var(--workspace-accent)]" />
-                <h2 className="font-display text-lg font-semibold text-cream">Review</h2>
-              </div>
-              <p className="mt-3 text-sm leading-6 text-cream/48">
-                Submit your answer to unlock rubric feedback and the authored explanation.
-              </p>
-            </section>
-          )}
-        </aside>
-      </div>
-
-      <div className="mt-6 flex items-center justify-between gap-4 border-t border-white/7 pt-5">
-        {question.previousHref ? (
-          <Link
-            href={question.previousHref}
-            onClick={(event) => void navigateAfterSave(event, question.previousHref!)}
-            className="inline-flex items-center gap-2 text-sm text-cream/50 transition hover:text-cream"
-          >
-            <ArrowLeft size={15} /> Previous
-          </Link>
-        ) : (
-          <Link
-            href={question.sessionHref}
-            onClick={(event) => void navigateAfterSave(event, question.sessionHref)}
-            className="inline-flex items-center gap-2 text-sm text-cream/50 transition hover:text-cream"
-          >
-            <ArrowLeft size={15} /> Session
-          </Link>
-        )}
-        {question.nextHref ? (
-          <Link
-            href={question.nextHref}
-            onClick={(event) => void navigateAfterSave(event, question.nextHref!)}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-cream/65 transition hover:border-white/20 hover:text-cream"
-          >
-            {navigatingTo === question.nextHref ? (
-              <Loader2 size={15} className="animate-spin" />
-            ) : null}
-            Next question <ArrowRight size={15} />
-          </Link>
-        ) : (
-          <Link
-            href={question.sessionHref}
-            onClick={(event) => void navigateAfterSave(event, question.sessionHref)}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-cream/65 transition hover:border-white/20 hover:text-cream"
-          >
-            Review session <ArrowRight size={15} />
-          </Link>
-        )}
+        </div>
       </div>
     </main>
+  );
+}
+
+function ReviewSummary({ review }: { review: PrepPracticeReview }) {
+  const unverified = review.verificationStatus === "UNVERIFIED";
+  return (
+    <section className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
+      <p className="text-[12px] font-semibold uppercase tracking-[0.13em] text-cream/58">
+        Review ·{" "}
+        {review.score === null
+          ? unverified
+            ? "Pending verification"
+            : "Not scored"
+          : `${Math.round(review.score * 100)}%`}
+      </p>
+      <p className="mt-2 text-[13.5px] leading-6 text-cream/72">{review.summary}</p>
+    </section>
   );
 }
 

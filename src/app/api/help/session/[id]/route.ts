@@ -110,7 +110,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
                 kind: NotificationKind.HELP_FEEDBACK_RECEIVED,
                 title: `${learner.label} thanked you for your support`,
                 body: `Your Trailmate session made a difference.`,
-                href: "/help",
+                href: "/trailmate",
                 subjectId: helpRequest.id
               });
             }
@@ -189,7 +189,7 @@ function notifyConversationEnded(
           kind: NotificationKind.HELP_REQUEST_RESOLVED,
           title: `Your session with ${learnerName} is complete`,
           body: `Thanks for supporting ${learnerName} with ${title}.`,
-          href: "/help",
+          href: "/trailmate",
           subjectId: request.id
         })
       ]);

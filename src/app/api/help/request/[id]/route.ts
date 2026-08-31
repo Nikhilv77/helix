@@ -113,7 +113,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
                 kind: NotificationKind.HELP_REQUEST_RESOLVED,
                 title: `Your session with ${learnerName} is complete`,
                 body: `Thanks for supporting ${learnerName} with ${title}.`,
-                href: "/help",
+                href: "/trailmate",
                 subjectId: updated.id
               })
             );

@@ -91,6 +91,6 @@ describe("CurrentPeerHelpPrompt", () => {
     const join = await screen.findByRole("button", { name: "Join Trailmate room" });
     expect(screen.getByRole("button", { name: "Hand back" })).toBeTruthy();
     fireEvent.click(join);
-    expect(routerPush).toHaveBeenCalledWith(`/help/room/${requestId}?from=%2Fpractice`);
+    expect(routerPush).toHaveBeenCalledWith(`/trailmate/room/${requestId}?from=%2Fpractice`);
   });
 });

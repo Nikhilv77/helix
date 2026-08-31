@@ -8,10 +8,11 @@ export function isWorkspaceChromeRoute(pathname: string): boolean {
     pathname === "/interviews" ||
     pathname === "/progress" ||
     pathname === "/reports" ||
-    pathname === "/help" ||
-    pathname.startsWith("/help/") ||
+    pathname === "/trailmate" ||
+    pathname.startsWith("/trailmate/") ||
     pathname === "/profile" ||
     pathname === "/manage" ||
+    pathname === "/mentors" ||
     pathname.startsWith("/sessions/") ||
     pathname.startsWith("/session/")
   );

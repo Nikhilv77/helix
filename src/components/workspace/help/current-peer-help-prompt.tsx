@@ -61,7 +61,7 @@ export function CurrentPeerHelpPrompt() {
       router.push(`/dsa-questions/${encodeURIComponent(engagement.slug)}`);
       return;
     }
-    const returnTo = `${pathname ?? "/help"}${window.location.search}`;
+    const returnTo = `${pathname ?? "/trailmate"}${window.location.search}`;
     router.push(peerHelpRoomHref(engagement.requestId, returnTo));
   };
 

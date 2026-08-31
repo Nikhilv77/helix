@@ -253,7 +253,7 @@ export function HelpRoom({ requestId, returnTo }: { requestId: string; returnTo:
         <div>
           <p className="text-lg font-semibold text-cream">Room unavailable</p>
           <p className="mt-2 text-sm leading-6 text-cream/45">{error}</p>
-          <Link href="/help" className="mt-5 inline-block text-sm text-[var(--workspace-accent)]">
+          <Link href="/trailmate" className="mt-5 inline-block text-sm text-[var(--workspace-accent)]">
             Back to Trailmate
           </Link>
         </div>
@@ -378,7 +378,7 @@ export function HelpRoom({ requestId, returnTo }: { requestId: string; returnTo:
       </div>
 
       <div className={`mt-3 flex justify-end border-t ${HELP_ROOM_PANEL_RULE} pt-3`}>
-        <SafetyControls requestId={requestId} onActioned={() => router.push("/help")} />
+        <SafetyControls requestId={requestId} onActioned={() => router.push("/trailmate")} />
       </div>
 
       {ended && room.seat === "learner" ? (

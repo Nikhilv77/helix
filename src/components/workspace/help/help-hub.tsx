@@ -346,7 +346,7 @@ function ActiveConversationView({
             </div>
           </div>
           <Link
-            href={peerHelpRoomHref(conversation.requestId, "/help")}
+            href={peerHelpRoomHref(conversation.requestId, "/trailmate")}
             className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#17181a] transition hover:bg-white"
           >
             <UsersRound size={16} aria-hidden="true" />

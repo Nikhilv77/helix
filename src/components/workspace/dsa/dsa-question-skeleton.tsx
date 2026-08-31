@@ -7,72 +7,75 @@ function Line({ className = "" }: { className?: string }) {
 export function DsaQuestionSkeleton() {
   return (
     <div
-      className="mx-auto w-full max-w-[84rem] px-4 pb-20 pt-6 text-cream sm:px-6 sm:pt-8 lg:px-8 lg:pt-10"
+      className="w-full bg-black p-2 text-cream sm:p-3 xl:h-[calc(100svh-4.25rem)] xl:overflow-hidden"
       aria-busy="true"
       aria-label="Loading question"
     >
       <RouteProgress />
 
-      <div className="flex items-center gap-2 border-b border-cream/15 pb-5">
-        <Line className="w-12" />
-        <Line className="w-16" />
-        <Line className="w-32" />
+      <div className="mx-auto flex min-h-0 w-full max-w-[112rem] flex-col gap-2 xl:h-full">
+        <header className="flex shrink-0 flex-wrap items-center gap-3 rounded-xl border border-white/[0.08] bg-[#141619] px-3 py-2.5 sm:px-4">
+          <div className="skeleton h-9 w-9 !rounded-lg" />
+          <Line className="h-4 w-44" />
+          <div className="flex gap-1.5">
+            <div className="skeleton h-6 w-12 !rounded-md" />
+            <div className="skeleton h-6 w-16 !rounded-md" />
+            <div className="skeleton hidden h-6 w-24 !rounded-md sm:block" />
+          </div>
+          <div className="ml-auto flex gap-1">
+            <div className="skeleton h-9 w-32 !rounded-lg" />
+          </div>
+          <div className="flex w-full gap-2 border-t border-white/[0.06] pt-2.5 xl:w-auto xl:border-0 xl:pt-0">
+            <div className="skeleton h-9 w-24 !rounded-lg" />
+            <div className="skeleton h-9 w-16 !rounded-lg" />
+          </div>
+        </header>
+
+        <div className="grid min-h-0 flex-1 gap-2 xl:grid-cols-[minmax(22rem,0.82fr)_minmax(34rem,1.18fr)]">
+          <section className="min-h-[34rem] overflow-hidden rounded-xl border border-white/[0.08] bg-[#141619] xl:min-h-0">
+            <div className="flex h-12 items-end gap-5 border-b border-white/[0.07] px-5 pb-3">
+              {Array.from({ length: 4 }, (_, index) => (
+                <Line key={index} className={index === 0 ? "w-20" : "w-12"} />
+              ))}
+            </div>
+            <div className="space-y-7 p-6">
+              <div>
+                <Line className="w-20" />
+                <Line className="mt-4 w-full" />
+                <Line className="mt-2 w-11/12" />
+                <Line className="mt-2 w-4/5" />
+              </div>
+              {Array.from({ length: 2 }, (_, index) => (
+                <div key={index} className="rounded-xl bg-black/20 p-4">
+                  <Line className="w-16" />
+                  <Line className="mt-4 w-5/6" />
+                  <Line className="mt-2 w-3/5" />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="flex min-h-[38rem] flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#101214] xl:min-h-0">
+            <div className="flex h-14 items-center gap-3 border-b border-white/[0.07] px-4">
+              <Line className="w-20" />
+              <div className="ml-auto skeleton h-9 w-32 !rounded-lg" />
+              <div className="skeleton h-9 w-9 !rounded-lg" />
+              <div className="skeleton h-9 w-24 !rounded-lg" />
+            </div>
+            <div className="flex-1 bg-[#0b0d10] p-5">
+              <Line className="w-2/3" />
+              <Line className="mt-3 w-1/2" />
+              <Line className="mt-3 w-3/4" />
+              <Line className="mt-8 w-3/5" />
+              <Line className="mt-3 w-2/5" />
+            </div>
+            <div className="flex h-14 items-center justify-between border-t border-white/[0.07] bg-[#141619] px-4">
+              <Line className="w-20" />
+              <div className="skeleton h-9 w-28 !rounded-lg" />
+            </div>
+          </section>
+        </div>
       </div>
-
-      <section className="mt-6 rounded-[1.25rem] border border-cream/15 bg-cream/[0.035] p-5 sm:p-7">
-        <div className="flex flex-wrap gap-2">
-          <div className="skeleton h-6 w-16 !rounded-md" />
-          <div className="skeleton h-6 w-24 !rounded-md" />
-          <div className="skeleton h-6 w-32 !rounded-md" />
-        </div>
-        <div className="skeleton mt-5 h-10 w-5/6 max-w-3xl" />
-        <div className="skeleton mt-3 h-10 w-2/3 max-w-2xl" />
-        <Line className="mt-5 w-full max-w-3xl" />
-        <Line className="mt-2 w-4/5 max-w-2xl" />
-        <div className="mt-6 flex flex-wrap gap-3">
-          <div className="skeleton h-11 w-36 !rounded-xl" />
-          <div className="skeleton h-11 w-24 !rounded-xl" />
-          <div className="skeleton h-11 w-32 !rounded-xl" />
-        </div>
-
-        <div className="mt-8 grid gap-8 border-t border-cream/15 pt-8 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
-          <div className="space-y-8">
-            {Array.from({ length: 3 }, (_, index) => (
-              <div key={index} className="border-b border-cream/10 pb-7">
-                <Line className="w-28" />
-                <Line className="mt-4 w-full max-w-3xl" />
-                <Line className="mt-2 w-5/6 max-w-2xl" />
-                <Line className="mt-2 w-2/3 max-w-xl" />
-              </div>
-            ))}
-          </div>
-          <div className="min-h-[24rem] rounded-2xl bg-cream/[0.055] p-5">
-            <div className="skeleton mx-auto h-36 w-36 !rounded-full" />
-            <Line className="mx-auto mt-6 w-28" />
-            <Line className="mx-auto mt-3 w-44" />
-            <div className="mt-8 space-y-3">
-              <div className="skeleton h-10 w-full !rounded-xl" />
-              <div className="skeleton h-10 w-full !rounded-xl" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mt-8 border-t border-cream/15 pt-6">
-        <Line className="w-44" />
-        <Line className="mt-3 w-96 max-w-full" />
-        <div className="mt-5 divide-y divide-cream/10">
-          {Array.from({ length: 4 }, (_, index) => (
-            <div key={index} className="flex items-center gap-4 py-5">
-              <div className="skeleton h-8 w-8 !rounded-lg" />
-              <div className="min-w-0 flex-1">
-                <Line className="w-52 max-w-full" />
-                <Line className="mt-2 w-80 max-w-full" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
