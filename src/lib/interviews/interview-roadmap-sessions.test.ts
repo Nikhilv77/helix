@@ -125,7 +125,7 @@ describe("personalized interview roadmap sessions", () => {
     });
 
     expect(sessions.map((session) => session.id)).toEqual([
-      "frontend-dsa",
+      "dsa",
       "blueprint-core-technical",
       "blueprint-applied-engineering",
       "blueprint-architecture-system-design",
@@ -155,7 +155,7 @@ describe("personalized interview roadmap sessions", () => {
       roadmap: null,
       history: [
         historyItem(undefined),
-        historyItem("frontend-dsa", {
+        historyItem("dsa", {
           sessionId: "new-dsa-session",
           updatedAt: 200,
           questionsCovered: 2

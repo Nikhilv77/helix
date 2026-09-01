@@ -13,12 +13,12 @@ import type { FrontendRoadmapService } from "../roadmap/frontend-roadmap.service
 import { PracticeRoadmapService } from "./practice-roadmap.service";
 
 const templateSlugs = [
-  "frontend-dsa",
-  "javascript-react-core",
-  "computer-fundamentals",
-  "production-ui-quality",
+  "dsa",
+  "core-technical",
+  "applied-engineering",
+  "architecture-system-design",
   "resume-behavioral-defense",
-  "final-frontend-mock"
+  "final-mock"
 ];
 
 function plan(): PersonalizedInterviewPlan {
@@ -88,7 +88,7 @@ function plan(): PersonalizedInterviewPlan {
 }
 
 describe("PracticeRoadmapService", () => {
-  it("reconciles all six stable slots without writing over progress counters", async () => {
+  it("reconciles all four Practice slots without writing over progress counters", async () => {
     const activePlan = plan();
     const transaction = practiceTransaction(activePlan, true);
     const prisma = {
@@ -111,7 +111,8 @@ describe("PracticeRoadmapService", () => {
       completedQuestions: 4
     });
     expect(result?.sessions.slice(1).every((session) => session.href === null)).toBe(true);
-    expect(transaction.userSessionProgress.update).toHaveBeenCalledTimes(6);
+    // Four, not six: the resume round and the final mock are interview-only.
+    expect(transaction.userSessionProgress.update).toHaveBeenCalledTimes(4);
     for (const [{ data }] of transaction.userSessionProgress.update.mock.calls) {
       expect(data).not.toHaveProperty("status");
       expect(data).not.toHaveProperty("attemptedQuestions");
@@ -137,7 +138,7 @@ describe("PracticeRoadmapService", () => {
 
     const result = await service.home("owner-1");
 
-    expect(result?.sessions).toHaveLength(6);
+    expect(result?.sessions).toHaveLength(4);
     expect(transaction.userSessionProgress.create).not.toHaveBeenCalled();
     expect(transaction.userSessionProgress.update).not.toHaveBeenCalled();
     expect(transaction.userRoadmap.update).not.toHaveBeenCalled();

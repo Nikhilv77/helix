@@ -17,7 +17,6 @@ import { DsaService } from "./dsa/dsa.service";
 import { DsaNotesService } from "./dsa/dsa-notes.service";
 import { HelpRequestService } from "./help/help-request.service";
 import { StuckSummaryService } from "./help/stuck-summary";
-import { ConciergeNotifier } from "./help/concierge-notifier";
 import { HelperMatchingService } from "./help/helper-matching";
 import { HelperEligibilityService } from "./help/helper-eligibility";
 import { HelpSessionService } from "./help/help-session.service";
@@ -56,7 +55,6 @@ export interface AppContainer {
   dsaNotesService: DsaNotesService;
   helpRequestService: HelpRequestService;
   stuckSummaryService: StuckSummaryService;
-  conciergeNotifier: ConciergeNotifier;
   helperMatchingService: HelperMatchingService;
   helpSessionService: HelpSessionService;
   helpSafetyService: HelpSafetyService;
@@ -132,7 +130,6 @@ export function getAppContainer(): AppContainer {
     dsaNotesService: new DsaNotesService(prisma),
     helpRequestService: new HelpRequestService(prisma, helpSafety, helperEligibility),
     stuckSummaryService: new StuckSummaryService(geminiAi),
-    conciergeNotifier: new ConciergeNotifier(config.helpRequestWebhookUrl),
     helperMatchingService: new HelperMatchingService(prisma),
     helpSessionService: new HelpSessionService(prisma),
     helpSafetyService: helpSafety,

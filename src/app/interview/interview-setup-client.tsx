@@ -11,7 +11,7 @@ import {
 } from "@/lib/api/api-client";
 import type { Curriculum, CurriculumSession } from "@/lib/curriculum/curriculum";
 import type { SessionBlueprint } from "@/lib/interviews/personalized-plan";
-import { FRONTEND_SESSIONS, type FrontendSession } from "@/lib/roadmap/frontend-plan";
+import { PREP_SESSIONS, type PrepSession } from "@/lib/roadmap/frontend-plan";
 import { findTemplate, type InterviewTemplate } from "@/lib/interviews/interview-templates";
 import { pageTitle } from "@/lib/shared/seo";
 import type { Intensity, InterviewSetup, Level, Role, RoundType } from "@/lib/shared/types";
@@ -711,12 +711,12 @@ function findPreparedQuestion(
   );
 }
 
-function findRoadmapSession(id: string | null): FrontendSession | null {
+function findRoadmapSession(id: string | null): PrepSession | null {
   if (!id) return null;
-  return FRONTEND_SESSIONS.find((session) => session.id === id) ?? null;
+  return PREP_SESSIONS.find((session) => session.id === id) ?? null;
 }
 
-function agendaForRoadmapSession(session: FrontendSession): string[] {
+function agendaForRoadmapSession(session: PrepSession): string[] {
   return [
     `${session.title}: ${session.purpose}`,
     ...session.covers.map((item) => `${session.title}: ${item}`)
@@ -734,7 +734,7 @@ function agendaForPersonalizedBlueprint(blueprint: SessionBlueprint): string[] {
 
 function roundTypeForRoadmapSession(id: string): RoundType {
   if (id === "resume-behavioral-defense") return "behavioral";
-  if (id === "final-frontend-mock") return "hiring-manager";
+  if (id === "final-mock") return "hiring-manager";
   return "technical";
 }
 

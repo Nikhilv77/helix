@@ -3021,27 +3021,7 @@ body {
 }
 */
 
-/* ---------------------------------------------------------------------------
-   Mentors — the one warm surface in a dark product.
-
-   Cream is already the brand's text colour; here it becomes the ground and the
-   ink inverts, so the page reads as the same brand seen from the other side
-   rather than a foreign light theme. The sidebar stays dark on purpose: the
-   contrast between chrome and content is what makes this feel like a room you
-   stepped into rather than a setting you toggled.
-
-   The accent follows whatever the user picked in Manage. The saved values are
-   tuned for a black ground, and two of them (mono, emerald) all but vanish on
-   cream, so this surface derives its own darker pair rather than using them
-   raw: --m-accent for fills, dots and borders, and --m-accent-ink for anything
-   carrying text weight.
-
-   The 44% ratio is not arbitrary: it is the loosest mix where all six accents
-   clear WCAG AA both as ink on the cream ground and as white text on an accent
-   fill. Emerald (5.79 / 6.65) and mono (5.13 / 5.88) are the binding cases — at
-   55% they fall to 4.27 and 3.74 and fail. Re-check those two before loosening
-   it, and whenever an accent is added to the palette.
---------------------------------------------------------------------------- */
+/* Trailguide is the warm editorial room inside the dark workspace shell. */
 
 .mentor-surface {
   --m-ground: #f4efe3;
@@ -3059,18 +3039,7 @@ body {
   --m-accent-line: color-mix(in srgb, var(--workspace-accent, #f26e01) 34%, transparent);
 
   color-scheme: light;
-  background:
-    radial-gradient(
-      circle at 18% -8%,
-      color-mix(in srgb, var(--workspace-accent, #f26e01) 8%, transparent),
-      transparent 32rem
-    ),
-    radial-gradient(
-      circle at 92% 6%,
-      color-mix(in srgb, var(--workspace-accent, #f26e01) 4%, transparent),
-      transparent 26rem
-    ),
-    var(--m-ground);
+  background: var(--m-ground);
   color: var(--m-ink);
   /* Opacity only — transforming a full-height container fights the
      `overflow-hidden` on <main> and clips the surface edge. */
@@ -3097,6 +3066,24 @@ body {
   from {
     opacity: 0;
     transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Program steps animate independently using compositor-friendly properties.
+   The short travel distance keeps the sequence calm on small screens. */
+.mentor-program-stage {
+  animation: mentor-program-stage 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--stage-delay, 0ms);
+}
+
+@keyframes mentor-program-stage {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -3184,6 +3171,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .mentor-surface,
   .mentor-rise,
+  .mentor-program-stage,
   .upgrade-card::before {
     animation: none;
   }
@@ -3192,4 +3180,16 @@ body {
     opacity: 1;
     transform: none;
   }
+}
+
+/* Monaco decorations for the Practice code viewer. Monaco applies these by
+   class name, so they cannot be scoped through the component. */
+.practice-flaw-line {
+  background: color-mix(in srgb, var(--workspace-accent) 15%, transparent);
+}
+
+.practice-flaw-gutter {
+  width: 3px !important;
+  margin-left: 3px;
+  background: var(--workspace-accent);
 }

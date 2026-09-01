@@ -1,0 +1,3081 @@
+{
+  "bank": "applied-engineering-flaws",
+  "sourceLinks": [
+    {
+      "id": "mdn-event-loop",
+      "title": "The event loop",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Event_loop",
+      "notes": "Async execution and scheduling."
+    }
+  ],
+  "templates": [
+    {
+      "id": "find-flaw-01",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "data-layer",
+      "category": "data-layer",
+      "title": "One query, then many",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "debugging",
+      "competency": "backend-data",
+      "format": "find-the-flaw",
+      "prompt": "This endpoint returns posts with their authors. It works and the tests pass. Explain what is wrong with it and what that costs at scale.",
+      "objective": "Recognize an N+1 query pattern hidden inside an ordinary-looking loop.",
+      "prerequisites": [],
+      "hints": [
+        "Count how many database round trips happen for a page of 100 posts.",
+        "Look closely at what is being awaited inside the loop."
+      ],
+      "explanation": "The loop body awaits a database call, so each iteration is a separate round trip. The query count scales with the result set rather than staying constant. Either join the author in the original query or collect the author ids and fetch them in one findMany, then map them in memory.",
+      "answerKey": {
+        "code": "async function listPosts(prisma, limit) {\n  const posts = await prisma.post.findMany({\n    take: limit,\n    orderBy: { createdAt: 'desc' }\n  });\n\n  const result = [];\n  for (const post of posts) {\n    const author = await prisma.user.findUnique({\n      where: { id: post.authorId }\n    });\n    result.push({ ...post, authorName: author.name });\n  }\n  return result;\n}",
+        "language": "javascript",
+        "flaw": "The author is fetched inside the loop, so the endpoint issues one query per post instead of one query for all of them — a classic N+1.",
+        "line": 9,
+        "category": "n-plus-one",
+        "consequence": "Latency grows linearly with the page size and the database sees limit+1 round trips per request. At limit=100 this is 101 queries where 2 would do. Fix it with an include/join or a single findMany over the collected author ids."
+      },
+      "tags": [
+        "databases",
+        "orm",
+        "performance"
+      ],
+      "whatItTests": [
+        "n+1 queries",
+        "ORM behaviour",
+        "latency scaling"
+      ],
+      "goodAnswerSignals": [
+        "Names the N+1 pattern",
+        "Explains that query count scales with page size"
+      ],
+      "weakAnswerSignals": [
+        "Says the code looks correct",
+        "Only suggests adding an index"
+      ],
+      "followUpPrompts": [
+        "How would you rewrite this with a single query?"
+      ],
+      "mayaPushbacks": [
+        "How many queries run when limit is 100?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ],
+      "promptTemplate": "This endpoint in {{projectName}} returns posts with their authors. It works and the tests pass. Explain what is wrong with it and what that costs at scale."
+    },
+    {
+      "id": "find-flaw-02",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "data-layer",
+      "category": "data-layer",
+      "title": "A cache that only grows",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "debugging",
+      "competency": "backend-data",
+      "format": "find-the-flaw",
+      "prompt": "This memoizes an expensive lookup. It is correct and it is fast. Explain what is wrong with it and what that costs in production.",
+      "objective": "Spot a memoization cache with no eviction policy and no expiry.",
+      "prerequisites": [],
+      "hints": [
+        "Consider what happens after a million distinct users have been requested.",
+        "Ask what happens when a profile is updated somewhere else."
+      ],
+      "explanation": "A Map used as a cache holds a strong reference to every key it has ever seen. Without a maximum size, a TTL, or invalidation on update, it is a memory leak that also serves stale data. Bound it with an LRU and expire entries, and clear the key when the underlying profile changes.",
+      "answerKey": {
+        "code": "const cache = new Map();\n\nexport async function getUserProfile(userId, fetchProfile) {\n  if (cache.has(userId)) {\n    return cache.get(userId);\n  }\n  const profile = await fetchProfile(userId);\n  cache.set(userId, profile);\n  return profile;\n}",
+        "language": "javascript",
+        "flaw": "Entries are added but never evicted and never expire, so the cache grows without bound and serves stale profiles forever.",
+        "line": 8,
+        "category": "unbounded-memory",
+        "consequence": "Memory grows with the number of distinct users the process ever sees, ending in an out-of-memory restart on a long-lived server. Separately, a profile updated elsewhere is never reflected. Needs a size bound or a TTL, and invalidation on write."
+      },
+      "tags": [
+        "caching",
+        "memory"
+      ],
+      "whatItTests": [
+        "cache design",
+        "memory leaks",
+        "staleness"
+      ],
+      "goodAnswerSignals": [
+        "Names unbounded growth or the missing eviction policy",
+        "Mentions staleness as well as memory"
+      ],
+      "weakAnswerSignals": [
+        "Praises the caching without noting the growth",
+        "Suggests only a bigger machine"
+      ],
+      "followUpPrompts": [
+        "What eviction policy would you pick here, and why?"
+      ],
+      "mayaPushbacks": [
+        "When does an entry ever leave this cache?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-03",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "concurrency-and-failure",
+      "category": "concurrency-and-failure",
+      "title": "The promise nobody waited for",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "easy",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "backend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This handler records an audit entry before returning. Explain what is wrong with it and what that costs in production.",
+      "objective": "Identify a floating promise whose failure is invisible and whose completion is not guaranteed.",
+      "prerequisites": [],
+      "hints": [
+        "Compare how the two database calls in this function are invoked.",
+        "Ask what happens if the second write rejects."
+      ],
+      "explanation": "An async call without await returns a promise that nobody observes. The handler responds immediately, so the audit write races the end of the request, and if it rejects there is no catch anywhere — an unhandled rejection. Either await it, or attach a catch and document that the write is intentionally fire-and-forget.",
+      "answerKey": {
+        "code": "export async function updateSettings(req, res, db) {\n  const updated = await db.settings.update({\n    where: { userId: req.userId },\n    data: req.body\n  });\n\n  db.auditLog.create({\n    data: { userId: req.userId, action: 'settings.update' }\n  });\n\n  res.json(updated);\n}",
+        "language": "javascript",
+        "flaw": "The audit write is not awaited, so the response can be sent before it completes and any rejection becomes an unhandled promise rejection.",
+        "line": 7,
+        "category": "floating-promise",
+        "consequence": "Audit entries are silently lost when the process finishes the request first, and a failing write crashes the process on newer Node versions rather than surfacing as a handled error. Await it, or deliberately detach it with a catch handler and a comment saying why."
+      },
+      "tags": [
+        "async",
+        "errors"
+      ],
+      "whatItTests": [
+        "floating promises",
+        "error propagation",
+        "async correctness"
+      ],
+      "goodAnswerSignals": [
+        "Notices the missing await",
+        "Mentions unhandled rejection or lost writes"
+      ],
+      "weakAnswerSignals": [
+        "Says both writes are awaited",
+        "Focuses only on input validation"
+      ],
+      "followUpPrompts": [
+        "When is fire-and-forget actually the right call here?"
+      ],
+      "mayaPushbacks": [
+        "What handles a rejection from the audit write?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-04",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "concurrency-and-failure",
+      "category": "concurrency-and-failure",
+      "title": "Read, think, overwrite",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "hard",
+      "expectedMinutes": 7,
+      "evidenceType": "debugging",
+      "competency": "backend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This increments a view counter. It is correct when tested by one user. Explain what is wrong with it and what that costs under real traffic.",
+      "objective": "Recognize a lost-update race created by read-modify-write across two statements.",
+      "prerequisites": [],
+      "hints": [
+        "Imagine two requests arriving at the same millisecond.",
+        "Ask what happens between the read and the write."
+      ],
+      "explanation": "Between the read and the write, another request can complete the same sequence. Both read the same starting value and both write value+1, so two views are recorded as one. The database can do this atomically — an increment expression, or a transaction with the right isolation — and application-side arithmetic on a shared counter is the bug.",
+      "answerKey": {
+        "code": "export async function recordView(db, postId) {\n  const post = await db.post.findUnique({\n    where: { id: postId },\n    select: { views: true }\n  });\n\n  await db.post.update({\n    where: { id: postId },\n    data: { views: post.views + 1 }\n  });\n}",
+        "language": "javascript",
+        "flaw": "The counter is read and written in two separate statements, so concurrent calls read the same value and one increment overwrites the other.",
+        "line": 9,
+        "category": "race-condition",
+        "consequence": "Under concurrent traffic the view count drifts permanently low, and the loss grows with concurrency. Use an atomic database increment rather than read-modify-write in application code."
+      },
+      "tags": [
+        "concurrency",
+        "races"
+      ],
+      "whatItTests": [
+        "race conditions",
+        "atomicity",
+        "lost updates"
+      ],
+      "goodAnswerSignals": [
+        "Names the lost update or the read-modify-write race",
+        "Suggests an atomic increment"
+      ],
+      "weakAnswerSignals": [
+        "Says it is fine because both statements are awaited",
+        "Suggests only adding an index"
+      ],
+      "followUpPrompts": [
+        "Would wrapping both statements in a transaction be enough?"
+      ],
+      "mayaPushbacks": [
+        "What guarantees nothing changes between the read and the write?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-05",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "concurrency-and-failure",
+      "category": "concurrency-and-failure",
+      "title": "Retry until it charges twice",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "hard",
+      "expectedMinutes": 7,
+      "evidenceType": "debugging",
+      "competency": "backend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This retries a payment call on failure, which sounds prudent. Explain what is wrong with it and what that costs in production.",
+      "objective": "Recognize that retrying a non-idempotent operation can duplicate its side effect.",
+      "prerequisites": [],
+      "hints": [
+        "A timeout means the response was lost, not that nothing happened.",
+        "Ask what makes the second attempt distinguishable from a new payment."
+      ],
+      "explanation": "A timeout tells you the response was lost, not that the work did not happen. Retrying a bare charge treats an ambiguous failure as a definite one. Generating a stable idempotency key before the first attempt and sending it on every retry lets the gateway recognize the duplicate and return the original result.",
+      "answerKey": {
+        "code": "export async function chargeWithRetry(gateway, amount, userId) {\n  for (let attempt = 0; attempt < 3; attempt++) {\n    try {\n      return await gateway.charge({ amount, userId });\n    } catch (error) {\n      if (attempt === 2) throw error;\n      await sleep(200 * (attempt + 1));\n    }\n  }\n}",
+        "language": "javascript",
+        "flaw": "The charge is retried without an idempotency key, so a request that actually succeeded but timed out is charged again on the retry.",
+        "line": 4,
+        "category": "non-idempotent-retry",
+        "consequence": "A network timeout after the gateway has already taken the money produces a duplicate charge — the retry has no way to say this is the same payment. Pass a stable idempotency key generated once, before the loop, so the gateway can deduplicate."
+      },
+      "tags": [
+        "retries",
+        "idempotency"
+      ],
+      "whatItTests": [
+        "idempotency",
+        "retry safety",
+        "distributed failure"
+      ],
+      "goodAnswerSignals": [
+        "Names the missing idempotency key",
+        "Explains the timeout-then-retry duplicate charge"
+      ],
+      "weakAnswerSignals": [
+        "Says three retries is too many and stops there",
+        "Only suggests longer backoff"
+      ],
+      "followUpPrompts": [
+        "Where should the idempotency key be generated, and why there?"
+      ],
+      "mayaPushbacks": [
+        "What if the first charge succeeded but the response timed out?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-06",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "the-network",
+      "category": "the-network",
+      "title": "Awaited one at a time",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "backend-performance",
+      "format": "find-the-flaw",
+      "prompt": "This gathers three independent pieces of data for a dashboard. Explain what is wrong with it and what that costs in production.",
+      "objective": "Spot independent async calls serialized by await when they could run concurrently.",
+      "prerequisites": [],
+      "hints": [
+        "Check whether any of these three calls uses the result of another.",
+        "Add up the latency if each request takes 200 milliseconds."
+      ],
+      "explanation": "await suspends until each call finishes before the next one starts. Because no call uses the result of a previous one, the sequencing buys nothing and costs the sum of all three latencies. Promise.all starts them together and waits once, turning the sum into the maximum.",
+      "answerKey": {
+        "code": "export async function loadDashboard(api, userId) {\n  const profile = await api.getProfile(userId);\n  const invoices = await api.getInvoices(userId);\n  const usage = await api.getUsage(userId);\n\n  return { profile, invoices, usage };\n}",
+        "language": "javascript",
+        "flaw": "Three independent requests are awaited sequentially, so the total latency is their sum rather than their maximum.",
+        "line": 3,
+        "category": "sequential-await",
+        "consequence": "A dashboard that could load in 200ms takes 600ms, and the gap widens as calls are added. None of the three depends on another, so they should start together with Promise.all."
+      },
+      "tags": [
+        "latency",
+        "async"
+      ],
+      "whatItTests": [
+        "latency",
+        "concurrency",
+        "Promise.all"
+      ],
+      "goodAnswerSignals": [
+        "Notices the calls are independent",
+        "Proposes Promise.all and explains the latency change"
+      ],
+      "weakAnswerSignals": [
+        "Says await is required here",
+        "Suggests caching without addressing the sequencing"
+      ],
+      "followUpPrompts": [
+        "What changes if getUsage needs the profile id?"
+      ],
+      "mayaPushbacks": [
+        "Which of these three calls depends on another?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ],
+      "promptTemplate": "This gathers three independent pieces of data for a dashboard in {{projectName}}. Explain what is wrong with it and what that costs in production."
+    },
+    {
+      "id": "find-flaw-07",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "data-layer",
+      "category": "data-layer",
+      "title": "A page that skips a row",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "debugging",
+      "competency": "backend-data",
+      "format": "find-the-flaw",
+      "prompt": "This paginates a list. The first page looks right. Explain what is wrong with it and what that costs in production.",
+      "objective": "Recognize that offset pagination needs a total ordering to be stable.",
+      "prerequisites": [],
+      "hints": [
+        "Consider several rows written in the same millisecond.",
+        "Ask whether this ordering is guaranteed to be the same across two separate queries."
+      ],
+      "explanation": "Two rows with the same createdAt have no defined relative order, so the database may return them differently between queries. With skip/take, that means a row can be counted on page one and page two, or skipped by both. Ordering by createdAt and then id makes the sort total and the paging stable.",
+      "answerKey": {
+        "code": "export async function getPage(db, page, pageSize) {\n  const skip = page * pageSize;\n\n  const rows = await db.item.findMany({\n    skip,\n    take: pageSize,\n    orderBy: { createdAt: 'desc' }\n  });\n\n  return rows;\n}",
+        "language": "javascript",
+        "flaw": "Ordering is by a non-unique createdAt with no tie-breaker, so rows sharing a timestamp can appear on two pages or on none.",
+        "line": 7,
+        "category": "unstable-sort",
+        "consequence": "Users see duplicated or silently missing items when several rows share a createdAt, and the bug is invisible in small test data. Add a unique tie-breaker such as id to make the ordering total, or switch to cursor pagination."
+      },
+      "tags": [
+        "pagination",
+        "boundaries"
+      ],
+      "whatItTests": [
+        "pagination",
+        "sort stability",
+        "boundary correctness"
+      ],
+      "goodAnswerSignals": [
+        "Identifies the non-unique sort key",
+        "Proposes a tie-breaker or cursor pagination"
+      ],
+      "weakAnswerSignals": [
+        "Focuses only on the skip arithmetic",
+        "Says offset pagination is always fine"
+      ],
+      "followUpPrompts": [
+        "How does cursor pagination avoid this entirely?"
+      ],
+      "mayaPushbacks": [
+        "Is this ordering guaranteed to be identical across two queries?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-08",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "reading-code",
+      "category": "reading-code",
+      "title": "The listener that never leaves",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "frontend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This React effect keeps a widget in sync with the window size. Explain what is wrong with it and what that costs in production.",
+      "objective": "Recognize an effect that acquires a subscription without releasing it.",
+      "prerequisites": [],
+      "hints": [
+        "Ask what happens to the listener when this component unmounts.",
+        "Consider a user navigating to this screen ten times."
+      ],
+      "explanation": "An effect that subscribes must return a function that unsubscribes. Without it, the listener stays attached to window after the component unmounts, holding its closure and state setter alive. Navigating back and forth registers a new listener each time, so the leak compounds.",
+      "answerKey": {
+        "code": "useEffect(() => {\n  function onResize() {\n    setWidth(window.innerWidth);\n  }\n\n  window.addEventListener('resize', onResize);\n}, []);",
+        "language": "javascript",
+        "flaw": "The effect registers a resize listener and returns no cleanup, so the listener survives unmount and accumulates on every remount.",
+        "line": 6,
+        "category": "resource-leak",
+        "consequence": "Each mount adds another listener that keeps the component's closure alive, so memory grows and setWidth is eventually called on unmounted components. Return a cleanup that removes the listener."
+      },
+      "tags": [
+        "memory",
+        "lifecycle"
+      ],
+      "whatItTests": [
+        "effect cleanup",
+        "memory leaks",
+        "component lifecycle"
+      ],
+      "goodAnswerSignals": [
+        "Names the missing cleanup function",
+        "Explains accumulation across remounts"
+      ],
+      "weakAnswerSignals": [
+        "Says the empty dependency array is the bug",
+        "Suggests useCallback"
+      ],
+      "followUpPrompts": [
+        "What exactly keeps the closure alive after unmount?"
+      ],
+      "mayaPushbacks": [
+        "What removes this listener?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ],
+      "promptTemplate": "This {{framework}} effect keeps a widget in sync with the window size. Explain what is wrong with it and what that costs in production."
+    },
+    {
+      "id": "find-flaw-09",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "concurrency-and-failure",
+      "category": "concurrency-and-failure",
+      "title": "Errors that vanish in a loop",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "debugging",
+      "competency": "backend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This sends a notification to each recipient. Explain what is wrong with it and what that costs in production.",
+      "objective": "Recognize a reported result that does not reflect what actually happened.",
+      "prerequisites": [],
+      "hints": [
+        "Ask where the returned count comes from.",
+        "Consider one recipient failing out of fifty."
+      ],
+      "explanation": "Promise.all rejects as soon as one promise rejects, so the function either throws or claims full success — there is no partial truth. The returned count is derived from the input length rather than from outcomes. Promise.allSettled gives each result, letting the function report how many actually sent and which recipients failed.",
+      "answerKey": {
+        "code": "export async function notifyAll(mailer, recipients) {\n  const sends = recipients.map((recipient) => mailer.send(recipient));\n\n  await Promise.all(sends);\n  return { sent: recipients.length };\n}",
+        "language": "javascript",
+        "flaw": "The count returned assumes every send succeeded, and Promise.all rejects on the first failure so the remaining outcomes are never inspected.",
+        "line": 5,
+        "category": "silent-failure",
+        "consequence": "The caller is told every recipient was notified even when sends failed, and one failure discards the status of all the others. Use Promise.allSettled and report the real successes and failures."
+      },
+      "tags": [
+        "errors",
+        "async"
+      ],
+      "whatItTests": [
+        "error handling",
+        "partial failure",
+        "honest reporting"
+      ],
+      "goodAnswerSignals": [
+        "Notices the count is derived from the input, not the results",
+        "Proposes allSettled"
+      ],
+      "weakAnswerSignals": [
+        "Says the code handles errors because it awaits",
+        "Only suggests a try/catch around everything"
+      ],
+      "followUpPrompts": [
+        "What should this return when three of fifty fail?"
+      ],
+      "mayaPushbacks": [
+        "Where does the number in the response actually come from?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-10",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "the-network",
+      "category": "the-network",
+      "title": "Filtered after the fact",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "easy",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "backend-performance",
+      "format": "find-the-flaw",
+      "prompt": "This returns a user's recent orders. It returns correct results. Explain what is wrong with it and what that costs at scale.",
+      "objective": "Recognize filtering done in application code that belongs in the query.",
+      "prerequisites": [],
+      "hints": [
+        "Consider a table with ten million orders.",
+        "Ask how many rows cross the network for this request."
+      ],
+      "explanation": "The database is asked for every row, and the narrowing happens afterwards in JavaScript. Correct, but the cost is the entire table transferred and held in memory on each request. Moving the where clause and the limit into findMany lets the database use an index and return twenty rows.",
+      "answerKey": {
+        "code": "export async function recentOrders(db, userId) {\n  const orders = await db.order.findMany({\n    orderBy: { createdAt: 'desc' }\n  });\n\n  return orders\n    .filter((order) => order.userId === userId)\n    .slice(0, 20);\n}",
+        "language": "javascript",
+        "flaw": "Every order in the table is loaded into memory and filtered in application code, instead of filtering and limiting in the query.",
+        "line": 2,
+        "category": "full-scan",
+        "consequence": "Memory and latency scale with the size of the whole orders table rather than with one user's orders, and the process will eventually run out of memory. Push the userId filter and the limit into the query with a where clause and take."
+      },
+      "tags": [
+        "databases",
+        "performance"
+      ],
+      "whatItTests": [
+        "query pushdown",
+        "full scans",
+        "resource scaling"
+      ],
+      "goodAnswerSignals": [
+        "Notices the filter belongs in the query",
+        "Mentions memory or transfer cost scaling with the table"
+      ],
+      "weakAnswerSignals": [
+        "Suggests only adding an index without moving the filter",
+        "Says it is fine because results are correct"
+      ],
+      "followUpPrompts": [
+        "Which index would make the corrected query fast?"
+      ],
+      "mayaPushbacks": [
+        "How many rows leave the database for a user with three orders?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-11",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "data-layer",
+      "category": "data-layer",
+      "title": "Two writes, no transaction",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "debugging",
+      "competency": "backend-data",
+      "format": "find-the-flaw",
+      "prompt": "This transfers credit between two accounts. Explain what is wrong with it and what that costs in production.",
+      "objective": "Recognize two related writes that must be atomic but are not.",
+      "prerequisites": [],
+      "hints": [
+        "Ask what the balances look like if the process dies between the two updates.",
+        "Consider whether each statement being atomic makes the pair atomic."
+      ],
+      "explanation": "Each update is atomic on its own, which is not the same as the pair being atomic. A crash, timeout, or validation error between them leaves the system in a state no business rule allows. Running both inside db.$transaction makes the pair all-or-nothing.",
+      "answerKey": {
+        "code": "export async function transfer(db, fromId, toId, amount) {\n  await db.account.update({\n    where: { id: fromId },\n    data: { balance: { decrement: amount } }\n  });\n\n  await db.account.update({\n    where: { id: toId },\n    data: { balance: { increment: amount } }\n  });\n}",
+        "language": "javascript",
+        "flaw": "The debit and the credit are separate statements with no transaction, so a failure between them destroys money.",
+        "line": 9,
+        "category": "missing-transaction",
+        "consequence": "If the second update fails or the process dies between the two, the amount is debited and never credited. Wrap both in a single transaction so they commit or roll back together."
+      },
+      "tags": [
+        "transactions"
+      ],
+      "whatItTests": [
+        "transactions",
+        "atomicity",
+        "consistency"
+      ],
+      "goodAnswerSignals": [
+        "Names the missing transaction",
+        "Describes the money-lost intermediate state"
+      ],
+      "weakAnswerSignals": [
+        "Says both updates are atomic so it is fine",
+        "Suggests only retrying the second write"
+      ],
+      "followUpPrompts": [
+        "What isolation level would you want here?"
+      ],
+      "mayaPushbacks": [
+        "What if the second update throws?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-12",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "data-layer",
+      "category": "data-layer",
+      "title": "Everything, then a little",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "easy",
+      "expectedMinutes": 4,
+      "evidenceType": "debugging",
+      "competency": "backend-data",
+      "format": "find-the-flaw",
+      "prompt": "This loads a user for a header that shows a name and an avatar. Explain what is wrong with it and what that costs at scale.",
+      "objective": "Spot data fetched far beyond what the function returns.",
+      "prerequisites": [],
+      "hints": [
+        "Compare what the query asks for with what the function returns.",
+        "Consider a user with ten thousand comments."
+      ],
+      "explanation": "The include clause tells the database to join and return three collections. None of them is read. For an active account that is thousands of rows serialized, transferred and parsed to produce a name and a URL. A select with the two required fields makes the query constant-cost.",
+      "answerKey": {
+        "code": "export async function getHeaderUser(db, userId) {\n  const user = await db.user.findUnique({\n    where: { id: userId },\n    include: { posts: true, comments: true, sessions: true }\n  });\n\n  return { name: user.name, avatarUrl: user.avatarUrl };\n}",
+        "language": "javascript",
+        "flaw": "Three large relations are eagerly loaded and then discarded — only two scalar columns are actually returned.",
+        "line": 4,
+        "category": "over-fetching",
+        "consequence": "Every header render pulls a user's entire post, comment and session history across the wire for two fields, so latency and memory scale with account age. Select only the two columns needed."
+      },
+      "tags": [
+        "queries"
+      ],
+      "whatItTests": [
+        "over-fetching",
+        "query shape",
+        "cost scaling"
+      ],
+      "goodAnswerSignals": [
+        "Notices the includes are unused",
+        "Ties cost to account size"
+      ],
+      "weakAnswerSignals": [
+        "Says include is required to get the name",
+        "Only suggests caching the result"
+      ],
+      "followUpPrompts": [
+        "What does this cost for an account with 10,000 posts?"
+      ],
+      "mayaPushbacks": [
+        "Which of those three relations does the return value use?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-13",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "data-layer",
+      "category": "data-layer",
+      "title": "Deleted, but still counted",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "backend-data",
+      "format": "find-the-flaw",
+      "prompt": "This project uses soft deletes: rows carry a deletedAt timestamp. Explain what is wrong with this function.",
+      "objective": "Recognize a query that ignores the soft-delete convention the schema relies on.",
+      "prerequisites": [],
+      "hints": [
+        "Ask what deletedAt is for if no query reads it.",
+        "Consider a team that has removed half its members."
+      ],
+      "explanation": "Soft deletion only works if every read filters on it. A single query that forgets turns deleted rows back into live data. Because the count grows silently rather than erroring, the discrepancy is usually discovered through a billing complaint rather than a test.",
+      "answerKey": {
+        "code": "export async function countActiveMembers(db, teamId) {\n  const members = await db.member.count({\n    where: { teamId }\n  });\n\n  return members;\n}",
+        "language": "javascript",
+        "flaw": "The query does not exclude soft-deleted rows, so removed members are still counted as active.",
+        "line": 3,
+        "category": "soft-delete-leak",
+        "consequence": "Seat counts, billing and permission checks built on this number are all inflated, and the bug worsens over time as more members are removed. The filter must include deletedAt: null."
+      },
+      "tags": [
+        "soft-delete"
+      ],
+      "whatItTests": [
+        "soft deletes",
+        "query filters",
+        "data integrity"
+      ],
+      "goodAnswerSignals": [
+        "Notices the missing deletedAt filter",
+        "Connects it to billing or permissions"
+      ],
+      "weakAnswerSignals": [
+        "Says count is always accurate",
+        "Suggests adding an index"
+      ],
+      "followUpPrompts": [
+        "How would you stop every future query forgetting this?"
+      ],
+      "mayaPushbacks": [
+        "What happens to a row when a member is removed?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-14",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "data-layer",
+      "category": "data-layer",
+      "title": "Unique in code only",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "hard",
+      "expectedMinutes": 7,
+      "evidenceType": "debugging",
+      "competency": "backend-data",
+      "format": "find-the-flaw",
+      "prompt": "This prevents duplicate signups for an event. Explain what is wrong with it and what that costs under load.",
+      "objective": "Recognize that application-level uniqueness checks do not survive concurrency.",
+      "prerequisites": [],
+      "hints": [
+        "Imagine the user double-clicking the button.",
+        "Ask what enforces uniqueness if two requests interleave."
+      ],
+      "explanation": "Between the read and the insert another request can complete the same sequence. Both find nothing and both insert. Only a database-level unique constraint makes this impossible; the application check then becomes an optimization, not the guarantee.",
+      "answerKey": {
+        "code": "export async function register(db, eventId, userId) {\n  const existing = await db.registration.findFirst({\n    where: { eventId, userId }\n  });\n\n  if (existing) return existing;\n\n  return db.registration.create({\n    data: { eventId, userId }\n  });\n}",
+        "language": "javascript",
+        "flaw": "Uniqueness is enforced by a check-then-insert in application code with no database constraint, so concurrent calls both pass the check and both insert.",
+        "line": 8,
+        "category": "check-then-act",
+        "consequence": "Two simultaneous requests create duplicate registrations, inflating counts and breaking anything that assumes one row per user. Add a unique constraint on (eventId, userId) and handle the conflict."
+      },
+      "tags": [
+        "constraints",
+        "races"
+      ],
+      "whatItTests": [
+        "uniqueness",
+        "race conditions",
+        "database constraints"
+      ],
+      "goodAnswerSignals": [
+        "Names the check-then-act race",
+        "Proposes a database unique constraint"
+      ],
+      "weakAnswerSignals": [
+        "Says the findFirst check is sufficient",
+        "Suggests only disabling the button"
+      ],
+      "followUpPrompts": [
+        "How should the code respond to the constraint violation?"
+      ],
+      "mayaPushbacks": [
+        "What stops two concurrent requests both passing the check?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-15",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "concurrency-and-failure",
+      "category": "concurrency-and-failure",
+      "title": "Two hundred at once",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "debugging",
+      "competency": "backend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This resizes every uploaded image for a gallery. Explain what is wrong with it and what that costs in production.",
+      "objective": "Recognize Promise.all used as parallelism with no bound on the number in flight.",
+      "prerequisites": [],
+      "hints": [
+        "Ask how many operations run at once for a gallery of two thousand.",
+        "Consider what the input size is bounded by."
+      ],
+      "explanation": "Promise.all waits for everything but starts everything immediately. The number in flight equals the input length, which is attacker- or user-controlled. A worker pool with a fixed size gives the same result with predictable resource use.",
+      "answerKey": {
+        "code": "export async function resizeAll(images, resize) {\n  const results = await Promise.all(\n    images.map((image) => resize(image))\n  );\n\n  return results;\n}",
+        "language": "javascript",
+        "flaw": "Every image is started at once with no concurrency limit, so a large gallery launches unbounded parallel work.",
+        "line": 3,
+        "category": "unbounded-concurrency",
+        "consequence": "A gallery of two thousand images opens two thousand simultaneous operations, exhausting memory, file handles or the downstream rate limit. Cap concurrency with a pool or batch the work."
+      },
+      "tags": [
+        "concurrency",
+        "load"
+      ],
+      "whatItTests": [
+        "concurrency limits",
+        "resource exhaustion",
+        "backpressure"
+      ],
+      "goodAnswerSignals": [
+        "Names the missing concurrency cap",
+        "Ties the bound to the input size"
+      ],
+      "weakAnswerSignals": [
+        "Says Promise.all is always the right choice",
+        "Suggests only a faster machine"
+      ],
+      "followUpPrompts": [
+        "What concurrency limit would you choose, and how would you pick it?"
+      ],
+      "mayaPushbacks": [
+        "How many resize operations are in flight at peak?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-16",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "concurrency-and-failure",
+      "category": "concurrency-and-failure",
+      "title": "The catch that says nothing",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "easy",
+      "expectedMinutes": 4,
+      "evidenceType": "debugging",
+      "competency": "backend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This saves a draft and reports success to the caller. Explain what is wrong with it.",
+      "objective": "Recognize an empty catch paired with an unconditionally optimistic return value.",
+      "prerequisites": [],
+      "hints": [
+        "Ask what the caller sees when the database is unreachable.",
+        "Consider where an operator would look to discover this failed."
+      ],
+      "explanation": "Catching without logging removes the only evidence the failure happened. Returning saved: true regardless converts a recoverable error into silent data loss. If the failure genuinely should not block the editor, it still has to be recorded and reported honestly.",
+      "answerKey": {
+        "code": "export async function saveDraft(db, draft) {\n  try {\n    await db.draft.upsert({\n      where: { id: draft.id },\n      update: draft,\n      create: draft\n    });\n  } catch (error) {\n    // keep the editor responsive\n  }\n\n  return { saved: true };\n}",
+        "language": "javascript",
+        "flaw": "The catch swallows every error and the function still reports success, so a failed save is indistinguishable from a successful one.",
+        "line": 12,
+        "category": "swallowed-error",
+        "consequence": "Users are told their work is saved when it is not, and the failure is never logged so nobody finds out. Log the error and return an honest result the caller can act on."
+      },
+      "tags": [
+        "errors"
+      ],
+      "whatItTests": [
+        "error handling",
+        "silent failure",
+        "honest results"
+      ],
+      "goodAnswerSignals": [
+        "Notices success is reported regardless",
+        "Mentions the missing logging"
+      ],
+      "weakAnswerSignals": [
+        "Says the empty catch is fine for user experience",
+        "Only suggests a retry"
+      ],
+      "followUpPrompts": [
+        "What should this return when the write fails?"
+      ],
+      "mayaPushbacks": [
+        "How would you ever learn that this failed in production?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-17",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "concurrency-and-failure",
+      "category": "concurrency-and-failure",
+      "title": "A timer that outlives its screen",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "frontend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This polls for job status while a screen is open. Explain what is wrong with it and what that costs in production.",
+      "objective": "Recognize a repeating timer created in an effect with no teardown.",
+      "prerequisites": [],
+      "hints": [
+        "Ask what happens to the first timer when jobId changes.",
+        "Count how many timers exist after visiting three different jobs."
+      ],
+      "explanation": "The effect re-runs whenever jobId changes, creating an additional interval each time while the previous ones keep firing. After five job changes the endpoint is polled five times every two seconds, forever. Returning a cleanup that calls clearInterval fixes both the leak and the duplication.",
+      "answerKey": {
+        "code": "useEffect(() => {\n  const id = setInterval(() => {\n    fetchStatus().then(setStatus);\n  }, 2000);\n}, [jobId]);",
+        "language": "javascript",
+        "flaw": "The interval is created but never cleared, so a new poller starts on every jobId change and none of them ever stop.",
+        "line": 2,
+        "category": "resource-leak",
+        "consequence": "Polling frequency multiplies with every navigation, hammering the endpoint and calling setStatus on unmounted components. Return a cleanup that clears the interval."
+      },
+      "tags": [
+        "lifecycle"
+      ],
+      "whatItTests": [
+        "effect cleanup",
+        "timers",
+        "leak multiplication"
+      ],
+      "goodAnswerSignals": [
+        "Names the missing clearInterval",
+        "Explains multiplication across dependency changes"
+      ],
+      "weakAnswerSignals": [
+        "Says the dependency array is wrong",
+        "Suggests a shorter interval"
+      ],
+      "followUpPrompts": [
+        "What else should stop when this screen closes?"
+      ],
+      "mayaPushbacks": [
+        "What clears this interval?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-18",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "concurrency-and-failure",
+      "category": "concurrency-and-failure",
+      "title": "Retrying into the fire",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "debugging",
+      "competency": "backend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This retries a failing dependency. Explain what is wrong with it and what that costs when the dependency is struggling.",
+      "objective": "Recognize retries that amplify load rather than relieving it.",
+      "prerequisites": [],
+      "hints": [
+        "Ask what the request rate becomes when the dependency starts failing.",
+        "Consider a thousand clients all retrying at the same moment."
+      ],
+      "explanation": "A retry loop with no delay converts one failing request into five back-to-back requests. Across many clients that is a coordinated surge exactly when the dependency can least handle it. Exponential backoff spreads attempts out, and jitter stops every client retrying in lockstep.",
+      "answerKey": {
+        "code": "export async function fetchWithRetry(url, attempts = 5) {\n  for (let i = 0; i < attempts; i++) {\n    try {\n      return await fetch(url);\n    } catch (error) {\n      if (i === attempts - 1) throw error;\n    }\n  }\n}",
+        "language": "javascript",
+        "flaw": "Retries fire immediately with no delay, backoff or jitter, so a struggling dependency is hit five times as fast as normal.",
+        "line": 6,
+        "category": "retry-storm",
+        "consequence": "When the dependency slows under load, every client multiplies its request rate instead of backing off, turning a partial outage into a total one. Add exponential backoff with jitter, and a cap."
+      },
+      "tags": [
+        "retries",
+        "load"
+      ],
+      "whatItTests": [
+        "retry strategy",
+        "backoff",
+        "cascading failure"
+      ],
+      "goodAnswerSignals": [
+        "Names the missing backoff",
+        "Explains load amplification during an outage"
+      ],
+      "weakAnswerSignals": [
+        "Says five attempts is reasonable and stops there",
+        "Focuses only on the error type"
+      ],
+      "followUpPrompts": [
+        "Why does jitter matter as well as backoff?"
+      ],
+      "mayaPushbacks": [
+        "What is the request rate during a dependency outage?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-19",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "the-network",
+      "category": "the-network",
+      "title": "A request with no deadline",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "backend-performance",
+      "format": "find-the-flaw",
+      "prompt": "This calls a third-party pricing service during checkout. Explain what is wrong with it and what that costs in production.",
+      "objective": "Recognize an external call with no upper bound on how long it may take.",
+      "prerequisites": [],
+      "hints": [
+        "Ask what the longest this call can take is.",
+        "Consider what happens to other requests while this one waits."
+      ],
+      "explanation": "Without a timeout the request waits as long as the socket stays open, which under a network partition can be minutes. Each hung call holds a connection, and the failure spreads to endpoints that never touch pricing. A deadline plus an explicit fallback keeps one dependency's problem contained.",
+      "answerKey": {
+        "code": "export async function getQuote(items) {\n  const response = await fetch('https://pricing.example.com/quote', {\n    method: 'POST',\n    body: JSON.stringify({ items })\n  });\n\n  return response.json();\n}",
+        "language": "javascript",
+        "flaw": "The call has no timeout, so a hung third party holds the checkout request open indefinitely.",
+        "line": 2,
+        "category": "missing-timeout",
+        "consequence": "One slow dependency ties up server connections until the pool is exhausted and unrelated requests start failing. Attach an AbortSignal with a deadline and decide what checkout does when it fires."
+      },
+      "tags": [
+        "timeouts"
+      ],
+      "whatItTests": [
+        "timeouts",
+        "failure isolation",
+        "resource exhaustion"
+      ],
+      "goodAnswerSignals": [
+        "Names the missing timeout",
+        "Explains connection exhaustion spreading the failure"
+      ],
+      "weakAnswerSignals": [
+        "Says fetch times out by default",
+        "Only suggests adding a retry"
+      ],
+      "followUpPrompts": [
+        "What should checkout do when the deadline fires?"
+      ],
+      "mayaPushbacks": [
+        "What bounds how long this call can run?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-20",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "the-network",
+      "category": "the-network",
+      "title": "Page by page, one by one",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "debugging",
+      "competency": "backend-performance",
+      "format": "find-the-flaw",
+      "prompt": "This drains a paginated API. Explain what is wrong with it and what that costs for a large account.",
+      "objective": "Recognize a drain loop with neither concurrency nor an upper bound.",
+      "prerequisites": [],
+      "hints": [
+        "Multiply the round trip time by the number of pages for a large account.",
+        "Ask how much memory the returned array holds at the end."
+      ],
+      "explanation": "Each iteration waits for the previous one, so total latency is the page count times the per-page latency. Nothing limits how many pages are pulled, and every record stays in memory until the loop ends. Returning an async iterator lets the caller process pages as they arrive with constant memory.",
+      "answerKey": {
+        "code": "export async function fetchAllPages(api) {\n  const all = [];\n  let page = 1;\n\n  while (true) {\n    const batch = await api.list({ page, pageSize: 50 });\n    if (batch.length === 0) break;\n    all.push(...batch);\n    page += 1;\n  }\n\n  return all;\n}",
+        "language": "javascript",
+        "flaw": "Pages are fetched strictly one after another with no bound on the total, so latency and memory grow without limit with account size.",
+        "line": 6,
+        "category": "unbounded-pagination",
+        "consequence": "An account with a hundred thousand records makes two thousand sequential round trips and holds every record in memory at once. Stream or page the consumer instead of materializing the whole list, and cap the total."
+      },
+      "tags": [
+        "latency"
+      ],
+      "whatItTests": [
+        "pagination",
+        "streaming",
+        "memory bounds"
+      ],
+      "goodAnswerSignals": [
+        "Notices both the sequencing and the missing bound",
+        "Suggests streaming or a cap"
+      ],
+      "weakAnswerSignals": [
+        "Only suggests a bigger page size",
+        "Says the loop is fine because it terminates"
+      ],
+      "followUpPrompts": [
+        "How would you rewrite this as an async iterator?"
+      ],
+      "mayaPushbacks": [
+        "What limits how much this function can load?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-21",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "the-network",
+      "category": "the-network",
+      "title": "Nobody cancelled the search",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "debugging",
+      "competency": "frontend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This runs a search as the user types. Explain what is wrong with it and what the user sees.",
+      "objective": "Recognize a request race where response order is not guaranteed to match request order.",
+      "prerequisites": [],
+      "hints": [
+        "Ask what happens if the request for a short query returns after a longer one.",
+        "Consider two requests in flight at the same time."
+      ],
+      "explanation": "Each keystroke starts a request; the network decides the order they return in. Without cancellation or a staleness guard, whichever finishes last wins, which may be the oldest query. Returning a cleanup that sets an ignore flag or aborts the request makes the newest query authoritative.",
+      "answerKey": {
+        "code": "useEffect(() => {\n  search(query).then((results) => {\n    setResults(results);\n  });\n}, [query]);",
+        "language": "javascript",
+        "flaw": "In-flight requests are never cancelled or ignored, so a slow earlier response can overwrite a faster later one.",
+        "line": 2,
+        "category": "out-of-order-response",
+        "consequence": "The user types a refined query, sees correct results briefly, then watches them replaced by results for an older query. Track the latest request and ignore stale responses, or abort them on cleanup."
+      },
+      "tags": [
+        "races",
+        "lifecycle"
+      ],
+      "whatItTests": [
+        "request races",
+        "cancellation",
+        "effect cleanup"
+      ],
+      "goodAnswerSignals": [
+        "Names the out-of-order response race",
+        "Proposes cancellation or a staleness check"
+      ],
+      "weakAnswerSignals": [
+        "Says the dependency array handles it",
+        "Suggests only debouncing"
+      ],
+      "followUpPrompts": [
+        "Does debouncing remove this race or just make it rarer?"
+      ],
+      "mayaPushbacks": [
+        "What guarantees responses arrive in the order they were sent?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-22",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "reading-code",
+      "category": "reading-code",
+      "title": "The stale closure",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "hard",
+      "expectedMinutes": 7,
+      "evidenceType": "debugging",
+      "competency": "frontend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This autosaves a document every ten seconds. Explain what is wrong with it and what the user loses.",
+      "objective": "Recognize a long-lived callback closing over state that will not be updated.",
+      "prerequisites": [],
+      "hints": [
+        "Ask which value of content the callback can see after ten minutes of typing.",
+        "Note that the cleanup is correct — the defect is elsewhere."
+      ],
+      "explanation": "The empty dependency array runs the effect once, so the closure passed to setInterval captures the first content value forever. Cleanup is present and correct, which makes the bug easy to miss. A ref updated on each render gives the interval access to current state without re-subscribing.",
+      "answerKey": {
+        "code": "useEffect(() => {\n  const id = setInterval(() => {\n    save(content);\n  }, 10000);\n\n  return () => clearInterval(id);\n}, []);",
+        "language": "javascript",
+        "flaw": "The effect captures content once on mount and never re-subscribes, so the interval keeps saving the original value.",
+        "line": 3,
+        "category": "stale-closure",
+        "consequence": "Every autosave writes the document as it was when the screen opened, silently discarding everything typed since. Use a ref holding the latest value, or re-create the interval when content changes."
+      },
+      "tags": [
+        "react",
+        "closures"
+      ],
+      "whatItTests": [
+        "closures",
+        "effect dependencies",
+        "stale state"
+      ],
+      "goodAnswerSignals": [
+        "Names the stale closure",
+        "Proposes a ref or a corrected dependency"
+      ],
+      "weakAnswerSignals": [
+        "Says the cleanup is missing",
+        "Suggests a shorter interval"
+      ],
+      "followUpPrompts": [
+        "Why is adding content to the dependency array an imperfect fix?"
+      ],
+      "mayaPushbacks": [
+        "Which content does the interval save after ten minutes?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ],
+      "promptTemplate": "This autosaves a document in {{projectName}} every ten seconds. Explain what is wrong with it and what the user loses."
+    },
+    {
+      "id": "find-flaw-23",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "reading-code",
+      "category": "reading-code",
+      "title": "Money in floats",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "backend-data",
+      "format": "find-the-flaw",
+      "prompt": "This totals a shopping cart. Explain what is wrong with it and what the user eventually sees.",
+      "objective": "Recognize currency arithmetic performed in a type that cannot represent it exactly.",
+      "prerequisites": [],
+      "hints": [
+        "Try adding 0.1 and 0.2 in a JavaScript console.",
+        "Ask whether toFixed changes the stored value or only how it is shown."
+      ],
+      "explanation": "Binary floating point cannot represent most decimal fractions exactly, so repeated addition accumulates error. toFixed hides it at display time without fixing the stored value. Working in paise as integers makes every operation exact, converting to a decimal only for display.",
+      "answerKey": {
+        "code": "export function cartTotal(items) {\n  let total = 0;\n\n  for (const item of items) {\n    total += item.priceInRupees * item.quantity;\n  }\n\n  return total.toFixed(2);\n}",
+        "language": "javascript",
+        "flaw": "Currency is accumulated in binary floating point, so amounts like 0.1 and 0.2 do not sum exactly and the total drifts.",
+        "line": 5,
+        "category": "float-money",
+        "consequence": "Totals disagree with the sum of the line items by a paisa, and the discrepancy compounds across a large cart and reconciles badly against payment records. Store and add money as integer minor units."
+      },
+      "tags": [
+        "numbers"
+      ],
+      "whatItTests": [
+        "numeric precision",
+        "money handling",
+        "representation"
+      ],
+      "goodAnswerSignals": [
+        "Names floating point representation error",
+        "Proposes integer minor units"
+      ],
+      "weakAnswerSignals": [
+        "Says toFixed solves it",
+        "Suggests rounding at each step"
+      ],
+      "followUpPrompts": [
+        "Where exactly would you convert back to rupees?"
+      ],
+      "mayaPushbacks": [
+        "Does toFixed fix the number or only its display?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-24",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "reading-code",
+      "category": "reading-code",
+      "title": "Sorted in place",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "frontend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This renders a sorted view of a list held in state. Explain what is wrong with it.",
+      "objective": "Recognize an in-place array method applied to state or props.",
+      "prerequisites": [],
+      "hints": [
+        "Check whether sort returns a new array or the same one.",
+        "Ask what else holds a reference to the tasks array."
+      ],
+      "explanation": "sort returns the same array it was given, having reordered it. Because tasks came from state, this rewrites state during render — an update React never observed. Spreading into a new array first keeps the render pure and leaves the source untouched.",
+      "answerKey": {
+        "code": "function TaskList({ tasks }) {\n  const sorted = tasks.sort((a, b) => a.order - b.order);\n\n  return sorted.map((task) => <Row key={task.id} task={task} />);\n}",
+        "language": "javascript",
+        "flaw": "Array.sort mutates in place, so this reorders the caller's state array during render instead of producing a new list.",
+        "line": 2,
+        "category": "state-mutation",
+        "consequence": "Props are mutated during render, so React may not detect the change, other consumers of the same array see it reorder unexpectedly, and the render is no longer pure. Copy before sorting."
+      },
+      "tags": [
+        "react",
+        "mutation"
+      ],
+      "whatItTests": [
+        "immutability",
+        "render purity",
+        "array methods"
+      ],
+      "goodAnswerSignals": [
+        "Names the in-place mutation",
+        "Proposes copying before sorting"
+      ],
+      "weakAnswerSignals": [
+        "Says sort returns a new array",
+        "Focuses only on the key prop"
+      ],
+      "followUpPrompts": [
+        "Which other array methods have this property?"
+      ],
+      "mayaPushbacks": [
+        "Does sort copy the array first?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ],
+      "promptTemplate": "This renders a sorted view of a list held in {{framework}} state. Explain what is wrong with it."
+    },
+    {
+      "id": "find-flaw-25",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "reading-code",
+      "category": "reading-code",
+      "title": "Derived, then stored",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "debugging",
+      "competency": "frontend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This keeps a formatted label alongside a value. Explain what is wrong with it and what the user sees.",
+      "objective": "Recognize state that duplicates something already derivable from props.",
+      "prerequisites": [],
+      "hints": [
+        "Count how many renders happen when amount changes.",
+        "Ask what the effect is compensating for."
+      ],
+      "explanation": "useState initializes once, so the effect exists purely to re-synchronize. That means every change renders the old value, then the new one. Since format is a pure function of amount, calling it during render removes the state, the effect, the extra render and the possibility of drift.",
+      "answerKey": {
+        "code": "function Price({ amount }) {\n  const [label, setLabel] = useState(format(amount));\n\n  useEffect(() => {\n    setLabel(format(amount));\n  }, [amount]);\n\n  return <span>{label}</span>;\n}",
+        "language": "javascript",
+        "flaw": "A value fully derivable from props is copied into state, so it renders stale for one frame after every change and can drift out of sync.",
+        "line": 2,
+        "category": "derived-state",
+        "consequence": "Each amount change renders the previous label once before the effect corrects it, producing a visible flicker and an extra render. Compute the label during render instead of storing it."
+      },
+      "tags": [
+        "react",
+        "state"
+      ],
+      "whatItTests": [
+        "derived state",
+        "render cycles",
+        "state design"
+      ],
+      "goodAnswerSignals": [
+        "Identifies the unnecessary derived state",
+        "Notes the extra render or flicker"
+      ],
+      "weakAnswerSignals": [
+        "Says the dependency array is wrong",
+        "Suggests useMemo without removing the state"
+      ],
+      "followUpPrompts": [
+        "When is copying a prop into state actually correct?"
+      ],
+      "mayaPushbacks": [
+        "What does the effect exist to fix?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-26",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "data-layer",
+      "category": "data-layer",
+      "title": "Counting the whole table",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "backend-data",
+      "format": "find-the-flaw",
+      "prompt": "This renders a paginated table with a total count. Explain what is wrong with it at scale.",
+      "objective": "Recognize an exact total that costs more than the data it accompanies.",
+      "prerequisites": [],
+      "hints": [
+        "Compare the cost of fetching 50 rows against counting 50 million.",
+        "Ask which half of this Promise.all takes longer as the table grows."
+      ],
+      "explanation": "Counting all rows cannot use a covering index the way a limited read can; the database inspects the whole table. The fifty rows are cheap and the count is not, so the query that matters least dominates the latency. Most products can use an approximate total or omit the page count entirely.",
+      "answerKey": {
+        "code": "export async function tablePage(db, page) {\n  const [rows, total] = await Promise.all([\n    db.event.findMany({ skip: page * 50, take: 50 }),\n    db.event.count()\n  ]);\n\n  return { rows, total, pages: Math.ceil(total / 50) };\n}",
+        "language": "javascript",
+        "flaw": "An unfiltered count runs on every page request, which scans the whole table rather than using an index.",
+        "line": 4,
+        "category": "expensive-count",
+        "consequence": "Once the table reaches tens of millions of rows, the count dominates the request and the page slows even though only fifty rows are returned. Cache the total, approximate it, or drop the exact page count."
+      },
+      "tags": [
+        "queries"
+      ],
+      "whatItTests": [
+        "query cost",
+        "counts",
+        "pagination"
+      ],
+      "goodAnswerSignals": [
+        "Names the full-table count",
+        "Suggests caching, approximating or removing it"
+      ],
+      "weakAnswerSignals": [
+        "Says Promise.all makes it free",
+        "Suggests an index on the primary key"
+      ],
+      "followUpPrompts": [
+        "What would you show instead of an exact page count?"
+      ],
+      "mayaPushbacks": [
+        "Which of these two queries gets slower as the table grows?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-27",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "data-layer",
+      "category": "data-layer",
+      "title": "Deep pages get slower",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "hard",
+      "expectedMinutes": 6,
+      "evidenceType": "debugging",
+      "competency": "backend-data",
+      "format": "find-the-flaw",
+      "prompt": "This powers an infinite scroll that users sometimes take very far. Explain what is wrong with it.",
+      "objective": "Recognize that skip is not free and scales with page depth.",
+      "prerequisites": [],
+      "hints": [
+        "Ask how many rows the database touches to return page 5,000.",
+        "Consider why page one feels instant and page one thousand does not."
+      ],
+      "explanation": "The database cannot jump to row 100,000 — it reads and discards everything before it. Cursor pagination passes the last seen id and adds a where clause, letting the index seek directly to the position, which makes every page cost the same.",
+      "answerKey": {
+        "code": "export async function feedPage(db, pageNumber) {\n  return db.post.findMany({\n    skip: pageNumber * 20,\n    take: 20,\n    orderBy: { id: 'asc' }\n  });\n}",
+        "language": "javascript",
+        "flaw": "Offset pagination makes the database walk and discard every skipped row, so cost grows linearly with how deep the user scrolls.",
+        "line": 3,
+        "category": "deep-offset",
+        "consequence": "Page 1 is instant and page 5,000 reads a hundred thousand rows to return twenty, so the feed degrades exactly for the most engaged users. Use a cursor on the ordering column instead of an offset."
+      },
+      "tags": [
+        "pagination"
+      ],
+      "whatItTests": [
+        "pagination",
+        "index seeks",
+        "scaling"
+      ],
+      "goodAnswerSignals": [
+        "Names the offset scan cost",
+        "Proposes cursor or keyset pagination"
+      ],
+      "weakAnswerSignals": [
+        "Says an index fixes it without changing the query",
+        "Only suggests smaller pages"
+      ],
+      "followUpPrompts": [
+        "What do you pass to the client for a cursor to work?"
+      ],
+      "mayaPushbacks": [
+        "How does the database reach row 100,000?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-28",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "data-layer",
+      "category": "data-layer",
+      "title": "Borrowed and never returned",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "debugging",
+      "competency": "backend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This runs a report against a pooled connection. Explain what is wrong with it and what that costs in production.",
+      "objective": "Recognize an acquired resource released outside a finally.",
+      "prerequisites": [],
+      "hints": [
+        "Trace what happens when the query throws.",
+        "Ask which line runs if an exception is raised above it."
+      ],
+      "explanation": "If query rejects, the exception propagates and release is never reached. The pool believes the connection is still in use and will not hand it out again. A handful of failures exhausts the pool, and the resulting outage looks like a database problem rather than a code problem.",
+      "answerKey": {
+        "code": "export async function runReport(pool, sql) {\n  const client = await pool.connect();\n\n  const result = await client.query(sql);\n\n  client.release();\n  return result.rows;\n}",
+        "language": "javascript",
+        "flaw": "The connection is released only on the success path, so a query that throws leaks it out of the pool permanently.",
+        "line": 4,
+        "category": "resource-leak",
+        "consequence": "Every failing report removes one connection from the pool until the pool is empty and every request hangs waiting for one. Release in a finally block so it happens on both paths."
+      },
+      "tags": [
+        "resources"
+      ],
+      "whatItTests": [
+        "resource lifecycle",
+        "error paths",
+        "connection pools"
+      ],
+      "goodAnswerSignals": [
+        "Names the leak on the error path",
+        "Proposes try/finally"
+      ],
+      "weakAnswerSignals": [
+        "Says release is always called",
+        "Suggests only a larger pool"
+      ],
+      "followUpPrompts": [
+        "Why does this failure look like a database outage?"
+      ],
+      "mayaPushbacks": [
+        "What releases the connection when the query throws?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-29",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "data-layer",
+      "category": "data-layer",
+      "title": "Indexed, but not for this",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "hard",
+      "expectedMinutes": 6,
+      "evidenceType": "debugging",
+      "competency": "backend-data",
+      "format": "find-the-flaw",
+      "prompt": "The comments table has an index on postId. This query is still slow. Explain why.",
+      "objective": "Recognize that an index must cover the filter and the ordering, not just one column.",
+      "prerequisites": [],
+      "hints": [
+        "Ask what the database does after narrowing to one post.",
+        "Consider a post with fifty thousand comments."
+      ],
+      "explanation": "An index on postId narrows to one post, which may still be thousands of rows. The status filter and the createdAt sort both happen afterwards in memory. A composite index ordered to match the query lets the database walk the index in output order and stop at ten.",
+      "answerKey": {
+        "code": "export async function recentApproved(db, postId) {\n  return db.comment.findMany({\n    where: { postId, status: 'APPROVED' },\n    orderBy: { createdAt: 'desc' },\n    take: 10\n  });\n}",
+        "language": "javascript",
+        "flaw": "The single-column index on postId cannot satisfy the status filter or the ordering, so the database sorts a large filtered set on every call.",
+        "line": 4,
+        "category": "wrong-index",
+        "consequence": "For a popular post the database reads every comment, filters by status and sorts them all to return ten rows. A composite index on (postId, status, createdAt desc) lets it seek and stop after ten."
+      },
+      "tags": [
+        "indexes"
+      ],
+      "whatItTests": [
+        "index design",
+        "query plans",
+        "sort cost"
+      ],
+      "goodAnswerSignals": [
+        "Proposes a composite index covering filter and sort",
+        "Explains the in-memory sort"
+      ],
+      "weakAnswerSignals": [
+        "Says the existing index is sufficient",
+        "Suggests caching without addressing the query"
+      ],
+      "followUpPrompts": [
+        "Why does the column order in a composite index matter?"
+      ],
+      "mayaPushbacks": [
+        "What does the index help with, and what is left over?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-30",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "concurrency-and-failure",
+      "category": "concurrency-and-failure",
+      "title": "Guarded on the client only",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "backend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "The submit button is disabled after the first click. This is the handler behind it. Explain what is wrong.",
+      "objective": "Recognize a correctness guarantee enforced only where it cannot be trusted.",
+      "prerequisites": [],
+      "hints": [
+        "Ask what happens if the browser retries after a timeout.",
+        "Consider a request sent from outside the browser entirely."
+      ],
+      "explanation": "A disabled button is a user experience improvement, not a guarantee. The server accepts any request it receives, including a retry after a timeout the client never saw succeed. Making the endpoint idempotent on a request key moves the guarantee to where it holds.",
+      "answerKey": {
+        "code": "export async function submitOrder(db, req, res) {\n  const order = await db.order.create({\n    data: { userId: req.userId, items: req.body.items }\n  });\n\n  res.json({ orderId: order.id });\n}",
+        "language": "javascript",
+        "flaw": "Duplicate submissions are prevented only in the browser, so a retry, a refresh or a direct call creates a second order.",
+        "line": 2,
+        "category": "client-side-guard",
+        "consequence": "Flaky networks, impatient refreshes and any non-browser client all produce duplicate orders that customers get charged for. Accept a client-supplied idempotency key and enforce it with a unique constraint."
+      },
+      "tags": [
+        "idempotency"
+      ],
+      "whatItTests": [
+        "idempotency",
+        "trust boundaries",
+        "duplicate requests"
+      ],
+      "goodAnswerSignals": [
+        "Notices the server has no duplicate protection",
+        "Proposes an idempotency key"
+      ],
+      "weakAnswerSignals": [
+        "Says the disabled button is sufficient",
+        "Suggests only rate limiting"
+      ],
+      "followUpPrompts": [
+        "Where should that key be generated?"
+      ],
+      "mayaPushbacks": [
+        "What stops a duplicate request that never came from your UI?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-31",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "concurrency-and-failure",
+      "category": "concurrency-and-failure",
+      "title": "Waiting inside the lock",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "hard",
+      "expectedMinutes": 7,
+      "evidenceType": "debugging",
+      "competency": "backend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This charges a card and records the order together. Explain what is wrong with it and what that costs under load.",
+      "objective": "Recognize an external call widening a transaction far beyond database work.",
+      "prerequisites": [],
+      "hints": [
+        "Ask how long the database locks are held for.",
+        "Consider what a rollback does about money already taken."
+      ],
+      "explanation": "A transaction should be as short as the writes it protects. Putting a network call inside means locks are held while waiting on a third party you do not control, and connection pool pressure follows. It also creates an inconsistency the transaction cannot fix: rolling back the rows does not refund the card.",
+      "answerKey": {
+        "code": "export async function placeOrder(db, gateway, order) {\n  return db.$transaction(async (tx) => {\n    const created = await tx.order.create({ data: order });\n\n    await gateway.charge({ amount: order.total });\n\n    return tx.order.update({\n      where: { id: created.id },\n      data: { status: 'PAID' }\n    });\n  });\n}",
+        "language": "javascript",
+        "flaw": "A slow external network call sits inside the database transaction, holding its locks for the whole duration of the payment.",
+        "line": 5,
+        "category": "long-transaction",
+        "consequence": "Row locks are held for hundreds of milliseconds per order, so under load transactions queue behind each other and the database becomes the bottleneck. Worse, a rollback cannot undo the charge. Move the external call outside the transaction."
+      },
+      "tags": [
+        "transactions"
+      ],
+      "whatItTests": [
+        "transaction scope",
+        "lock contention",
+        "external side effects"
+      ],
+      "goodAnswerSignals": [
+        "Names the external call inside the transaction",
+        "Mentions lock duration or the unrollbackable charge"
+      ],
+      "weakAnswerSignals": [
+        "Says the transaction makes it safe",
+        "Suggests only a longer timeout"
+      ],
+      "followUpPrompts": [
+        "How would you restructure this so a rollback stays meaningful?"
+      ],
+      "mayaPushbacks": [
+        "Can the transaction roll back the payment?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-32",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "concurrency-and-failure",
+      "category": "concurrency-and-failure",
+      "title": "Optional all the way down",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "frontend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This reads a value from an API response. Explain what is wrong with it.",
+      "objective": "Recognize defensive syntax that turns a missing structure into a plausible value.",
+      "prerequisites": [],
+      "hints": [
+        "Ask how a broken response differs from a genuine zero here.",
+        "Consider what telemetry would show if the API changed shape."
+      ],
+      "explanation": "Each ?. quietly accepts an unexpected shape, and ?? 0 gives it a meaning. A response missing subscription entirely and a genuine zero-seat plan become indistinguishable, so a serialization bug or an outage looks like a business state. Validate the shape and treat a violation as an error.",
+      "answerKey": {
+        "code": "export function planSeats(response) {\n  const seats = response?.data?.subscription?.seats ?? 0;\n\n  if (seats === 0) {\n    return { plan: 'free', seats: 0 };\n  }\n\n  return { plan: 'team', seats };\n}",
+        "language": "javascript",
+        "flaw": "Optional chaining collapses a malformed or failed response into the same value as a legitimate zero, hiding the error.",
+        "line": 2,
+        "category": "swallowed-error",
+        "consequence": "A broken API response silently downgrades a paying team to the free plan instead of surfacing a fault, and no telemetry records that the shape was wrong. Distinguish absent data from a real zero and fail loudly on the former."
+      },
+      "tags": [
+        "errors"
+      ],
+      "whatItTests": [
+        "error visibility",
+        "data validation",
+        "defensive coding"
+      ],
+      "goodAnswerSignals": [
+        "Distinguishes missing data from a real zero",
+        "Proposes validating the shape"
+      ],
+      "weakAnswerSignals": [
+        "Praises the defensive chaining",
+        "Suggests more optional chaining"
+      ],
+      "followUpPrompts": [
+        "What should this do when subscription is absent?"
+      ],
+      "mayaPushbacks": [
+        "How would you find out the API changed shape?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-33",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "concurrency-and-failure",
+      "category": "concurrency-and-failure",
+      "title": "Exit before the flush",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "debugging",
+      "competency": "backend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This is a nightly job that reports its results to a metrics service. Explain what is wrong with it.",
+      "objective": "Recognize a forced exit discarding work that has been buffered but not sent.",
+      "prerequisites": [],
+      "hints": [
+        "Ask whether the metrics call has actually been sent when exit runs.",
+        "Consider how a metrics client batches sends."
+      ],
+      "explanation": "process.exit does not wait for pending I/O. Most metrics clients batch over a short window, so a call made microseconds before exit never leaves the process. Awaiting an explicit flush, or simply returning and letting the event loop drain, delivers it.",
+      "answerKey": {
+        "code": "export async function runNightly(job, metrics) {\n  const result = await job.run();\n\n  metrics.record('nightly.completed', result.count);\n\n  process.exit(0);\n}",
+        "language": "javascript",
+        "flaw": "process.exit terminates immediately without letting the buffered metrics call flush, so the report is usually lost.",
+        "line": 6,
+        "category": "premature-exit",
+        "consequence": "The job succeeds but its telemetry never arrives, so dashboards show the job as never having run and a real failure is indistinguishable from a reporting gap. Await a flush, or let the process end naturally."
+      },
+      "tags": [
+        "lifecycle"
+      ],
+      "whatItTests": [
+        "process lifecycle",
+        "buffered IO",
+        "observability"
+      ],
+      "goodAnswerSignals": [
+        "Names the unflushed buffer",
+        "Proposes awaiting a flush or removing the exit"
+      ],
+      "weakAnswerSignals": [
+        "Says exit(0) is correct because the job succeeded",
+        "Focuses only on the exit code"
+      ],
+      "followUpPrompts": [
+        "Why might the process not exit on its own?"
+      ],
+      "mayaPushbacks": [
+        "Has the metric left the process when exit is called?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-34",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "the-network",
+      "category": "the-network",
+      "title": "Cached forever by accident",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "backend-performance",
+      "format": "find-the-flaw",
+      "prompt": "This serves a user's private dashboard payload. Explain what is wrong with the response.",
+      "objective": "Recognize a caching directive whose scope does not match the data.",
+      "prerequisites": [],
+      "hints": [
+        "Ask which caches are allowed to store a response marked public.",
+        "Note that the URL does not contain the user id."
+      ],
+      "explanation": "public tells every cache in the path that this response is shared. The URL does not vary by user — the identity comes from a session — so a proxy keyed on the URL alone will reuse it. private restricts storage to the end user's browser; no-store prevents caching altogether.",
+      "answerKey": {
+        "code": "export async function dashboard(req, res, db) {\n  const data = await db.dashboard.forUser(req.userId);\n\n  res.setHeader('Cache-Control', 'public, max-age=3600');\n  res.json(data);\n}",
+        "language": "javascript",
+        "flaw": "Per-user private data is marked publicly cacheable, so shared caches may store it and serve one user's dashboard to another.",
+        "line": 4,
+        "category": "cache-scope",
+        "consequence": "A CDN or proxy can hand a cached response to a different user, leaking private data, and stale data persists for an hour after any change. Private per-user responses need private or no-store."
+      },
+      "tags": [
+        "caching",
+        "http"
+      ],
+      "whatItTests": [
+        "http caching",
+        "data scoping",
+        "privacy"
+      ],
+      "goodAnswerSignals": [
+        "Identifies the public directive as wrong for per-user data",
+        "Mentions cross-user leakage"
+      ],
+      "weakAnswerSignals": [
+        "Says caching is always a performance win",
+        "Only suggests a shorter max-age"
+      ],
+      "followUpPrompts": [
+        "When would Vary be part of the answer here?"
+      ],
+      "mayaPushbacks": [
+        "Which cache decides this response can be reused?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-35",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "the-network",
+      "category": "the-network",
+      "title": "More than the client asked for",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "backend-data",
+      "format": "find-the-flaw",
+      "prompt": "This returns a profile to the browser. Explain what is wrong with it.",
+      "objective": "Recognize a response shape defined by the database rather than by the API.",
+      "prerequisites": [],
+      "hints": [
+        "List every column this response contains today.",
+        "Ask what happens when someone adds a column to the users table."
+      ],
+      "explanation": "Passing the record straight to res.json couples the wire format to the table. Today it may only leak an internal flag; the real danger is that adding a column to the table silently adds it to the public response. An explicit projection makes exposure a deliberate act.",
+      "answerKey": {
+        "code": "export async function profile(req, res, db) {\n  const user = await db.user.findUnique({\n    where: { id: req.params.id }\n  });\n\n  res.json(user);\n}",
+        "language": "javascript",
+        "flaw": "The full database row is serialized directly, so every column including internal and sensitive fields is sent to the client.",
+        "line": 6,
+        "category": "over-exposure",
+        "consequence": "Password hashes, tokens, internal flags and anything a future migration adds are exposed the moment they exist, with no code change to notice. Serialize an explicit field list instead of the row."
+      },
+      "tags": [
+        "serialization"
+      ],
+      "whatItTests": [
+        "data exposure",
+        "API contracts",
+        "serialization"
+      ],
+      "goodAnswerSignals": [
+        "Notices the whole row is serialized",
+        "Mentions future columns leaking automatically"
+      ],
+      "weakAnswerSignals": [
+        "Says it is fine if no sensitive columns exist now",
+        "Suggests only removing the password field"
+      ],
+      "followUpPrompts": [
+        "Where should that projection live so it cannot be forgotten?"
+      ],
+      "mayaPushbacks": [
+        "What appears in this response after the next migration?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-36",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "the-network",
+      "category": "the-network",
+      "title": "The whole file in memory",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "debugging",
+      "competency": "backend-performance",
+      "format": "find-the-flaw",
+      "prompt": "This serves an export that users download. Explain what is wrong with it and what that costs.",
+      "objective": "Recognize a buffered read where a stream would do.",
+      "prerequisites": [],
+      "hints": [
+        "Multiply the file size by the number of concurrent downloads.",
+        "Ask when the first byte reaches the user."
+      ],
+      "explanation": "readAll waits for the whole object before responding, so nothing is sent until everything is loaded and the peak memory is the full file per request. Streaming sends bytes as they arrive, keeps memory bounded by the chunk size, and lets the download start immediately.",
+      "answerKey": {
+        "code": "export async function download(req, res, storage) {\n  const buffer = await storage.readAll(req.params.key);\n\n  res.setHeader('Content-Type', 'text/csv');\n  res.send(buffer);\n}",
+        "language": "javascript",
+        "flaw": "The entire object is read into memory before any bytes are sent, so memory use scales with file size times concurrent downloads.",
+        "line": 2,
+        "category": "no-streaming",
+        "consequence": "Ten users downloading a 500MB export need five gigabytes of resident memory, and the process is killed. Pipe the storage stream to the response so memory stays constant."
+      },
+      "tags": [
+        "streaming"
+      ],
+      "whatItTests": [
+        "streaming",
+        "memory bounds",
+        "throughput"
+      ],
+      "goodAnswerSignals": [
+        "Proposes streaming or piping",
+        "Ties memory to size times concurrency"
+      ],
+      "weakAnswerSignals": [
+        "Says it is fine for small files and stops there",
+        "Suggests only compression"
+      ],
+      "followUpPrompts": [
+        "What does streaming change about time-to-first-byte?"
+      ],
+      "mayaPushbacks": [
+        "What is the peak memory for ten concurrent downloads?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-37",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "reading-code",
+      "category": "reading-code",
+      "title": "Keyed by position",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "frontend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This renders a reorderable list where each row holds its own input. Explain what is wrong with it.",
+      "objective": "Recognize an identity key that changes when the collection is reordered.",
+      "prerequisites": [],
+      "hints": [
+        "Delete the first item mentally and follow where each component's state goes.",
+        "Ask what the key is supposed to identify."
+      ],
+      "explanation": "React uses the key to decide which component instance corresponds to which item across renders. An index says the second thing is the second thing, so removing an earlier entry shifts every subsequent item onto a different instance and inherits its state. A stable id keeps identity attached to data.",
+      "answerKey": {
+        "code": "function Rows({ items }) {\n  return items.map((item, index) => (\n    <EditableRow key={index} item={item} />\n  ));\n}",
+        "language": "javascript",
+        "flaw": "Using the array index as the key ties component identity to position, so reordering or removing an item leaves state attached to the wrong row.",
+        "line": 3,
+        "category": "index-key",
+        "consequence": "Delete the first row and the text a user typed in it appears in the second, because React reuses the component at that index rather than the one for that item. Key by a stable item id."
+      },
+      "tags": [
+        "react",
+        "lists"
+      ],
+      "whatItTests": [
+        "react keys",
+        "component identity",
+        "list state"
+      ],
+      "goodAnswerSignals": [
+        "Names the identity problem with index keys",
+        "Gives a reorder or delete example"
+      ],
+      "weakAnswerSignals": [
+        "Says index keys are fine because they are unique",
+        "Focuses only on the console warning"
+      ],
+      "followUpPrompts": [
+        "When is an index key genuinely acceptable?"
+      ],
+      "mayaPushbacks": [
+        "What does key identify — a position or an item?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-38",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "reading-code",
+      "category": "reading-code",
+      "title": "Midnight somewhere else",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "backend-data",
+      "format": "find-the-flaw",
+      "prompt": "This groups events into calendar days for a chart. Explain what is wrong with it.",
+      "objective": "Recognize a date calculation that silently assumes UTC.",
+      "prerequisites": [],
+      "hints": [
+        "Work out which day 04:00 in Asia/Kolkata falls on under this function.",
+        "Ask which timezone toISOString renders in."
+      ],
+      "explanation": "toISOString always renders in UTC, so slicing the first ten characters gives the UTC calendar day. A day boundary is a local concept and differs from UTC by hours. Formatting in a chosen timezone, and being explicit about which one, is the only way the buckets match what the user experienced.",
+      "answerKey": {
+        "code": "export function dayBucket(isoTimestamp) {\n  const date = new Date(isoTimestamp);\n\n  return date.toISOString().slice(0, 10);\n}",
+        "language": "javascript",
+        "flaw": "Days are computed in UTC rather than the viewer's timezone, so events near midnight are counted on the wrong day.",
+        "line": 4,
+        "category": "timezone-bucketing",
+        "consequence": "For a user in Asia/Kolkata, everything before 05:30 local is attributed to the previous day, so daily charts and streaks are wrong at exactly the hours users care about. Bucket in an explicit timezone."
+      },
+      "tags": [
+        "dates"
+      ],
+      "whatItTests": [
+        "timezones",
+        "date boundaries",
+        "correctness"
+      ],
+      "goodAnswerSignals": [
+        "Names the UTC assumption",
+        "Gives a concrete near-midnight example"
+      ],
+      "weakAnswerSignals": [
+        "Says ISO strings are timezone independent",
+        "Suggests only storing local time"
+      ],
+      "followUpPrompts": [
+        "Whose timezone should the buckets use, and where is it decided?"
+      ],
+      "mayaPushbacks": [
+        "Which timezone does toISOString use?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "find-flaw-39",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "reading-code",
+      "category": "reading-code",
+      "title": "A regex that hangs",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "hard",
+      "expectedMinutes": 7,
+      "evidenceType": "debugging",
+      "competency": "backend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This validates a tag string from user input. Explain what is wrong with it.",
+      "objective": "Recognize a regular expression whose worst case is exponential in input length.",
+      "prerequisites": [],
+      "hints": [
+        "Try a long run of word characters ending in a character that cannot match.",
+        "Ask how many ways the engine can split the input between the two quantifiers."
+      ],
+      "explanation": "Because \\w+ and the surrounding group can both consume the same characters, the engine has many ways to divide the input. On a match it finds one quickly; on a failure it must try them all before rejecting. Since Node evaluates regexes synchronously, one request can stall every other one.",
+      "answerKey": {
+        "code": "const TAG = /^(\\w+\\s?)+$/;\n\nexport function isValidTag(input) {\n  return TAG.test(input);\n}",
+        "language": "javascript",
+        "flaw": "The pattern nests a quantifier inside a quantified group, so a non-matching input causes catastrophic backtracking.",
+        "line": 1,
+        "category": "regex-backtracking",
+        "consequence": "A crafted string of thirty word characters followed by one invalid character makes the engine explore exponentially many splits, pinning a CPU core and blocking the event loop for the whole process. Rewrite the pattern without nested quantifiers."
+      },
+      "tags": [
+        "regex",
+        "security"
+      ],
+      "whatItTests": [
+        "regex complexity",
+        "denial of service",
+        "event loop blocking"
+      ],
+      "goodAnswerSignals": [
+        "Names catastrophic backtracking or ReDoS",
+        "Notes it blocks the whole event loop"
+      ],
+      "weakAnswerSignals": [
+        "Says the regex is correct so it is fine",
+        "Suggests only a length limit"
+      ],
+      "followUpPrompts": [
+        "How would you rewrite this without nested quantifiers?"
+      ],
+      "mayaPushbacks": [
+        "What does the engine do before it can report no match?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ],
+      "promptTemplate": "You are interviewing at {{targetCompany}}. This validates a tag string from user input. Explain what is wrong with it."
+    },
+    {
+      "id": "find-flaw-40",
+      "contentVersion": 1,
+      "sessionKey": "applied-engineering",
+      "chapterKey": "reading-code",
+      "category": "reading-code",
+      "title": "Memoized on nothing",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "debugging",
+      "competency": "frontend-reliability",
+      "format": "find-the-flaw",
+      "prompt": "This memoizes an expensive computation. Explain what is wrong with it.",
+      "objective": "Recognize a memo whose dependencies do not cover its inputs.",
+      "prerequisites": [],
+      "hints": [
+        "List the values the callback reads, then compare them with the dependency array.",
+        "Ask what happens when the filter changes but the row count does not."
+      ],
+      "explanation": "useMemo recomputes only when a dependency changes. summarize reads both rows and filter, but the list mentions neither — only a derived length. Any change that keeps the count the same, including every filter change, returns the cached value. Dependencies must cover every input the callback reads.",
+      "answerKey": {
+        "code": "function Report({ rows, filter }) {\n  const summary = useMemo(() => summarize(rows, filter), [rows.length]);\n\n  return <Summary data={summary} />;\n}",
+        "language": "javascript",
+        "flaw": "The dependency list watches only the row count, so the summary is not recomputed when filter changes or when rows change without changing length.",
+        "line": 2,
+        "category": "stale-memo",
+        "consequence": "Changing the filter leaves the previous summary on screen with no indication it is stale, and editing a row in place shows old numbers. Depend on the actual values the computation reads."
+      },
+      "tags": [
+        "react",
+        "memo"
+      ],
+      "whatItTests": [
+        "memoization",
+        "dependency correctness",
+        "stale UI"
+      ],
+      "goodAnswerSignals": [
+        "Notices filter is missing from the dependencies",
+        "Gives a same-length change example"
+      ],
+      "weakAnswerSignals": [
+        "Says rows.length is a valid proxy for rows",
+        "Suggests removing the memo without explaining"
+      ],
+      "followUpPrompts": [
+        "Why is rows.length tempting here, and why is it wrong?"
+      ],
+      "mayaPushbacks": [
+        "Which inputs does the callback read?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Name the defect → State the cost",
+        "steps": [
+          "Trace what runs per request",
+          "Name the specific defect",
+          "Say what breaks in production"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the planted defect and its production cost.",
+        "developing": "Notices something wrong but not the planted defect.",
+        "weak": "Calls the code correct or is too vague to judge."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    }
+  ]
+}

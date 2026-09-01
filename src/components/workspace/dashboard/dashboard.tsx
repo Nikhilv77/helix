@@ -9,12 +9,15 @@ import type { DashboardOverviewData } from "@/lib/dashboard/dashboard-overview";
 import type { FrontendDsaPlan } from "@/lib/roadmap/frontend-plan";
 import type { CandidateProfile, Role } from "@/lib/shared/types";
 import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
+import type { PracticeRoadmapSession } from "@/lib/practice/practice-roadmap";
 
 interface DashboardProps {
   profile: CandidateProfile;
   showMayaWelcome?: boolean;
   frontendRoadmap?: FrontendRoadmapHome | null;
   frontendPlan?: FrontendDsaPlan | null;
+  /** The candidate's own Practice sessions, for the welcome preview. */
+  practiceSessions?: PracticeRoadmapSession[] | null;
   overviewData?: DashboardOverviewData;
 }
 
@@ -23,6 +26,7 @@ export function Dashboard({
   showMayaWelcome = false,
   frontendRoadmap = null,
   frontendPlan = null,
+  practiceSessions = null,
   overviewData
 }: DashboardProps) {
   if (showMayaWelcome) {
@@ -38,6 +42,7 @@ export function Dashboard({
           )}
           frontendRoadmap={frontendRoadmap}
           frontendPlan={frontendPlan}
+          practiceSessions={practiceSessions}
         />
         <MayaWelcomeLoading />
       </>

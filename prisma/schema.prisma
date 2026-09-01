@@ -688,6 +688,11 @@ model PrepQuestionTemplate {
   title                String
   roles                String[]
   levels               String[]
+  /// Languages whose semantics the answer depends on. Empty means
+  /// language-agnostic: a JavaScript snippet demonstrating an N+1 query still
+  /// teaches a Go candidate, but `var` hoisting does not, so only questions
+  /// that are actually language-bound are tagged.
+  languages            String[]                      @default([])
   difficulty           String
   expectedMinutes      Int
   evidenceType         String

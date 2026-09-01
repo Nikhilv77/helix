@@ -27,6 +27,7 @@ import type { DsaQuestion } from "@/lib/dsa/dsa";
 
 type RunTest = {
   index: number;
+  visible?: boolean;
   input: string;
   expectedOutput: string;
   actualOutput?: string;
@@ -476,16 +477,22 @@ function RunOutput({
                     {test.passed ? "Passed" : "Failed"}
                   </span>
                 </div>
-                <dl className="mt-3 grid gap-x-3 gap-y-1.5 font-mono text-[12.5px] leading-5 sm:grid-cols-[4.5rem_1fr]">
-                  <dt className="text-cream/35">Input</dt>
-                  <dd className="break-words text-cream/65">{test.input}</dd>
-                  <dt className="text-cream/35">Expected</dt>
-                  <dd className="break-words text-cream/65">{test.expectedOutput}</dd>
-                  <dt className="text-cream/35">Output</dt>
-                  <dd className="break-words text-cream/65">
-                    {test.error || test.actualOutput || "No output"}
-                  </dd>
-                </dl>
+                {test.visible === false ? (
+                  <p className="mt-3 font-mono text-[12.5px] leading-5 text-cream/35">
+                    Hidden case — a correct solution passes it without seeing the input.
+                  </p>
+                ) : (
+                  <dl className="mt-3 grid gap-x-3 gap-y-1.5 font-mono text-[12.5px] leading-5 sm:grid-cols-[4.5rem_1fr]">
+                    <dt className="text-cream/35">Input</dt>
+                    <dd className="break-words text-cream/65">{test.input}</dd>
+                    <dt className="text-cream/35">Expected</dt>
+                    <dd className="break-words text-cream/65">{test.expectedOutput}</dd>
+                    <dt className="text-cream/35">Output</dt>
+                    <dd className="break-words text-cream/65">
+                      {test.error || test.actualOutput || "No output"}
+                    </dd>
+                  </dl>
+                )}
               </div>
             ))}
           </div>

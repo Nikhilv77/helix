@@ -2,7 +2,15 @@ export const PRACTICE_QUESTION_SCHEMA_VERSION = 1 as const;
 
 export type PracticeQuestionSource = "dsa" | "prep";
 export type PracticeQuestionDifficulty = "easy" | "medium" | "hard";
-export type PracticeQuestionFormat = "code" | "mcq" | "typed" | "spoken" | "diagram";
+export type PracticeQuestionFormat =
+  | "code"
+  | "mcq"
+  | "typed"
+  | "spoken"
+  | "diagram"
+  | "predict-run"
+  | "find-the-flaw"
+  | "diagnose";
 export type PracticeCodeLanguage = "python" | "javascript" | "cpp" | "java";
 
 export interface PracticeRubricDimension {

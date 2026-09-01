@@ -12,7 +12,7 @@ export class DsaService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  /** The curated Frontend DSA path: pattern chapters drawn from the full bank. */
+  /** The curated DSA path: pattern chapters drawn from the full bank. */
   async frontendPlan(): Promise<FrontendDsaPlan> {
     if (this.cachedPlan) return this.cachedPlan;
 

@@ -194,18 +194,6 @@ export async function POST(request: NextRequest) {
       try {
         const summary = await app.stuckSummaryService.summarize(question, context);
         await app.helpRequestService.attachSummary(helpRequest.id, JSON.stringify(summary));
-
-        await app.conciergeNotifier.notify({
-          requestId: helpRequest.id,
-          learnerName: learner.label,
-          questionTitle: question.title,
-          questionSlug: question.slug,
-          language: parsed.data.language,
-          difficulty: question.difficulty,
-          summary,
-          timeSpentMs: context.timeSpentMs,
-          hintsUsed: context.hintsUsed
-        });
       } catch (error) {
         // A request that never got summarised is still a request worth having.
         logger.error(

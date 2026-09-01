@@ -100,6 +100,7 @@ export const structuredDsaTestCasesBatch3: Record<string, Batch3Case[]> = {
 
 export function structuredCasesForBatch3(slug: string, examples: DsaExample[]): Batch3Case[] | null {
   const cases = structuredDsaTestCasesBatch3[slug];
-  if (cases?.length === examples.length) return cases;
+  // A set is valid if it covers at least the examples; extra cases are hidden.
+  if (cases && cases.length >= examples.length) return cases;
   return structuredCasesForBatch4(slug, examples);
 }

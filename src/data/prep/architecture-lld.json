@@ -1,0 +1,941 @@
+{
+  "bank": "architecture-lld",
+  "sourceLinks": [
+    {
+      "id": "refactoring-guru",
+      "title": "Design patterns",
+      "url": "https://refactoring.guru/design-patterns",
+      "notes": "Object-level design references."
+    }
+  ],
+  "templates": [
+    {
+      "id": "lld-01",
+      "contentVersion": 1,
+      "sessionKey": "architecture-system-design",
+      "chapterKey": "classic-objects",
+      "category": "classic-objects",
+      "title": "Twice the limit at the boundary",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "hard",
+      "expectedMinutes": 7,
+      "evidenceType": "practical-design",
+      "competency": "lld-design",
+      "format": "find-the-flaw",
+      "prompt": "This is a rate limiter allowing 100 requests per minute. Explain what is wrong with the design.",
+      "objective": "Recognize the burst a fixed-window counter allows at its boundary.",
+      "prerequisites": [],
+      "hints": [
+        "Send 100 requests at 11:59:59.9 and 100 more at 12:00:00.1.",
+        "Ask what happens to the count the moment the window index changes."
+      ],
+      "explanation": "The bucket key changes the instant the window index increments, so the count resets to zero regardless of how recently requests arrived. Two adjacent windows are independent, and a caller aware of the boundary gets double the intended rate. A sliding log, sliding window counter, or token bucket removes the discontinuity.",
+      "tags": [
+        "rate-limiting"
+      ],
+      "whatItTests": [
+        "rate limiting",
+        "window semantics",
+        "burst behaviour"
+      ],
+      "goodAnswerSignals": [
+        "Names the boundary burst",
+        "Proposes sliding window or token bucket"
+      ],
+      "weakAnswerSignals": [
+        "Says the limiter is correct",
+        "Only points out that the map grows"
+      ],
+      "followUpPrompts": [
+        "What does a token bucket change about this?"
+      ],
+      "mayaPushbacks": [
+        "How many requests fit in one second here?"
+      ],
+      "answerStructure": {
+        "framework": "Read the design → Name the defect → State the consequence",
+        "steps": [
+          "Work out what the component promises",
+          "Find where it breaks that promise",
+          "Say what goes wrong for a caller"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the design defect and what it costs a caller.",
+        "developing": "Notices something off without naming the defect.",
+        "weak": "Calls the design correct or restates what the code does."
+      },
+      "sourceLinkIds": [
+        "refactoring-guru"
+      ],
+      "answerKey": {
+        "code": "export class RateLimiter {\n  constructor(limit, windowMs) {\n    this.limit = limit;\n    this.windowMs = windowMs;\n    this.counts = new Map();\n  }\n\n  allow(key) {\n    const window = Math.floor(Date.now() / this.windowMs);\n    const bucket = `${key}:${window}`;\n    const used = this.counts.get(bucket) ?? 0;\n\n    if (used >= this.limit) return false;\n    this.counts.set(bucket, used + 1);\n    return true;\n  }\n}",
+        "language": "javascript",
+        "flaw": "A fixed window resets on a wall-clock boundary, so a caller can send the full limit at the end of one window and again at the start of the next.",
+        "line": 9,
+        "category": "fixed-window-burst",
+        "consequence": "A 100-per-minute limiter permits 200 requests inside one second spanning the boundary, which is exactly when a dependency is least able to absorb it. A sliding window or token bucket enforces the rate continuously."
+      }
+    },
+    {
+      "id": "lld-02",
+      "contentVersion": 1,
+      "sessionKey": "architecture-system-design",
+      "chapterKey": "classic-objects",
+      "category": "classic-objects",
+      "title": "The LRU that forgot to reorder",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "practical-design",
+      "competency": "lld-design",
+      "format": "find-the-flaw",
+      "prompt": "This is an LRU cache. Explain what is wrong with it.",
+      "objective": "Recognize an eviction policy that does not match the name on the class.",
+      "prerequisites": [],
+      "hints": [
+        "Read a key a thousand times, then insert new keys and see what gets evicted.",
+        "Ask which operations change the order of this map."
+      ],
+      "explanation": "Map preserves insertion order, and the eviction picks the first key — which is the oldest inserted, not the least recently used. Since get never touches the ordering, reads have no effect on what survives. Deleting and re-setting the key inside get restores true LRU behaviour.",
+      "tags": [
+        "caching",
+        "data-structures"
+      ],
+      "whatItTests": [
+        "cache eviction",
+        "data structure semantics",
+        "LRU"
+      ],
+      "goodAnswerSignals": [
+        "Notices reads do not affect eviction order",
+        "Names the FIFO behaviour"
+      ],
+      "weakAnswerSignals": [
+        "Says the eviction check is off by one",
+        "Focuses only on the missing delete return"
+      ],
+      "followUpPrompts": [
+        "What data structure would you use if Map did not keep order?"
+      ],
+      "mayaPushbacks": [
+        "Which operation here updates recency?"
+      ],
+      "answerStructure": {
+        "framework": "Read the design → Name the defect → State the consequence",
+        "steps": [
+          "Work out what the component promises",
+          "Find where it breaks that promise",
+          "Say what goes wrong for a caller"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the design defect and what it costs a caller.",
+        "developing": "Notices something off without naming the defect.",
+        "weak": "Calls the design correct or restates what the code does."
+      },
+      "sourceLinkIds": [
+        "refactoring-guru"
+      ],
+      "answerKey": {
+        "code": "export class LruCache {\n  constructor(max) {\n    this.max = max;\n    this.map = new Map();\n  }\n\n  get(key) {\n    return this.map.get(key);\n  }\n\n  set(key, value) {\n    if (this.map.size >= this.max && !this.map.has(key)) {\n      const oldest = this.map.keys().next().value;\n      this.map.delete(oldest);\n    }\n    this.map.set(key, value);\n  }\n}",
+        "language": "javascript",
+        "flaw": "A read does not mark the entry as recently used, so eviction follows insertion order and the cache is FIFO rather than LRU.",
+        "line": 8,
+        "category": "wrong-eviction-policy",
+        "consequence": "The hottest key is evicted as soon as it is the oldest insertion, no matter how often it is read, so hit rate collapses for exactly the entries the cache exists to hold. get must move the key to the most-recent end."
+      }
+    },
+    {
+      "id": "lld-03",
+      "contentVersion": 1,
+      "sessionKey": "architecture-system-design",
+      "chapterKey": "classic-objects",
+      "category": "classic-objects",
+      "title": "Subscribed forever",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "practical-design",
+      "competency": "lld-design",
+      "format": "find-the-flaw",
+      "prompt": "This is an event emitter used across a long-lived application. Explain what is wrong with its interface.",
+      "objective": "Recognize a subscription interface with no matching release.",
+      "prerequisites": [],
+      "hints": [
+        "Ask how a component that subscribed would stop receiving events.",
+        "Consider what the emitter keeps a reference to."
+      ],
+      "explanation": "Any API that acquires something must offer a way to let it go. Without off or a returned disposer, callers have no mechanism to stop receiving events, and the emitter holds strong references to every handler forever. Returning an unsubscribe function from on is the smallest fix and makes the contract obvious.",
+      "tags": [
+        "observer"
+      ],
+      "whatItTests": [
+        "interface design",
+        "resource lifecycle",
+        "observer pattern"
+      ],
+      "goodAnswerSignals": [
+        "Names the missing unsubscribe",
+        "Connects retention to the emitter holding handlers"
+      ],
+      "weakAnswerSignals": [
+        "Says emit should be async",
+        "Focuses only on error handling"
+      ],
+      "followUpPrompts": [
+        "Why is returning a disposer better than an off(event, handler) method?"
+      ],
+      "mayaPushbacks": [
+        "How does a caller detach?"
+      ],
+      "answerStructure": {
+        "framework": "Read the design → Name the defect → State the consequence",
+        "steps": [
+          "Work out what the component promises",
+          "Find where it breaks that promise",
+          "Say what goes wrong for a caller"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the design defect and what it costs a caller.",
+        "developing": "Notices something off without naming the defect.",
+        "weak": "Calls the design correct or restates what the code does."
+      },
+      "sourceLinkIds": [
+        "refactoring-guru"
+      ],
+      "answerKey": {
+        "code": "export class Emitter {\n  constructor() {\n    this.handlers = new Map();\n  }\n\n  on(event, handler) {\n    const list = this.handlers.get(event) ?? [];\n    list.push(handler);\n    this.handlers.set(event, list);\n  }\n\n  emit(event, payload) {\n    for (const handler of this.handlers.get(event) ?? []) {\n      handler(payload);\n    }\n  }\n}",
+        "language": "javascript",
+        "flaw": "There is no way to unsubscribe, so every handler and everything it closes over is retained for the lifetime of the emitter.",
+        "line": 6,
+        "category": "no-teardown",
+        "consequence": "Components that subscribe on mount can never detach, so memory grows with every mount and handlers fire against destroyed state. `on` should return a disposer, or an `off` method should exist."
+      }
+    },
+    {
+      "id": "lld-04",
+      "contentVersion": 1,
+      "sessionKey": "architecture-system-design",
+      "chapterKey": "classic-objects",
+      "category": "classic-objects",
+      "title": "One handler ruins the broadcast",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "practical-design",
+      "competency": "lld-design",
+      "format": "find-the-flaw",
+      "prompt": "This dispatches an event to every subscriber. Explain what is wrong with it.",
+      "objective": "Recognize a broadcast where one participant can prevent the others from being served.",
+      "prerequisites": [],
+      "hints": [
+        "Ask what happens to the fifth handler if the second throws.",
+        "Compare the returned count with what was actually delivered."
+      ],
+      "explanation": "Iteration stops at the first exception, so ordering decides who gets the event — a property no subscriber can see or control. The return value compounds it by reporting the input length rather than actual deliveries. Wrapping each call and collecting failures makes delivery independent and the result honest.",
+      "tags": [
+        "observer",
+        "errors"
+      ],
+      "whatItTests": [
+        "error isolation",
+        "broadcast semantics",
+        "honest results"
+      ],
+      "goodAnswerSignals": [
+        "Names the aborted loop",
+        "Notices the count is derived from input length"
+      ],
+      "weakAnswerSignals": [
+        "Says handlers should not throw",
+        "Suggests wrapping the whole loop in one try/catch"
+      ],
+      "followUpPrompts": [
+        "Should dispatch rethrow, or collect and report?"
+      ],
+      "mayaPushbacks": [
+        "Which handlers run if the second one throws?"
+      ],
+      "answerStructure": {
+        "framework": "Read the design → Name the defect → State the consequence",
+        "steps": [
+          "Work out what the component promises",
+          "Find where it breaks that promise",
+          "Say what goes wrong for a caller"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the design defect and what it costs a caller.",
+        "developing": "Notices something off without naming the defect.",
+        "weak": "Calls the design correct or restates what the code does."
+      },
+      "sourceLinkIds": [
+        "refactoring-guru"
+      ],
+      "answerKey": {
+        "code": "export function dispatch(handlers, payload) {\n  for (const handler of handlers) {\n    handler(payload);\n  }\n  return { delivered: handlers.length };\n}",
+        "language": "javascript",
+        "flaw": "A throwing handler aborts the loop, so subscribers registered after it never receive the event and the reported delivery count is wrong.",
+        "line": 3,
+        "category": "failure-propagation",
+        "consequence": "One buggy subscriber silently breaks every other subscriber, and the caller is told delivery succeeded for all of them. Isolate each handler in a try/catch and report the real outcome."
+      }
+    },
+    {
+      "id": "lld-05",
+      "contentVersion": 1,
+      "sessionKey": "architecture-system-design",
+      "chapterKey": "interfaces",
+      "category": "interfaces",
+      "title": "Shared by default",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "practical-design",
+      "competency": "lld-design",
+      "format": "find-the-flaw",
+      "prompt": "This builds a request configuration. Explain what is wrong with it.",
+      "objective": "Recognize a shallow copy that leaves nested state shared.",
+      "prerequisites": [],
+      "hints": [
+        "Call this twice and inspect DEFAULTS afterwards.",
+        "Ask what the spread actually copied."
+      ],
+      "explanation": "Spreading copies the top-level keys, but headers is a reference — every config points at the same object. Writing to config.headers writes to DEFAULTS.headers. The bug is invisible for a single call and appears as cross-request contamination under load.",
+      "tags": [
+        "interfaces"
+      ],
+      "whatItTests": [
+        "copy semantics",
+        "shared state",
+        "defaults"
+      ],
+      "goodAnswerSignals": [
+        "Names the shared nested object",
+        "Explains cross-call contamination"
+      ],
+      "weakAnswerSignals": [
+        "Says the spread is the wrong order",
+        "Suggests freezing overrides"
+      ],
+      "followUpPrompts": [
+        "Where else does shallow copying bite in configuration code?"
+      ],
+      "mayaPushbacks": [
+        "What does config.headers point at?"
+      ],
+      "answerStructure": {
+        "framework": "Read the design → Name the defect → State the consequence",
+        "steps": [
+          "Work out what the component promises",
+          "Find where it breaks that promise",
+          "Say what goes wrong for a caller"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the design defect and what it costs a caller.",
+        "developing": "Notices something off without naming the defect.",
+        "weak": "Calls the design correct or restates what the code does."
+      },
+      "sourceLinkIds": [
+        "refactoring-guru"
+      ],
+      "answerKey": {
+        "code": "const DEFAULTS = { headers: {}, retries: 2 };\n\nexport function buildRequest(overrides = {}) {\n  const config = { ...DEFAULTS, ...overrides };\n  config.headers['x-request-id'] = crypto.randomUUID();\n  return config;\n}",
+        "language": "javascript",
+        "flaw": "The spread is shallow, so every config shares the one DEFAULTS.headers object and each call mutates state visible to all the others.",
+        "line": 5,
+        "category": "shared-mutable-default",
+        "consequence": "Request ids accumulate on a single shared object, so headers leak between unrelated requests and the module-level default is permanently polluted. Deep-copy the nested default, or build headers fresh per call."
+      }
+    },
+    {
+      "id": "lld-06",
+      "contentVersion": 1,
+      "sessionKey": "architecture-system-design",
+      "chapterKey": "interfaces",
+      "category": "interfaces",
+      "title": "Retrying what will never work",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "practical-design",
+      "competency": "lld-design",
+      "format": "find-the-flaw",
+      "prompt": "This wraps any operation with retries. Explain what is wrong with the design.",
+      "objective": "Recognize a retry policy with no notion of which failures are transient.",
+      "prerequisites": [],
+      "hints": [
+        "Ask what this does with a 400 Bad Request.",
+        "Consider which of these three attempts could ever succeed."
+      ],
+      "explanation": "Backoff is present and correct, which makes the omission easy to miss. Retrying is only useful when the failure might not recur — a timeout, a 503, a connection reset. A 400 or a validation error will fail identically every time, so retrying converts a fast failure into a slow one.",
+      "tags": [
+        "interfaces",
+        "retries"
+      ],
+      "whatItTests": [
+        "retry design",
+        "error classification",
+        "API contracts"
+      ],
+      "goodAnswerSignals": [
+        "Names the missing retryable predicate",
+        "Gives a deterministic error example"
+      ],
+      "weakAnswerSignals": [
+        "Says the backoff is wrong",
+        "Suggests more attempts"
+      ],
+      "followUpPrompts": [
+        "What signature would you give the predicate?"
+      ],
+      "mayaPushbacks": [
+        "Which errors here are worth a second attempt?"
+      ],
+      "answerStructure": {
+        "framework": "Read the design → Name the defect → State the consequence",
+        "steps": [
+          "Work out what the component promises",
+          "Find where it breaks that promise",
+          "Say what goes wrong for a caller"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the design defect and what it costs a caller.",
+        "developing": "Notices something off without naming the defect.",
+        "weak": "Calls the design correct or restates what the code does."
+      },
+      "sourceLinkIds": [
+        "refactoring-guru"
+      ],
+      "answerKey": {
+        "code": "export async function withRetry(operation, attempts = 3) {\n  let lastError;\n  for (let i = 0; i < attempts; i++) {\n    try {\n      return await operation();\n    } catch (error) {\n      lastError = error;\n      await sleep(2 ** i * 100);\n    }\n  }\n  throw lastError;\n}",
+        "language": "javascript",
+        "flaw": "Every error is treated as retryable, so deterministic failures such as validation errors or a 404 are retried until the attempts run out.",
+        "line": 7,
+        "category": "indiscriminate-retry",
+        "consequence": "A malformed request costs three round trips and several hundred milliseconds of delay before returning the same error, and write operations may be duplicated for no reason. The wrapper needs a predicate deciding which errors are worth retrying."
+      }
+    },
+    {
+      "id": "lld-07",
+      "contentVersion": 1,
+      "sessionKey": "architecture-system-design",
+      "chapterKey": "thread-safety",
+      "category": "thread-safety",
+      "title": "Counted twice, allocated once",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "hard",
+      "expectedMinutes": 7,
+      "evidenceType": "practical-design",
+      "competency": "lld-design",
+      "format": "find-the-flaw",
+      "prompt": "This allocates a parking spot. Explain what is wrong with it under concurrent requests.",
+      "objective": "Recognize a suspension point between reading shared state and updating it.",
+      "prerequisites": [],
+      "hints": [
+        "Trace two allocate calls that interleave at the await.",
+        "Ask what other code can run while persist is pending."
+      ],
+      "explanation": "JavaScript is single-threaded but not atomic across await. The moment persist suspends, another allocate runs, reads the same first free spot, and proceeds. Claiming the spot synchronously before the await makes the reservation atomic with respect to other callers.",
+      "tags": [
+        "concurrency"
+      ],
+      "whatItTests": [
+        "async atomicity",
+        "shared state",
+        "allocation"
+      ],
+      "goodAnswerSignals": [
+        "Names the await between read and write",
+        "Proposes claiming before persisting"
+      ],
+      "weakAnswerSignals": [
+        "Says JavaScript is single-threaded so this is safe",
+        "Suggests a database transaction only"
+      ],
+      "followUpPrompts": [
+        "What should happen to the spot if persist throws?"
+      ],
+      "mayaPushbacks": [
+        "What runs while persist is awaiting?"
+      ],
+      "answerStructure": {
+        "framework": "Read the design → Name the defect → State the consequence",
+        "steps": [
+          "Work out what the component promises",
+          "Find where it breaks that promise",
+          "Say what goes wrong for a caller"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the design defect and what it costs a caller.",
+        "developing": "Notices something off without naming the defect.",
+        "weak": "Calls the design correct or restates what the code does."
+      },
+      "sourceLinkIds": [
+        "refactoring-guru"
+      ],
+      "answerKey": {
+        "code": "export class ParkingLot {\n  constructor(spots) {\n    this.free = new Set(spots);\n  }\n\n  async allocate(vehicleId, persist) {\n    const spot = this.free.values().next().value;\n    if (!spot) return null;\n\n    await persist(vehicleId, spot);\n\n    this.free.delete(spot);\n    return spot;\n  }\n}",
+        "language": "javascript",
+        "flaw": "The spot is removed from the free set only after an await, so two concurrent calls both read the same spot and both allocate it.",
+        "line": 10,
+        "category": "check-then-act",
+        "consequence": "Two vehicles are assigned the same physical spot, and the free set stays consistent with neither. Remove the spot from the set before awaiting, and restore it if persistence fails."
+      }
+    },
+    {
+      "id": "lld-08",
+      "contentVersion": 1,
+      "sessionKey": "architecture-system-design",
+      "chapterKey": "thread-safety",
+      "category": "thread-safety",
+      "title": "Unique enough, probably",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "hard",
+      "expectedMinutes": 7,
+      "evidenceType": "practical-design",
+      "competency": "lld-design",
+      "format": "find-the-flaw",
+      "prompt": "This generates ordered ids for a high-throughput writer. Explain what is wrong with it.",
+      "objective": "Recognize an identifier scheme that assumes a monotonic clock.",
+      "prerequisites": [],
+      "hints": [
+        "Ask what happens if Date.now returns a smaller value than the previous call.",
+        "Consider an NTP correction while the process is running."
+      ],
+      "explanation": "The scheme is sound while time only moves forward, which wall-clock time does not guarantee. On a backwards adjustment the branch treats the earlier timestamp as a new millisecond and restarts the counter inside a range already used. Tracking the maximum timestamp seen, or using a monotonic source, closes it.",
+      "tags": [
+        "concurrency",
+        "ids"
+      ],
+      "whatItTests": [
+        "identifier design",
+        "clock assumptions",
+        "collision"
+      ],
+      "goodAnswerSignals": [
+        "Names the non-monotonic clock assumption",
+        "Explains the collision mechanism"
+      ],
+      "weakAnswerSignals": [
+        "Says the counter should be bigger",
+        "Suggests only adding randomness"
+      ],
+      "followUpPrompts": [
+        "How does a monotonic clock source change this?"
+      ],
+      "mayaPushbacks": [
+        "Can Date.now go backwards?"
+      ],
+      "answerStructure": {
+        "framework": "Read the design → Name the defect → State the consequence",
+        "steps": [
+          "Work out what the component promises",
+          "Find where it breaks that promise",
+          "Say what goes wrong for a caller"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the design defect and what it costs a caller.",
+        "developing": "Notices something off without naming the defect.",
+        "weak": "Calls the design correct or restates what the code does."
+      },
+      "sourceLinkIds": [
+        "refactoring-guru"
+      ],
+      "answerKey": {
+        "code": "let lastMs = 0;\nlet counter = 0;\n\nexport function nextId() {\n  const now = Date.now();\n  if (now !== lastMs) {\n    lastMs = now;\n    counter = 0;\n  }\n  return `${now}-${counter++}`;\n}",
+        "language": "javascript",
+        "flaw": "The counter resets whenever the millisecond changes, and Date.now can move backwards on a clock adjustment, so ids can repeat.",
+        "line": 5,
+        "category": "id-collision",
+        "consequence": "An NTP correction or a leap-second smear makes now smaller than lastMs, the counter resets, and previously issued ids are generated again — producing primary key collisions that look like impossible data corruption."
+      }
+    },
+    {
+      "id": "lld-09",
+      "contentVersion": 1,
+      "sessionKey": "architecture-system-design",
+      "chapterKey": "data-modelling",
+      "category": "data-modelling",
+      "title": "Two rows where one was intended",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "practical-design",
+      "competency": "lld-design",
+      "format": "diagnose",
+      "prompt": "Read the schema and the sample rows, then explain what the design permits.",
+      "objective": "Distinguish an index from a constraint when reading a schema.",
+      "prerequisites": [],
+      "hints": [
+        "Look for what enforces uniqueness rather than what makes reads fast.",
+        "Note that duplicates already exist in the table."
+      ],
+      "explanation": "The index makes lookups by user fast; it enforces nothing. Any retried request or double-click inserts another row, and the send path iterates rows rather than distinct channels. The count query is the evidence — the duplicates already exist, so the fix has to include a de-duplication before the constraint can be added.",
+      "tags": [
+        "schema"
+      ],
+      "whatItTests": [
+        "schema constraints",
+        "uniqueness",
+        "data modelling"
+      ],
+      "goodAnswerSignals": [
+        "Names the missing unique constraint",
+        "Distinguishes the index from a constraint"
+      ],
+      "weakAnswerSignals": [
+        "Says the send query needs DISTINCT and stops there",
+        "Blames the application without noting the schema permits it"
+      ],
+      "followUpPrompts": [
+        "What has to happen before the constraint can be added?"
+      ],
+      "mayaPushbacks": [
+        "Does an index prevent duplicates?"
+      ],
+      "answerStructure": {
+        "framework": "Read the design → Name the defect → State the consequence",
+        "steps": [
+          "Work out what the component promises",
+          "Find where it breaks that promise",
+          "Say what goes wrong for a caller"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the design defect and what it costs a caller.",
+        "developing": "Notices something off without naming the defect.",
+        "weak": "Calls the design correct or restates what the code does."
+      },
+      "sourceLinkIds": [
+        "refactoring-guru"
+      ],
+      "answerKey": {
+        "body": "CREATE TABLE subscription (\n  id          uuid PRIMARY KEY,\n  user_id     uuid NOT NULL REFERENCES \"user\"(id),\n  channel     text NOT NULL,\n  created_at  timestamptz NOT NULL DEFAULT now()\n);\n\nIndexes:\n  subscription_pkey          PRIMARY KEY (id)\n  subscription_user_id_idx   btree (user_id)\n\nSELECT user_id, channel, count(*) FROM subscription\nGROUP BY 1,2 HAVING count(*) > 1;\n\n user_id                              | channel | count\n--------------------------------------+---------+-------\n 9f2c...                              | email   |     2\n 41ab...                              | email   |     3",
+        "kind": "log",
+        "symptom": "Support reports that some users receive two copies of every notification email.",
+        "rootCause": "Nothing prevents more than one subscription row per user and channel — there is an index on user_id but no unique constraint on (user_id, channel).",
+        "acceptableFixes": [
+          "Add a unique constraint on (user_id, channel) after de-duplicating",
+          "Use an upsert keyed on (user_id, channel) so repeats update rather than insert"
+        ]
+      }
+    },
+    {
+      "id": "lld-10",
+      "contentVersion": 1,
+      "sessionKey": "architecture-system-design",
+      "chapterKey": "data-modelling",
+      "category": "data-modelling",
+      "title": "The counter that drifted",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "hard",
+      "expectedMinutes": 7,
+      "evidenceType": "practical-design",
+      "competency": "lld-design",
+      "format": "diagnose",
+      "prompt": "Read the evidence and explain what is happening.",
+      "objective": "Recognize a denormalized value maintained on some write paths but not all.",
+      "prerequisites": [],
+      "hints": [
+        "Compare the two write paths for what each does to the counter.",
+        "Ask which code paths can remove a comment."
+      ],
+      "explanation": "The creation path is careful — insert and increment in one transaction. The deletion path bypasses it entirely, which is easy to miss because it lives in a different tool. Any denormalized aggregate has to be maintained by every writer, which is why a trigger or a computed value is often safer than application discipline.",
+      "tags": [
+        "schema",
+        "denormalization"
+      ],
+      "whatItTests": [
+        "denormalization",
+        "invariants",
+        "write paths"
+      ],
+      "goodAnswerSignals": [
+        "Identifies the deletion path as the gap",
+        "Generalizes to all write paths needing to maintain it"
+      ],
+      "weakAnswerSignals": [
+        "Says the count query is wrong",
+        "Suggests a nightly rebuild without addressing the cause"
+      ],
+      "followUpPrompts": [
+        "Why might a trigger be safer than fixing the moderation tool?"
+      ],
+      "mayaPushbacks": [
+        "Which write paths change the number of comments?"
+      ],
+      "answerStructure": {
+        "framework": "Read the design → Name the defect → State the consequence",
+        "steps": [
+          "Work out what the component promises",
+          "Find where it breaks that promise",
+          "Say what goes wrong for a caller"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the design defect and what it costs a caller.",
+        "developing": "Notices something off without naming the defect.",
+        "weak": "Calls the design correct or restates what the code does."
+      },
+      "sourceLinkIds": [
+        "refactoring-guru"
+      ],
+      "answerKey": {
+        "body": "CREATE TABLE post (\n  id             uuid PRIMARY KEY,\n  comment_count  integer NOT NULL DEFAULT 0\n);\n\n-- comment creation path\nBEGIN;\n  INSERT INTO comment (post_id, body) VALUES ($1, $2);\n  UPDATE post SET comment_count = comment_count + 1 WHERE id = $1;\nCOMMIT;\n\n-- comment deletion path (moderation tool)\nDELETE FROM comment WHERE id = $1;\n\nSELECT p.id, p.comment_count, count(c.id)\nFROM post p LEFT JOIN comment c ON c.post_id = p.id\nGROUP BY p.id, p.comment_count\nHAVING p.comment_count <> count(c.id);\n-- 1,284 rows",
+        "kind": "log",
+        "symptom": "Post pages show a comment count that does not match the number of comments listed.",
+        "rootCause": "The denormalized counter is incremented on create but never decremented on delete, so moderation removals leave it permanently high.",
+        "acceptableFixes": [
+          "Decrement the counter in the deletion path, inside the same transaction",
+          "Maintain the counter with a database trigger so every write path is covered",
+          "Drop the counter and compute it, or rebuild it periodically"
+        ]
+      }
+    },
+    {
+      "id": "lld-11",
+      "contentVersion": 1,
+      "sessionKey": "architecture-system-design",
+      "chapterKey": "data-modelling",
+      "category": "data-modelling",
+      "title": "Free text where an enum belonged",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "practical-design",
+      "competency": "lld-design",
+      "format": "diagnose",
+      "prompt": "Read the distribution and explain what the schema allowed.",
+      "objective": "Recognize a column whose domain is enforced nowhere.",
+      "prerequisites": [],
+      "hints": [
+        "Count how many distinct labels describe the same state.",
+        "Ask what rejects an unexpected value on insert."
+      ],
+      "explanation": "Nothing rejects a new spelling, so every client is free to invent one, and a filter on status = 'OPEN' silently misses 3,392 tickets. The distribution is the evidence: the same states appear under multiple labels in proportions that match different code paths. Constraining the column is only half the fix — the existing values must be normalized first.",
+      "tags": [
+        "schema"
+      ],
+      "whatItTests": [
+        "schema constraints",
+        "data quality",
+        "domain modelling"
+      ],
+      "goodAnswerSignals": [
+        "Names the unconstrained domain",
+        "Notes that existing data must be normalized first"
+      ],
+      "weakAnswerSignals": [
+        "Says the query needs ILIKE",
+        "Blames one client without noting the schema allows it"
+      ],
+      "followUpPrompts": [
+        "Enum, CHECK constraint, or lookup table — which and why?"
+      ],
+      "mayaPushbacks": [
+        "What stops a client writing a new spelling?"
+      ],
+      "answerStructure": {
+        "framework": "Read the design → Name the defect → State the consequence",
+        "steps": [
+          "Work out what the component promises",
+          "Find where it breaks that promise",
+          "Say what goes wrong for a caller"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the design defect and what it costs a caller.",
+        "developing": "Notices something off without naming the defect.",
+        "weak": "Calls the design correct or restates what the code does."
+      },
+      "sourceLinkIds": [
+        "refactoring-guru"
+      ],
+      "answerKey": {
+        "body": "CREATE TABLE ticket (\n  id      uuid PRIMARY KEY,\n  status  text NOT NULL\n);\n\nSELECT status, count(*) FROM ticket GROUP BY 1 ORDER BY 2 DESC;\n\n status      | count\n-------------+-------\n OPEN        | 41022\n open        |  3180\n Open        |   212\n IN_PROGRESS |  9004\n in progress |   488\n CLOSED      | 28110\n closed      |  1902",
+        "kind": "log",
+        "symptom": "A status filter misses records, and the dashboard totals do not add up.",
+        "rootCause": "status is unconstrained free text, so several writers have inserted different spellings of the same logical state.",
+        "acceptableFixes": [
+          "Add a CHECK constraint or a Postgres enum after normalizing the existing values",
+          "Move status to a lookup table with a foreign key",
+          "Normalize the values and constrain the column so new variants cannot be written"
+        ]
+      }
+    },
+    {
+      "id": "lld-12",
+      "contentVersion": 1,
+      "sessionKey": "architecture-system-design",
+      "chapterKey": "data-modelling",
+      "category": "data-modelling",
+      "title": "Orphans after the delete",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "0-2",
+        "3-5",
+        "5-plus"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "practical-design",
+      "competency": "lld-design",
+      "format": "diagnose",
+      "prompt": "Read the evidence and explain what the schema permits.",
+      "objective": "Recognize a relationship the schema does not actually enforce.",
+      "prerequisites": [],
+      "hints": [
+        "Note what the column is named versus what is declared.",
+        "Ask what the database did when the workspace row was removed."
+      ],
+      "explanation": "The column is named like a foreign key and used like one, but nothing declares it, so the database will happily orphan 7,412 rows. Which ON DELETE behaviour is right is a product decision — cascade if documents are meaningless without the workspace, restrict if losing them silently would be worse — but the absence of any constraint is not a decision, it is an oversight.",
+      "tags": [
+        "schema"
+      ],
+      "whatItTests": [
+        "referential integrity",
+        "foreign keys",
+        "delete semantics"
+      ],
+      "goodAnswerSignals": [
+        "Names the missing foreign key",
+        "Discusses cascade versus restrict as a real choice"
+      ],
+      "weakAnswerSignals": [
+        "Says the application should check first",
+        "Suggests only deleting the orphans"
+      ],
+      "followUpPrompts": [
+        "Cascade or restrict here, and why?"
+      ],
+      "mayaPushbacks": [
+        "What enforces this relationship today?"
+      ],
+      "answerStructure": {
+        "framework": "Read the design → Name the defect → State the consequence",
+        "steps": [
+          "Work out what the component promises",
+          "Find where it breaks that promise",
+          "Say what goes wrong for a caller"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Names the design defect and what it costs a caller.",
+        "developing": "Notices something off without naming the defect.",
+        "weak": "Calls the design correct or restates what the code does."
+      },
+      "sourceLinkIds": [
+        "refactoring-guru"
+      ],
+      "answerKey": {
+        "body": "CREATE TABLE workspace (id uuid PRIMARY KEY);\n\nCREATE TABLE document (\n  id            uuid PRIMARY KEY,\n  workspace_id  uuid NOT NULL,\n  title         text NOT NULL\n);\n\n-- no foreign key on document.workspace_id\n\nSELECT count(*) FROM document d\nLEFT JOIN workspace w ON w.id = d.workspace_id\nWHERE w.id IS NULL;\n-- 7,412",
+        "kind": "log",
+        "symptom": "Deleting a workspace leaves the app throwing on pages that reference it.",
+        "rootCause": "document.workspace_id has no foreign key, so deleting a workspace leaves documents pointing at an id that no longer exists.",
+        "acceptableFixes": [
+          "Add a foreign key with ON DELETE CASCADE after cleaning up the orphans",
+          "Add a foreign key with ON DELETE RESTRICT and delete documents explicitly first",
+          "Soft-delete the workspace and filter documents by it"
+        ]
+      }
+    }
+  ]
+}

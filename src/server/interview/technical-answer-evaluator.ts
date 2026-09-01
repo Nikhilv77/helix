@@ -73,7 +73,7 @@ export function shouldEvaluateTechnicalAnswer(
   if (setup.resumeRound) return question.stage === "skills" || question.stage === "code";
   if (setup.fundamentalsRound) return question.stage === "explain" || question.stage === "scenario";
   if (
-    setup.templateId === "frontend-dsa" ||
+    setup.templateId === "dsa" ||
     setup.templateTitle === "DSA practice interview"
   ) {
     return true;

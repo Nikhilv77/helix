@@ -2,23 +2,8 @@
 
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import { FaStar } from "react-icons/fa6";
-import {
-  Bell,
-  BellRing,
-  CheckCheck,
-  ChevronRight,
-  CircleCheckBig,
-  Clock3,
-  HandHelping,
-  Heart,
-  Inbox,
-  Target,
-  TimerOff,
-  UserCheck,
-  X
-} from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type ElementType } from "react";
+import { Bell, CheckCheck, ChevronRight, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
 interface InboxItem {
@@ -35,72 +20,50 @@ interface InboxItem {
 const POLL_MS = 15_000;
 
 interface NotificationPresentation {
-  icon: ElementType;
   label: string;
-  iconClass: string;
 }
 
 function notificationPresentation(kind: string, teacherName: string): NotificationPresentation {
   switch (kind) {
     case "TEACHER_WELCOME":
       return {
-        icon: FaStar,
-        label: `Welcome from ${teacherName}`,
-        iconClass: "bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]"
+        label: `Welcome from ${teacherName}`
       };
     case "TEACHER_RECOMMENDATION":
       return {
-        icon: Target,
-        label: `Practice from ${teacherName}`,
-        iconClass: "bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]"
+        label: `Practice from ${teacherName}`
       };
     case "TEACHER_ENCOURAGEMENT":
       return {
-        icon: Heart,
-        label: `A note from ${teacherName}`,
-        iconClass: "bg-[#f6b98a]/10 text-[#f6c9a6]"
+        label: `A note from ${teacherName}`
       };
     case "TEACHER_REMINDER":
       return {
-        icon: Clock3,
-        label: `Reminder from ${teacherName}`,
-        iconClass: "bg-[#efcf84]/10 text-[#efdba8]"
+        label: `Reminder from ${teacherName}`
       };
     case "HELP_REQUEST_OPENED":
       return {
-        icon: HandHelping,
-        label: "Trailmate request",
-        iconClass: "bg-[#71d6a5]/10 text-[#9be8c1]"
+        label: "Trailmate request"
       };
     case "HELP_REQUEST_CLAIMED":
       return {
-        icon: UserCheck,
-        label: "Trailmate joined",
-        iconClass: "bg-[#8fd6ff]/10 text-[#a8e1ff]"
+        label: "Trailmate joined"
       };
     case "HELP_REQUEST_RESOLVED":
       return {
-        icon: CircleCheckBig,
-        label: "Session completed",
-        iconClass: "bg-[#71d6a5]/10 text-[#9be8c1]"
+        label: "Session completed"
       };
     case "HELP_REQUEST_EXPIRED":
       return {
-        icon: TimerOff,
-        label: "Trailmate request closed",
-        iconClass: "bg-cream/[0.055] text-cream/48"
+        label: "Trailmate request closed"
       };
     case "HELP_FEEDBACK_RECEIVED":
       return {
-        icon: Heart,
-        label: "Mate thank-you",
-        iconClass: "bg-[#f6b98a]/10 text-[#f6c9a6]"
+        label: "Mate thank-you"
       };
     default:
       return {
-        icon: BellRing,
-        label: "Trailgrad update",
-        iconClass: "bg-cream/[0.055] text-cream/58"
+        label: "Trailgrad update"
       };
   }
 }
@@ -267,21 +230,21 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
                 aria-label="Notifications"
                 className="pointer-events-auto fixed inset-2 flex flex-col overflow-hidden rounded-[1.5rem] bg-[#151619]/[0.99] shadow-[0_36px_110px_-32px_rgba(0,0,0,0.98),0_12px_38px_-24px_rgba(0,0,0,0.9)] ring-1 ring-inset ring-white/[0.075] backdrop-blur-2xl md:inset-auto md:right-6 md:top-[4.75rem] md:h-[min(42rem,calc(100vh-6rem))] md:w-[32rem] md:rounded-[1.75rem] lg:w-[36rem]"
               >
-                <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-[var(--workspace-accent)] opacity-[0.14] blur-[90px]" />
-
-                <header className="relative flex shrink-0 items-center justify-between gap-3 px-4 pb-4 pt-4 sm:gap-5 sm:px-6 sm:pb-5 sm:pt-6">
-                  <div className="flex min-w-0 items-center gap-3 sm:gap-3.5">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)] shadow-soft-inset sm:h-11 sm:w-11">
-                      <BellRing size={19} strokeWidth={1.7} aria-hidden="true" />
-                    </span>
-                    <div className="min-w-0">
+                <header className="relative flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.065] px-4 pb-4 pt-4 sm:gap-5 sm:px-6 sm:pb-5 sm:pt-6">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2.5">
                       <h2 className="truncate text-[16px] font-semibold tracking-[-0.015em] text-cream sm:text-[17px]">
                         Notifications
                       </h2>
-                      <p className="mt-0.5 truncate text-[11.5px] text-cream/42 sm:text-[12px]">
-                        Coaching, reminders, and help activity
-                      </p>
+                      {unread > 0 ? (
+                        <span className="rounded-full bg-cream/[0.065] px-2 py-0.5 text-[10px] font-semibold text-cream/60">
+                          {unread} new
+                        </span>
+                      ) : null}
                     </div>
+                    <p className="mt-1 truncate text-[11.5px] text-cream/42 sm:text-[12px]">
+                      Coaching, reminders, and help activity
+                    </p>
                   </div>
 
                   <div className="flex shrink-0 items-center gap-1.5">
@@ -311,10 +274,8 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
                   {items.length === 0 ? (
                     <div className="grid min-h-64 place-items-center rounded-[1.4rem] bg-cream/[0.022] px-6 py-12 text-center">
                       <div>
-                        <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-cream/[0.05] text-cream/38">
-                          <Inbox size={21} strokeWidth={1.6} aria-hidden="true" />
-                        </span>
-                        <p className="mt-4 text-[14px] font-semibold text-cream/70">
+                        <span aria-hidden="true" className="mx-auto block h-px w-10 bg-cream/20" />
+                        <p className="mt-5 text-[14px] font-semibold text-cream/70">
                           You’re all caught up
                         </p>
                         <p className="mx-auto mt-1 max-w-xs text-[12.5px] leading-5 text-cream/38">
@@ -333,54 +294,43 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
                         </p>
                       </div>
 
-                      <div className="grid gap-2">
-                        {items.map((item) => {
+                      <div className="overflow-hidden rounded-xl bg-cream/[0.018] ring-1 ring-inset ring-white/[0.05]">
+                        {items.map((item, index) => {
                           const presentation = notificationPresentation(item.kind, teacher.name);
-                          const NotificationIcon = presentation.icon;
                           const content = (
-                            <div className="relative flex min-w-0 gap-3 p-3.5 sm:gap-4 sm:p-[1.125rem]">
+                            <div className="relative min-w-0 px-4 py-4 sm:px-5 sm:py-[1.125rem]">
                               {!item.read ? (
-                                <span className="absolute left-1 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-full bg-[var(--workspace-accent)]" />
+                                <span className="absolute bottom-4 left-0 top-4 w-0.5 rounded-full bg-[var(--workspace-accent)]" />
                               ) : null}
-                              <span
-                                className={`relative grid h-10 w-10 shrink-0 place-items-center rounded-2xl shadow-soft-inset sm:h-11 sm:w-11 ${presentation.iconClass}`}
-                              >
-                                <NotificationIcon size={18} strokeWidth={1.7} aria-hidden="true" />
-                                {!item.read ? (
-                                  <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_0_3px_#18191c]" />
-                                ) : null}
-                              </span>
-
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center justify-between gap-3">
-                                  <p className="truncate text-[9.5px] font-semibold uppercase tracking-[0.145em] text-[var(--workspace-accent)]">
-                                    {presentation.label}
+                              <div className="flex items-center justify-between gap-3">
+                                <p
+                                  className={`truncate text-[9.5px] font-semibold uppercase tracking-[0.145em] ${item.read ? "text-cream/34" : "text-cream/62"}`}
+                                >
+                                  {presentation.label}
+                                </p>
+                                <time
+                                  dateTime={new Date(item.createdAt).toISOString()}
+                                  className="shrink-0 text-[10.5px] tabular-nums text-cream/30"
+                                >
+                                  {relativeTime(item.createdAt)}
+                                </time>
+                              </div>
+                              <div className="mt-1.5 flex items-start gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-[14px] font-semibold leading-5.5 tracking-[-0.01em] text-cream/92">
+                                    {item.title}
                                   </p>
-                                  <time
-                                    dateTime={new Date(item.createdAt).toISOString()}
-                                    className="inline-flex shrink-0 items-center gap-1 text-[10.5px] text-cream/30"
-                                  >
-                                    <Clock3 size={11} strokeWidth={1.6} aria-hidden="true" />
-                                    {relativeTime(item.createdAt)}
-                                  </time>
+                                  <p className="mt-1.5 text-[12.75px] leading-[1.6] text-cream/52">
+                                    {item.body}
+                                  </p>
                                 </div>
-                                <div className="mt-1 flex items-start gap-3">
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-[14px] font-semibold leading-5.5 tracking-[-0.01em] text-cream/92">
-                                      {item.title}
-                                    </p>
-                                    <p className="mt-1.5 text-[12.75px] leading-[1.6] text-cream/52">
-                                      {item.body}
-                                    </p>
-                                  </div>
-                                  {item.href ? (
-                                    <ChevronRight
-                                      size={16}
-                                      className="mt-0.5 shrink-0 text-cream/20 transition duration-200 group-hover:translate-x-0.5 group-hover:text-cream/55"
-                                      aria-hidden="true"
-                                    />
-                                  ) : null}
-                                </div>
+                                {item.href ? (
+                                  <ChevronRight
+                                    size={16}
+                                    className="mt-0.5 shrink-0 text-cream/20 transition duration-200 group-hover:translate-x-0.5 group-hover:text-cream/55"
+                                    aria-hidden="true"
+                                  />
+                                ) : null}
                               </div>
                             </div>
                           );
@@ -390,10 +340,10 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
                               key={item.id}
                               href={item.href}
                               onClick={() => setOpen(false)}
-                              className={`group block overflow-hidden rounded-2xl outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)] ${
+                              className={`group block outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cream/30 ${index > 0 ? "border-t border-white/[0.055]" : ""} ${
                                 item.read
-                                  ? "bg-cream/[0.024] hover:bg-cream/[0.045]"
-                                  : "bg-[var(--workspace-accent-soft)] hover:brightness-110"
+                                  ? "hover:bg-cream/[0.035]"
+                                  : "bg-cream/[0.04] hover:bg-cream/[0.06]"
                               }`}
                             >
                               {content}
@@ -401,8 +351,8 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
                           ) : (
                             <div
                               key={item.id}
-                              className={`overflow-hidden rounded-2xl ${
-                                item.read ? "bg-cream/[0.024]" : "bg-[var(--workspace-accent-soft)]"
+                              className={`${index > 0 ? "border-t border-white/[0.055]" : ""} ${
+                                item.read ? "" : "bg-cream/[0.04]"
                               }`}
                             >
                               {content}

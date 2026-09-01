@@ -6,7 +6,7 @@ import {
   type PracticeCodeLanguage
 } from "./contracts";
 
-export const DSA_PRACTICE_SESSION_KEY = "frontend-dsa";
+export const DSA_PRACTICE_SESSION_KEY = "dsa";
 
 /** Normalize one authored DSA item without exposing a database-shaped model. */
 export function normalizeDsaQuestion(

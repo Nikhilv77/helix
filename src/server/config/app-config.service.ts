@@ -10,7 +10,6 @@ type AppConfigInput = Omit<
   | "livekitUrl"
   | "livekitApiKey"
   | "livekitApiSecret"
-  | "helpRequestWebhookUrl"
   | "operatorUserIds"
   | "resendApiKey"
   | "notificationEmailEnabled"
@@ -29,7 +28,6 @@ type AppConfigInput = Omit<
   livekitUrl?: EnvironmentConfig["livekitUrl"];
   livekitApiKey?: EnvironmentConfig["livekitApiKey"];
   livekitApiSecret?: EnvironmentConfig["livekitApiSecret"];
-  helpRequestWebhookUrl?: EnvironmentConfig["helpRequestWebhookUrl"];
   operatorUserIds?: EnvironmentConfig["operatorUserIds"];
   resendApiKey?: EnvironmentConfig["resendApiKey"];
   notificationEmailEnabled?: EnvironmentConfig["notificationEmailEnabled"];
@@ -178,10 +176,6 @@ export class AppConfigService {
   /** Empty means the report queue is closed to everyone — the safe default. */
   get operatorUserIds(): string[] {
     return this.config.operatorUserIds ?? [];
-  }
-
-  get helpRequestWebhookUrl(): string | undefined {
-    return this.config.helpRequestWebhookUrl;
   }
 
   get resendApiKey(): string | undefined {

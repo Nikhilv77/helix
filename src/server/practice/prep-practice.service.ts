@@ -1,14 +1,20 @@
 import { Prisma } from "@prisma/client";
 import { candidatePerformanceProfileSchema } from "@/lib/interviews/performance-profile";
+import type { CandidateResume } from "@/lib/shared/types";
 import type {
   NonDsaPracticeSessionKey,
   PrepPracticeChapter,
+  PrepPracticeFormat,
   PrepPracticeQuestion,
   PrepPracticeQuestionSummary,
   PrepPracticeReview,
   PrepPracticeSession
 } from "@/lib/practice/prep-practice";
 import { practiceQuestionHref } from "@/lib/practice/prep-practice";
+import { diagnoseArtifact } from "@/lib/practice/diagnose";
+import { findTheFlawSnippet } from "@/lib/practice/find-the-flaw";
+import { renderPrompt } from "@/lib/practice/prompt-personalization";
+import { predictRunSnippet } from "@/lib/practice/predict-run";
 import type { PrismaService } from "../database/prisma.service";
 import type { FrontendRoadmapService } from "../roadmap/frontend-roadmap.service";
 import { ApiRouteError } from "../http/api-error";
@@ -96,16 +102,10 @@ export class PrepPracticeService {
       if (!question) return [];
       const normalized = normalizePrepQuestion(question, {
         sessionKey,
-        chapterKey: sessionKey === "final-mock" ? "mixed-review" : question.chapterKey
+        chapterKey: question.chapterKey
       });
       const chapterKey = normalized.classification.chapterKey;
-      const chapterCopy =
-        sessionKey === "final-mock"
-          ? {
-              title: "Mixed Review",
-              purpose: "A balanced rehearsal across the earlier Practice sessions."
-            }
-          : {
+      const chapterCopy = {
               title:
                 placement.questionProgress.chapterProgress?.chapterTemplate.title ??
                 titleCase(chapterKey),
@@ -223,10 +223,25 @@ export class PrepPracticeService {
         select: { feedback: true }
       })
     ]);
+    // Tier 3 personalization needs the resume; one extra read on a page that
+    // already makes several, and a failure here must not block the question.
+    const profile = await this.prisma.candidateProfile
+      .findUnique({
+        where: { ownerId },
+        select: {
+          resumeAnalysis: true,
+          resumeConfidence: true,
+          targetCompany: true,
+          level: true,
+          dsaEditorLanguage: true
+        }
+      })
+      .catch(() => null);
+
     const question = placement.questionProgress.prepQuestionTemplate;
     const normalized = normalizePrepQuestion(question, {
       sessionKey,
-      chapterKey: sessionKey === "final-mock" ? "mixed-review" : question.chapterKey
+      chapterKey: question.chapterKey
     });
     const index = ordered.findIndex(
       (entry) => entry.questionProgress.prepQuestionTemplateId === questionId
@@ -244,17 +259,39 @@ export class PrepPracticeService {
       totalInSession: ordered.length,
       chapterKey: normalized.classification.chapterKey,
       chapterTitle:
-        sessionKey === "final-mock"
-          ? "Mixed Review"
-          : (placement.questionProgress.chapterProgress?.chapterTemplate.title ??
-            titleCase(question.chapterKey)),
+        placement.questionProgress.chapterProgress?.chapterTemplate.title ??
+        titleCase(question.chapterKey),
       title: normalized.content.title,
-      prompt: normalized.content.prompt,
+      prompt: renderPrompt(
+        { prompt: normalized.content.prompt, promptTemplate: question.promptTemplate },
+        {
+          resume: (profile?.resumeAnalysis as CandidateResume | null) ?? null,
+          resumeConfidence: profile?.resumeConfidence ?? null,
+          targetCompany: profile?.targetCompany ?? null,
+          level: profile?.level ?? null,
+          editorLanguage: profile?.dsaEditorLanguage ?? null
+        }
+      ),
       objective: normalized.content.objective,
       difficulty: normalized.targeting.difficulty,
       format: normalized.targeting.format === "code" ? "typed" : normalized.targeting.format,
       expectedMinutes: normalized.targeting.expectedMinutes,
       options: normalized.targeting.format === "mcq" ? mcqOptions(question.answerKey) : [],
+      // Code and language only. `predictRunSnippet` deliberately drops
+      // `expectedStdout` so the answer cannot reach the browser ahead of the
+      // candidate's prediction.
+      snippet:
+        normalized.targeting.format === "predict-run"
+          ? predictRunSnippet(question.answerKey)
+          : normalized.targeting.format === "find-the-flaw"
+            ? findTheFlawSnippet(question.answerKey)
+            : null,
+      // Evidence and symptom only — `diagnoseArtifact` drops the root cause and
+      // the accepted fixes so they cannot be read ahead of the diagnosis.
+      artifact:
+        normalized.targeting.format === "diagnose"
+          ? diagnoseArtifact(question.answerKey)
+          : null,
       hints: normalized.coaching.hints,
       revealedHintCount: Math.min(
         placement.questionProgress.revealedHintCount,
@@ -417,7 +454,7 @@ function questionSummary(
     order: placement.order,
     title: question.title,
     objective,
-    chapterKey: sessionKey === "final-mock" ? "mixed-review" : question.chapterKey,
+    chapterKey: question.chapterKey,
     difficulty: normalizeDifficulty(question.difficulty),
     format: normalizeFormat(question.format),
     expectedMinutes: question.expectedMinutes,
@@ -507,6 +544,21 @@ function normalizeDifficulty(value: string): "easy" | "medium" | "hard" {
   return value === "easy" || value === "hard" ? value : "medium";
 }
 
-function normalizeFormat(value: string): "mcq" | "typed" | "spoken" | "diagram" {
-  return value === "mcq" || value === "spoken" || value === "diagram" ? value : "typed";
+/**
+ * Collapses an unknown format to `typed` so the list still renders. It has to
+ * name every format explicitly: when it did not, `find-the-flaw` and `diagnose`
+ * questions were listed as "Typed" on the session page while the workspace
+ * rendered them correctly, because only this summary path was narrowing.
+ */
+function normalizeFormat(value: string): PrepPracticeFormat {
+  const known: PrepPracticeFormat[] = [
+    "mcq",
+    "typed",
+    "spoken",
+    "diagram",
+    "predict-run",
+    "find-the-flaw",
+    "diagnose"
+  ];
+  return known.includes(value as PrepPracticeFormat) ? (value as PrepPracticeFormat) : "typed";
 }

@@ -26,7 +26,8 @@ import {
 } from "lucide-react";
 import { useMayaVoice, voiceUrl, type VoiceState } from "@/lib/voice/use-maya-voice";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
-import { FRONTEND_SESSIONS, type FrontendDsaPlan } from "@/lib/roadmap/frontend-plan";
+import { PREP_SESSIONS, type FrontendDsaPlan } from "@/lib/roadmap/frontend-plan";
+import type { PracticeRoadmapSession } from "@/lib/practice/practice-roadmap";
 import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
 import type { CandidateProfile, Role } from "@/lib/shared/types";
 
@@ -44,19 +45,19 @@ const FALLBACK_WELCOME_SLIDE = {
   icon: Check
 };
 const SESSION_CARD_META: Record<string, { label: string; detail: string }> = {
-  "frontend-dsa": {
+  "dsa": {
     label: "Pattern practice",
     detail: "Warmups, traps, and solve rhythm."
   },
-  "javascript-react-core": {
+  "core-technical": {
     label: "Core depth",
     detail: "JS behaviour, React timing, and rendering."
   },
-  "computer-fundamentals": {
+  "applied-engineering": {
     label: "Under the hood",
     detail: "Network, OS and database behaviour."
   },
-  "production-ui-quality": {
+  "architecture-system-design": {
     label: "Ship quality",
     detail: "Performance, accessibility, and reliability."
   },
@@ -64,7 +65,7 @@ const SESSION_CARD_META: Record<string, { label: string; detail: string }> = {
     label: "Evidence defense",
     detail: "Turn resume claims into strong answers."
   },
-  "final-frontend-mock": {
+  "final-mock": {
     label: "Full loop",
     detail: "A complete mock across the interview path."
   }
@@ -83,8 +84,15 @@ const SESSION_ICON_RULES: Array<{ keywords: string[]; icon: LucideIcon }> = [
   { keywords: ["security", "auth", "safe"], icon: ShieldCheck }
 ];
 
-function sessionIcon(session: { id: string; title: string; purpose: string; covers: string[] }) {
-  const haystack = [session.id, session.title, session.purpose, ...session.covers]
+function sessionIcon(session: {
+  id: string;
+  title?: string;
+  purpose?: string;
+  covers: string[];
+}) {
+  // Title and purpose are optional so a projected Practice session, which
+  // carries a personalised title but no static purpose, can be matched too.
+  const haystack = [session.id, session.title ?? "", session.purpose ?? "", ...session.covers]
     .join(" ")
     .toLowerCase();
   return (
@@ -284,15 +292,33 @@ interface MayaWelcomeProps {
   practiceHref: string;
   frontendRoadmap?: FrontendRoadmapHome | null;
   frontendPlan?: FrontendDsaPlan | null;
+  /**
+   * The candidate's generated Practice sessions. Falls back to PREP_SESSIONS
+   * only when the roadmap could not be built — otherwise this screen promised
+   * everyone the same static titles while Practice showed personalised ones.
+   */
+  practiceSessions?: PracticeRoadmapSession[] | null;
 }
 
 export function MayaWelcome({
   profile,
   practiceHref,
   frontendRoadmap = null,
-  frontendPlan = null
+  frontendPlan = null,
+  practiceSessions = null
 }: MayaWelcomeProps) {
   const teacher = useWorkspaceTeacher();
+  // The candidate's real sessions when the roadmap generated, the static path
+  // otherwise — a fresh profile whose plan is still building should still see
+  // something rather than an empty grid.
+  const previewSessions =
+    practiceSessions?.length
+      ? practiceSessions
+      : PREP_SESSIONS.map((session) => ({
+          key: session.id,
+          title: session.title,
+          covers: session.covers
+        }));
   // Maya introduces herself out loud by default; muting her turns this off for
   // the rest of the walkthrough.
   const voiceEnabled = useRef(true);
@@ -318,7 +344,7 @@ export function MayaWelcome({
     : resume?.projects[0]?.name || profile.headline || "your resume evidence";
   const firstRoadmapStep = resume?.roadmap[0]?.title || profile.focusAreas[0] || "Build a baseline";
   const frontendStats = {
-    sessions: frontendRoadmap?.totalSessions ?? FRONTEND_SESSIONS.length,
+    sessions: frontendRoadmap?.totalSessions ?? PREP_SESSIONS.length,
     chapters: frontendRoadmap?.totalChapters ?? frontendPlan?.chapters.length ?? 12,
     questions: frontendRoadmap?.totalQuestions ?? frontendPlan?.totalQuestions ?? 123,
     hours: frontendRoadmap
@@ -594,15 +620,19 @@ export function MayaWelcome({
 
               {hasRoadmapTrack && step === 1 ? (
                 <div className="mx-auto mt-5 grid min-w-0 max-w-full w-[calc(100%-0.75rem)] gap-2 sm:mt-7 sm:w-full sm:grid-cols-2">
-                  {FRONTEND_SESSIONS.map((session, index) => {
-                    const meta = SESSION_CARD_META[session.id] ?? {
+                  {previewSessions.map((session, index) => {
+                    const meta = SESSION_CARD_META[session.key] ?? {
                       label: "Guided practice",
                       detail: session.covers[0] ?? "Focused interview prep."
                     };
-                    const SessionIcon = sessionIcon(session);
+                    const SessionIcon = sessionIcon({
+                      id: session.key,
+                      title: session.title,
+                      covers: session.covers
+                    });
                     return (
                       <div
-                        key={session.id}
+                        key={session.key}
                         className="onboarding-card-reveal flex min-w-0 max-w-full min-h-[5.4rem] items-start gap-3 overflow-hidden rounded-lg border border-white/[0.09] bg-white/[0.035] px-4 py-3.5 text-cream backdrop-blur-xl"
                         style={
                           {

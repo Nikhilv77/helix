@@ -112,7 +112,12 @@ export function auditDsaBank(): DsaBankAuditReport {
       examples += question.examples?.length ?? 0;
       try {
         const testCases = buildTestCases(question.examples ?? [], question.slug);
-        if (testCases.length !== question.examples?.length) {
+        // Test cases may now exceed examples — everything past the last example
+        // is a hidden case. What still has to hold is that every authored
+        // example is covered, and that the visible cases line up with them.
+        const exampleCount = question.examples?.length ?? 0;
+        const visibleCount = testCases.filter((testCase) => testCase.visible).length;
+        if (testCases.length < exampleCount || visibleCount !== exampleCount) {
           unrunnableExamples.push({
             slug: question.slug,
             error: "Not every authored example produced a test case."

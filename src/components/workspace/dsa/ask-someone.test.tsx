@@ -115,6 +115,11 @@ describe("AskSomeone", () => {
     );
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    // helperCount is null until the availability response lands in state, and
+    // waitFor above only proves the call was made. Clicking on the null branch
+    // takes the "helpers available" path and actually sends, which is what made
+    // this test fail roughly one run in three.
+    await act(async () => {});
     expect(screen.queryByText(/Trailmates are available right now/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Ask a mate" }));
 

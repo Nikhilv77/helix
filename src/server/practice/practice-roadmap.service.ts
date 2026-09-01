@@ -170,7 +170,7 @@ export class PracticeRoadmapService {
           }
           const existing = progressByTemplateId.get(template.id);
           const questionCount =
-            session.key === "frontend-dsa"
+            session.key === "dsa"
               ? template._count.questions
               : (existing?.totalQuestions ?? template._count.questions);
           const availability =
@@ -247,7 +247,7 @@ export class PracticeRoadmapService {
         );
         for (const [index, progress] of progressRows.entries()) {
           const key = progress.practiceSessionKey as PracticeSessionKey;
-          if (key === "frontend-dsa") continue;
+          if (key === "dsa") continue;
           const totalQuestions = placementResult.counts.get(key) ?? 0;
           const availability = placementAvailability(totalQuestions);
           if (
@@ -320,7 +320,7 @@ export class PracticeRoadmapService {
               href:
                 progress.availability !== PracticeSessionAvailability.AVAILABLE
                   ? null
-                  : key === "frontend-dsa"
+                  : key === "dsa"
                     ? "/practice/dsa"
                     : this.nonDsaEnabled
                       ? `/practice/${key}`

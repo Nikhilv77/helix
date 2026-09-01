@@ -166,7 +166,11 @@ export function OnboardingFlow({
 
     try {
       await completeOnboarding(result, teacherId);
-      router.push(replacingResume ? "/profile" : "/?welcome=maya");
+      router.push(
+        replacingResume
+          ? "/profile"
+          : `/?welcome=${encodeURIComponent(teacherId ?? "maya")}`
+      );
       router.refresh();
     } catch (caught) {
       setError(

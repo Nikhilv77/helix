@@ -15,7 +15,7 @@ import {
 } from "@prisma/client";
 import {
   buildFrontendDsaPlan,
-  FRONTEND_SESSIONS,
+  PREP_SESSIONS,
   type PlanQuestion
 } from "../src/lib/roadmap/frontend-plan";
 import { assertPrepQuestionBankPublishable } from "../src/server/practice/questions/prep-bank-audit";
@@ -320,11 +320,12 @@ interface PrepQuestionTemplateSeed {
   title: string;
   roles: string[];
   levels: string[];
+  languages?: string[];
   difficulty: string;
   expectedMinutes: number;
   evidenceType: string;
   competency: string;
-  format?: "mcq" | "typed" | "spoken" | "diagram";
+  format?: "mcq" | "typed" | "spoken" | "diagram" | "predict-run" | "find-the-flaw" | "diagnose";
   prompt: string;
   promptTemplate?: string;
   objective?: string;
@@ -488,7 +489,7 @@ async function seedFrontendRoadmapTemplates(): Promise<void> {
     }
   });
 
-  const sessionSlugs = FRONTEND_SESSIONS.map((session) => session.id);
+  const sessionSlugs = PREP_SESSIONS.map((session) => session.id);
 
   // Sessions are unique on (templateId, order) as well as (templateId, slug).
   // Removing dropped sessions first, then parking the survivors outside the
@@ -504,7 +505,7 @@ async function seedFrontendRoadmapTemplates(): Promise<void> {
   `;
 
   const sessionTemplateIds: string[] = [];
-  for (const session of FRONTEND_SESSIONS) {
+  for (const session of PREP_SESSIONS) {
     const stored = await prisma.roadmapSessionTemplate.upsert({
       where: {
         templateId_slug: {
@@ -541,7 +542,7 @@ async function seedFrontendRoadmapTemplates(): Promise<void> {
     where: {
       templateId_slug: {
         templateId: frontendTemplate.id,
-        slug: "frontend-dsa"
+        slug: "dsa"
       }
     }
   });
@@ -686,7 +687,7 @@ async function seedFrontendRoadmapTemplates(): Promise<void> {
   await seedFrontendPrepRoadmapTemplates(frontendTemplate.id);
 
   console.log(
-    `Seeded full-stack roadmap template with ${FRONTEND_SESSIONS.length} sessions, ${plan.chapters.length} DSA chapters, and ${plan.totalQuestions} DSA question mappings plus published prep placements.`
+    `Seeded full-stack roadmap template with ${PREP_SESSIONS.length} sessions, ${plan.chapters.length} DSA chapters, and ${plan.totalQuestions} DSA question mappings plus published prep placements.`
   );
 }
 
@@ -754,15 +755,18 @@ async function seedFrontendPrepRoadmapTemplates(templateId: string): Promise<voi
     where: { templateId },
     select: { id: true, slug: true }
   });
-  const slugByPracticeKey: Record<string, string> = {
-    "core-technical": "javascript-react-core",
-    "applied-engineering": "computer-fundamentals",
-    "architecture-system-design": "production-ui-quality",
-    "resume-behavioral-defense": "resume-behavioral-defense"
-  };
+  // Template slug and Practice session key are the same string since the
+  // sessions were renamed; this list is just which sessions get prep chapters.
+  const prepSessionKeys = [
+    "core-technical",
+    "applied-engineering",
+    "architecture-system-design",
+    "resume-behavioral-defense"
+  ];
   const sessionBySlug = new Map(sessions.map((session) => [session.slug, session]));
 
-  for (const [practiceSessionKey, sessionSlug] of Object.entries(slugByPracticeKey)) {
+  for (const practiceSessionKey of prepSessionKeys) {
+    const sessionSlug = practiceSessionKey;
     const session = sessionBySlug.get(sessionSlug);
     if (!session) throw new Error(`Missing roadmap session template: ${sessionSlug}`);
     const questions = await prisma.prepQuestionTemplate.findMany({
@@ -861,7 +865,7 @@ async function seedFrontendPrepRoadmapTemplates(templateId: string): Promise<voi
     });
   }
 
-  const finalSession = sessionBySlug.get("final-frontend-mock");
+  const finalSession = sessionBySlug.get("final-mock");
   if (finalSession) {
     await prisma.roadmapQuestionTemplate.deleteMany({
       where: { sessionTemplateId: finalSession.id }
@@ -928,6 +932,7 @@ function prepTemplateData(
     title: template.title,
     roles: template.roles,
     levels: template.levels,
+    languages: templateLanguages(template),
     difficulty: template.difficulty,
     expectedMinutes: template.expectedMinutes,
     evidenceType: template.evidenceType,
@@ -956,8 +961,25 @@ function prepTemplateData(
   };
 }
 
+/**
+ * A question is language-bound when its answer depends on one language's
+ * semantics. `predict-run` always is — the whole exercise is predicting what a
+ * specific runtime prints. Everything else is agnostic unless the author says
+ * otherwise, because a JavaScript snippet demonstrating an N+1 query still
+ * teaches a Go candidate.
+ */
+function templateLanguages(template: PrepQuestionTemplateSeed): string[] {
+  if (template.languages?.length) return template.languages;
+  if (template.format !== "predict-run") return [];
+  const key = template.answerKey as { language?: unknown } | null | undefined;
+  return typeof key?.language === "string" ? [key.language] : [];
+}
+
 function prepSessionKey(bank: string, competency: string): string {
-  if (bank === "computer-fundamentals") return "applied-engineering";
+  // Retired from Practice. These 42 MCQs are recognition-only, and
+  // applied-engineering now has 40 artifact-based questions that do not need
+  // them to clear its floor. They stay published for the placement quiz.
+  if (bank === "placement-fundamentals") return "placement";
   if (bank === "behavioral-resume-deep-dive" || competency === "frontend-depth") {
     return "resume-behavioral-defense";
   }
@@ -975,7 +997,9 @@ function prepChapterKey(
   sessionKey: string,
   template: Pick<PrepQuestionTemplateSeed, "category" | "competency">
 ): string {
-  if (sessionKey === "applied-engineering") return template.category;
+  if (sessionKey === "applied-engineering" || sessionKey === "placement") {
+    return template.category;
+  }
   if (sessionKey === "resume-behavioral-defense") {
     return template.category === "resume-deep-dive" ? "resume-claims" : "behavioral-stories";
   }
@@ -1064,7 +1088,7 @@ function fundamentalsPrepBank(): PrepQuestionBankSeed {
     );
 
   return {
-    bank: "computer-fundamentals",
+    bank: "placement-fundamentals",
     sourceLinks: [],
     templates: files.flatMap((area) =>
       area.questions.map((question): PrepQuestionTemplateSeed => {
@@ -1075,7 +1099,7 @@ function fundamentalsPrepBank(): PrepQuestionBankSeed {
         return {
           id: `fundamentals-${question.slug}`,
           contentVersion: question.contentVersion ?? 1,
-          sessionKey: "applied-engineering",
+          sessionKey: "placement",
           chapterKey: area.area,
           category: area.area,
           title: question.concept.title,
@@ -1089,7 +1113,7 @@ function fundamentalsPrepBank(): PrepQuestionBankSeed {
           prompt: question.prompt,
           objective: `Explain ${question.concept.title.toLowerCase()} accurately and connect it to engineering behavior.`,
           prerequisites: [],
-          tags: ["applied-engineering", area.area, question.format],
+          tags: ["fundamentals", area.area, question.format],
           whatItTests: [question.concept.title, ...question.concept.points.slice(0, 2)],
           goodAnswerSignals: strongSignals,
           weakAnswerSignals: [

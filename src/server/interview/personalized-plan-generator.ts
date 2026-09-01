@@ -335,12 +335,12 @@ function problemSolvingDefinition(context: GenerationContext) {
 function coreTechnicalDefinition(context: GenerationContext) {
   const selected = context.coreSkills.slice(0, 4);
   return {
-    title: coreTechnicalTitle(context, selected),
-    subtitle: "Mechanisms, trade-offs, and depth across the highest-priority technical evidence",
+    title: `Core Technical · ${coreTechnicalSuffix(context, selected)}`,
+    subtitle: "What the language actually does — execution order, closures, references and memory",
     durationMinutes: 35,
     rationale: selected.length
       ? `Deepens the highest-ranked target-role evidence: ${selected.map(displayLabel).join(", ")}.`
-      : `Establishes the technical fundamentals expected of a ${context.targetRole.title}.`,
+      : `Establishes the runtime behaviour a ${context.targetRole.title} is expected to reason about without running the code.`,
     topicSeeds: selected.length
       ? selected.map((skill) =>
           skillTopic(skill, [
@@ -374,14 +374,14 @@ function appliedEngineeringDefinition(context: GenerationContext) {
   const project = context.importantProject;
 
   return {
-    title: appliedEngineeringTitle(context, selected),
+    title: `Applied Engineering · ${suffix(appliedEngineeringTitle(context, selected))}`,
     subtitle: project
       ? `Production scenarios grounded in ${project.name}`
       : "Production scenarios grounded in the candidate's strongest technical evidence",
     durationMinutes: 40,
     rationale: project
       ? `Uses ${project.name} as an evidence anchor while testing production engineering judgement.`
-      : `Tests whether ${context.roleLabel.toLowerCase()} knowledge transfers to realistic engineering constraints.`,
+      : `Tests whether ${context.roleLabel.toLowerCase()} judgement holds up against real defects and real evidence.`,
     topicSeeds: topicSeeds.length
       ? topicSeeds
       : [genericTopic("applied-engineering", `${context.roleLabel} Engineering`)],
@@ -411,8 +411,8 @@ function architectureDefinition(context: GenerationContext) {
   ]);
 
   return {
-    title: `${context.roleLabel} System Design`,
-    subtitle: "Architecture decisions, constraints, scale, and failure modes",
+    title: `Architecture & Design · ${context.roleLabel}`,
+    subtitle: "Designing the objects an interview asks you to build, before the boxes and arrows",
     durationMinutes: 45,
     rationale: context.primaryDomain
       ? `Moves from component knowledge into system-level reasoning around ${context.primaryDomain.label}.`
@@ -534,12 +534,43 @@ function titleCase(value: string): string {
     .join(" ");
 }
 
+/**
+ * The suffix after "Core Technical ·".
+ *
+ * Prefers the language, because this session tests what the language does —
+ * "Python & Apache Spark" promised Spark semantics, and Spark is not a
+ * language. Falls back to the previous stack naming when no language is known.
+ */
+/**
+ * Trims the words the prefix already says. Without it the AI plan read
+ * "Applied Engineering · Applied AI Engineering".
+ */
+function suffix(value: string): string {
+  return value
+    .replace(/^Applied\s+/i, "")
+    .replace(/\s+Engineering$/i, "")
+    .trim();
+}
+
+function coreTechnicalSuffix(
+  context: GenerationContext,
+  selected: RankedSkillRelevance[]
+): string {
+  if (context.language) return displayLabel(context.language);
+  return coreTechnicalTitle(context, selected);
+}
+
 function coreTechnicalTitle(context: GenerationContext, selected: RankedSkillRelevance[]): string {
   if (context.targetRole.family === "frontend" || context.targetRole.family === "fullstack") {
     const framework = context.frontendSkills.find((skill) => skill.category === "framework");
-    return framework
-      ? `${displayLabel(framework)} & Frontend Engineering`
-      : "Frontend Engineering Deep Dive";
+    if (framework) return `${displayLabel(framework)} & Frontend Engineering`;
+
+    // Only "frontend" if there is frontend evidence. A fullstack target with no
+    // framework on the resume used to fall back to "Frontend Engineering Deep
+    // Dive" regardless — so a Kafka/Spark/Airflow data engineer was told their
+    // core session was frontend. Fall through to the stack-pair naming below,
+    // which reads the skills that are actually there.
+    if (context.targetRole.family === "frontend") return "Frontend Engineering Deep Dive";
   }
 
   if (context.targetRole.family === "ai-ml") {

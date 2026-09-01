@@ -148,7 +148,7 @@ function dsaSession(): StoredInterviewSession {
       roundType: "technical",
       intensity: "realistic",
       context: "DSA interview",
-      templateId: "frontend-dsa",
+      templateId: "dsa",
       templateTitle: "DSA practice interview",
       dsaQuestionSlugs: ["two-sum"],
       questionCount: 3

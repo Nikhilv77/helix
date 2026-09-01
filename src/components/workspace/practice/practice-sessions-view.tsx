@@ -18,7 +18,7 @@ import type { PracticeRoadmapHome, PracticeRoadmapSession } from "@/lib/practice
 import type { WorkspaceInsights } from "@/lib/shared/types";
 
 const sessionIcons: Record<string, LucideIcon> = {
-  "frontend-dsa": CodeXml,
+  "dsa": CodeXml,
   "resume-behavioral-defense": BadgeCheck,
   "core-technical": Atom,
   "applied-engineering": Cpu,

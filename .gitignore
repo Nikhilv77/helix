@@ -24,3 +24,7 @@ tsconfig.tsbuildinfo
 agent/*.egg-info
 agent/__pycache__
 **/__pycache__
+
+# Local resume exports — contain real candidate CV data.
+resume-analysis-backup.json
+*.dump

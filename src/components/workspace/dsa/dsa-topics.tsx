@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Check, ChevronDown, Clock3, SkipForward } from "lucide-react";
 import { PracticeCoachCard, PracticeIntro } from "@/components/workspace/practice/practice-intro";
 import type { DsaChapter, FrontendDsaPlan, PlanQuestion } from "@/lib/roadmap/frontend-plan";
-import { FRONTEND_SESSIONS } from "@/lib/roadmap/frontend-plan";
+import { PREP_SESSIONS } from "@/lib/roadmap/frontend-plan";
 import type { FrontendRoadmapChapter, FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
 
 /** The DSA roadmap: current pattern first, then the complete numbered path. */
@@ -20,7 +20,7 @@ export function DsaTopics({
     roadmap?.sessions.find((session) => session.id === roadmap.currentSessionTemplateSlug) ??
     roadmap?.sessions[0] ??
     null;
-  const fallback = FRONTEND_SESSIONS.find((session) => session.status === "active");
+  const fallback = PREP_SESSIONS.find((session) => session.status === "active");
   const purpose = activeSession?.purpose ?? fallback?.purpose ?? "";
   const progressByChapter = new Map(
     (roadmap?.chapters ?? []).map((chapter) => [chapter.id, chapter])

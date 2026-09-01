@@ -238,3 +238,15 @@ export function personaForSession(sessionId: string | null | undefined): Intervi
   // The index is always in range; the fallback satisfies noUncheckedIndexedAccess.
   return INTERVIEWERS[hash(sessionId) % INTERVIEWERS.length] ?? MAYA;
 }
+
+
+/**
+ * Reads the `?welcome=` parameter that follows onboarding.
+ *
+ * It used to be the literal `maya`, from when she was the only teacher. It now
+ * carries whichever teacher the candidate picked, and `maya` still resolves so
+ * links already sent out keep working.
+ */
+export function welcomePersonaFromQuery(value: string | null | undefined): InterviewerPersona | null {
+  return personaById(value?.trim().toLowerCase());
+}

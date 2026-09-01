@@ -13,6 +13,7 @@ import { ScrollRestoration } from "@/components/scroll-restoration";
 import { clerkAppearance } from "@/lib/auth/clerk-theme";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared/seo";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
+import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
 import { isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
@@ -133,11 +134,10 @@ const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 /**
  * Never prerendered or reused across auth states.
  *
- * The layout decides whether the workspace chrome renders at all, and Next
- * does not re-render layouts on client-side navigation. Without this, a layout
- * that rendered once without a resolved session kept being reused, so pages
- * reached by navigation appeared with no sidebar while a freshly loaded page
- * had one.
+ * The signed-in workspace shell stays mounted across public and workspace
+ * routes. Next reuses this layout during client navigation, so mounting the
+ * shell only for the first pathname would make the sidebar impossible to
+ * restore when returning from Trailguide without a hard refresh.
  */
 export const dynamic = "force-dynamic";
 
@@ -149,13 +149,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const pathname = requestHeaders.get("x-trailgrad-pathname") ?? "";
   const search = requestHeaders.get("x-trailgrad-search") ?? "";
   const workspaceRoute = isWorkspaceChromeRoute(pathname);
-  const welcomeHome = pathname === "/" && new URLSearchParams(search).get("welcome") === "maya";
+  const welcomeHome =
+    pathname === "/" &&
+    welcomePersonaFromQuery(new URLSearchParams(search).get("welcome")) !== null;
 
   if (workspaceRoute && pathname !== "/" && !userId) redirect("/");
 
-  // Public editorial pages stay outside the signed-in workspace shell. The
-  // URL remains public whether or not a visitor is authenticated.
-  const showWorkspaceShell = Boolean(userId && workspaceRoute && !welcomeHome);
   let initialWorkspaceAccent: WorkspaceAccent | undefined;
   let initialTeacherId: string | null = null;
   let initialProfileImage: string | null = null;
@@ -168,14 +167,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     if (profile) {
       initialTeacherId = profile.teacherId;
       initialProfileImage = profile.profileImage;
-      if (workspaceRoute && !welcomeHome) initialWorkspaceAccent = profile.workspaceAccent;
+      initialWorkspaceAccent = profile.workspaceAccent;
     }
   }
 
   const app = (
     <>
       <ScrollRestoration />
-      {showWorkspaceShell ? (
+      {userId ? (
         <WorkspaceTeacherProvider teacherId={initialTeacherId}>
           <WorkspaceShell
             initialAccent={initialWorkspaceAccent}
@@ -184,8 +183,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             {children}
           </WorkspaceShell>
         </WorkspaceTeacherProvider>
-      ) : userId ? (
-        <WorkspaceTeacherProvider teacherId={initialTeacherId}>{children}</WorkspaceTeacherProvider>
       ) : (
         <>
           <AuthSync />

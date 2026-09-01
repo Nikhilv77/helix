@@ -31,17 +31,20 @@ interface InterviewsViewProps {
   roadmap: FrontendRoadmapHome | null;
 }
 
+/**
+ * Keyed by roadmap session id, plus the blueprint kinds that do not share one.
+ *
+ * Session ids and blueprint kinds now agree everywhere except `problem-solving`,
+ * whose session is `frontend-dsa`; the duplicate entries this map used to carry
+ * were the old template slugs before they were renamed.
+ */
 const sessionIcons: Record<string, LucideIcon> = {
-  "frontend-dsa": CodeXml,
-  "javascript-react-core": Atom,
-  "computer-fundamentals": Cpu,
-  "production-ui-quality": CircleGauge,
-  "resume-behavioral-defense": BadgeCheck,
-  "final-frontend-mock": Rocket,
+  "dsa": CodeXml,
   "problem-solving": CodeXml,
   "core-technical": Atom,
   "applied-engineering": Cpu,
   "architecture-system-design": CircleGauge,
+  "resume-behavioral-defense": BadgeCheck,
   "final-mock": Rocket
 };
 

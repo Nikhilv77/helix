@@ -61,7 +61,7 @@ describe("POST /api/practice/attempt", () => {
     const response = await POST(
       request({
         requestId: "00000000-0000-4000-8000-000000000001",
-        sessionKey: "frontend-dsa",
+        sessionKey: "dsa",
         questionId: "question",
         action: "submit"
       })

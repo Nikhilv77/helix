@@ -5,6 +5,8 @@ import type { CandidateProfile } from "@/lib/shared/types";
 const mocks = vi.hoisted(() => ({
   requireOnboardedProfile: vi.fn(),
   home: vi.fn(),
+  insights: vi.fn(),
+  activity: vi.fn(),
   logError: vi.fn()
 }));
 
@@ -12,8 +14,13 @@ vi.mock("@/server/auth/onboarding-guard", () => ({
   requireOnboardedProfile: mocks.requireOnboardedProfile
 }));
 
+// The page reads three services. Mocking only `home` made every test throw
+// inside Promise.all before reaching its assertion.
 vi.mock("@/server/app-container", () => ({
-  getAppContainer: () => ({ practiceRoadmapService: { home: mocks.home } })
+  getAppContainer: () => ({
+    practiceRoadmapService: { home: mocks.home, activity: mocks.activity },
+    interviewService: { insights: mocks.insights }
+  })
 }));
 
 vi.mock("@/server/common/logger", () => ({
@@ -27,6 +34,8 @@ import PracticePage from "./page";
 describe("PracticePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.insights.mockResolvedValue(null);
+    mocks.activity.mockResolvedValue([]);
   });
 
   it("does not reach the Practice generator when the onboarding guard rejects access", async () => {

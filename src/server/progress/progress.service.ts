@@ -515,7 +515,7 @@ function expectedMinutesOf(question: QuestionRow): number {
 }
 
 function sessionHref(slug: string, title: string): string {
-  if (slug === "frontend-dsa") return "/practice";
+  if (slug === "dsa") return "/practice";
   return `/interview?${new URLSearchParams({ focus: title }).toString()}`;
 }
 

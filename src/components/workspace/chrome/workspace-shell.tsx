@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useLinkStatus } from "next/link";
 import { SignOutButton, useUser } from "@clerk/nextjs";
@@ -353,8 +353,10 @@ export function WorkspaceShell({
   initialProfileImage?: string | null;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user } = useUser();
-  const showChrome = pathname ? isWorkspaceChromeRoute(pathname) : false;
+  const welcomeHome = pathname === "/" && searchParams.get("welcome") === "maya";
+  const showChrome = pathname ? isWorkspaceChromeRoute(pathname) && !welcomeHome : false;
   const userName =
     user?.fullName ?? user?.firstName ?? user?.primaryEmailAddress?.emailAddress ?? "";
   const [menuOpen, setMenuOpen] = useState(false);
@@ -365,6 +367,11 @@ export function WorkspaceShell({
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true");
   }, []);
+
+  useEffect(() => {
+    document.body.classList.toggle("workspace", showChrome);
+    return () => document.body.classList.remove("workspace");
+  }, [showChrome]);
 
   useEffect(() => {
     if (!showChrome) return;

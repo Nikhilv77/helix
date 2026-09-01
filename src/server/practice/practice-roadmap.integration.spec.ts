@@ -192,12 +192,12 @@ describeDatabase("PracticeRoadmapService database integration", () => {
       expect(storedRoadmaps[0]?.practiceQuestionPlacements).toHaveLength(69);
       const primaryQuestionIds = new Set(
         storedRoadmaps[0]?.practiceQuestionPlacements
-          .filter((placement) => placement.practiceSessionKey !== "final-mock")
+          .filter((placement) => placement.practiceSessionKey !== "architecture-system-design")
           .map((placement) => placement.questionProgressId)
       );
       expect(
         storedRoadmaps[0]?.practiceQuestionPlacements
-          .filter((placement) => placement.practiceSessionKey === "final-mock")
+          .filter((placement) => placement.practiceSessionKey === "architecture-system-design")
           .every((placement) => primaryQuestionIds.has(placement.questionProgressId))
       ).toBe(true);
 
@@ -327,7 +327,7 @@ describeDatabase("PracticeRoadmapService database integration", () => {
       });
 
       const finalPlacement = await prisma.practiceQuestionPlacement.findFirstOrThrow({
-        where: { roadmapId: storedRoadmaps[0]!.id, practiceSessionKey: "final-mock" },
+        where: { roadmapId: storedRoadmaps[0]!.id, practiceSessionKey: "architecture-system-design" },
         include: { questionProgress: { include: { prepQuestionTemplate: true } } }
       });
       const finalQuestion = finalPlacement.questionProgress.prepQuestionTemplate!;
@@ -346,7 +346,7 @@ describeDatabase("PracticeRoadmapService database integration", () => {
           : `option:${finalSelectedOption}`;
       await prepPractice.attempt(ownerId, {
         requestId: randomUUID(),
-        sessionKey: "final-mock",
+        sessionKey: "architecture-system-design",
         questionId: finalPlacement.questionProgress.prepQuestionTemplateId!,
         action: "submit",
         answer: finalAnswer,

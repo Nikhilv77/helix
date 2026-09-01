@@ -58,7 +58,6 @@ describe("validateEnvironment", () => {
       // Defaults to an empty list rather than undefined: the report queue is
       // closed to everyone until somebody is explicitly named.
       operatorUserIds: [],
-      helpRequestWebhookUrl: undefined,
       resendApiKey: undefined,
       notificationEmailEnabled: false,
       notificationFromEmail: undefined,

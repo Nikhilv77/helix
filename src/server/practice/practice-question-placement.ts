@@ -10,8 +10,7 @@ import type { PracticeSessionKey } from "@/lib/practice/practice-roadmap";
 const PRIMARY_LIMITS = {
   "core-technical": 12,
   "applied-engineering": 24,
-  "architecture-system-design": 12,
-  "resume-behavioral-defense": 12
+  "architecture-system-design": 12
 } as const;
 
 type PrimaryPracticeSessionKey = keyof typeof PRIMARY_LIMITS;
@@ -25,6 +24,9 @@ export interface PracticePlacementCandidate {
   contentVersion: number;
   roles: string[];
   levels: string[];
+  /** Empty means language-agnostic. See PrepQuestionTemplate.languages. */
+  languages: string[];
+  format: string;
   prerequisites: string[];
   attemptCount: number;
   bestScore: number | null;
@@ -53,7 +55,8 @@ export interface PracticePlacementReconciliation {
 export function selectPracticeQuestionPlacements(
   candidates: PracticePlacementCandidate[],
   plan: PersonalizedInterviewPlan,
-  candidateLevel: string | null = null
+  candidateLevel: string | null = null,
+  candidateLanguage: string | null = null
 ): SelectedPracticePlacement[] {
   const primary = new Map<PrimaryPracticeSessionKey, SelectedPracticePlacement[]>();
   const completedIds = new Set(
@@ -63,7 +66,17 @@ export function selectPracticeQuestionPlacements(
   );
 
   for (const sessionKey of Object.keys(PRIMARY_LIMITS) as PrimaryPracticeSessionKey[]) {
-    const inSession = candidates.filter((candidate) => candidate.sessionKey === sessionKey);
+    const inSession = candidates
+      .filter((candidate) => candidate.sessionKey === sessionKey)
+      // Language is a gate rather than a ranking signal. A `predict-run`
+      // question asks what JavaScript prints; for a Go candidate there is no
+      // partially-right answer, so the question must not be offered at all.
+      // An empty `languages` array means agnostic and always passes.
+      .filter(
+        (candidate) =>
+          candidate.languages.length === 0 ||
+          (candidateLanguage !== null && candidate.languages.includes(candidateLanguage))
+      );
     const roleMatches = inSession.filter((candidate) =>
       candidate.roles.includes(plan.sourceSnapshot.targetRole.family)
     );
@@ -83,22 +96,7 @@ export function selectPracticeQuestionPlacements(
     primary.set(sessionKey, selected);
   }
 
-  const finalDistribution: Array<[PrimaryPracticeSessionKey, number]> = [
-    ["core-technical", 3],
-    ["applied-engineering", 3],
-    ["architecture-system-design", 3],
-    ["resume-behavioral-defense", 3]
-  ];
-  const final = finalDistribution.flatMap(([sessionKey, count]) =>
-    (primary.get(sessionKey) ?? []).slice(0, count)
-  ).map((candidate, index) => ({
-    ...candidate,
-    practiceSessionKey: "final-mock" as const,
-    order: index + 1,
-    selectionReason: "final-mixed-review"
-  }));
-
-  return [...primary.values()].flat().concat(final);
+return [...primary.values()].flat();
 }
 
 export async function reconcilePracticeQuestionPlacements(
@@ -130,6 +128,8 @@ export async function reconcilePracticeQuestionPlacements(
             contentVersion: true,
             roles: true,
             levels: true,
+            languages: true,
+            format: true,
             prerequisites: true,
             title: true,
             prompt: true,
@@ -140,7 +140,10 @@ export async function reconcilePracticeQuestionPlacements(
         }
       }
     }),
-    tx.candidateProfile.findUnique({ where: { ownerId }, select: { level: true } })
+    tx.candidateProfile.findUnique({
+      where: { ownerId },
+      select: { level: true, dsaEditorLanguage: true }
+    })
   ]);
   const candidates = progress.flatMap((row): PracticePlacementCandidate[] =>
     row.prepQuestionTemplate
@@ -156,7 +159,12 @@ export async function reconcilePracticeQuestionPlacements(
         }]
       : []
   );
-  const desired = selectPracticeQuestionPlacements(candidates, plan, profile?.level ?? null);
+  const desired = selectPracticeQuestionPlacements(
+    candidates,
+    plan,
+    profile?.level ?? null,
+    profile?.dsaEditorLanguage ?? null
+  );
   const sessionByKey = new Map(sessions.map((session) => [session.practiceSessionKey, session.id]));
   const desiredWithSession = desired.flatMap((placement) => {
     const sessionProgressId = sessionByKey.get(placement.practiceSessionKey);
@@ -269,7 +277,7 @@ function candidateTopicScore(
   candidateLevel: string | null,
   completedIds: Set<string>
 ): (candidate: PracticePlacementCandidate) => number {
-  const blueprintKind = sessionKey === "resume-behavioral-defense" ? "final-mock" : sessionKey;
+  const blueprintKind = sessionKey;
   const blueprint = plan.sessions.find((session) => session.kind === blueprintKind);
   const targetTokens = new Set(
     (blueprint?.topics ?? []).flatMap((topic) =>
@@ -286,6 +294,7 @@ function candidateTopicScore(
     ].join(" ")));
     let score = 0;
     for (const token of targetTokens) if (candidateTokens.has(token)) score += 10;
+    score += formatWeight(candidate.format);
     if (candidateLevel && candidate.levels.includes(candidateLevel)) score += 6;
     if (candidate.prerequisites.every((id) => completedIds.has(id))) score += 4;
     else score -= 4;
@@ -295,6 +304,42 @@ function candidateTopicScore(
     if (candidate.status === "COMPLETED") score -= 3;
     return score;
   };
+}
+
+/**
+ * How much a format is worth beyond its topic match.
+ *
+ * Topic matching alone favours the questions it was meant to replace: an essay
+ * prompt titled "React rendering, state, and effects" shares many more tokens
+ * with a React blueprint than "var, closures, and the loop that already
+ * finished" does, so eleven typed questions displaced ten predict-run ones in
+ * the same session.
+ *
+ * The weight encodes the product decision rather than fighting it with keywords:
+ * a question graded against a known answer is worth more than one graded against
+ * an open rubric, because the evidence it produces is more reliable. It is small
+ * enough that a strong topic match still wins — two matching tokens outweigh it.
+ */
+function formatWeight(format: string): number {
+  switch (format) {
+    // Mechanically verified: the runtime decides, not a model.
+    case "predict-run":
+      return 14;
+    // Graded against a planted answer the grader is told.
+    case "find-the-flaw":
+    case "diagnose":
+      return 12;
+    // Open rubric over prose.
+    case "typed":
+    case "spoken":
+    case "diagram":
+      return 0;
+    // Recognition only; retired from Practice but defensive.
+    case "mcq":
+      return -6;
+    default:
+      return 0;
+  }
 }
 
 function selectionReason(

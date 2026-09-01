@@ -1,0 +1,742 @@
+{
+  "bank": "javascript-runtime-predict",
+  "sourceLinks": [
+    {
+      "id": "mdn-event-loop",
+      "title": "The event loop",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Event_loop",
+      "notes": "Task and microtask queue ordering."
+    }
+  ],
+  "templates": [
+    {
+      "id": "predict-run-js-01",
+      "contentVersion": 1,
+      "category": "frontend",
+      "title": "Sync, microtask, macrotask",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "difficulty": "easy",
+      "expectedMinutes": 4,
+      "evidenceType": "fundamental",
+      "competency": "javascript-async",
+      "format": "predict-run",
+      "prompt": "Read the code and predict exactly what it prints, in order. Everything here is synchronous, a microtask, or a macrotask — the order they run in is the whole question.",
+      "objective": "Separate synchronous execution from the microtask queue and the macrotask queue.",
+      "prerequisites": [],
+      "hints": [
+        "Synchronous statements finish before any callback runs.",
+        "Promise callbacks and setTimeout callbacks are not in the same queue."
+      ],
+      "explanation": "All synchronous code runs to completion first. Then the microtask queue drains fully — that is where promise callbacks live. Only then does the event loop take one macrotask, which is where setTimeout lands. A zero millisecond timeout is not immediate; it is merely eligible.",
+      "answerKey": {
+        "code": "console.log('start');\nsetTimeout(() => console.log('timeout'), 0);\nPromise.resolve().then(() => console.log('promise'));\nconsole.log('end');",
+        "language": "javascript",
+        "expectedStdout": "start\nend\npromise\ntimeout"
+      },
+      "tags": [
+        "javascript",
+        "async",
+        "event-loop"
+      ],
+      "whatItTests": [
+        "event loop",
+        "microtask vs macrotask",
+        "execution order"
+      ],
+      "goodAnswerSignals": [
+        "Names the two queues",
+        "Places the zero-delay timeout last"
+      ],
+      "weakAnswerSignals": [
+        "Assumes setTimeout with zero delay runs immediately",
+        "Interleaves the callbacks with synchronous logs"
+      ],
+      "followUpPrompts": [
+        "Where would queueMicrotask land in this order?"
+      ],
+      "mayaPushbacks": [
+        "Why does a zero millisecond delay not mean immediately?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Simulate → Commit",
+        "steps": [
+          "Walk each statement in order",
+          "Track what is queued and where",
+          "Write the printed lines in order"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Predicted every line in the correct order.",
+        "developing": "Right values, wrong order.",
+        "weak": "Missed queued work or misread scope."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "predict-run-js-02",
+      "contentVersion": 1,
+      "category": "frontend",
+      "title": "A microtask queued from a microtask",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "fundamental",
+      "competency": "javascript-async",
+      "format": "predict-run",
+      "prompt": "Both chains are already resolved, so both callbacks are queued immediately. One of them queues a third. Predict what prints, in order.",
+      "objective": "Show that a microtask queued during the drain runs after the ones already waiting.",
+      "prerequisites": [],
+      "hints": [
+        "Both outer callbacks are queued before the first one runs.",
+        "A microtask created during the drain goes to the back of the queue."
+      ],
+      "explanation": "Both outer callbacks are queued before either runs, so the queue holds a then c. Running a appends b to the back of the same queue, not the front. The loop keeps draining, so c runs before b. New microtasks join the end of the line.",
+      "answerKey": {
+        "code": "Promise.resolve().then(() => {\n  console.log('a');\n  Promise.resolve().then(() => console.log('b'));\n});\nPromise.resolve().then(() => console.log('c'));",
+        "language": "javascript",
+        "expectedStdout": "a\nc\nb"
+      },
+      "tags": [
+        "javascript",
+        "async",
+        "event-loop"
+      ],
+      "whatItTests": [
+        "microtask queue",
+        "queue ordering",
+        "nested promises"
+      ],
+      "goodAnswerSignals": [
+        "Explains the queue is FIFO",
+        "Places b after c"
+      ],
+      "weakAnswerSignals": [
+        "Assumes a nested promise runs immediately",
+        "Predicts a, b, c"
+      ],
+      "followUpPrompts": [
+        "What if the inner promise were a setTimeout instead?"
+      ],
+      "mayaPushbacks": [
+        "Why does the nested callback not jump ahead of one already queued?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Simulate → Commit",
+        "steps": [
+          "Walk each statement in order",
+          "Track what is queued and where",
+          "Write the printed lines in order"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Predicted every line in the correct order.",
+        "developing": "Right values, wrong order.",
+        "weak": "Missed queued work or misread scope."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "predict-run-js-03",
+      "contentVersion": 1,
+      "category": "frontend",
+      "title": "await is a pause, not a wait",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "fundamental",
+      "competency": "javascript-async",
+      "format": "predict-run",
+      "prompt": "This async function awaits a value that is not a promise. Predict what prints, in order.",
+      "objective": "Show that await always yields, even when there is nothing to wait for.",
+      "prerequisites": [],
+      "hints": [
+        "Code before the first await runs synchronously.",
+        "await suspends even when the awaited value is already available."
+      ],
+      "explanation": "An async function runs synchronously until its first await. So 1 prints immediately. await null still suspends the function and queues the rest as a microtask, letting 3 print. Only when the stack is empty does 2 run. Awaiting a non-promise still costs you a turn.",
+      "answerKey": {
+        "code": "async function run() {\n  console.log('1');\n  await null;\n  console.log('2');\n}\nrun();\nconsole.log('3');",
+        "language": "javascript",
+        "expectedStdout": "1\n3\n2"
+      },
+      "tags": [
+        "javascript",
+        "async",
+        "await"
+      ],
+      "whatItTests": [
+        "async functions",
+        "await semantics",
+        "execution order"
+      ],
+      "goodAnswerSignals": [
+        "Knows the body runs synchronously up to the first await",
+        "Places 2 last"
+      ],
+      "weakAnswerSignals": [
+        "Assumes the whole async body is deferred",
+        "Assumes await null does not suspend"
+      ],
+      "followUpPrompts": [
+        "What changes if you remove the await entirely?"
+      ],
+      "mayaPushbacks": [
+        "Why does awaiting a non-promise still defer the rest?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Simulate → Commit",
+        "steps": [
+          "Walk each statement in order",
+          "Track what is queued and where",
+          "Write the printed lines in order"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Predicted every line in the correct order.",
+        "developing": "Right values, wrong order.",
+        "weak": "Missed queued work or misread scope."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "predict-run-js-04",
+      "contentVersion": 1,
+      "category": "frontend",
+      "title": "var, closures, and the loop that already finished",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "fundamental",
+      "competency": "javascript-scope",
+      "format": "predict-run",
+      "prompt": "A classic. Predict what this prints, in order, and be precise about how many lines there are.",
+      "objective": "Show that var is function-scoped, so every callback closes over one shared binding.",
+      "prerequisites": [],
+      "hints": [
+        "var is scoped to the function, not the loop body.",
+        "The callbacks run after the loop has completely finished."
+      ],
+      "explanation": "var creates a single binding for the whole function, not one per iteration. All three callbacks close over that same variable. By the time the timeouts run, the loop has finished and i is 3. Replacing var with let creates a fresh binding per iteration and prints 0, 1, 2.",
+      "answerKey": {
+        "code": "for (var i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i), 0);\n}",
+        "language": "javascript",
+        "expectedStdout": "3\n3\n3"
+      },
+      "tags": [
+        "javascript",
+        "closures",
+        "scope"
+      ],
+      "whatItTests": [
+        "closures",
+        "var vs let",
+        "loop capture"
+      ],
+      "goodAnswerSignals": [
+        "Identifies the single shared binding",
+        "Knows let would change the answer"
+      ],
+      "weakAnswerSignals": [
+        "Predicts 0, 1, 2",
+        "Thinks each iteration captures its own copy"
+      ],
+      "followUpPrompts": [
+        "What exactly does let change about the binding?"
+      ],
+      "mayaPushbacks": [
+        "How many bindings of i exist in this program?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Simulate → Commit",
+        "steps": [
+          "Walk each statement in order",
+          "Track what is queued and where",
+          "Write the printed lines in order"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Predicted every line in the correct order.",
+        "developing": "Right values, wrong order.",
+        "weak": "Missed queued work or misread scope."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "predict-run-js-05",
+      "contentVersion": 1,
+      "category": "frontend",
+      "title": "Two loops, two capture rules",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 6,
+      "evidenceType": "fundamental",
+      "competency": "javascript-scope",
+      "format": "predict-run",
+      "prompt": "Both loops push functions into the same array. Only the declaration keyword differs. Predict the single line this prints.",
+      "objective": "Contrast per-iteration bindings with a single shared binding in one output.",
+      "prerequisites": [],
+      "hints": [
+        "The two loops differ only in the declaration keyword.",
+        "One keyword creates three bindings, the other creates one."
+      ],
+      "explanation": "let gives each iteration its own binding, so those three closures capture 0, 1 and 2. var gives one binding for all three, and after the loop it holds 3. The same loop shape produces completely different closures depending on the keyword.",
+      "answerKey": {
+        "code": "const fns = [];\nfor (let i = 0; i < 3; i++) fns.push(() => i);\nfor (var j = 0; j < 3; j++) fns.push(() => j);\nconsole.log(fns.map((f) => f()).join(','));",
+        "language": "javascript",
+        "expectedStdout": "0,1,2,3,3,3"
+      },
+      "tags": [
+        "javascript",
+        "closures",
+        "scope"
+      ],
+      "whatItTests": [
+        "closures",
+        "block scope",
+        "loop capture"
+      ],
+      "goodAnswerSignals": [
+        "Explains per-iteration bindings",
+        "Gets both halves of the line right"
+      ],
+      "weakAnswerSignals": [
+        "Predicts all zeros or all threes",
+        "Applies one rule to both loops"
+      ],
+      "followUpPrompts": [
+        "Rewrite the var loop so it behaves like the let loop."
+      ],
+      "mayaPushbacks": [
+        "Why does let create a new binding each iteration?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Simulate → Commit",
+        "steps": [
+          "Walk each statement in order",
+          "Track what is queued and where",
+          "Write the printed lines in order"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Predicted every line in the correct order.",
+        "developing": "Right values, wrong order.",
+        "weak": "Missed queued work or misread scope."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "predict-run-js-06",
+      "contentVersion": 1,
+      "category": "frontend",
+      "title": "Hoisted, but not initialised",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "fundamental",
+      "competency": "javascript-scope",
+      "format": "predict-run",
+      "prompt": "One of these reads happens before the declaration and survives. The other throws. Predict what prints, in order.",
+      "objective": "Distinguish var hoisting from the temporal dead zone that let and const create.",
+      "prerequisites": [],
+      "hints": [
+        "Both declarations are hoisted; only one is initialised early.",
+        "The error type is the specific detail being tested."
+      ],
+      "explanation": "var declarations are hoisted and initialised to undefined, so reading a early is legal and gives undefined. let is also hoisted but stays uninitialised until its declaration runs — the temporal dead zone — and reading it there throws a ReferenceError, not undefined and not a TypeError.",
+      "answerKey": {
+        "code": "console.log(typeof a);\nvar a = 1;\ntry {\n  console.log(b);\n} catch (error) {\n  console.log(error.constructor.name);\n}\nlet b = 2;",
+        "language": "javascript",
+        "expectedStdout": "undefined\nReferenceError"
+      },
+      "tags": [
+        "javascript",
+        "scope",
+        "hoisting"
+      ],
+      "whatItTests": [
+        "hoisting",
+        "temporal dead zone",
+        "error types"
+      ],
+      "goodAnswerSignals": [
+        "Names the temporal dead zone",
+        "Gets ReferenceError rather than TypeError"
+      ],
+      "weakAnswerSignals": [
+        "Predicts undefined for both",
+        "Guesses TypeError"
+      ],
+      "followUpPrompts": [
+        "What would typeof b print inside the try block?"
+      ],
+      "mayaPushbacks": [
+        "If let is hoisted too, why does reading it throw?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Simulate → Commit",
+        "steps": [
+          "Walk each statement in order",
+          "Track what is queued and where",
+          "Write the printed lines in order"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Predicted every line in the correct order.",
+        "developing": "Right values, wrong order.",
+        "weak": "Missed queued work or misread scope."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "predict-run-js-07",
+      "contentVersion": 1,
+      "category": "frontend",
+      "title": "Copies that are not copies",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "difficulty": "easy",
+      "expectedMinutes": 4,
+      "evidenceType": "fundamental",
+      "competency": "javascript-objects",
+      "format": "predict-run",
+      "prompt": "One assignment shares a reference, the other creates a shallow copy. Predict what prints, in order.",
+      "objective": "Separate copying a reference from copying the object it points at.",
+      "prerequisites": [],
+      "hints": [
+        "Only one of these two statements creates a new object.",
+        "const does not make the object immutable."
+      ],
+      "explanation": "const b = a copies the reference, so a and b are the same object and mutating one shows in the other. Spreading into c builds a new object, so writing to c leaves a untouched. const protects the binding, never the contents.",
+      "answerKey": {
+        "code": "const a = { n: 1 };\nconst b = a;\nb.n = 2;\nconsole.log(a.n);\nconst c = { ...a };\nc.n = 3;\nconsole.log(a.n);",
+        "language": "javascript",
+        "expectedStdout": "2\n2"
+      },
+      "tags": [
+        "javascript",
+        "objects",
+        "references"
+      ],
+      "whatItTests": [
+        "reference semantics",
+        "shallow copy",
+        "const"
+      ],
+      "goodAnswerSignals": [
+        "Distinguishes the binding from the object",
+        "Knows spread is a copy"
+      ],
+      "weakAnswerSignals": [
+        "Assumes const prevents mutation",
+        "Predicts 1 for the first log"
+      ],
+      "followUpPrompts": [
+        "What happens if a has a nested object and you spread it?"
+      ],
+      "mayaPushbacks": [
+        "What exactly does const prevent here?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Simulate → Commit",
+        "steps": [
+          "Walk each statement in order",
+          "Track what is queued and where",
+          "Write the printed lines in order"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Predicted every line in the correct order.",
+        "developing": "Right values, wrong order.",
+        "weak": "Missed queued work or misread scope."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "predict-run-js-08",
+      "contentVersion": 1,
+      "category": "frontend",
+      "title": "map takes a snapshot",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "difficulty": "easy",
+      "expectedMinutes": 4,
+      "evidenceType": "fundamental",
+      "competency": "javascript-objects",
+      "format": "predict-run",
+      "prompt": "The array is mutated after map has already run. Predict what prints, in order.",
+      "objective": "Show that map produces a new array that does not track later mutations.",
+      "prerequisites": [],
+      "hints": [
+        "map returns a new array rather than a view.",
+        "The push happens after map has finished."
+      ],
+      "explanation": "map walks the array once and returns a new array built from what it found. Pushing to the original afterwards has no effect on the result — there is no live link between them. This is why mapped state in a UI goes stale unless it is recomputed.",
+      "answerKey": {
+        "code": "const arr = [1, 2, 3];\nconst mapped = arr.map((x) => x * 2);\narr.push(4);\nconsole.log(mapped.length);\nconsole.log(arr.length);",
+        "language": "javascript",
+        "expectedStdout": "3\n4"
+      },
+      "tags": [
+        "javascript",
+        "arrays"
+      ],
+      "whatItTests": [
+        "array methods",
+        "immutability",
+        "snapshots"
+      ],
+      "goodAnswerSignals": [
+        "Knows map is eager and returns a new array",
+        "Gets both lengths right"
+      ],
+      "weakAnswerSignals": [
+        "Thinks the mapped array tracks the source",
+        "Predicts 4 and 4"
+      ],
+      "followUpPrompts": [
+        "What if you mutated an object inside the array instead of pushing?"
+      ],
+      "mayaPushbacks": [
+        "Is there any link between the two arrays after map returns?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Simulate → Commit",
+        "steps": [
+          "Walk each statement in order",
+          "Track what is queued and where",
+          "Write the printed lines in order"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Predicted every line in the correct order.",
+        "developing": "Right values, wrong order.",
+        "weak": "Missed queued work or misread scope."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "predict-run-js-09",
+      "contentVersion": 1,
+      "category": "frontend",
+      "title": "A rejection is still a microtask",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "difficulty": "medium",
+      "expectedMinutes": 5,
+      "evidenceType": "fundamental",
+      "competency": "javascript-async",
+      "format": "predict-run",
+      "prompt": "The async function throws immediately, but the catch handler is not synchronous. Predict what prints, in order.",
+      "objective": "Show that a rejection handler runs as a microtask, not at the moment of the throw.",
+      "prerequisites": [],
+      "hints": [
+        "A throw inside an async function becomes a rejected promise.",
+        "The catch callback is scheduled, not run immediately."
+      ],
+      "explanation": "Throwing inside an async function rejects its promise rather than propagating up the stack. The catch callback is scheduled as a microtask, so the synchronous log runs first. This is why wrapping an async call in a plain try/catch without await catches nothing.",
+      "answerKey": {
+        "code": "async function boom() {\n  throw new Error('x');\n}\nboom().catch(() => console.log('caught'));\nconsole.log('after');",
+        "language": "javascript",
+        "expectedStdout": "after\ncaught"
+      },
+      "tags": [
+        "javascript",
+        "async",
+        "errors"
+      ],
+      "whatItTests": [
+        "async errors",
+        "promise rejection",
+        "microtasks"
+      ],
+      "goodAnswerSignals": [
+        "Knows async throws become rejections",
+        "Places caught after the sync log"
+      ],
+      "weakAnswerSignals": [
+        "Expects caught to print first",
+        "Thinks a plain try/catch would work here"
+      ],
+      "followUpPrompts": [
+        "Would a synchronous try/catch around boom() catch this?"
+      ],
+      "mayaPushbacks": [
+        "Why does the throw not interrupt the synchronous log?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Simulate → Commit",
+        "steps": [
+          "Walk each statement in order",
+          "Track what is queued and where",
+          "Write the printed lines in order"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Predicted every line in the correct order.",
+        "developing": "Right values, wrong order.",
+        "weak": "Missed queued work or misread scope."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    },
+    {
+      "id": "predict-run-js-10",
+      "contentVersion": 1,
+      "category": "frontend",
+      "title": "Concurrent awaits interleave",
+      "roles": [
+        "frontend",
+        "fullstack"
+      ],
+      "levels": [
+        "fresher",
+        "0-2",
+        "3-5"
+      ],
+      "difficulty": "hard",
+      "expectedMinutes": 6,
+      "evidenceType": "fundamental",
+      "competency": "javascript-async",
+      "format": "predict-run",
+      "prompt": "Two async calls are started before either is awaited. Predict the single line printed at the end.",
+      "objective": "Show that starting two async functions interleaves them at each await point.",
+      "prerequisites": [],
+      "hints": [
+        "Both calls run before Promise.all awaits anything.",
+        "Each function runs synchronously up to its first await."
+      ],
+      "explanation": "Calling task(1) runs synchronously to its await and suspends, then task(2) does the same — so both starts happen before either end. Each suspension queues the remainder as a microtask, and they resume in the order they suspended. Concurrency here is interleaving on one thread, not parallelism.",
+      "answerKey": {
+        "code": "const log = [];\nasync function task(n) {\n  log.push('start' + n);\n  await null;\n  log.push('end' + n);\n}\nPromise.all([task(1), task(2)]).then(() => console.log(log.join(',')));",
+        "language": "javascript",
+        "expectedStdout": "start1,start2,end1,end2"
+      },
+      "tags": [
+        "javascript",
+        "async",
+        "concurrency"
+      ],
+      "whatItTests": [
+        "concurrency",
+        "await interleaving",
+        "Promise.all"
+      ],
+      "goodAnswerSignals": [
+        "Explains interleaving at await points",
+        "Groups the starts before the ends"
+      ],
+      "weakAnswerSignals": [
+        "Predicts start1,end1,start2,end2",
+        "Confuses concurrency with parallelism"
+      ],
+      "followUpPrompts": [
+        "How would the output change with await task(1); await task(2);?"
+      ],
+      "mayaPushbacks": [
+        "Are these two functions running in parallel?"
+      ],
+      "answerStructure": {
+        "framework": "Read → Simulate → Commit",
+        "steps": [
+          "Walk each statement in order",
+          "Track what is queued and where",
+          "Write the printed lines in order"
+        ]
+      },
+      "scoringRubric": {
+        "strong": "Predicted every line in the correct order.",
+        "developing": "Right values, wrong order.",
+        "weak": "Missed queued work or misread scope."
+      },
+      "sourceLinkIds": [
+        "mdn-event-loop"
+      ]
+    }
+  ]
+}

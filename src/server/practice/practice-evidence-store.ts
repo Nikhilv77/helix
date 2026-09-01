@@ -270,7 +270,7 @@ function nonNegativeInteger(value: Prisma.JsonValue | undefined): number {
 }
 
 function practiceFormat(value: string): VerifiedPracticeAttemptInput["format"] {
-  if (["mcq", "typed", "spoken", "diagram", "code"].includes(value)) {
+  if (["mcq", "typed", "spoken", "diagram", "code", "predict-run", "find-the-flaw", "diagnose"].includes(value)) {
     return value as VerifiedPracticeAttemptInput["format"];
   }
   return "typed";

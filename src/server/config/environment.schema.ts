@@ -88,9 +88,6 @@ export const environmentSchema = z
     UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
     GROQ_API_KEY: z.string().optional(),
     GROQ_DECIDER_MODEL: z.string().min(1).default("openai/gpt-oss-20b"),
-    /// Slack or Discord webhook that Milestone A routes help requests to. Unset
-    /// means requests are only recorded and logged.
-    HELP_REQUEST_WEBHOOK_URL: z.string().url().optional(),
     /// Clerk user ids allowed to read the help report queue, comma-separated.
     /// Empty means nobody — the queue is closed until somebody is named.
     OPERATOR_USER_IDS: z
@@ -187,7 +184,6 @@ export const environmentSchema = z
     upstashRedisRestToken: env.UPSTASH_REDIS_REST_TOKEN,
     groqApiKey: env.GROQ_API_KEY,
     groqDeciderModel: env.GROQ_DECIDER_MODEL,
-    helpRequestWebhookUrl: env.HELP_REQUEST_WEBHOOK_URL,
     operatorUserIds: env.OPERATOR_USER_IDS,
     resendApiKey: env.RESEND_API_KEY,
     notificationEmailEnabled: env.NOTIFICATION_EMAIL_ENABLED,

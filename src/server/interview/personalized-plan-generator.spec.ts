@@ -99,9 +99,9 @@ describe("PersonalizedInterviewPlanGenerator stack personalization", () => {
 
     expect(plan.sessions.map((session) => session.title)).toEqual([
       "Problem Solving · PHP",
-      "PHP & Laravel Deep Dive",
-      "Backend Engineering",
-      "Backend System Design",
+      "Core Technical · PHP",
+      "Applied Engineering · Backend",
+      "Architecture & Design · Backend",
       "Laravel Backend Mock"
     ]);
     expect(plan.status).toBe("draft");
@@ -159,9 +159,9 @@ describe("PersonalizedInterviewPlanGenerator stack personalization", () => {
 
     expect(plan.sessions.map((session) => session.title)).toEqual([
       "Problem Solving · Python",
-      "LLM & RAG Engineering",
-      "Applied AI Engineering",
-      "AI System Design",
+      "Core Technical · Python",
+      "Applied Engineering · AI",
+      "Architecture & Design · AI",
       "AI Engineer Mock"
     ]);
     expect(plan.sessions[1]?.topics.map((topic) => topic.key)).toEqual(
@@ -204,9 +204,9 @@ describe("PersonalizedInterviewPlanGenerator stack personalization", () => {
 
     expect(plan.sessions.map((session) => session.title)).toEqual([
       "Problem Solving · Java",
-      "React & Frontend Engineering",
-      "Java & Spring Boot",
-      "Full Stack System Design",
+      "Core Technical · Java",
+      "Applied Engineering · Java & Spring Boot",
+      "Architecture & Design · Full Stack",
       "Full Stack Mock"
     ]);
     expect(plan.sessions[1]?.topics.map((topic) => topic.key)).toContain("react");
@@ -421,4 +421,67 @@ describe("PersonalizedInterviewPlanGenerator source and adaptation policy", () =
     expect(finalMock?.rationale).toMatch(/demonstrated DSA and behavioral evidence/i);
     expectValidBlueprintWeights(plan);
   });
+  // The companion test — "still says frontend when the resume has a framework" —
+  // was removed when titles became "Core Technical · {language}". The language
+  // now wins whenever one is known, so a React resume reads "Core Technical ·
+  // TypeScript" and the frontend wording only survives in the no-language
+  // fallback. What still matters is that frontend is never claimed falsely.
+  it("does not call a session frontend when the resume has no frontend evidence", () => {
+    // A data engineer targeting fullstack used to be titled "Frontend
+    // Engineering Deep Dive": the frontend branch returned unconditionally once
+    // the role family matched, whether or not any frontend skill existed.
+    const candidate = profile(
+      resume({
+        skills: ["Apache Kafka", "Python", "Apache Spark", "Airflow"],
+        experience: [
+          {
+            organization: "Streamly",
+            role: "Data Engineer",
+            period: "2023 - Present",
+            location: "Remote",
+            summary: "Built a real-time event analytics pipeline.",
+            achievements: ["Processed 2B events per day through Kafka and Spark"],
+            skills: ["Apache Kafka", "Apache Spark", "Airflow", "Python"]
+          }
+        ]
+      }),
+      "fullstack"
+    );
+    const { plan } = generate({
+      profile: candidate,
+      targetRole: { title: "Full Stack Engineer", family: "fullstack", source: "declared" }
+    });
+
+    const core = plan.sessions.find((session) => session.kind === "core-technical");
+    expect(core?.title.toLowerCase()).not.toContain("frontend");
+  });
+
+  it("keeps the session prefix stable regardless of stack", () => {
+    // Every core-technical title now starts the same way; only the suffix moves.
+    const candidate = profile(
+      resume({
+        skills: ["React", "TypeScript"],
+        experience: [
+          {
+            organization: "Shopfront",
+            role: "Frontend Engineer",
+            period: "2023 - Present",
+            location: "Remote",
+            summary: "Built the storefront UI.",
+            achievements: ["Shipped a React design system"],
+            skills: ["React", "TypeScript"]
+          }
+        ]
+      }),
+      "frontend"
+    );
+    const { plan } = generate({
+      profile: candidate,
+      targetRole: { title: "Frontend Engineer", family: "frontend", source: "declared" }
+    });
+    const core = plan.sessions.find((session) => session.kind === "core-technical");
+    expect(core?.title.startsWith("Core Technical · ")).toBe(true);
+  });
+
+
 });

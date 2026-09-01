@@ -18,7 +18,7 @@ import { InterviewSignal } from "@/components/brand/blueprint-art";
 import { ChapterCarousel } from "@/components/workspace/practice/chapter-carousel";
 import { MayaInsights } from "@/components/workspace/shared/maya/maya-insights";
 import type { CarouselChapter } from "@/components/workspace/practice/chapter-carousel";
-import { FRONTEND_SESSIONS } from "@/lib/roadmap/frontend-plan";
+import { PREP_SESSIONS } from "@/lib/roadmap/frontend-plan";
 import type { FrontendDsaPlan } from "@/lib/roadmap/frontend-plan";
 import type { FrontendRoadmapInsight } from "@/lib/roadmap/roadmap";
 import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
@@ -33,28 +33,28 @@ type SessionMeta = {
 };
 
 const SESSION_META: Record<string, SessionMeta> = {
-  "frontend-dsa": {
+  "dsa": {
     icon: Code2,
     accent: "bg-[linear-gradient(135deg,#bfe2ff,#6fa8ff)]",
     background: "/images/session-cards/frontend-dsa-v2.jpg",
     tag: "Coding",
     metric: "123 questions"
   },
-  "javascript-react-core": {
+  "core-technical": {
     icon: Braces,
     accent: "bg-[linear-gradient(135deg,#d8ebff,#7db7ff)]",
     background: "/images/session-cards/javascript-react-core-v2.jpg",
     tag: "React",
     metric: "Core concepts"
   },
-  "computer-fundamentals": {
+  "applied-engineering": {
     icon: Cpu,
     accent: "bg-[linear-gradient(135deg,#cde8ff,#82c2ff)]",
     background: "/images/session-cards/computer-fundamentals-v2.jpg",
     tag: "Fundamentals",
     metric: "Network · OS · DB"
   },
-  "production-ui-quality": {
+  "architecture-system-design": {
     icon: Sparkles,
     accent: "bg-[linear-gradient(135deg,#d7eaff,#91bfff)]",
     background: "/images/session-cards/production-ui-quality-v2.jpg",
@@ -68,7 +68,7 @@ const SESSION_META: Record<string, SessionMeta> = {
     tag: "Stories",
     metric: "Evidence"
   },
-  "final-frontend-mock": {
+  "final-mock": {
     icon: Target,
     accent: "bg-[linear-gradient(135deg,#cfe7ff,#799df5)]",
     background: "/images/session-cards/final-frontend-mock-v2.jpg",
@@ -100,7 +100,7 @@ export function SessionCards({
 }) {
   const sessions = roadmap?.sessions.length
     ? roadmap.sessions
-    : FRONTEND_SESSIONS.map((session) => ({
+    : PREP_SESSIONS.map((session) => ({
         ...session,
         progressPercent: 0,
         completedQuestions: 0,
@@ -201,7 +201,7 @@ export function SessionCards({
               </Link>
               <span className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#1b1d20] px-3.5 text-[12px] font-semibold text-cream/72">
                 <Braces size={15} className="text-[#bfe2ff]" aria-hidden="true" />
-                {activeSession?.title ?? "Frontend DSA"}
+                {activeSession?.title ?? "DSA"}
               </span>
             </div>
           </div>
@@ -422,7 +422,7 @@ function SessionCard({ session, isCurrent }: { session: DisplaySession; isCurren
 }
 
 function sessionHref(id: string, title: string): string {
-  if (id === "frontend-dsa") return "/practice";
+  if (id === "dsa") return "/practice";
 
   const params = new URLSearchParams({ focus: title });
   return `/interview?${params.toString()}`;

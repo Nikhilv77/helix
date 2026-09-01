@@ -240,7 +240,7 @@ function QuestionRow({
           ) : null}
         </span>
         <span className="mt-1.5 flex items-center gap-2 text-[11.5px] text-cream/42">
-          <span className="capitalize">{question.format}</span>
+          <span>{formatLabel(question.format)}</span>
           <span>·</span>
           <span className="capitalize">{question.difficulty}</span>
           <span>·</span>
@@ -257,4 +257,25 @@ function QuestionRow({
       />
     </Link>
   );
+}
+
+
+/** Human wording for a format slug; `capitalize` alone gives "Find-the-flaw". */
+function formatLabel(format: string): string {
+  switch (format) {
+    case "predict-run":
+      return "Predict the output";
+    case "find-the-flaw":
+      return "Find the flaw";
+    case "diagnose":
+      return "Diagnose";
+    case "mcq":
+      return "Multiple choice";
+    case "spoken":
+      return "Spoken";
+    case "diagram":
+      return "Diagram";
+    default:
+      return "Written";
+  }
 }

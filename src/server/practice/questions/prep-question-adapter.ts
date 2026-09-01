@@ -100,7 +100,11 @@ function practiceDifficulty(value: string): PracticeQuestionDifficulty {
 }
 
 function practiceFormat(value: string): PracticeQuestionFormat {
-  return value === "mcq" || value === "spoken" || value === "diagram" ? value : "typed";
+  return value === "mcq" || value === "spoken" || value === "diagram" || value === "predict-run" ||
+    value === "find-the-flaw" ||
+    value === "diagnose"
+    ? value
+    : "typed";
 }
 
 function hasMcqAnswer(value: unknown): boolean {

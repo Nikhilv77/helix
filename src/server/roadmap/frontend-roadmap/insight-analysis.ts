@@ -49,7 +49,7 @@ export function analyzeAttemptHistory(attempts: InsightAttempt[]): AttemptHistor
     activeDayKeys.add(dayKey(attempt.createdAt));
 
     const question = attempt.questionProgress;
-    const pattern = question.dsaQuestion?.primaryPattern ?? "frontend-dsa";
+    const pattern = question.dsaQuestion?.primaryPattern ?? "dsa";
     const title =
       question.dsaQuestion?.title ?? question.roadmapQuestionTemplate?.titleSnapshot ?? null;
     const signal = patternSignals.get(pattern) ?? {

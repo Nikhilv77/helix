@@ -12,7 +12,7 @@ describe("workspace routes", () => {
     expect(isWorkspaceChromeRoute(pathname)).toBe(true);
   });
 
-  it.each(["/blog", "/about", "/pricing"])(
+  it.each(["/blog", "/about", "/pricing", "/trailguide", "/trailguide/mentors"])(
     "keeps public editorial routes outside the workspace shell: %s",
     (pathname) => {
       expect(isWorkspaceChromeRoute(pathname)).toBe(false);

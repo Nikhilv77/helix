@@ -348,7 +348,7 @@ function isTrustedPersonalizedSession(state: InterviewState): boolean {
 
 function isDsaSession(state: InterviewState): boolean {
   return (
-    state.setup.templateId === "frontend-dsa" ||
+    state.setup.templateId === "dsa" ||
     state.setup.templateTitle === "DSA practice interview"
   );
 }

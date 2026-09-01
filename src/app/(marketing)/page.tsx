@@ -6,6 +6,7 @@ import { MarketingHome } from "@/components/marketing/home/marketing-home";
 import { Dashboard } from "@/components/workspace/dashboard/dashboard";
 import { DashboardSkeleton } from "@/components/workspace/dashboard/dashboard-skeleton";
 import { MayaWelcomeLoading } from "@/components/workspace/dashboard/maya-welcome-loading";
+import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
 import { buildDashboardOverview } from "@/lib/dashboard/dashboard-overview";
 import type { ProgressInterview } from "@/lib/roadmap/progress";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared/seo";
@@ -70,7 +71,10 @@ export default async function HomePage({
   if (!profile.onboardingCompletedAt) redirect("/onboarding");
 
   const query = await searchParams;
-  const showMayaWelcome = query.welcome === "maya";
+  const welcomePersona = welcomePersonaFromQuery(
+    typeof query.welcome === "string" ? query.welcome : null
+  );
+  const showMayaWelcome = welcomePersona !== null;
 
   if (!showMayaWelcome) {
     return (
@@ -122,7 +126,7 @@ async function DashboardOverviewHome({
 
 async function MayaWelcomeHome({ userId, profile }: { userId: string; profile: CandidateProfile }) {
   const ownerId = authenticatedOwnerId(userId);
-  const [frontendRoadmap, frontendPlan] =
+  const [frontendRoadmap, frontendPlan, practiceRoadmap] =
     profile.targetRole === "fullstack"
       ? await Promise.all([
           getAppContainer()
@@ -130,9 +134,15 @@ async function MayaWelcomeHome({ userId, profile }: { userId: string; profile: C
             .catch(() => null),
           getAppContainer()
             .dsaService.frontendPlan()
+            .catch(() => null),
+          // The welcome screen previews the candidate's own sessions; without
+          // this it fell back to the static PREP_SESSIONS list and promised
+          // everyone the same four generic titles.
+          getAppContainer()
+            .practiceRoadmapService.home(ownerId)
             .catch(() => null)
         ])
-      : [null, null];
+      : [null, null, null];
 
   return (
     <Dashboard
@@ -140,6 +150,7 @@ async function MayaWelcomeHome({ userId, profile }: { userId: string; profile: C
       showMayaWelcome
       frontendRoadmap={frontendRoadmap}
       frontendPlan={frontendPlan}
+      practiceSessions={practiceRoadmap?.sessions ?? null}
     />
   );
 }

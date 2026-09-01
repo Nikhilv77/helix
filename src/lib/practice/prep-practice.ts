@@ -1,12 +1,17 @@
 import type { PracticeProgressStatus, PracticeSessionKey } from "./practice-roadmap";
-export type PrepPracticeFormat = "mcq" | "typed" | "spoken" | "diagram";
+export type PrepPracticeFormat =
+  | "mcq"
+  | "typed"
+  | "spoken"
+  | "diagram"
+  | "predict-run"
+  | "find-the-flaw"
+  | "diagnose";
 
 export const NON_DSA_PRACTICE_SESSION_KEYS = [
   "core-technical",
   "applied-engineering",
-  "architecture-system-design",
-  "resume-behavioral-defense",
-  "final-mock"
+  "architecture-system-design"
 ] as const;
 
 export type NonDsaPracticeSessionKey = (typeof NON_DSA_PRACTICE_SESSION_KEYS)[number];
@@ -60,6 +65,19 @@ export interface PrepPracticeReview {
   missing: string[];
   explanation: string;
   correctOptionIndex: number | null;
+  /**
+   * Format A only, and only once an attempt has been submitted. Mirrors
+   * `correctOptionIndex`: the answer is withheld until the candidate has
+   * committed to a prediction.
+   */
+  expectedOutput: string | null;
+  /**
+   * Format C only, revealed with the review: the planted defect, the line it is
+   * on, and what it costs in production.
+   */
+  flaw: { summary: string; line: number; consequence: string } | null;
+  /** Format D only, revealed with the review. */
+  diagnosis: { rootCause: string; fixes: string[] } | null;
   verificationStatus: "VERIFIED" | "UNVERIFIED" | "NOT_APPLICABLE";
   evaluatorVersion: string;
   questionContentVersion: number;
@@ -83,6 +101,19 @@ export interface PrepPracticeQuestion {
   format: PrepPracticeFormat;
   expectedMinutes: number;
   options: string[];
+  /**
+   * Formats A and C. The code under examination — predicted in A, inspected in
+   * C. Carried
+   * separately from `prompt` because it renders read-only in an editor, and
+   * separately from `answerKey` because the expected output must never reach
+   * the browser before submission.
+   */
+  snippet: { code: string; language: string } | null;
+  /**
+   * Format D only. The evidence handed to the candidate and the symptom that
+   * was reported. The cause is withheld until an attempt is submitted.
+   */
+  artifact: { body: string; kind: string; symptom: string } | null;
   hints: string[];
   revealedHintCount: number;
   draftAnswer: string;

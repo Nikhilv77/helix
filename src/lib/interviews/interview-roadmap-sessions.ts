@@ -3,7 +3,7 @@ import type {
   PersonalizedInterviewPlan,
   SessionBlueprint
 } from "@/lib/interviews/personalized-plan";
-import { FRONTEND_SESSIONS } from "@/lib/roadmap/frontend-plan";
+import { PREP_SESSIONS } from "@/lib/roadmap/frontend-plan";
 import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
 import type { InterviewHistoryItem } from "@/lib/shared/types";
 
@@ -58,15 +58,15 @@ export function roadmapSessionHref(session: InterviewRoadmapSession): string {
     const params = new URLSearchParams({ plan: session.planId, blueprint: session.id });
     return `/interview?${params.toString()}`;
   }
-  if (session.id === "frontend-dsa") return "/interview/dsa";
+  if (session.id === "dsa") return "/interview/dsa";
   if (session.id === "resume-behavioral-defense") return "/interview/resume";
-  if (session.id === "computer-fundamentals") return "/interview/fundamentals";
+  if (session.id === "applied-engineering") return "/interview/fundamentals";
   const params = new URLSearchParams({ roadmapSession: session.id });
   return `/interview?${params.toString()}`;
 }
 
 function fallbackRoadmapSessions(): InterviewRoadmapSession[] {
-  return FRONTEND_SESSIONS.map((session) => ({
+  return PREP_SESSIONS.map((session) => ({
     id: session.id,
     planId: null,
     kind: null,
@@ -74,7 +74,7 @@ function fallbackRoadmapSessions(): InterviewRoadmapSession[] {
     title: session.title,
     purpose: session.purpose,
     covers: session.covers,
-    totalQuestions: session.id === "frontend-dsa" ? 123 : 0,
+    totalQuestions: session.id === "dsa" ? 123 : 0,
     completedQuestions: 0,
     progressPercent: 0,
     attemptStatus: "not_started",
@@ -134,14 +134,14 @@ function dsaRoadmapSession(
   const latest = findLatestSession(
     history,
     (session) =>
-      session.setup.templateId === "frontend-dsa" ||
+      session.setup.templateId === "dsa" ||
       session.setup.templateTitle === "DSA practice interview"
   );
   const progress = sessionProgress(latest, latest?.questionCount ?? 3);
   const titleSuffix = problemSolvingBlueprint.title.split("·").slice(1).join("·").trim();
 
   return {
-    id: "frontend-dsa",
+    id: "dsa",
     planId: null,
     kind: "problem-solving",
     order: 1,

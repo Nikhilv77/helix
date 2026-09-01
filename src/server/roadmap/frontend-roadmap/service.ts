@@ -1074,7 +1074,7 @@ function groupQuestionsBy<Row>(rows: Row[], key: (row: Row) => string | null): M
 }
 
 function sessionHref(slug: string, title: string): string {
-  if (slug === "frontend-dsa") return "/practice/dsa";
+  if (slug === "dsa") return "/practice/dsa";
 
   const params = new URLSearchParams({ focus: title });
   return `/interview?${params.toString()}`;
@@ -1289,7 +1289,7 @@ async function recalculateRoadmap(
   });
 
   // Session status is derived from owning the next unanswered question. Only
-  // Frontend DSA has seeded questions, so once it is finished nothing owns a
+  // DSA has seeded questions, so once it is finished nothing owns a
   // next question and every remaining session stayed LOCKED forever — the
   // roadmap dead-ended instead of moving to JavaScript and React Core.
   //
@@ -1549,7 +1549,7 @@ async function replaceActiveMayaInsights(
     input.nextQuestion?.dsaQuestion?.title ??
     input.nextQuestion?.roadmapQuestionTemplate?.titleSnapshot ??
     "your next question";
-  const chapterTitle = input.nextQuestion?.chapterProgress?.chapterTemplate.title ?? "Frontend DSA";
+  const chapterTitle = input.nextQuestion?.chapterProgress?.chapterTemplate.title ?? "DSA";
   const commonTrap =
     input.nextQuestion?.dsaQuestion?.commonMistakes[0] ??
     "Jumping into code before naming the pattern and edge cases.";
@@ -1561,7 +1561,7 @@ async function replaceActiveMayaInsights(
   const weakPatternLabel = weakPattern ? displayPattern(weakPattern.pattern) : null;
   const recentWin = attemptAnalysis.lastCompletedTitle;
   const nextHref = nextQuestionHref(input.nextQuestion);
-  // With nothing queued, the old copy still read "Frontend DSA: your next
+  // With nothing queued, the old copy still read "DSA: your next
   // question" — Maya promising a question that does not exist.
   const finished = input.totalQuestions > 0 && input.completedQuestions >= input.totalQuestions;
   const nothingQueued = !input.nextQuestion;
@@ -1581,7 +1581,7 @@ async function replaceActiveMayaInsights(
               ? "Everything left here is skipped. Reopen one of them to keep the path moving."
               : `${chapterTitle}: ${questionTitle}`,
         evidenceLabel:
-          weakPatternLabel ?? input.nextQuestion?.dsaQuestion?.primaryPattern ?? "frontend-dsa",
+          weakPatternLabel ?? input.nextQuestion?.dsaQuestion?.primaryPattern ?? "dsa",
         ctaLabel: nothingQueued ? "Review your session" : "Start practice",
         ctaHref: nextHref ?? "/practice",
         priority: 10,

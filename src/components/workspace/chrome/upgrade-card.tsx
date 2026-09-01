@@ -32,7 +32,7 @@ import { ArrowUpRight, Compass } from "lucide-react";
  * user chose in Manage. Nothing here is hard-coded to Ember.
  */
 
-const HREF = "/mentors";
+const HREF = "/trailguide";
 
 export function UpgradeCard({ onNavigate }: { onNavigate?: () => void }) {
   return (

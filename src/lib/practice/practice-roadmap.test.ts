@@ -77,21 +77,22 @@ function plan(idSuffix = "one"): PersonalizedInterviewPlan {
 }
 
 describe("projectPracticeSessions", () => {
-  it("creates the same six candidate-facing slots and inserts resume before the final mock", () => {
+  it("projects the four drillable slots and drops the interview-only rounds", () => {
     const sessions = projectPracticeSessions(plan());
 
     expect(sessions.map((session) => session.key)).toEqual(PRACTICE_SESSION_KEYS);
-    expect(sessions.map((session) => session.order)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(sessions[0]).toMatchObject({
-      key: "frontend-dsa",
+      key: "dsa",
       title: "DSA · TypeScript",
       sourceBlueprintId: "blueprint-problem-solving"
     });
-    expect(sessions[4]).toMatchObject({
-      key: "resume-behavioral-defense",
-      sourceBlueprintId: null,
-      sourceBlueprintKind: null
-    });
+
+    // The resume round and the final mock stay in the interview roadmap: a mock
+    // needs a continuous timed loop, and defending your own history needs live
+    // follow-ups. Neither exists in Practice.
+    const keys = sessions.map((session) => session.key as string);
+    expect(keys).not.toContain("resume-behavioral-defense");
+    expect(keys).not.toContain("final-mock");
   });
 
   it("keeps stable Practice keys when immutable blueprint IDs are regenerated", () => {

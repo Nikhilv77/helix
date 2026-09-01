@@ -1,14 +1,17 @@
 /**
- * The frontend-first preparation plan shown on Home.
+ * The preparation plan shown on Home.
  *
- * Six sessions make up the path. The DSA session is a curated slice of the
- * 200-question bank, grouped into pattern chapters rather than shown end to
- * end, because a frontend candidate does not need the whole bank.
+ * Six sessions make up the path. Session ids are the same strings Practice uses
+ * as its session keys, so a roadmap template row and a Practice session are the
+ * same identity rather than two names joined by a lookup table.
+ *
+ * The DSA session is a curated slice of the 200-question bank, grouped into
+ * pattern chapters rather than shown end to end.
  */
 
-export type FrontendSessionStatus = "active" | "planned";
+export type PrepSessionStatus = "active" | "planned";
 
-export interface FrontendSession {
+export interface PrepSession {
   id: string;
   order: number;
   title: string;
@@ -16,58 +19,59 @@ export interface FrontendSession {
   purpose: string;
   /** What the session covers on the roadmap cards. */
   covers: string[];
-  status: FrontendSessionStatus;
+  status: PrepSessionStatus;
 }
 
-export const FRONTEND_SESSIONS: FrontendSession[] = [
+export const PREP_SESSIONS: PrepSession[] = [
   {
-    id: "frontend-dsa",
+    id: "dsa",
     order: 1,
-    title: "Frontend DSA",
+    title: "DSA",
     purpose:
-      "The data-structure patterns that actually come up in frontend loops, in the order they build on each other.",
+      "The data-structure patterns that actually come up in interview loops, in the order they build on each other.",
     covers: [
       "Pattern-by-pattern practice, warmups first",
       "Maya introduces each pattern and how to recognize it",
-      "Common mistakes and interview signals per group"
+      "Hidden test cases, so a solution has to be right rather than lucky"
     ],
     status: "active"
   },
   {
-    id: "javascript-react-core",
+    id: "core-technical",
     order: 2,
-    title: "JavaScript and React Core",
+    title: "Core Technical",
     purpose:
-      "The language and rendering behaviour behind real UI bugs — closures, event loop, reconciliation, effects.",
+      "What the language itself does — the behaviour behind bugs that look impossible until you can trace the runtime.",
     covers: [
-      "Closures, `this`, prototypes and the event loop",
-      "React rendering, state batching and effect timing",
-      "Forms, controlled inputs and component architecture"
+      "Predict what code prints, then watch it run",
+      "Event loop, microtask ordering and async suspension",
+      "Closures, captured bindings, references and retained memory"
     ],
     status: "planned"
   },
   {
-    id: "computer-fundamentals",
+    id: "applied-engineering",
     order: 3,
-    title: "Computer Fundamentals",
+    title: "Applied Engineering",
     purpose:
-      "The layer under the framework — what the network, the browser process and the database are actually doing.",
+      "What the system around your code does — the layer where the bug is real, expensive and invisible in a unit test.",
     covers: [
-      "HTTP, DNS, TLS and what caching really invalidates",
-      "Processes, threads, memory and the event loop underneath",
-      "Databases, indexes and the cost of a query"
+      "Find the planted defect in code that looks correct",
+      "Diagnose a query plan, a waterfall or a metric series",
+      "N+1 queries, races, retries, caching and unbounded work"
     ],
     status: "planned"
   },
   {
-    id: "production-ui-quality",
+    id: "architecture-system-design",
     order: 4,
-    title: "Production UI Quality",
-    purpose: "What separates a working UI from a shippable one.",
+    title: "Architecture & System Design",
+    purpose:
+      "Low-level design first — the round most interviews actually run before they ask you to draw a load balancer.",
     covers: [
-      "Performance debugging and Core Web Vitals",
-      "Accessibility and keyboard behaviour",
-      "Responsive layout and cross-browser basics"
+      "Rate limiters, caches and the objects interviews ask you to build",
+      "Interfaces, teardown and thread safety",
+      "Data modelling: constraints, invariants and referential integrity"
     ],
     status: "planned"
   },
@@ -75,7 +79,7 @@ export const FRONTEND_SESSIONS: FrontendSession[] = [
     id: "resume-behavioral-defense",
     order: 5,
     title: "Resume and Behavioral Defense",
-    purpose: "Defending the frontend work already on your resume, with evidence.",
+    purpose: "Defending the work already on your resume, with evidence.",
     covers: [
       "Feature deep-dives on what you actually shipped",
       "Ownership, tradeoffs and incident stories",
@@ -84,9 +88,9 @@ export const FRONTEND_SESSIONS: FrontendSession[] = [
     status: "planned"
   },
   {
-    id: "final-frontend-mock",
+    id: "final-mock",
     order: 6,
-    title: "Final Frontend Mock",
+    title: "Final Mock",
     purpose: "A full loop simulation once the earlier sessions are behind you.",
     covers: [
       "One continuous mock across every round type",
@@ -97,23 +101,26 @@ export const FRONTEND_SESSIONS: FrontendSession[] = [
   }
 ];
 
-/** How one chapter of the Frontend DSA session is assembled from the bank. */
+/** How one chapter of the DSA session is assembled from the bank. */
 export interface DsaChapterConfig {
   id: string;
   title: string;
-  /** Why a frontend candidate should care — shown under the chapter title. */
+  /** Why this pattern is worth the time — shown under the chapter title. */
   whyItMatters: string;
   /** Primary patterns that feed this chapter. */
   patterns: string[];
   /** Target number of questions to pull. */
   take: number;
-  /** Ceiling on hard questions, keeping the path frontend-weighted. */
+  /** Ceiling on hard questions, so the path stays learnable rather than exhaustive. */
   maxHard: number;
 }
 
 /**
  * Ordered so the path runs warmups → core mediums, with the advanced families
  * deliberately last and thin. Counts sum to roughly 120 of the 200 questions.
+ *
+ * Patterns are role-independent: a backend, mobile or data candidate meets the
+ * same sliding window a frontend candidate does.
  */
 export const DSA_CHAPTERS: DsaChapterConfig[] = [
   {
@@ -147,7 +154,7 @@ export const DSA_CHAPTERS: DsaChapterConfig[] = [
     id: "stack-queue",
     title: "Stack & Queue",
     whyItMatters:
-      "Parsing, nesting and next-greater problems — the closest DSA gets to everyday frontend work.",
+      "Parsing, nesting and next-greater problems — the pattern behind matching, undo stacks and expression evaluation.",
     patterns: ["stack", "queue"],
     take: 12,
     maxHard: 1
@@ -291,7 +298,7 @@ function selectChapter(config: DsaChapterConfig, pool: PlanQuestion[]): PlanQues
 }
 
 /**
- * Builds the curated Frontend DSA path from the full bank. A question is only
+ * Builds the curated DSA path from the full bank. A question is only
  * ever claimed by the first chapter whose patterns match, so nothing is
  * duplicated across chapters.
  */

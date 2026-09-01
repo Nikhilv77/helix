@@ -35,7 +35,7 @@ export const recentPracticeQuestionEvidenceSchema = z.object({
   questionId: identifier,
   sourceType: z.enum(["PREP", "DSA"]),
   title: z.string().trim().min(1).max(300),
-  format: z.enum(["mcq", "typed", "spoken", "diagram", "code"]),
+  format: z.enum(["mcq", "typed", "spoken", "diagram", "code", "predict-run", "find-the-flaw", "diagnose"]),
   score: score100,
   observedAt: timestampMs,
   hintsUsed: z.number().int().nonnegative(),

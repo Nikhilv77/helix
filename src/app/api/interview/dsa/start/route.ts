@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
           intensity: "realistic",
           context,
           agenda,
-          templateId: "frontend-dsa",
+          templateId: "dsa",
           templateTitle: "DSA practice interview",
           dsaQuestionSlugs: selected.map((item) => item.slug),
           questionCount: QUESTION_COUNT

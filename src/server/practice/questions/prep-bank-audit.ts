@@ -1,13 +1,31 @@
+// Relative, not "@/": this module is loaded by prisma/seed.ts under ts-node,
+// which has no path-alias resolution. Type-only alias imports survive because
+// they are erased; these are value imports and would fail at runtime.
+import { parseDiagnoseAnswerKey } from "../../../lib/practice/diagnose";
+import { parseFindTheFlawAnswerKey } from "../../../lib/practice/find-the-flaw";
+import { parsePredictRunAnswerKey } from "../../../lib/practice/predict-run";
 import type { PrepQuestionRecord } from "./prep-question-adapter";
 
 export const PREP_BANK_MINIMUMS = {
   "core-technical": { questions: 12, chapters: 3 },
   "applied-engineering": { questions: 40, chapters: 4 },
-  "architecture-system-design": { questions: 12, chapters: 3 },
-  "resume-behavioral-defense": { questions: 8, chapters: 2 }
+  "architecture-system-design": { questions: 12, chapters: 3 }
 } as const;
 
 export type PublishedPrepSessionKey = keyof typeof PREP_BANK_MINIMUMS;
+
+/**
+ * Published, validated, but not a Practice session. Questions here are held for
+ * the placement quiz: they must still be well-formed, and they must not count
+ * toward any session's floor or appear in Practice progress.
+ */
+export const NON_PRACTICE_SESSION_KEYS = new Set<string>([
+  "placement",
+  // Retired from Practice — kept published as the seed content for the
+  // behavioral interview round.
+  "resume-behavioral-defense",
+  "final-mock"
+]);
 
 export interface AuditablePrepQuestion extends PrepQuestionRecord {
   publicationStatus: string;
@@ -37,7 +55,11 @@ export function auditPrepQuestionBank(
 
   const published = questions.filter((question) => question.publicationStatus === "PUBLISHED");
   for (const question of questions) {
-    if (question.publicationStatus === "DRAFT" && isPublishedSessionKey(question.sessionKey)) {
+    if (
+      question.publicationStatus === "DRAFT" &&
+      isPublishedSessionKey(question.sessionKey) &&
+      !NON_PRACTICE_SESSION_KEYS.has(question.sessionKey)
+    ) {
       errors.push(`${question.id}: active-session question is still DRAFT`);
     }
   }
@@ -49,7 +71,7 @@ export function auditPrepQuestionBank(
     if (isPublishedSessionKey(question.sessionKey)) {
       sessionCounts[question.sessionKey] += 1;
       chapterSets[question.sessionKey].add(question.chapterKey);
-    } else {
+    } else if (!NON_PRACTICE_SESSION_KEYS.has(question.sessionKey)) {
       errors.push(`${question.id}: unsupported published session ${question.sessionKey}`);
     }
     validateQuestion(question, publishedIds, errors);
@@ -107,7 +129,9 @@ function validateQuestion(
     fail("invalid expected minutes");
   }
   if (!["easy", "medium", "hard"].includes(question.difficulty)) fail("invalid difficulty");
-  if (!["mcq", "typed", "spoken", "diagram"].includes(question.format)) fail("invalid format");
+  if (!["mcq", "typed", "spoken", "diagram", "predict-run", "find-the-flaw", "diagnose"].includes(question.format)) {
+    fail("invalid format");
+  }
   if (containsPlaceholder(question)) fail("contains placeholder copy");
 
   for (const prerequisite of question.prerequisites) {
@@ -116,6 +140,18 @@ function validateQuestion(
 
   if (question.format === "mcq" && !validMcqAnswer(question.answerKey)) {
     fail("invalid private MCQ answer key");
+  }
+
+  if (question.format === "predict-run" && !parsePredictRunAnswerKey(question.answerKey)) {
+    fail("invalid private predict-run answer key");
+  }
+
+  if (question.format === "find-the-flaw" && !parseFindTheFlawAnswerKey(question.answerKey)) {
+    fail("invalid private find-the-flaw answer key");
+  }
+
+  if (question.format === "diagnose" && !parseDiagnoseAnswerKey(question.answerKey)) {
+    fail("invalid private diagnose answer key");
   }
 }
 
@@ -144,8 +180,7 @@ function emptySessionCounts(): Record<PublishedPrepSessionKey, number> {
   return {
     "core-technical": 0,
     "applied-engineering": 0,
-    "architecture-system-design": 0,
-    "resume-behavioral-defense": 0
+    "architecture-system-design": 0
   };
 }
 
@@ -153,7 +188,6 @@ function emptyChapterSets(): Record<PublishedPrepSessionKey, Set<string>> {
   return {
     "core-technical": new Set(),
     "applied-engineering": new Set(),
-    "architecture-system-design": new Set(),
-    "resume-behavioral-defense": new Set()
+    "architecture-system-design": new Set()
   };
 }

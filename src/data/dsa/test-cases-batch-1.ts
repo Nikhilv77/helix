@@ -14,7 +14,10 @@ export const structuredDsaTestCases: StructuredDsaTestCases = {
   "contains-duplicate": [
     { arguments: [[1, 2, 3, 1]], expectedValue: true },
     { arguments: [[1, 2, 3, 4]], expectedValue: false },
-    { arguments: [[1, 1, 1, 3, 3, 4, 3, 2, 4, 2]], expectedValue: true }
+    { arguments: [[1, 1, 1, 3, 3, 4, 3, 2, 4, 2]], expectedValue: true },
+    // Hidden from here on.
+    { arguments: [[1]], expectedValue: false },
+    { arguments: [[-1000000000, 1000000000, -1000000000]], expectedValue: true }
   ],
   "two-sum": [
     { arguments: [[2, 7, 11, 15], 9], expectedValue: [0, 1] },
@@ -61,7 +64,10 @@ export function structuredCasesFor(
   slug: string,
   examples: DsaExample[]
 ): StructuredDsaTestCase[] | null {
+  // Previously required cases.length === examples.length, which pinned the test
+  // set to the example set and made hidden cases impossible. A set is valid if
+  // it covers at least the examples; anything beyond them is a hidden case.
   const cases = structuredDsaTestCases[slug];
-  if (cases?.length === examples.length) return cases;
+  if (cases && cases.length >= examples.length) return cases;
   return structuredCasesForBatch2(slug, examples);
 }

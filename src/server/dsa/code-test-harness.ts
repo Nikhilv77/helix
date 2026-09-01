@@ -6,6 +6,14 @@ export type CodeRunnerLanguage = "python" | "javascript" | "cpp" | "java";
 export interface CodeTestCase {
   input: string;
   expectedOutput: string;
+  /**
+   * Whether the candidate is shown this case's input and expected output.
+   *
+   * Authored `examples` are visible by construction — they appear in the problem
+   * statement. Cases beyond them are hidden, which is the point: a solution that
+   * special-cases the inputs it can see should not pass.
+   */
+  visible: boolean;
   arguments: unknown[];
   expectedValue: unknown;
   mode?: "return" | "mutated-first-argument";
@@ -26,6 +34,8 @@ type TestAdapter =
 
 export interface CodeTestResult {
   index: number;
+  /** False for a case beyond the authored examples; detail is withheld. */
+  visible: boolean;
   input: string;
   expectedOutput: string;
   actualOutput: string;
@@ -35,18 +45,47 @@ export interface CodeTestResult {
 
 const RESULT_MARKER = "__TRAILGRAD_CASE__";
 
+/**
+ * Cases beyond the authored examples are hidden and still graded.
+ *
+ * This used to map over `examples`, which made the test set and the example set
+ * the same thing: no question could have more cases than it printed in its
+ * problem statement, and every input a solution had to satisfy was visible to
+ * the person writing it. Structured cases now drive the run, and examples
+ * supply the display strings for the ones a candidate can see.
+ */
+const MAX_TEST_CASES = 40;
+
 export function buildTestCases(examples: DsaExample[], slug?: string): CodeTestCase[] {
   const structured = slug ? structuredCasesFor(slug, examples) : null;
   const adapter = slug ? adapterForSlug(slug) : undefined;
-  return examples.slice(0, 10).map((example, index) => {
-    const structuredCase = structured?.[index];
-    return {
+
+  // Without structured cases there is nothing to run but the examples, exactly
+  // as before.
+  if (!structured?.length) {
+    return examples.slice(0, MAX_TEST_CASES).map((example) => ({
       input: example.input,
       expectedOutput: example.output,
-      arguments: structuredCase ? structuredCase.arguments : parseArguments(example.input),
-      expectedValue: structuredCase ? structuredCase.expectedValue : parseValue(example.output),
-      mode: structuredCase?.mode,
-      comparison: structuredCase?.comparison,
+      visible: true,
+      arguments: parseArguments(example.input),
+      expectedValue: parseValue(example.output),
+      adapter
+    }));
+  }
+
+  return structured.slice(0, MAX_TEST_CASES).map((structuredCase, index) => {
+    const example = examples[index];
+    const visible = example !== undefined;
+    return {
+      // Hidden cases carry no display strings — nothing should be able to print
+      // them back to the candidate by accident.
+      input: visible ? example.input : "",
+      expectedOutput: visible ? example.output : "",
+      visible,
+      arguments: structuredCase.arguments,
+      expectedValue: structuredCase.expectedValue,
+      mode: structuredCase.mode,
+      comparison: structuredCase.comparison,
       adapter
     };
   });
@@ -92,13 +131,31 @@ export function parseTestResults(stdout: string, testCases: CodeTestCase[]): Cod
     const payload = payloads.get(index);
     const error = payload?.ok === false ? payload.error || "Runtime error" : null;
     const actual = payload?.value;
+    const passed =
+      Boolean(payload?.ok) && equivalent(actual, testCase.expectedValue, testCase.comparison);
+
+    // A hidden case reports only whether it passed. Returning its input,
+    // expected value or the produced output would hand back the very thing the
+    // case exists to withhold — including through the runtime error string.
+    if (!testCase.visible) {
+      return {
+        index,
+        visible: false,
+        input: "",
+        expectedOutput: "",
+        actualOutput: "",
+        passed,
+        error: payload ? (error ? "Runtime error" : null) : "No result was returned."
+      };
+    }
+
     return {
       index,
+      visible: true,
       input: testCase.input,
       expectedOutput: testCase.expectedOutput,
       actualOutput: error ? "" : displayValue(actual),
-      passed:
-        Boolean(payload?.ok) && equivalent(actual, testCase.expectedValue, testCase.comparison),
+      passed,
       error: payload ? error : "No result was returned for this test case."
     };
   });
@@ -938,7 +995,7 @@ function mergeValueShapes(values: unknown[]): unknown {
   return defined[0];
 }
 
-function equivalent(
+export function equivalent(
   actual: unknown,
   expected: unknown,
   comparison: "exact" | "unordered" | "unordered-nested" | "one-of" = "exact"

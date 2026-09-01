@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
           intensity: "realistic",
           context: fundamentalsRoundContext(profile.level ?? null),
           agenda: plan.map((question) => question.text),
-          templateId: "computer-fundamentals",
+          templateId: "applied-engineering",
           templateTitle: "Computer Fundamentals",
           fundamentalsRound: true
         },

@@ -16,7 +16,7 @@ const practiceRoadmap: PracticeRoadmapHome = {
     profileRevision: 1
   },
   sessions: [
-    ["frontend-dsa", "DSA · Arrays", "available", "/practice/dsa", 200],
+    ["dsa", "DSA · Arrays", "available", "/practice/dsa", 200],
     ["core-technical", "JavaScript & React", "unavailable", null, 0],
     ["applied-engineering", "Applied Engineering", "unavailable", null, 0],
     ["architecture-system-design", "Architecture", "unavailable", null, 0],
