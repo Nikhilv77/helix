@@ -164,6 +164,51 @@ describe("help history", () => {
     });
   });
 
+  it("resolves the other participant for Trailmate notification portraits", async () => {
+    const prisma = {
+      helpRequest: {
+        findMany: jest.fn().mockResolvedValue([
+          { id: "opened", learnerId: "learner-1", helperId: null },
+          { id: "claimed", learnerId: "owner-1", helperId: "helper-1" },
+          { id: "expired", learnerId: "owner-1", helperId: null }
+        ])
+      },
+      candidateProfile: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            ownerId: "learner-1",
+            headline: null,
+            profileImage: "/images/profile/avatars/avatar-01.jpg",
+            resumeAnalysis: { fullName: "Asha Verma" }
+          },
+          {
+            ownerId: "helper-1",
+            headline: null,
+            profileImage: "/images/profile/avatars/avatar-02.jpg",
+            resumeAnalysis: { fullName: "Dev Shah" }
+          }
+        ])
+      }
+    } as unknown as PrismaService;
+
+    const participants = await new HelpHistoryService(prisma).notificationParticipants(
+      "owner-1",
+      ["opened", "claimed", "expired", "opened"]
+    );
+
+    expect(participants.get("opened")).toEqual({
+      label: "Asha Verma",
+      headline: null,
+      profileImage: "/images/profile/avatars/avatar-01.jpg"
+    });
+    expect(participants.get("claimed")).toEqual({
+      label: "Dev Shah",
+      headline: null,
+      profileImage: "/images/profile/avatars/avatar-02.jpg"
+    });
+    expect(participants.has("expired")).toBe(false);
+  });
+
   it("rejects malformed cursors before querying history", async () => {
     const prisma = {
       helpRequest: { findMany: jest.fn() }

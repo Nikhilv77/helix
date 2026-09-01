@@ -4,68 +4,155 @@ import { structuredCasesForBatch3 } from "./test-cases-batch-3";
 
 export const structuredDsaTestCasesBatch2: Record<string, StructuredDsaTestCase[]> = {
   "rotate-array": [
-    { arguments: [[1, 2, 3, 4, 5, 6, 7], 3], expectedValue: [5, 6, 7, 1, 2, 3, 4], mode: "mutated-first-argument" },
-    { arguments: [[-1, -100, 3, 99], 2], expectedValue: [3, 99, -1, -100], mode: "mutated-first-argument" }
+    { arguments: [[1,2,3,4,5,6,7],3], expectedValue: [5,6,7,1,2,3,4], mode: "mutated-first-argument" },
+    { arguments: [[-1,-100,3,99],2], expectedValue: [3,99,-1,-100], mode: "mutated-first-argument" },
+    // Hidden from here on — generated from the verified reference.,
+    { arguments: [[1],0], expectedValue: [1], mode: "mutated-first-argument" },
+    { arguments: [[1,2],3], expectedValue: [2,1], mode: "mutated-first-argument" },
+    { arguments: [[1,2,3],0], expectedValue: [1,2,3], mode: "mutated-first-argument" },
+    { arguments: [[1,2,3,4],4], expectedValue: [1,2,3,4], mode: "mutated-first-argument" },
+    { arguments: [[1,2,3,4,5],7], expectedValue: [4,5,1,2,3], mode: "mutated-first-argument" }
   ],
   "sort-colors": [
-    { arguments: [[2, 0, 2, 1, 1, 0]], expectedValue: [0, 0, 1, 1, 2, 2], mode: "mutated-first-argument" },
-    { arguments: [[2, 0, 1]], expectedValue: [0, 1, 2], mode: "mutated-first-argument" }
+    { arguments: [[2,0,2,1,1,0]], expectedValue: [0,0,1,1,2,2], mode: "mutated-first-argument" },
+    { arguments: [[2,0,1]], expectedValue: [0,1,2], mode: "mutated-first-argument" },
+    // Hidden from here on — generated from the verified reference.,
+    { arguments: [[0]], expectedValue: [0], mode: "mutated-first-argument" },
+    { arguments: [[2]], expectedValue: [2], mode: "mutated-first-argument" },
+    { arguments: [[1,1,1]], expectedValue: [1,1,1], mode: "mutated-first-argument" },
+    { arguments: [[2,2,0,0]], expectedValue: [0,0,2,2], mode: "mutated-first-argument" },
+    { arguments: [[0,1,2,0,1,2]], expectedValue: [0,0,1,1,2,2], mode: "mutated-first-argument" }
   ],
   "container-with-most-water": [
-    { arguments: [[1, 8, 6, 2, 5, 4, 8, 3, 7]], expectedValue: 49 },
-    { arguments: [[1, 1]], expectedValue: 1 }
+    { arguments: [[1,8,6,2,5,4,8,3,7]], expectedValue: 49 },
+    { arguments: [[1,1]], expectedValue: 1 },
+    // Hidden from here on — generated from the verified reference.,
+    { arguments: [[1,1]], expectedValue: 1 },
+    { arguments: [[0,0]], expectedValue: 0 },
+    { arguments: [[1,2,1]], expectedValue: 2 },
+    { arguments: [[2,3,4,5,18,17,6]], expectedValue: 17 },
+    { arguments: [[1,2,4,3]], expectedValue: 4 }
   ],
   "3sum": [
-    { arguments: [[-1, 0, 1, 2, -1, -4]], expectedValue: [[-1, -1, 2], [-1, 0, 1]], comparison: "unordered-nested" },
-    { arguments: [[0, 1, 1]], expectedValue: [] },
-    { arguments: [[0, 0, 0]], expectedValue: [[0, 0, 0]], comparison: "unordered-nested" }
+    { arguments: [[-1,0,1,2,-1,-4]], expectedValue: [[-1,-1,2],[-1,0,1]], comparison: "unordered-nested" },
+    { arguments: [[0,1,1]], expectedValue: [] },
+    { arguments: [[0,0,0]], expectedValue: [[0,0,0]], comparison: "unordered-nested" },
+    // Hidden from here on — generated from the verified reference.,
+    { arguments: [[]], expectedValue: [], comparison: "unordered-nested" },
+    { arguments: [[0,0,0]], expectedValue: [[0,0,0]], comparison: "unordered-nested" },
+    { arguments: [[0,0,0,0]], expectedValue: [[0,0,0]], comparison: "unordered-nested" },
+    { arguments: [[-2,0,1,1,2]], expectedValue: [[-2,0,2],[-2,1,1]], comparison: "unordered-nested" },
+    { arguments: [[1,2,-2,-1]], expectedValue: [], comparison: "unordered-nested" }
   ],
   "4sum": [
-    { arguments: [[1, 0, -1, 0, -2, 2], 0], expectedValue: [[-2, -1, 1, 2], [-2, 0, 0, 2], [-1, 0, 0, 1]], comparison: "unordered-nested" },
-    { arguments: [[2, 2, 2, 2, 2], 8], expectedValue: [[2, 2, 2, 2]], comparison: "unordered-nested" }
+    { arguments: [[1,0,-1,0,-2,2],0], expectedValue: [[-2,-1,1,2],[-2,0,0,2],[-1,0,0,1]], comparison: "unordered-nested" },
+    { arguments: [[2,2,2,2,2],8], expectedValue: [[2,2,2,2]], comparison: "unordered-nested" },
+    // Hidden from here on — generated from the verified reference.,
+    { arguments: [[],0], expectedValue: [], comparison: "unordered-nested" },
+    { arguments: [[0,0,0,0],0], expectedValue: [[0,0,0,0]], comparison: "unordered-nested" },
+    { arguments: [[1,2,3,4],100], expectedValue: [], comparison: "unordered-nested" },
+    { arguments: [[-3,-1,0,2,4,5],2], expectedValue: [[-3,-1,2,4]], comparison: "unordered-nested" }
   ],
   "trapping-rain-water": [
-    { arguments: [[0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]], expectedValue: 6 },
-    { arguments: [[4, 2, 0, 3, 2, 5]], expectedValue: 9 }
+    { arguments: [[0,1,0,2,1,0,1,3,2,1,2,1]], expectedValue: 6 },
+    { arguments: [[4,2,0,3,2,5]], expectedValue: 9 },
+    // Hidden from here on — generated from the verified reference.,
+    { arguments: [[]], expectedValue: 0 },
+    { arguments: [[3]], expectedValue: 0 },
+    { arguments: [[1,2,3]], expectedValue: 0 },
+    { arguments: [[3,2,1]], expectedValue: 0 },
+    { arguments: [[5,0,5]], expectedValue: 5 },
+    { arguments: [[0,0,0]], expectedValue: 0 }
   ],
   "next-permutation": [
-    { arguments: [[1, 2, 3]], expectedValue: [1, 3, 2], mode: "mutated-first-argument" },
-    { arguments: [[3, 2, 1]], expectedValue: [1, 2, 3], mode: "mutated-first-argument" },
-    { arguments: [[1, 1, 5]], expectedValue: [1, 5, 1], mode: "mutated-first-argument" }
+    { arguments: [[1,2,3]], expectedValue: [1,3,2], mode: "mutated-first-argument" },
+    { arguments: [[3,2,1]], expectedValue: [1,2,3], mode: "mutated-first-argument" },
+    { arguments: [[1,1,5]], expectedValue: [1,5,1], mode: "mutated-first-argument" },
+    // Hidden from here on — generated from the verified reference.,
+    { arguments: [[1]], expectedValue: [1], mode: "mutated-first-argument" },
+    { arguments: [[1,1]], expectedValue: [1,1], mode: "mutated-first-argument" },
+    { arguments: [[1,1,5]], expectedValue: [1,5,1], mode: "mutated-first-argument" },
+    { arguments: [[2,3,1]], expectedValue: [3,1,2], mode: "mutated-first-argument" },
+    { arguments: [[5,4,7,5,3,2]], expectedValue: [5,5,2,3,4,7], mode: "mutated-first-argument" }
   ],
   "find-the-duplicate-number": [
-    { arguments: [[1, 3, 4, 2, 2]], expectedValue: 2 },
-    { arguments: [[3, 1, 3, 4, 2]], expectedValue: 3 },
-    { arguments: [[3, 3, 3, 3, 3]], expectedValue: 3 }
+    { arguments: [[1,3,4,2,2]], expectedValue: 2 },
+    { arguments: [[3,1,3,4,2]], expectedValue: 3 },
+    { arguments: [[3,3,3,3,3]], expectedValue: 3 },
+    // Hidden from here on — generated from the verified reference.,
+    { arguments: [[1,1]], expectedValue: 1 },
+    { arguments: [[2,2,2,2,2]], expectedValue: 2 },
+    { arguments: [[1,4,6,6,6,2,3,5]], expectedValue: 6 },
+    { arguments: [[2,1,3,4,4]], expectedValue: 4 }
   ],
   "first-missing-positive": [
-    { arguments: [[1, 2, 0]], expectedValue: 3 },
-    { arguments: [[3, 4, -1, 1]], expectedValue: 2 },
-    { arguments: [[7, 8, 9, 11, 12]], expectedValue: 1 }
+    { arguments: [[1,2,0]], expectedValue: 3 },
+    { arguments: [[3,4,-1,1]], expectedValue: 2 },
+    { arguments: [[7,8,9,11,12]], expectedValue: 1 },
+    // Hidden from here on — generated from the verified reference.,
+    { arguments: [[]], expectedValue: 1 },
+    { arguments: [[1]], expectedValue: 2 },
+    { arguments: [[2]], expectedValue: 1 },
+    { arguments: [[7,8,9,11,12]], expectedValue: 1 },
+    { arguments: [[1,1]], expectedValue: 2 },
+    { arguments: [[-5,-3]], expectedValue: 1 }
   ],
   "merge-intervals": [
-    { arguments: [[[1, 3], [2, 6], [8, 10], [15, 18]]], expectedValue: [[1, 6], [8, 10], [15, 18]] },
-    { arguments: [[[1, 4], [4, 5]]], expectedValue: [[1, 5]] }
+    { arguments: [[[1,3],[2,6],[8,10],[15,18]]], expectedValue: [[1,6],[8,10],[15,18]] },
+    { arguments: [[[1,4],[4,5]]], expectedValue: [[1,5]] },
+    // Hidden from here on — generated from the verified reference.,
+    { arguments: [[]], expectedValue: [] },
+    { arguments: [[[1,4]]], expectedValue: [[1,4]] },
+    { arguments: [[[1,4],[0,4]]], expectedValue: [[0,4]] },
+    { arguments: [[[1,4],[2,3]]], expectedValue: [[1,4]] },
+    { arguments: [[[1,4],[5,6]]], expectedValue: [[1,4],[5,6]] }
   ],
   "insert-interval": [
-    { arguments: [[[1, 3], [6, 9]], [2, 5]], expectedValue: [[1, 5], [6, 9]] },
-    { arguments: [[[1, 2], [3, 5], [6, 7], [8, 10], [12, 16]], [4, 8]], expectedValue: [[1, 2], [3, 10], [12, 16]] }
+    { arguments: [[[1,3],[6,9]],[2,5]], expectedValue: [[1,5],[6,9]] },
+    { arguments: [[[1,2],[3,5],[6,7],[8,10],[12,16]],[4,8]], expectedValue: [[1,2],[3,10],[12,16]] },
+    // Hidden from here on — generated from the verified reference.,
+    { arguments: [[],[5,7]], expectedValue: [[5,7]] },
+    { arguments: [[[1,5]],[2,3]], expectedValue: [[1,5]] },
+    { arguments: [[[1,5]],[6,8]], expectedValue: [[1,5],[6,8]] },
+    { arguments: [[[3,5]],[1,2]], expectedValue: [[1,2],[3,5]] },
+    { arguments: [[[1,2],[5,6]],[3,4]], expectedValue: [[1,2],[3,4],[5,6]] }
   ],
   "set-matrix-zeroes": [
-    { arguments: [[[1, 1, 1], [1, 0, 1], [1, 1, 1]]], expectedValue: [[1, 0, 1], [0, 0, 0], [1, 0, 1]], mode: "mutated-first-argument" },
-    { arguments: [[[0, 1, 2, 0], [3, 4, 5, 2], [1, 3, 1, 5]]], expectedValue: [[0, 0, 0, 0], [0, 4, 5, 0], [0, 3, 1, 0]], mode: "mutated-first-argument" }
+    { arguments: [[[1,1,1],[1,0,1],[1,1,1]]], expectedValue: [[1,0,1],[0,0,0],[1,0,1]], mode: "mutated-first-argument" },
+    { arguments: [[[0,1,2,0],[3,4,5,2],[1,3,1,5]]], expectedValue: [[0,0,0,0],[0,4,5,0],[0,3,1,0]], mode: "mutated-first-argument" },
+    // Hidden from here on — generated from the verified reference.,
+    { arguments: [[[1]]], expectedValue: [[1]], mode: "mutated-first-argument" },
+    { arguments: [[[0]]], expectedValue: [[0]], mode: "mutated-first-argument" },
+    { arguments: [[[1,2],[3,4]]], expectedValue: [[1,2],[3,4]], mode: "mutated-first-argument" },
+    { arguments: [[[0,1],[1,1]]], expectedValue: [[0,0],[0,1]], mode: "mutated-first-argument" },
+    { arguments: [[[1,1,1],[1,1,1]]], expectedValue: [[1,1,1],[1,1,1]], mode: "mutated-first-argument" }
   ],
   "spiral-matrix": [
-    { arguments: [[[1, 2, 3], [4, 5, 6], [7, 8, 9]]], expectedValue: [1, 2, 3, 6, 9, 8, 7, 4, 5] },
-    { arguments: [[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]], expectedValue: [1, 2, 3, 4, 8, 12, 11, 10, 9, 5, 6, 7] }
+    { arguments: [[[1,2,3],[4,5,6],[7,8,9]]], expectedValue: [1,2,3,6,9,8,7,4,5] },
+    { arguments: [[[1,2,3,4],[5,6,7,8],[9,10,11,12]]], expectedValue: [1,2,3,4,8,12,11,10,9,5,6,7] },
+    // Hidden from here on — generated from the verified reference.,
+    { arguments: [[[1]]], expectedValue: [1] },
+    { arguments: [[[1,2]]], expectedValue: [1,2] },
+    { arguments: [[[1],[2]]], expectedValue: [1,2] },
+    { arguments: [[[1,2],[3,4]]], expectedValue: [1,2,4,3] },
+    { arguments: [[[1,2,3],[4,5,6]]], expectedValue: [1,2,3,6,5,4] }
   ],
   "rotate-image": [
-    { arguments: [[[1, 2, 3], [4, 5, 6], [7, 8, 9]]], expectedValue: [[7, 4, 1], [8, 5, 2], [9, 6, 3]], mode: "mutated-first-argument" },
-    { arguments: [[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]], expectedValue: [[13, 9, 5, 1], [14, 10, 6, 2], [15, 11, 7, 3], [16, 12, 8, 4]], mode: "mutated-first-argument" }
+    { arguments: [[[1,2,3],[4,5,6],[7,8,9]]], expectedValue: [[7,4,1],[8,5,2],[9,6,3]], mode: "mutated-first-argument" },
+    { arguments: [[[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]]], expectedValue: [[13,9,5,1],[14,10,6,2],[15,11,7,3],[16,12,8,4]], mode: "mutated-first-argument" },
+    // Hidden from here on — generated from the verified reference.,
+    { arguments: [[[1]]], expectedValue: [[1]], mode: "mutated-first-argument" },
+    { arguments: [[[1,2],[3,4]]], expectedValue: [[3,1],[4,2]], mode: "mutated-first-argument" },
+    { arguments: [[[0,0],[0,0]]], expectedValue: [[0,0],[0,0]], mode: "mutated-first-argument" }
   ],
   "game-of-life": [
-    { arguments: [[[0, 1, 0], [0, 0, 1], [1, 1, 1], [0, 0, 0]]], expectedValue: [[0, 0, 0], [1, 0, 1], [0, 1, 1], [0, 1, 0]], mode: "mutated-first-argument" },
-    { arguments: [[[1, 1], [1, 0]]], expectedValue: [[1, 1], [1, 1]], mode: "mutated-first-argument" }
+    { arguments: [[[0,1,0],[0,0,1],[1,1,1],[0,0,0]]], expectedValue: [[0,0,0],[1,0,1],[0,1,1],[0,1,0]], mode: "mutated-first-argument" },
+    { arguments: [[[1,1],[1,0]]], expectedValue: [[1,1],[1,1]], mode: "mutated-first-argument" },
+    // Hidden from here on — generated from the verified reference.,
+    { arguments: [[[0]]], expectedValue: [[0]], mode: "mutated-first-argument" },
+    { arguments: [[[1]]], expectedValue: [[0]], mode: "mutated-first-argument" },
+    { arguments: [[[1,1],[1,1]]], expectedValue: [[1,1],[1,1]], mode: "mutated-first-argument" },
+    { arguments: [[[0,0],[0,0]]], expectedValue: [[0,0],[0,0]], mode: "mutated-first-argument" }
   ],
   "valid-anagram": [
     { arguments: ["anagram", "nagaram"], expectedValue: true },

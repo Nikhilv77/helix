@@ -9,11 +9,36 @@ import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { useMayaVoice } from "@/lib/voice/use-maya-voice";
 import type { DsaPracticeFeedback } from "@/server/dsa/practice-feedback.service";
 
+/**
+ * What the run scored, carried so the debrief can say it.
+ *
+ * With hidden cases a candidate sees three examples pass and has no way to know
+ * six more were graded — so the modal states the tally rather than leaving the
+ * solve feeling smaller than it was.
+ */
+export interface DsaRunTally {
+  passed: number;
+  total: number;
+  hidden: number;
+}
+
 export type DsaTeacherFeedbackState =
   | { status: "idle" }
-  | { status: "loading"; code: string; language: DsaEditorLanguage }
-  | { status: "ready"; feedback: DsaPracticeFeedback; code: string; language: DsaEditorLanguage }
-  | { status: "error"; message: string; code: string; language: DsaEditorLanguage };
+  | { status: "loading"; code: string; language: DsaEditorLanguage; tally?: DsaRunTally }
+  | {
+      status: "ready";
+      feedback: DsaPracticeFeedback;
+      code: string;
+      language: DsaEditorLanguage;
+      tally?: DsaRunTally;
+    }
+  | {
+      status: "error";
+      message: string;
+      code: string;
+      language: DsaEditorLanguage;
+      tally?: DsaRunTally;
+    };
 
 /** A focused, centered teacher moment after a successful run. */
 export function DsaTeacherFeedback({
@@ -93,7 +118,7 @@ export function DsaTeacherFeedback({
                   aria-hidden="true"
                   style={{ color: "var(--workspace-accent)" }}
                 />
-                Your solution passed the supplied tests
+                {runSummary(state)}
               </div>
               <h2
                 id="teacher-feedback-title"
@@ -300,12 +325,39 @@ function toMarkdownBlocks(markdown: string): MarkdownBlock[] {
   return blocks;
 }
 
+/** Lines that are setup, never the interesting part of a solution. */
+const BOILERPLATE = /^\s*(import|package|using|#include|from\s+\S+\s+import|public\s+class|class\s+\w+\s*\{?\s*$)/;
+
+/**
+ * Picks the part of a solution worth showing back.
+ *
+ * The previous heuristic searched every line for `HashMap`, `for (` and friends
+ * — and `import java.util.HashMap;` matches, so a Java solve was shown its own
+ * import block under the heading "a good part of your code". Boilerplate is
+ * excluded before the search so the anchor lands on real logic.
+ */
 function codeExcerpt(code: string): string {
   const lines = code.split("\n");
-  const index = lines.findIndex((line) =>
-    /\b(new\s+(Set|Map)|HashSet|HashMap|for\s*\(|while\s*\(|return\s+)/.test(line)
-  );
-  const start = Math.max(0, index < 0 ? 0 : index - 1);
+  const interesting = /\b(new\s+(Set|Map)|HashSet|HashMap|for\s*\(|while\s*\(|if\s*\(|return\s+)/;
+
+  // The signature first when there is one: it names what the code does, and
+  // the lines under it are the solution. Anchoring on the first `return`
+  // instead showed Python solves the middle of their own loop.
+  const definition = /^\s*(def\s+\w+|(public|private|protected|static|final|\s)*[\w<>[\]]+\s+\w+\s*\(|function\s+\w+|const\s+\w+\s*=\s*(\(|function|async))/;
+  let index = lines.findIndex((line) => !BOILERPLATE.test(line) && definition.test(line));
+
+  if (index < 0) {
+    index = lines.findIndex((line) => !BOILERPLATE.test(line) && interesting.test(line));
+  }
+
+  // Nothing matched — fall back to the first line that is not setup.
+  if (index < 0) {
+    index = lines.findIndex((line) => line.trim() && !BOILERPLATE.test(line));
+  }
+  if (index < 0) return "";
+
+  // A signature is the top of the excerpt; a logic anchor gets a line of lead-in.
+  const start = definition.test(lines[index] ?? "") ? index : Math.max(0, index - 1);
   return lines
     .slice(start, start + 6)
     .join("\n")
@@ -331,4 +383,21 @@ function inlineMarkdown(text: string) {
       );
     return <Fragment key={index}>{part}</Fragment>;
   });
+}
+
+
+/**
+ * States what the run actually cleared.
+ *
+ * "Your solution passed the supplied tests" was true when every case was a
+ * visible example, and undersells a solve that also cleared cases the candidate
+ * never saw. The count is stated, but not the shown/hidden split — reading
+ * "3 shown, 4 hidden" at the moment of success makes the win feel qualified.
+ * The split belongs on the Test cases panel, not in the congratulation.
+ */
+function runSummary(state: DsaTeacherFeedbackState): string {
+  const tally = state.status === "idle" ? undefined : state.tally;
+  if (!tally || tally.total === 0) return "Your solution passed the supplied tests";
+
+  return `Passed all ${tally.total} test ${tally.total === 1 ? "case" : "cases"}`;
 }

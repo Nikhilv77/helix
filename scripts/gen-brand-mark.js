@@ -1,5 +1,5 @@
 /*
- * Turns public/brand/trailgrad-icon.png into a PDF-ready image stream.
+ * Turns public/brand/logo-transparent.png into a PDF-ready image stream.
  *
  * The PDF writer runs in the browser and emits a plain ASCII string, so the
  * pixels are deflated and hex encoded here, once, and checked in as a module.
@@ -9,8 +9,8 @@
 const fs = require("fs");
 const zlib = require("zlib");
 
-const SRC = "public/brand/trailgrad-icon.png";
-const OUT = "src/lib/report-brand-mark.ts";
+const SRC = "public/brand/logo-transparent.png";
+const OUT = "src/lib/reports/report-brand-mark.ts";
 const TARGET = 96;
 const BG = [54, 87, 180]; // #3657b4
 
@@ -149,7 +149,7 @@ const wrapped = hex.replace(/(.{96})/g, "$1\n").trim();
 fs.writeFileSync(
   OUT,
   `/**
- * The Trailgrad mark from public/brand/trailgrad-icon.png, prepared for the
+ * The Trailgrad mark from public/brand/logo-transparent.png, prepared for the
  * report PDF: downscaled to ${TARGET}px, its transparency flattened onto the
  * report background, then deflated and hex encoded so the generated file stays
  * pure ASCII and can be written from the browser.

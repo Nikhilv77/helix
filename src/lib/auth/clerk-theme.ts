@@ -1,7 +1,7 @@
 /** Shared Clerk styling so every auth surface belongs to the Trailgrad product. */
 export const clerkAppearance = {
   options: {
-    logoImageUrl: "/brand/trailgrad-wave-mark.svg",
+    logoImageUrl: "/brand/logo-transparent.png",
     logoLinkUrl: "/",
     logoPlacement: "inside" as const,
     socialButtonsVariant: "blockButton" as const,

@@ -45,14 +45,16 @@ export const metadata: Metadata = {
   publisher: siteName,
   category: "software",
   icons: {
-    // SVG first for the tab (the raw PNG is white on transparency and vanishes
-    // on a light tab); the PNG stays for platforms that want a bitmap.
     icon: [
-      { url: "/brand/trailgrad-favicon.svg?v=2", type: "image/svg+xml" },
-      { url: "/brand/trailgrad-icon.png", type: "image/png", sizes: "790x796" }
+      { url: "/brand/favicon.ico", type: "image/x-icon", sizes: "48x48" },
+      { url: "/brand/logo-black-bg.png", type: "image/png", sizes: "1200x1200" }
     ],
-    shortcut: "/brand/trailgrad-favicon.svg?v=2",
-    apple: "/brand/trailgrad-icon.png"
+    shortcut: "/brand/favicon.ico",
+    apple: {
+      url: "/brand/logo-black-bg.png",
+      type: "image/png",
+      sizes: "1200x1200"
+    }
   },
   openGraph: {
     type: "website",

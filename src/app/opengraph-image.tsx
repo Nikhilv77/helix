@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { defaultDescription, siteName } from "@/lib/shared/seo";
+import { appUrl, defaultDescription, siteName } from "@/lib/shared/seo";
 
 export const alt = "Trailgrad AI interview practice";
 export const size = {
@@ -53,28 +53,14 @@ export default function OpenGraphImage() {
           }}
         >
           <div style={{ alignItems: "center", display: "flex", gap: 22 }}>
-            <div
-              style={{
-                alignItems: "center",
-                display: "flex",
-                height: 58,
-                justifyContent: "center",
-                width: 58
-              }}
-            >
-              {[20, 38, 58, 34, 18].map((height, index) => (
-                <div
-                  key={index}
-                  style={{
-                    background: "#f1ead8",
-                    borderRadius: 999,
-                    height,
-                    marginLeft: index === 0 ? 0 : 7,
-                    width: 8
-                  }}
-                />
-              ))}
-            </div>
+            {/* ImageResponse renders standard image elements, not next/image. */}
+            <img
+              src={new URL("/brand/logo-transparent.png", appUrl).toString()}
+              alt=""
+              width={58}
+              height={58}
+              style={{ objectFit: "contain" }}
+            />
             <div style={{ fontSize: 34, fontWeight: 700, letterSpacing: "-0.02em" }}>
               {siteName}
             </div>

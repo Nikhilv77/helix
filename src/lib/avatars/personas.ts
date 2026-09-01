@@ -38,6 +38,8 @@ export interface InterviewerPersona {
   name: string;
   /** Path under /public. */
   model: string;
+  /** Static headshot used where a live 3D stage would be too heavy or too small. */
+  portrait: string;
   gender: PersonaGender;
   /**
    * Deepgram Aura-2 model id — the voice is baked into the id, there is no
@@ -84,6 +86,7 @@ export const MAYA: InterviewerPersona = {
   id: "maya",
   name: "Maya",
   model: "/avatars/maya.glb",
+  portrait: "/images/teacher-portraits/maya.jpg",
   gender: "feminine",
   voice: "aura-2-asteria-en",
   manner: "Warm and direct. Keeps the conversation moving.",
@@ -98,6 +101,7 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     id: "claire",
     name: "Claire",
     model: "/avatars/claire.glb",
+    portrait: "/images/teacher-portraits/claire.jpg",
     gender: "feminine",
     voice: "aura-2-athena-en",
     manner: "Encouraging. Gives you room to finish a thought before probing.",
@@ -110,6 +114,7 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     id: "daniel",
     name: "Daniel",
     model: "/avatars/daniel.glb",
+    portrait: "/images/teacher-portraits/daniel.jpg",
     gender: "masculine",
     voice: "aura-2-mars-en",
     manner: "Senior and measured. Long pauses, few tells.",
@@ -122,6 +127,7 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     id: "olivia",
     name: "Olivia",
     model: "/avatars/olivia.glb",
+    portrait: "/images/teacher-portraits/olivia.jpg",
     gender: "feminine",
     voice: "aura-2-aurora-en",
     manner: "Sharp and fast. Follows every vague claim to the mechanism.",
@@ -134,6 +140,7 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     id: "james",
     name: "James",
     model: "/avatars/james.glb",
+    portrait: "/images/teacher-portraits/james.jpg",
     gender: "masculine",
     voice: "aura-2-neptune-en",
     manner: "Formal and reserved. Structured, one question at a time.",
@@ -146,6 +153,7 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     id: "pooja",
     name: "Pooja",
     model: "/avatars/pooja.glb",
+    portrait: "/images/teacher-portraits/pooja.jpg",
     gender: "feminine",
     voice: "aura-2-thalia-en",
     speechRate: 1.14,
@@ -159,6 +167,7 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     id: "alex",
     name: "Alex",
     model: "/avatars/alex.glb",
+    portrait: "/images/teacher-portraits/alex.jpg",
     gender: "masculine",
     voice: "aura-2-zeus-en",
     manner: "Brisk and pragmatic. Wants the trade-off, not the tour.",
@@ -171,6 +180,7 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     id: "sophia",
     name: "Sophia",
     model: "/avatars/sophia.glb",
+    portrait: "/images/teacher-portraits/sophia.jpg",
     gender: "feminine",
     voice: "aura-2-theia-en",
     manner: "Calm and analytical. Quiet until something does not add up.",
@@ -183,6 +193,7 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     id: "ryan",
     name: "Ryan",
     model: "/avatars/ryan.glb",
+    portrait: "/images/teacher-portraits/ryan.jpg",
     gender: "masculine",
     voice: "aura-2-arcas-en",
     manner: "Casual and conversational. Low pressure, still thorough.",
@@ -195,6 +206,7 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     id: "ethan",
     name: "Ethan",
     model: "/avatars/ethan.glb",
+    portrait: "/images/teacher-portraits/ethan.jpg",
     gender: "masculine",
     voice: "aura-2-atlas-en",
     manner: "Energetic. Thinks out loud and expects you to as well.",

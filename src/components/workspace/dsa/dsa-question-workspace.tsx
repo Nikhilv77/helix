@@ -87,6 +87,7 @@ export function DsaQuestionWorkspace({
     language: DsaEditorLanguage;
     testsPassed: number;
     testCount: number;
+    hiddenCount: number;
   } | null>(null);
   const feedbackSignature = useRef<string | null>(null);
 
@@ -207,7 +208,8 @@ export function DsaQuestionWorkspace({
           code,
           language,
           testsPassed: payload.data.tests.filter((test) => test.passed).length,
-          testCount: payload.data.tests.length
+          testCount: payload.data.tests.length,
+          hiddenCount: payload.data.tests.filter((test) => test.visible === false).length
         };
         lastAcceptedRun.current = acceptedRun;
         void requestTeacherFeedback(acceptedRun);
@@ -231,7 +233,12 @@ export function DsaQuestionWorkspace({
     const signature = `${question.slug}:${run.language}:${run.code}`;
     if (feedbackSignature.current === signature) return;
     feedbackSignature.current = signature;
-    setTeacherFeedback({ status: "loading", code: run.code, language: run.language });
+    const tally = {
+      passed: run.testsPassed,
+      total: run.testCount,
+      hidden: run.hiddenCount
+    };
+    setTeacherFeedback({ status: "loading", code: run.code, language: run.language, tally });
 
     try {
       const response = await fetch("/api/dsa/practice-feedback", {
@@ -260,7 +267,8 @@ export function DsaQuestionWorkspace({
         status: "ready",
         feedback: payload.data,
         code: run.code,
-        language: run.language
+        language: run.language,
+        tally
       });
     } catch (feedbackError) {
       feedbackSignature.current = null;
@@ -340,12 +348,26 @@ export function DsaQuestionWorkspace({
           <FlaskConical size={13} aria-hidden="true" />
           Test cases
           {result ? (
-            <span
-              className={[
-                "h-1.5 w-1.5 rounded-full",
-                result.accepted ? "bg-[var(--workspace-accent)]" : "bg-[#ff8f8f]"
-              ].join(" ")}
-            />
+            <>
+              <span
+                className={[
+                  "h-1.5 w-1.5 rounded-full",
+                  result.accepted ? "bg-[var(--workspace-accent)]" : "bg-[#ff8f8f]"
+                ].join(" ")}
+              />
+              <span
+                className={`font-mono text-[12px] tabular-nums ${
+                  result.accepted ? "text-cream/72" : "text-[#ff8f8f]"
+                }`}
+              >
+                {result.tests.filter((test) => test.passed).length}/{result.tests.length}
+              </span>
+              {result.tests.some((test) => test.visible === false) ? (
+                <span className="text-[11.5px] text-cream/38">
+                  · {result.tests.filter((test) => test.visible === false).length} hidden
+                </span>
+              ) : null}
+            </>
           ) : null}
           <ChevronDown
             size={13}

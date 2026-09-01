@@ -124,7 +124,7 @@ function trailgradLogoAttachment(): Promise<
     }>
   | []
 > {
-  logoContent ??= readFile(join(process.cwd(), "public", "brand", "trailgrad-icon.png"))
+  logoContent ??= readFile(join(process.cwd(), "public", "brand", "logo-black-bg.png"))
     .then((content) => content.toString("base64"))
     .catch(() => null);
 

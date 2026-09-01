@@ -1,10 +1,30 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { createPortal } from "react-dom";
-import { Bell, CheckCheck, ChevronRight, X } from "lucide-react";
+import {
+  BadgeCheck,
+  Bell,
+  CheckCheck,
+  ChevronRight,
+  HandHelping,
+  MessageCircleHeart,
+  Route,
+  TimerOff,
+  UsersRound,
+  X,
+  type LucideIcon
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { InterviewerPersona } from "@/lib/avatars/personas";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
+import { ProfileAvatar } from "@/components/workspace/profile/profile-avatar";
+
+interface NotificationSender {
+  label: string;
+  profileImage: string | null;
+}
 
 interface InboxItem {
   id: string;
@@ -14,6 +34,7 @@ interface InboxItem {
   href: string | null;
   read: boolean;
   createdAt: number;
+  sender: NotificationSender | null;
 }
 
 /** Quiet enough not to nag, frequent enough that a waiting learner is not stale. */
@@ -21,51 +42,128 @@ const POLL_MS = 15_000;
 
 interface NotificationPresentation {
   label: string;
+  icon: LucideIcon;
+  teacher: boolean;
 }
 
 function notificationPresentation(kind: string, teacherName: string): NotificationPresentation {
   switch (kind) {
     case "TEACHER_WELCOME":
       return {
-        label: `Welcome from ${teacherName}`
+        label: `Welcome from ${teacherName}`,
+        icon: Route,
+        teacher: true
       };
     case "TEACHER_RECOMMENDATION":
       return {
-        label: `Practice from ${teacherName}`
+        label: `Practice from ${teacherName}`,
+        icon: Route,
+        teacher: true
       };
     case "TEACHER_ENCOURAGEMENT":
       return {
-        label: `A note from ${teacherName}`
+        label: `A note from ${teacherName}`,
+        icon: Route,
+        teacher: true
       };
     case "TEACHER_REMINDER":
       return {
-        label: `Reminder from ${teacherName}`
+        label: `Reminder from ${teacherName}`,
+        icon: Route,
+        teacher: true
       };
     case "HELP_REQUEST_OPENED":
       return {
-        label: "Trailmate request"
+        label: "Trailmate request",
+        icon: HandHelping,
+        teacher: false
       };
     case "HELP_REQUEST_CLAIMED":
       return {
-        label: "Trailmate joined"
+        label: "Trailmate joined",
+        icon: UsersRound,
+        teacher: false
       };
     case "HELP_REQUEST_RESOLVED":
       return {
-        label: "Session completed"
+        label: "Session completed",
+        icon: BadgeCheck,
+        teacher: false
       };
     case "HELP_REQUEST_EXPIRED":
       return {
-        label: "Trailmate request closed"
+        label: "Trailmate request closed",
+        icon: TimerOff,
+        teacher: false
       };
     case "HELP_FEEDBACK_RECEIVED":
       return {
-        label: "Mate thank-you"
+        label: "Mate thank-you",
+        icon: MessageCircleHeart,
+        teacher: false
       };
     default:
       return {
-        label: "Trailgrad update"
+        label: "Trailgrad update",
+        icon: Route,
+        teacher: false
       };
   }
+}
+
+function NotificationSource({
+  presentation,
+  teacher,
+  sender
+}: {
+  presentation: NotificationPresentation;
+  teacher: InterviewerPersona;
+  sender: NotificationSender | null;
+}) {
+  if (presentation.teacher) {
+    return (
+      <div
+        aria-label={`${teacher.name}, your teacher`}
+        className="relative h-11 w-11 shrink-0 overflow-hidden rounded-[0.9rem] bg-[#202126] ring-1 ring-inset ring-white/[0.09]"
+      >
+        <Image
+          src={teacher.portrait}
+          alt=""
+          fill
+          sizes="44px"
+          className="object-cover"
+        />
+      </div>
+    );
+  }
+
+  if (sender) {
+    return (
+      <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-[0.9rem] bg-[#202126] ring-1 ring-inset ring-white/[0.09]">
+        {sender.profileImage ? (
+          <Image
+            src={sender.profileImage}
+            alt={`${sender.label} profile`}
+            fill
+            sizes="44px"
+            className="object-cover"
+          />
+        ) : (
+          <ProfileAvatar name={sender.label} className="h-full w-full object-cover" />
+        )}
+      </div>
+    );
+  }
+
+  const Icon = presentation.icon;
+  return (
+    <span
+      aria-hidden="true"
+      className="grid h-11 w-11 shrink-0 place-items-center rounded-[0.9rem] bg-cream/[0.055] text-cream/64 ring-1 ring-inset ring-white/[0.075]"
+    >
+      <Icon size={18} strokeWidth={1.65} />
+    </span>
+  );
 }
 
 function relativeTime(createdAt: number): string {
@@ -270,7 +368,7 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
                   </div>
                 </header>
 
-                <div className="thin-scroll relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-2.5 pb-2.5 [scrollbar-gutter:stable] sm:px-4 sm:pb-4">
+                <div className="thin-scroll relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-2.5 pb-2.5 pt-4 [scrollbar-gutter:stable] sm:px-4 sm:pb-4 sm:pt-5">
                   {items.length === 0 ? (
                     <div className="grid min-h-64 place-items-center rounded-[1.4rem] bg-cream/[0.022] px-6 py-12 text-center">
                       <div>
@@ -285,7 +383,7 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
                     </div>
                   ) : (
                     <>
-                      <div className="flex items-center justify-between px-2 pb-2 pt-1 sm:px-2">
+                      <div className="flex items-center justify-between px-2 pb-3 sm:px-2 sm:pb-3.5">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cream/32">
                           Recent
                         </p>
@@ -298,39 +396,46 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
                         {items.map((item, index) => {
                           const presentation = notificationPresentation(item.kind, teacher.name);
                           const content = (
-                            <div className="relative min-w-0 px-4 py-4 sm:px-5 sm:py-[1.125rem]">
+                            <div className="relative flex min-w-0 items-start gap-3.5 px-4 py-4 sm:gap-4 sm:px-5 sm:py-[1.125rem]">
                               {!item.read ? (
                                 <span className="absolute bottom-4 left-0 top-4 w-0.5 rounded-full bg-[var(--workspace-accent)]" />
                               ) : null}
-                              <div className="flex items-center justify-between gap-3">
-                                <p
-                                  className={`truncate text-[9.5px] font-semibold uppercase tracking-[0.145em] ${item.read ? "text-cream/34" : "text-cream/62"}`}
-                                >
-                                  {presentation.label}
-                                </p>
-                                <time
-                                  dateTime={new Date(item.createdAt).toISOString()}
-                                  className="shrink-0 text-[10.5px] tabular-nums text-cream/30"
-                                >
-                                  {relativeTime(item.createdAt)}
-                                </time>
-                              </div>
-                              <div className="mt-1.5 flex items-start gap-3">
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-[14px] font-semibold leading-5.5 tracking-[-0.01em] text-cream/92">
-                                    {item.title}
+                              <NotificationSource
+                                presentation={presentation}
+                                teacher={teacher}
+                                sender={item.sender}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-3 pt-0.5">
+                                  <p
+                                    className={`truncate text-[9.5px] font-semibold uppercase tracking-[0.145em] ${item.read ? "text-cream/34" : "text-cream/62"}`}
+                                  >
+                                    {presentation.label}
                                   </p>
-                                  <p className="mt-1.5 text-[12.75px] leading-[1.6] text-cream/52">
-                                    {item.body}
-                                  </p>
+                                  <time
+                                    dateTime={new Date(item.createdAt).toISOString()}
+                                    className="shrink-0 text-[10.5px] tabular-nums text-cream/30"
+                                  >
+                                    {relativeTime(item.createdAt)}
+                                  </time>
                                 </div>
-                                {item.href ? (
-                                  <ChevronRight
-                                    size={16}
-                                    className="mt-0.5 shrink-0 text-cream/20 transition duration-200 group-hover:translate-x-0.5 group-hover:text-cream/55"
-                                    aria-hidden="true"
-                                  />
-                                ) : null}
+                                <div className="mt-1.5 flex items-start gap-3">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-[14px] font-semibold leading-5.5 tracking-[-0.01em] text-cream/92">
+                                      {item.title}
+                                    </p>
+                                    <p className="mt-1.5 text-[12.75px] leading-[1.6] text-cream/52">
+                                      {item.body}
+                                    </p>
+                                  </div>
+                                  {item.href ? (
+                                    <ChevronRight
+                                      size={16}
+                                      className="mt-0.5 shrink-0 text-cream/20 transition duration-200 group-hover:translate-x-0.5 group-hover:text-cream/55"
+                                      aria-hidden="true"
+                                    />
+                                  ) : null}
+                                </div>
                               </div>
                             </div>
                           );

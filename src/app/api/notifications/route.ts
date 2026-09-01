@@ -31,6 +31,13 @@ export async function GET(request: NextRequest) {
       app.notificationService.helpNotificationsEnabled(ownerId),
       app.notificationService.teacherNotificationsEnabled(ownerId)
     ]);
+    const helpRequestIds = items.flatMap((item) =>
+      item.kind.startsWith("HELP_") && item.subjectId ? [item.subjectId] : []
+    );
+    const participants = await app.helpHistoryService.notificationParticipants(
+      ownerId,
+      helpRequestIds
+    );
 
     retryPendingEmail();
 
@@ -38,15 +45,21 @@ export async function GET(request: NextRequest) {
       unread,
       helpNotificationsEnabled: helpEnabled,
       teacherNotificationsEnabled: teacherEnabled,
-      items: items.map((item) => ({
-        id: item.id,
-        kind: item.kind,
-        title: item.title,
-        body: item.body,
-        href: item.href,
-        read: item.readAt !== null,
-        createdAt: item.createdAt.getTime()
-      }))
+      items: items.map((item) => {
+        const participant = item.subjectId ? participants.get(item.subjectId) : undefined;
+        return {
+          id: item.id,
+          kind: item.kind,
+          title: item.title,
+          body: item.body,
+          href: item.href,
+          read: item.readAt !== null,
+          createdAt: item.createdAt.getTime(),
+          sender: participant
+            ? { label: participant.label, profileImage: participant.profileImage }
+            : null
+        };
+      })
     });
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);

@@ -216,6 +216,38 @@ export class HelpHistoryService {
     return participants.get(ownerId) ?? presentHelpParticipant(null);
   }
 
+  /**
+   * Resolve the other person behind Trailmate notifications in two queries:
+   * one for the requests and one for every distinct profile they reference.
+   * An invitation recipient is not on the request yet, so anybody other than
+   * the learner sees the learner as the source until they claim it.
+   */
+  async notificationParticipants(
+    ownerId: string,
+    requestIds: string[]
+  ): Promise<Map<string, HelpHistoryParticipant>> {
+    const uniqueIds = [...new Set(requestIds.filter(Boolean))].slice(0, 25);
+    if (uniqueIds.length === 0) return new Map();
+
+    const requests = await this.prisma.helpRequest.findMany({
+      where: { id: { in: uniqueIds } },
+      select: { id: true, learnerId: true, helperId: true }
+    });
+    const peerByRequest = new Map<string, string>();
+    for (const request of requests) {
+      const peerId = request.learnerId === ownerId ? request.helperId : request.learnerId;
+      if (peerId) peerByRequest.set(request.id, peerId);
+    }
+
+    const participants = await this.participants([...new Set(peerByRequest.values())]);
+    return new Map(
+      [...peerByRequest].flatMap(([requestId, peerId]) => {
+        const participant = participants.get(peerId);
+        return participant ? ([[requestId, participant]] as const) : [];
+      })
+    );
+  }
+
   async participants(ownerIds: string[]): Promise<Map<string, HelpHistoryParticipant>> {
     const uniqueIds = [...new Set(ownerIds.filter(Boolean))];
     if (uniqueIds.length === 0) return new Map();
