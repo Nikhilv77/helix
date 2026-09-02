@@ -4,19 +4,20 @@ import type { CSSProperties } from "react";
 import {
   ArrowLeft,
   ArrowRight,
-  BrainCircuit,
-  CloudCog,
-  Code2,
-  Database,
+  Check,
+  ListChecks,
   MessageSquare,
-  ShieldCheck,
+  MessagesSquare,
+  NotebookPen,
   Target,
   Users
 } from "lucide-react";
 
+import { Reveal } from "@/components/marketing/home/visuals/reveal";
+import { TrailguideFaq } from "@/components/workspace/mentors/trailguide-faq";
 import anikaPortrait from "../../../../public/images/trailguide/anika-rao.webp";
+import aarohiFeaturePortrait from "../../../../public/images/trailguide/aarohi-sharma-v3.webp";
 import aarohiDirectoryPortrait from "../../../../public/images/trailguide/aarohi-sharma-v2.webp";
-import arjunPortrait from "../../../../public/images/trailguide/arjun-mehta.webp";
 import devPortrait from "../../../../public/images/trailguide/dev-malhotra.webp";
 import meeraPortrait from "../../../../public/images/trailguide/meera-iyer.webp";
 import mentorDirectoryHero from "../../../../public/images/trailguide/mentor-directory-hero.webp";
@@ -26,80 +27,53 @@ import rohanPortrait from "../../../../public/images/trailguide/rohan-kulkarni.w
 import sanaPortrait from "../../../../public/images/trailguide/sana-qureshi.webp";
 import vikramDirectoryPortrait from "../../../../public/images/trailguide/vikram-shah-v2.webp";
 
-const PROGRAM_STAGES = [
+const GUIDANCE_STEPS = [
   {
-    title: "Prepare with direction",
-    body: "Build the right technical depth for your target role, with a plan shaped around the gaps that actually hold you back."
+    title: "Tell us what is going on",
+    body: "Share the role, interview, feedback or decision you want help with. It does not need to be neatly figured out first.",
+    tone: "bg-[#ffd8c4] text-[#321b12]",
+    icon: NotebookPen
   },
   {
-    title: "Perform with confidence",
-    body: "Practise the interview, communication and decision-making skills that help strong preparation show up under pressure."
+    title: "Talk it through with a guide",
+    body: "Your guide asks questions, looks at the context and gives you an honest outside perspective.",
+    tone: "bg-[#dce7ff] text-[#17243b]",
+    icon: MessagesSquare
   },
   {
-    title: "Position for opportunity",
-    body: "Tell a sharper career story, navigate the search thoughtfully and create more credible paths into ambitious teams."
+    title: "Decide what to do next",
+    body: "Finish with a short plan that makes sense for your goal, your current level and the time you have.",
+    tone: "bg-[#dfe9d8] text-[#1d2b19]",
+    icon: ListChecks
   }
 ];
 
-const TRACKS = [
+const MENTOR_MOMENTS = [
   {
-    icon: Code2,
-    title: "Software engineering",
-    detail:
-      "Build the problem-solving and systems judgment expected across strong engineering teams.",
-    focus: "Technical depth · Interview readiness",
-    tone: "accent" as const
+    heading: "Get ready for the interview in front of you.",
+    body: "Build a focused plan around the role, your feedback and the time you actually have.",
+    image: aarohiFeaturePortrait,
+    imagePosition: "object-[center_28%]",
+    tone: "bg-[#ef7d45] text-[#2d180f]",
+    layout: "lg:col-span-6"
   },
   {
-    icon: BrainCircuit,
-    title: "AI & machine learning",
-    detail: "Turn applied AI work into credible evidence of depth, impact and sound decisions.",
-    focus: "ML systems · Applied AI narrative",
-    tone: "dark" as const
+    heading: "See the trade-offs in your code or design.",
+    body: "Bring the decisions you are stuck on and work through scale, reliability and what you would change.",
+    image: rohanDirectoryPortrait,
+    imagePosition: "object-[center_24%]",
+    tone: "bg-[#dce7ff] text-[#17243b]",
+    layout: "lg:col-span-3"
   },
   {
-    icon: Database,
-    title: "Data engineering",
-    detail:
-      "Strengthen the foundations behind reliable pipelines, data systems and analytical scale.",
-    focus: "Data systems · Architecture stories",
-    tone: "sand" as const
-  },
-  {
-    icon: CloudCog,
-    title: "Cloud & platform",
-    detail: "Prepare for roles built around infrastructure, reliability and developer platforms.",
-    focus: "Cloud systems · Platform ownership",
-    tone: "paper" as const
+    heading: "Choose your next move with more context.",
+    body: "Compare roles, teams or career paths with someone who understands the work behind the title.",
+    image: vikramDirectoryPortrait,
+    imagePosition: "object-[center_24%]",
+    tone: "bg-[#dfe9d8] text-[#1d2b19]",
+    layout: "lg:col-span-3"
   }
 ];
-
-const TRACK_TONES = {
-  accent: {
-    card: "bg-[#f47d48] text-[#191713]",
-    icon: "bg-[#191713] text-[#f4efe3]",
-    detail: "text-[#54372b]",
-    focus: "text-[#54372b]"
-  },
-  dark: {
-    card: "bg-[#191713] text-[#f4efe3]",
-    icon: "bg-white/10 text-[#f4efe3]",
-    detail: "text-[#aaa396]",
-    focus: "text-white/50"
-  },
-  sand: {
-    card: "bg-[#dcd2bc] text-[#191713]",
-    icon: "bg-[#191713] text-[#f4efe3]",
-    detail: "text-[#625a4d]",
-    focus: "text-[#716858]"
-  },
-  paper: {
-    card: "bg-[var(--m-raised)] text-[var(--m-ink)]",
-    icon: "bg-[var(--m-sunken)] text-[var(--m-ink)]",
-    detail: "text-[var(--m-ink-soft)]",
-    focus: "text-[var(--m-ink-faint)]"
-  }
-};
 
 const GUIDES: Array<{
   name: string;
@@ -214,186 +188,375 @@ const DIRECTORY_STATS = [
 
 export function MentorsView() {
   return (
-    <div className="mentor-surface min-h-screen w-full overflow-hidden">
-      <main className="mx-auto w-full max-w-[1440px] px-5 pb-20 pt-7 sm:px-8 lg:px-12 lg:pb-28 lg:pt-10">
+    <div
+      className="mentor-surface min-h-screen w-full overflow-hidden"
+      style={
+        {
+          "--m-ground": "#f7f7f3",
+          "--m-raised": "#ffffff",
+          "--m-sunken": "#ecece6"
+        } as CSSProperties
+      }
+    >
+      <main className="mx-auto w-full max-w-[1360px] px-5 pb-20 pt-6 sm:px-8 lg:px-10 lg:pb-28 lg:pt-7">
         <TrailguideHeader />
 
-        <section className="grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-[1.02fr_0.98fr] lg:gap-16 lg:py-20">
+        <section className="grid items-center gap-12 pb-20 pt-12 sm:pt-16 lg:min-h-[690px] lg:grid-cols-[0.88fr_1.12fr] lg:gap-16 lg:pb-24 lg:pt-14">
           <div
-            className="mentor-rise max-w-3xl"
+            className="mentor-rise max-w-[610px]"
             style={{ "--rise-delay": "100ms" } as CSSProperties}
           >
-            <h1 className="max-w-[12ch] text-[clamp(2.75rem,11.5vw,6.8rem)] font-semibold leading-[0.94] tracking-[-0.055em] text-[var(--m-ink)] sm:leading-[0.91] sm:tracking-[-0.065em]">
-              Your ambition deserves a serious path.
+            <h1 className="max-w-[11ch] text-[clamp(3.15rem,5.4vw,5rem)] font-semibold leading-[0.94] tracking-[-0.055em] text-[var(--m-ink)]">
+              Big career questions are easier with the right person.
             </h1>
-            <p className="mt-7 max-w-[58ch] text-[1.02rem] leading-[1.75] text-[var(--m-ink-soft)] sm:text-[1.12rem]">
-              Trailguide is a focused mentor-led program designed to help you prepare deeply,
-              interview confidently and position yourself for ambitious Big Tech opportunities.
+            <p className="mt-7 max-w-[55ch] text-[1.02rem] leading-[1.75] text-[var(--m-ink-soft)] sm:text-[1.12rem]">
+              Trailguide connects you with experienced engineers who can help you prepare for an
+              interview, make sense of difficult feedback or decide what to do next in your career.
+              You bring the context. You leave with a clearer plan.
             </p>
 
-            <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+            <div className="mt-8 flex flex-wrap items-center gap-5">
               <MentorCta />
-              <p className="max-w-[32ch] text-sm leading-[1.6] text-[var(--m-ink-faint)]">
-                Explore mentors across focused technology career paths.
-              </p>
+              <Link
+                href="#how-it-works"
+                className="group inline-flex items-center gap-2 text-sm font-semibold text-[var(--m-ink)] underline decoration-[var(--m-line-strong)] underline-offset-4 transition-colors hover:decoration-[var(--m-ink)]"
+              >
+                See how it works
+                <ArrowRight
+                  size={14}
+                  aria-hidden="true"
+                  className="transition-transform group-hover:translate-x-0.5"
+                />
+              </Link>
             </div>
+
+            <p className="mt-10 max-w-[52ch] text-sm leading-6 text-[var(--m-ink-faint)]">
+              Useful for interview preparation, technical decisions, role changes and the moments
+              when generic advice is not enough.
+            </p>
           </div>
 
           <div
-            className="mentor-rise relative mx-auto w-full max-w-[660px]"
-            style={{ "--rise-delay": "180ms" } as CSSProperties}
+            className="mentor-rise relative mx-auto w-full max-w-[680px]"
+            style={{ "--rise-delay": "170ms" } as CSSProperties}
           >
-            <div className="grid grid-cols-[1.12fr_0.88fr] gap-3 rounded-[2rem] bg-[var(--m-ink)] p-3 sm:gap-4 sm:p-4">
-              <PortraitTile
-                image={anikaPortrait}
-                alt="Portrait of Indian technology mentor Anika Rao"
-                className="aspect-[4/5]"
-                sizes="(min-width: 1440px) 360px, (min-width: 1024px) 25vw, 58vw"
+            <div className="relative min-h-[540px] overflow-hidden rounded-[1.25rem] bg-[#d8d0c8] sm:min-h-[610px]">
+              <Image
+                src={rohanPortrait}
+                alt="Rohan Kulkarni, a Trailguide mentor"
+                fill
                 preload
+                placeholder="blur"
+                quality={80}
+                sizes="(min-width: 1360px) 680px, (min-width: 1024px) 50vw, 100vw"
+                className="object-cover object-[center_30%]"
               />
-              <div className="grid gap-3 sm:gap-4">
-                <PortraitTile
-                  image={arjunPortrait}
-                  alt="Portrait of Indian technology mentor Arjun Mehta"
-                  className="aspect-square"
-                  sizes="(min-width: 1440px) 260px, (min-width: 1024px) 19vw, 40vw"
-                  eager
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent px-6 pb-6 pt-28 text-white sm:px-8 sm:pb-8">
+                <p className="text-base font-semibold">Rohan Kulkarni</p>
+                <p className="mt-1 text-sm text-white/70">Engineering mentor</p>
+              </div>
+            </div>
+            <div className="absolute -bottom-5 -left-3 max-w-[270px] rounded-[1rem] bg-[#ef7d45] p-5 text-[#191713] shadow-[0_18px_45px_rgba(25,23,19,0.15)] sm:-left-6 sm:p-6">
+              <p className="text-lg font-semibold leading-snug tracking-[-0.025em]">
+                Bring one real question.
+              </p>
+              <p className="mt-2 text-sm leading-6 text-black/60">Leave knowing what to do next.</p>
+            </div>
+          </div>
+        </section>
+
+        <Reveal className="py-10 sm:py-14">
+          <section id="why-trailguide" className="scroll-mt-8">
+            <div className="max-w-[760px]">
+              <h2 className="text-[clamp(2.4rem,5vw,4.2rem)] font-semibold leading-[0.98] tracking-[-0.05em] text-[var(--m-ink)]">
+                What can you actually talk about here?
+              </h2>
+              <p className="mt-5 max-w-[62ch] text-base leading-7 text-[var(--m-ink-soft)]">
+                Anything that feels important, specific and difficult to work through alone. You do
+                not need a polished question before you arrive.
+              </p>
+            </div>
+
+            <div className="mt-10 grid gap-4 lg:grid-cols-12">
+              <article className="group relative min-h-[420px] overflow-hidden rounded-[1.5rem] bg-[#ef7d45] p-7 text-[#25160f] transition-transform duration-300 ease-out hover:-translate-y-1 lg:col-span-7 lg:p-10">
+                <span
+                  aria-hidden="true"
+                  className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/20 transition-transform duration-700 ease-out group-hover:scale-110"
                 />
-                <div className="flex min-h-0 flex-col justify-between rounded-[1.35rem] bg-[#f47d48] p-4 text-[#191713] sm:p-5">
-                  <p className="mt-7 text-[clamp(1.05rem,2.2vw,1.55rem)] font-semibold leading-[1.12] tracking-[-0.025em]">
-                    Less noise.
-                    <br />
-                    Better next moves.
+                <div className="relative flex h-full flex-col">
+                  <h3 className="max-w-[12ch] text-[clamp(2rem,4vw,3.35rem)] font-semibold leading-[1] tracking-[-0.045em]">
+                    “My interview is close and I&apos;m trying to prepare for everything.”
+                  </h3>
+                  <p className="mt-auto max-w-[48ch] pt-16 text-base leading-7 text-black/65">
+                    A guide can help you narrow the plan, identify the rounds that need the most
+                    work and stop spending time on low-impact preparation.
+                  </p>
+                </div>
+              </article>
+
+              <div className="grid gap-4 lg:col-span-5">
+                <article className="group rounded-[1.35rem] bg-[#dce8ff] p-7 text-[#17243b] transition-transform duration-300 ease-out hover:-translate-y-1">
+                  <h3 className="max-w-[18ch] text-2xl font-semibold leading-[1.08] tracking-[-0.035em]">
+                    “People keep telling me to be more senior.”
+                  </h3>
+                  <p className="mt-5 max-w-[44ch] text-sm leading-7 text-[#344663]">
+                    Turn vague feedback into concrete changes in how you make decisions, explain
+                    trade-offs and show ownership.
+                  </p>
+                </article>
+                <article className="group rounded-[1.35rem] bg-[#dfe9d8] p-7 text-[#1d2b19] transition-transform duration-300 ease-out hover:-translate-y-1">
+                  <h3 className="max-w-[18ch] text-2xl font-semibold leading-[1.08] tracking-[-0.035em]">
+                    “I&apos;m not sure which role or path fits me.”
+                  </h3>
+                  <p className="mt-5 max-w-[44ch] text-sm leading-7 text-[#40523a]">
+                    Compare the day-to-day work behind your options and make a decision based on
+                    more than job titles.
+                  </p>
+                </article>
+              </div>
+            </div>
+          </section>
+        </Reveal>
+
+        <Reveal className="py-10 sm:py-14">
+          <section className="grid overflow-hidden rounded-[1.5rem] bg-[#1c1a16] text-[var(--m-ground)] lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="relative min-h-[440px] lg:min-h-[620px]">
+              <Image
+                src={meeraPortrait}
+                alt="Meera Iyer, a Trailguide mentor"
+                fill
+                placeholder="blur"
+                quality={78}
+                sizes="(min-width: 1240px) 540px, (min-width: 1024px) 45vw, 100vw"
+                className="object-cover object-[center_28%] transition-transform duration-700 ease-out hover:scale-[1.015]"
+              />
+            </div>
+            <div className="flex flex-col justify-center px-7 py-12 sm:px-12 sm:py-16 lg:px-16">
+              <h2 className="max-w-[12ch] text-[clamp(2.35rem,4.7vw,4.25rem)] font-semibold leading-[0.98] tracking-[-0.05em]">
+                This is a working session, not a lecture.
+              </h2>
+              <p className="mt-6 max-w-[48ch] text-base leading-7 text-white/62">
+                You and your guide look at the situation together. They will ask questions, point
+                out what you may be missing and help you choose a practical way forward.
+              </p>
+              <ul className="mt-8 space-y-4 pt-3">
+                {[
+                  "We use your actual context, not a generic checklist",
+                  "You can ask follow-up questions and challenge the advice",
+                  "You finish with a few next steps you can realistically do"
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-3 text-sm text-white/80">
+                    <span className="grid h-6 w-6 place-items-center rounded-full bg-white/10">
+                      <Check
+                        size={13}
+                        strokeWidth={2}
+                        className="text-[#ef8b58]"
+                        aria-hidden="true"
+                      />
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        </Reveal>
+
+        <Reveal className="py-12 sm:py-16">
+          <section aria-labelledby="mentor-moments-title">
+            <div className="max-w-[760px]">
+              <h2
+                id="mentor-moments-title"
+                className="text-[clamp(2.35rem,5vw,4rem)] font-semibold leading-[1] tracking-[-0.05em] text-[var(--m-ink)]"
+              >
+                Choose the kind of help you need right now.
+              </h2>
+              <p className="mt-5 max-w-[60ch] text-base leading-7 text-[var(--m-ink-soft)]">
+                You do not have to sign up for a long programme. Start with the conversation that
+                would make the biggest difference today.
+              </p>
+            </div>
+
+            <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-12">
+              {MENTOR_MOMENTS.map((moment, index) => (
+                <article
+                  key={moment.heading}
+                  className={`group overflow-hidden rounded-[1.5rem] shadow-[0_18px_50px_rgba(25,23,19,0.08)] transition-[box-shadow,transform] duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_24px_64px_rgba(25,23,19,0.13)] md:last:col-span-2 lg:last:col-span-3 ${moment.tone} ${moment.layout} ${index === 0 ? "sm:grid sm:grid-cols-[1.05fr_0.95fr] md:col-span-2 lg:min-h-[490px]" : "flex min-h-[490px] flex-col"}`}
+                >
+                  <div
+                    className={`relative overflow-hidden ${index === 0 ? "min-h-[290px] sm:order-2 sm:min-h-full" : "min-h-[250px]"}`}
+                  >
+                    <Image
+                      src={moment.image}
+                      alt=""
+                      fill
+                      placeholder="blur"
+                      quality={index === 0 ? 92 : 80}
+                      sizes={
+                        index === 0
+                          ? "(min-width: 1024px) 640px, 100vw"
+                          : "(min-width: 1024px) 280px, 50vw"
+                      }
+                      className={`object-cover ${moment.imagePosition} transition-transform duration-700 ease-out group-hover:scale-[1.025]`}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                  </div>
+
+                  <div
+                    className={`flex flex-1 flex-col p-7 sm:p-8 ${index === 0 ? "sm:order-1 lg:p-10" : ""}`}
+                  >
+                    <span className="mb-9 h-2.5 w-2.5 rounded-full bg-current opacity-45" />
+                    <h3
+                      className={`mt-auto max-w-[15ch] font-semibold leading-[1.02] tracking-[-0.045em] ${index === 0 ? "text-[clamp(2.15rem,3.4vw,3.35rem)]" : "text-[clamp(1.7rem,2.35vw,2.25rem)]"}`}
+                    >
+                      {moment.heading}
+                    </h3>
+                    <p className="mt-5 max-w-[44ch] text-sm leading-7 opacity-70">{moment.body}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        </Reveal>
+
+        <Reveal className="py-12 sm:py-16">
+          <section
+            id="how-it-works"
+            className="relative scroll-mt-8 overflow-hidden rounded-[1.5rem] bg-[#20201d] p-6 text-white sm:p-10 lg:p-14"
+          >
+            <span
+              aria-hidden="true"
+              className="absolute -bottom-36 -left-24 h-96 w-96 rounded-full bg-[#ef7d45]/10 blur-3xl"
+            />
+
+            <div className="relative grid gap-12 lg:grid-cols-[0.78fr_1.22fr] lg:gap-20">
+              <div className="flex flex-col">
+                <div>
+                  <h2 className="max-w-[11ch] text-[clamp(2.5rem,5vw,4.5rem)] font-semibold leading-[0.96] tracking-[-0.055em]">
+                    You bring the question. We help you move it forward.
+                  </h2>
+                  <p className="mt-6 max-w-[44ch] text-base leading-7 text-white/60">
+                    No long programme or complicated setup. Choose a guide, share the real context
+                    and use the conversation where it matters most.
+                  </p>
+                </div>
+
+                <div className="mt-10 flex items-center gap-4 lg:mt-auto lg:pt-16">
+                  <div className="flex -space-x-3" aria-hidden="true">
+                    {[anikaPortrait, rohanPortrait, sanaPortrait].map((portrait, index) => (
+                      <div
+                        key={portrait.src}
+                        className="relative h-11 w-11 overflow-hidden rounded-full border-2 border-[#20201d] bg-[#d9d0c5]"
+                      >
+                        <Image
+                          src={portrait}
+                          alt=""
+                          fill
+                          placeholder="blur"
+                          sizes="44px"
+                          className={`object-cover ${index === 0 ? "object-[center_25%]" : "object-[center_30%]"}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="max-w-[20ch] text-sm leading-5 text-white/55">
+                    A real conversation, shaped around you.
                   </p>
                 </div>
               </div>
-            </div>
-            <div className="absolute -bottom-5 left-5 right-5 flex items-center justify-between gap-4 rounded-2xl bg-[var(--m-raised)] px-5 py-4 shadow-[0_18px_50px_rgba(25,23,19,0.16)] sm:left-auto sm:right-7 sm:w-[70%]">
-              <div>
-                <p className="text-sm font-semibold leading-snug text-[var(--m-ink)]">
-                  Built around your target role
-                </p>
-                <p className="mt-1 text-xs leading-[1.45] text-[var(--m-ink-faint)]">
-                  Your path, pressure-tested with a guide
-                </p>
-              </div>
-              <ShieldCheck
-                size={20}
-                strokeWidth={1.7}
-                className="shrink-0 text-[var(--m-accent-ink)]"
-                aria-hidden="true"
-              />
-            </div>
-          </div>
-        </section>
 
-        <section
-          className="mentor-rise mt-7 overflow-hidden rounded-[2rem] bg-[var(--m-ink)] px-6 py-9 text-[var(--m-ground)] sm:px-8 sm:py-11 lg:px-10 lg:py-12"
-          style={{ "--rise-delay": "240ms" } as CSSProperties}
-        >
-          <div className="grid gap-9 lg:grid-cols-[0.82fr_2.18fr] lg:gap-14">
-            <div className="lg:pr-4">
-              <h2 className="max-w-[11ch] text-[2rem] font-semibold leading-[1.03] tracking-[-0.04em] sm:text-[2.65rem]">
-                One path from preparation to opportunity.
-              </h2>
-              <p className="mt-5 max-w-[38ch] text-[0.9375rem] leading-[1.7] text-[#aaa396]">
-                Each part strengthens the next, so your effort becomes a clear and credible signal.
-              </p>
-            </div>
+              <ol className="grid gap-4">
+                {GUIDANCE_STEPS.map((step) => {
+                  const Icon = step.icon;
 
-            <ol className="grid list-none gap-7 sm:grid-cols-3 sm:gap-6">
-              {PROGRAM_STAGES.map((stage, index) => (
-                <li
-                  key={stage.title}
-                  className="mentor-program-stage pt-1"
-                  style={{ "--stage-delay": `${300 + index * 90}ms` } as CSSProperties}
-                >
-                  <h3 className="max-w-[11ch] text-[1.4rem] font-semibold leading-[1.08] tracking-[-0.03em] sm:text-[1.55rem]">
-                    {stage.title}
-                  </h3>
-                  <p className="mt-4 max-w-[34ch] text-[0.9375rem] leading-[1.7] text-[#b8b1a4]">
-                    {stage.body}
-                  </p>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        <section
-          className="mentor-rise py-12 sm:py-16"
-          style={{ "--rise-delay": "300ms" } as CSSProperties}
-        >
-          <div className="rounded-[2rem] bg-[var(--m-sunken)] p-5 sm:p-7 lg:p-8">
-            <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr] lg:items-end lg:gap-12">
-              <div>
-                <h2 className="max-w-[15ch] text-[2rem] font-semibold leading-[1] tracking-[-0.045em] text-[var(--m-ink)] sm:text-[2.65rem]">
-                  Your craft shapes the route.
-                </h2>
-              </div>
-              <p className="max-w-[62ch] text-base leading-[1.7] text-[var(--m-ink-soft)] lg:justify-self-end">
-                Choose the engineering direction you are aiming for. Trailguide will focus the
-                preparation, interview practice and career decisions around the bar for that role.
-              </p>
-            </div>
-
-            <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {TRACKS.map((track) => {
-                const Icon = track.icon;
-                const tone = TRACK_TONES[track.tone];
-
-                return (
-                  <article
-                    key={track.title}
-                    className={`relative flex min-h-[15rem] overflow-hidden rounded-[1.5rem] p-5 sm:p-6 ${tone.card}`}
-                  >
-                    <div className="relative z-10 flex w-full flex-col">
-                      <span
-                        className={`grid h-10 w-10 place-items-center rounded-[0.8rem] ${tone.icon}`}
-                      >
-                        <Icon size={18} strokeWidth={1.65} aria-hidden="true" />
+                  return (
+                    <li
+                      key={step.title}
+                      className={`group grid gap-6 rounded-[1.2rem] p-6 transition-transform duration-300 ease-out hover:translate-x-1 sm:grid-cols-[64px_1fr] sm:items-center sm:p-7 ${step.tone}`}
+                    >
+                      <span className="grid h-14 w-14 place-items-center rounded-full bg-white/40">
+                        <Icon size={23} strokeWidth={1.7} aria-hidden="true" />
                       </span>
-
-                      <div className="mt-8">
-                        <h3 className="max-w-[12ch] text-[1.3rem] font-semibold leading-[1.05] tracking-[-0.03em]">
-                          {track.title}
+                      <div>
+                        <h3 className="text-[1.35rem] font-semibold tracking-[-0.035em]">
+                          {step.title}
                         </h3>
-                        <p className={`mt-3 max-w-[34ch] text-sm leading-[1.65] ${tone.detail}`}>
-                          {track.detail}
+                        <p className="mt-2 max-w-[52ch] text-sm leading-6 opacity-65">
+                          {step.body}
                         </p>
                       </div>
-
-                      <p
-                        className={`mt-auto pt-4 text-[0.7rem] font-semibold uppercase tracking-[0.1em] ${tone.focus}`}
-                      >
-                        {track.focus}
-                      </p>
-                    </div>
-                  </article>
-                );
-              })}
+                    </li>
+                  );
+                })}
+              </ol>
             </div>
-          </div>
-        </section>
+          </section>
+        </Reveal>
 
-        <section
-          className="mentor-rise mt-16 overflow-hidden rounded-[2rem] bg-[#f47d48] p-7 text-[#191713] sm:mt-20 sm:p-10 lg:p-12"
-          style={{ "--rise-delay": "420ms" } as CSSProperties}
-        >
-          <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
-            <div>
-              <h2 className="max-w-[14ch] text-[2.25rem] font-semibold leading-[1] tracking-[-0.045em] sm:text-[3.4rem]">
-                The right guide can change how far you aim.
-              </h2>
-              <p className="mt-5 max-w-[58ch] text-[0.92rem] leading-[1.7] text-[#3f3028]">
-                We are creating a focused program for engineers who want a more deliberate route
-                toward exceptional teams. No placement promises—just serious preparation, honest
-                guidance and better odds of being ready when opportunity appears.
-              </p>
+        <Reveal className="py-12 sm:py-16">
+          <section aria-labelledby="meet-guides-title">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+              <div className="max-w-[760px]">
+                <h2
+                  id="meet-guides-title"
+                  className="text-[clamp(2.35rem,5vw,4rem)] font-semibold leading-[1] tracking-[-0.05em] text-[var(--m-ink)]"
+                >
+                  Find someone who understands your kind of problem.
+                </h2>
+                <p className="mt-5 max-w-[60ch] text-base leading-7 text-[var(--m-ink-soft)]">
+                  Every guide brings experience from real engineering teams. Start with the question
+                  you have, then choose the person whose background feels most useful.
+                </p>
+              </div>
+              <MentorCta />
             </div>
-            <MentorCta />
-          </div>
-        </section>
+
+            <div className="mt-10 grid gap-4 md:grid-cols-3">
+              {GUIDES.slice(0, 3).map((guide) => (
+                <Link
+                  key={guide.name}
+                  href="/trailguide/mentors"
+                  className="group relative min-h-[420px] overflow-hidden rounded-[1.25rem] bg-[#ddd6cb]"
+                >
+                  <Image
+                    src={guide.image}
+                    alt={guide.name}
+                    fill
+                    placeholder="blur"
+                    quality={76}
+                    sizes="(min-width: 1024px) 420px, (min-width: 768px) 32vw, 100vw"
+                    className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.025]"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent px-6 pb-6 pt-28 text-white">
+                    <h3 className="text-xl font-semibold tracking-[-0.025em]">{guide.name}</h3>
+                    <p className="mt-1 text-sm text-white/70">{guide.role}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        </Reveal>
+
+        <Reveal className="py-12 sm:py-16">
+          <TrailguideFaq />
+        </Reveal>
+
+        <Reveal className="pb-4 pt-12 sm:pt-16">
+          <section className="overflow-hidden rounded-[1.5rem] bg-[#ef7d45] px-7 py-10 text-[#191713] sm:px-10 sm:py-14 lg:px-14 lg:py-16">
+            <div className="grid gap-9 lg:grid-cols-[1fr_auto] lg:items-end">
+              <div>
+                <h2 className="max-w-[14ch] text-[clamp(2.4rem,5vw,4.3rem)] font-semibold leading-[0.98] tracking-[-0.05em]">
+                  Ready to talk it through with someone?
+                </h2>
+                <p className="mt-5 max-w-[56ch] text-[0.95rem] leading-7 text-black/65">
+                  Browse the mentors, find a background that fits your question and start from
+                  there. You do not need to have everything figured out first.
+                </p>
+              </div>
+              <MentorCta />
+            </div>
+          </section>
+        </Reveal>
       </main>
     </div>
   );
@@ -640,7 +803,7 @@ function TrailguideHeader({ directory = false }: { directory?: boolean }) {
     >
       <Link
         href="/trailguide"
-        className="text-[0.8125rem] font-semibold uppercase tracking-[0.16em] text-[var(--m-ink)] outline-none transition-opacity hover:opacity-65 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-[var(--m-accent-line)]"
+        className="text-[0.95rem] font-semibold tracking-[-0.02em] text-[var(--m-ink)] outline-none transition-opacity hover:opacity-65 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-[var(--m-accent-line)]"
       >
         Trailguide
       </Link>
@@ -649,9 +812,25 @@ function TrailguideHeader({ directory = false }: { directory?: boolean }) {
         aria-label="Trailguide navigation"
         className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:justify-end"
       >
+        {!directory ? (
+          <div className="mr-2 hidden items-center gap-7 lg:flex">
+            <Link
+              href="#why-trailguide"
+              className="text-[0.8125rem] font-medium text-[var(--m-ink-soft)] transition-colors hover:text-[var(--m-ink)]"
+            >
+              Why Trailguide
+            </Link>
+            <Link
+              href="#how-it-works"
+              className="text-[0.8125rem] font-medium text-[var(--m-ink-soft)] transition-colors hover:text-[var(--m-ink)]"
+            >
+              How it works
+            </Link>
+          </div>
+        ) : null}
         <Link
           href="/"
-          className="group inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-[var(--m-line-strong)] px-4 text-[0.8125rem] font-semibold text-[var(--m-ink)] outline-none transition-[background-color,transform] duration-200 ease-out hover:-translate-y-0.5 hover:bg-[var(--m-raised)] focus-visible:ring-2 focus-visible:ring-[var(--m-accent-line)] sm:min-h-10"
+          className="group inline-flex min-h-11 shrink-0 items-center gap-2 px-2 text-[0.8125rem] font-semibold text-[var(--m-ink)] outline-none transition-opacity hover:opacity-60 focus-visible:ring-2 focus-visible:ring-[var(--m-accent-line)] sm:min-h-10"
         >
           <ArrowLeft
             size={14}
@@ -684,38 +863,6 @@ function TrailguideHeader({ directory = false }: { directory?: boolean }) {
   );
 }
 
-function PortraitTile({
-  image,
-  alt,
-  className,
-  sizes,
-  preload = false,
-  eager = false
-}: {
-  image: StaticImageData;
-  alt: string;
-  className: string;
-  sizes: string;
-  preload?: boolean;
-  eager?: boolean;
-}) {
-  return (
-    <div className={`relative overflow-hidden rounded-[1.35rem] bg-[#2a2822] ${className}`}>
-      <Image
-        src={image}
-        alt={alt}
-        fill
-        preload={preload}
-        loading={preload ? undefined : eager ? "eager" : "lazy"}
-        placeholder="blur"
-        quality={72}
-        sizes={sizes}
-        className="object-cover"
-      />
-    </div>
-  );
-}
-
 function MentorCta({ compact = false }: { compact?: boolean }) {
   return (
     <Link
@@ -728,7 +875,7 @@ function MentorCta({ compact = false }: { compact?: boolean }) {
           <span className="hidden sm:inline">Meet the mentors</span>
         </>
       ) : (
-        "Meet the mentors"
+        "Find your guide"
       )}
       <ArrowRight
         size={compact ? 14 : 16}
