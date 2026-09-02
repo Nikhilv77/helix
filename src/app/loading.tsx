@@ -12,6 +12,7 @@ import {
 import { ProfileSkeleton } from "@/components/workspace/profile/profile-skeleton";
 import { RouteProgress, Waveform } from "@/components/workspace/shared/loading/primitives";
 import { isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
+import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
 
 const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
@@ -25,7 +26,9 @@ export default async function RootLoading() {
   const manageRoute = pathname === "/manage";
   const profileRoute = pathname === "/profile";
   const workspaceRoute = isWorkspaceChromeRoute(pathname) && pathname !== "/";
-  const welcomeHome = pathname === "/" && new URLSearchParams(search).get("welcome") === "maya";
+  const welcomeHome =
+    pathname === "/" &&
+    welcomePersonaFromQuery(new URLSearchParams(search).get("welcome")) !== null;
   const workspaceHome =
     pathname === "/" && !welcomeHome && clerkEnabled && Boolean((await auth()).userId);
 

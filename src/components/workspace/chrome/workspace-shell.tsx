@@ -46,6 +46,7 @@ import {
 } from "@/lib/workspace/accent";
 import { isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
 import { useWorkspaceProfileImage } from "@/lib/workspace/profile-image";
+import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
 
 const navGroups = [
   {
@@ -366,7 +367,8 @@ export function WorkspaceShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user } = useUser();
-  const welcomeHome = pathname === "/" && searchParams.get("welcome") === "maya";
+  const welcomeHome =
+    pathname === "/" && welcomePersonaFromQuery(searchParams.get("welcome")) !== null;
   const showChrome = pathname ? isWorkspaceChromeRoute(pathname) && !welcomeHome : false;
   const userName =
     user?.fullName ?? user?.firstName ?? user?.primaryEmailAddress?.emailAddress ?? "";

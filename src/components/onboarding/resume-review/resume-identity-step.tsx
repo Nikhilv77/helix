@@ -17,10 +17,12 @@ import {
 
 export function ResumeIdentityStep({
   result,
+  teacherName,
   onReplace,
   onContinue
 }: {
   result: ResumeExtractionResponse;
+  teacherName: string;
   onReplace: () => void;
   onContinue: () => void;
 }) {
@@ -121,7 +123,9 @@ export function ResumeIdentityStep({
 
         {phase === 1 ? (
           <section key="summary" className="identity-stage-in w-full">
-            <p className="thinking-shimmer blueprint-label text-cream/45">Maya read your profile</p>
+            <p className="thinking-shimmer blueprint-label text-cream/45">
+              {teacherName} read your profile
+            </p>
             <p className="mx-auto mt-5 max-w-3xl text-2xl font-semibold leading-snug tracking-[-0.025em] text-cream sm:text-[2.7rem] sm:leading-tight">
               {profileSummary}
             </p>

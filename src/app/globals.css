@@ -402,36 +402,6 @@ select {
   }
 }
 
-@keyframes teacher-carousel-next {
-  0% {
-    opacity: 0.72;
-    transform: translateX(16px) scale(0.99);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-@keyframes teacher-carousel-previous {
-  0% {
-    opacity: 0.72;
-    transform: translateX(-16px) scale(0.99);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-.teacher-carousel-scene-next {
-  animation: teacher-carousel-next 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.teacher-carousel-scene-previous {
-  animation: teacher-carousel-previous 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
 @keyframes teacher-carousel-cta-shine {
   0%,
   66% {
@@ -2142,6 +2112,19 @@ html {
     background-color: rgba(255, 255, 255, 0.05);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+
+  .maya-welcome-panel .trail-word {
+    filter: none;
+    transition:
+      opacity 300ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 340ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .maya-welcome-copy-word.trail-word-visible {
+    color: rgba(241, 234, 216, 0.78);
+    background: none;
+    animation: none;
   }
 }
 

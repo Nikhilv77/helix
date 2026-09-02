@@ -46,6 +46,9 @@ describe("HelpRequestToast", () => {
   it("lets a helper accept and go directly to the voice room", async () => {
     const fetchMock = vi.fn((input: string | URL | Request) => {
       const url = String(input);
+      if (url === "/api/help/status") {
+        return Promise.resolve(jsonResponse({ success: true, data: { version: "v1" } }));
+      }
       if (url === "/api/help/inbox") {
         return Promise.resolve(
           jsonResponse({
@@ -80,6 +83,9 @@ describe("HelpRequestToast", () => {
   it("lets a helper quietly decline without navigating", async () => {
     const fetchMock = vi.fn((input: string | URL | Request) => {
       const url = String(input);
+      if (url === "/api/help/status") {
+        return Promise.resolve(jsonResponse({ success: true, data: { version: "v1" } }));
+      }
       if (url === "/api/help/inbox") {
         return Promise.resolve(
           jsonResponse({
@@ -116,6 +122,9 @@ describe("HelpRequestToast", () => {
     let inboxLoads = 0;
     const fetchMock = vi.fn((input: string | URL | Request) => {
       const url = String(input);
+      if (url === "/api/help/status") {
+        return Promise.resolve(jsonResponse({ success: true, data: { version: "v1" } }));
+      }
       if (url === "/api/help/active") {
         return Promise.resolve(jsonResponse({ success: true, data: null }));
       }

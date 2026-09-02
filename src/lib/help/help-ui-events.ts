@@ -1,6 +1,7 @@
 export const PEER_HELP_ENDED_EVENT = "trailgrad:peer-help-ended";
 export const PEER_HELP_PROMPT_VISIBILITY_EVENT = "trailgrad:peer-help-prompt-visibility";
 export const SHOW_CURRENT_PEER_HELP_EVENT = "trailgrad:show-current-peer-help";
+export const WORKSPACE_HELP_CHANGED_EVENT = "trailgrad:workspace-help-changed";
 
 let centeredPromptCount = 0;
 
@@ -29,6 +30,11 @@ export function showCurrentPeerHelp(): void {
 export function announcePeerHelpEnded(requestId: string): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(PEER_HELP_ENDED_EVENT, { detail: { requestId } }));
+}
+
+/** Let sibling workspace providers refresh urgent help-dependent UI together. */
+export function announceWorkspaceHelpChanged(): void {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(WORKSPACE_HELP_CHANGED_EVENT));
 }
 
 function announcePromptVisibility(): void {

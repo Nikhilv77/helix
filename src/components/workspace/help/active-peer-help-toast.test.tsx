@@ -34,6 +34,9 @@ function jsonResponse(payload: unknown) {
 
 function helpFetch(active: () => typeof activeMeeting | null = () => activeMeeting) {
   return vi.fn((input: string | URL | Request) => {
+    if (String(input) === "/api/help/status") {
+      return Promise.resolve(jsonResponse({ success: true, data: { version: "v1" } }));
+    }
     if (String(input) === "/api/help/inbox") {
       return Promise.resolve(
         jsonResponse({

@@ -187,11 +187,14 @@ export class HelpRequestService {
             AND request."status" = 'OPEN'::"HelpRequestStatus"
             AND request."expiresAt" > CURRENT_TIMESTAMP
             AND request."learnerId" <> ${helperId}
-            AND "helpHelperEligibilityScore"(
-              ${helperId},
-              request."questionSlug",
-              request."language"
-            ) > ${MIN_HELPER_ELIGIBILITY_SCORE}
+            AND (
+              "helpHelperEligibilityScore"(
+                ${helperId},
+                request."questionSlug",
+                request."language"
+              ) > ${MIN_HELPER_ELIGIBILITY_SCORE}
+              OR "helpHelperSolvedQuestion"(${helperId}, request."questionSlug")
+            )
             AND NOT EXISTS (
               SELECT 1 FROM "HelpRequest" AS own_request
               WHERE own_request."learnerId" = ${helperId}
@@ -273,6 +276,15 @@ export class HelpRequestService {
     });
 
     return this.byId(requestId);
+  }
+
+  /** Helpers who already passed on this request must not be notified again. */
+  async declinedHelperIds(requestId: string): Promise<string[]> {
+    const rows = await this.prisma.helpRequestDecline.findMany({
+      where: { requestId },
+      select: { helperId: true }
+    });
+    return rows.map((row) => row.helperId);
   }
 
   private async isQualified(
@@ -371,6 +383,14 @@ export class HelpRequestService {
       await transaction.helpRequest.update({
         where: { id: requestId },
         data: { status: HelpRequestStatus.OPEN, helperId: null, claimedAt: null }
+      });
+      // Handing a request back is also a pass from this helper. Persist it in
+      // the same transaction so a focus-triggered full inbox refresh cannot
+      // immediately offer them the request they just released.
+      await transaction.helpRequestDecline.upsert({
+        where: { requestId_helperId: { requestId, helperId } },
+        create: { requestId, helperId },
+        update: {}
       });
 
       return this.byIdWith(transaction, requestId);

@@ -77,6 +77,62 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
             ? await service.release(id, helperId)
             : await service.resolve(id, helperId);
 
+    if (parsed.data.action === "claim" || parsed.data.action === "decline") {
+      try {
+        await app.notificationService.dismissHelpRequestInvitations(
+          updated.id,
+          parsed.data.action === "decline" ? helperId : undefined
+        );
+      } catch (error) {
+        // The lifecycle transition already committed. A later status/cron pass
+        // can reconcile a stale invitation without turning success into a 500.
+        logger.error(
+          JSON.stringify({
+            event: "help.invitation.cleanup.failed",
+            requestId: updated.id,
+            action: parsed.data.action,
+            reason: error instanceof Error ? error.message : String(error)
+          })
+        );
+      }
+    }
+
+    if (parsed.data.action === "release") {
+      try {
+        const [helpers, declinedIds, learner] = await Promise.all([
+          app.helperMatchingService.findHelpers(
+            updated.questionSlug,
+            updated.learnerId,
+            updated.language
+          ),
+          service.declinedHelperIds(updated.id),
+          app.helpHistoryService.participant(updated.learnerId)
+        ]);
+        const excluded = new Set(declinedIds);
+        await app.notificationService.deliverHelpRequestInvitations(
+          helpers.map((helper) => helper.ownerId).filter((ownerId) => !excluded.has(ownerId)),
+          {
+            title: `${learner.label} still needs a mate for ${
+              findQuestion(updated.questionSlug)?.question.title ?? updated.questionSlug
+            }`,
+            body: `They shared their current ${updated.language} code and are still looking for help.`,
+            href: `/help?request=${updated.id}`,
+            subjectId: updated.id
+          }
+        );
+      } catch (error) {
+        // The hand-back itself remains valid even if notification fan-out has
+        // a transient failure; opening Trailmate still reads the request.
+        logger.error(
+          JSON.stringify({
+            event: "help.request.refan.failed",
+            requestId: updated.id,
+            reason: error instanceof Error ? error.message : String(error)
+          })
+        );
+      }
+    }
+
     // Telling the learner is the point of the transition, but it must not be
     // able to fail it — the state change is already committed.
     if (parsed.data.action === "claim" || parsed.data.action === "resolve") {

@@ -9,11 +9,13 @@ import { AUTO_SCROLL_IDLE_MS } from "./shared";
 
 export function ResumeEvidenceStep({
   result,
+  teacherName,
   onBack,
   onReplace,
   onContinue
 }: {
   result: ResumeExtractionResponse;
+  teacherName: string;
   onBack: () => void;
   onReplace: () => void;
   onContinue: () => void;
@@ -31,7 +33,7 @@ export function ResumeEvidenceStep({
       title: firstRole?.role || "Work timeline",
       detail: firstRole?.organization
         ? `${firstRole.organization}${firstRole.period ? ` · ${firstRole.period}` : ""}`
-        : "No role listed yet. Maya will lean more on projects.",
+        : `No role listed yet. ${teacherName} will lean more on projects.`,
       note: firstRole?.summary || "Roles and responsibilities pulled from the resume.",
       icon: BriefcaseBusiness
     },
@@ -41,7 +43,9 @@ export function ResumeEvidenceStep({
         extraction.projects.length === 1 ? "project" : "projects"
       }`,
       title: firstProject?.name || "Project details",
-      detail: firstProject ? "Practical work Maya can ask about." : "No named projects found.",
+      detail: firstProject
+        ? `Practical work ${teacherName} can ask about.`
+        : "No named projects found.",
       note:
         firstProject?.outcome ||
         firstProject?.summary ||
@@ -95,7 +99,7 @@ export function ResumeEvidenceStep({
 
       <section className="mx-auto flex min-h-[calc(100svh-9rem)] w-full max-w-6xl flex-col items-center justify-center pb-10 pt-16 text-center sm:mt-8 sm:min-h-[34rem] sm:py-0">
         <div className="identity-stage-in w-full">
-          <p className="blueprint-label text-cream/45">Maya found your anchors</p>
+          <p className="blueprint-label text-cream/45">{teacherName} found your anchors</p>
           <h1
             className="identity-text-shine display-heading mx-auto mt-5 max-w-4xl text-cream"
             style={{ fontSize: "clamp(2.35rem, 4.7vw, 4.35rem)" }}

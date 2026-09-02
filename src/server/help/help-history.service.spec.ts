@@ -2,6 +2,23 @@ import type { PrismaService } from "../database/prisma.service";
 import { HelpHistoryService, InvalidHelpHistoryCursorError } from "./help-history.service";
 
 describe("help history", () => {
+  it("builds the urgent-help version in one database round trip", async () => {
+    const queryRaw = vi.fn().mockResolvedValue([
+      {
+        invitationCount: 3,
+        latestInvitationAt: new Date("2026-09-03T00:00:00.000Z"),
+        engagementCount: 2,
+        latestEngagementAt: new Date("2026-09-03T00:01:00.000Z")
+      }
+    ]);
+    const service = new HelpHistoryService({ $queryRaw: queryRaw } as unknown as PrismaService);
+
+    await expect(service.pollingStatus("owner-1")).resolves.toEqual({
+      version: "3:1788393600000:2:1788393660000"
+    });
+    expect(queryRaw).toHaveBeenCalledTimes(1);
+  });
+
   it("presents a learner's waiting request as their current engagement", async () => {
     const prisma = {
       helpRequest: {

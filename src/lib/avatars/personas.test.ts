@@ -8,6 +8,7 @@ import {
   MAYA,
   personaById,
   personaForSession,
+  welcomePersonaFromQuery,
   type PersonaGender
 } from "./personas";
 
@@ -164,5 +165,11 @@ describe("interviewer personas", () => {
     expect(personaById("daniel")?.name).toBe("Daniel");
     expect(personaById("nobody")).toBeNull();
     expect(personaById(null)).toBeNull();
+  });
+
+  it("recognizes every valid teacher in welcome links", () => {
+    expect(welcomePersonaFromQuery("claire")?.name).toBe("Claire");
+    expect(welcomePersonaFromQuery("maya")?.name).toBe("Maya");
+    expect(welcomePersonaFromQuery("nobody")).toBeNull();
   });
 });

@@ -110,6 +110,28 @@ function fakePrisma(profiles: Record<string, ProfilePreference> = {}) {
       rows.push(row);
       return { ...row };
     },
+    async createMany({
+      data,
+      skipDuplicates
+    }: {
+      data: Array<Pick<Row, "ownerId" | "kind" | "title" | "body" | "href" | "subjectId">>;
+      skipDuplicates?: boolean;
+    }) {
+      let count = 0;
+      for (const item of data) {
+        const clash = rows.some(
+          (row) =>
+            row.ownerId === item.ownerId &&
+            row.kind === item.kind &&
+            row.subjectId !== null &&
+            row.subjectId === item.subjectId
+        );
+        if (clash && skipDuplicates) continue;
+        await notification.create({ data: item });
+        count += 1;
+      }
+      return { count };
+    },
     async findFirst({ where }: { where: Record<string, unknown> }) {
       const row = rows.find((candidate) => matches(candidate, where));
       return row ? { ...row } : null;
@@ -157,6 +179,23 @@ function fakePrisma(profiles: Record<string, ProfilePreference> = {}) {
         ? { helpNotificationsEnabled: value, teacherNotificationsEnabled: true }
         : { ...value };
     },
+    async findMany({
+      where
+    }: {
+      where: { ownerId: { in: string[] }; helpNotificationsEnabled: boolean };
+    }) {
+      return where.ownerId.in.flatMap((ownerId) => {
+        const value = profiles[ownerId];
+        if (value === undefined) return [];
+        const preferences =
+          typeof value === "boolean"
+            ? { helpNotificationsEnabled: value, teacherNotificationsEnabled: true }
+            : value;
+        return preferences.helpNotificationsEnabled === where.helpNotificationsEnabled
+          ? [{ ownerId }]
+          : [];
+      });
+    },
     async updateMany({
       where,
       data
@@ -188,6 +227,46 @@ const opened = {
 };
 
 describe("notification delivery", () => {
+  it("records one invitation for every unique opted-in helper in bulk", async () => {
+    const { prisma, rows } = fakePrisma({
+      "helper-1": true,
+      "helper-2": true,
+      "helper-muted": false
+    });
+    const service = new NotificationService(prisma);
+
+    await expect(
+      service.deliverHelpRequestInvitations(
+        ["helper-1", "helper-2", "helper-1", "helper-muted"],
+        opened
+      )
+    ).resolves.toBe(2);
+    expect(rows.map((row) => row.ownerId)).toEqual(["helper-1", "helper-2"]);
+
+    await expect(
+      service.deliverHelpRequestInvitations(["helper-1", "helper-2"], opened)
+    ).resolves.toBe(0);
+    expect(rows).toHaveLength(2);
+  });
+
+  it("removes every losing invitation immediately after a request is claimed", async () => {
+    const { prisma, rows } = fakePrisma({ "helper-1": true, "helper-2": true });
+    const service = new NotificationService(prisma);
+    await service.deliverHelpRequestInvitations(["helper-1", "helper-2"], opened);
+
+    await expect(service.dismissHelpRequestInvitations("req-1")).resolves.toBe(2);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("removes only one helper's invitation when they decline", async () => {
+    const { prisma, rows } = fakePrisma({ "helper-1": true, "helper-2": true });
+    const service = new NotificationService(prisma);
+    await service.deliverHelpRequestInvitations(["helper-1", "helper-2"], opened);
+
+    await expect(service.dismissHelpRequestInvitations("req-1", "helper-1")).resolves.toBe(1);
+    expect(rows.map((row) => row.ownerId)).toEqual(["helper-2"]);
+  });
+
   it("records a notification for a candidate who accepts them", async () => {
     const { prisma } = fakePrisma({ "helper-1": true });
     const service = new NotificationService(prisma);
@@ -331,6 +410,23 @@ describe("notification delivery", () => {
 });
 
 describe("inbox", () => {
+  it("builds a compact polling version from one aggregate", async () => {
+    const queryRaw = vi
+      .fn()
+      .mockResolvedValue([
+        { total: 4, unread: 2, latestCreatedAt: new Date("2026-09-03T00:00:00.000Z") }
+      ]);
+    const service = new NotificationService({
+      $queryRaw: queryRaw
+    } as unknown as PrismaService);
+
+    await expect(service.pollingStatus("helper-1")).resolves.toEqual({
+      version: "4:2:1788393600000",
+      unread: 2
+    });
+    expect(queryRaw).toHaveBeenCalledTimes(1);
+  });
+
   it("removes help-request alerts after their ten-minute window", async () => {
     const { prisma, rows } = fakePrisma({ "helper-1": true });
     const service = new NotificationService(prisma);
@@ -348,6 +444,19 @@ describe("inbox", () => {
 
     await expect(service.purgeExpiredHelpRequestNotifications("helper-1", now)).resolves.toBe(1);
     expect(rows.map((row) => row.kind)).toEqual([NotificationKind.TEACHER_WELCOME]);
+  });
+
+  it("purges expired invitation rows globally for scheduled maintenance", async () => {
+    const { prisma, rows } = fakePrisma({ "helper-1": true, "helper-2": true });
+    const service = new NotificationService(prisma);
+    const now = new Date("2026-09-03T00:00:00.000Z");
+    await service.deliverHelpRequestInvitations(["helper-1", "helper-2"], opened);
+    rows.forEach((row) => {
+      row.createdAt = new Date(now.getTime() - DEFAULT_TTL_MS);
+    });
+
+    await expect(service.purgeAllExpiredHelpRequestNotifications(now)).resolves.toBe(2);
+    expect(rows).toHaveLength(0);
   });
 
   it("counts only unread and clears them together", async () => {

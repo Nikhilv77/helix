@@ -14,14 +14,18 @@ import {
 } from "./onboarding-data";
 import { BlueprintBackdrop } from "../shared/onboarding-ui";
 import { LevelStep } from "../steps/level-step";
-import { TeacherStep } from "../steps/teacher-step";
+import { DEFAULT_TEACHER_ID, TeacherStep } from "../steps/teacher-step";
 import { ResumeStep } from "../steps/resume-upload-step";
 import { ResumeEvidenceStep } from "../resume-review/resume-evidence-step";
 import { ResumeIdentityStep } from "../resume-review/resume-identity-step";
 import { ResumeReadinessStep } from "../resume-review/resume-readiness-step";
 import { ApiClientError, completeOnboarding, uploadResume } from "@/lib/api/api-client";
+import { personaById } from "@/lib/avatars/personas";
 import { pageTitle } from "@/lib/shared/seo";
 import type { Level, ResumeExtractionResponse, Role } from "@/lib/shared/types";
+import { shouldAutoRetryResumeAnalysis } from "./resume-analysis-retry";
+
+const ANALYSIS_RETRY_NOTICE_MS = 700;
 
 export function OnboardingFlow({
   replacingResume = false,
@@ -52,8 +56,11 @@ export function OnboardingFlow({
   const [uploading, setUploading] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [analysisStage, setAnalysisStage] = useState(0);
+  const [retryingAnalysis, setRetryingAnalysis] = useState(false);
   const [result, setResult] = useState<ResumeExtractionResponse | null>(initialResult);
   const [error, setError] = useState<string | null>(null);
+  const selectedTeacherName =
+    personaById(teacherId ?? DEFAULT_TEACHER_ID)?.name ?? "Your teacher";
 
   const chooseAnotherResume = useCallback(() => {
     uploadRunRef.current += 1;
@@ -61,6 +68,7 @@ export function OnboardingFlow({
     uploadAbortRef.current = null;
     setUploading(false);
     setAnalysisStage(0);
+    setRetryingAnalysis(false);
     setFile(null);
     setResult(null);
     setError(null);
@@ -90,6 +98,7 @@ export function OnboardingFlow({
 
   function acceptFile(next: File | null) {
     setError(null);
+    setRetryingAnalysis(false);
     if (!next) {
       setFile(null);
       setResult(null);
@@ -118,44 +127,68 @@ export function OnboardingFlow({
     if (!file || !role || !level || uploading) return;
     const runId = uploadRunRef.current + 1;
     uploadRunRef.current = runId;
-    const controller = new AbortController();
-    uploadAbortRef.current = controller;
-    // Without this a stalled request leaves the progress screen spinning forever.
-    const timeout = window.setTimeout(() => controller.abort("timeout"), UPLOAD_TIMEOUT_MS);
     setUploading(true);
     setAnalysisStage(0);
+    setRetryingAnalysis(false);
     setError(null);
 
     try {
-      const extracted = await uploadResume({
-        file,
-        targetRole: role,
-        level,
-        signal: controller.signal
-      });
-      if (uploadRunRef.current !== runId) return;
-      setResult(extracted);
-      setStep("identity");
-    } catch (caught) {
-      if (uploadRunRef.current !== runId) return;
-      if (controller.signal.aborted) {
-        // A manual cancel already wrote its own message.
-        if (controller.signal.reason === "timeout") {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        if (uploadRunRef.current !== runId) return;
+
+        const controller = new AbortController();
+        uploadAbortRef.current = controller;
+        // Each request gets its own ceiling so a failed first attempt cannot
+        // consume the retry's timeout budget.
+        const timeout = window.setTimeout(() => controller.abort("timeout"), UPLOAD_TIMEOUT_MS);
+
+        try {
+          const extracted = await uploadResume({
+            file,
+            targetRole: role,
+            level,
+            signal: controller.signal
+          });
+          if (uploadRunRef.current !== runId) return;
+          setResult(extracted);
+          setStep("identity");
+          return;
+        } catch (caught) {
+          if (uploadRunRef.current !== runId) return;
+
+          const browserTimedOut =
+            controller.signal.aborted && controller.signal.reason === "timeout";
+          const shouldRetry =
+            attempt === 0 && (browserTimedOut || shouldAutoRetryResumeAnalysis(caught));
+
+          if (shouldRetry) {
+            setRetryingAnalysis(true);
+            // Ensure a fast failure does not make the recovery message flash.
+            await new Promise((resolve) => window.setTimeout(resolve, ANALYSIS_RETRY_NOTICE_MS));
+            continue;
+          }
+
+          // A manual cancel already updated or left the current screen.
+          if (controller.signal.aborted && !browserTimedOut) return;
+
           setError(
-            "Reading this resume took too long. Try again, or export a text-based PDF if this one is a scan."
+            browserTimedOut
+              ? "Reading this resume took too long. Try again, or export a text-based PDF if this one is a scan."
+              : caught instanceof ApiClientError
+                ? caught.message
+                : "Trailgrad could not process this resume. Try the original PDF or DOCX file."
           );
+          return;
+        } finally {
+          window.clearTimeout(timeout);
+          if (uploadAbortRef.current === controller) uploadAbortRef.current = null;
         }
-      } else {
-        setError(
-          caught instanceof ApiClientError
-            ? caught.message
-            : "Trailgrad could not process this resume. Try the original PDF or DOCX file."
-        );
       }
     } finally {
-      window.clearTimeout(timeout);
-      if (uploadAbortRef.current === controller) uploadAbortRef.current = null;
-      if (uploadRunRef.current === runId) setUploading(false);
+      if (uploadRunRef.current === runId) {
+        setUploading(false);
+        setRetryingAnalysis(false);
+      }
     }
   }, [file, level, role, uploading]);
 
@@ -168,7 +201,9 @@ export function OnboardingFlow({
     try {
       await completeOnboarding(result, teacherId);
       router.push(
-        replacingResume ? "/profile" : `/?welcome=${encodeURIComponent(teacherId ?? "maya")}`
+        replacingResume
+          ? "/profile"
+          : `/?welcome=${encodeURIComponent(teacherId ?? DEFAULT_TEACHER_ID)}`
       );
       router.refresh();
     } catch (caught) {
@@ -246,6 +281,7 @@ export function OnboardingFlow({
                 error={error}
                 inputRef={fileInput}
                 uploading={uploading}
+                retryingAnalysis={retryingAnalysis}
                 activeStage={analysisStage}
                 onFile={acceptFile}
                 onChooseAnother={chooseAnotherResume}
@@ -259,6 +295,7 @@ export function OnboardingFlow({
                   setError(null);
                   setUploading(false);
                   setAnalysisStage(0);
+                  setRetryingAnalysis(false);
                   if (fileInput.current) fileInput.current.value = "";
                   setStep("level");
                 }}
@@ -267,6 +304,7 @@ export function OnboardingFlow({
             {step === "identity" && result ? (
               <ResumeIdentityStep
                 result={result}
+                teacherName={selectedTeacherName}
                 onReplace={() => {
                   chooseAnotherResume();
                   setStep("resume");
@@ -277,12 +315,14 @@ export function OnboardingFlow({
             {step === "evidence" && result ? (
               <ResumeEvidenceStep
                 result={result}
+                teacherName={selectedTeacherName}
                 onBack={() => {
                   setResult(null);
                   setFile(null);
                   setError(null);
                   setUploading(false);
                   setAnalysisStage(0);
+                  setRetryingAnalysis(false);
                   if (fileInput.current) fileInput.current.value = "";
                   setStep("resume");
                 }}
@@ -296,6 +336,7 @@ export function OnboardingFlow({
             {step === "readiness" && result ? (
               <ResumeReadinessStep
                 result={result}
+                teacherName={selectedTeacherName}
                 onBack={() => setStep("evidence")}
                 replacingResume={replacingResume}
                 continuing={completing}

@@ -7,7 +7,6 @@ import { findQuestion } from "@/lib/dsa/dsa";
 import { getAppContainer } from "@/server/app-container";
 import { Logger } from "@/server/common/logger";
 import { HelpRequestError } from "@/server/help/help-request.types";
-import { NotificationKind } from "@/server/notifications/notification.service";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/server/interview/owner";
@@ -17,15 +16,6 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const logger = new Logger("HelpRequest");
-
-/**
- * How many helpers hear about one request.
- *
- * Notifying everyone who ever solved a problem is how a helper pool learns to
- * ignore the notifications. The best few get asked; if none of them accept, a
- * later re-fan can widen it.
- */
-const HELPERS_TO_NOTIFY = 3;
 
 const selectionSchema = z
   .object({
@@ -94,16 +84,13 @@ export async function POST(request: NextRequest) {
     if (!detail) throw new ApiRouteError(404, "DSA_QUESTION_NOT_FOUND", "Question not found");
     const question = detail.question;
 
-    // Asking for a human is cheap for the learner and expensive for whoever
-    // answers, so it is throttled like any other outbound-effect endpoint.
     const app = getAppContainer();
     await getSharedGuard(app.config).enforce(RATE_LIMIT_POLICIES.helpRequest, ownerId);
 
     const helpers = await app.helperMatchingService.findHelpers(
       question.slug,
       ownerId,
-      parsed.data.language,
-      HELPERS_TO_NOTIFY
+      parsed.data.language
     );
     if (helpers.length === 0) {
       throw new ApiRouteError(
@@ -142,33 +129,15 @@ export async function POST(request: NextRequest) {
         : `They are working in ${parsed.data.language} with ${failing} failing ${
             failing === 1 ? "test" : "tests"
           }.`;
-    const deliveries = await Promise.allSettled(
-      helpers.map((helper) =>
-        app.notificationDispatcher.dispatch({
-          ownerId: helper.ownerId,
-          kind: NotificationKind.HELP_REQUEST_OPENED,
-          title: `${learner.label} asked for a mate for ${question.title}`,
-          body,
-          href: `/help?request=${helpRequest.id}`,
-          subjectId: helpRequest.id
-        })
-      )
+    const invitationsSent = await app.notificationService.deliverHelpRequestInvitations(
+      helpers.map((helper) => helper.ownerId),
+      {
+        title: `${learner.label} asked for a mate for ${question.title}`,
+        body,
+        href: `/help?request=${helpRequest.id}`,
+        subjectId: helpRequest.id
+      }
     );
-    const invitationsSent = deliveries.filter(
-      (delivery) => delivery.status === "fulfilled" && delivery.value.recorded
-    ).length;
-    const failed = deliveries.filter((delivery) => delivery.status === "rejected").length;
-
-    if (failed > 0) {
-      logger.error(
-        JSON.stringify({
-          event: "help.request.fanout.partial_failure",
-          requestId: helpRequest.id,
-          failed,
-          invitationsSent
-        })
-      );
-    }
 
     if (invitationsSent === 0) {
       await app.helpRequestService.cancel(helpRequest.id, ownerId).catch((error) => {
@@ -262,7 +231,18 @@ export async function DELETE(request: NextRequest) {
       throw new ApiRouteError(400, "BAD_REQUEST", "A valid request id is required");
     }
 
-    const cancelled = await getAppContainer().helpRequestService.cancel(id, ownerId);
+    const app = getAppContainer();
+    const cancelled = await app.helpRequestService.cancel(id, ownerId);
+    await app.notificationService.dismissHelpRequestInvitations(cancelled.id).catch((error) => {
+      logger.error(
+        JSON.stringify({
+          event: "help.invitation.cleanup.failed",
+          requestId: cancelled.id,
+          action: "cancel",
+          reason: error instanceof Error ? error.message : String(error)
+        })
+      );
+    });
     return apiSuccess({ id: cancelled.id, status: cancelled.status });
   } catch (error) {
     return apiError(translate(error), request.nextUrl.pathname);

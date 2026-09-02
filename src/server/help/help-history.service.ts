@@ -36,6 +36,13 @@ interface TopHelperAggregateRow {
   thankedCount: number;
 }
 
+interface HelpPollingStatusRow {
+  invitationCount: number;
+  latestInvitationAt: Date | null;
+  engagementCount: number;
+  latestEngagementAt: Date | null;
+}
+
 interface HistoryCursor {
   createdAt: string;
   id: string;
@@ -48,6 +55,52 @@ export class HelpHistoryService {
   private topHelpersInFlight: Promise<TopPeerHelper[]> | null = null;
 
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Cheap change token for the 15-second urgent-help loop.
+   *
+   * Invitation rows were already materialized when the learner asked, so this
+   * avoids rerunning matching, inbox presentation, profile hydration, and
+   * active-session reconciliation when nothing changed.
+   */
+  async pollingStatus(ownerId: string): Promise<{ version: string }> {
+    const rows = await this.prisma.$queryRaw<HelpPollingStatusRow[]>(Prisma.sql`
+      WITH invitations AS (
+        SELECT
+          COUNT(*)::int AS "invitationCount",
+          MAX(notification."createdAt") AS "latestInvitationAt"
+        FROM "Notification" notification
+        WHERE notification."ownerId" = ${ownerId}
+          AND notification."kind" = 'HELP_REQUEST_OPENED'::"NotificationKind"
+      ),
+      engagements AS (
+        SELECT
+          COUNT(*)::int AS "engagementCount",
+          MAX(request."updatedAt") AS "latestEngagementAt"
+        FROM "HelpRequest" request
+        WHERE request."learnerId" = ${ownerId}
+           OR request."helperId" = ${ownerId}
+      )
+      SELECT invitations.*, engagements.*
+      FROM invitations
+      CROSS JOIN engagements
+    `);
+    const row = rows[0] ?? {
+      invitationCount: 0,
+      latestInvitationAt: null,
+      engagementCount: 0,
+      latestEngagementAt: null
+    };
+
+    return {
+      version: [
+        row.invitationCount,
+        row.latestInvitationAt?.getTime() ?? 0,
+        row.engagementCount,
+        row.latestEngagementAt?.getTime() ?? 0
+      ].join(":")
+    };
+  }
 
   async overview(ownerId: string): Promise<HelpOverview> {
     const [counts, activeConversation, topHelpers, viewer] = await Promise.all([

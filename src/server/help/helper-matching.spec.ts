@@ -1,4 +1,10 @@
-import { rankCandidates, scoreCandidate, type HelperCandidate } from "./helper-matching";
+import type { PrismaService } from "../database/prisma.service";
+import {
+  HelperMatchingService,
+  rankCandidates,
+  scoreCandidate,
+  type HelperCandidate
+} from "./helper-matching";
 
 const NOW = new Date("2026-08-26T12:00:00Z");
 
@@ -159,5 +165,23 @@ describe("helper scoring", () => {
     const current = scoreCandidate(candidate({ completedAt: NOW }), NOW);
 
     expect(skewed).toBeLessThanOrEqual(current);
+  });
+});
+
+describe("helper discovery", () => {
+  it("returns the entire eligible pool instead of truncating the fan-out", async () => {
+    const candidates = Array.from({ length: 12 }, (_, index) =>
+      candidate({ ownerId: `helper-${index}`, completedAt: daysAgo(index) })
+    );
+    const queryRaw = vi.fn().mockResolvedValue(candidates);
+    const service = new HelperMatchingService({
+      $queryRawUnsafe: queryRaw
+    } as unknown as PrismaService);
+
+    const helpers = await service.findHelpers("two-sum", "learner", "javascript");
+
+    expect(helpers).toHaveLength(12);
+    expect(new Set(helpers.map((helper) => helper.ownerId)).size).toBe(12);
+    expect(queryRaw.mock.calls[0]?.[0]).toContain('"helpHelperSolvedQuestion"');
   });
 });

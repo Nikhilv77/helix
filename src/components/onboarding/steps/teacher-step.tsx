@@ -22,7 +22,7 @@ const AvatarStage = dynamic(
 
 const headingWords = ["Who", "should", "teach", "you?"];
 
-const DEFAULT_TEACHER_ID = "sophia";
+export const DEFAULT_TEACHER_ID = "sophia";
 const FRAMING = "default" as const;
 
 /** Only the centre stage plus its two neighbours are ever mounted. */
@@ -68,15 +68,21 @@ export function TeacherStep({
     const defaultIndex = ALL_PERSONAS.findIndex((persona) => persona.id === DEFAULT_TEACHER_ID);
     return defaultIndex === -1 ? 0 : defaultIndex;
   });
-  const [motion, setMotion] = useState<"previous" | "next" | null>(null);
   const { state, speak, stop, awaitingGesture } = useMayaVoice();
   const wide = useWideViewport();
   const introducedRef = useRef(false);
+  const pendingTeacherRef = useRef<{
+    persona: InterviewerPersona;
+    previousIndex: number;
+  } | null>(null);
+  const [loadingTeacherId, setLoadingTeacherId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const focused = ALL_PERSONAS[index]!;
   const { left, right } = neighbours(index);
   const speaking = state === "speaking" || state === "loading";
   const voiceBroken = state === "unavailable";
+  const loadingTeacher = loadingTeacherId !== null;
 
   // Centring a teacher is the selection. There is no separate commit step —
   // whoever is on the stage when Continue is pressed is the one who teaches.
@@ -94,24 +100,47 @@ export function TeacherStep({
 
   const go = useCallback(
     (nextIndex: number) => {
+      if (loadingTeacher) return;
       const count = ALL_PERSONAS.length;
       const wrapped = (nextIndex + count) % count;
-      const direction =
-        (nextIndex - index + count) % count === 1 || (index === count - 1 && wrapped === 0)
-          ? "next"
-          : "previous";
+      const persona = ALL_PERSONAS[wrapped]!;
 
-      // Clear the animation for one frame so a run of clicks in the same
-      // direction still gets its own handoff rather than snapping to the new
-      // teacher. The canvas remains mounted throughout.
-      setMotion(null);
-      window.requestAnimationFrame(() => {
-        setIndex(wrapped);
-        setMotion(direction);
-      });
-      greet(ALL_PERSONAS[wrapped]!);
+      // Cover the previous canvas with a stable loading state while the next
+      // GLB decodes. There is intentionally no card motion during this handoff.
+      stop();
+      pendingTeacherRef.current = { persona, previousIndex: index };
+      setLoadError(null);
+      setLoadingTeacherId(persona.id);
+      setIndex(wrapped);
     },
-    [greet, index]
+    [index, loadingTeacher, stop]
+  );
+
+  const handleModelReady = useCallback(
+    (modelUrl: string) => {
+      const pending = pendingTeacherRef.current;
+      if (!pending || pending.persona.model !== modelUrl) return;
+      pendingTeacherRef.current = null;
+      setLoadingTeacherId(null);
+      greet(pending.persona);
+    },
+    [greet]
+  );
+
+  const handleModelError = useCallback((modelUrl: string) => {
+    const pending = pendingTeacherRef.current;
+    if (!pending || pending.persona.model !== modelUrl) return;
+    pendingTeacherRef.current = null;
+    setLoadingTeacherId(null);
+    setLoadError(`${pending.persona.name} couldn't load. Try again.`);
+    setIndex(pending.previousIndex);
+  }, []);
+
+  useEffect(
+    () => () => {
+      pendingTeacherRef.current = null;
+    },
+    []
   );
 
   useEffect(() => {
@@ -149,16 +178,16 @@ export function TeacherStep({
 
       <div className="relative mx-auto mt-7 flex w-full max-w-6xl items-center justify-center gap-3 sm:gap-6">
         {wide ? (
-          <Peek persona={ALL_PERSONAS[left]!} side="left" onClick={() => go(index - 1)} />
+          <Peek
+            persona={ALL_PERSONAS[left]!}
+            side="left"
+            disabled={loadingTeacher}
+            onClick={() => go(index - 1)}
+          />
         ) : null}
 
         <div className="relative w-full max-w-[20rem] shrink-0 sm:max-w-[23rem]">
-          <div
-            className={[
-              "teacher-carousel-scene relative h-[20.5rem] overflow-hidden rounded-[2rem] sm:h-[25rem]",
-              motion ? `teacher-carousel-scene-${motion}` : ""
-            ].join(" ")}
-          >
+          <div className="teacher-carousel-scene relative h-[20.5rem] overflow-hidden rounded-[2rem] sm:h-[25rem]">
             <div className="teacher-carousel-orbit" aria-hidden="true" />
             <AvatarStage
               agentTrack={null}
@@ -170,10 +199,26 @@ export function TeacherStep({
               showStatus={false}
               feather={false}
               introducing={state === "speaking"}
+              onModelReady={handleModelReady}
+              onModelError={handleModelError}
             />
+
+            {loadingTeacher ? (
+              <div
+                role="status"
+                aria-live="polite"
+                className="absolute inset-0 z-20 grid place-items-center bg-[#15161a]"
+              >
+                <div className="flex flex-col items-center gap-3 text-cream/60">
+                  <Loader2 size={24} className="animate-spin text-[#F26E01]" aria-hidden="true" />
+                  <span className="blueprint-label">LOADING {focused.name.toUpperCase()}...</span>
+                </div>
+              </div>
+            ) : null}
 
             <button
               type="button"
+              disabled={loadingTeacher}
               onClick={() => (speaking ? stop() : greet(focused))}
               aria-label={speaking ? `Stop ${focused.name}` : `Hear ${focused.name}`}
               className={[
@@ -207,27 +252,37 @@ export function TeacherStep({
         </div>
 
         {wide ? (
-          <Peek persona={ALL_PERSONAS[right]!} side="right" onClick={() => go(index + 1)} />
+          <Peek
+            persona={ALL_PERSONAS[right]!}
+            side="right"
+            disabled={loadingTeacher}
+            onClick={() => go(index + 1)}
+          />
         ) : null}
 
-        <Arrow side="left" onClick={() => go(index - 1)} />
-        <Arrow side="right" onClick={() => go(index + 1)} />
+        <Arrow side="left" disabled={loadingTeacher} onClick={() => go(index - 1)} />
+        <Arrow side="right" disabled={loadingTeacher} onClick={() => go(index + 1)} />
       </div>
 
       <div className="mx-auto mt-7 flex w-full max-w-5xl flex-col items-center gap-4">
         <p className="min-h-5 text-[12.5px] text-cream/50" role="status">
-          {voiceBroken
-            ? "Voice preview is unavailable right now — you can still choose."
-            : awaitingGesture
-              ? `Tap the orange sound button to hear ${focused.name}.`
-              : !introducedRef.current
-                ? `Tap the sound button to hear ${focused.name}.`
-                : `${focused.name} will guide you from here.`}
+          {loadingTeacher
+            ? `Loading ${focused.name}...`
+            : loadError
+              ? loadError
+              : voiceBroken
+                ? "Voice preview is unavailable right now — you can still choose."
+                : awaitingGesture
+                  ? `Tap the orange sound button to hear ${focused.name}.`
+                  : !introducedRef.current
+                    ? `Tap the sound button to hear ${focused.name}.`
+                    : `${focused.name} will guide you from here.`}
         </p>
 
         <button
           type="button"
-          className={`${PRIMARY_BUTTON} teacher-carousel-continue relative overflow-hidden font-medium`}
+          className={`${PRIMARY_BUTTON} teacher-carousel-continue relative overflow-hidden font-medium disabled:cursor-wait disabled:opacity-55`}
+          disabled={loadingTeacher}
           onClick={() => {
             stop();
             onContinue();
@@ -247,10 +302,12 @@ export function TeacherStep({
 function Peek({
   persona,
   side,
+  disabled,
   onClick
 }: {
   persona: InterviewerPersona;
   side: "left" | "right";
+  disabled?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -258,6 +315,7 @@ function Peek({
       type="button"
       aria-label={`Show ${persona.name}`}
       onClick={onClick}
+      disabled={disabled}
       className={[
         "teacher-carousel-peek group relative hidden h-[16.5rem] w-[12rem] shrink-0 overflow-hidden rounded-[1.8rem] transition duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] lg:block",
         side === "left" ? "origin-right" : "origin-left",
@@ -282,14 +340,23 @@ function Peek({
   );
 }
 
-function Arrow({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
+function Arrow({
+  side,
+  disabled,
+  onClick
+}: {
+  side: "left" | "right";
+  disabled?: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-label={side === "left" ? "Previous teacher" : "Next teacher"}
       className={[
-        "absolute top-[9.5rem] z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-[#17181b]/95 text-cream/70 shadow-[0_10px_30px_rgba(0,0,0,0.25)] transition duration-300 hover:scale-110 hover:bg-[#222328] hover:text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#F26E01] sm:top-[12rem] lg:bg-white/[0.055] lg:backdrop-blur-xl lg:hover:bg-white/[0.12]",
+        "absolute top-[9.5rem] z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-[#17181b]/95 text-cream/70 shadow-[0_10px_30px_rgba(0,0,0,0.25)] transition duration-300 hover:scale-110 hover:bg-[#222328] hover:text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#F26E01] disabled:cursor-wait disabled:opacity-45 disabled:hover:scale-100 sm:top-[12rem] lg:bg-white/[0.055] lg:backdrop-blur-xl lg:hover:bg-white/[0.12]",
         side === "left" ? "left-0 sm:-left-2" : "right-0 sm:-right-2"
       ].join(" ")}
     >

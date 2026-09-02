@@ -10,8 +10,9 @@ import {
   useState,
   type ReactNode
 } from "react";
+import { WORKSPACE_HELP_CHANGED_EVENT } from "@/lib/help/help-ui-events";
 
-const POLL_MS = 15_000;
+const POLL_BACKOFF_MS = [60_000, 120_000, 300_000] as const;
 
 export interface NotificationSender {
   label: string;
@@ -44,6 +45,7 @@ export function WorkspaceNotificationPollingProvider({ children }: { children: R
   const [unread, setUnread] = useState(0);
   const mountedRef = useRef(false);
   const controllerRef = useRef<AbortController | null>(null);
+  const statusControllerRef = useRef<AbortController | null>(null);
   const refreshRef = useRef<Promise<void> | null>(null);
   const refreshQueuedRef = useRef(false);
   const markingIdsRef = useRef(new Set<string>());
@@ -88,24 +90,102 @@ export function WorkspaceNotificationPollingProvider({ children }: { children: R
 
   useEffect(() => {
     mountedRef.current = true;
-    void refresh();
+    let statusVersion: string | null = null;
+    let backoffIndex = 0;
+    let timer: number | null = null;
+    let statusInFlight = false;
+    let forceRefreshQueued = false;
+
+    function scheduleNext() {
+      if (timer !== null) window.clearTimeout(timer);
+      if (!mountedRef.current || document.visibilityState !== "visible") return;
+      timer = window.setTimeout(() => void checkStatus(), POLL_BACKOFF_MS[backoffIndex]);
+    }
+
+    async function checkStatus(forceFullRefresh = false): Promise<void> {
+      if (!mountedRef.current || document.visibilityState !== "visible") return;
+      if (statusInFlight) {
+        // Focus can race a scheduled check. Queue only the stronger operation;
+        // unchanged background ticks never need to stack up.
+        if (forceFullRefresh) forceRefreshQueued = true;
+        return;
+      }
+
+      if (timer !== null) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
+      statusInFlight = true;
+      let changed = false;
+      const controller = new AbortController();
+      statusControllerRef.current = controller;
+
+      try {
+        const response = await fetch("/api/notifications/status", { signal: controller.signal });
+        const payload = await response.json().catch(() => null);
+        if (controller.signal.aborted || !mountedRef.current || !response.ok || !payload?.success) {
+          return;
+        }
+
+        const nextVersion = String(payload.data?.version ?? "");
+        changed = statusVersion !== null && nextVersion !== statusVersion;
+        statusVersion = nextVersion;
+        setUnread(payload.data?.unread ?? 0);
+
+        if (forceFullRefresh || changed) await refresh();
+        backoffIndex =
+          forceFullRefresh || changed ? 0 : Math.min(backoffIndex + 1, POLL_BACKOFF_MS.length - 1);
+      } catch {
+        // Preserve the current inbox and retry on the next scheduled check.
+        if (forceFullRefresh) await refresh();
+      } finally {
+        if (statusControllerRef.current === controller) statusControllerRef.current = null;
+        statusInFlight = false;
+
+        if (forceRefreshQueued && mountedRef.current) {
+          forceRefreshQueued = false;
+          void checkStatus(true);
+        } else {
+          scheduleNext();
+        }
+      }
+    }
+
+    // First paint still loads the complete inbox. Subsequent idle work is only
+    // the compact status aggregate until its version changes.
+    void checkStatus(true);
 
     const refreshVisible = () => {
-      if (document.visibilityState === "visible") void refresh();
-      else controllerRef.current?.abort();
+      if (document.visibilityState === "visible") {
+        backoffIndex = 0;
+        void checkStatus(true);
+      } else {
+        if (timer !== null) window.clearTimeout(timer);
+        timer = null;
+        controllerRef.current?.abort();
+        statusControllerRef.current?.abort();
+      }
     };
-    const timer = window.setInterval(refreshVisible, POLL_MS);
+    const refreshUrgentHelp = () => {
+      backoffIndex = 0;
+      void checkStatus(true);
+    };
     window.addEventListener("focus", refreshVisible);
+    window.addEventListener(WORKSPACE_HELP_CHANGED_EVENT, refreshUrgentHelp);
     document.addEventListener("visibilitychange", refreshVisible);
 
     return () => {
       mountedRef.current = false;
-      window.clearInterval(timer);
+      if (timer !== null) window.clearTimeout(timer);
       window.removeEventListener("focus", refreshVisible);
+      window.removeEventListener(WORKSPACE_HELP_CHANGED_EVENT, refreshUrgentHelp);
       document.removeEventListener("visibilitychange", refreshVisible);
       controllerRef.current?.abort();
+      statusControllerRef.current?.abort();
       controllerRef.current = null;
+      statusControllerRef.current = null;
       refreshQueuedRef.current = false;
+      forceRefreshQueued = false;
     };
   }, [refresh]);
 

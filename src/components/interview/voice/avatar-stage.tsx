@@ -44,6 +44,10 @@ interface AvatarStageProps {
   feather?: boolean;
   /** Plays a short smile-and-nod gesture at the start of an introduction. */
   introducing?: boolean;
+  /** Fires after a requested model has replaced the previous model on canvas. */
+  onModelReady?: (url: string) => void;
+  /** Fires when a requested model could not be loaded. */
+  onModelError?: (url: string) => void;
   /**
    * Set false to park the render loop while the avatar is still mounted. The
    * marketing hero is `position: sticky`, so it never leaves the viewport and
@@ -192,6 +196,8 @@ export function AvatarStage({
   showStatus = true,
   feather = true,
   introducing = false,
+  onModelReady,
+  onModelError,
   rig = DEFAULT_RIG
 }: AvatarStageProps) {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -216,6 +222,12 @@ export function AvatarStage({
   rigRef.current = rig;
   const introducingRef = useRef(introducing);
   introducingRef.current = introducing;
+  // Model loading outlives ordinary React renders. Keep the latest callback
+  // without rebuilding the renderer whenever a parent callback changes.
+  const onModelReadyRef = useRef(onModelReady);
+  onModelReadyRef.current = onModelReady;
+  const onModelErrorRef = useRef(onModelError);
+  onModelErrorRef.current = onModelError;
   const urlRef = useRef(url);
   urlRef.current = url;
   const syncRef = useRef<(() => void) | null>(null);
@@ -455,10 +467,14 @@ export function AvatarStage({
           idleSince = performance.now();
           sync();
           setStatus("ready");
+          onModelReadyRef.current?.(nextUrl);
         },
         undefined,
         () => {
-          if (!disposed && request === modelRequest) setStatus("failed");
+          if (!disposed && request === modelRequest) {
+            setStatus("failed");
+            onModelErrorRef.current?.(nextUrl);
+          }
         }
       );
     }

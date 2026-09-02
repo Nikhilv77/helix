@@ -13,6 +13,7 @@ import {
 
 import type { CurrentPeerHelpEngagement } from "@/lib/help/help-history";
 import type { HelpInboxData } from "@/lib/help/help-inbox";
+import { announceWorkspaceHelpChanged } from "@/lib/help/help-ui-events";
 
 const POLL_MS = 15_000;
 
@@ -53,6 +54,7 @@ export function WorkspaceHelpPollingProvider({ children }: { children: ReactNode
   const inFlightRef = useRef<Promise<WorkspaceHelpSnapshot> | null>(null);
   const queuedRef = useRef(false);
   const controllerRef = useRef<AbortController | null>(null);
+  const statusControllerRef = useRef<AbortController | null>(null);
 
   const commit = useCallback((next: WorkspaceHelpSnapshot) => {
     snapshotRef.current = next;
@@ -119,13 +121,65 @@ export function WorkspaceHelpPollingProvider({ children }: { children: ReactNode
 
   useEffect(() => {
     mountedRef.current = true;
-    void refresh();
+    let statusVersion: string | null = null;
+    let statusInFlight = false;
+    let statusQueued = false;
+    let forceRefreshQueued = false;
+
+    const checkStatus = async (forceFullRefresh = false): Promise<void> => {
+      if (!mountedRef.current || document.visibilityState !== "visible") return;
+      if (statusInFlight) {
+        if (forceFullRefresh) {
+          statusQueued = true;
+          forceRefreshQueued = true;
+        }
+        return;
+      }
+
+      statusInFlight = true;
+      let shouldRefresh = forceFullRefresh;
+      const controller = new AbortController();
+      statusControllerRef.current = controller;
+      try {
+        const status = await readApiData<{ version: string }>(
+          "/api/help/status",
+          controller.signal
+        );
+        if (controller.signal.aborted || !mountedRef.current) return;
+
+        const changed = statusVersion !== null && status.version !== statusVersion;
+        shouldRefresh ||= changed;
+        statusVersion = status.version;
+        if (shouldRefresh) await refresh();
+        if (changed) announceWorkspaceHelpChanged();
+      } catch {
+        // A missed status tick is harmless; the next tick or focus retries it.
+        if (forceFullRefresh) await refresh();
+      } finally {
+        if (statusControllerRef.current === controller) statusControllerRef.current = null;
+        statusInFlight = false;
+        if (statusQueued && mountedRef.current) {
+          const queuedForce = forceRefreshQueued;
+          statusQueued = false;
+          forceRefreshQueued = false;
+          void checkStatus(queuedForce);
+        }
+      }
+    };
+
+    // Establish the cheap version token before the initial full snapshot. An
+    // event racing these calls is included by the full snapshot and cannot be
+    // skipped by the next status comparison.
+    void checkStatus(true);
 
     const refreshVisible = () => {
-      if (document.visibilityState === "visible") void refresh();
-      else controllerRef.current?.abort();
+      if (document.visibilityState === "visible") void checkStatus(true);
+      else {
+        controllerRef.current?.abort();
+        statusControllerRef.current?.abort();
+      }
     };
-    const timer = window.setInterval(refreshVisible, POLL_MS);
+    const timer = window.setInterval(() => void checkStatus(), POLL_MS);
     window.addEventListener("focus", refreshVisible);
     document.addEventListener("visibilitychange", refreshVisible);
 
@@ -135,8 +189,12 @@ export function WorkspaceHelpPollingProvider({ children }: { children: ReactNode
       window.removeEventListener("focus", refreshVisible);
       document.removeEventListener("visibilitychange", refreshVisible);
       controllerRef.current?.abort();
+      statusControllerRef.current?.abort();
       controllerRef.current = null;
+      statusControllerRef.current = null;
       queuedRef.current = false;
+      statusQueued = false;
+      forceRefreshQueued = false;
     };
   }, [refresh]);
 

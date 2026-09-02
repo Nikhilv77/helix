@@ -60,6 +60,14 @@ export interface DispatchRecord {
   created: boolean;
 }
 
+export interface HelpRequestInvitationInput {
+  title: string;
+  body: string;
+  href?: string;
+  /** Required so replaying a fan-out cannot create duplicate invitations. */
+  subjectId: string;
+}
+
 export interface EmailDeliveryRecord {
   id: string;
   ownerId: string;
@@ -79,6 +87,12 @@ export interface EmailDeliveryRecord {
 export interface EmailDeliveryClaim {
   token: string;
   notification: EmailDeliveryRecord;
+}
+
+interface NotificationPollingStatusRow {
+  total: number;
+  unread: number;
+  latestCreatedAt: Date | null;
 }
 
 /**
@@ -105,6 +119,75 @@ export function isOptional(kind: NotificationKind): boolean {
  */
 export class NotificationService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Persist one help invitation for every currently opted-in recipient.
+   *
+   * Matching can return the whole eligible pool, so this deliberately uses two
+   * set-based queries instead of performing one preference read and one insert
+   * per helper. The second preference check closes the race where somebody
+   * opts out after matching but before delivery.
+   */
+  async deliverHelpRequestInvitations(
+    ownerIds: readonly string[],
+    input: HelpRequestInvitationInput
+  ): Promise<number> {
+    const uniqueOwnerIds = [...new Set(ownerIds.filter(Boolean))];
+    if (uniqueOwnerIds.length === 0) return 0;
+
+    const recipients = await this.prisma.candidateProfile.findMany({
+      where: {
+        ownerId: { in: uniqueOwnerIds },
+        helpNotificationsEnabled: true
+      },
+      select: { ownerId: true }
+    });
+    if (recipients.length === 0) return 0;
+
+    const { count } = await this.prisma.notification.createMany({
+      data: recipients.map(({ ownerId }) => ({
+        ownerId,
+        kind: NotificationKind.HELP_REQUEST_OPENED,
+        title: input.title,
+        body: input.body,
+        href: input.href ?? null,
+        subjectId: input.subjectId
+      })),
+      skipDuplicates: true
+    });
+
+    return count;
+  }
+
+  /** One indexed aggregate for the background change detector. */
+  async pollingStatus(ownerId: string): Promise<{ version: string; unread: number }> {
+    const rows = await this.prisma.$queryRaw<NotificationPollingStatusRow[]>(Prisma.sql`
+      SELECT
+        COUNT(*)::int AS "total",
+        COUNT(*) FILTER (WHERE notification."readAt" IS NULL)::int AS "unread",
+        MAX(notification."createdAt") AS "latestCreatedAt"
+      FROM "Notification" notification
+      WHERE notification."ownerId" = ${ownerId}
+    `);
+    const row = rows[0] ?? { total: 0, unread: 0, latestCreatedAt: null };
+
+    return {
+      version: `${row.total}:${row.unread}:${row.latestCreatedAt?.getTime() ?? 0}`,
+      unread: row.unread
+    };
+  }
+
+  /** Remove an invitation once it cannot be acted on anymore. */
+  async dismissHelpRequestInvitations(subjectId: string, ownerId?: string): Promise<number> {
+    const { count } = await this.prisma.notification.deleteMany({
+      where: {
+        kind: NotificationKind.HELP_REQUEST_OPENED,
+        subjectId,
+        ...(ownerId ? { ownerId } : {})
+      }
+    });
+    return count;
+  }
 
   /**
    * Record a notification, honouring the recipient's opt-out.
@@ -339,6 +422,17 @@ export class NotificationService {
       }
     });
 
+    return count;
+  }
+
+  /** Scheduled global cleanup; never runs in a user-facing polling request. */
+  async purgeAllExpiredHelpRequestNotifications(now = new Date()): Promise<number> {
+    const { count } = await this.prisma.notification.deleteMany({
+      where: {
+        kind: NotificationKind.HELP_REQUEST_OPENED,
+        createdAt: { lte: new Date(now.getTime() - DEFAULT_TTL_MS) }
+      }
+    });
     return count;
   }
 

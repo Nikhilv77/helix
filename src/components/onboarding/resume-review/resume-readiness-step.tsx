@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Tags, Target } from "lucide-react";
+import { ArrowRight, Loader2, Tags, Target } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { PRIMARY_BUTTON } from "../flow/onboarding-data";
 import { BackButton } from "../shared/onboarding-ui";
@@ -13,14 +13,23 @@ import {
   WordRevealLine
 } from "./shared";
 
+const entryStages = [
+  "SAVING YOUR PROFILE...",
+  "PREPARING YOUR TRAIL...",
+  "SETTING UP YOUR WORKSPACE...",
+  "ALMOST THERE..."
+];
+
 export function ResumeReadinessStep({
   result,
+  teacherName,
   onBack,
   onContinue,
   continuing = false,
   error = null
 }: {
   result: ResumeExtractionResponse;
+  teacherName: string;
   replacingResume: boolean;
   onBack: () => void;
   onContinue: () => void;
@@ -35,6 +44,7 @@ export function ResumeReadinessStep({
   const finalAutoScrollRanRef = useRef(false);
   const [visibleSkillCount, setVisibleSkillCount] = useState(0);
   const [visibleFocusCount, setVisibleFocusCount] = useState(0);
+  const [entryStage, setEntryStage] = useState(0);
   const skillsTitle = useWordReveal("Good, your skills are in great shape.", true, 180);
   const showRouteTitle = skillsTitle.done && visibleSkillCount >= Math.max(visibleSkills.length, 1);
   const routeTitle = useWordReveal("We have prepared a trail for you.", showRouteTitle, 360);
@@ -115,6 +125,18 @@ export function ResumeReadinessStep({
     return () => window.clearTimeout(timer);
   }, [showCta]);
 
+  useEffect(() => {
+    setEntryStage(0);
+    if (!continuing) return;
+
+    const timer = window.setInterval(
+      () => setEntryStage((current) => Math.min(current + 1, entryStages.length - 1)),
+      1_400
+    );
+
+    return () => window.clearInterval(timer);
+  }, [continuing]);
+
   return (
     <div className="relative w-full">
       <div className="absolute left-0 top-0 z-10">
@@ -186,7 +208,7 @@ export function ResumeReadinessStep({
                 ))
               ) : visibleFocusCount ? (
                 <li className="step-in text-center text-base leading-7 text-cream/58 sm:text-[1.0625rem]">
-                  Maya will start with a broad baseline.
+                  {teacherName} will start with a broad baseline.
                 </li>
               ) : null}
             </ol>
@@ -204,6 +226,9 @@ export function ResumeReadinessStep({
               >
                 {continuing ? "Entering..." : "Enter"} <ArrowRight size={15} />
               </button>
+              <div className="min-h-5">
+                {continuing ? <EntryProgress activeStage={entryStage} /> : null}
+              </div>
               {error ? (
                 <p className="max-w-sm text-center text-base font-semibold leading-relaxed text-cream/68">
                   {error}
@@ -213,6 +238,21 @@ export function ResumeReadinessStep({
           ) : null}
         </div>
       </section>
+    </div>
+  );
+}
+
+function EntryProgress({ activeStage }: { activeStage: number }) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="blueprint-label flex items-center justify-center gap-2 text-cream/45"
+    >
+      <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+      <span key={activeStage} className="step-in">
+        {entryStages[activeStage] ?? "ENTERING TRAILGRAD..."}
+      </span>
     </div>
   );
 }

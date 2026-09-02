@@ -42,6 +42,12 @@ export function HelpRequestToast() {
   }, [busy, inbox, request]);
 
   useEffect(() => {
+    if (!request || !inbox || busy) return;
+    if (inbox.open.some((item) => item.id === request.id)) return;
+    setRequest(null);
+  }, [busy, inbox, request]);
+
+  useEffect(() => {
     if (!request || busy) return;
     const timer = window.setTimeout(() => setRequest(null), VISIBLE_MS);
     return () => window.clearTimeout(timer);

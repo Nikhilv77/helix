@@ -161,7 +161,7 @@ function relativeTime(createdAt: number): string {
  */
 export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
   const teacher = useWorkspaceTeacher();
-  const { items, unread, markRead, markAllRead } = useWorkspaceNotifications();
+  const { items, unread, refresh, markRead, markAllRead } = useWorkspaceNotifications();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDivElement>(null);
@@ -206,7 +206,10 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
   }, [open]);
 
   const toggleOpen = () => {
-    if (!open) onOpen?.();
+    if (!open) {
+      onOpen?.();
+      void refresh();
+    }
     setOpen((current) => !current);
   };
 

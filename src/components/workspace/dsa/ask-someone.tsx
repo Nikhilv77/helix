@@ -252,7 +252,8 @@ export function AskSomeone({
         throw new Error(payload?.error?.message ?? "Could not send that request.");
       }
 
-      beginCooldown(payload.data.cooldownMs ?? DEFAULT_COOLDOWN_MS);
+      const cooldownMs = payload.data.cooldownMs ?? 0;
+      if (cooldownMs > 0) beginCooldown(cooldownMs);
       setInvitationsSent(Math.max(1, payload.data.invitationsSent ?? 1));
       setLive({ id: payload.data.id, status: payload.data.status, helper: null });
       setDeliverySeconds(DELIVERY_SECONDS);

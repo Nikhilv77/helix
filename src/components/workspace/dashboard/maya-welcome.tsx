@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
@@ -30,6 +31,10 @@ import { PREP_SESSIONS, type FrontendDsaPlan } from "@/lib/roadmap/frontend-plan
 import type { PracticeRoadmapSession } from "@/lib/practice/practice-roadmap";
 import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
 import type { CandidateProfile, Role } from "@/lib/shared/types";
+import {
+  welcomePerformanceProfile,
+  type WelcomePerformanceProfile
+} from "./welcome-performance";
 
 const AvatarStage = dynamic(
   () => import("@/components/interview/voice/avatar-stage").then((module) => module.AvatarStage),
@@ -128,6 +133,10 @@ function useWordReveal(
 
     let interval = 0;
     const timer = window.setTimeout(() => {
+      if (stagger <= 0) {
+        setVisibleCount(words.length);
+        return;
+      }
       let index = 0;
       interval = window.setInterval(() => {
         index += 1;
@@ -143,6 +152,20 @@ function useWordReveal(
   }, [active, delay, stagger, words.length]);
 
   return { words, visibleCount };
+}
+
+function readWelcomePerformanceProfile(): WelcomePerformanceProfile {
+  const device = navigator as Navigator & {
+    deviceMemory?: number;
+    connection?: { saveData?: boolean };
+  };
+
+  return welcomePerformanceProfile({
+    coarsePointer: window.matchMedia("(pointer: coarse)").matches,
+    deviceMemory: device.deviceMemory,
+    hardwareConcurrency: navigator.hardwareConcurrency,
+    saveData: device.connection?.saveData
+  });
 }
 
 function WordRevealLine({
@@ -336,7 +359,10 @@ export function MayaWelcome({
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const userControlledScroll = useRef(false);
   const [step, setStep] = useState(0);
-  const visible = true;
+  const [mounted, setMounted] = useState(false);
+  const [touchPresentation, setTouchPresentation] = useState(false);
+  const [lightweightAvatar, setLightweightAvatar] = useState(false);
+  const visible = mounted;
   const {
     state: voiceState,
     speak: speakLine,
@@ -344,7 +370,6 @@ export function MayaWelcome({
     awaitingGesture,
     setAwaitingGesture
   } = useMayaVoice();
-  const [mounted, setMounted] = useState(false);
   const speaking = voiceState === "speaking";
   const resume = profile.resume;
   const firstName = resume?.fullName.trim().split(/\s+/)[0] || "there";
@@ -426,7 +451,12 @@ export function MayaWelcome({
 
   const current = slides[step] ?? slides[0] ?? FALLBACK_WELCOME_SLIDE;
   const titleReveal = useWordReveal(current.title, visible, 160);
-  const bodyReveal = useWordReveal(current.body, visible, 640, WELCOME_BODY_STAGGER_MS);
+  const bodyReveal = useWordReveal(
+    current.body,
+    visible,
+    640,
+    touchPresentation ? 0 : WELCOME_BODY_STAGGER_MS
+  );
 
   const dismiss = useCallback(
     (destination = "/") => {
@@ -436,7 +466,12 @@ export function MayaWelcome({
     [stopVoice]
   );
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const profile = readWelcomePerformanceProfile();
+    setTouchPresentation(profile.touchPresentation);
+    setLightweightAvatar(profile.lightweightAvatar);
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     // The workspace scrolls the document, and locking <body> alone left the
@@ -461,7 +496,7 @@ export function MayaWelcome({
   // Narrates the opening slide on arrival, then every slide the candidate
   // advances to, until they mute her.
   useEffect(() => {
-    if (!voiceEnabled.current || awaitingGesture || !current) return;
+    if (!visible || !voiceEnabled.current || awaitingGesture || !current) return;
 
     // Unlocking and advancing arrive as two separate events (pointerdown then
     // click), so settle for a beat and speak only the slide that survives.
@@ -469,17 +504,18 @@ export function MayaWelcome({
       void speakLine(`${current.title} ${current.body}`);
     }, 60);
     return () => window.clearTimeout(start);
-  }, [awaitingGesture, current, speakLine]);
+  }, [awaitingGesture, current, speakLine, visible]);
 
   // Warm the next slide's audio while this one plays: by the time Continue is
   // pressed the file is already in the browser cache.
   useEffect(() => {
+    if (!visible || touchPresentation) return;
     const next = slides[step + 1];
     if (!next) return;
     const warm = new Audio(voiceUrl(`${next.title} ${next.body}`, teacher.id));
     warm.preload = "auto";
     warm.load();
-  }, [slides, step, teacher.id]);
+  }, [slides, step, teacher.id, touchPresentation, visible]);
 
   // Releasing the lock is all this does: the effect above then speaks whichever
   // slide is current, so a gesture that also advances the slide narrates the
@@ -516,7 +552,7 @@ export function MayaWelcome({
     }, 2600);
 
     return () => window.clearTimeout(timer);
-  }, [step]);
+  }, [step, visible]);
 
   function toggleVoice() {
     if (!current) return;
@@ -567,13 +603,24 @@ export function MayaWelcome({
           <div className="hidden">
             <TechInterviewMotifs side="maya" />
           </div>
-          <AvatarStage
-            agentTrack={null}
-            state={speaking ? "speaking" : "listening"}
-            url={teacher.model}
-            rig={teacher.rig}
-            performanceProfile="welcome"
-          />
+          {lightweightAvatar ? (
+            <Image
+              src={teacher.portrait}
+              alt={`${teacher.name}, your Trailgrad teacher`}
+              fill
+              priority
+              sizes="(max-width: 767px) 100vw, 36rem"
+              className="object-cover object-top"
+            />
+          ) : (
+            <AvatarStage
+              agentTrack={null}
+              state={speaking ? "speaking" : "listening"}
+              url={teacher.model}
+              rig={teacher.rig}
+              performanceProfile="welcome"
+            />
+          )}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[rgba(17,18,20,0.7)] to-transparent" />
           <button
             type="button"

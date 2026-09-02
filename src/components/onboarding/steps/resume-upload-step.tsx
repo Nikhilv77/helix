@@ -59,6 +59,7 @@ export function ResumeStep({
   error,
   inputRef,
   uploading,
+  retryingAnalysis,
   activeStage,
   onFile,
   onChooseAnother,
@@ -70,6 +71,7 @@ export function ResumeStep({
   error: string | null;
   inputRef: RefObject<HTMLInputElement | null>;
   uploading: boolean;
+  retryingAnalysis: boolean;
   activeStage: number;
   onFile: (file: File | null) => void;
   onChooseAnother: () => void;
@@ -225,14 +227,25 @@ export function ResumeStep({
         ) : null}
 
         <div className="mt-5 min-h-5">
-          {uploading ? <ResumeVerificationProgress activeStage={activeStage} /> : null}
+          {uploading ? (
+            <ResumeVerificationProgress
+              activeStage={activeStage}
+              retryingAnalysis={retryingAnalysis}
+            />
+          ) : null}
         </div>
       </div>
     </>
   );
 }
 
-function ResumeVerificationProgress({ activeStage }: { activeStage: number }) {
+function ResumeVerificationProgress({
+  activeStage,
+  retryingAnalysis
+}: {
+  activeStage: number;
+  retryingAnalysis: boolean;
+}) {
   const labels = [
     "CHECKING DOCUMENT INTEGRITY...",
     "VERIFYING RESUME DETAILS...",
@@ -247,8 +260,10 @@ function ResumeVerificationProgress({ activeStage }: { activeStage: number }) {
       className="blueprint-label flex items-center justify-center gap-2 text-cream/45"
     >
       <Loader2 size={14} className="animate-spin" aria-hidden="true" />
-      <span key={activeStage} className="step-in">
-        {labels[activeStage] ?? "VERIFYING RESUME..."}
+      <span key={retryingAnalysis ? "retry" : activeStage} className="step-in">
+        {retryingAnalysis
+          ? "TRYING RESUME ANALYSIS AGAIN..."
+          : (labels[activeStage] ?? "VERIFYING RESUME...")}
       </span>
     </div>
   );

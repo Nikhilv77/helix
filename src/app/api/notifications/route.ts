@@ -1,5 +1,4 @@
 import { auth } from "@clerk/nextjs/server";
-import { after } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -16,14 +15,10 @@ const readSchema = z.union([
   z.object({ all: z.literal(true) }).strict()
 ]);
 
-const EMAIL_RETRY_INTERVAL_MS = 60_000;
-let lastEmailRetryAt = 0;
-
 export async function GET(request: NextRequest) {
   try {
     const ownerId = await requireOwner();
     const app = getAppContainer();
-    await app.notificationService.purgeExpiredHelpRequestNotifications(ownerId);
 
     const [items, unread, helpEnabled, teacherEnabled] = await Promise.all([
       app.notificationService.list(ownerId),
@@ -38,8 +33,6 @@ export async function GET(request: NextRequest) {
       ownerId,
       helpRequestIds
     );
-
-    retryPendingEmail();
 
     return apiSuccess({
       unread,
@@ -64,19 +57,6 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   }
-}
-
-/** Opportunistic retry: bounded and leased, so every app instance may offer. */
-function retryPendingEmail(): void {
-  const now = Date.now();
-  if (now - lastEmailRetryAt < EMAIL_RETRY_INTERVAL_MS) return;
-  lastEmailRetryAt = now;
-
-  after(() =>
-    getAppContainer()
-      .notificationDispatcher.retryPending()
-      .catch(() => undefined)
-  );
 }
 
 /** Marks one notification, or the whole inbox, as read. */

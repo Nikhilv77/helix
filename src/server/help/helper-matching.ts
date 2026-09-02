@@ -106,8 +106,7 @@ export class HelperMatchingService {
   async findHelpers(
     questionSlug: string,
     learnerId: string,
-    language: string,
-    limit = 10
+    language: string
   ): Promise<RankedHelper[]> {
     const rows = await this.prisma.$queryRawUnsafe<CandidateRow[]>(
       `
@@ -169,7 +168,10 @@ export class HelperMatchingService {
       ) AS signals
       WHERE profile."ownerId" <> $2
         AND profile."helpNotificationsEnabled" = true
-        AND eligibility.score > 0
+        AND (
+          eligibility.score > 0
+          OR "helpHelperSolvedQuestion"(profile."ownerId", $1)
+        )
         AND NOT EXISTS (
         SELECT 1 FROM "HelpRequest" r
         WHERE r."learnerId" = profile."ownerId"
@@ -193,7 +195,7 @@ export class HelperMatchingService {
       language
     );
 
-    return rankCandidates(rows).slice(0, limit);
+    return rankCandidates(rows);
   }
 
   /**
@@ -208,7 +210,10 @@ export class HelperMatchingService {
       FROM "CandidateProfile" profile
       WHERE profile."ownerId" <> $2
         AND profile."helpNotificationsEnabled" = true
-        AND "helpHelperEligibilityScore"(profile."ownerId", $1, $3) > 0
+        AND (
+          "helpHelperEligibilityScore"(profile."ownerId", $1, $3) > 0
+          OR "helpHelperSolvedQuestion"(profile."ownerId", $1)
+        )
         AND NOT EXISTS (
           SELECT 1 FROM "HelpRequest" r
           WHERE r."learnerId" = profile."ownerId"

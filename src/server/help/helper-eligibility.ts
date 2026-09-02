@@ -25,7 +25,10 @@ export class HelperEligibilityService {
 
   async score(helperId: string, questionSlug: string, language: string): Promise<number> {
     const rows = await this.prisma.$queryRawUnsafe<ScoreRow[]>(
-      `SELECT "helpHelperEligibilityScore"($1, $2, $3) AS score`,
+      `SELECT GREATEST(
+         "helpHelperEligibilityScore"($1, $2, $3),
+         CASE WHEN "helpHelperSolvedQuestion"($1, $2) THEN 1.0 ELSE 0.0 END
+       ) AS score`,
       helperId,
       questionSlug,
       language
@@ -43,7 +46,13 @@ export class HelperEligibilityService {
     const rows = await this.prisma.$queryRawUnsafe<ScoreRow[]>(
       `
         SELECT candidate.id,
-               "helpHelperEligibilityScore"($1, candidate.slug, candidate.language) AS score
+               GREATEST(
+                 "helpHelperEligibilityScore"($1, candidate.slug, candidate.language),
+                 CASE
+                   WHEN "helpHelperSolvedQuestion"($1, candidate.slug) THEN 1.0
+                   ELSE 0.0
+                 END
+               ) AS score
         FROM jsonb_to_recordset($2::jsonb)
           AS candidate(id TEXT, slug TEXT, language TEXT)
       `,

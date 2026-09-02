@@ -251,10 +251,7 @@ function fakePrisma(
       row.status !== HelpRequestStatus.OPEN ||
       row.expiresAt <= new Date() ||
       row.learnerId === helperId ||
-      (!(
-        (attempts[helperId] ?? []).includes(row.questionSlug) &&
-        (verifiedAttempts[helperId] ?? []).includes(row.questionSlug)
-      ) &&
+      (!(attempts[helperId] ?? []).includes(row.questionSlug) &&
         !profileQualified.has(helperId)) ||
       rows.some(
         (candidate) =>
@@ -347,9 +344,7 @@ function serviceUnderTest(
   );
 
   const evidenceScore = (helperId: string, slug: string, language: string): number => {
-    const exact =
-      (attempts[helperId] ?? []).includes(slug) &&
-      (verifiedAttempts[helperId] ?? []).includes(slug);
+    const exact = (attempts[helperId] ?? []).includes(slug);
     if (exact) return language === "java" ? 1 : 0.95;
     return profileQualified.has(helperId) ? 0.7 : 0;
   };
@@ -502,12 +497,13 @@ describe("help request lifecycle", () => {
     });
   });
 
-  it("refuses a completion without a strong test-backed run", async () => {
+  it("allows an exact completion without a separate eligibility score", async () => {
     const { service } = serviceUnderTest({ "helper-1": ["lru-cache"] }, [], {});
     const request = await openRequest(service);
 
-    await expect(service.claim(request.id, "helper-1")).rejects.toMatchObject({
-      reason: "NOT_QUALIFIED"
+    await expect(service.claim(request.id, "helper-1")).resolves.toMatchObject({
+      status: HelpRequestStatus.CLAIMED,
+      helperId: "helper-1"
     });
   });
 
@@ -564,13 +560,15 @@ describe("help request lifecycle", () => {
   });
 
   it("returns a released request to the pool for another helper", async () => {
-    const { service } = serviceUnderTest();
+    const { service, declines } = serviceUnderTest();
     const request = await openRequest(service);
     await service.claim(request.id, "helper-1");
 
     const released = await service.release(request.id, "helper-1");
     expect(released.status).toBe(HelpRequestStatus.OPEN);
     expect(released.helperId).toBeNull();
+    expect(declines).toEqual([{ requestId: request.id, helperId: "helper-1" }]);
+    await expect(service.openRequestsForHelper("helper-1")).resolves.toEqual([]);
 
     await expect(service.claim(request.id, "helper-2")).resolves.toMatchObject({
       helperId: "helper-2"
@@ -793,11 +791,11 @@ describe("helper inbox", () => {
     await expect(service.openRequestsForHelper("helper-1")).resolves.toHaveLength(1);
   });
 
-  it("does not offer a completed question without verified runner evidence", async () => {
+  it("offers a completed question without requiring another evidence lane", async () => {
     const { service } = serviceUnderTest({ "helper-1": ["lru-cache"] }, [], {});
     await openRequest(service, "learner-1");
 
-    await expect(service.openRequestsForHelper("helper-1")).resolves.toEqual([]);
+    await expect(service.openRequestsForHelper("helper-1")).resolves.toHaveLength(1);
   });
 
   it("puts requests in a verified language ahead of cross-language requests", async () => {
@@ -888,6 +886,7 @@ describe("helper inbox", () => {
     await service.release(request.id, "helper-1");
 
     await expect(service.openRequestsForHelper("helper-2")).resolves.toHaveLength(1);
+    await expect(service.openRequestsForHelper("helper-1")).resolves.toEqual([]);
     await expect(service.claimedByHelper("helper-1")).resolves.toEqual([]);
   });
 });
