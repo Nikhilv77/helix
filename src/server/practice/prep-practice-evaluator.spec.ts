@@ -17,15 +17,15 @@ const rawStrongEvaluation = {
   rubricRationale: "Matches the strong band by connecting diagnosis, containment, and recovery."
 };
 const telemetry = {
-  evaluationVerified: jest.fn(),
-  evaluationUnverified: jest.fn()
+  evaluationVerified: vi.fn(),
+  evaluationUnverified: vi.fn()
 };
 
 describe("prep practice evaluator", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it("grades MCQs locally while preserving a verified versioned result", async () => {
-    const generateStructured = jest.fn();
+    const generateStructured = vi.fn();
     const evaluator = new PrepPracticeEvaluator(
       { generateStructured } as unknown as AiService,
       telemetry
@@ -53,7 +53,7 @@ describe("prep practice evaluator", () => {
   });
 
   it("evaluates non-MCQ answers against the authored rubric instead of keyword overlap", async () => {
-    const generateStructured = jest.fn().mockResolvedValue(rawStrongEvaluation);
+    const generateStructured = vi.fn().mockResolvedValue(rawStrongEvaluation);
     const evaluator = new PrepPracticeEvaluator(
       { generateStructured } as unknown as AiService,
       telemetry
@@ -101,7 +101,7 @@ describe("prep practice evaluator", () => {
   it("preserves evaluator outages as unverified, unscored evidence", async () => {
     const evaluator = new PrepPracticeEvaluator(
       {
-        generateStructured: jest.fn().mockRejectedValue(new Error("provider unavailable"))
+        generateStructured: vi.fn().mockRejectedValue(new Error("provider unavailable"))
       },
       telemetry
     );

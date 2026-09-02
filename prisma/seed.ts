@@ -376,6 +376,7 @@ async function seedDsaQuestionBank(): Promise<void> {
   for (const phase of phases) {
     const phaseSlug = dsaPhaseSlug(phase.phase);
     const phaseNumber = dsaPhaseNumber(phase.phase);
+    const sourceQuestionSlugs = new Set(phase.questions.map((question) => question.slug));
 
     await prisma.dsaPhase.upsert({
       where: { slug: phaseSlug },
@@ -392,23 +393,63 @@ async function seedDsaQuestionBank(): Promise<void> {
       }
     });
 
-    for (const question of phase.questions) {
-      const data = dsaQuestionData(phaseSlug, question);
-      await prisma.dsaQuestion.upsert({
-        where: { slug: question.slug },
-        update: {
-          ...data,
-          ...(question.contentVersion === undefined
-            ? {}
-            : { contentVersion: question.contentVersion })
-        },
-        create: {
-          slug: question.slug,
-          contentVersion: question.contentVersion ?? 1,
-          ...data
+    await prisma.$transaction(
+      async (transaction) => {
+        const existingQuestions = await transaction.dsaQuestion.findMany({
+          where: { phaseSlug },
+          select: { slug: true, recommendedOrder: true },
+          orderBy: [{ recommendedOrder: "asc" }, { slug: "asc" }]
+        });
+        const sourceMaxOrder = phase.questions.reduce(
+          (maximum, question) => Math.max(maximum, question.recommendedOrder),
+          0
+        );
+
+        // Park every current order above both the existing and incoming ranges.
+        // This makes replacements and arbitrary reorders safe with the unique
+        // (phaseSlug, recommendedOrder) constraint.
+        if (existingQuestions.length > 0) {
+          const existingOrders = existingQuestions.map((question) => question.recommendedOrder);
+          const existingMinOrder = Math.min(...existingOrders);
+          const occupiedMaxOrder = Math.max(sourceMaxOrder, ...existingOrders);
+          const temporaryOrderOffset = occupiedMaxOrder - existingMinOrder + 1;
+
+          await transaction.dsaQuestion.updateMany({
+            where: { phaseSlug },
+            data: { recommendedOrder: { increment: temporaryOrderOffset } }
+          });
         }
-      });
-    }
+
+        for (const question of phase.questions) {
+          const data = dsaQuestionData(phaseSlug, question);
+          await transaction.dsaQuestion.upsert({
+            where: { slug: question.slug },
+            update: {
+              ...data,
+              ...(question.contentVersion === undefined
+                ? {}
+                : { contentVersion: question.contentVersion })
+            },
+            create: {
+              slug: question.slug,
+              contentVersion: question.contentVersion ?? 1,
+              ...data
+            }
+          });
+        }
+
+        const preservedQuestions = existingQuestions.filter(
+          (question) => !sourceQuestionSlugs.has(question.slug)
+        );
+        for (const [index, question] of preservedQuestions.entries()) {
+          await transaction.dsaQuestion.update({
+            where: { slug: question.slug },
+            data: { recommendedOrder: sourceMaxOrder + index + 1 }
+          });
+        }
+      },
+      { timeout: 120_000 }
+    );
   }
 
   console.log(`Seeded ${questionSlugs.length} DSA questions across ${phaseSlugs.length} phases.`);

@@ -61,10 +61,12 @@
         "range-for semantics"
       ],
       "goodAnswerSignals": [
-        "Names the copy explicitly"
+        "Names the copy explicitly",
+        "Contrasts the by-value loop with reference binding"
       ],
       "weakAnswerSignals": [
-        "Expects the first loop to modify the vector"
+        "Expects the first loop to modify the vector",
+        "Does not distinguish auto from auto&"
       ],
       "followUpPrompts": [
         "When is `const auto&` the right default here?"
@@ -133,10 +135,12 @@
         "read-only lookup alternatives"
       ],
       "goodAnswerSignals": [
-        "Notices the size change caused by a read"
+        "Notices the size change caused by a read",
+        "Identifies a non-inserting lookup alternative"
       ],
       "weakAnswerSignals": [
-        "Expects the size to stay zero throughout"
+        "Expects the size to stay zero throughout",
+        "Treats operator[] as a read-only lookup"
       ],
       "followUpPrompts": [
         "Which lookup would you use on a const map?"
@@ -206,10 +210,12 @@
         "static vs dynamic type"
       ],
       "goodAnswerSignals": [
-        "Names slicing as the reason the by-value call differs"
+        "Names slicing as the reason the by-value call differs",
+        "Separates static lookup from virtual dispatch"
       ],
       "weakAnswerSignals": [
-        "Expects virtual to work through a by-value parameter"
+        "Expects virtual to work through a by-value parameter",
+        "Does not account for the object's static type"
       ],
       "followUpPrompts": [
         "What should the parameter type have been?"
@@ -278,7 +284,8 @@
         "reverse destruction order"
       ],
       "goodAnswerSignals": [
-        "Says destruction is reverse of construction"
+        "Says destruction is reverse of construction",
+        "Tracks the static counter across both calls"
       ],
       "weakAnswerSignals": [
         "Resets the counter on each call",
@@ -352,10 +359,12 @@
         "signed comparison pitfalls"
       ],
       "goodAnswerSignals": [
-        "Explains the conversion direction in the comparison"
+        "Explains the conversion direction in the comparison",
+        "Predicts truncating division and the remainder sign"
       ],
       "weakAnswerSignals": [
-        "Expects -1 to compare less than 1 here"
+        "Expects -1 to compare less than 1 here",
+        "Applies floating-point division rules to the integers"
       ],
       "followUpPrompts": [
         "Why does comparing against `.size()` cause this so often?"
@@ -424,10 +433,12 @@
         "reference parameters"
       ],
       "goodAnswerSignals": [
-        "Notes both the correctness and the cost of the copy"
+        "Notes both the correctness and the cost of the copy",
+        "Distinguishes caller mutation from local mutation"
       ],
       "weakAnswerSignals": [
-        "Expects the by-value call to modify the caller"
+        "Expects the by-value call to modify the caller",
+        "Treats the copied vector as shared storage"
       ],
       "followUpPrompts": [
         "When is `const&` the right choice and when is by-value fine?"
@@ -496,10 +507,12 @@
         "lexicographic ordering"
       ],
       "goodAnswerSignals": [
-        "Explains the numeric-looking comparison correctly"
+        "Explains the numeric-looking comparison correctly",
+        "Recognizes that string assignment copies the value"
       ],
       "weakAnswerSignals": [
-        "Compares the strings as numbers"
+        "Compares the strings as numbers",
+        "Assumes the assigned strings share later mutations"
       ],
       "followUpPrompts": [
         "How would you sort version strings correctly?"
@@ -568,10 +581,12 @@
         "iterator-returning algorithms"
       ],
       "goodAnswerSignals": [
-        "Says remove only reorders and returns an iterator"
+        "Says remove only reorders and returns an iterator",
+        "Explains why erase is required to change the size"
       ],
       "weakAnswerSignals": [
-        "Expects remove alone to shrink the vector"
+        "Expects remove alone to shrink the vector",
+        "Treats lower_bound as a boolean found result"
       ],
       "followUpPrompts": [
         "What does the tail of the vector hold between the two calls?"
@@ -640,10 +655,12 @@
         "pass-by-value cost"
       ],
       "goodAnswerSignals": [
-        "Accounts for every copy and the final counter"
+        "Accounts for every copy and the final counter",
+        "Identifies the pass-by-value copy separately"
       ],
       "weakAnswerSignals": [
-        "Assumes the compiler elides the lvalue copy"
+        "Assumes the compiler elides the lvalue copy",
+        "Misses a copy at the function boundary"
       ],
       "followUpPrompts": [
         "Which of these copies would a reference parameter remove?"
@@ -712,10 +729,12 @@
         "scope resolution"
       ],
       "goodAnswerSignals": [
-        "Tracks the value back after the inner block ends"
+        "Tracks the value back after the inner block ends",
+        "Uses scope resolution to identify the global value"
       ],
       "weakAnswerSignals": [
-        "Carries the innermost value past its block"
+        "Carries the innermost value past its block",
+        "Cannot distinguish the local and global declarations"
       ],
       "followUpPrompts": [
         "Why do compilers offer a warning for this?"

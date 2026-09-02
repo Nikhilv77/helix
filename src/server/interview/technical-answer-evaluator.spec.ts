@@ -99,7 +99,7 @@ describe("technical answer evaluator", () => {
   });
 
   it("requires the model to prioritize factual correctness over fluent delivery", async () => {
-    const generateStructured = jest.fn().mockResolvedValue(rawEvaluation);
+    const generateStructured = vi.fn().mockResolvedValue(rawEvaluation);
     const evaluator = new TechnicalAnswerEvaluator({ generateStructured } as unknown as AiService);
 
     await evaluator.evaluate(input(null));

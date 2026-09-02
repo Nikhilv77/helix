@@ -5,7 +5,7 @@ describe("help history", () => {
   it("presents a learner's waiting request as their current engagement", async () => {
     const prisma = {
       helpRequest: {
-        findFirst: jest.fn().mockResolvedValue({
+        findFirst: vi.fn().mockResolvedValue({
           id: "00000000-0000-4000-8000-000000000001",
           learnerId: "owner-1",
           helperId: null,
@@ -33,7 +33,7 @@ describe("help history", () => {
   it("never presents an ended room as resumable", async () => {
     const prisma = {
       helpRequest: {
-        findFirst: jest.fn().mockResolvedValue({
+        findFirst: vi.fn().mockResolvedValue({
           id: "00000000-0000-4000-8000-000000000001",
           learnerId: "owner-1",
           helperId: "helper-1",
@@ -50,7 +50,7 @@ describe("help history", () => {
   });
 
   it("returns owner-scoped help-given history without exposing internal participant ids", async () => {
-    const helpRequestFindMany = jest.fn().mockResolvedValue([
+    const helpRequestFindMany = vi.fn().mockResolvedValue([
       {
         id: "00000000-0000-4000-8000-000000000001",
         learnerId: "private-learner-id",
@@ -73,7 +73,7 @@ describe("help history", () => {
     const prisma = {
       helpRequest: { findMany: helpRequestFindMany },
       candidateProfile: {
-        findMany: jest.fn().mockResolvedValue([
+        findMany: vi.fn().mockResolvedValue([
           {
             ownerId: "private-learner-id",
             headline: "Frontend candidate",
@@ -112,7 +112,7 @@ describe("help history", () => {
   });
 
   it("returns only the lightweight counts used by the simplified Help page", async () => {
-    const queryRaw = jest
+    const queryRaw = vi
       .fn()
       .mockResolvedValueOnce([
         {
@@ -127,10 +127,10 @@ describe("help history", () => {
       .mockResolvedValueOnce([]);
     const prisma = {
       helpRequest: {
-        findFirst: jest.fn().mockResolvedValue(null)
+        findFirst: vi.fn().mockResolvedValue(null)
       },
       candidateProfile: {
-        findMany: jest.fn().mockImplementation(({ where }) => {
+        findMany: vi.fn().mockImplementation(({ where }) => {
           const ownerIds = where.ownerId.in as string[];
           return Promise.resolve(
             ownerIds.includes("owner-1")
@@ -169,12 +169,12 @@ describe("help history", () => {
 
   it("aggregates the leaderboard in SQL and shares it for 45 seconds", async () => {
     let now = 1_000;
-    const dateNow = jest.spyOn(Date, "now").mockImplementation(() => now);
-    const queryRaw = jest.fn().mockResolvedValue([
+    const dateNow = vi.spyOn(Date, "now").mockImplementation(() => now);
+    const queryRaw = vi.fn().mockResolvedValue([
       { helperId: "helper-1", helpedCount: 8, thankedCount: 6 },
       { helperId: "helper-2", helpedCount: 11, thankedCount: 4 }
     ]);
-    const profileFindMany = jest.fn().mockResolvedValue([
+    const profileFindMany = vi.fn().mockResolvedValue([
       {
         ownerId: "helper-1",
         headline: "Backend candidate",
@@ -229,7 +229,7 @@ describe("help history", () => {
   });
 
   it("uses the consolidated counters for the lightweight dashboard overview", async () => {
-    const queryRaw = jest.fn().mockResolvedValue([
+    const queryRaw = vi.fn().mockResolvedValue([
       {
         helpReceived: 7,
         peopleHelped: 3,
@@ -239,7 +239,7 @@ describe("help history", () => {
         availabilityCredits: 1
       }
     ]);
-    const findFirst = jest.fn().mockResolvedValue(null);
+    const findFirst = vi.fn().mockResolvedValue(null);
     const service = new HelpHistoryService({
       $queryRaw: queryRaw,
       helpRequest: { findFirst }
@@ -257,14 +257,14 @@ describe("help history", () => {
   it("resolves the other participant for Trailmate notification portraits", async () => {
     const prisma = {
       helpRequest: {
-        findMany: jest.fn().mockResolvedValue([
+        findMany: vi.fn().mockResolvedValue([
           { id: "opened", learnerId: "learner-1", helperId: null },
           { id: "claimed", learnerId: "owner-1", helperId: "helper-1" },
           { id: "expired", learnerId: "owner-1", helperId: null }
         ])
       },
       candidateProfile: {
-        findMany: jest.fn().mockResolvedValue([
+        findMany: vi.fn().mockResolvedValue([
           {
             ownerId: "learner-1",
             headline: null,
@@ -303,7 +303,7 @@ describe("help history", () => {
 
   it("rejects malformed cursors before querying history", async () => {
     const prisma = {
-      helpRequest: { findMany: jest.fn() }
+      helpRequest: { findMany: vi.fn() }
     } as unknown as PrismaService;
     const service = new HelpHistoryService(prisma);
 

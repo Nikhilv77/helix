@@ -16,29 +16,14 @@ import {
   X,
   type LucideIcon
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { InterviewerPersona } from "@/lib/avatars/personas";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { ProfileAvatar } from "@/components/workspace/profile/profile-avatar";
-
-interface NotificationSender {
-  label: string;
-  profileImage: string | null;
-}
-
-interface InboxItem {
-  id: string;
-  kind: string;
-  title: string;
-  body: string;
-  href: string | null;
-  read: boolean;
-  createdAt: number;
-  sender: NotificationSender | null;
-}
-
-/** Quiet enough not to nag, frequent enough that a waiting learner is not stale. */
-const POLL_MS = 15_000;
+import {
+  useWorkspaceNotifications,
+  type NotificationSender
+} from "./workspace-notification-polling";
 
 interface NotificationPresentation {
   label: string;
@@ -126,13 +111,7 @@ function NotificationSource({
         aria-label={`${teacher.name}, your teacher`}
         className="relative h-11 w-11 shrink-0 overflow-hidden rounded-[0.9rem] bg-[#202126] ring-1 ring-inset ring-white/[0.09]"
       >
-        <Image
-          src={teacher.portrait}
-          alt=""
-          fill
-          sizes="44px"
-          className="object-cover"
-        />
+        <Image src={teacher.portrait} alt="" fill sizes="44px" className="object-cover" />
       </div>
     );
   }
@@ -177,46 +156,15 @@ function relativeTime(createdAt: number): string {
 /**
  * The inbox, in the workspace header.
  *
- * Polls while the workspace is visible rather than holding a socket open, and
- * refreshes immediately when the window regains focus. Delivery therefore
- * degrades to "slightly late" instead of "silently disconnected".
+ * Both responsive placements share one visibility-aware polling provider, so
+ * the hidden copy never doubles the background requests.
  */
 export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
   const teacher = useWorkspaceTeacher();
-  const [items, setItems] = useState<InboxItem[]>([]);
-  const [unread, setUnread] = useState(0);
+  const { items, unread, markRead, markAllRead } = useWorkspaceNotifications();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDivElement>(null);
-
-  const load = useCallback(async () => {
-    try {
-      const response = await fetch("/api/notifications");
-      if (!response.ok) return;
-      const payload = await response.json();
-      if (!payload?.success || !payload.data) return;
-
-      setItems(payload.data.items ?? []);
-      setUnread(payload.data.unread ?? 0);
-    } catch {
-      // An inbox that cannot load is not worth an error surface of its own.
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-    const refreshVisible = () => {
-      if (document.visibilityState === "visible") void load();
-    };
-    const timer = window.setInterval(refreshVisible, POLL_MS);
-    window.addEventListener("focus", refreshVisible);
-    document.addEventListener("visibilitychange", refreshVisible);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener("focus", refreshVisible);
-      document.removeEventListener("visibilitychange", refreshVisible);
-    };
-  }, [load]);
 
   // Opening the panel acknowledges only the rows actually rendered. This is
   // deliberately id-based: a new row arriving during the request, or an older
@@ -225,26 +173,8 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
     const visibleUnreadIds = items.filter((item) => !item.read).map((item) => item.id);
     if (!open || visibleUnreadIds.length === 0) return;
 
-    void fetch("/api/notifications", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ids: visibleUnreadIds })
-    })
-      .then(async (response) => {
-        if (!response.ok) return null;
-        const payload = await response.json().catch(() => null);
-        return payload?.success ? payload : null;
-      })
-      .then((payload) => {
-        if (!payload) return;
-        const visible = new Set(visibleUnreadIds);
-        setUnread((current) => Math.max(0, current - (payload.data?.marked ?? 0)));
-        setItems((current) =>
-          current.map((item) => (visible.has(item.id) ? { ...item, read: true } : item))
-        );
-      })
-      .catch(() => undefined);
-  }, [items, open]);
+    void markRead(visibleUnreadIds);
+  }, [items, markRead, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -274,23 +204,6 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
       document.body.style.overflow = previousOverflow;
     };
   }, [open]);
-
-  const markAllRead = useCallback(async () => {
-    if (unread === 0) return;
-    try {
-      const response = await fetch("/api/notifications", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ all: true })
-      });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload?.success) return;
-      setUnread(0);
-      setItems((current) => current.map((item) => ({ ...item, read: true })));
-    } catch {
-      // Keep the local unread state authoritative until a successful write.
-    }
-  }, [unread]);
 
   const toggleOpen = () => {
     if (!open) onOpen?.();

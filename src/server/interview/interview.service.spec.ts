@@ -32,11 +32,11 @@ const questions: PlannedQuestion[] = [
 ];
 
 function harness(plan = questions, evaluation?: QuestionEvaluation) {
-  const planQuestions = jest.fn().mockResolvedValue(plan);
+  const planQuestions = vi.fn().mockResolvedValue(plan);
   const planner = { plan: planQuestions } as unknown as InterviewPlanner;
-  const decide = jest.fn();
+  const decide = vi.fn();
   const decider = { decide } as unknown as InterviewDecider;
-  const evaluate = jest.fn().mockResolvedValue(evaluation);
+  const evaluate = vi.fn().mockResolvedValue(evaluation);
   const evaluator = evaluation ? ({ evaluate } as unknown as TechnicalAnswerEvaluator) : undefined;
   const store = new MemorySessionStore();
   const service = new InterviewService(planner, decider, store, 10, evaluator);

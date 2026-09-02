@@ -23,10 +23,10 @@ function state(id: string, startedAt: number): InterviewState {
 }
 
 describe("MemorySessionStore", () => {
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => vi.useRealTimers());
 
   it("persists state updates and daily starts", async () => {
-    jest.useFakeTimers().setSystemTime(new Date("2026-08-03T00:00:00Z"));
+    vi.useFakeTimers().setSystemTime(new Date("2026-08-03T00:00:00Z"));
     const store = new MemorySessionStore();
     const created = state("11111111-1111-4111-8111-111111111111", Date.now());
 
@@ -53,23 +53,23 @@ describe("MemorySessionStore", () => {
   });
 
   it("expires inactive session state", async () => {
-    jest.useFakeTimers().setSystemTime(new Date("2026-08-03T00:00:00Z"));
+    vi.useFakeTimers().setSystemTime(new Date("2026-08-03T00:00:00Z"));
     const store = new MemorySessionStore();
     const created = state("22222222-2222-4222-8222-222222222222", Date.now());
     await store.create(created, "user-1");
 
-    jest.setSystemTime(Date.now() + HOUR_MS + 1);
+    vi.setSystemTime(Date.now() + HOUR_MS + 1);
 
     await expect(store.get(created.id)).resolves.toBeNull();
   });
 
   it("keeps expired sessions available to their owner for reports", async () => {
-    jest.useFakeTimers().setSystemTime(new Date("2026-08-03T00:00:00Z"));
+    vi.useFakeTimers().setSystemTime(new Date("2026-08-03T00:00:00Z"));
     const store = new MemorySessionStore();
     const created = state("33333333-3333-4333-8333-333333333333", Date.now());
     await store.create(created, "user-1");
 
-    jest.setSystemTime(Date.now() + HOUR_MS + 1);
+    vi.setSystemTime(Date.now() + HOUR_MS + 1);
 
     await expect(store.get(created.id)).resolves.toBeNull();
     await expect(store.getOwned(created.id, "user-1")).resolves.toMatchObject({

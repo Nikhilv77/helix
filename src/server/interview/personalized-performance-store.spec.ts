@@ -87,7 +87,7 @@ function completedState(): InterviewState {
 function prismaMock() {
   const mock = {
     interviewSession: {
-      findMany: jest.fn().mockResolvedValue([
+      findMany: vi.fn().mockResolvedValue([
         {
           state: completedState(),
           startedAt: new Date(NOW - 10_000),
@@ -96,11 +96,11 @@ function prismaMock() {
       ])
     },
     candidatePerformanceProfileVersion: {
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      create: jest.fn()
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn()
     },
-    $transaction: jest.fn()
+    $transaction: vi.fn()
   };
   mock.$transaction.mockImplementation(
     async (operation: (transaction: typeof mock) => Promise<unknown>) => operation(mock)

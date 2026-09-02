@@ -1,5 +1,5 @@
 import type { ReportsOverview } from "@/lib/reports/reports";
-import type { ProgressOverview } from "@/lib/roadmap/progress";
+import type { ProgressDashboardOverview } from "@/lib/roadmap/progress";
 import type { HelpDashboardOverview } from "@/lib/help/help-history";
 import { roundShortLabel } from "@/lib/shared/labels";
 import type { CandidateProfile } from "@/lib/shared/types";
@@ -180,7 +180,7 @@ export interface DashboardOverviewData {
 export function buildDashboardOverview(
   profile: CandidateProfile,
   reports: ReportsOverview | null,
-  practice: ProgressOverview | null,
+  practice: ProgressDashboardOverview | null,
   now = Date.now(),
   trailmate: HelpDashboardOverview | null = null
 ): DashboardOverviewData {
@@ -196,7 +196,7 @@ export function buildDashboardOverview(
 function buildDirection(
   profile: CandidateProfile,
   reports: ReportsOverview | null,
-  practice: ProgressOverview | null,
+  practice: ProgressDashboardOverview | null,
   now: number
 ): DashboardDirection {
   return {
@@ -205,7 +205,10 @@ function buildDirection(
   };
 }
 
-function buildWeeklyRhythm(practice: ProgressOverview | null, now: number): DashboardWeeklyRhythm {
+function buildWeeklyRhythm(
+  practice: ProgressDashboardOverview | null,
+  now: number
+): DashboardWeeklyRhythm {
   const dates = lastSevenUtcDates(now);
   const activityByDate = new Map((practice?.activity ?? []).map((day) => [day.date, day]));
   const days = dates.map((date) => {
@@ -262,7 +265,7 @@ function buildWeeklyRhythm(practice: ProgressOverview | null, now: number): Dash
 function buildNextFocus(
   profile: CandidateProfile,
   reports: ReportsOverview | null,
-  practice: ProgressOverview | null
+  practice: ProgressDashboardOverview | null
 ): DashboardNextFocus {
   const gap = reports?.recurringGaps[0] ?? null;
   if (gap) {
@@ -361,7 +364,7 @@ function buildNextFocus(
 
 function buildExplore(
   reports: ReportsOverview | null,
-  practice: ProgressOverview | null,
+  practice: ProgressDashboardOverview | null,
   trailmate: HelpDashboardOverview | null
 ): DashboardExplore {
   return {
@@ -371,7 +374,9 @@ function buildExplore(
   };
 }
 
-function buildProgressSummary(practice: ProgressOverview | null): DashboardProgressSummary {
+function buildProgressSummary(
+  practice: ProgressDashboardOverview | null
+): DashboardProgressSummary {
   if (!practice) {
     return {
       state: "unavailable",
@@ -500,7 +505,7 @@ function buildTrailmateSummary(trailmate: HelpDashboardOverview | null): Dashboa
 
 function buildContinuation(
   reports: ReportsOverview | null,
-  practice: ProgressOverview | null
+  practice: ProgressDashboardOverview | null
 ): DashboardContinuation {
   return {
     practice: buildPracticeContinuation(practice),
@@ -509,7 +514,7 @@ function buildContinuation(
 }
 
 function buildPracticeContinuation(
-  practice: ProgressOverview | null
+  practice: ProgressDashboardOverview | null
 ): DashboardPracticeContinuation {
   if (!practice) {
     return {
@@ -667,7 +672,7 @@ function buildInterviewContinuation(
 function buildCoaching(
   profile: CandidateProfile,
   reports: ReportsOverview | null,
-  practice: ProgressOverview | null,
+  practice: ProgressDashboardOverview | null,
   now: number
 ): DashboardCoaching {
   const activeInterview = reports?.rounds.find((round) => round.status === "in_progress") ?? null;

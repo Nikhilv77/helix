@@ -189,22 +189,22 @@ function plan(profile = compiledProfile()): PersonalizedInterviewPlan {
 function createPrismaMock() {
   const mock = {
     candidateInterviewProfileVersion: {
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      create: jest.fn()
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn()
     },
     personalizedInterviewPlanVersion: {
-      findFirst: jest.fn(),
-      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
-      create: jest.fn()
+      findFirst: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+      create: vi.fn()
     },
     candidatePerformanceProfileVersion: {
-      findFirst: jest.fn()
+      findFirst: vi.fn()
     },
     candidatePracticeEvidenceVersion: {
-      findFirst: jest.fn()
+      findFirst: vi.fn()
     },
-    $transaction: jest.fn()
+    $transaction: vi.fn()
   };
   mock.$transaction.mockImplementation(
     async (operation: (transaction: typeof mock) => Promise<unknown>) => operation(mock)
@@ -214,7 +214,7 @@ function createPrismaMock() {
 
 function storeWith(mock: ReturnType<typeof createPrismaMock>, profile = candidateProfile()) {
   return new PersonalizedPlanningStore(mock as unknown as PrismaService, {
-    get: jest.fn().mockResolvedValue(profile)
+    get: vi.fn().mockResolvedValue(profile)
   });
 }
 

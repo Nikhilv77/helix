@@ -33,7 +33,7 @@ describe("HealthService", () => {
 
   it("returns ok when the database responds", async () => {
     const prisma = {
-      $queryRaw: jest.fn().mockResolvedValue([{ result: 1 }])
+      $queryRaw: vi.fn().mockResolvedValue([{ result: 1 }])
     } as unknown as PrismaService;
     const service = new HealthService(config, prisma);
 
@@ -50,7 +50,7 @@ describe("HealthService", () => {
 
   it("returns unhealthy when the database query fails", async () => {
     const prisma = {
-      $queryRaw: jest.fn().mockRejectedValue(new Error("connection failed"))
+      $queryRaw: vi.fn().mockRejectedValue(new Error("connection failed"))
     } as unknown as PrismaService;
     const service = new HealthService(config, prisma);
 

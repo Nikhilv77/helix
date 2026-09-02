@@ -7,10 +7,10 @@ const judgeDescribe = process.env.RUN_DSA_JUDGE0_SMOKE === "1" ? describe : desc
 
 /**
  * Opt-in because every case consumes an external Judge0 request. Run with:
- * RUN_DSA_JUDGE0_SMOKE=1 pnpm exec jest --runInBand dsa-judge0-smoke.spec.ts
+ * RUN_DSA_JUDGE0_SMOKE=1 pnpm exec vitest run dsa-judge0-smoke.spec.ts
  */
 judgeDescribe("Judge0 DSA smoke contracts", () => {
-  jest.setTimeout(120_000);
+  vi.setConfig({ testTimeout: 120_000 });
 
   it.each([
     {

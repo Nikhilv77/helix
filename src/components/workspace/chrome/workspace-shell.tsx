@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useLinkStatus } from "next/link";
 import { SignOutButton, useUser } from "@clerk/nextjs";
-import { GoSidebarCollapse } from "react-icons/go";
 import { UpgradeCard, UpgradeRailButton } from "@/components/workspace/chrome/upgrade-card";
 import { NotificationInbox } from "./notification-inbox";
+import { WorkspaceNotificationPollingProvider } from "./workspace-notification-polling";
 import {
   Braces,
   BookOpen,
@@ -20,6 +21,7 @@ import {
   LogOut,
   Menu,
   Mic,
+  PanelLeftClose,
   Search,
   Settings,
   StickyNote,
@@ -343,10 +345,18 @@ function searchResultIcon(kind: WorkspaceSearchKind) {
 // user's sidebar back to the default. Nobody sees the string.
 const SIDEBAR_STORAGE_KEY = "helix:sidebar-collapsed";
 
+function WorkspacePollingProviders({ children }: { children: ReactNode }) {
+  return (
+    <WorkspaceHelpPollingProvider>
+      <WorkspaceNotificationPollingProvider>{children}</WorkspaceNotificationPollingProvider>
+    </WorkspaceHelpPollingProvider>
+  );
+}
+
 /** Signed-in workspace chrome, mounted persistently but shown only on app routes. */
 export function WorkspaceShell({
   children,
-  initialAccent = DEFAULT_WORKSPACE_ACCENT,
+  initialAccent,
   initialProfileImage = null
 }: {
   children: ReactNode;
@@ -362,7 +372,9 @@ export function WorkspaceShell({
     user?.fullName ?? user?.firstName ?? user?.primaryEmailAddress?.emailAddress ?? "";
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [workspaceAccent, setWorkspaceAccent] = useState<WorkspaceAccent>(initialAccent);
+  const [workspaceAccent, setWorkspaceAccent] = useState<WorkspaceAccent>(
+    initialAccent ?? DEFAULT_WORKSPACE_ACCENT
+  );
   const [accentShimmerKey, setAccentShimmerKey] = useState(0);
   const profileImage = useWorkspaceProfileImage(initialProfileImage);
   useEffect(() => {
@@ -378,13 +390,17 @@ export function WorkspaceShell({
     if (!showChrome) return;
 
     let disposed = false;
-    void getWorkspaceAccent()
-      .then(({ accent }) => {
-        if (!disposed) setWorkspaceAccent(accent);
-      })
-      .catch(() => {
-        if (!disposed) setWorkspaceAccent(DEFAULT_WORKSPACE_ACCENT);
-      });
+    if (initialAccent) {
+      setWorkspaceAccent(initialAccent);
+    } else {
+      void getWorkspaceAccent()
+        .then(({ accent }) => {
+          if (!disposed) setWorkspaceAccent(accent);
+        })
+        .catch(() => {
+          if (!disposed) setWorkspaceAccent(DEFAULT_WORKSPACE_ACCENT);
+        });
+    }
 
     const onAccentChange = (event: Event) => {
       const accent = (event as CustomEvent<WorkspaceAccent>).detail;
@@ -399,7 +415,7 @@ export function WorkspaceShell({
       disposed = true;
       window.removeEventListener(WORKSPACE_ACCENT_CHANGE_EVENT, onAccentChange);
     };
-  }, [showChrome]);
+  }, [initialAccent, showChrome]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -442,7 +458,7 @@ export function WorkspaceShell({
   if (!showChrome) return <>{children}</>;
 
   return (
-    <WorkspaceHelpPollingProvider>
+    <WorkspacePollingProviders>
       <div
         data-workspace-accent={workspaceAccent}
         className={[
@@ -506,7 +522,7 @@ export function WorkspaceShell({
                 collapsed ? "md:h-12 md:w-12 md:rounded-xl" : ""
               ].join(" ")}
             >
-              <GoSidebarCollapse
+              <PanelLeftClose
                 size={collapsed ? 23 : 21}
                 className={collapsed ? "rotate-180" : ""}
                 aria-hidden="true"
@@ -725,7 +741,7 @@ export function WorkspaceShell({
           {children}
         </main>
       </div>
-    </WorkspaceHelpPollingProvider>
+    </WorkspacePollingProviders>
   );
 }
 
@@ -839,9 +855,13 @@ function PlainAvatar({
 
   if (profileImage) {
     return (
-      <img
+      <Image
         src={profileImage}
         alt={name ? `${name} avatar` : "Account avatar"}
+        width={size === "large" ? 44 : 40}
+        height={size === "large" ? 44 : 40}
+        sizes={size === "large" ? "44px" : "40px"}
+        quality={72}
         className={`${dimension} rounded-full object-cover`}
       />
     );

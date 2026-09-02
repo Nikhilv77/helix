@@ -12,7 +12,7 @@ export function DashboardThirdRow({ data }: { data: DashboardExplore }) {
   return (
     <section
       aria-label="Progress and community"
-      className="mt-5 grid min-w-0 gap-4 lg:grid-cols-3 lg:gap-5"
+      className="dashboard-deferred-row dashboard-deferred-row-summary mt-5 grid min-w-0 gap-4 lg:grid-cols-3 lg:gap-5"
     >
       <ProgressSummaryCard progress={data.progress} />
       <ReportsSummaryCard reports={data.reports} />

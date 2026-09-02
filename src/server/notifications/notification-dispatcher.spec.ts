@@ -50,7 +50,7 @@ function harness(
     emailAttempts: 1,
     emailSentAt: null
   };
-  const recordForDispatch = jest.fn().mockImplementation(async (input: DeliverInput) => {
+  const recordForDispatch = vi.fn().mockImplementation(async (input: DeliverInput) => {
     if (options.recorded === false) return null;
     notification = {
       ...notification,
@@ -67,14 +67,14 @@ function harness(
     };
     return { notification, created: true };
   });
-  const claimEmailDelivery = jest
+  const claimEmailDelivery = vi
     .fn()
     .mockImplementation(async () => ({ token: "lease-1", notification }));
-  const completeEmailDelivery = jest.fn().mockResolvedValue(true);
-  const cancelEmailDelivery = jest.fn().mockResolvedValue(true);
-  const recipientAllowsKind = jest.fn().mockResolvedValue(options.allowed ?? true);
-  const dueEmailDeliveryIds = jest.fn().mockResolvedValue([notification.id]);
-  const send = jest.fn().mockResolvedValue(options.emailed ?? true);
+  const completeEmailDelivery = vi.fn().mockResolvedValue(true);
+  const cancelEmailDelivery = vi.fn().mockResolvedValue(true);
+  const recipientAllowsKind = vi.fn().mockResolvedValue(options.allowed ?? true);
+  const dueEmailDeliveryIds = vi.fn().mockResolvedValue([notification.id]);
+  const send = vi.fn().mockResolvedValue(options.emailed ?? true);
 
   const dispatcher = new NotificationDispatcher(
     {
@@ -230,15 +230,15 @@ describe("email body", () => {
       emailAttempts: 1,
       emailSentAt: null
     };
-    const recordForDispatch = jest.fn().mockResolvedValue({ notification, created: true });
-    const claimEmailDelivery = jest.fn().mockResolvedValue({ token: "lease-1", notification });
-    const send = jest.fn().mockResolvedValue(true);
+    const recordForDispatch = vi.fn().mockResolvedValue({ notification, created: true });
+    const claimEmailDelivery = vi.fn().mockResolvedValue({ token: "lease-1", notification });
+    const send = vi.fn().mockResolvedValue(true);
     const dispatcher = new NotificationDispatcher(
       {
         recordForDispatch,
         claimEmailDelivery,
-        completeEmailDelivery: jest.fn().mockResolvedValue(true),
-        recipientAllowsKind: jest.fn().mockResolvedValue(true)
+        completeEmailDelivery: vi.fn().mockResolvedValue(true),
+        recipientAllowsKind: vi.fn().mockResolvedValue(true)
       } as unknown as NotificationService,
       { configured: true, send } as unknown as EmailChannel,
       undefined

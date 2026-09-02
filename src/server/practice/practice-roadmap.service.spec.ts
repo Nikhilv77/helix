@@ -92,13 +92,13 @@ describe("PracticeRoadmapService", () => {
     const activePlan = plan();
     const transaction = practiceTransaction(activePlan, true);
     const prisma = {
-      $transaction: jest.fn().mockImplementation((work) => work(transaction))
+      $transaction: vi.fn().mockImplementation((work) => work(transaction))
     } as unknown as PrismaService;
     const roadmaps = {
-      home: jest.fn().mockResolvedValue({ roadmapId: "roadmap" })
+      home: vi.fn().mockResolvedValue({ roadmapId: "roadmap" })
     } as unknown as FrontendRoadmapService;
     const plans = {
-      activePlan: jest.fn().mockResolvedValue(activePlan)
+      activePlan: vi.fn().mockResolvedValue(activePlan)
     } as unknown as PersonalizedInterviewPlanningService;
 
     const result = await new PracticeRoadmapService(prisma, roadmaps, plans).home("owner-1");
@@ -128,12 +128,12 @@ describe("PracticeRoadmapService", () => {
     const activePlan = plan();
     const transaction = practiceTransaction(activePlan, false);
     const prisma = {
-      $transaction: jest.fn().mockImplementation((work) => work(transaction))
+      $transaction: vi.fn().mockImplementation((work) => work(transaction))
     } as unknown as PrismaService;
     const service = new PracticeRoadmapService(
       prisma,
-      { home: jest.fn().mockResolvedValue({ roadmapId: "roadmap" }) } as unknown as FrontendRoadmapService,
-      { activePlan: jest.fn().mockResolvedValue(activePlan) } as unknown as PersonalizedInterviewPlanningService
+      { home: vi.fn().mockResolvedValue({ roadmapId: "roadmap" }) } as unknown as FrontendRoadmapService,
+      { activePlan: vi.fn().mockResolvedValue(activePlan) } as unknown as PersonalizedInterviewPlanningService
     );
 
     const result = await service.home("owner-1");
@@ -175,15 +175,15 @@ function practiceTransaction(activePlan: PersonalizedInterviewPlan, stale: boole
     completedQuestions: 4,
     progressPercent: 35
   }));
-  const update = jest.fn().mockImplementation(({ where, data }) => {
+  const update = vi.fn().mockImplementation(({ where, data }) => {
     const existing = rows.find((row) => row.id === where.id);
     return Promise.resolve({ ...existing, ...data });
   });
 
   return {
-    $executeRaw: jest.fn().mockResolvedValue(1),
+    $executeRaw: vi.fn().mockResolvedValue(1),
     userRoadmap: {
-      findUniqueOrThrow: jest.fn().mockResolvedValue({
+      findUniqueOrThrow: vi.fn().mockResolvedValue({
         id: "00000000-0000-4000-8000-000000000100",
         title: "Practice roadmap",
         templateId: "00000000-0000-4000-8000-000000000200",
@@ -199,24 +199,24 @@ function practiceTransaction(activePlan: PersonalizedInterviewPlan, stale: boole
           : activePlan.sourceSnapshot.candidateProfile.revision,
         practiceGenerationVersion: 1
       }),
-      update: jest.fn().mockResolvedValue({ generatedAt: new Date(2) })
+      update: vi.fn().mockResolvedValue({ generatedAt: new Date(2) })
     },
-    roadmapSessionTemplate: { findMany: jest.fn().mockResolvedValue(templates) },
+    roadmapSessionTemplate: { findMany: vi.fn().mockResolvedValue(templates) },
     userSessionProgress: {
-      findMany: jest.fn().mockResolvedValue(rows),
-      create: jest.fn(),
+      findMany: vi.fn().mockResolvedValue(rows),
+      create: vi.fn(),
       update
     },
     userQuestionProgress: {
-      findMany: jest.fn().mockResolvedValue([])
+      findMany: vi.fn().mockResolvedValue([])
     },
     candidateProfile: {
-      findUnique: jest.fn().mockResolvedValue({ level: "3-5" })
+      findUnique: vi.fn().mockResolvedValue({ level: "3-5" })
     },
     practiceQuestionPlacement: {
-      findMany: jest.fn().mockResolvedValue([]),
-      upsert: jest.fn(),
-      deleteMany: jest.fn()
+      findMany: vi.fn().mockResolvedValue([]),
+      upsert: vi.fn(),
+      deleteMany: vi.fn()
     }
   };
 }

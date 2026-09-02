@@ -141,7 +141,8 @@
         "Explains why the default-argument version differs"
       ],
       "weakAnswerSignals": [
-        "Expects each closure to remember its own loop value"
+        "Expects each closure to remember its own loop value",
+        "Cannot explain why a default argument freezes the value"
       ],
       "followUpPrompts": [
         "Which of these two would you use in review, and why?"
@@ -215,7 +216,8 @@
         "Contrasts with the comprehension"
       ],
       "weakAnswerSignals": [
-        "Treats list multiplication as a deep copy"
+        "Treats list multiplication as a deep copy",
+        "Misses that all rows have the same identity"
       ],
       "followUpPrompts": [
         "How would you spot this bug from the symptom alone?"
@@ -289,7 +291,8 @@
         "Explains which value survives in the dict"
       ],
       "weakAnswerSignals": [
-        "Expects separate entries for True and 1"
+        "Expects separate entries for True and 1",
+        "Does not account for equal hashes collapsing keys"
       ],
       "followUpPrompts": [
         "Where could this bite in a counter keyed by user input?"
@@ -437,7 +440,8 @@
         "Explains why the two instances diverge"
       ],
       "weakAnswerSignals": [
-        "Expects both instances to track the class attribute"
+        "Expects both instances to track the class attribute",
+        "Treats an instance write as a class-level mutation"
       ],
       "followUpPrompts": [
         "How would you make a counter genuinely shared across instances?"
@@ -506,10 +510,12 @@
         "lazy vs eager evaluation"
       ],
       "goodAnswerSignals": [
-        "Says the generator is consumed by the first pass"
+        "Says the generator is consumed by the first pass",
+        "Contrasts the generator with the reusable list"
       ],
       "weakAnswerSignals": [
-        "Expects the same total twice from the generator"
+        "Expects the same total twice from the generator",
+        "Treats lazy iteration as stored collection data"
       ],
       "followUpPrompts": [
         "When is the lazy version the one you want anyway?"
@@ -578,10 +584,12 @@
         "falsy containers"
       ],
       "goodAnswerSignals": [
-        "Says the operators return operands, not booleans"
+        "Says the operators return operands, not booleans",
+        "Tracks short-circuiting through the falsy containers"
       ],
       "weakAnswerSignals": [
-        "Expects True or False from every line"
+        "Expects True or False from every line",
+        "Does not identify which operand is returned"
       ],
       "followUpPrompts": [
         "When does `x or default` give you the wrong default?"
@@ -650,7 +658,8 @@
         "list type of the remainder"
       ],
       "goodAnswerSignals": [
-        "Gets the empty list case right"
+        "Gets the empty list case right",
+        "Identifies the starred remainder as a list"
       ],
       "weakAnswerSignals": [
         "Expects a tuple",
@@ -723,10 +732,12 @@
         "reverse semantics"
       ],
       "goodAnswerSignals": [
-        "Keeps equal-key pairs in input order under reverse"
+        "Keeps equal-key pairs in input order under reverse",
+        "Explains why reverse does not reverse equal-key ties"
       ],
       "weakAnswerSignals": [
-        "Reverses the whole list including the ties"
+        "Reverses the whole list including the ties",
+        "Does not account for Python's stable sort"
       ],
       "followUpPrompts": [
         "How would you sort by count descending, then name ascending?"

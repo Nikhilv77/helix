@@ -183,9 +183,9 @@ function dependencies(params: {
   practice?: CandidatePracticeEvidence | null;
 }) {
   const store = {
-    ensureCandidateProfile: jest.fn().mockResolvedValue(candidateProfile()),
-    getActivePlan: jest.fn().mockResolvedValue(params.storedPlan ?? null),
-    saveReadyPlan: jest.fn().mockImplementation(async (_ownerId, plan) => ({
+    ensureCandidateProfile: vi.fn().mockResolvedValue(candidateProfile()),
+    getActivePlan: vi.fn().mockResolvedValue(params.storedPlan ?? null),
+    saveReadyPlan: vi.fn().mockImplementation(async (_ownerId, plan) => ({
       ...plan,
       revision: 1,
       status: "ready"
@@ -193,16 +193,16 @@ function dependencies(params: {
   };
   const generatedPlan = params.generatedPlan ?? activePlan({ status: "draft", revision: 1 });
   const generator = {
-    generate: jest.fn().mockReturnValue({ plan: generatedPlan, relevance: {} })
+    generate: vi.fn().mockReturnValue({ plan: generatedPlan, relevance: {} })
   };
   const profiles = {
-    get: jest.fn().mockResolvedValue(params.workspaceProfile ?? candidateWorkspaceProfile())
+    get: vi.fn().mockResolvedValue(params.workspaceProfile ?? candidateWorkspaceProfile())
   };
   const performanceProfiles = {
-    refresh: jest.fn().mockResolvedValue(params.performance ?? null)
+    refresh: vi.fn().mockResolvedValue(params.performance ?? null)
   };
   const practiceEvidenceStore = {
-    refresh: jest.fn().mockResolvedValue(params.practice ?? null)
+    refresh: vi.fn().mockResolvedValue(params.practice ?? null)
   };
   const service = new PersonalizedInterviewPlanningService(
     store as unknown as PersonalizedPlanningStore,

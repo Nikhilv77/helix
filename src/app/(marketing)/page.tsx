@@ -8,11 +8,11 @@ import { DashboardSkeleton } from "@/components/workspace/dashboard/dashboard-sk
 import { MayaWelcomeLoading } from "@/components/workspace/dashboard/maya-welcome-loading";
 import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
 import { buildDashboardOverview } from "@/lib/dashboard/dashboard-overview";
-import type { ProgressInterview } from "@/lib/roadmap/progress";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared/seo";
 import type { CandidateProfile } from "@/lib/shared/types";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
+import { getProfileForRequest } from "@/server/profile/profile-query";
 
 const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
@@ -63,7 +63,7 @@ export default async function HomePage({
   let profile;
 
   try {
-    profile = await getAppContainer().profileService.get(authenticatedOwnerId(userId));
+    profile = await getProfileForRequest(authenticatedOwnerId(userId));
   } catch {
     redirect("/onboarding");
   }
@@ -91,16 +91,6 @@ export default async function HomePage({
   );
 }
 
-const EMPTY_PROGRESS_INTERVIEW: ProgressInterview = {
-  readinessScore: null,
-  completedSessions: 0,
-  sessionsThisWeek: 0,
-  answeredQuestions: 0,
-  competencies: [],
-  strongest: null,
-  focus: null
-};
-
 async function DashboardOverviewHome({
   userId,
   profile
@@ -112,7 +102,7 @@ async function DashboardOverviewHome({
   const container = getAppContainer();
   const [reports, practice, trailmate] = await Promise.all([
     container.interviewService.reportsOverview(ownerId).catch(() => null),
-    container.progressService.overview(ownerId, EMPTY_PROGRESS_INTERVIEW).catch(() => null),
+    container.progressService.dashboard(ownerId).catch(() => null),
     container.helpHistoryService.dashboardOverview(ownerId).catch(() => null)
   ]);
 

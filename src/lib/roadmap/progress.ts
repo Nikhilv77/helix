@@ -40,6 +40,22 @@ export interface ProgressBriefingOverview {
   interview: Pick<ProgressInterview, "completedSessions">;
 }
 
+/** Minimal projection used by the workspace dashboard. */
+export interface ProgressDashboardOverview {
+  totals: Pick<
+    ProgressTotals,
+    | "completedQuestions"
+    | "totalQuestions"
+    | "completionPercent"
+    | "totalAttempts"
+    | "solvedThisWeek"
+  >;
+  streak: Pick<ProgressStreak, "currentDays" | "lastActiveAt">;
+  /** The seven daily rows rendered by the weekly-rhythm card. */
+  activity: ProgressDay[];
+  nextUp: ProgressNextUp | null;
+}
+
 export interface ProgressTotals {
   totalQuestions: number;
   completedQuestions: number;

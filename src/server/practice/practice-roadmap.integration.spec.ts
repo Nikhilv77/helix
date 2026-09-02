@@ -12,7 +12,7 @@ import { PrepPracticeEvaluator } from "./prep-practice-evaluator";
 const describeDatabase = process.env.RUN_PRACTICE_DB_INTEGRATION === "1" ? describe : describe.skip;
 const ROLLBACK = Symbol("ROLLBACK_PRACTICE_REGENERATION_TEST");
 
-jest.setTimeout(120_000);
+vi.setConfig({ testTimeout: 120_000 });
 
 describeDatabase("PracticeRoadmapService database integration", () => {
   const prisma = new PrismaService();
@@ -232,7 +232,7 @@ describeDatabase("PracticeRoadmapService database integration", () => {
         prisma,
         roadmaps,
         new PrepPracticeEvaluator({
-          generateStructured: jest.fn().mockResolvedValue({
+          generateStructured: vi.fn().mockResolvedValue({
             score: 90,
             verdict: "strong",
             summary: "The answer meets the authored rubric.",

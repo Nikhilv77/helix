@@ -5,11 +5,11 @@ describe("email channel", () => {
 
   afterEach(() => {
     global.fetch = originalFetch;
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it("sends a stable idempotency key to Resend", async () => {
-    const send = jest.fn().mockResolvedValue({ ok: true });
+    const send = vi.fn().mockResolvedValue({ ok: true });
     global.fetch = send as unknown as typeof fetch;
     const channel = new EmailChannel(
       "re_test",
@@ -34,7 +34,7 @@ describe("email channel", () => {
   });
 
   it("uses the teacher as the visible sender and embeds the Trailgrad logo", async () => {
-    const send = jest.fn().mockResolvedValue({ ok: true });
+    const send = vi.fn().mockResolvedValue({ ok: true });
     global.fetch = send as unknown as typeof fetch;
     const channel = new EmailChannel(
       "re_test",
@@ -75,7 +75,7 @@ describe("email channel", () => {
   });
 
   it("keeps email disabled when no API key is configured", async () => {
-    const send = jest.fn();
+    const send = vi.fn();
     global.fetch = send as unknown as typeof fetch;
     const channel = new EmailChannel(undefined, undefined, async () => "helper@example.com");
 

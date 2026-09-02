@@ -7,7 +7,7 @@ import { ApiRouteError } from "../http/api-error";
 
 describe("PracticeTelemetry", () => {
   it("emits a content-safe, alertable state-save failure", () => {
-    const sink = { log: jest.fn(), warn: jest.fn() };
+    const sink = { log: vi.fn(), warn: vi.fn() };
     const telemetry = new PracticeTelemetry(sink);
 
     telemetry.stateSaveFailed({
@@ -36,7 +36,7 @@ describe("PracticeTelemetry", () => {
   });
 
   it("emits evaluator latency and an unverified outage counter", () => {
-    const sink = { log: jest.fn(), warn: jest.fn() };
+    const sink = { log: vi.fn(), warn: vi.fn() };
     const telemetry = new PracticeTelemetry(sink);
 
     telemetry.evaluationUnverified({
@@ -60,7 +60,7 @@ describe("PracticeTelemetry", () => {
   });
 
   it("counts candidate errors without treating them as infrastructure outages", () => {
-    const sink = { log: jest.fn(), warn: jest.fn() };
+    const sink = { log: vi.fn(), warn: vi.fn() };
     const telemetry = new PracticeTelemetry(sink);
 
     telemetry.stateSaveFailed({

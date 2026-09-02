@@ -87,11 +87,11 @@ function plannedDsaQuestion(text: string) {
 
 describe("InterviewPlanner", () => {
   beforeEach(() => {
-    jest.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it("returns a complete role-specific fallback plan", () => {
@@ -135,7 +135,7 @@ describe("InterviewPlanner", () => {
 
   it("keeps a planned DSA round aligned with the workspace order", async () => {
     const ai = {
-      generateStructured: jest.fn(async () => ({
+      generateStructured: vi.fn(async () => ({
         questions: [
           plannedDsaQuestion("How would you find the two numbers that add to the target?"),
           plannedDsaQuestion("What is the cheapest way to make that amount?"),
@@ -158,7 +158,7 @@ describe("InterviewPlanner", () => {
   it("plans exact personalized slots and stamps trusted blueprint metadata", async () => {
     const prompts: string[] = [];
     const ai = {
-      generateStructured: jest.fn(async (request: { prompt: string }) => {
+      generateStructured: vi.fn(async (request: { prompt: string }) => {
         prompts.push(request.prompt);
         return {
           questions: [
@@ -192,7 +192,7 @@ describe("InterviewPlanner", () => {
   it("asks the provider for one question per selected problem", async () => {
     const prompts: string[] = [];
     const ai = {
-      generateStructured: jest.fn((request: { prompt: string }) => {
+      generateStructured: vi.fn((request: { prompt: string }) => {
         prompts.push(request.prompt);
         return new Promise(() => undefined);
       })
@@ -210,7 +210,7 @@ describe("InterviewPlanner", () => {
 
   it("falls back quickly when the provider does not respond", async () => {
     const ai = {
-      generateStructured: jest.fn(() => new Promise(() => undefined))
+      generateStructured: vi.fn(() => new Promise(() => undefined))
     } as unknown as AiService;
     const planner = new InterviewPlanner(ai, 5);
 
@@ -222,7 +222,7 @@ describe("InterviewPlanner", () => {
   it("plans against a chosen template's agenda instead of the default arc", async () => {
     const prompts: string[] = [];
     const ai = {
-      generateStructured: jest.fn((request: { prompt: string }) => {
+      generateStructured: vi.fn((request: { prompt: string }) => {
         prompts.push(request.prompt);
         return new Promise(() => undefined);
       })
@@ -248,7 +248,7 @@ describe("InterviewPlanner", () => {
   it("keeps the default arc when no template was chosen", async () => {
     const prompts: string[] = [];
     const ai = {
-      generateStructured: jest.fn((request: { prompt: string }) => {
+      generateStructured: vi.fn((request: { prompt: string }) => {
         prompts.push(request.prompt);
         return new Promise(() => undefined);
       })
@@ -262,7 +262,7 @@ describe("InterviewPlanner", () => {
   it("adds conversational resume-defense guidance", async () => {
     const prompts: string[] = [];
     const ai = {
-      generateStructured: jest.fn((request: { prompt: string }) => {
+      generateStructured: vi.fn((request: { prompt: string }) => {
         prompts.push(request.prompt);
         return new Promise(() => undefined);
       })

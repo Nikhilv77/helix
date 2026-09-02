@@ -18,7 +18,7 @@ const compilerDescribe =
  * local `javac` and `clang++` binaries and never calls an external provider.
  */
 compilerDescribe("full DSA starter compiler audit", () => {
-  jest.setTimeout(10 * 60 * 1000);
+  vi.setConfig({ testTimeout: 10 * 60 * 1000 });
 
   it("compiles every advertised Java and C++ starter against its authored harness", () => {
     const directory = mkdtempSync(join(tmpdir(), "trailgrad-dsa-compiler-audit-"));

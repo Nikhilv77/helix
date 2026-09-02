@@ -12,7 +12,7 @@ export function DashboardSecondRow({ data }: { data: DashboardContinuation }) {
   return (
     <section
       aria-label="Continue preparing"
-      className="mt-5 grid min-w-0 gap-4 lg:grid-cols-2 lg:gap-5"
+      className="dashboard-deferred-row dashboard-deferred-row-continuation mt-5 grid min-w-0 gap-4 lg:grid-cols-2 lg:gap-5"
     >
       <PracticeContinuationCard practice={data.practice} />
       <InterviewContinuationCard interviews={data.interviews} />

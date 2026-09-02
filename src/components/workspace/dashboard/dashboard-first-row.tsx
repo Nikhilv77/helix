@@ -50,7 +50,7 @@ export function DashboardFirstRow({
                 WebkitMaskImage: "linear-gradient(180deg,#000 0%,#000 78%,transparent 100%)"
               }}
             >
-              <MayaStage speaking={speaking} transparent />
+              <MayaStage speaking={speaking} transparent performanceProfile="dashboard" />
             </div>
           </div>
 

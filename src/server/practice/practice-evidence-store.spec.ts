@@ -30,7 +30,7 @@ describe("PracticeEvidenceStore", () => {
         }
       ]
     })!;
-    const findMany = jest.fn().mockResolvedValue([
+    const findMany = vi.fn().mockResolvedValue([
       {
         id: "attempt-1",
         sourceType: "PREP",
@@ -57,7 +57,7 @@ describe("PracticeEvidenceStore", () => {
         }
       }
     ]);
-    const findUnique = jest.fn().mockImplementation(({ where }) => {
+    const findUnique = vi.fn().mockImplementation(({ where }) => {
       const fingerprint = where.ownerId_sourceAttemptFingerprint_schemaVersion
         .sourceAttemptFingerprint as string;
       return Promise.resolve({

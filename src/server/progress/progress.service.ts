@@ -5,6 +5,7 @@ import {
   type ProgressAttemptStatus,
   type ProgressBriefingOverview,
   type ProgressChapterRow,
+  type ProgressDashboardOverview,
   type ProgressDay,
   type ProgressDifficulty,
   type ProgressInterview,
@@ -21,6 +22,23 @@ const FRONTEND_ROADMAP_ROLE = "fullstack";
 const DAY_MS = 86_400_000;
 /** 18 weeks of heatmap: wide enough to show a habit, short enough to stay dense. */
 const WINDOW_DAYS = 126;
+
+const DASHBOARD_NEXT_QUESTION_SELECT = {
+  dsaQuestionSlug: true,
+  roadmapQuestionTemplateId: true,
+  dsaQuestion: {
+    select: {
+      slug: true,
+      title: true,
+      difficulty: true,
+      expectedTimeMinutes: true
+    }
+  },
+  roadmapQuestionTemplate: {
+    select: { titleSnapshot: true, difficulty: true, expectedMinutes: true }
+  },
+  chapterProgress: { select: { chapterTemplate: { select: { title: true } } } }
+} satisfies Prisma.UserQuestionProgressSelect;
 
 /**
  * Reads the /progress page's data. Strictly read-only — unlike
@@ -63,6 +81,85 @@ export class ProgressService {
       activity: activity.slice(-7),
       interview
     };
+  }
+
+  /**
+   * Dashboard-only projection. This deliberately reads roadmap counters and
+   * one next question instead of hydrating every session, chapter, and
+   * question needed by the full analytics page.
+   */
+  async dashboard(ownerId: string, now: Date = new Date()): Promise<ProgressDashboardOverview> {
+    const windowStart = startOfUtcDay(new Date(now.getTime() - (WINDOW_DAYS - 1) * DAY_MS));
+    const [roadmap, attempts] = await Promise.all([
+      this.prisma.userRoadmap.findUnique({
+        where: { ownerId_role: { ownerId, role: FRONTEND_ROADMAP_ROLE } },
+        select: {
+          id: true,
+          nextQuestionKey: true,
+          totalQuestions: true,
+          completedQuestions: true
+        }
+      }),
+      this.prisma.userQuestionAttempt.findMany({
+        where: { ownerId, createdAt: { gte: windowStart } },
+        orderBy: { createdAt: "desc" },
+        select: { status: true, createdAt: true }
+      })
+    ]);
+
+    const activity = buildActivity(attempts, windowStart, now);
+    const streak = buildStreak(attempts, now);
+    const nextQuestion = roadmap ? await this.findDashboardNextQuestion(roadmap) : null;
+
+    return {
+      totals: {
+        completedQuestions: roadmap?.completedQuestions ?? 0,
+        totalQuestions: roadmap?.totalQuestions ?? 0,
+        completionPercent: percent(roadmap?.completedQuestions ?? 0, roadmap?.totalQuestions ?? 0),
+        totalAttempts: attempts.length,
+        solvedThisWeek: solvedSince(activity, startOfUtcWeek(now))
+      },
+      streak: {
+        currentDays: streak.currentDays,
+        lastActiveAt: streak.lastActiveAt
+      },
+      activity: activity.slice(-7),
+      nextUp: buildDashboardNextUp(nextQuestion)
+    };
+  }
+
+  private async findDashboardNextQuestion(roadmap: {
+    id: string;
+    nextQuestionKey: string | null;
+    totalQuestions: number;
+    completedQuestions: number;
+  }): Promise<DashboardNextQuestionRow | null> {
+    if (roadmap.completedQuestions >= roadmap.totalQuestions) return null;
+
+    if (roadmap.nextQuestionKey) {
+      const nextQuestionIdentity = isUuid(roadmap.nextQuestionKey)
+        ? { roadmapQuestionTemplateId: roadmap.nextQuestionKey }
+        : { dsaQuestionSlug: roadmap.nextQuestionKey };
+      const exact = await this.prisma.userQuestionProgress.findFirst({
+        where: {
+          roadmapId: roadmap.id,
+          ...nextQuestionIdentity
+        },
+        select: DASHBOARD_NEXT_QUESTION_SELECT
+      });
+      if (exact) return exact;
+    }
+
+    return this.prisma.userQuestionProgress.findFirst({
+      where: {
+        roadmapId: roadmap.id,
+        status: {
+          notIn: [RoadmapProgressStatus.COMPLETED, RoadmapProgressStatus.SKIPPED]
+        }
+      },
+      orderBy: { order: "asc" },
+      select: DASHBOARD_NEXT_QUESTION_SELECT
+    });
   }
 
   async overview(
@@ -142,6 +239,10 @@ export class ProgressService {
     };
   }
 }
+
+type DashboardNextQuestionRow = Prisma.UserQuestionProgressGetPayload<{
+  select: typeof DASHBOARD_NEXT_QUESTION_SELECT;
+}>;
 
 type QuestionRow = Prisma.UserQuestionProgressGetPayload<{
   include: {
@@ -539,6 +640,42 @@ function buildNextUp(roadmap: RoadmapRow, questions: QuestionRow[]): ProgressNex
   };
 }
 
+function buildDashboardNextUp(question: DashboardNextQuestionRow | null): ProgressNextUp | null {
+  if (!question) return null;
+
+  const slug = question.dsaQuestion?.slug ?? question.dsaQuestionSlug;
+  const difficulty = (
+    question.roadmapQuestionTemplate?.difficulty ??
+    question.dsaQuestion?.difficulty ??
+    ""
+  ).toLowerCase();
+  const minutes =
+    question.roadmapQuestionTemplate?.expectedMinutes ??
+    question.dsaQuestion?.expectedTimeMinutes ??
+    null;
+
+  return {
+    title:
+      question.dsaQuestion?.title ??
+      question.roadmapQuestionTemplate?.titleSnapshot ??
+      "Next question",
+    href: slug ? `/dsa-questions/${slug}` : "/practice",
+    chapterTitle: question.chapterProgress?.chapterTemplate.title ?? null,
+    difficulty:
+      difficulty === "easy" || difficulty === "medium" || difficulty === "hard" ? difficulty : null,
+    minutes: minutes && minutes > 0 ? minutes : null
+  };
+}
+
+function solvedSince(activity: ProgressDay[], start: Date): number {
+  const startTime = start.getTime();
+  return activity.reduce(
+    (total, day) =>
+      Date.parse(`${day.date}T00:00:00.000Z`) >= startTime ? total + day.solved : total,
+    0
+  );
+}
+
 function difficultyOf(question: QuestionRow): ProgressDifficulty["difficulty"] | null {
   const value = (
     question.roadmapQuestionTemplate?.difficulty ??
@@ -587,4 +724,8 @@ function shortDate(date: Date): string {
 function percent(done: number, total: number): number {
   if (total <= 0) return 0;
   return Math.round((done / total) * 100);
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }

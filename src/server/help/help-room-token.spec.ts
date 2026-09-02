@@ -1,3 +1,8 @@
+// @vitest-environment node
+//
+// LiveKit signs the token through `jose`, which rejects a Uint8Array from
+// jsdom's realm as "not an instance of Uint8Array". This is server-only
+// crypto and has no DOM to need.
 import { TokenVerifier } from "livekit-server-sdk";
 
 import {

@@ -43,7 +43,7 @@ describe("DsaPracticeFeedbackService", () => {
   });
 
   it("uses the fast structured-model path", async () => {
-    const generateStructured = jest.fn().mockResolvedValue({
+    const generateStructured = vi.fn().mockResolvedValue({
       headline: "Clean set-based solution",
       markdown: "### What landed\nYou used a `Set`.",
       voiceScript:

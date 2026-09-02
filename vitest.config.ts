@@ -5,7 +5,12 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
-    include: ["src/**/*.test.{ts,tsx}"]
+    // The `.spec.` files use Jest-style globals rather than importing from
+    // vitest. Explicit imports keep working, so this only widens what resolves.
+    globals: true,
+    // Both suffixes, deliberately. The repo uses `.test.` and `.spec.`
+    // interchangeably; matching only one silently excluded 72 files.
+    include: ["src/**/*.{test,spec}.{ts,tsx}"]
   },
   resolve: {
     alias: {

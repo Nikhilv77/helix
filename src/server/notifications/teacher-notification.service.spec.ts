@@ -5,7 +5,7 @@ import { TeacherNotificationService } from "./teacher-notification.service";
 
 describe("teacher notifications", () => {
   it("forms a personalized, idempotent onboarding welcome and email", async () => {
-    const dispatch = jest.fn().mockResolvedValue({ recorded: true, emailed: true });
+    const dispatch = vi.fn().mockResolvedValue({ recorded: true, emailed: true });
     const service = new TeacherNotificationService(
       {} as PrismaService,
       { dispatch } as unknown as NotificationDispatcher
@@ -39,7 +39,7 @@ describe("teacher notifications", () => {
   });
 
   it("normalizes an all-caps resume name in the welcome template", async () => {
-    const dispatch = jest.fn().mockResolvedValue({ recorded: true, emailed: true });
+    const dispatch = vi.fn().mockResolvedValue({ recorded: true, emailed: true });
     const service = new TeacherNotificationService(
       {} as PrismaService,
       { dispatch } as unknown as NotificationDispatcher,
@@ -61,13 +61,13 @@ describe("teacher notifications", () => {
   });
 
   it("sends one recommendation plus a second nudge only for unfinished work", async () => {
-    const dispatch = jest.fn().mockResolvedValue({ recorded: true, emailed: false });
+    const dispatch = vi.fn().mockResolvedValue({ recorded: true, emailed: false });
     const prisma = {
       candidateProfile: {
-        findMany: jest.fn().mockResolvedValue([{ ownerId: "candidate-1", teacherId: "maya" }])
+        findMany: vi.fn().mockResolvedValue([{ ownerId: "candidate-1", teacherId: "maya" }])
       },
       userQuestionProgress: {
-        findMany: jest.fn().mockResolvedValue([
+        findMany: vi.fn().mockResolvedValue([
           {
             id: "unfinished",
             order: 1,
@@ -132,12 +132,12 @@ describe("teacher notifications", () => {
   });
 
   it("sends only one generic recommendation when no roadmap question is available", async () => {
-    const dispatch = jest.fn().mockResolvedValue({ recorded: true, emailed: false });
+    const dispatch = vi.fn().mockResolvedValue({ recorded: true, emailed: false });
     const prisma = {
       candidateProfile: {
-        findMany: jest.fn().mockResolvedValue([{ ownerId: "candidate-1", teacherId: "claire" }])
+        findMany: vi.fn().mockResolvedValue([{ ownerId: "candidate-1", teacherId: "claire" }])
       },
-      userQuestionProgress: { findMany: jest.fn().mockResolvedValue([]) }
+      userQuestionProgress: { findMany: vi.fn().mockResolvedValue([]) }
     } as unknown as PrismaService;
     const service = new TeacherNotificationService(prisma, {
       dispatch
@@ -155,12 +155,12 @@ describe("teacher notifications", () => {
   });
 
   it("occasionally replaces the daily question prompt with a warm teacher note", async () => {
-    const dispatch = jest.fn().mockResolvedValue({ recorded: true, emailed: false });
+    const dispatch = vi.fn().mockResolvedValue({ recorded: true, emailed: false });
     const prisma = {
       candidateProfile: {
-        findMany: jest.fn().mockResolvedValue([{ ownerId: "candidate-1", teacherId: "claire" }])
+        findMany: vi.fn().mockResolvedValue([{ ownerId: "candidate-1", teacherId: "claire" }])
       },
-      userQuestionProgress: { findMany: jest.fn().mockResolvedValue([]) }
+      userQuestionProgress: { findMany: vi.fn().mockResolvedValue([]) }
     } as unknown as PrismaService;
     const service = new TeacherNotificationService(prisma, {
       dispatch

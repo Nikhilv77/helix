@@ -5,7 +5,7 @@ import { SystemDesignerAIProvider } from "./interfaces/system-designer-ai-provid
 describe("AiService", () => {
   it("delegates structured generation to the configured provider", async () => {
     const schema = z.object({ ok: z.boolean() });
-    const generateStructured = jest.fn().mockResolvedValue({ ok: true });
+    const generateStructured = vi.fn().mockResolvedValue({ ok: true });
     const provider: SystemDesignerAIProvider = { generateStructured };
     const service = new AiService(provider);
     const request = {

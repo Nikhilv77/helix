@@ -8,8 +8,18 @@ const voiceMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/components/workspace/shared/maya/maya-stage", () => ({
-  MayaStage: ({ speaking }: { speaking: boolean }) => (
-    <div data-testid="teacher-avatar" data-speaking={String(speaking)} />
+  MayaStage: ({
+    speaking,
+    performanceProfile
+  }: {
+    speaking: boolean;
+    performanceProfile: string;
+  }) => (
+    <div
+      data-testid="teacher-avatar"
+      data-speaking={String(speaking)}
+      data-performance-profile={performanceProfile}
+    />
   )
 }));
 
@@ -59,6 +69,9 @@ describe("DashboardFirstRow", () => {
     expect(screen.queryByText("Maya")).toBeNull();
     expect(screen.queryByText("Warm, direct, keeps it moving")).toBeNull();
     expect(screen.queryByText("Latest coaching signal")).toBeNull();
+    expect(screen.getByTestId("teacher-avatar").getAttribute("data-performance-profile")).toBe(
+      "dashboard"
+    );
     expect(
       screen.getByRole("heading", { name: /Measurement specificity is the clearest/ })
     ).toBeTruthy();

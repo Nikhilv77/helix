@@ -19,12 +19,12 @@ describe("GeminiProvider", () => {
   type Output = z.infer<typeof outputSchema>;
 
   beforeEach(() => {
-    jest.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   function createConfig(
@@ -78,14 +78,14 @@ describe("GeminiProvider", () => {
     return {
       models: {
         generateContent,
-        embedContent: jest.fn()
+        embedContent: vi.fn()
       }
     };
   }
 
   it("selects the configured fast and reasoning models", async () => {
     const calls: GenerateContentParameters[] = [];
-    const generateContent = jest.fn((params: GenerateContentParameters) => {
+    const generateContent = vi.fn((params: GenerateContentParameters) => {
       calls.push(params);
       return Promise.resolve({ text: JSON.stringify({ ok: true, message: "done" }) });
     });
@@ -114,7 +114,7 @@ describe("GeminiProvider", () => {
       entries: z.array(z.object({ quote: z.string().min(8).max(180) })).max(6)
     });
     const calls: GenerateContentParameters[] = [];
-    const generateContent = jest.fn((params: GenerateContentParameters) => {
+    const generateContent = vi.fn((params: GenerateContentParameters) => {
       calls.push(params);
       return Promise.resolve({
         text: JSON.stringify({ headline: "Engineer", confidence: 1, skills: [], entries: [] })
@@ -148,7 +148,7 @@ describe("GeminiProvider", () => {
   });
 
   it("honours a per-request timeout and attempt budget", async () => {
-    const generateContent = jest.fn(() =>
+    const generateContent = vi.fn(() =>
       Promise.reject(Object.assign(new Error("temporarily unavailable"), { status: 503 }))
     );
     const provider = new GeminiProvider(
@@ -163,7 +163,7 @@ describe("GeminiProvider", () => {
   });
 
   it("returns successful structured output validated with Zod", async () => {
-    const generateContent = jest.fn(() =>
+    const generateContent = vi.fn(() =>
       Promise.resolve({
         text: JSON.stringify({ ok: true, message: "done" })
       })
@@ -177,7 +177,7 @@ describe("GeminiProvider", () => {
   });
 
   it("sends inline documents as multimodal content", async () => {
-    const generateContent = jest.fn(() =>
+    const generateContent = vi.fn(() =>
       Promise.resolve({ text: JSON.stringify({ ok: true, message: "done" }) })
     );
     const provider = new GeminiProvider(createConfig(), createClient(generateContent));
@@ -204,7 +204,7 @@ describe("GeminiProvider", () => {
   });
 
   it("maps invalid model output to a safe invalid response error", async () => {
-    const generateContent = jest.fn(() =>
+    const generateContent = vi.fn(() =>
       Promise.resolve({
         text: JSON.stringify({ ok: true })
       })
@@ -225,7 +225,7 @@ describe("GeminiProvider", () => {
   it("maps provider errors without exposing provider internals in the message", async () => {
     const providerError = new Error("raw provider message with prompt details");
     Object.assign(providerError, { status: 400 });
-    const generateContent = jest.fn(() => Promise.reject(providerError));
+    const generateContent = vi.fn(() => Promise.reject(providerError));
     const provider = new GeminiProvider(
       createConfig({ aiMaxRetries: 1 }),
       createClient(generateContent)
@@ -240,8 +240,8 @@ describe("GeminiProvider", () => {
   });
 
   it("retries transient provider failures", async () => {
-    const generateContent = jest
-      .fn<Promise<GeminiGenerateContentResponse>, [GenerateContentParameters]>()
+    const generateContent = vi
+      .fn<(params: GenerateContentParameters) => Promise<GeminiGenerateContentResponse>>()
       .mockRejectedValueOnce({ status: 503, message: "temporarily unavailable" })
       .mockResolvedValueOnce({ text: JSON.stringify({ ok: true, message: "done" }) });
     const provider = new GeminiProvider(
@@ -257,7 +257,7 @@ describe("GeminiProvider", () => {
   });
 
   it("maps timeout behavior to a retryable timeout error", async () => {
-    const generateContent = jest.fn(
+    const generateContent = vi.fn(
       () => new Promise<GeminiGenerateContentResponse>(() => undefined)
     );
     const provider = new GeminiProvider(

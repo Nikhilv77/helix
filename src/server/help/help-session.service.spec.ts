@@ -395,7 +395,7 @@ describe("reconciling a call", () => {
         questionSlug: "contains-duplicate"
       }
     ];
-    const queryRaw = jest.fn().mockResolvedValue(reconciled);
+    const queryRaw = vi.fn().mockResolvedValue(reconciled);
     const service = new HelpSessionService({ $queryRaw: queryRaw } as unknown as PrismaService);
 
     await expect(service.reconcileStale(new Date("2026-08-28T03:00:00.000Z"))).resolves.toEqual(

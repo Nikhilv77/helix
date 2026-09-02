@@ -66,7 +66,8 @@
         "Explains the primitive comparison separately"
       ],
       "weakAnswerSignals": [
-        "Says == always compares values for Integer"
+        "Says == always compares values for Integer",
+        "Does not distinguish cached boxes from unboxing"
       ],
       "followUpPrompts": [
         "Why is this a bug that only shows up with large inputs?"
@@ -135,10 +136,12 @@
         "reference vs value equality"
       ],
       "goodAnswerSignals": [
-        "Distinguishes the pool from the heap"
+        "Distinguishes the pool from the heap",
+        "Separates reference equality from content equality"
       ],
       "weakAnswerSignals": [
-        "Uses == for string content throughout"
+        "Uses == for string content throughout",
+        "Assumes new String returns the pooled object"
       ],
       "followUpPrompts": [
         "When would you ever call intern deliberately?"
@@ -208,10 +211,12 @@
         "static vs dynamic type"
       ],
       "goodAnswerSignals": [
-        "Says overloads are static and overrides are dynamic"
+        "Says overloads are static and overrides are dynamic",
+        "Uses the declared argument type for each call"
       ],
       "weakAnswerSignals": [
-        "Expects the runtime type to select the overload"
+        "Expects the runtime type to select the overload",
+        "Cannot explain why bare null picks the specific overload"
       ],
       "followUpPrompts": [
         "How does this differ from an overridden method?"
@@ -281,10 +286,12 @@
         "declared vs runtime type"
       ],
       "goodAnswerSignals": [
-        "States the rule for each of fields and methods"
+        "States the rule for each of fields and methods",
+        "Predicts the result through both reference types"
       ],
       "weakAnswerSignals": [
-        "Expects the field to follow the object like the method does"
+        "Expects the field to follow the object like the method does",
+        "Treats field access as virtual dispatch"
       ],
       "followUpPrompts": [
         "Why is hiding a field almost always a mistake?"
@@ -353,10 +360,12 @@
         "value vs reference mutation"
       ],
       "goodAnswerSignals": [
-        "Separates rebinding the local from mutating the object"
+        "Separates rebinding the local from mutating the object",
+        "Accounts for finally running after the return value is chosen"
       ],
       "weakAnswerSignals": [
-        "Expects both cases to behave the same way"
+        "Expects both cases to behave the same way",
+        "Misses the mutation visible through the returned reference"
       ],
       "followUpPrompts": [
         "What would returning from inside finally do here?"
@@ -426,10 +435,12 @@
         "immutability"
       ],
       "goodAnswerSignals": [
-        "Says the reference is copied, not the object"
+        "Says the reference is copied, not the object",
+        "Separates object mutation from parameter reassignment"
       ],
       "weakAnswerSignals": [
-        "Calls Java pass-by-reference for objects"
+        "Calls Java pass-by-reference for objects",
+        "Expects reassignment to replace the caller's reference"
       ],
       "followUpPrompts": [
         "How would you let a method replace the caller's array?"
@@ -499,7 +510,8 @@
         "truncating division and remainder sign"
       ],
       "goodAnswerSignals": [
-        "Explains why abs of the minimum is negative"
+        "Explains why abs of the minimum is negative",
+        "Predicts truncation and remainder behavior for negatives"
       ],
       "weakAnswerSignals": [
         "Expects an exception on overflow",
@@ -572,10 +584,12 @@
         "string concatenation order"
       ],
       "goodAnswerSignals": [
-        "Explains both concatenation lines by associativity"
+        "Explains both concatenation lines by associativity",
+        "Accounts for numeric promotion of char and int"
       ],
       "weakAnswerSignals": [
-        "Expects char + int to stay a char"
+        "Expects char + int to stay a char",
+        "Ignores the left-to-right switch to string concatenation"
       ],
       "followUpPrompts": [
         "How would you print the next letter of the alphabet?"
@@ -644,10 +658,12 @@
         "List remove semantics"
       ],
       "goodAnswerSignals": [
-        "Names both overloads and why the int wins"
+        "Names both overloads and why the int wins",
+        "Explains how to force removal by value"
       ],
       "weakAnswerSignals": [
-        "Expects removal by value throughout"
+        "Expects removal by value throughout",
+        "Does not account for primitive overload selection"
       ],
       "followUpPrompts": [
         "Why does this bug survive code review so often?"
@@ -720,7 +736,8 @@
         "Puts the constructor body last"
       ],
       "weakAnswerSignals": [
-        "Runs the constructor before the field initializers"
+        "Runs the constructor before the field initializers",
+        "Interleaves static initialization with each new instance"
       ],
       "followUpPrompts": [
         "When does the class actually get loaded here?"

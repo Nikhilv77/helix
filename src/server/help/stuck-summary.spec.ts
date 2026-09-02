@@ -123,7 +123,7 @@ describe("stuck summary service", () => {
       estimatedMinutes: 6,
       opener: "Ask what happens to the neighbours when they move a node."
     };
-    const ai = { generateStructured: jest.fn().mockResolvedValue(briefing) };
+    const ai = { generateStructured: vi.fn().mockResolvedValue(briefing) };
 
     const service = new StuckSummaryService(ai as unknown as AiService);
     await expect(service.summarize(question, context)).resolves.toEqual(briefing);
@@ -134,7 +134,7 @@ describe("stuck summary service", () => {
   });
 
   it("falls back instead of throwing when the model is unavailable", async () => {
-    const ai = { generateStructured: jest.fn().mockRejectedValue(new Error("upstream down")) };
+    const ai = { generateStructured: vi.fn().mockRejectedValue(new Error("upstream down")) };
     const service = new StuckSummaryService(ai as unknown as AiService);
 
     // The request is already open by this point. A model outage must not turn

@@ -2786,7 +2786,7 @@ html {
   will-change: auto;
 }
 
-@media (max-width: 639px) {
+@media (max-width: 639px), (hover: none) and (pointer: coarse) {
   /* Large animated blur filters and full-surface backdrop filters are the two
      expensive effects on mobile GPUs. The movement, timing and fades remain;
      only their costly blur pass is exchanged for cleaner opacity/translation. */
@@ -3082,6 +3082,27 @@ html {
   stroke: rgba(255, 255, 255, 0.32);
   stroke-width: 2;
   opacity: 0.48;
+}
+
+/* The lower overview rows keep their exact cards and interactions, but the
+   browser can defer their layout and paint until they approach the viewport. */
+.dashboard-deferred-row {
+  content-visibility: auto;
+}
+
+.dashboard-deferred-row-continuation {
+  contain-intrinsic-size: auto 28rem;
+}
+
+.dashboard-deferred-row-summary {
+  contain-intrinsic-size: auto 36rem;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-deferred-row-continuation,
+  .dashboard-deferred-row-summary {
+    contain-intrinsic-size: auto 14rem;
+  }
 }
 
 .report-evidence-bar {

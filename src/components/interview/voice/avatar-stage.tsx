@@ -14,7 +14,7 @@ const FADE =
   "linear-gradient(to bottom, #000 0%, #000 72%, rgba(0,0,0,0.55) 88%, transparent 100%)";
 
 export type AvatarPerformanceProfile =
-  "default" | "marketing" | "preview" | "onboarding" | "welcome" | "report";
+  "default" | "marketing" | "preview" | "onboarding" | "welcome" | "dashboard" | "report";
 
 interface StagePerformanceSettings {
   antialias: boolean;
@@ -102,8 +102,9 @@ function mobileProfile(performanceProfile: AvatarPerformanceProfile): StagePerfo
   const marketingMobile = constrained && performanceProfile === "marketing";
   const onboarding = performanceProfile === "onboarding";
   const welcome = performanceProfile === "welcome";
+  const dashboard = performanceProfile === "dashboard";
   const report = performanceProfile === "report";
-  const adaptiveTouch = (onboarding && constrained) || ((welcome || report) && coarse);
+  const adaptiveTouch = (onboarding && constrained) || ((welcome || dashboard || report) && coarse);
 
   const device = navigator as Navigator & {
     deviceMemory?: number;
@@ -133,12 +134,12 @@ function mobileProfile(performanceProfile: AvatarPerformanceProfile): StagePerfo
     };
   }
 
-  if (welcome || report) {
+  if (welcome || dashboard || report) {
     return {
       antialias: true,
-      // Welcome and report stages are both prominent but remain mounted while
-      // somebody reads. Keep the portrait sharp without running the default
-      // profile's 2.5 DPR, unrestricted loop on touch hardware.
+      // These prominent reading surfaces remain mounted for a long time. Keep
+      // the portrait sharp without running the default profile's 2.5 DPR,
+      // unrestricted loop on touch hardware.
       pixelRatio: Math.min(dpr, coarse ? 1.5 : DESKTOP_PIXEL_RATIO_CAP),
       activeFrameInterval: 1000 / (lowEndAdaptive ? 24 : coarse ? 30 : 45),
       idleFrameInterval: 1000 / (lowEndAdaptive ? 10 : coarse ? 15 : 24),
