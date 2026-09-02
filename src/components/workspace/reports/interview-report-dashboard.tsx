@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { createThemedReportPdf, type ReportPdfBriefing } from "@/lib/reports/report-pdf";
+import type { ReportPdfBriefing } from "@/lib/reports/report-pdf";
 import type { ReportsOverview } from "@/lib/reports/reports";
 import { formatDuration, formatShortDate, roundShortLabel } from "@/lib/shared/labels";
 import type { InterviewReport } from "@/lib/shared/types";
@@ -135,7 +135,7 @@ export function InterviewReportDashboard({
         </div>
 
         <div className="identity-stage-in relative z-10 -mt-7 flex max-w-xl flex-col items-center sm:-mt-9">
-          <div className="report-glass-card relative rounded-2xl px-5 py-4 text-left sm:px-6">
+          <div className="report-maya-speech-card report-glass-card relative rounded-2xl px-5 py-4 text-left sm:px-6">
             <span
               aria-hidden
               className="report-glass-tail absolute -top-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45"
@@ -216,6 +216,10 @@ export function InterviewReportDashboard({
           delay={1020}
         />
       </article>
+
+      <div className="mt-10 flex justify-center pb-2">
+        <DownloadInterviewReportButton briefing={briefing} variant="primary" />
+      </div>
     </section>
   );
 }
@@ -556,6 +560,7 @@ function buildPdfBriefing(
 }
 
 async function downloadReport(briefing: ReportPdfBriefing) {
+  const { createThemedReportPdf } = await import("@/lib/reports/report-pdf");
   const pdf = await createThemedReportPdf(briefing);
   const url = URL.createObjectURL(new Blob([new Uint8Array(pdf)], { type: "application/pdf" }));
   const link = document.createElement("a");
@@ -565,7 +570,13 @@ async function downloadReport(briefing: ReportPdfBriefing) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
-function DownloadInterviewReportButton({ briefing }: { briefing: ReportPdfBriefing }) {
+function DownloadInterviewReportButton({
+  briefing,
+  variant = "compact"
+}: {
+  briefing: ReportPdfBriefing;
+  variant?: "compact" | "primary";
+}) {
   const [isPreparing, setIsPreparing] = useState(false);
 
   const handleDownload = async () => {
@@ -582,10 +593,21 @@ function DownloadInterviewReportButton({ briefing }: { briefing: ReportPdfBriefi
       type="button"
       onClick={handleDownload}
       disabled={isPreparing}
-      className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-white/[0.11] px-3.5 text-sm font-semibold text-cream/74 transition hover:bg-white/[0.06] hover:text-cream disabled:cursor-wait disabled:opacity-65"
+      className={
+        variant === "primary"
+          ? "progress-cta-shimmer relative inline-flex min-h-12 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-cream px-6 py-3 text-base font-semibold text-[#171a16] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-wait disabled:opacity-65"
+          : "inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-white/[0.11] px-3.5 text-sm font-semibold text-cream/74 transition hover:bg-white/[0.06] hover:text-cream disabled:cursor-wait disabled:opacity-65"
+      }
     >
-      <Download size={16} strokeWidth={1.9} aria-hidden="true" />
-      {isPreparing ? "Preparing…" : "Download report"}
+      <Download
+        size={variant === "primary" ? 17 : 16}
+        strokeWidth={1.9}
+        aria-hidden="true"
+        className={variant === "primary" ? "relative z-10" : undefined}
+      />
+      <span className={variant === "primary" ? "relative z-10" : undefined}>
+        {isPreparing ? "Preparing…" : "Download report"}
+      </span>
     </button>
   );
 }

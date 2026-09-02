@@ -298,7 +298,7 @@ export class WorkspaceSearchService {
             initcap(session."state" #>> '{setup,intensity}')
           ),
           CASE
-            WHEN session."state" ->> 'phase' = 'done' THEN '/sessions/' || session."id"::text
+            WHEN session."state" ->> 'phase' = 'done' THEN '/reports'
             ELSE '/interview/voice?session=' || session."id"::text
           END,
           CASE WHEN session."state" ->> 'phase' = 'done' THEN 'Completed' ELSE 'In progress' END,

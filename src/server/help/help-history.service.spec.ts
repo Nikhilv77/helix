@@ -112,21 +112,22 @@ describe("help history", () => {
   });
 
   it("returns only the lightweight counts used by the simplified Help page", async () => {
-    const count = jest
+    const queryRaw = jest
       .fn()
-      .mockResolvedValueOnce(4)
-      .mockResolvedValueOnce(1)
-      .mockResolvedValueOnce(0);
+      .mockResolvedValueOnce([
+        {
+          helpReceived: 4,
+          peopleHelped: 1,
+          activeReceived: 1,
+          activeGiven: 0,
+          positiveHelps: 1,
+          availabilityCredits: 1
+        }
+      ])
+      .mockResolvedValueOnce([]);
     const prisma = {
       helpRequest: {
-        count,
-        findFirst: jest.fn().mockResolvedValue(null),
-        findMany: jest
-          .fn()
-          .mockResolvedValue([{ learnerId: "learner-1" }, { learnerId: "learner-1" }])
-      },
-      helpSession: {
-        count: jest.fn().mockResolvedValue(1)
+        findFirst: jest.fn().mockResolvedValue(null)
       },
       candidateProfile: {
         findMany: jest.fn().mockImplementation(({ where }) => {
@@ -144,7 +145,8 @@ describe("help history", () => {
               : []
           );
         })
-      }
+      },
+      $queryRaw: queryRaw
     } as unknown as PrismaService;
 
     await expect(new HelpHistoryService(prisma).overview("owner-1")).resolves.toEqual({
@@ -162,6 +164,94 @@ describe("help history", () => {
       activeConversation: null,
       topHelpers: []
     });
+    expect(queryRaw).toHaveBeenCalledTimes(2);
+  });
+
+  it("aggregates the leaderboard in SQL and shares it for 45 seconds", async () => {
+    let now = 1_000;
+    const dateNow = jest.spyOn(Date, "now").mockImplementation(() => now);
+    const queryRaw = jest.fn().mockResolvedValue([
+      { helperId: "helper-1", helpedCount: 8, thankedCount: 6 },
+      { helperId: "helper-2", helpedCount: 11, thankedCount: 4 }
+    ]);
+    const profileFindMany = jest.fn().mockResolvedValue([
+      {
+        ownerId: "helper-1",
+        headline: "Backend candidate",
+        profileImage: "/images/profile/avatars/avatar-01.jpg",
+        resumeAnalysis: { fullName: "Asha Verma" }
+      },
+      {
+        ownerId: "helper-2",
+        headline: null,
+        profileImage: null,
+        resumeAnalysis: { fullName: "Dev Shah" }
+      }
+    ]);
+    const service = new HelpHistoryService({
+      $queryRaw: queryRaw,
+      candidateProfile: { findMany: profileFindMany }
+    } as unknown as PrismaService);
+
+    try {
+      const [first, concurrent] = await Promise.all([service.topHelpers(), service.topHelpers()]);
+      expect(first).toEqual([
+        {
+          participant: {
+            label: "Asha Verma",
+            headline: "Backend candidate",
+            profileImage: "/images/profile/avatars/avatar-01.jpg"
+          },
+          helpedCount: 8,
+          thankedCount: 6
+        },
+        {
+          participant: { label: "Dev Shah", headline: null, profileImage: null },
+          helpedCount: 11,
+          thankedCount: 4
+        }
+      ]);
+      expect(concurrent).toEqual(first);
+      expect(queryRaw).toHaveBeenCalledTimes(1);
+      expect(profileFindMany).toHaveBeenCalledTimes(1);
+
+      now = 45_999;
+      await service.topHelpers();
+      expect(queryRaw).toHaveBeenCalledTimes(1);
+
+      now = 46_001;
+      await service.topHelpers();
+      expect(queryRaw).toHaveBeenCalledTimes(2);
+      expect(profileFindMany).toHaveBeenCalledTimes(2);
+    } finally {
+      dateNow.mockRestore();
+    }
+  });
+
+  it("uses the consolidated counters for the lightweight dashboard overview", async () => {
+    const queryRaw = jest.fn().mockResolvedValue([
+      {
+        helpReceived: 7,
+        peopleHelped: 3,
+        activeReceived: 0,
+        activeGiven: 0,
+        positiveHelps: 2,
+        availabilityCredits: 1
+      }
+    ]);
+    const findFirst = jest.fn().mockResolvedValue(null);
+    const service = new HelpHistoryService({
+      $queryRaw: queryRaw,
+      helpRequest: { findFirst }
+    } as unknown as PrismaService);
+
+    await expect(service.dashboardOverview("owner-1")).resolves.toEqual({
+      helpReceived: 7,
+      peopleHelped: 3,
+      activeConversation: null
+    });
+    expect(queryRaw).toHaveBeenCalledTimes(1);
+    expect(findFirst).toHaveBeenCalledTimes(1);
   });
 
   it("resolves the other participant for Trailmate notification portraits", async () => {
@@ -191,10 +281,12 @@ describe("help history", () => {
       }
     } as unknown as PrismaService;
 
-    const participants = await new HelpHistoryService(prisma).notificationParticipants(
-      "owner-1",
-      ["opened", "claimed", "expired", "opened"]
-    );
+    const participants = await new HelpHistoryService(prisma).notificationParticipants("owner-1", [
+      "opened",
+      "claimed",
+      "expired",
+      "opened"
+    ]);
 
     expect(participants.get("opened")).toEqual({
       label: "Asha Verma",

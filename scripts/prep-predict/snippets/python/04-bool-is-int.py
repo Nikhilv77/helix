@@ -1,0 +1,6 @@
+print(1 < 2 < 3)
+print(True + True)
+print(isinstance(True, int))
+print([1, 2] == [1.0, 2.0])
+print({True: "a", 1: "b"})
+print(len({1, True, 1.0}))

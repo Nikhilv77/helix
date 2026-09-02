@@ -13,6 +13,19 @@ import type { PresenceState } from "./interviewer-presence";
 const FADE =
   "linear-gradient(to bottom, #000 0%, #000 72%, rgba(0,0,0,0.55) 88%, transparent 100%)";
 
+export type AvatarPerformanceProfile =
+  "default" | "marketing" | "preview" | "onboarding" | "welcome" | "report";
+
+interface StagePerformanceSettings {
+  antialias: boolean;
+  pixelRatio: number;
+  activeFrameInterval: number;
+  idleFrameInterval: number;
+  idleParkAfterMs: number;
+  imageBasedLighting: boolean;
+  powerPreference: "default" | "high-performance" | "low-power";
+}
+
 interface AvatarStageProps {
   /** The agent's audio. Drives the mouth. */
   agentTrack: MediaStreamTrack | null;
@@ -24,7 +37,7 @@ interface AvatarStageProps {
    */
   url: string;
   framing?: "default" | "marketing" | "portrait";
-  performanceProfile?: "default" | "marketing" | "preview";
+  performanceProfile?: AvatarPerformanceProfile;
   /** Hide the stage status when the surrounding UI supplies its own visual state. */
   showStatus?: boolean;
   /** Keep the full portrait visible instead of fading it into a card edge. */
@@ -70,19 +83,72 @@ const MOBILE_PIXEL_RATIO_CAP = 2.5;
 const MARKETING_MOBILE_PIXEL_RATIO_CAP = 1.75;
 const DESKTOP_PIXEL_RATIO_CAP = 2;
 
-function mobileProfile(performanceProfile: "default" | "marketing" | "preview") {
+function mobileProfile(performanceProfile: AvatarPerformanceProfile): StagePerformanceSettings {
   const dpr = window.devicePixelRatio || 1;
   if (performanceProfile === "preview") {
     return {
       antialias: true,
-      pixelRatio: Math.min(dpr, 1),
-      frameInterval: 0
+      pixelRatio: Math.min(dpr, 1.5),
+      activeFrameInterval: 0,
+      idleFrameInterval: 0,
+      idleParkAfterMs: 0,
+      imageBasedLighting: true,
+      powerPreference: "low-power"
     };
   }
   const coarse = window.matchMedia("(pointer: coarse)").matches;
   const small = Math.min(window.innerWidth, window.innerHeight) < 820;
   const constrained = coarse && small;
   const marketingMobile = constrained && performanceProfile === "marketing";
+  const onboarding = performanceProfile === "onboarding";
+  const welcome = performanceProfile === "welcome";
+  const report = performanceProfile === "report";
+  const adaptiveTouch = (onboarding && constrained) || ((welcome || report) && coarse);
+
+  const device = navigator as Navigator & {
+    deviceMemory?: number;
+    connection?: { saveData?: boolean };
+  };
+  const lowEndAdaptive =
+    adaptiveTouch &&
+    ((device.deviceMemory !== undefined && device.deviceMemory <= 4) ||
+      (navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency <= 4) ||
+      device.connection?.saveData === true);
+
+  if (onboarding) {
+    return {
+      antialias: true,
+      // One moderately dense canvas remains crisp at card size. The previous
+      // onboarding scene rendered three canvases at up to 2.5 DPR, which is a
+      // quadratic amount of fragment work on a phone.
+      pixelRatio: Math.min(dpr, constrained ? 1.25 : 1.5),
+      activeFrameInterval: 1000 / (lowEndAdaptive ? 20 : constrained ? 24 : 30),
+      idleFrameInterval: 1000 / (lowEndAdaptive ? 8 : constrained ? 12 : 15),
+      // A parked canvas keeps its final full-resolution frame. Weak phones
+      // therefore stop spending power after the user has looked at an idle
+      // teacher for a while, without ever swapping in a softer image.
+      idleParkAfterMs: lowEndAdaptive ? 8000 : 0,
+      imageBasedLighting: !lowEndAdaptive,
+      powerPreference: lowEndAdaptive ? "low-power" : "default"
+    };
+  }
+
+  if (welcome || report) {
+    return {
+      antialias: true,
+      // Welcome and report stages are both prominent but remain mounted while
+      // somebody reads. Keep the portrait sharp without running the default
+      // profile's 2.5 DPR, unrestricted loop on touch hardware.
+      pixelRatio: Math.min(dpr, coarse ? 1.5 : DESKTOP_PIXEL_RATIO_CAP),
+      activeFrameInterval: 1000 / (lowEndAdaptive ? 24 : coarse ? 30 : 45),
+      idleFrameInterval: 1000 / (lowEndAdaptive ? 10 : coarse ? 15 : 24),
+      // Freeze the final sharp frame after the initial idle beat and wake
+      // immediately if the teacher starts speaking again.
+      idleParkAfterMs: coarse ? 8000 : 0,
+      imageBasedLighting: !lowEndAdaptive,
+      powerPreference: lowEndAdaptive ? "low-power" : "default"
+    };
+  }
 
   return {
     antialias: true,
@@ -94,7 +160,11 @@ function mobileProfile(performanceProfile: "default" | "marketing" | "preview") 
           ? MOBILE_PIXEL_RATIO_CAP
           : DESKTOP_PIXEL_RATIO_CAP
     ),
-    frameInterval: marketingMobile ? 1000 / 30 : 0
+    activeFrameInterval: marketingMobile ? 1000 / 30 : 0,
+    idleFrameInterval: marketingMobile ? 1000 / 30 : 0,
+    idleParkAfterMs: 0,
+    imageBasedLighting: true,
+    powerPreference: "default"
   };
 }
 
@@ -145,7 +215,10 @@ export function AvatarStage({
   rigRef.current = rig;
   const introducingRef = useRef(introducing);
   introducingRef.current = introducing;
+  const urlRef = useRef(url);
+  urlRef.current = url;
   const syncRef = useRef<(() => void) | null>(null);
+  const loadModelRef = useRef<((nextUrl: string) => void) | null>(null);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -164,7 +237,11 @@ export function AvatarStage({
     // has an "unavailable" state to fall back to.
     let renderer: THREE.WebGLRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: profile.antialias, alpha: true });
+      renderer = new THREE.WebGLRenderer({
+        antialias: profile.antialias,
+        alpha: true,
+        powerPreference: profile.powerPreference
+      });
     } catch {
       setStatus("failed");
       return;
@@ -178,8 +255,15 @@ export function AvatarStage({
     renderer.toneMappingExposure = 1.05;
     mount.appendChild(renderer.domElement);
 
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    let pmrem: THREE.PMREMGenerator | null = null;
+    let environmentTarget: THREE.WebGLRenderTarget | null = null;
+    if (profile.imageBasedLighting) {
+      pmrem = new THREE.PMREMGenerator(renderer);
+      const room = new RoomEnvironment();
+      environmentTarget = pmrem.fromScene(room, 0.04);
+      room.dispose();
+      scene.environment = environmentTarget.texture;
+    }
 
     // Cool ambient with a cream key and a blue rim, so the avatar sits inside
     // the blueprint palette rather than looking pasted onto it.
@@ -202,6 +286,9 @@ export function AvatarStage({
     // per-frame string hashing on the main thread.
     let morphSlots = new Map<string, Array<{ influences: number[]; index: number }>>();
     let disposed = false;
+    let currentModel: THREE.Object3D | null = null;
+    let requestedUrl: string | null = null;
+    let modelRequest = 0;
     let frame = 0;
 
     let blinkAt = performance.now() + rigRef.current.blinkIntervalMs[0];
@@ -214,6 +301,8 @@ export function AvatarStage({
     const nodAxis = new THREE.Vector3(1, 0, 0);
     let wasIntroducing = false;
     let introductionElapsed = Number.POSITIVE_INFINITY;
+    let wasSpeaking = stateRef.current === "speaking";
+    let idleSince = performance.now();
     // One value per shape, each eased separately: mouths open fast and close
     // slowly, and a single shared scalar could not express that.
     const shapes = {
@@ -244,70 +333,137 @@ export function AvatarStage({
     const observer = new ResizeObserver(resize);
     observer.observe(mount);
 
-    // The model ships meshopt-compressed: vertex and morph-target data is
-    // quantized and byte-packed, which more than halves the download at the
-    // cost of a decode measured in single-digit milliseconds. The decoder is
-    // pure JS + wasm and rides in this chunk, which is already lazy.
-    new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(
-      url,
-      (gltf) => {
-        if (disposed) return;
-        const model = gltf.scene;
-        root.add(model);
+    function disposeModel(model: THREE.Object3D) {
+      const geometries = new Set<THREE.BufferGeometry>();
+      const materials = new Set<THREE.Material>();
+      const textures = new Set<THREE.Texture>();
+      const skeletons = new Set<THREE.Skeleton>();
 
-        model.traverse((child) => {
-          if (!(child instanceof THREE.Mesh)) return;
-          const dictionary = child.morphTargetDictionary;
-          const influences = child.morphTargetInfluences;
-          if (!dictionary || !influences) return;
-
-          for (const [name, index] of Object.entries(dictionary)) {
-            const slots = morphSlots.get(name);
-            if (slots) slots.push({ influences, index });
-            else morphSlots.set(name, [{ influences, index }]);
+      model.traverse((object) => {
+        if (!(object instanceof THREE.Mesh)) return;
+        geometries.add(object.geometry);
+        const objectMaterials = Array.isArray(object.material)
+          ? object.material
+          : [object.material];
+        for (const material of objectMaterials) {
+          materials.add(material);
+          for (const value of Object.values(material)) {
+            if (value instanceof THREE.Texture) textures.add(value);
           }
-        });
+        }
+        if (object instanceof THREE.SkinnedMesh) skeletons.add(object.skeleton);
+      });
 
-        // Both supported skeleton families expose a head bone, but use
-        // different names. Keep its authored rest pose and layer only a tiny
-        // greeting nod on top so the model never snaps into a generic pose.
-        head =
-          model.getObjectByName("Head") ??
-          model.getObjectByName("Bip01 Head") ??
-          model.children.find((child) => /(^|\s)head$/i.test(child.name)) ??
-          null;
-        if (head) headRest.copy(head.quaternion);
-
-        // Frame from geometry, not node names. Matching a node called "head"
-        // is unreliable across rigs — several models aim the camera at the
-        // knees. Human proportions put the head centre about 7% down from the
-        // top of the bounding box, whatever the rig calls its bones.
-        const box = new THREE.Box3().setFromObject(model);
-        const size = box.getSize(new THREE.Vector3());
-        const centre = box.getCenter(new THREE.Vector3());
-        const marketingFrame = framing === "marketing";
-        const portraitFrame = framing === "portrait";
-        const focusY = box.max.y - size.y * 0.075;
-        const framedHeight = size.y * (marketingFrame ? 0.34 : portraitFrame ? 0.56 : 0.36);
-
-        model.position.x -= centre.x;
-        model.position.z -= centre.z;
-
-        const distance = framedHeight / 2 / Math.tan((camera.fov / 2) * THREE.MathUtils.DEG2RAD);
-        camera.position.set(0, focusY, distance);
-        camera.lookAt(0, focusY - size.y * 0.02, 0);
-
-        resize();
-        // Parked preview stages still need one frame on screen. Their render
-        // loops remain stopped after this initial draw.
-        renderer.render(scene, camera);
-        setStatus("ready");
-      },
-      undefined,
-      () => {
-        if (!disposed) setStatus("failed");
+      for (const texture of textures) {
+        texture.dispose();
+        const image = texture.source.data;
+        if (typeof ImageBitmap !== "undefined" && image instanceof ImageBitmap) image.close();
       }
-    );
+      for (const material of materials) material.dispose();
+      for (const geometry of geometries) geometry.dispose();
+      for (const skeleton of skeletons) skeleton.dispose();
+    }
+
+    function resetFace() {
+      for (const key of Object.keys(shapes) as Array<keyof typeof shapes>) shapes[key] = 0;
+      blinkPhase = -1;
+      blinkAt = performance.now() + rigRef.current.blinkIntervalMs[0];
+      wasIntroducing = false;
+      introductionElapsed = Number.POSITIVE_INFINITY;
+      root.position.set(0, 0, 0);
+      root.rotation.set(0, 0, 0);
+    }
+
+    const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+
+    function loadModel(nextUrl: string) {
+      if (disposed || requestedUrl === nextUrl) return;
+      requestedUrl = nextUrl;
+      const request = ++modelRequest;
+      setStatus("loading");
+
+      // The renderer, lights and environment deliberately stay mounted while
+      // this decodes. The previous teacher remains as the last sharp frame and
+      // is swapped only after the new GLB is ready, avoiding both a blank flash
+      // and repeated WebGL context creation while someone browses teachers.
+      loader.load(
+        nextUrl,
+        (gltf) => {
+          const model = gltf.scene;
+          if (disposed || request !== modelRequest) {
+            disposeModel(model);
+            return;
+          }
+
+          if (currentModel) {
+            root.remove(currentModel);
+            disposeModel(currentModel);
+          }
+          currentModel = model;
+          morphSlots = new Map();
+          head = null;
+          resetFace();
+          root.add(model);
+
+          model.traverse((child) => {
+            if (!(child instanceof THREE.Mesh)) return;
+            const dictionary = child.morphTargetDictionary;
+            const influences = child.morphTargetInfluences;
+            if (!dictionary || !influences) return;
+
+            for (const [name, index] of Object.entries(dictionary)) {
+              const slots = morphSlots.get(name);
+              if (slots) slots.push({ influences, index });
+              else morphSlots.set(name, [{ influences, index }]);
+            }
+          });
+
+          // Both supported skeleton families expose a head bone, but use
+          // different names. Keep its authored rest pose and layer only a tiny
+          // greeting nod on top so the model never snaps into a generic pose.
+          head =
+            model.getObjectByName("Head") ??
+            model.getObjectByName("Bip01 Head") ??
+            model.children.find((child) => /(^|\s)head$/i.test(child.name)) ??
+            null;
+          if (head) headRest.copy(head.quaternion);
+
+          // Frame from geometry, not node names. Matching a node called "head"
+          // is unreliable across rigs — several models aim the camera at the
+          // knees. Human proportions put the head centre about 7% down from the
+          // top of the bounding box, whatever the rig calls its bones.
+          const box = new THREE.Box3().setFromObject(model);
+          const size = box.getSize(new THREE.Vector3());
+          const centre = box.getCenter(new THREE.Vector3());
+          const marketingFrame = framing === "marketing";
+          const portraitFrame = framing === "portrait";
+          const focusY = box.max.y - size.y * 0.075;
+          const framedHeight = size.y * (marketingFrame ? 0.34 : portraitFrame ? 0.56 : 0.36);
+
+          model.position.x -= centre.x;
+          model.position.z -= centre.z;
+
+          const distance = framedHeight / 2 / Math.tan((camera.fov / 2) * THREE.MathUtils.DEG2RAD);
+          camera.position.set(0, focusY, distance);
+          camera.lookAt(0, focusY - size.y * 0.02, 0);
+
+          resize();
+          // A single immediate render makes model swaps and parked low-power
+          // stages sharp even before their next scheduled animation frame.
+          renderer.render(scene, camera);
+          idleSince = performance.now();
+          sync();
+          setStatus("ready");
+        },
+        undefined,
+        () => {
+          if (!disposed && request === modelRequest) setStatus("failed");
+        }
+      );
+    }
+
+    loadModelRef.current = loadModel;
+    loadModel(urlRef.current);
 
     /** Ease toward a target with separate attack and release rates. */
     function ease(current: number, target: number, attack: number, release: number, delta: number) {
@@ -416,14 +572,26 @@ export function AvatarStage({
 
     function render(now: number) {
       frame = requestAnimationFrame(render);
-      if (profile.frameInterval > 0 && now - lastRenderedFrame < profile.frameInterval) return;
+      const speaking = stateRef.current === "speaking";
+      if (speaking !== wasSpeaking) {
+        wasSpeaking = speaking;
+        idleSince = speaking ? Number.POSITIVE_INFINITY : now;
+      }
+      if (!speaking && profile.idleParkAfterMs > 0 && now - idleSince >= profile.idleParkAfterMs) {
+        // The canvas retains the last rendered pixels, so parking is visually
+        // indistinguishable from a still pose and never introduces a poster or
+        // lower-resolution fallback. State changes wake it through syncRef.
+        stopLoop();
+        return;
+      }
+      const frameInterval = speaking ? profile.activeFrameInterval : profile.idleFrameInterval;
+      if (frameInterval > 0 && now - lastRenderedFrame < frameInterval) return;
       lastRenderedFrame = now;
 
       const delta = Math.min(0.05, (now - lastFrame) / 1000 || 0.016);
       lastFrame = now;
       clock += delta;
 
-      const speaking = stateRef.current === "speaking";
       const introducingNow = introducingRef.current;
       if (introducingNow && !wasIntroducing) introductionElapsed = 0;
       if (introducingNow) introductionElapsed += delta;
@@ -530,33 +698,37 @@ export function AvatarStage({
 
     return () => {
       disposed = true;
+      modelRequest += 1;
       syncRef.current = null;
+      if (loadModelRef.current === loadModel) loadModelRef.current = null;
       stopLoop();
       cancelAnimationFrame(frame);
       document.removeEventListener("visibilitychange", onPageVisibility);
       visibility.disconnect();
       observer.disconnect();
       morphSlots = new Map();
-      scene.traverse((object) => {
-        if (object instanceof THREE.Mesh) {
-          object.geometry.dispose();
-          const material = object.material;
-          if (Array.isArray(material)) material.forEach((m) => m.dispose());
-          else material.dispose();
-        }
-      });
-      pmrem.dispose();
+      if (currentModel) disposeModel(currentModel);
+      scene.environment = null;
+      environmentTarget?.dispose();
+      pmrem?.dispose();
       renderer.dispose();
+      renderer.forceContextLoss();
       if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
     };
-  }, [framing, performanceProfile, url]);
+  }, [framing, performanceProfile]);
+
+  // Model changes reuse the existing renderer and GPU context. The scene owns
+  // the actual loader so this effect remains a cheap hand-off.
+  useEffect(() => {
+    loadModelRef.current?.(url);
+  }, [url]);
 
   // Nudges the gate above. Deliberately separate from the scene effect: `active`
   // flips on every scroll past the hero, and rebuilding the renderer there
   // would be far worse than the loop it stops.
   useEffect(() => {
     syncRef.current?.();
-  }, [active]);
+  }, [active, state]);
 
   return (
     <div className="relative h-full w-full">

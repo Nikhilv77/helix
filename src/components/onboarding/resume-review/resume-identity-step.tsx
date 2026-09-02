@@ -122,9 +122,7 @@ export function ResumeIdentityStep({
         {phase === 1 ? (
           <section key="summary" className="identity-stage-in w-full">
             <p className="thinking-shimmer blueprint-label text-cream/45">Maya read your profile</p>
-            <p
-              className="mx-auto mt-5 max-w-3xl text-2xl font-semibold leading-snug text-cream sm:text-[2.7rem] sm:leading-tight"
-            >
+            <p className="mx-auto mt-5 max-w-3xl text-2xl font-semibold leading-snug tracking-[-0.025em] text-cream sm:text-[2.7rem] sm:leading-tight">
               {profileSummary}
             </p>
           </section>
@@ -159,7 +157,9 @@ export function ResumeIdentityStep({
                       className="mx-auto text-cream/74"
                       aria-hidden="true"
                     />
-                    <p className="mt-5 text-2xl font-bold leading-none">{item.label}</p>
+                    <p className="mt-5 text-2xl font-bold leading-none tracking-[-0.025em]">
+                      {item.label}
+                    </p>
                     <p className="blueprint-label mt-3 text-cream/48">{item.value}</p>
                   </div>
                 );

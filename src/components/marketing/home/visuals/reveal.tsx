@@ -46,6 +46,47 @@ export function useInView<T extends Element>(
   return inView;
 }
 
+/**
+ * Tracks whether an animated scene is close enough to the viewport to run.
+ * Unlike `useInView`, this deliberately turns false again after the scene
+ * leaves. Rotating marketing demos should not keep timers and React renders
+ * alive while somebody is reading a different part of the page.
+ */
+export function useViewportPresence<T extends Element>(
+  ref: RefObject<T | null>,
+  rootMargin = "20% 0px"
+): boolean {
+  const [present, setPresent] = useState(false);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    let intersecting = false;
+
+    const sync = () => {
+      setPresent(intersecting && document.visibilityState === "visible");
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        intersecting = Boolean(entry?.isIntersecting);
+        sync();
+      },
+      { rootMargin, threshold: 0 }
+    );
+
+    observer.observe(element);
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [ref, rootMargin]);
+
+  return present;
+}
+
 interface RevealProps {
   children: ReactNode;
   delay?: number;
@@ -96,17 +137,27 @@ export function useScrollProgress<T extends HTMLElement>(
     // the work they gate on it (parking a WebGL loop) matters just as much.
     const parallax = !prefersReducedMotion();
     let frame = 0;
+    let lastProgress = -1;
 
     function update() {
       frame = 0;
       const target = ref.current;
       if (!target) return;
       const progress = Math.min(1, Math.max(0, window.scrollY / window.innerHeight));
+      if (progress === lastProgress) return;
+      lastProgress = progress;
       if (parallax) target.style.setProperty("--p", progress.toFixed(4));
       report.current?.(progress);
     }
 
     function onScroll() {
+      const scrollY = window.scrollY;
+      if (
+        (lastProgress === 1 && scrollY >= window.innerHeight) ||
+        (lastProgress === 0 && scrollY <= 0)
+      ) {
+        return;
+      }
       if (frame === 0) {
         frame = window.requestAnimationFrame(update);
       }
@@ -259,7 +310,12 @@ export function useRotator({
   // Off until the client confirms motion is welcome. Rotation is the one thing
   // here that cannot be honoured by simply shortening a duration.
   useEffect(() => {
-    if (!prefersReducedMotion()) setRotating(true);
+    if (prefersReducedMotion()) return;
+
+    const syncVisibility = () => setRotating(document.visibilityState === "visible");
+    syncVisibility();
+    document.addEventListener("visibilitychange", syncVisibility);
+    return () => document.removeEventListener("visibilitychange", syncVisibility);
   }, []);
 
   useEffect(() => {

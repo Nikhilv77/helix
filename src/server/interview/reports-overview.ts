@@ -42,7 +42,7 @@ export function createReportsOverview(
     score: report.summary.evidenceScore,
     roundType: report.setup.roundType,
     startedAt: report.startedAt,
-    href: `/sessions/${report.sessionId}`
+    href: "/reports"
   }));
 
   const competencies = buildCompetencies(scored);
@@ -120,9 +120,7 @@ function toRoundRow(report: InterviewReport): ReportRoundRow {
     interruptions: report.interaction.interruptions,
     codeSubmitted: report.codeExercise ? report.codeExercise.submitted : null,
     href:
-      report.status === "in_progress"
-        ? `/interview/voice?session=${report.sessionId}`
-        : `/sessions/${report.sessionId}`
+      report.status === "in_progress" ? `/interview/voice?session=${report.sessionId}` : "/reports"
   };
 }
 
@@ -256,7 +254,7 @@ function buildMatrix(scored: InterviewReport[], competencies: ReportCompetencyRo
       sessionId: report.sessionId,
       label: formatShortDate(report.startedAt),
       roundType: report.setup.roundType,
-      href: `/sessions/${report.sessionId}`
+      href: "/reports"
     })),
     rows
   };

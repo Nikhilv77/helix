@@ -75,7 +75,7 @@ const latestInterview = {
   strongest: "Architecture",
   nextStep: "Name the metric, threshold, and production decision it changes",
   evidenceScore: 62,
-  href: "/sessions/session-1"
+  href: "/reports"
 } as ReportsOverview["latest"];
 
 describe("buildDashboardOverview", () => {

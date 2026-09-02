@@ -9,12 +9,12 @@ import { useMayaVoice } from "@/lib/voice/use-maya-voice";
 import { PRIMARY_BUTTON } from "../flow/onboarding-data";
 
 const AvatarStage = dynamic(
-  () => import("@/components/interview/voice/avatar-stage").then((m) => m.AvatarStage),
+  () => import("@/components/interview/voice/avatar-stage").then((module) => module.AvatarStage),
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full w-full items-center justify-center">
-        <span className="h-9 w-9 animate-pulse rounded-full bg-cream/[0.08]" />
+      <div className="grid h-full w-full place-items-center" aria-label="Loading teacher avatar">
+        <Loader2 className="animate-spin text-cream/35" size={22} />
       </div>
     )
   }
@@ -22,16 +22,8 @@ const AvatarStage = dynamic(
 
 const headingWords = ["Who", "should", "teach", "you?"];
 
-/**
- * Head-and-shoulders, not portrait.
- *
- * The Rocketbox models are stored in their bind pose — arms straight out — and
- * carry no idle animation to pose them out of it. `portrait` framing (0.56 of
- * body height) is wide enough to put those arms on screen; `default` (0.36)
- * crops to the face, which is the only part the rig actually animates anyway.
- */
-const FRAMING = "default" as const;
 const DEFAULT_TEACHER_ID = "sophia";
+const FRAMING = "default" as const;
 
 /** Only the centre stage plus its two neighbours are ever mounted. */
 function neighbours(index: number) {
@@ -43,15 +35,15 @@ function neighbours(index: number) {
 }
 
 /**
- * True once the viewport is wide enough to show the flanking avatars. They are
- * gated on this rather than merely hidden so phones never create the extra
- * WebGL contexts or download models they cannot display.
+ * Desktop pointers get the full three-avatar composition. Touch devices keep
+ * one sharp live stage, including wide tablets that would otherwise create
+ * three WebGL contexts merely because their CSS viewport crosses 1024px.
  */
 function useWideViewport(): boolean {
   const [wide, setWide] = useState(false);
 
   useEffect(() => {
-    const query = window.matchMedia("(min-width: 1024px)");
+    const query = window.matchMedia("(min-width: 1024px) and (pointer: fine)");
     const sync = () => setWide(query.matches);
     sync();
     query.addEventListener("change", sync);
@@ -79,12 +71,9 @@ export function TeacherStep({
   const [motion, setMotion] = useState<"previous" | "next" | null>(null);
   const { state, speak, stop, awaitingGesture } = useMayaVoice();
   const wide = useWideViewport();
-  // Autoplay is refused until the page has seen a real gesture, so the first
-  // greeting waits for one instead of being reported as a broken voice.
   const introducedRef = useRef(false);
 
   const focused = ALL_PERSONAS[index]!;
-  const initialPersonaRef = useRef(focused);
   const { left, right } = neighbours(index);
   const speaking = state === "speaking" || state === "loading";
   const voiceBroken = state === "unavailable";
@@ -102,19 +91,6 @@ export function TeacherStep({
     },
     [speak]
   );
-
-  // Try the first introduction immediately. Browsers that recognise prior
-  // media engagement or same-origin navigation will allow it; a brand-new
-  // visitor falls back to the explicit sound control below when autoplay is
-  // denied. Resetting the guard during effect cleanup lets React Strict Mode's
-  // development-only remount retry after the first audio element is stopped.
-  useEffect(() => {
-    if (introducedRef.current) return;
-    greet(initialPersonaRef.current);
-    return () => {
-      introducedRef.current = false;
-    };
-  }, [greet]);
 
   const go = useCallback(
     (nextIndex: number) => {
@@ -155,8 +131,7 @@ export function TeacherStep({
     <>
       <div className="text-center">
         <h1
-          className="display-heading mx-auto flex max-w-4xl flex-wrap justify-center gap-x-3 gap-y-1 text-cream sm:gap-x-4"
-          style={{ fontSize: "clamp(2rem, 4.4vw, 3.5rem)" }}
+          className="onboarding-page-title display-heading mx-auto flex max-w-4xl flex-wrap justify-center gap-x-3 gap-y-1 text-cream sm:gap-x-4"
           aria-label="Who should teach you?"
         >
           {headingWords.map((word, wordIndex) => (
@@ -185,15 +160,13 @@ export function TeacherStep({
             ].join(" ")}
           >
             <div className="teacher-carousel-orbit" aria-hidden="true" />
-            {/* No `key`: `url` is a dependency of the stage's own scene effect,
-                so switching teacher rebuilds the scene in place rather than
-                remounting the canvas and flashing an empty frame. */}
             <AvatarStage
               agentTrack={null}
               state={speaking ? "speaking" : "listening"}
               url={focused.model}
               rig={focused.rig}
               framing={FRAMING}
+              performanceProfile="onboarding"
               showStatus={false}
               feather={false}
               introducing={state === "speaking"}
@@ -204,10 +177,10 @@ export function TeacherStep({
               onClick={() => (speaking ? stop() : greet(focused))}
               aria-label={speaking ? `Stop ${focused.name}` : `Hear ${focused.name}`}
               className={[
-                "absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.22)] backdrop-blur-xl transition duration-300 hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#F26E01]",
+                "absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.22)] transition duration-300 hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#F26E01] lg:backdrop-blur-xl",
                 awaitingGesture
                   ? "animate-pulse bg-[#F26E01] text-white hover:bg-[#ff7a0a]"
-                  : "bg-black/30 text-cream/75 hover:bg-black/50 hover:text-cream"
+                  : "bg-black/65 text-cream/75 hover:bg-black/75 hover:text-cream lg:bg-black/30 lg:hover:bg-black/50"
               ].join(" ")}
             >
               {state === "loading" ? (
@@ -221,13 +194,13 @@ export function TeacherStep({
           </div>
 
           <div key={focused.id} className="teacher-carousel-copy mt-5 text-center">
-            <p className="text-[1.85rem] font-bold leading-none tracking-[-0.04em] text-cream sm:text-[2rem]">
+            <p className="text-[1.65rem] font-semibold leading-none tracking-[-0.035em] text-cream sm:text-[1.9rem]">
               {focused.name}
             </p>
             <p className="mt-2 text-[12.5px] font-semibold uppercase tracking-[0.14em] text-[#F26E01]/85">
               {focused.tagline}
             </p>
-            <p className="mx-auto mt-3 max-w-[26rem] text-[14.5px] leading-6 text-cream/72">
+            <p className="onboarding-lede mx-auto mt-3 max-w-[26rem] text-cream/72">
               {focused.bio}
             </p>
           </div>
@@ -248,7 +221,7 @@ export function TeacherStep({
             : awaitingGesture
               ? `Tap the orange sound button to hear ${focused.name}.`
               : !introducedRef.current
-                ? "Preparing the introduction..."
+                ? `Tap the sound button to hear ${focused.name}.`
                 : `${focused.name} will guide you from here.`}
         </p>
 
@@ -268,9 +241,8 @@ export function TeacherStep({
 }
 
 /**
- * A flanking teacher. It renders one low-resolution WebGL frame and then parks
- * its loop, preserving the three-person carousel without continuously
- * animating three full scenes.
+ * Desktop-only flanking teachers render one sharp GLB frame and then park.
+ * Touch devices never mount these stages.
  */
 function Peek({
   persona,
@@ -289,7 +261,7 @@ function Peek({
       className={[
         "teacher-carousel-peek group relative hidden h-[16.5rem] w-[12rem] shrink-0 overflow-hidden rounded-[1.8rem] transition duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] lg:block",
         side === "left" ? "origin-right" : "origin-left",
-        "opacity-35 blur-[2.5px] hover:scale-[1.025] hover:opacity-65 hover:blur-[0.5px]"
+        "opacity-45 hover:scale-[1.025] hover:opacity-75"
       ].join(" ")}
     >
       <AvatarStage
@@ -317,7 +289,7 @@ function Arrow({ side, onClick }: { side: "left" | "right"; onClick: () => void 
       onClick={onClick}
       aria-label={side === "left" ? "Previous teacher" : "Next teacher"}
       className={[
-        "absolute top-[9.5rem] z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/[0.055] text-cream/70 shadow-[0_10px_30px_rgba(0,0,0,0.25)] backdrop-blur-xl transition duration-300 hover:scale-110 hover:bg-white/[0.12] hover:text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#F26E01] sm:top-[12rem]",
+        "absolute top-[9.5rem] z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-[#17181b]/95 text-cream/70 shadow-[0_10px_30px_rgba(0,0,0,0.25)] transition duration-300 hover:scale-110 hover:bg-[#222328] hover:text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#F26E01] sm:top-[12rem] lg:bg-white/[0.055] lg:backdrop-blur-xl lg:hover:bg-white/[0.12]",
         side === "left" ? "left-0 sm:-left-2" : "right-0 sm:-right-2"
       ].join(" ")}
     >

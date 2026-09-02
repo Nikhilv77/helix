@@ -7,7 +7,7 @@ function Line({ className = "" }: { className?: string }) {
 export function ManageSkeleton() {
   return (
     <section
-      className="relative mx-auto flex min-h-screen w-full max-w-[84rem] flex-col px-4 pb-20 pt-6 text-cream sm:px-6 sm:pt-8 lg:px-8 lg:pt-10"
+      className="manage-loading relative mx-auto flex min-h-screen w-full max-w-[84rem] flex-col px-4 pb-20 pt-6 text-cream sm:px-6 sm:pt-8 lg:px-8 lg:pt-10"
       aria-busy="true"
       aria-label="Loading manage account"
     >
@@ -19,7 +19,10 @@ export function ManageSkeleton() {
         <Line className="mx-auto mt-2 w-2/3 max-w-xl" />
         <div className="mx-auto mt-10 grid w-full max-w-2xl gap-3 text-left sm:grid-cols-2">
           {Array.from({ length: 2 }, (_, index) => (
-            <div key={index} className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4">
+            <div
+              key={index}
+              className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4"
+            >
               <Line className="w-24" />
               <Line className="mt-4 w-full" />
               <Line className="mt-2 w-3/4" />

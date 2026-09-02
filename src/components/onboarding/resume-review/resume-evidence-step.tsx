@@ -112,7 +112,7 @@ export function ResumeEvidenceStep({
                 key={item.label}
                 className="onboarding-card-reveal group flex min-h-[17.5rem] flex-col rounded-[1.35rem] bg-cream/[0.035] p-5 text-left text-cream backdrop-blur-[2px] transition duration-300 hover:-translate-y-1 hover:bg-cream/[0.05] sm:p-6"
                 style={
-                      {
+                  {
                     "--card-delay": `${260 + index * 170}ms`
                   } as CSSProperties
                 }
@@ -130,15 +130,11 @@ export function ResumeEvidenceStep({
                 </div>
 
                 <p className="blueprint-label mt-8 text-cream/42">{item.label}</p>
-                <h2 className="mt-3 text-2xl font-bold leading-tight tracking-tight text-cream sm:text-[1.7rem]">
+                <h2 className="mt-3 text-2xl font-bold leading-tight tracking-[-0.025em] text-cream sm:text-[1.7rem]">
                   {item.title}
                 </h2>
-                <p className="mt-3 text-[15px] font-semibold leading-6 text-cream/66">
-                  {item.detail}
-                </p>
-                <p className="mt-auto pt-7 text-[15px] leading-7 text-cream/54">
-                  {item.note}
-                </p>
+                <p className="onboarding-lede mt-3 font-semibold text-cream/66">{item.detail}</p>
+                <p className="onboarding-lede mt-auto pt-7 text-cream/54">{item.note}</p>
               </article>
             );
           })}
@@ -148,7 +144,7 @@ export function ResumeEvidenceStep({
           <button
             type="button"
             onClick={onContinue}
-            className={`browse-nudge ${PRIMARY_BUTTON}`}
+            className={`browse-nudge onboarding-review-nudge ${PRIMARY_BUTTON}`}
           >
             Continue <ArrowRight size={15} />
           </button>

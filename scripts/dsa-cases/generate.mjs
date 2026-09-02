@@ -27,11 +27,25 @@
 
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { buildTestCases, equivalent } from "../../src/server/dsa/code-test-harness";
+import {
+  buildTestCases,
+  equivalent,
+  materialiseArguments
+} from "../../src/server/dsa/code-test-harness";
 import { findQuestion } from "../../src/lib/dsa/dsa";
 import { phase1, phase1Rest } from "./references/phase-1-arrays.mjs";
+import { phase2 } from "./references/phase-2-strings.mjs";
+import { phase3 } from "./references/phase-3-sliding-window.mjs";
+import { phase4 } from "./references/phase-4-binary-search.mjs";
+import { phase5 } from "./references/phase-5-linked-list.mjs";
+import { phase6 } from "./references/phase-6-stack-queue.mjs";
+import { phase7 } from "./references/phase-7-trees.mjs";
+import { phase8 } from "./references/phase-8-heap.mjs";
+import { phase9 } from "./references/phase-9-graphs.mjs";
+import { phase10 } from "./references/phase-10-dynamic-programming.mjs";
+import { phase11 } from "./references/phase-11-tries-backtracking.mjs";
 
-const REFERENCES = { ...phase1, ...phase1Rest };
+const REFERENCES = { ...phase1, ...phase1Rest, ...phase2, ...phase3, ...phase4, ...phase5, ...phase6, ...phase7, ...phase8, ...phase9, ...phase10, ...phase11 };
 
 const emit = process.argv.includes("--emit");
 const write = process.argv.includes("--write");
@@ -104,17 +118,69 @@ for (const [slug, reference] of Object.entries(REFERENCES)) {
   const generated = [];
   for (const args of reference.generate()) {
     try {
-      const expectedValue = runReference(reference, args);
+      const solved = runReference(reference, args);
+      let expectedValue = solved;
+      let comparison = reference.comparison;
+
+      // `accepted` widens an answer for a question where several are correct —
+      // "find a peak", not "find the peak". It cannot invent one: the verified
+      // reference's own answer has to be in the set it returns, which is what
+      // keeps this inside the no-hand-written-expectations rule.
+      if (reference.accepted) {
+        const options = reference.accepted(...clone(args));
+        if (!options.some((option) => equivalent(solved, option, reference.comparison))) {
+          results.mismatched.push({
+            slug,
+            generating: args,
+            error: `accepted() omits the reference's own answer ${JSON.stringify(solved)}`
+          });
+          continue;
+        }
+        expectedValue = options;
+        comparison = "one-of";
+      }
+
       generated.push({
         arguments: clone(args),
         expectedValue: clone(expectedValue),
         ...(reference.mode ? { mode: reference.mode } : {}),
         // Without this an unordered result — 3sum, 4sum — is compared exactly
         // and a correct answer in a different order is marked wrong.
-        ...(reference.comparison ? { comparison: reference.comparison } : {})
+        ...(comparison ? { comparison } : {})
       });
     } catch (error) {
       results.mismatched.push({ slug, generating: args, error: error.message });
+    }
+  }
+
+  // Step 5: scale cases, whose inputs the generated program builds for itself.
+  //
+  // These exist to make wrong complexity fail. An inlined input is capped near
+  // 2,000 elements by Java's 64KB method limit, and at that size a quadratic
+  // solution finishes instantly — so a built input is the only way the time
+  // limit means anything. The expected value still comes from replaying the
+  // verified reference over the same array.
+  for (const scaleCase of reference.scale?.() ?? []) {
+    const args = materialiseArguments(scaleCase);
+    try {
+      const expectedValue = runReference(reference, args);
+      if (Array.isArray(expectedValue) && expectedValue.length > 64) {
+        results.mismatched.push({
+          slug,
+          generating: scaleCase.build,
+          error: `scale case answers with ${expectedValue.length} values; the answer is written into the bank, so scale cases must answer small`
+        });
+        continue;
+      }
+      generated.push({
+        arguments: clone(scaleCase.arguments),
+        expectedValue: clone(expectedValue),
+        build: clone(scaleCase.build),
+        ...(reference.mode ? { mode: reference.mode } : {}),
+        ...(reference.comparison ? { comparison: reference.comparison } : {})
+      });
+    } catch (error) {
+      results.mismatched.push({ slug, generating: scaleCase.build, error: error.message });
     }
   }
 
@@ -144,11 +210,19 @@ function writeCases(slug, existing, generated) {
     const start = source.indexOf(key);
     if (start === -1) continue;
 
+    // Brackets inside a string literal are not structure. `valid-parentheses`
+    // has "]" as an input, which closed the array early and truncated the file.
     let depth = 1;
     let i = start + key.length;
+    let quote = "";
     while (i < source.length && depth > 0) {
-      if (source[i] === "[") depth++;
-      else if (source[i] === "]") depth--;
+      const character = source[i];
+      if (quote) {
+        if (character === "\\") i++;
+        else if (character === quote) quote = "";
+      } else if (character === '"' || character === "'") quote = character;
+      else if (character === "[") depth++;
+      else if (character === "]") depth--;
       i++;
     }
 
@@ -159,6 +233,7 @@ function writeCases(slug, existing, generated) {
       ];
       if (testCase.mode) parts.push(`mode: ${JSON.stringify(testCase.mode)}`);
       if (testCase.comparison) parts.push(`comparison: ${JSON.stringify(testCase.comparison)}`);
+      if (testCase.build) parts.push(`build: ${JSON.stringify(testCase.build)}`);
       return `    { ${parts.join(", ")} }`;
     };
 
@@ -166,14 +241,14 @@ function writeCases(slug, existing, generated) {
       arguments: testCase.arguments,
       expectedValue: testCase.expectedValue,
       mode: testCase.mode,
-      comparison: testCase.comparison
+      comparison: testCase.comparison,
+      build: testCase.build
     }));
     const hidden = generated.map(serialise);
-    const body = [
-      ...visible,
-      hidden.length ? "    // Hidden from here on — generated from the verified reference." : null,
-      ...hidden
-    ].filter(Boolean).join(",\n");
+    const comment = "    // Hidden from here on — generated from the verified reference.";
+    const body =
+      visible.join(",\n") +
+      (hidden.length ? `,\n${comment}\n${hidden.join(",\n")}` : "");
 
     const next = `${source.slice(0, start)}${key}\n${body}\n  ]${source.slice(i)}`;
     writeFileSync(path, next);

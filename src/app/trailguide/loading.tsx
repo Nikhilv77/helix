@@ -1,10 +1,5 @@
 function WarmBlock({ className = "" }: { className?: string }) {
-  return (
-    <div
-      aria-hidden="true"
-      className={`animate-pulse bg-[#dfd6c8] motion-reduce:animate-none ${className}`}
-    />
-  );
+  return <div aria-hidden="true" className={`bg-[#dfd6c8] ${className}`} />;
 }
 
 export default function TrailguideLoading() {

@@ -47,7 +47,7 @@ export function ReportMayaAvatar({
             : "linear-gradient(180deg,#000 0%,#000 86%,transparent 100%)"
         }}
       >
-        <MayaStage speaking={speaking} transparent={transparent} />
+        <MayaStage speaking={speaking} transparent={transparent} performanceProfile="report" />
       </div>
       {transparent ? <div aria-hidden className="report-maya-bottom-soften" /> : null}
       {!transparent ? (

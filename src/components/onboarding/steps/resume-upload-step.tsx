@@ -2,9 +2,7 @@
 
 import { FileCheck2, FileUp, Loader2, X } from "lucide-react";
 import type { CSSProperties, RefObject } from "react";
-import {
-  formatBytes
-} from "../flow/onboarding-data";
+import { formatBytes } from "../flow/onboarding-data";
 import { BackButton } from "../shared/onboarding-ui";
 
 const headingWords = ["Upload", "your", "resume."];
@@ -65,7 +63,7 @@ export function ResumeStep({
   onFile,
   onChooseAnother,
   onDragging,
-  onBack,
+  onBack
 }: {
   file: File | null;
   dragging: boolean;
@@ -132,7 +130,7 @@ export function ResumeStep({
             onFile(event.dataTransfer.files?.[0] ?? null);
           }}
           className={[
-            "onboarding-card-reveal group relative min-h-[21rem] overflow-hidden rounded-[1.65rem] p-5 text-left outline-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 sm:p-7 sm:backdrop-blur-sm",
+            "onboarding-card-reveal group relative min-h-[21rem] overflow-hidden rounded-[1.65rem] p-5 text-left outline-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] sm:p-7 lg:hover:-translate-y-1 lg:backdrop-blur-sm",
             dragging
               ? "bg-cream/[0.075] shadow-[0_22px_70px_rgba(0,0,0,0.22)]"
               : file
@@ -162,9 +160,7 @@ export function ResumeStep({
           <div className="relative flex min-h-[18rem] flex-col items-center justify-center text-center">
             {file ? (
               <>
-                <span
-                  className="upload-float text-cream/88 drop-shadow-[0_18px_32px_rgba(3,10,31,0.25)]"
-                >
+                <span className="upload-float text-cream/88 drop-shadow-[0_18px_32px_rgba(3,10,31,0.25)]">
                   <FileCheck2 size={54} strokeWidth={1.45} />
                 </span>
                 <TypingText
@@ -182,32 +178,30 @@ export function ResumeStep({
                   onClick={() => {
                     onChooseAnother();
                   }}
-                  className="mt-5 inline-flex min-h-9 items-center gap-2 rounded-lg border border-cream/20 px-3 text-sm font-medium text-cream/62 transition hover:bg-cream/[0.08] hover:text-cream disabled:cursor-not-allowed disabled:opacity-45"
+                  className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-lg border border-cream/20 px-3.5 text-[0.9375rem] font-medium text-cream/62 transition hover:bg-cream/[0.08] hover:text-cream disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   <X size={14} /> Choose another
                 </button>
               </>
             ) : (
               <>
-                <span
-                  className="upload-float text-cream/88 drop-shadow-[0_18px_32px_rgba(3,10,31,0.25)]"
-                >
+                <span className="upload-float text-cream/88 drop-shadow-[0_18px_32px_rgba(3,10,31,0.25)]">
                   <FileUp size={56} strokeWidth={1.45} />
                 </span>
                 <TypingText
                   text="Drop your resume"
                   delay={620}
                   duration={880}
-                  className="mt-6 text-3xl font-bold leading-none text-cream sm:text-[2.45rem]"
+                  className="mt-6 text-[2rem] font-bold leading-none tracking-[-0.035em] text-cream sm:text-[2.45rem]"
                 />
-                <p className="mt-4 max-w-md text-base leading-7 text-cream/68">
+                <p className="mt-4 max-w-md text-[1.0625rem] leading-[1.7] tracking-[-0.008em] text-cream/68 sm:text-lg">
                   Drag it in, or choose a file from your computer.
                 </p>
                 <button
                   type="button"
                   disabled={uploading}
                   onClick={() => inputRef.current?.click()}
-                  className="browse-nudge mt-7 min-h-11 rounded-lg border border-cream/20 bg-cream/[0.035] px-5 text-sm font-bold text-cream transition hover:-translate-y-0.5 hover:border-cream/35 hover:bg-cream/[0.09] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0"
+                  className="browse-nudge mt-7 min-h-12 rounded-lg border border-cream/20 bg-cream/[0.035] px-6 text-base font-bold text-cream transition lg:hover:-translate-y-0.5 hover:border-cream/35 hover:bg-cream/[0.09] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0"
                 >
                   Browse files
                 </button>
@@ -219,7 +213,7 @@ export function ResumeStep({
         {error ? (
           <div
             role="alert"
-            className="onboarding-card-reveal mt-4 rounded-[1.15rem] border border-[#f6b0b0]/35 bg-[#4b1f36]/30 px-4 py-3 text-sm font-medium text-[#ffd3d3] backdrop-blur-sm"
+            className="onboarding-card-reveal mt-4 rounded-[1.15rem] border border-[#f6b0b0]/35 bg-[#4b1f36]/30 px-4 py-3 text-base font-medium leading-relaxed text-[#ffd3d3] lg:backdrop-blur-sm"
             style={
               {
                 "--card-delay": "80ms"

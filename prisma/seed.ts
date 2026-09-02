@@ -692,6 +692,21 @@ async function seedFrontendRoadmapTemplates(): Promise<void> {
 }
 
 const PREP_CHAPTER_TITLES: Record<string, { title: string; purpose: string }> = {
+  // One chapter per language. Placement round-robins across chapters, so a
+  // language spanning more chapters would quietly take a bigger share of the
+  // session than the others.
+  "python-runtime": {
+    title: "Python Runtime & Data Model",
+    purpose: "Predict what Python actually does with objects, scope, and defaults."
+  },
+  "java-runtime": {
+    title: "Java Runtime & Type Semantics",
+    purpose: "Predict boxing, dispatch, initialization order, and integer behaviour."
+  },
+  "cpp-runtime": {
+    title: "C++ Runtime & Value Semantics",
+    purpose: "Predict copies, lifetimes, conversions, and virtual dispatch."
+  },
   "javascript-runtime": {
     title: "JavaScript Runtime & Type Safety",
     purpose: "Reason about the language mechanisms behind production UI behavior."

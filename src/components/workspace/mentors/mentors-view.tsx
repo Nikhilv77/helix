@@ -14,17 +14,17 @@ import {
   Users
 } from "lucide-react";
 
-import anikaPortrait from "../../../../public/images/trailguide/anika-rao.png";
-import aarohiDirectoryPortrait from "../../../../public/images/trailguide/aarohi-sharma-v2.png";
-import arjunPortrait from "../../../../public/images/trailguide/arjun-mehta.png";
-import devPortrait from "../../../../public/images/trailguide/dev-malhotra.png";
-import meeraPortrait from "../../../../public/images/trailguide/meera-iyer.png";
-import mentorDirectoryHero from "../../../../public/images/trailguide/mentor-directory-hero.png";
-import nehaDirectoryPortrait from "../../../../public/images/trailguide/neha-iyer-v2.png";
-import rohanDirectoryPortrait from "../../../../public/images/trailguide/rohan-mehta-v2.png";
-import rohanPortrait from "../../../../public/images/trailguide/rohan-kulkarni.png";
-import sanaPortrait from "../../../../public/images/trailguide/sana-qureshi.png";
-import vikramDirectoryPortrait from "../../../../public/images/trailguide/vikram-shah-v2.png";
+import anikaPortrait from "../../../../public/images/trailguide/anika-rao.webp";
+import aarohiDirectoryPortrait from "../../../../public/images/trailguide/aarohi-sharma-v2.webp";
+import arjunPortrait from "../../../../public/images/trailguide/arjun-mehta.webp";
+import devPortrait from "../../../../public/images/trailguide/dev-malhotra.webp";
+import meeraPortrait from "../../../../public/images/trailguide/meera-iyer.webp";
+import mentorDirectoryHero from "../../../../public/images/trailguide/mentor-directory-hero.webp";
+import nehaDirectoryPortrait from "../../../../public/images/trailguide/neha-iyer-v2.webp";
+import rohanDirectoryPortrait from "../../../../public/images/trailguide/rohan-mehta-v2.webp";
+import rohanPortrait from "../../../../public/images/trailguide/rohan-kulkarni.webp";
+import sanaPortrait from "../../../../public/images/trailguide/sana-qureshi.webp";
+import vikramDirectoryPortrait from "../../../../public/images/trailguide/vikram-shah-v2.webp";
 
 const PROGRAM_STAGES = [
   {
@@ -108,7 +108,6 @@ const GUIDES: Array<{
   company: "Google" | "Microsoft" | "Amazon" | "Stripe" | "Shopify" | "Meta" | "Adobe" | "Uber";
   experience: string;
   summary: string;
-  bestFor: string;
   image: StaticImageData;
 }> = [
   {
@@ -118,7 +117,6 @@ const GUIDES: Array<{
     company: "Google",
     experience: "14+ years",
     summary: "Turns ambiguous systems work into clear decisions and credible staff-level evidence.",
-    bestFor: "Senior → Staff",
     image: aarohiDirectoryPortrait
   },
   {
@@ -129,7 +127,6 @@ const GUIDES: Array<{
     experience: "13+ years",
     summary:
       "Pressure-tests architecture choices across reliability, scale and operational trade-offs.",
-    bestFor: "Backend interviews",
     image: rohanDirectoryPortrait
   },
   {
@@ -140,7 +137,6 @@ const GUIDES: Array<{
     experience: "16+ years",
     summary:
       "Builds principal-level judgment for resilient cloud platforms and complex migrations.",
-    bestFor: "Principal-level loops",
     image: nehaDirectoryPortrait
   },
   {
@@ -150,7 +146,6 @@ const GUIDES: Array<{
     company: "Stripe",
     experience: "12+ years",
     summary: "Sharpens performance reasoning and high-stakes product infrastructure decisions.",
-    bestFor: "High-scale systems",
     image: rohanPortrait
   },
   {
@@ -160,7 +155,6 @@ const GUIDES: Array<{
     company: "Shopify",
     experience: "17+ years",
     summary: "Connects technical leadership, product direction and the transition into management.",
-    bestFor: "Lead → Manager",
     image: meeraPortrait
   },
   {
@@ -170,7 +164,6 @@ const GUIDES: Array<{
     company: "Meta",
     experience: "18+ years",
     summary: "Refines leadership narratives, organisational judgment and executive communication.",
-    bestFor: "Manager & director loops",
     image: vikramDirectoryPortrait
   },
   {
@@ -180,7 +173,6 @@ const GUIDES: Array<{
     company: "Adobe",
     experience: "15+ years",
     summary: "Clarifies platform strategy, API boundaries and influence across engineering teams.",
-    bestFor: "Platform & API roles",
     image: sanaPortrait
   },
   {
@@ -191,7 +183,6 @@ const GUIDES: Array<{
     experience: "14+ years",
     summary:
       "Grounds ML system design in production constraints, measurement and model operations.",
-    bestFor: "Senior ML roles",
     image: devPortrait
   }
 ];
@@ -232,7 +223,7 @@ export function MentorsView() {
             className="mentor-rise max-w-3xl"
             style={{ "--rise-delay": "100ms" } as CSSProperties}
           >
-            <h1 className="max-w-[12ch] text-[clamp(3.15rem,7.2vw,6.8rem)] font-semibold leading-[0.91] tracking-[-0.065em] text-[var(--m-ink)]">
+            <h1 className="max-w-[12ch] text-[clamp(2.75rem,11.5vw,6.8rem)] font-semibold leading-[0.94] tracking-[-0.055em] text-[var(--m-ink)] sm:leading-[0.91] sm:tracking-[-0.065em]">
               Your ambition deserves a serious path.
             </h1>
             <p className="mt-7 max-w-[58ch] text-[1.02rem] leading-[1.75] text-[var(--m-ink-soft)] sm:text-[1.12rem]">
@@ -242,7 +233,7 @@ export function MentorsView() {
 
             <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
               <MentorCta />
-              <p className="max-w-[29ch] text-[0.78rem] leading-relaxed text-[var(--m-ink-faint)]">
+              <p className="max-w-[32ch] text-sm leading-[1.6] text-[var(--m-ink-faint)]">
                 Explore mentors across focused technology career paths.
               </p>
             </div>
@@ -257,14 +248,16 @@ export function MentorsView() {
                 image={anikaPortrait}
                 alt="Portrait of Indian technology mentor Anika Rao"
                 className="aspect-[4/5]"
-                priority
+                sizes="(min-width: 1440px) 360px, (min-width: 1024px) 25vw, 58vw"
+                preload
               />
               <div className="grid gap-3 sm:gap-4">
                 <PortraitTile
                   image={arjunPortrait}
                   alt="Portrait of Indian technology mentor Arjun Mehta"
                   className="aspect-square"
-                  priority
+                  sizes="(min-width: 1440px) 260px, (min-width: 1024px) 19vw, 40vw"
+                  eager
                 />
                 <div className="flex min-h-0 flex-col justify-between rounded-[1.35rem] bg-[#f47d48] p-4 text-[#191713] sm:p-5">
                   <p className="mt-7 text-[clamp(1.05rem,2.2vw,1.55rem)] font-semibold leading-[1.12] tracking-[-0.025em]">
@@ -277,10 +270,10 @@ export function MentorsView() {
             </div>
             <div className="absolute -bottom-5 left-5 right-5 flex items-center justify-between gap-4 rounded-2xl bg-[var(--m-raised)] px-5 py-4 shadow-[0_18px_50px_rgba(25,23,19,0.16)] sm:left-auto sm:right-7 sm:w-[70%]">
               <div>
-                <p className="text-[0.76rem] font-semibold text-[var(--m-ink)]">
+                <p className="text-sm font-semibold leading-snug text-[var(--m-ink)]">
                   Built around your target role
                 </p>
-                <p className="mt-1 text-[0.7rem] text-[var(--m-ink-faint)]">
+                <p className="mt-1 text-xs leading-[1.45] text-[var(--m-ink-faint)]">
                   Your path, pressure-tested with a guide
                 </p>
               </div>
@@ -303,7 +296,7 @@ export function MentorsView() {
               <h2 className="max-w-[11ch] text-[2rem] font-semibold leading-[1.03] tracking-[-0.04em] sm:text-[2.65rem]">
                 One path from preparation to opportunity.
               </h2>
-              <p className="mt-5 max-w-[38ch] text-[0.8rem] leading-[1.7] text-[#9f988b]">
+              <p className="mt-5 max-w-[38ch] text-[0.9375rem] leading-[1.7] text-[#aaa396]">
                 Each part strengthens the next, so your effort becomes a clear and credible signal.
               </p>
             </div>
@@ -318,7 +311,7 @@ export function MentorsView() {
                   <h3 className="max-w-[11ch] text-[1.4rem] font-semibold leading-[1.08] tracking-[-0.03em] sm:text-[1.55rem]">
                     {stage.title}
                   </h3>
-                  <p className="mt-4 max-w-[34ch] text-[0.8rem] leading-[1.7] text-[#aaa396]">
+                  <p className="mt-4 max-w-[34ch] text-[0.9375rem] leading-[1.7] text-[#b8b1a4]">
                     {stage.body}
                   </p>
                 </li>
@@ -338,7 +331,7 @@ export function MentorsView() {
                   Your craft shapes the route.
                 </h2>
               </div>
-              <p className="max-w-[62ch] text-[0.86rem] leading-[1.7] text-[var(--m-ink-soft)] lg:justify-self-end">
+              <p className="max-w-[62ch] text-base leading-[1.7] text-[var(--m-ink-soft)] lg:justify-self-end">
                 Choose the engineering direction you are aiming for. Trailguide will focus the
                 preparation, interview practice and career decisions around the bar for that role.
               </p>
@@ -365,15 +358,13 @@ export function MentorsView() {
                         <h3 className="max-w-[12ch] text-[1.3rem] font-semibold leading-[1.05] tracking-[-0.03em]">
                           {track.title}
                         </h3>
-                        <p
-                          className={`mt-3 max-w-[34ch] text-[0.75rem] leading-[1.6] ${tone.detail}`}
-                        >
+                        <p className={`mt-3 max-w-[34ch] text-sm leading-[1.65] ${tone.detail}`}>
                           {track.detail}
                         </p>
                       </div>
 
                       <p
-                        className={`mt-auto pt-4 text-[0.62rem] font-semibold uppercase tracking-[0.11em] ${tone.focus}`}
+                        className={`mt-auto pt-4 text-[0.7rem] font-semibold uppercase tracking-[0.1em] ${tone.focus}`}
                       >
                         {track.focus}
                       </p>
@@ -419,7 +410,7 @@ export function MentorDirectoryView() {
             <h1 className="max-w-[12ch] text-[clamp(3rem,5.25vw,4.55rem)] font-semibold leading-[0.94] tracking-[-0.055em] text-[#191713]">
               Learn from those who’ve led.
             </h1>
-            <p className="mt-5 max-w-[48ch] text-[0.94rem] leading-[1.7] text-[#6f6a62]">
+            <p className="mt-5 max-w-[48ch] text-base leading-[1.7] text-[#625d55]">
               Our mentors are engineering leaders from top companies who’ve walked the path—and now
               guide others on it.
             </p>
@@ -436,10 +427,10 @@ export function MentorDirectoryView() {
                       <Icon size={18} strokeWidth={1.7} aria-hidden="true" />
                     </span>
                     <div>
-                      <p className="text-[0.75rem] font-semibold leading-tight text-[#191713]">
+                      <p className="text-sm font-semibold leading-snug text-[#191713]">
                         {feature.title}
                       </p>
-                      <p className="mt-2 text-[0.67rem] leading-[1.4] text-[#817b72]">
+                      <p className="mt-1.5 text-[0.8125rem] leading-[1.5] text-[#756f67]">
                         {feature.detail}
                       </p>
                     </div>
@@ -454,8 +445,9 @@ export function MentorDirectoryView() {
               src={mentorDirectoryHero}
               alt=""
               fill
-              priority
+              preload
               placeholder="blur"
+              quality={72}
               sizes="(min-width: 1024px) 560px, 92vw"
               className="object-cover"
             />
@@ -464,13 +456,13 @@ export function MentorDirectoryView() {
               Clarity from experience. Direction for your next leap.
             </h2>
 
-            <div className="absolute bottom-5 left-5 right-5 grid grid-cols-2 gap-y-5 rounded-[1rem] bg-[#fbf8f0]/95 px-5 py-4 shadow-[0_12px_35px_rgba(25,23,19,0.13)] backdrop-blur-md sm:grid-cols-4 sm:gap-y-0 sm:px-6">
+            <div className="absolute bottom-5 left-5 right-5 grid grid-cols-2 gap-y-5 rounded-[1rem] bg-[#fbf8f0]/95 px-5 py-4 shadow-[0_12px_35px_rgba(25,23,19,0.13)] sm:grid-cols-4 sm:gap-y-0 sm:px-6">
               {DIRECTORY_STATS.map((stat) => (
                 <div key={stat.label}>
                   <p className="text-[1.3rem] font-medium tracking-[-0.04em] text-[#f26e31]">
                     {stat.value}
                   </p>
-                  <p className="mt-1 text-[0.63rem] text-[#59544d]">{stat.label}</p>
+                  <p className="mt-1 text-xs font-medium text-[#59544d]">{stat.label}</p>
                 </div>
               ))}
             </div>
@@ -492,7 +484,7 @@ export function MentorDirectoryView() {
 function GuideGrid() {
   return (
     <div className="mentor-rise mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-      {GUIDES.map((guide, index) => (
+      {GUIDES.map((guide) => (
         <article
           key={guide.name}
           className="group flex min-h-[450px] flex-col overflow-hidden rounded-[1.25rem] bg-[#fbf8f0] shadow-[0_12px_34px_rgba(25,23,19,0.07)] transition-[box-shadow,transform] duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_18px_46px_rgba(25,23,19,0.11)]"
@@ -502,8 +494,8 @@ function GuideGrid() {
               src={guide.image}
               alt={`Illustrative portrait of ${guide.name}`}
               fill
-              priority={index < 2}
               placeholder="blur"
+              quality={72}
               sizes="(min-width: 1024px) 280px, (min-width: 640px) 46vw, 92vw"
               className="object-cover object-[center_32%] transition-transform duration-700 ease-out group-hover:scale-[1.015]"
             />
@@ -514,15 +506,15 @@ function GuideGrid() {
             <h3 className="text-[1.12rem] font-semibold tracking-[-0.03em] text-[#191713]">
               {guide.name}
             </h3>
-            <p className="mt-1.5 text-[0.8rem] font-medium text-[#5f5a53]">{guide.role}</p>
+            <p className="mt-1.5 text-sm font-medium text-[#5f5a53]">{guide.role}</p>
 
-            <p className="mt-4 text-[0.78rem] leading-[1.65] text-[#6d675f]">{guide.summary}</p>
+            <p className="mt-4 text-sm leading-[1.65] text-[#625d56]">{guide.summary}</p>
 
             <div className="mt-4 flex flex-wrap gap-2">
               {guide.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-md bg-[#eee7db] px-2.5 py-1.5 text-[0.68rem] font-medium text-[#403c37]"
+                  className="rounded-md bg-[#eee7db] px-2.5 py-1.5 text-xs font-medium text-[#403c37]"
                 >
                   {tag}
                 </span>
@@ -532,25 +524,21 @@ function GuideGrid() {
             <div className="mt-auto pt-5">
               <div className="grid grid-cols-2 gap-4 rounded-[0.9rem] bg-[#f1eadf] px-4 py-3.5">
                 <div>
-                  <p className="text-[0.61rem] font-semibold uppercase tracking-[0.11em] text-[#8a8379]">
+                  <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[#777168]">
                     Company
                   </p>
-                  <p className="mt-1.5 text-[0.78rem] font-semibold text-[#191713]">
-                    {guide.company}
-                  </p>
+                  <p className="mt-1.5 text-sm font-semibold text-[#191713]">{guide.company}</p>
                 </div>
                 <div>
-                  <p className="text-[0.61rem] font-semibold uppercase tracking-[0.11em] text-[#8a8379]">
+                  <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[#777168]">
                     Experience
                   </p>
-                  <p className="mt-1.5 text-[0.78rem] font-semibold text-[#191713]">
-                    {guide.experience}
-                  </p>
+                  <p className="mt-1.5 text-sm font-semibold text-[#191713]">{guide.experience}</p>
                 </div>
               </div>
 
               <div
-                className="mt-3 inline-flex h-11 w-full cursor-default items-center justify-center rounded-[0.85rem] bg-[#f47d48] px-4 text-[0.76rem] font-semibold text-white"
+                className="mt-3 inline-flex h-11 w-full cursor-default items-center justify-center rounded-[0.85rem] bg-[#f47d48] px-4 text-sm font-semibold text-white"
                 aria-disabled="true"
               >
                 Coming soon
@@ -609,7 +597,7 @@ function MentorDirectoryHeader() {
     <header className="mentor-rise flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
       <Link
         href="/trailguide"
-        className="text-[0.76rem] font-semibold uppercase tracking-[0.24em] text-[#191713] outline-none focus-visible:ring-2 focus-visible:ring-[#f47d48]"
+        className="text-[0.8125rem] font-semibold uppercase tracking-[0.2em] text-[#191713] outline-none focus-visible:ring-2 focus-visible:ring-[#f47d48]"
       >
         Trailguide
       </Link>
@@ -617,7 +605,7 @@ function MentorDirectoryHeader() {
       <nav aria-label="Mentor directory navigation" className="flex flex-wrap items-center gap-3">
         <Link
           href="/trailguide"
-          className="group inline-flex h-9 items-center gap-2 rounded-full border border-black/10 bg-[#fbf8f0] px-4 text-[0.64rem] font-medium text-[#191713] outline-none transition-colors hover:bg-[#f0eadf] focus-visible:ring-2 focus-visible:ring-[#f47d48]"
+          className="group inline-flex min-h-11 items-center gap-2 rounded-full border border-black/10 bg-[#fbf8f0] px-4 text-[0.8125rem] font-semibold text-[#191713] outline-none transition-colors hover:bg-[#f0eadf] focus-visible:ring-2 focus-visible:ring-[#f47d48] sm:min-h-10"
         >
           <ArrowLeft
             size={13}
@@ -629,7 +617,7 @@ function MentorDirectoryHeader() {
         </Link>
         <Link
           href="mailto:hello@trailgrad.com?subject=Trailguide%20mentorship"
-          className="group inline-flex h-9 items-center gap-3 rounded-full bg-[#191713] px-5 text-[0.64rem] font-medium text-[#f4efe3] outline-none focus-visible:ring-2 focus-visible:ring-[#f47d48]"
+          className="group inline-flex min-h-11 items-center gap-3 rounded-full bg-[#191713] px-5 text-[0.8125rem] font-semibold text-[#f4efe3] outline-none focus-visible:ring-2 focus-visible:ring-[#f47d48] sm:min-h-10"
         >
           Apply for mentorship
           <ArrowRight
@@ -652,7 +640,7 @@ function TrailguideHeader({ directory = false }: { directory?: boolean }) {
     >
       <Link
         href="/trailguide"
-        className="text-[0.78rem] font-semibold uppercase tracking-[0.16em] text-[var(--m-ink)] outline-none transition-opacity hover:opacity-65 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-[var(--m-accent-line)]"
+        className="text-[0.8125rem] font-semibold uppercase tracking-[0.16em] text-[var(--m-ink)] outline-none transition-opacity hover:opacity-65 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-[var(--m-accent-line)]"
       >
         Trailguide
       </Link>
@@ -663,7 +651,7 @@ function TrailguideHeader({ directory = false }: { directory?: boolean }) {
       >
         <Link
           href="/"
-          className="group inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-[var(--m-line-strong)] px-4 text-[0.72rem] font-semibold text-[var(--m-ink)] outline-none transition-[background-color,transform] duration-200 ease-out hover:-translate-y-0.5 hover:bg-[var(--m-raised)] focus-visible:ring-2 focus-visible:ring-[var(--m-accent-line)]"
+          className="group inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-[var(--m-line-strong)] px-4 text-[0.8125rem] font-semibold text-[var(--m-ink)] outline-none transition-[background-color,transform] duration-200 ease-out hover:-translate-y-0.5 hover:bg-[var(--m-raised)] focus-visible:ring-2 focus-visible:ring-[var(--m-accent-line)] sm:min-h-10"
         >
           <ArrowLeft
             size={14}
@@ -677,7 +665,7 @@ function TrailguideHeader({ directory = false }: { directory?: boolean }) {
         {directory ? (
           <Link
             href="/trailguide"
-            className="group inline-flex h-9 shrink-0 items-center gap-2 rounded-full bg-[var(--m-ink)] px-4 text-[0.72rem] font-semibold text-[var(--m-ground)] outline-none transition-transform duration-200 ease-out hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--m-accent-line)]"
+            className="group inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-[var(--m-ink)] px-4 text-[0.8125rem] font-semibold text-[var(--m-ground)] outline-none transition-transform duration-200 ease-out hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--m-accent-line)] sm:min-h-10"
           >
             <ArrowLeft
               size={14}
@@ -700,12 +688,16 @@ function PortraitTile({
   image,
   alt,
   className,
-  priority = false
+  sizes,
+  preload = false,
+  eager = false
 }: {
   image: StaticImageData;
   alt: string;
   className: string;
-  priority?: boolean;
+  sizes: string;
+  preload?: boolean;
+  eager?: boolean;
 }) {
   return (
     <div className={`relative overflow-hidden rounded-[1.35rem] bg-[#2a2822] ${className}`}>
@@ -713,9 +705,11 @@ function PortraitTile({
         src={image}
         alt={alt}
         fill
-        priority={priority}
+        preload={preload}
+        loading={preload ? undefined : eager ? "eager" : "lazy"}
         placeholder="blur"
-        sizes="(min-width: 1024px) 27vw, 46vw"
+        quality={72}
+        sizes={sizes}
         className="object-cover"
       />
     </div>
@@ -726,7 +720,7 @@ function MentorCta({ compact = false }: { compact?: boolean }) {
   return (
     <Link
       href="/trailguide/mentors"
-      className={`group inline-flex w-fit items-center justify-center gap-2 rounded-full bg-[var(--m-ink)] font-semibold text-[var(--m-ground)] outline-none transition-transform duration-200 ease-out hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--m-accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--m-ground)] ${compact ? "h-9 px-4 text-[0.72rem]" : "h-12 px-6 text-[0.88rem]"}`}
+      className={`group inline-flex w-fit items-center justify-center gap-2 rounded-full bg-[var(--m-ink)] font-semibold text-[var(--m-ground)] outline-none transition-transform duration-200 ease-out hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--m-accent-line)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--m-ground)] ${compact ? "min-h-11 px-4 text-[0.8125rem] sm:min-h-10" : "min-h-12 px-6 text-[0.9375rem]"}`}
     >
       {compact ? (
         <>

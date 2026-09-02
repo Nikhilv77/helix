@@ -28,21 +28,20 @@ export function LegalPage({ document }: { document: LegalDocument }) {
         <article className="mx-auto w-full max-w-[44rem]">
           <header>
             <p className="blueprint-label text-[color:var(--dm-accent-soft)]">{document.eyebrow}</p>
-            <h1
-              className="display-heading mt-5 text-cream"
-              style={{ fontSize: "clamp(2rem, 4.4vw, 3.4rem)" }}
-            >
-              {document.title}
-            </h1>
-            <p className="mt-6 text-lg leading-relaxed text-cream/70">{document.introduction}</p>
-            <p className="mt-6 text-sm text-cream/30">Last updated {document.updatedAt}</p>
+            <h1 className="marketing-page-title mt-5 text-cream">{document.title}</h1>
+            <p className="marketing-page-lede mt-5 max-w-[40rem] text-cream/70 sm:mt-6">
+              {document.introduction}
+            </p>
+            <p className="mt-6 text-[0.8125rem] font-medium tracking-[-0.005em] text-cream/35">
+              Last updated {document.updatedAt}
+            </p>
           </header>
 
-          <div className="mt-14">
+          <div className="mt-12 sm:mt-14">
             {document.sections.map((section) => (
-              <section key={section.title} className="border-t border-white/[0.06] py-9">
-                <h2 className="text-xl font-medium tracking-tight text-cream">{section.title}</h2>
-                <p className="mt-4 text-[1.05rem] leading-8 text-cream/65">{section.body}</p>
+              <section key={section.title} className="border-t border-white/[0.06] py-8 sm:py-9">
+                <h2 className="marketing-reading-title text-cream">{section.title}</h2>
+                <p className="marketing-reading-copy mt-4 text-cream/65">{section.body}</p>
               </section>
             ))}
           </div>

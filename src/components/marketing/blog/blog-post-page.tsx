@@ -85,14 +85,9 @@ export async function BlogPostPage({ params }: { params: Promise<{ slug: string 
 
           <header className="mt-10">
             <p className="blueprint-label text-[color:var(--dm-accent-soft)]">{post.category}</p>
-            <h1
-              className="display-heading mt-5 text-cream"
-              style={{ fontSize: "clamp(2rem, 4.4vw, 3.4rem)" }}
-            >
-              {post.title}
-            </h1>
-            <p className="mt-6 text-lg leading-relaxed text-cream/70">{post.dek}</p>
-            <p className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-cream/30">
+            <h1 className="marketing-page-title mt-5 text-cream">{post.title}</h1>
+            <p className="marketing-page-lede mt-5 text-cream/70 sm:mt-6">{post.dek}</p>
+            <p className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.8125rem] font-medium text-cream/35">
               <span>{post.publishedAt}</span>
               <span className="text-cream/15">·</span>
               <span>{post.readTime}</span>
@@ -103,7 +98,7 @@ export async function BlogPostPage({ params }: { params: Promise<{ slug: string 
               is one column of type now, so nothing here needs a container. */}
           <ul className="mt-10 grid gap-3 border-y border-white/[0.06] py-7">
             {post.summary.map((item) => (
-              <li key={item} className="flex gap-3 text-[0.95rem] leading-7 text-cream/60">
+              <li key={item} className="flex gap-3 text-base leading-[1.7] text-cream/60">
                 <span className="mt-3 h-1 w-1 shrink-0 rounded-full bg-[color:var(--dm-accent)]" />
                 {item}
               </li>
@@ -118,12 +113,10 @@ export async function BlogPostPage({ params }: { params: Promise<{ slug: string 
                     {section.kicker}
                   </p>
                 ) : null}
-                <h2 className="mt-3 text-2xl font-medium tracking-tight text-cream">
-                  {section.heading}
-                </h2>
+                <h2 className="marketing-reading-title mt-3 text-cream">{section.heading}</h2>
                 <div className="mt-5 space-y-5">
                   {section.paragraphs.map((paragraph) => (
-                    <p key={paragraph} className="text-[1.05rem] leading-8 text-cream/65">
+                    <p key={paragraph} className="marketing-reading-copy text-cream/65">
                       {paragraph}
                     </p>
                   ))}
@@ -132,10 +125,7 @@ export async function BlogPostPage({ params }: { params: Promise<{ slug: string 
                 {section.bullets ? (
                   <ul className="mt-7 grid gap-3.5">
                     {section.bullets.map((bullet) => (
-                      <li
-                        key={bullet}
-                        className="flex gap-3 text-[0.95rem] leading-7 text-cream/55"
-                      >
+                      <li key={bullet} className="flex gap-3 text-base leading-[1.7] text-cream/55">
                         <span className="mt-3 h-1 w-1 shrink-0 rounded-full bg-cream/25" />
                         {bullet}
                       </li>
@@ -150,7 +140,7 @@ export async function BlogPostPage({ params }: { params: Promise<{ slug: string 
             <p className="blueprint-label text-[color:var(--dm-accent-soft)]">Try this next</p>
             <ol className="mt-6 grid gap-4">
               {post.nextPractice.map((item, index) => (
-                <li key={item} className="flex gap-4 text-[0.95rem] leading-7 text-cream/65">
+                <li key={item} className="flex gap-4 text-base leading-[1.7] text-cream/65">
                   <span className="font-mono text-sm text-cream/25">
                     {String(index + 1).padStart(2, "0")}
                   </span>
@@ -180,10 +170,12 @@ export async function BlogPostPage({ params }: { params: Promise<{ slug: string 
                 >
                   <div className="min-w-0 flex-1">
                     <span className="blueprint-label text-cream/30">{related.category}</span>
-                    <h3 className="mt-2.5 text-lg font-medium tracking-tight text-cream">
+                    <h3 className="mt-2.5 text-lg font-semibold leading-snug tracking-[-0.02em] text-cream">
                       {related.title}
                     </h3>
-                    <p className="mt-2 text-sm leading-6 text-cream/45">{related.dek}</p>
+                    <p className="mt-2 text-[0.9375rem] leading-[1.65] text-cream/45">
+                      {related.dek}
+                    </p>
                   </div>
                   <ArrowRight
                     size={15}

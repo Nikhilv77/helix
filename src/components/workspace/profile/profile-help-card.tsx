@@ -3,9 +3,8 @@
 import { ChevronRight, HandHelping, Loader2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { HelpInbox, type HelpInboxStats } from "@/components/workspace/help/help-inbox";
-
-const EMPTY_STATS: HelpInboxStats = { available: 0, claimed: 0, helpedPeople: 0 };
+import { HelpInbox } from "@/components/workspace/help/help-inbox";
+import { useWorkspaceHelpPolling } from "@/components/workspace/help/workspace-help-polling";
 
 function peopleLabel(count: number): string {
   if (count === 0) return "Become a Trailmate";
@@ -14,36 +13,16 @@ function peopleLabel(count: number): string {
 
 /** Compact profile entry point for helping, with the full inbox in a dialog. */
 export function ProfileHelpCard() {
-  const [stats, setStats] = useState<HelpInboxStats>(EMPTY_STATS);
-  const [loading, setLoading] = useState(true);
+  const { inbox, inboxLoaded, refresh } = useWorkspaceHelpPolling();
   const [open, setOpen] = useState(false);
   const openButton = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
-
-  const loadStats = useCallback(async () => {
-    try {
-      const response = await fetch("/api/help/inbox");
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload?.success || !payload.data) return;
-
-      setStats({
-        available: payload.data.open?.length ?? 0,
-        claimed: payload.data.claimed?.length ?? 0,
-        helpedPeople: payload.data.helpedPeopleCount ?? 0
-      });
-    } catch {
-      // The activity card is supplementary; a transient inbox failure should
-      // not turn the whole Profile page into an error state.
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadStats();
-    window.addEventListener("focus", loadStats);
-    return () => window.removeEventListener("focus", loadStats);
-  }, [loadStats]);
+  const loading = !inboxLoaded;
+  const stats = {
+    available: inbox?.open.length ?? 0,
+    claimed: inbox?.claimed.length ?? 0,
+    helpedPeople: inbox?.helpedPeopleCount ?? 0
+  };
 
   // Notification links and the old /help redirect can open a particular card.
   useEffect(() => {
@@ -53,7 +32,7 @@ export function ProfileHelpCard() {
 
   const close = useCallback(() => {
     setOpen(false);
-    void loadStats();
+    void refresh();
     window.requestAnimationFrame(() => openButton.current?.focus());
 
     const url = new URL(window.location.href);
@@ -64,7 +43,7 @@ export function ProfileHelpCard() {
       "",
       `${url.pathname}${url.search}${url.hash}`
     );
-  }, [loadStats]);
+  }, [refresh]);
 
   useEffect(() => {
     if (!open) return;
@@ -84,7 +63,6 @@ export function ProfileHelpCard() {
     };
   }, [close, open]);
 
-  const updateStats = useCallback((next: HelpInboxStats) => setStats(next), []);
   const active = stats.available + stats.claimed;
 
   return (
@@ -170,7 +148,7 @@ export function ProfileHelpCard() {
             </header>
 
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6 sm:py-6">
-              <HelpInbox onStatsChange={updateStats} />
+              <HelpInbox />
             </div>
           </section>
         </div>

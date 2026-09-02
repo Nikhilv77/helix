@@ -3,7 +3,7 @@
 import { Fragment, useRef } from "react";
 import type { CSSProperties } from "react";
 import { ArrowRight } from "lucide-react";
-import { Reveal, useRotator, useScrollProgress } from "./visuals/reveal";
+import { Reveal, useRotator, useScrollProgress, useViewportPresence } from "./visuals/reveal";
 import { PrimaryAction } from "./primary-action";
 
 /**
@@ -34,11 +34,14 @@ const HOLD_MS = 3600;
 const EXIT_MS = 1050;
 
 export function Hero() {
+  const sectionRef = useRef<HTMLElement>(null);
   const parallaxRef = useRef<HTMLDivElement>(null);
+  const present = useViewportPresence(sectionRef, "25% 0px");
   const { index, phase } = useRotator({
     length: pitches.length,
     holdMs: HOLD_MS,
-    exitMs: EXIT_MS
+    exitMs: EXIT_MS,
+    enabled: present
   });
 
   // Drives `--p` for the parallax fade. The hero is sticky, so the section
@@ -47,8 +50,10 @@ export function Hero() {
 
   return (
     <section
+      ref={sectionRef}
       id="learn"
-      className="marketing-theme-hero sticky top-0 z-0 h-[100svh] min-h-[36rem] overflow-hidden px-5 pb-[20vh] pt-24 sm:px-10"
+      data-running={present}
+      className="marketing-theme-hero sticky top-0 z-0 h-[100svh] min-h-[36rem] overflow-hidden px-5 pb-20 pt-20 sm:px-10 sm:pb-[20vh] sm:pt-24"
     >
       <div
         ref={parallaxRef}
@@ -76,9 +81,8 @@ export function Hero() {
                 ].join(" ")}
               >
                 <p
-                  className="stagger-line wordmark text-cream"
+                  className="marketing-hero-title stagger-line wordmark text-cream"
                   data-phase={active ? phase : undefined}
-                  style={{ fontSize: "clamp(2.2rem, 4.8vw, 3.8rem)", letterSpacing: "-0.035em" }}
                 >
                   {words.map((word, wordIndex) => (
                     <Fragment key={`${word}-${wordIndex}`}>
@@ -91,7 +95,7 @@ export function Hero() {
                 </p>
 
                 <p
-                  className="stagger-fade mx-auto mt-7 max-w-2xl text-lg leading-relaxed text-cream/80 sm:text-xl"
+                  className="marketing-lede stagger-fade mx-auto mt-6 max-w-2xl text-cream/76 sm:mt-7"
                   data-phase={active ? phase : undefined}
                   style={{ "--n": words.length } as CSSProperties}
                 >
@@ -103,7 +107,7 @@ export function Hero() {
         </div>
 
         <Reveal delay={620}>
-          <PrimaryAction className="glass-cta mt-11 inline-flex min-h-12 items-center gap-3 rounded-xl px-7 text-sm font-semibold sm:text-base">
+          <PrimaryAction className="glass-cta mt-9 inline-flex min-h-[3.25rem] items-center gap-3 rounded-xl px-7 text-[0.9375rem] font-semibold sm:mt-11 sm:text-base">
             Get started
             <ArrowRight size={18} aria-hidden="true" />
           </PrimaryAction>

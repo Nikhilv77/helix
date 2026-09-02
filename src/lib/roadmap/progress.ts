@@ -31,6 +31,15 @@ export interface ProgressOverview {
   nextUp: ProgressNextUp | null;
 }
 
+/** Minimal read model serialized into the client-only progress briefing. */
+export interface ProgressBriefingOverview {
+  totals: Pick<ProgressTotals, "totalAttempts" | "completedQuestions">;
+  streak: ProgressStreak;
+  /** The seven daily rows used to explain the candidate's current pace. */
+  activity: ProgressDay[];
+  interview: Pick<ProgressInterview, "completedSessions">;
+}
+
 export interface ProgressTotals {
   totalQuestions: number;
   completedQuestions: number;

@@ -4,22 +4,18 @@ import Image from "next/image";
 import { HandHelping, Loader2, Mic } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { HelpHistoryParticipant } from "@/lib/help/help-history";
+import type { HelpInboxRequest } from "@/lib/help/help-inbox";
 import { peerHelpRoomHref } from "@/lib/help/help-room-navigation";
 import { showCurrentPeerHelp } from "@/lib/help/help-ui-events";
 import { ProfileAvatar } from "../profile/profile-avatar";
+import { useWorkspaceHelpPolling } from "./workspace-help-polling";
 
-/** Near-live without adding a socket or service-worker delivery layer. */
-const POLL_MS = 15_000;
 const VISIBLE_MS = 14_000;
 
-interface ToastRequest {
-  id: string;
-  title: string;
-  language: string;
-  estimatedMinutes: number | null;
-  learner: HelpHistoryParticipant | null;
-}
+type ToastRequest = Pick<
+  HelpInboxRequest,
+  "id" | "title" | "language" | "estimatedMinutes" | "learner"
+>;
 
 /**
  * A quiet, actionable heads-up for qualified helpers.
@@ -30,46 +26,20 @@ interface ToastRequest {
  */
 export function HelpRequestToast() {
   const router = useRouter();
+  const { inbox, refresh } = useWorkspaceHelpPolling();
   const [request, setRequest] = useState<ToastRequest | null>(null);
   const [busy, setBusy] = useState<"claim" | "decline" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const seen = useRef(new Set<string>());
 
-  const load = useCallback(async () => {
-    if (request || busy) return;
-
-    try {
-      const response = await fetch("/api/help/inbox");
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload?.success || !payload.data) return;
-
-      const next = (payload.data.open as ToastRequest[] | undefined)?.find(
-        (item) => !seen.current.has(item.id)
-      );
-      if (!next) return;
-
-      seen.current.add(next.id);
-      setError(null);
-      setRequest(next);
-    } catch {
-      // The persistent inbox remains available if a quiet toast poll misses.
-    }
-  }, [busy, request]);
-
   useEffect(() => {
-    void load();
-    const refreshVisible = () => {
-      if (document.visibilityState === "visible") void load();
-    };
-    const timer = window.setInterval(refreshVisible, POLL_MS);
-    window.addEventListener("focus", refreshVisible);
-    document.addEventListener("visibilitychange", refreshVisible);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener("focus", refreshVisible);
-      document.removeEventListener("visibilitychange", refreshVisible);
-    };
-  }, [load]);
+    if (request || busy) return;
+    const next = inbox?.open.find((item) => !seen.current.has(item.id));
+    if (!next) return;
+    seen.current.add(next.id);
+    setError(null);
+    setRequest(next);
+  }, [busy, inbox, request]);
 
   useEffect(() => {
     if (!request || busy) return;
@@ -94,6 +64,7 @@ export function HelpRequestToast() {
           if (action === "claim" && payload?.error?.code === "HELP_HELPER_UNAVAILABLE") {
             setRequest(null);
             showCurrentPeerHelp();
+            void refresh();
             return;
           }
           throw new Error(payload?.error?.message ?? "That request is no longer available.");
@@ -105,13 +76,15 @@ export function HelpRequestToast() {
         if (action === "claim") {
           router.push(peerHelpRoomHref(requestId, returnTo));
         }
+        void refresh();
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "That did not work.");
+        void refresh();
       } finally {
         setBusy(null);
       }
     },
-    [busy, request, router]
+    [busy, refresh, request, router]
   );
 
   if (!request) return null;

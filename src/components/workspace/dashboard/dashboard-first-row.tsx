@@ -14,6 +14,7 @@ import {
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import type { DashboardOverviewData } from "@/lib/dashboard/dashboard-overview";
 import { useMayaVoice } from "@/lib/voice/use-maya-voice";
+import { DashboardScoreRing } from "./dashboard-score-ring";
 
 export function DashboardFirstRow({
   data
@@ -164,7 +165,7 @@ function ReadinessCard({ readiness }: { readiness: DashboardOverviewData["readin
   return (
     <article
       aria-label="Interview readiness"
-      className="dashboard-overview-card relative flex h-[21rem] min-w-0 flex-col items-center overflow-hidden rounded-[1.65rem] bg-[#151619] px-6 py-5 text-center"
+      className="dashboard-overview-card relative flex min-h-[24rem] min-w-0 flex-col items-center overflow-hidden rounded-[1.65rem] bg-[#151619] px-6 py-5 text-center"
     >
       <div className="relative flex w-full items-start justify-between gap-3 text-left">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-cream/40">
@@ -176,44 +177,12 @@ function ReadinessCard({ readiness }: { readiness: DashboardOverviewData["readin
         <StaggeredWords text={readiness.label} baseMs={260} />
       </h2>
 
-      <div
-        className="relative mt-3 grid h-28 w-28 shrink-0 place-items-center"
-        role="img"
-        aria-label={`Readiness score ${score} out of 100`}
-      >
-        <svg
-          viewBox="0 0 140 140"
-          className="absolute inset-0 h-full w-full rotate-[135deg] overflow-visible"
-          aria-hidden="true"
-        >
-          <circle
-            cx="70"
-            cy="70"
-            r="55"
-            fill="none"
-            stroke="rgba(241, 234, 216, 0.07)"
-            strokeWidth="10"
-          />
-          <circle
-            cx="70"
-            cy="70"
-            r="55"
-            pathLength="100"
-            fill="none"
-            stroke="var(--workspace-accent)"
-            strokeWidth="10"
-            strokeLinecap="round"
-            strokeDasharray={`${score} ${100 - score}`}
-            style={{
-              filter:
-                "drop-shadow(0 8px 12px color-mix(in srgb, var(--workspace-accent) 22%, transparent))"
-            }}
-          />
-        </svg>
-        <span className="font-mono text-[1.7rem] font-medium tracking-[-0.04em] text-cream">
-          {score}%
-        </span>
-      </div>
+      <DashboardScoreRing
+        value={score}
+        ariaLabel={`Readiness score ${score} out of 100`}
+        className="mt-2.5 h-[8.5rem] w-[8.5rem]"
+        valueClassName="text-[2rem]"
+      />
 
       <div className="relative mt-3 w-full rounded-2xl bg-black/20 px-4 py-3 text-left">
         <p className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-cream/34">

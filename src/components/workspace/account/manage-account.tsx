@@ -3,6 +3,7 @@
 import { SignOutButton, useReverification, useUser } from "@clerk/nextjs";
 import { isReverificationCancelledError } from "@clerk/nextjs/errors";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Bell,
@@ -17,7 +18,7 @@ import {
   VolumeX,
   type LucideIcon
 } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ProfileAvatar } from "@/components/workspace/profile/profile-avatar";
 import { ALL_PERSONAS, MAYA, personaById, type InterviewerPersona } from "@/lib/avatars/personas";
@@ -32,11 +33,16 @@ import type { CandidateProfile } from "@/lib/shared/types";
 import { useMayaVoice } from "@/lib/voice/use-maya-voice";
 import { type WorkspaceAccent, WORKSPACE_ACCENT_CHANGE_EVENT } from "@/lib/workspace/accent";
 
-const MANAGE_ORIGIN_KEY = "trailgrad:manage-origin";
-
 const AvatarStage = dynamic(
   () => import("@/components/interview/voice/avatar-stage").then((module) => module.AvatarStage),
-  { ssr: false, loading: () => null }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="grid h-full w-full place-items-center" aria-label="Loading teacher avatar">
+        <Loader2 className="animate-spin text-cream/35" size={22} />
+      </div>
+    )
+  }
 );
 
 const accentOptions: Array<{
@@ -55,8 +61,6 @@ const accentOptions: Array<{
 
 export function ManageAccount({ profile }: { profile: CandidateProfile }) {
   const { user } = useUser();
-  const avatarRef = useRef<HTMLDivElement>(null);
-  const [avatarDelta, setAvatarDelta] = useState({ x: -190, y: 310 });
   const [deleting, setDeleting] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [accent, setAccent] = useState<WorkspaceAccent>(profile.workspaceAccent);
@@ -77,27 +81,6 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
     "Your account";
   const avatarImage = profile.profileImage || user?.imageUrl || null;
   const deleteAccountWithReverification = useReverification(deleteAccount);
-
-  useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      const target = avatarRef.current?.getBoundingClientRect();
-      if (!target) return;
-
-      const stored = window.sessionStorage.getItem(MANAGE_ORIGIN_KEY);
-      window.sessionStorage.removeItem(MANAGE_ORIGIN_KEY);
-      const origin = stored ? parseOrigin(stored) : null;
-      const fallback = window.innerWidth < 768 ? { x: window.innerWidth - 36, y: 32 } : null;
-      const from = origin ?? fallback;
-      if (!from) return;
-
-      setAvatarDelta({
-        x: Math.round(from.x - (target.left + target.width / 2)),
-        y: Math.round(from.y - (target.top + target.height / 2))
-      });
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, []);
 
   const onDelete = async () => {
     if (deleting) return;
@@ -168,24 +151,14 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
   return (
     <section className="profile-theme relative mx-auto flex min-h-screen w-full max-w-[84rem] flex-col px-4 pb-20 pt-6 text-cream sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
       <div className="relative z-10 mx-auto flex min-h-[calc(100svh-5rem)] w-full max-w-4xl flex-col items-center justify-center py-10 text-center">
-        <div
-          ref={avatarRef}
-          className="manage-avatar-arrive relative grid h-28 w-28 place-items-center rounded-full bg-cream p-1 shadow-[0_24px_80px_rgba(4,12,42,0.32)] sm:h-32 sm:w-32"
-          style={
-            {
-              "--avatar-from-x": `${avatarDelta.x}px`,
-              "--avatar-from-y": `${avatarDelta.y}px`
-            } as CSSProperties
-          }
-        >
-          <span
-            aria-hidden
-            className="manage-avatar-pulse absolute -inset-4 rounded-full border border-cream/20"
-          />
+        <div className="manage-avatar-arrive relative grid h-28 w-28 place-items-center rounded-full bg-cream p-1 shadow-[0_18px_54px_rgba(4,12,42,0.26)] sm:h-32 sm:w-32">
           {avatarImage ? (
             <img
               src={avatarImage}
               alt={`${name} profile avatar`}
+              width={128}
+              height={128}
+              decoding="async"
               className="relative h-full w-full rounded-full object-cover object-center"
             />
           ) : (
@@ -197,27 +170,20 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
         </div>
 
         <div className="mt-8 flex w-full flex-col">
-          <p className="blueprint-label manage-sequence-line text-cream/42">Manage account</p>
+          <p className="blueprint-label text-cream/48">Manage account</p>
           <h1 className="mt-4 text-[clamp(2.45rem,7vw,5rem)] font-semibold leading-[0.98] tracking-tight text-cream">
-            <AnimatedWords text="So far, so good." delay={680} />
+            So far, so good.
           </h1>
 
           <p className="mx-auto mt-5 max-w-2xl text-[clamp(1.1rem,2.4vw,1.55rem)] font-medium leading-8 text-cream/78">
-            <AnimatedWords text="Hope you are enjoying Trailgrad." delay={1280} copy />
+            Hope you are enjoying Trailgrad.
           </p>
 
           <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-cream/62 sm:text-lg sm:leading-8">
-            <AnimatedWords
-              text="Keep your session simple, or permanently remove your account when you are sure."
-              delay={2020}
-              copy
-            />
+            Keep your session simple, or permanently remove your account when you are sure.
           </p>
 
-          <section
-            className="manage-action-line report-glass-card order-4 mx-auto mt-4 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:p-6"
-            style={{ "--line-delay": "3200ms" } as CSSProperties}
-          >
+          <section className="manage-panel order-4 mx-auto mt-4 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:p-6">
             <h2 className="text-base font-semibold text-cream">Account actions</h2>
             <div className="mt-2 divide-y divide-white/[0.07]">
               <AccountActionRow
@@ -259,10 +225,7 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
             onError={(message) => setError(message)}
           />
 
-          <section
-            className="manage-action-line report-glass-card order-2 mx-auto mt-4 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:mt-4 sm:p-6"
-            style={{ "--line-delay": "3340ms" } as CSSProperties}
-          >
+          <section className="manage-panel order-2 mx-auto mt-4 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:mt-4 sm:p-6">
             <div>
               <h2 className="text-base font-semibold text-cream">Theme</h2>
               <p className="mt-1 text-sm leading-6 text-cream/52">
@@ -285,8 +248,7 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
 
           <section
             id="notifications"
-            className="manage-action-line report-glass-card order-3 mx-auto mt-4 w-full max-w-6xl scroll-mt-24 rounded-[1.5rem] p-5 text-left sm:p-6"
-            style={{ "--line-delay": "3420ms" } as CSSProperties}
+            className="manage-panel order-3 mx-auto mt-4 w-full max-w-6xl scroll-mt-24 rounded-[1.5rem] p-5 text-left sm:p-6"
           >
             <div>
               <h2 className="text-base font-semibold text-cream">Notifications</h2>
@@ -317,7 +279,7 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
           </section>
 
           {error ? (
-            <p className="manage-action-line order-5 mx-auto mt-5 max-w-xl text-[0.9rem] leading-6 text-cream/72">
+            <p className="order-5 mx-auto mt-5 max-w-xl text-[0.9375rem] leading-6 text-cream/72">
               {error}
             </p>
           ) : null}
@@ -380,10 +342,7 @@ function ManageTeacherPicker({
   };
 
   return (
-    <section
-      className="manage-action-line report-glass-card order-1 mx-auto mt-10 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:p-6"
-      style={{ "--line-delay": "3280ms" } as CSSProperties}
-    >
+    <section className="manage-panel order-1 mx-auto mt-10 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:p-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
         <div>
           <h2 className="text-base font-semibold text-cream">Your teacher</h2>
@@ -391,7 +350,7 @@ function ManageTeacherPicker({
             Choose who guides your practice and runs your interviews.
           </p>
         </div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cream/36">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cream/46">
           {savedTeacherId === focused.id ? `${focused.name} is with you` : "Previewing a change"}
         </p>
       </div>
@@ -401,7 +360,7 @@ function ManageTeacherPicker({
           type="button"
           onClick={() => move(-1)}
           aria-label="Previous teacher"
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.045] text-cream/62 transition hover:bg-white/[0.09] hover:text-cream"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/[0.045] text-cream/62 transition-colors hover:bg-white/[0.09] hover:text-cream"
         >
           <ChevronLeft size={18} />
         </button>
@@ -410,23 +369,29 @@ function ManageTeacherPicker({
 
         <div className="w-full max-w-[17rem] text-center sm:max-w-[19rem]">
           <div className="relative mx-auto h-56 w-full overflow-hidden rounded-[1.35rem] bg-[#121316] shadow-[0_24px_60px_-42px_rgba(0,0,0,0.9)] sm:h-64">
-            <AvatarStage
-              agentTrack={null}
-              state={speaking ? "speaking" : "listening"}
-              url={focused.model}
-              rig={focused.rig}
-              framing="default"
-              performanceProfile="preview"
-              showStatus={false}
-              feather={false}
-              introducing={state === "speaking"}
-            />
+            <div
+              className="h-full w-full"
+              role="img"
+              aria-label={`${focused.name}, your Trailgrad teacher`}
+            >
+              <AvatarStage
+                agentTrack={null}
+                state={speaking ? "speaking" : "listening"}
+                url={focused.model}
+                rig={focused.rig}
+                framing="default"
+                performanceProfile="onboarding"
+                showStatus={false}
+                feather={false}
+                introducing={state === "speaking"}
+              />
+            </div>
 
             <button
               type="button"
               onClick={() => (speaking ? stop() : void speak(focused.greeting, focused.id))}
               aria-label={speaking ? `Stop ${focused.name}` : `Hear ${focused.name}`}
-              className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-black/38 text-cream/72 backdrop-blur-lg transition hover:bg-black/58 hover:text-cream"
+              className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-black/72 text-cream/78 transition-colors hover:bg-black/88 hover:text-cream"
             >
               {state === "loading" ? (
                 <Loader2 size={15} className="animate-spin" />
@@ -438,7 +403,7 @@ function ManageTeacherPicker({
             </button>
 
             {selected ? (
-              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-[var(--workspace-accent)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#111214]">
+              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-[var(--workspace-accent)] px-2.5 py-1 text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-[#111214]">
                 <Check size={11} strokeWidth={2.6} /> Current
               </span>
             ) : null}
@@ -448,7 +413,7 @@ function ManageTeacherPicker({
             <h3 className="text-[1.55rem] font-semibold leading-none tracking-[-0.03em] text-cream">
               {focused.name}
             </h3>
-            <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
               {focused.tagline}
             </p>
             <p className="mx-auto mt-3 min-h-12 max-w-sm text-sm leading-6 text-cream/54">
@@ -463,7 +428,7 @@ function ManageTeacherPicker({
           type="button"
           onClick={() => move(1)}
           aria-label="Next teacher"
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.045] text-cream/62 transition hover:bg-white/[0.09] hover:text-cream"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/[0.045] text-cream/62 transition-colors hover:bg-white/[0.09] hover:text-cream"
         >
           <ChevronRight size={18} />
         </button>
@@ -474,7 +439,7 @@ function ManageTeacherPicker({
           type="button"
           onClick={() => void saveTeacher()}
           disabled={saving || selected}
-          className="inline-flex h-10 min-w-40 items-center justify-center rounded-lg bg-cream px-5 text-sm font-medium text-[#171a16] transition hover:bg-white disabled:cursor-default disabled:bg-white/[0.07] disabled:text-cream/38"
+          className="inline-flex h-11 min-w-40 items-center justify-center rounded-lg bg-cream px-5 text-sm font-medium text-[#171a16] transition-colors hover:bg-white disabled:cursor-default disabled:bg-white/[0.07] disabled:text-cream/38"
         >
           {saving
             ? "Saving teacher…"
@@ -501,17 +466,14 @@ function TeacherSidePreview({
       aria-label={`Preview ${persona.name}`}
       className="group hidden w-28 shrink-0 text-center opacity-48 transition duration-300 hover:-translate-y-0.5 hover:opacity-80 sm:block lg:w-32"
     >
-      <span className="block h-36 overflow-hidden rounded-[1.1rem] bg-white/[0.025] lg:h-40">
-        <AvatarStage
-          agentTrack={null}
-          state="listening"
-          url={persona.model}
-          rig={persona.rig}
-          framing="default"
-          performanceProfile="preview"
-          showStatus={false}
-          feather={false}
-          active={false}
+      <span className="relative block h-36 overflow-hidden rounded-[1.1rem] bg-white/[0.025] lg:h-40">
+        <Image
+          src={persona.portrait}
+          alt=""
+          fill
+          sizes="(min-width: 1024px) 128px, 112px"
+          quality={72}
+          className="object-cover object-center"
         />
       </span>
       <span className="mt-2 block text-xs font-medium text-cream/60 group-hover:text-cream/82">
@@ -580,7 +542,7 @@ function NotificationPreferenceRow({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold text-cream/88">{title}</span>
-        <span className="mt-0.5 block text-[12.5px] leading-5 text-cream/48">{description}</span>
+        <span className="mt-0.5 block text-sm leading-5 text-cream/52">{description}</span>
       </span>
       <button
         type="button"
@@ -622,7 +584,7 @@ function AccentThemeCard({
       style={{ "--card-accent": option.color } as CSSProperties}
       className={`
         group relative min-w-0 rounded-[16px] border p-2.5 text-left
-        transition-all duration-200
+        transition-[background-color,border-color,box-shadow,opacity] duration-200
         disabled:cursor-wait disabled:opacity-60
         ${
           selected
@@ -728,42 +690,6 @@ function AccentThemeCard({
     </button>
   );
 }
-function AnimatedWords({
-  text,
-  delay,
-  copy = false
-}: {
-  text: string;
-  delay: number;
-  copy?: boolean;
-}) {
-  const words = text.split(" ");
-  return (
-    <>
-      {words.map((word, index) => (
-        <span
-          key={`${word}-${index}`}
-          className={copy ? "onboarding-word manage-copy-word" : "onboarding-word"}
-          style={{ "--word-delay": `${delay + index * 58}ms` } as CSSProperties}
-        >
-          {word}
-          {index < words.length - 1 ? "\u00A0" : ""}
-        </span>
-      ))}
-    </>
-  );
-}
-
-function parseOrigin(value: string): { x: number; y: number } | null {
-  try {
-    const parsed = JSON.parse(value) as { x?: unknown; y?: unknown };
-    if (typeof parsed.x !== "number" || typeof parsed.y !== "number") return null;
-    return { x: parsed.x, y: parsed.y };
-  } catch {
-    return null;
-  }
-}
-
 function DeleteAccountWarningModal({
   deleting,
   onCancel,
@@ -793,7 +719,7 @@ function DeleteAccountWarningModal({
       <button
         type="button"
         aria-label="Close delete account warning"
-        className={`absolute inset-0 bg-[#050814]/48 backdrop-blur-md transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        className={`absolute inset-0 bg-[#050814]/82 transition-opacity duration-200 ease-out ${
           visible ? "opacity-100" : "opacity-0"
         }`}
         onClick={close}
@@ -802,7 +728,7 @@ function DeleteAccountWarningModal({
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="delete-account-warning-title"
-        className={`relative w-full max-w-md rounded-2xl border border-cream/20 bg-[#151619] p-6 text-cream outline-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform ${
+        className={`relative w-full max-w-md rounded-2xl border border-cream/20 bg-[#151619] p-6 text-cream outline-none transition duration-200 ease-out ${
           visible ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-[0.97] opacity-0"
         }`}
       >
@@ -839,169 +765,5 @@ function DeleteAccountWarningModal({
       </div>
     </div>,
     document.body
-  );
-}
-
-export function ManageBackdrop() {
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 hidden overflow-hidden text-cream xl:block"
-    >
-      <svg
-        className="absolute left-0 top-20 h-32 w-52 opacity-[0.075] 2xl:left-5"
-        viewBox="0 0 230 150"
-        fill="none"
-      >
-        <rect x="18" y="24" width="160" height="68" rx="14" stroke="currentColor" />
-        <circle cx="42" cy="48" r="5" fill="currentColor" fillOpacity="0.42" />
-        <path d="M61 45h78M61 64h104" stroke="currentColor" strokeLinecap="round" />
-        <path d="M28 116h178" stroke="currentColor" strokeLinecap="round" strokeDasharray="7 12" />
-      </svg>
-
-      <svg
-        className="absolute left-8 top-[20rem] h-40 w-60 opacity-[0.06] 2xl:left-16"
-        viewBox="0 0 260 180"
-        fill="none"
-      >
-        <rect x="22" y="22" width="176" height="62" rx="15" stroke="currentColor" />
-        <rect x="58" y="106" width="172" height="52" rx="13" stroke="currentColor" />
-        <circle cx="48" cy="48" r="5" fill="currentColor" fillOpacity="0.42" />
-        <circle cx="84" cy="130" r="5" fill="#9be8c1" fillOpacity="0.46" />
-        <path d="M68 45h88M68 61h112M104 128h78M104 143h52" stroke="currentColor" />
-        <path d="M198 53h28v78H230" stroke="currentColor" strokeDasharray="5 9" />
-      </svg>
-
-      <svg
-        className="absolute left-0 top-[38rem] h-24 w-64 opacity-[0.052] 2xl:left-10"
-        viewBox="0 0 300 120"
-        fill="none"
-      >
-        <path d="M18 86h50m178 0h36" stroke="currentColor" strokeLinecap="round" />
-        {Array.from({ length: 14 }, (_, item) => (
-          <line
-            key={item}
-            x1={84 + item * 10}
-            x2={84 + item * 10}
-            y1={86 - ((item % 6) + 2) * 5}
-            y2={86 + ((item % 6) + 2) * 5}
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeWidth="2.2"
-          />
-        ))}
-        <path d="M72 24h150M72 42h96M72 60h122" stroke="currentColor" strokeOpacity="0.72" />
-        <rect x="50" y="8" width="190" height="64" rx="14" stroke="currentColor" />
-      </svg>
-
-      <svg
-        className="absolute right-0 top-[6.5rem] h-36 w-60 opacity-[0.075] 2xl:right-8"
-        viewBox="0 0 280 180"
-        fill="none"
-      >
-        <path d="M18 92h24m196 0h24" stroke="currentColor" />
-        {Array.from({ length: 12 }, (_, item) => (
-          <line
-            key={item}
-            x1={52 + item * 15}
-            x2={52 + item * 15}
-            y1={92 - ((item % 5) + 2) * 7}
-            y2={92 + ((item % 5) + 2) * 7}
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeWidth="2.4"
-          />
-        ))}
-        <circle cx="140" cy="92" r="74" stroke="currentColor" />
-      </svg>
-
-      <svg
-        className="absolute right-5 top-[19rem] h-44 w-64 opacity-[0.06] 2xl:right-16"
-        viewBox="0 0 300 200"
-        fill="none"
-      >
-        <rect x="56" y="18" width="176" height="58" rx="14" stroke="currentColor" />
-        <rect x="32" y="112" width="142" height="54" rx="14" stroke="currentColor" />
-        <circle cx="82" cy="47" r="5" fill="#9be8c1" fillOpacity="0.5" />
-        <circle cx="58" cy="138" r="5" fill="currentColor" fillOpacity="0.4" />
-        <path d="M104 44h76M104 58h96M80 136h68M80 151h42" stroke="currentColor" />
-        <path d="M146 76v36M146 94h92" stroke="currentColor" strokeDasharray="5 9" />
-        <path d="M236 94l12-10M236 94l12 10" stroke="currentColor" strokeLinecap="round" />
-      </svg>
-
-      <svg
-        className="absolute right-0 top-[36rem] h-32 w-64 opacity-[0.052] 2xl:right-12"
-        viewBox="0 0 300 150"
-        fill="none"
-      >
-        <path d="M72 32h156M72 52h104M72 72h132" stroke="currentColor" />
-        <rect x="48" y="14" width="204" height="78" rx="16" stroke="currentColor" />
-        <path
-          d="M34 124 C 74 88, 108 88, 148 116 S 218 146, 266 92"
-          stroke="#9be8c1"
-          strokeOpacity="0.55"
-          strokeDasharray="5 9"
-        />
-        <circle cx="148" cy="116" r="6" fill="currentColor" fillOpacity="0.35" />
-        <circle cx="218" cy="122" r="6" fill="currentColor" fillOpacity="0.26" />
-      </svg>
-
-      <svg
-        className="absolute left-20 top-[51rem] h-24 w-44 opacity-[0.05] 2xl:left-32"
-        viewBox="0 0 180 120"
-        fill="none"
-      >
-        {Array.from({ length: 18 }, (_, item) => (
-          <circle
-            key={item}
-            cx={24 + (item % 6) * 24}
-            cy={26 + Math.floor(item / 6) * 28}
-            r="3"
-            fill="currentColor"
-            fillOpacity={item % 4 === 0 ? "0.48" : "0.24"}
-          />
-        ))}
-        <path d="M28 96h124" stroke="currentColor" strokeDasharray="6 10" />
-      </svg>
-
-      <svg
-        className="absolute right-16 top-[50rem] h-24 w-52 opacity-[0.05] 2xl:right-32"
-        viewBox="0 0 210 110"
-        fill="none"
-      >
-        <path d="M28 34h154M28 56h112M28 78h132" stroke="currentColor" />
-        <path d="M16 20h178v76H16z" stroke="currentColor" />
-        <path d="M54 20v76M118 20v76" stroke="currentColor" strokeOpacity="0.55" />
-      </svg>
-
-      <svg
-        className="absolute left-2 top-[57rem] h-32 w-60 opacity-[0.05] 2xl:left-14"
-        viewBox="0 0 270 150"
-        fill="none"
-      >
-        <rect x="42" y="18" width="176" height="58" rx="14" stroke="currentColor" />
-        <path d="M68 44h96M68 58h124" stroke="currentColor" />
-        <path
-          d="M30 120 C 70 82, 110 86, 146 110 S 214 144, 246 78"
-          stroke="#9be8c1"
-          strokeOpacity="0.48"
-          strokeDasharray="5 9"
-        />
-        <circle cx="146" cy="110" r="6" fill="currentColor" fillOpacity="0.32" />
-        <circle cx="214" cy="116" r="6" fill="currentColor" fillOpacity="0.24" />
-      </svg>
-
-      <svg
-        className="absolute bottom-8 right-8 h-24 w-44 opacity-[0.06] 2xl:right-24"
-        viewBox="0 0 180 120"
-        fill="none"
-      >
-        <path d="M24 28h132v64H24z" stroke="currentColor" />
-        <path d="M56 28v64M100 28v64M24 58h132" stroke="currentColor" strokeOpacity="0.58" />
-        <circle cx="42" cy="44" r="5" fill="currentColor" fillOpacity="0.46" />
-        <circle cx="80" cy="76" r="5" fill="#9be8c1" fillOpacity="0.52" />
-        <circle cx="124" cy="44" r="5" fill="currentColor" fillOpacity="0.34" />
-      </svg>
-    </div>
   );
 }

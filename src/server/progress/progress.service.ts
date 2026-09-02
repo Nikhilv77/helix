@@ -3,6 +3,7 @@ import {
   patternLabel,
   type ProgressAttemptRow,
   type ProgressAttemptStatus,
+  type ProgressBriefingOverview,
   type ProgressChapterRow,
   type ProgressDay,
   type ProgressDifficulty,
@@ -28,6 +29,41 @@ const WINDOW_DAYS = 126;
  */
 export class ProgressService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Compact read for the current Maya-led /progress screen. The broader
+   * overview remains available to analytics surfaces, but this route only
+   * needs recent activity, streaks, and whether practice has begun.
+   */
+  async briefing(
+    ownerId: string,
+    interview: ProgressBriefingOverview["interview"],
+    now: Date = new Date()
+  ): Promise<ProgressBriefingOverview> {
+    const windowStart = startOfUtcDay(new Date(now.getTime() - (WINDOW_DAYS - 1) * DAY_MS));
+    const [roadmap, attempts] = await Promise.all([
+      this.prisma.userRoadmap.findUnique({
+        where: { ownerId_role: { ownerId, role: FRONTEND_ROADMAP_ROLE } },
+        select: { completedQuestions: true }
+      }),
+      this.prisma.userQuestionAttempt.findMany({
+        where: { ownerId, createdAt: { gte: windowStart } },
+        orderBy: { createdAt: "desc" },
+        select: { status: true, createdAt: true }
+      })
+    ]);
+    const activity = buildActivity(attempts, windowStart, now);
+
+    return {
+      totals: {
+        totalAttempts: attempts.length,
+        completedQuestions: roadmap?.completedQuestions ?? 0
+      },
+      streak: buildStreak(attempts, now),
+      activity: activity.slice(-7),
+      interview
+    };
+  }
 
   async overview(
     ownerId: string,
@@ -132,10 +168,13 @@ type RoadmapRow = Prisma.UserRoadmapGetPayload<{
   };
 }> | null;
 
-interface AttemptRow {
-  id: string;
+interface ActivityAttemptRow {
   status: RoadmapQuestionAttemptStatus;
   createdAt: Date;
+}
+
+interface AttemptRow extends ActivityAttemptRow {
+  id: string;
   dsaQuestionSlug: string | null;
   questionProgressId: string;
 }
@@ -168,7 +207,11 @@ function buildQuestionMeta(questions: QuestionRow[]): Map<string, QuestionMeta> 
  * One row per day across the whole window, including the empty ones — the
  * heatmap needs a continuous calendar, not just the days that have data.
  */
-function buildActivity(attempts: AttemptRow[], windowStart: Date, now: Date): ProgressDay[] {
+function buildActivity(
+  attempts: ActivityAttemptRow[],
+  windowStart: Date,
+  now: Date
+): ProgressDay[] {
   const solvedByDay = new Map<string, number>();
   const attemptsByDay = new Map<string, number>();
 
@@ -197,7 +240,7 @@ function buildActivity(attempts: AttemptRow[], windowStart: Date, now: Date): Pr
   return days;
 }
 
-function buildStreak(attempts: AttemptRow[], now: Date): ProgressStreak {
+function buildStreak(attempts: ActivityAttemptRow[], now: Date): ProgressStreak {
   const solvedDays = new Set<string>();
   const activeDays = new Set<string>();
   let lastActiveAt: number | null = null;

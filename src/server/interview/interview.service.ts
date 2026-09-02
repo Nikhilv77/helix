@@ -11,7 +11,11 @@ import {
   type BeginAnswerResult,
   type VersionedInterviewSession
 } from "./session-store";
-import { createHistoryItem, createInterviewReport, createWorkspaceInsights } from "./report";
+import {
+  createHistoryItem,
+  createInterviewReport,
+  createWorkspaceInsightsFromReports
+} from "./report";
 import { createReportsOverview } from "./reports-overview";
 import type { ReportsOverview } from "@/lib/reports/reports";
 import type { InterviewHistoryItem, InterviewReport, WorkspaceInsights } from "@/lib/shared/types";
@@ -150,19 +154,21 @@ export class InterviewService {
 
   async insights(ownerId: string, limit = 30, now = Date.now()): Promise<WorkspaceInsights> {
     const boundedLimit = Math.max(1, Math.min(limit, 50));
-    return createWorkspaceInsights(await this.store.listByOwner(ownerId, boundedLimit), now);
+    return createWorkspaceInsightsFromReports(
+      await this.store.listReportsByOwner(ownerId, boundedLimit, now),
+      now
+    );
   }
 
   /**
-   * Every round this user has run, folded into the cross-round view. One store
-   * read: the reports are built from the same sessions the history list uses,
-   * so the index never disagrees with the rows it links to.
+   * Every round this user has run, folded into the cross-round view. The store
+   * supplies transcript-free report snapshots so the index does not have to
+   * deserialize complete interview states.
    */
   async reportsOverview(ownerId: string, limit = 50, now = Date.now()): Promise<ReportsOverview> {
     const boundedLimit = Math.max(1, Math.min(limit, 50));
-    const sessions = await this.store.listByOwner(ownerId, boundedLimit);
     return createReportsOverview(
-      sessions.map((session) => createInterviewReport(session, now)),
+      await this.store.listReportsByOwner(ownerId, boundedLimit, now),
       now
     );
   }

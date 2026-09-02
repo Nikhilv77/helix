@@ -15,8 +15,8 @@ import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
 import { isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
-import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
+import { getProfileForRequest } from "@/server/profile/profile-query";
 import "./globals.css";
 
 const googleSiteVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
@@ -162,9 +162,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   let initialProfileImage: string | null = null;
 
   if (userId) {
-    const profile = await getAppContainer()
-      .profileService.get(authenticatedOwnerId(userId))
-      .catch(() => null);
+    const profile = await getProfileForRequest(authenticatedOwnerId(userId)).catch(() => null);
     if (workspaceRoute && !welcomeHome && !profile?.onboardingCompletedAt) redirect("/onboarding");
     if (profile) {
       initialTeacherId = profile.teacherId;

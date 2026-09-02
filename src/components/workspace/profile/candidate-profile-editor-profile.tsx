@@ -1,4 +1,5 @@
 import { type CSSProperties } from "react";
+import Image from "next/image";
 import { BadgeCheck, BarChart3, Pencil, Sparkles, Target } from "lucide-react";
 import type { CandidateProfile, CandidateProfileInput } from "@/lib/shared/types";
 import {
@@ -37,7 +38,6 @@ export function ProfileHero({
   const selectedAvatar = profileAvatars.find((avatar) => avatar.src === profile.profileImage);
   const avatar = selectedAvatar ?? {
     src: PROFILE_FALLBACK_IMAGE,
-    displaySrc: PROFILE_FALLBACK_IMAGE,
     width: 1254,
     height: 1254
   };
@@ -54,12 +54,14 @@ export function ProfileHero({
           className="profile-cover-stage relative min-h-36 overflow-hidden bg-[#111214] sm:min-h-44"
           style={{ aspectRatio: `${cover.width} / ${cover.height}` }}
         >
-          <img
+          <Image
             key={cover.src}
-            src={cover.displaySrc}
+            src={cover.src}
             alt=""
-            width={cover.width}
-            height={cover.height}
+            fill
+            sizes="(max-width: 767px) 100vw, (max-width: 1535px) calc(100vw - 17rem), 84rem"
+            quality={72}
+            priority
             className="profile-cover-image profile-cover-image-change absolute inset-0 h-full w-full object-cover object-center"
           />
           <span
@@ -99,12 +101,14 @@ export function ProfileHero({
             >
               <span aria-hidden className="absolute -inset-2 rounded-full bg-cream/10" />
               <span aria-hidden className="profile-avatar-ring absolute -inset-1 rounded-full" />
-              <img
+              <Image
                 key={avatar.src}
-                src={avatar.displaySrc}
+                src={avatar.src}
                 alt=""
                 width={avatar.width}
                 height={avatar.height}
+                sizes="(max-width: 639px) 112px, 128px"
+                quality={72}
                 className="profile-avatar-image-change relative h-full w-full rounded-full object-cover object-center shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)]"
               />
               <span

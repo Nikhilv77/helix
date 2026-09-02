@@ -1,6 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import type { PrismaService } from "../database/prisma.service";
+import type { InterviewReport } from "@/lib/shared/types";
+import {
+  createInterviewReportSnapshot,
+  readInterviewReportSnapshot,
+  type InterviewReportSnapshot
+} from "./report";
+import { SESSION_TTL_MS } from "./session-constants";
 import type { InterviewAnswerResponse, InterviewState } from "./types";
 
 const ANSWER_LEASE_MS = 20_000;
@@ -34,6 +41,8 @@ export interface SessionStore {
   /** Durable owner-scoped read used by history and reports; does not enforce room TTL. */
   getOwned(id: string, ownerId: string): Promise<StoredInterviewSession | null>;
   listByOwner(ownerId: string, limit: number): Promise<StoredInterviewSession[]>;
+  /** Transcript-free read model used by the cross-session reports index. */
+  listReportsByOwner(ownerId: string, limit: number, now?: number): Promise<InterviewReport[]>;
   /** Moves sessions proven by a signed anonymous-browser identity to its account. */
   reassignOwner(fromOwnerId: string, toOwnerId: string): Promise<number>;
   save(state: InterviewState, expectedVersion: number): Promise<number>;
@@ -56,7 +65,7 @@ export interface SessionStore {
   countStartedSince(ownerId: string, since: number): Promise<number>;
 }
 
-export const SESSION_TTL_MS = 60 * 60 * 1000;
+export { SESSION_TTL_MS } from "./session-constants";
 /** Long enough to still enforce the daily cap after sessions themselves expire. */
 const OWNER_HISTORY_TTL_MS = 25 * 60 * 60 * 1000;
 
@@ -146,6 +155,20 @@ export class MemorySessionStore implements SessionStore {
       .sort((left, right) => right.state.startedAt - left.state.startedAt)
       .slice(0, limit)
       .map(storedView);
+  }
+
+  async listReportsByOwner(
+    ownerId: string,
+    limit: number,
+    now = Date.now()
+  ): Promise<InterviewReport[]> {
+    return (await this.listByOwner(ownerId, limit)).map((session) =>
+      readInterviewReportSnapshot(
+        createInterviewReportSnapshot(session, now),
+        session.touchedAt,
+        now
+      )
+    );
   }
 
   async reassignOwner(fromOwnerId: string, toOwnerId: string): Promise<number> {
@@ -282,12 +305,20 @@ export class PrismaSessionStore implements SessionStore {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(state: InterviewState, ownerId: string): Promise<void> {
+    const touchedAt = new Date();
     await this.prisma.interviewSession.create({
       data: {
         id: state.id,
         ownerId,
         state: toJson(state),
-        startedAt: new Date(state.startedAt)
+        reportSnapshot: toJsonValue(
+          createInterviewReportSnapshot(
+            { state, touchedAt: touchedAt.getTime() },
+            touchedAt.getTime()
+          )
+        ),
+        startedAt: new Date(state.startedAt),
+        touchedAt
       }
     });
   }
@@ -348,6 +379,61 @@ export class PrismaSessionStore implements SessionStore {
     }));
   }
 
+  async listReportsByOwner(
+    ownerId: string,
+    limit: number,
+    now = Date.now()
+  ): Promise<InterviewReport[]> {
+    const rows = await this.prisma.interviewSession.findMany({
+      where: { ownerId },
+      orderBy: { startedAt: "desc" },
+      take: limit,
+      select: { id: true, reportSnapshot: true, touchedAt: true }
+    });
+    const legacyIds = rows.filter((row) => row.reportSnapshot === null).map((row) => row.id);
+    const legacyRows = legacyIds.length
+      ? await this.prisma.interviewSession.findMany({
+          where: { id: { in: legacyIds }, ownerId },
+          select: { id: true, state: true, touchedAt: true }
+        })
+      : [];
+    const legacySnapshots = new Map<string, InterviewReportSnapshot>();
+
+    for (const row of legacyRows) {
+      const snapshot = createInterviewReportSnapshot(
+        {
+          state: row.state as unknown as InterviewState,
+          touchedAt: row.touchedAt.getTime()
+        },
+        now
+      );
+      legacySnapshots.set(row.id, snapshot);
+    }
+
+    if (legacySnapshots.size) {
+      // Preserve touchedAt so backfilling an old report cannot revive an
+      // expired interview room. Concurrent session writes win this race.
+      await Promise.all(
+        legacyRows.map((row) =>
+          this.prisma.interviewSession.updateMany({
+            where: { id: row.id, reportSnapshot: { equals: Prisma.DbNull } },
+            data: {
+              reportSnapshot: toJsonValue(legacySnapshots.get(row.id)),
+              touchedAt: row.touchedAt
+            }
+          })
+        )
+      );
+    }
+
+    return rows.flatMap((row) => {
+      const snapshot =
+        (row.reportSnapshot as unknown as InterviewReportSnapshot | null) ??
+        legacySnapshots.get(row.id);
+      return snapshot ? [readInterviewReportSnapshot(snapshot, row.touchedAt.getTime(), now)] : [];
+    });
+  }
+
   async reassignOwner(fromOwnerId: string, toOwnerId: string): Promise<number> {
     const result = await this.prisma.interviewSession.updateMany({
       where: { ownerId: fromOwnerId },
@@ -357,9 +443,20 @@ export class PrismaSessionStore implements SessionStore {
   }
 
   async save(state: InterviewState, expectedVersion: number): Promise<number> {
+    const touchedAt = new Date();
     const result = await this.prisma.interviewSession.updateMany({
       where: { id: state.id, version: expectedVersion },
-      data: { state: toJson(state), touchedAt: new Date(), version: { increment: 1 } }
+      data: {
+        state: toJson(state),
+        reportSnapshot: toJsonValue(
+          createInterviewReportSnapshot(
+            { state, touchedAt: touchedAt.getTime() },
+            touchedAt.getTime()
+          )
+        ),
+        touchedAt,
+        version: { increment: 1 }
+      }
     });
     if (result.count !== 1) throw new SessionVersionConflictError(state.id);
     return expectedVersion + 1;
@@ -423,10 +520,21 @@ export class PrismaSessionStore implements SessionStore {
     turnId: string,
     response: InterviewAnswerResponse
   ): Promise<number> {
+    const touchedAt = new Date();
     await this.prisma.$transaction(async (transaction) => {
       const updated = await transaction.interviewSession.updateMany({
         where: { id: state.id, version: expectedVersion },
-        data: { state: toJson(state), touchedAt: new Date(), version: { increment: 1 } }
+        data: {
+          state: toJson(state),
+          reportSnapshot: toJsonValue(
+            createInterviewReportSnapshot(
+              { state, touchedAt: touchedAt.getTime() },
+              touchedAt.getTime()
+            )
+          ),
+          touchedAt,
+          version: { increment: 1 }
+        }
       });
       if (updated.count !== 1) throw new SessionVersionConflictError(state.id);
 

@@ -1,8 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import type { CandidateProfile } from "@/lib/shared/types";
-import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
+import { getProfileForRequest } from "@/server/profile/profile-query";
 
 export async function requireOnboardedProfile(): Promise<{
   userId: string;
@@ -13,7 +13,7 @@ export async function requireOnboardedProfile(): Promise<{
   if (!userId) redirect("/");
 
   const ownerId = authenticatedOwnerId(userId);
-  const profile = await getAppContainer().profileService.get(ownerId);
+  const profile = await getProfileForRequest(ownerId);
   if (!profile.onboardingCompletedAt) redirect("/onboarding");
 
   return { userId, ownerId, profile };

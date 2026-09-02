@@ -1,5 +1,5 @@
 {
-  "phase": "Phase 5 — Linked List",
+  "phase": "Phase 5 \u2014 Linked List",
   "questions": [
     {
       "title": "Reverse Linked List",
@@ -7,7 +7,9 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/reverse-linked-list/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["sublist-reversal"],
+      "subPatterns": [
+        "sublist-reversal"
+      ],
       "difficulty": "easy",
       "expectedTimeMinutes": 15,
       "recommendedOrder": 1,
@@ -50,8 +52,16 @@
           "output": "[5,4,3,2,1]",
           "explanation": "Each next pointer is reversed so the tail becomes the new head."
         },
-        { "input": "head = [1,2]", "output": "[2,1]", "explanation": "The two nodes swap order." },
-        { "input": "head = []", "output": "[]", "explanation": "An empty list remains empty." }
+        {
+          "input": "head = [1,2]",
+          "output": "[2,1]",
+          "explanation": "The two nodes swap order."
+        },
+        {
+          "input": "head = []",
+          "output": "[]",
+          "explanation": "An empty list remains empty."
+        }
       ],
       "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around the previous, current and next three-pointer walk. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -62,7 +72,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -76,7 +86,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Walk the list with previous, current and next pointers, redirecting each node's link to its predecessor; the final previous pointer is the new head.",
           "steps": [
             "Track the state needed for the previous, current and next three-pointer walk.",
@@ -109,7 +119,11 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/merge-two-sorted-lists/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["dummy-head", "pointer-rewiring", "in-place-mutation"],
+      "subPatterns": [
+        "dummy-head",
+        "pointer-rewiring",
+        "in-place-mutation"
+      ],
       "difficulty": "easy",
       "expectedTimeMinutes": 15,
       "recommendedOrder": 2,
@@ -173,7 +187,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -187,7 +201,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Keep a tail pointer behind a dummy head, repeatedly splice on whichever front node is smaller, then attach whatever remains of the other list.",
           "steps": [
             "Track the state needed for a dummy head to avoid special-casing the first node.",
@@ -220,7 +234,10 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/linked-list-cycle/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["fast-slow-pointer", "cycle-detection"],
+      "subPatterns": [
+        "fast-slow-pointer",
+        "cycle-detection"
+      ],
       "difficulty": "easy",
       "expectedTimeMinutes": 15,
       "recommendedOrder": 3,
@@ -284,7 +301,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -298,7 +315,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Advance one pointer one node at a time and another two at a time; they meet if and only if a cycle exists.",
           "steps": [
             "Track the state needed for Floyd's tortoise and hare.",
@@ -331,11 +348,15 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/intersection-of-two-linked-lists/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["two-pointer-opposite-ends"],
+      "subPatterns": [
+        "two-pointer-opposite-ends"
+      ],
       "difficulty": "easy",
       "expectedTimeMinutes": 20,
       "recommendedOrder": 4,
-      "prerequisites": ["linked-list-cycle"],
+      "prerequisites": [
+        "linked-list-cycle"
+      ],
       "conceptsTested": [
         "equalizing the distance each pointer travels",
         "switching to the other head so both walk m plus n",
@@ -396,7 +417,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -410,7 +431,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Walk both lists and, on hitting the end, continue from the other list's head; both pointers then cover the same total distance and meet at the intersection or at null.",
           "steps": [
             "Track the state needed for equalizing the distance each pointer travels.",
@@ -443,11 +464,16 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/remove-nth-node-from-end-of-list/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["dummy-head", "two-pointer-same-direction"],
+      "subPatterns": [
+        "dummy-head",
+        "two-pointer-same-direction"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 20,
       "recommendedOrder": 5,
-      "prerequisites": ["merge-two-sorted-lists"],
+      "prerequisites": [
+        "merge-two-sorted-lists"
+      ],
       "conceptsTested": [
         "maintaining a fixed gap between two pointers",
         "a dummy head so removing the first node needs no special case",
@@ -508,7 +534,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -522,7 +548,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Move a lead pointer n nodes ahead of a trailing pointer that starts on a dummy head, advance both until the lead reaches the end, then unlink the trailing pointer's successor.",
           "steps": [
             "Track the state needed for maintaining a fixed gap between two pointers.",
@@ -556,11 +582,16 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/linked-list-cycle-ii/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["fast-slow-pointer", "cycle-detection"],
+      "subPatterns": [
+        "fast-slow-pointer",
+        "cycle-detection"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 30,
       "recommendedOrder": 6,
-      "prerequisites": ["linked-list-cycle"],
+      "prerequisites": [
+        "linked-list-cycle"
+      ],
       "conceptsTested": [
         "the second phase of Floyd's algorithm",
         "the distance identity that places the entry at the meeting point",
@@ -620,7 +651,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -634,7 +665,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Find the fast-slow meeting point, then reset one pointer to the head and advance both one node at a time; they meet exactly at the cycle's entrance.",
           "steps": [
             "Track the state needed for the second phase of Floyd's algorithm.",
@@ -668,11 +699,18 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/palindrome-linked-list/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["fast-slow-pointer", "array-reversal", "pointer-rewiring"],
+      "subPatterns": [
+        "fast-slow-pointer",
+        "array-reversal",
+        "pointer-rewiring"
+      ],
       "difficulty": "easy",
       "expectedTimeMinutes": 25,
       "recommendedOrder": 7,
-      "prerequisites": ["reverse-linked-list", "linked-list-cycle"],
+      "prerequisites": [
+        "reverse-linked-list",
+        "linked-list-cycle"
+      ],
       "conceptsTested": [
         "locating the middle with fast and slow pointers",
         "reversing the second half in place",
@@ -726,7 +764,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -740,7 +778,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Find the middle with fast and slow pointers, reverse the second half in place, compare the two halves node by node, then re-reverse to restore the list.",
           "steps": [
             "Track the state needed for locating the middle with fast and slow pointers.",
@@ -774,11 +812,16 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/add-two-numbers/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["dummy-head", "digit-arithmetic"],
+      "subPatterns": [
+        "dummy-head",
+        "digit-arithmetic"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 20,
       "recommendedOrder": 8,
-      "prerequisites": ["merge-two-sorted-lists"],
+      "prerequisites": [
+        "merge-two-sorted-lists"
+      ],
       "conceptsTested": [
         "digit-by-digit addition with a carry",
         "a dummy head to build the result list",
@@ -838,7 +881,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -852,7 +895,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Walk both lists in step, summing whatever digits are available plus the carry into a new node behind a dummy head, and emit one final node if a carry remains.",
           "steps": [
             "Track the state needed for digit-by-digit addition with a carry.",
@@ -886,11 +929,17 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/swap-nodes-in-pairs/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["dummy-head", "pointer-rewiring"],
+      "subPatterns": [
+        "dummy-head",
+        "pointer-rewiring"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 25,
       "recommendedOrder": 9,
-      "prerequisites": ["reverse-linked-list", "merge-two-sorted-lists"],
+      "prerequisites": [
+        "reverse-linked-list",
+        "merge-two-sorted-lists"
+      ],
       "conceptsTested": [
         "local pointer surgery across four references",
         "a dummy head so the first pair is not special",
@@ -929,7 +978,11 @@
           "output": "[2,1,4,3]",
           "explanation": "Each adjacent pair is swapped while preserving pair order."
         },
-        { "input": "head = []", "output": "[]", "explanation": "An empty list remains empty." },
+        {
+          "input": "head = []",
+          "output": "[]",
+          "explanation": "An empty list remains empty."
+        },
         {
           "input": "head = [1]",
           "output": "[1]",
@@ -945,7 +998,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -959,7 +1012,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Behind a dummy head, rewire the previous node, the first and the second of each pair so the pair reverses, then advance the previous pointer two nodes.",
           "steps": [
             "Track the state needed for local pointer surgery across four references.",
@@ -993,11 +1046,15 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/odd-even-linked-list/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["pointer-rewiring"],
+      "subPatterns": [
+        "pointer-rewiring"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 20,
       "recommendedOrder": 10,
-      "prerequisites": ["swap-nodes-in-pairs"],
+      "prerequisites": [
+        "swap-nodes-in-pairs"
+      ],
       "conceptsTested": [
         "splitting into two chains by position",
         "weaving both chains forward in one pass",
@@ -1051,7 +1108,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1065,7 +1122,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Advance an odd tail and an even tail together, relinking alternate nodes onto each chain, then attach the saved even head to the odd chain's tail.",
           "steps": [
             "Track the state needed for splitting into two chains by position.",
@@ -1099,11 +1156,18 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/reverse-linked-list-ii/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["dummy-head", "sublist-reversal", "pointer-rewiring"],
+      "subPatterns": [
+        "dummy-head",
+        "sublist-reversal",
+        "pointer-rewiring"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 30,
       "recommendedOrder": 11,
-      "prerequisites": ["reverse-linked-list", "swap-nodes-in-pairs"],
+      "prerequisites": [
+        "reverse-linked-list",
+        "swap-nodes-in-pairs"
+      ],
       "conceptsTested": [
         "reversing only a sublist",
         "a dummy head for ranges starting at position one",
@@ -1159,7 +1223,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1173,7 +1237,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Walk to the node before the range, then repeatedly move the following node to the front of the range until it is reversed, and reconnect both seams; a dummy head removes the position-one special case.",
           "steps": [
             "Track the state needed for reversing only a sublist.",
@@ -1207,11 +1271,16 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/rotate-list/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["modulo-indexing", "two-pointer-same-direction"],
+      "subPatterns": [
+        "modulo-indexing",
+        "two-pointer-same-direction"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 25,
       "recommendedOrder": 12,
-      "prerequisites": ["remove-nth-node-from-end-of-list"],
+      "prerequisites": [
+        "remove-nth-node-from-end-of-list"
+      ],
       "conceptsTested": [
         "reducing k modulo the list length",
         "closing the list into a ring",
@@ -1266,7 +1335,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1280,7 +1349,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Measure the length while walking to the tail, link the tail to the head to form a ring, step to the new tail at length minus k modulo length, and break the ring there.",
           "steps": [
             "Track the state needed for reducing k modulo the list length.",
@@ -1314,11 +1383,18 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/reorder-list/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["fast-slow-pointer", "array-reversal", "pointer-rewiring"],
+      "subPatterns": [
+        "fast-slow-pointer",
+        "array-reversal",
+        "pointer-rewiring"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 30,
       "recommendedOrder": 13,
-      "prerequisites": ["palindrome-linked-list", "merge-two-sorted-lists"],
+      "prerequisites": [
+        "palindrome-linked-list",
+        "merge-two-sorted-lists"
+      ],
       "conceptsTested": [
         "composing find-middle, reverse and alternate merge",
         "severing the list cleanly at the middle",
@@ -1372,7 +1448,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1386,7 +1462,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Split at the middle with fast and slow pointers, reverse the second half in place, then merge the two halves by alternating nodes.",
           "steps": [
             "Track the state needed for composing find-middle, reverse and alternate merge.",
@@ -1420,7 +1496,10 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/copy-list-with-random-pointer/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["pointer-rewiring", "canonical-key"],
+      "subPatterns": [
+        "pointer-rewiring",
+        "canonical-key"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 30,
       "recommendedOrder": 14,
@@ -1484,7 +1563,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1498,7 +1577,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Either map originals to clones in a hash map, or splice each clone directly after its original so random targets can be read from neighbours, then separate the two lists again.",
           "steps": [
             "Track the state needed for mapping each original node to its clone.",
@@ -1527,71 +1606,82 @@
       ]
     },
     {
-      "title": "Flatten a Multilevel Doubly Linked List",
-      "slug": "flatten-a-multilevel-doubly-linked-list",
+      "title": "Partition List",
+      "slug": "partition-list",
       "source": "leetcode",
-      "externalUrl": "https://leetcode.com/problems/flatten-a-multilevel-doubly-linked-list/",
+      "externalUrl": "https://leetcode.com/problems/partition-list/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["pointer-rewiring", "stack-simulation"],
+      "subPatterns": [
+        "two-pointer-same-direction",
+        "dummy-head"
+      ],
       "difficulty": "medium",
-      "expectedTimeMinutes": 30,
+      "expectedTimeMinutes": 25,
       "recommendedOrder": 15,
-      "prerequisites": [],
+      "prerequisites": [
+        "merge-two-sorted-lists"
+      ],
       "conceptsTested": [
-        "depth-first splicing of child lists",
-        "finding a child list's tail to reconnect the successor",
-        "clearing child pointers and repairing previous links"
+        "building two lists behind dummy heads",
+        "preserving the original relative order within each part",
+        "terminating the second list so the result is not circular"
       ],
       "commonMistakes": [
-        "Leaving child pointers set after splicing",
-        "Forgetting the previous pointer on the spliced segment",
-        "Losing the successor of the node that had a child"
+        "Forgetting to null the tail of the second list, which leaves a cycle",
+        "Swapping node values instead of relinking, which breaks stability",
+        "Comparing with >= instead of < and moving equal values to the wrong side"
       ],
       "interviewSignals": [
-        "Saves the successor before splicing anything in",
-        "Maintains both the next and previous invariants throughout"
+        "Reaches for two dummy heads rather than trying to splice in place",
+        "States that the relative order inside each partition must be preserved",
+        "Remembers to terminate the second list before joining"
       ],
       "followUpPrompts": [
-        "Solve it iteratively with an explicit stack.",
-        "Restore the original multilevel structure afterwards.",
-        "What if a child list were cyclic?"
+        "Partition into three parts around a range instead of two.",
+        "What changes if the list is doubly linked?",
+        "How does this compare with the partition step of quicksort?"
       ],
-      "promptSummary": "Flatten a doubly linked list whose nodes may carry child lists into a single-level doubly linked list.",
-      "highLevelApproach": "Walk the list and, at each node holding a child, splice that child list between the node and its successor, fixing previous pointers and clearing the child link; recursion or an explicit stack handles deeper levels.",
+      "promptSummary": "Reorder a linked list so every node less than x comes before every node greater than or equal to x, keeping the original relative order inside each group.",
+      "highLevelApproach": "Build two lists behind dummy heads \u2014 one for values below x and one for the rest \u2014 appending each node as you walk it, then terminate the second list and join the first to it.",
       "complexity": {
         "time": "O(n)",
-        "space": "O(depth)"
+        "space": "O(1)"
       },
-      "problemStatement": "You are given a doubly linked list, which in addition to the next and previous pointers, has a child pointer that may point to a separate doubly linked list. These child lists may have one or more children of their own. Flatten the list so that all nodes appear in a single-level doubly linked list in depth-first order.",
+      "problemStatement": "Given the head of a linked list and a value x, partition it so that all nodes less than x come before nodes greater than or equal to x. You must preserve the original relative order of the nodes in each of the two partitions.",
       "constraints": [
         "Use the public problem constraints as the source of truth for bounds.",
-        "Aim for the intended O(n) time and O(depth) space target.",
-        "The number of nodes in the list is in the range [0, 1000].",
-        "1 <= Node.val <= 10^5.",
-        "Child pointers may be null or point to a separate list."
+        "Aim for the intended O(n) time and O(1) space target.",
+        "The number of nodes in the list is in the range [0, 200].",
+        "-100 <= Node.val <= 100.",
+        "-200 <= x <= 200."
       ],
       "examples": [
         {
-          "input": "head = [1,2,3,4,5,6,null,null,null,7,8,9,10,null,null,11,12]",
-          "output": "[1,2,3,7,8,11,12,9,10,4,5,6]",
-          "explanation": "Child lists are inserted immediately after their parent in depth-first order."
+          "input": "head = [1,4,3,2,5,2], x = 3",
+          "output": "[1,2,2,4,3,5]",
+          "explanation": "The values below three keep their order, and so do the values at or above it."
         },
         {
-          "input": "head = [1,2,null,3]",
-          "output": "[1,3,2]",
-          "explanation": "The child list of node 2 is flattened before continuing with the next node."
+          "input": "head = [2,1], x = 2",
+          "output": "[1,2]",
+          "explanation": "Only one node is below x, so it moves to the front."
+        },
+        {
+          "input": "head = [], x = 0",
+          "output": "[]",
+          "explanation": "An empty list partitions to an empty list."
         }
       ],
-      "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around depth-first splicing of child lists. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "keyInsight": "Stability is the whole difficulty. Appending each node to one of two lists in the order you meet it preserves the relative order for free, where any in-place swapping scheme has to work to keep it.",
       "hints": [
         "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
-        "Look for the pointer manipulation structure: what state can be carried forward instead of recomputed?",
-        "Be careful about this common trap: Leaving child pointers set after splicing.",
-        "The intended path is: Walk the list and, at each node holding a child, splice that child list between the node and its successor, fixing previous pointers and clearing the child link; recursion or an explicit stack handles deeper levels."
+        "Look for the two-list structure: what if you never move a node, only choose which list it joins?",
+        "Be careful about this common trap: Forgetting to null the tail of the second list, which leaves a cycle.",
+        "The intended path is: build two lists behind dummy heads, append each node as you walk it, terminate the second, and join them."
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1605,32 +1695,32 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
-          "idea": "Walk the list and, at each node holding a child, splice that child list between the node and its successor, fixing previous pointers and clearing the child link; recursion or an explicit stack handles deeper levels.",
+          "name": "Intended \u2014 two lists behind dummy heads",
+          "idea": "Build two lists behind dummy heads \u2014 one for values below x and one for the rest \u2014 appending each node as you walk it, then terminate the second list and join the first to it.",
           "steps": [
-            "Track the state needed for depth-first splicing of child lists.",
+            "Track the state needed for preserving the relative order within each partition.",
             "Update that state in a single disciplined pass, traversal, or recursive branch.",
             "Preserve the invariant after every update and return the value the prompt asks for."
           ],
           "complexity": {
             "time": "O(n)",
-            "space": "O(depth)"
+            "space": "O(1)"
           },
           "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
         }
       ],
       "edgeCases": [
-        "Empty or minimum-size input if the problem allows it",
-        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
-        "Negative values, zeros, or boundary values when arithmetic is involved",
-        "Leaving child pointers set after splicing"
+        "Empty or single-node list",
+        "Every value below x, or every value at or above it",
+        "Repeated values equal to x, which must all land on the second side",
+        "Forgetting to null the tail of the second list, which leaves a cycle"
       ],
       "relatedQuestions": [
-        "reverse-linked-list",
         "merge-two-sorted-lists",
-        "linked-list-cycle",
-        "intersection-of-two-linked-lists",
-        "copy-list-with-random-pointer"
+        "odd-even-linked-list",
+        "reverse-linked-list-ii",
+        "sort-list",
+        "remove-nth-node-from-end-of-list"
       ]
     },
     {
@@ -1639,11 +1729,17 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/sort-list/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["divide-and-conquer", "pointer-rewiring"],
+      "subPatterns": [
+        "divide-and-conquer",
+        "pointer-rewiring"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 35,
       "recommendedOrder": 16,
-      "prerequisites": ["merge-two-sorted-lists", "palindrome-linked-list"],
+      "prerequisites": [
+        "merge-two-sorted-lists",
+        "palindrome-linked-list"
+      ],
       "conceptsTested": [
         "merge sort as the natural sort for linked lists",
         "splitting at the middle with fast and slow pointers",
@@ -1687,7 +1783,11 @@
           "output": "[-1,0,3,4,5]",
           "explanation": "Negative and positive values are placed in sorted order."
         },
-        { "input": "head = []", "output": "[]", "explanation": "An empty list remains empty." }
+        {
+          "input": "head = []",
+          "output": "[]",
+          "explanation": "An empty list remains empty."
+        }
       ],
       "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around merge sort as the natural sort for linked lists. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1698,7 +1798,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1712,7 +1812,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Split at the middle with fast and slow pointers, sort each half, and merge them; iterating over doubling run lengths bottom-up removes the recursion stack entirely.",
           "steps": [
             "Track the state needed for merge sort as the natural sort for linked lists.",
@@ -1737,7 +1837,7 @@
         "palindrome-linked-list",
         "reverse-linked-list",
         "linked-list-cycle",
-        "flatten-a-multilevel-doubly-linked-list"
+        "partition-list"
       ]
     },
     {
@@ -1746,11 +1846,17 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/merge-k-sorted-lists/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["bounded-k-heap", "divide-and-conquer", "heap-extraction"],
+      "subPatterns": [
+        "bounded-k-heap",
+        "divide-and-conquer",
+        "heap-extraction"
+      ],
       "difficulty": "hard",
       "expectedTimeMinutes": 35,
       "recommendedOrder": 17,
-      "prerequisites": ["sort-list"],
+      "prerequisites": [
+        "sort-list"
+      ],
       "conceptsTested": [
         "a min-heap over the k current heads",
         "divide-and-conquer pairwise merging",
@@ -1791,8 +1897,16 @@
           "output": "[1,1,2,3,4,4,5,6]",
           "explanation": "All three sorted lists are merged into one sorted list."
         },
-        { "input": "lists = []", "output": "[]", "explanation": "There are no lists to merge." },
-        { "input": "lists = [[]]", "output": "[]", "explanation": "The only list is empty." }
+        {
+          "input": "lists = []",
+          "output": "[]",
+          "explanation": "There are no lists to merge."
+        },
+        {
+          "input": "lists = [[]]",
+          "output": "[]",
+          "explanation": "The only list is empty."
+        }
       ],
       "keyInsight": "The key is to recognize the pointer manipulation pattern and maintain the right invariant around a min-heap over the k current heads. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -1803,7 +1917,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1817,7 +1931,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Either keep a min-heap of the k current heads and repeatedly pop the smallest, or merge the lists pairwise in rounds so the count halves each pass.",
           "steps": [
             "Track the state needed for a min-heap over the k current heads.",
@@ -1851,11 +1965,16 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/reverse-nodes-in-k-group/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["sublist-reversal", "dummy-head"],
+      "subPatterns": [
+        "sublist-reversal",
+        "dummy-head"
+      ],
       "difficulty": "hard",
       "expectedTimeMinutes": 40,
       "recommendedOrder": 18,
-      "prerequisites": ["reverse-linked-list-ii"],
+      "prerequisites": [
+        "reverse-linked-list-ii"
+      ],
       "conceptsTested": [
         "reversing fixed-size groups in place",
         "checking a full group exists before touching pointers",
@@ -1911,7 +2030,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1925,7 +2044,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "For each group, confirm k nodes remain, reverse that segment in place, then attach it between the previous group's tail and the node that follows the group.",
           "steps": [
             "Track the state needed for reversing fixed-size groups in place.",
@@ -1959,7 +2078,10 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/design-browser-history/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["pointer-rewiring", "design-problem"],
+      "subPatterns": [
+        "pointer-rewiring",
+        "design-problem"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 25,
       "recommendedOrder": 19,
@@ -2006,7 +2128,7 @@
         },
         {
           "input": "BrowserHistory(\"a.com\"); visit(\"b.com\"); back(1); forward(1)",
-          "output": "[null,\"a.com\",\"b.com\"]",
+          "output": "[null,null,\"a.com\",\"b.com\"]",
           "explanation": "The browser returns to the previous page and then moves forward again."
         }
       ],
@@ -2019,7 +2141,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -2033,7 +2155,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Hold a current node in a doubly linked list: visiting appends a node and drops the forward chain, while back and forward walk at most the requested number of steps.",
           "steps": [
             "Track the state needed for a current pointer with forward truncation on each new visit.",
@@ -2067,11 +2189,17 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/lru-cache/",
       "primaryPattern": "linked-list",
-      "subPatterns": ["pointer-rewiring", "canonical-key", "design-problem"],
+      "subPatterns": [
+        "pointer-rewiring",
+        "canonical-key",
+        "design-problem"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 40,
       "recommendedOrder": 20,
-      "prerequisites": ["design-browser-history"],
+      "prerequisites": [
+        "design-browser-history"
+      ],
       "conceptsTested": [
         "a hash map for lookup paired with a doubly linked list for recency",
         "sentinel head and tail nodes",
@@ -2126,7 +2254,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -2140,7 +2268,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — pointer manipulation",
+          "name": "Intended \u2014 pointer manipulation",
           "idea": "Pair a key-to-node hash map with a doubly linked list ordered by recency: each access unlinks its node and reinserts it at the front, and eviction removes the node before the tail sentinel.",
           "steps": [
             "Track the state needed for a hash map for lookup paired with a doubly linked list for recency.",

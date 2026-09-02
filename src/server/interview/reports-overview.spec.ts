@@ -106,6 +106,16 @@ describe("createReportsOverview", () => {
     expect(overview.rounds.map((round) => round.sessionId)).toEqual(["c", "b", "a"]);
   });
 
+  it("routes every completed-round drill-down to the canonical reports page", () => {
+    const overview = createReportsOverview([
+      report({ sessionId: "complete", startedAt: DAY, status: "completed" })
+    ]);
+
+    expect(overview.rounds[0]?.href).toBe("/reports");
+    expect(overview.trend[0]?.href).toBe("/reports");
+    expect(overview.matrix.rounds[0]?.href).toBe("/reports");
+  });
+
   it("uses the latest answered round for the report, even during wrap-up", () => {
     const overview = createReportsOverview([
       report({ sessionId: "finished", startedAt: DAY, status: "completed" }),

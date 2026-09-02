@@ -3,17 +3,12 @@
 import { ArrowLeft, ArrowRight, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { InterviewSignal } from "@/components/brand/blueprint-art";
-import {
-  CARD,
-  CARD_INNER,
-  INK,
-  PRIMARY_BUTTON
-} from "../flow/onboarding-data";
+import { CARD, CARD_INNER, INK, PRIMARY_BUTTON } from "../flow/onboarding-data";
 
 export function BlueprintBackdrop() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-      <InterviewSignal className="absolute left-1/2 top-8 h-[26rem] w-[34rem] -translate-x-1/2 text-[#F26E01] opacity-[0.07] sm:h-[32rem] sm:w-[42rem]" />
+      <InterviewSignal className="absolute left-1/2 top-8 hidden h-[32rem] w-[42rem] -translate-x-1/2 text-[#F26E01] opacity-[0.07] sm:block" />
     </div>
   );
 }
@@ -34,16 +29,13 @@ export function StepHeader({
       {icon && eyebrow ? <Eyebrow icon={icon}>{eyebrow}</Eyebrow> : null}
       <h1
         className={[
-          "display-heading max-w-4xl text-cream",
+          "onboarding-page-title display-heading max-w-4xl text-cream",
           icon && eyebrow ? "mt-6" : ""
         ].join(" ")}
-        style={{ fontSize: "clamp(2.15rem, 4.2vw, 3.5rem)" }}
       >
         {title}
       </h1>
-      {children ? (
-        <p className="mt-6 max-w-2xl text-lg leading-relaxed text-cream/80">{children}</p>
-      ) : null}
+      {children ? <p className="onboarding-lede mt-5 max-w-2xl text-cream/76">{children}</p> : null}
     </div>
   );
 }
@@ -83,9 +75,7 @@ export function AnalysisMetric({
         <Icon size={19} strokeWidth={1.8} />
       </span>
       <div className="min-w-0">
-        <p className="truncate text-xs font-semibold uppercase text-cream/55">
-          {label}
-        </p>
+        <p className="truncate text-xs font-semibold uppercase text-cream/55">{label}</p>
         <p className="mt-1 truncate text-2xl font-bold" style={{ color: INK }}>
           {value}
         </p>
@@ -113,7 +103,7 @@ export function EvidencePanel({
       <div className="flex items-center gap-3 border-b border-white/[0.08] px-5 py-4">
         <span
           className="grid h-11 w-11 shrink-0 place-items-center rounded-lg"
-        style={{ backgroundColor: "rgba(242,110,1,0.08)", color: "#F26E01" }}
+          style={{ backgroundColor: "rgba(242,110,1,0.08)", color: "#F26E01" }}
         >
           <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
         </span>
@@ -125,7 +115,7 @@ export function EvidencePanel({
         </div>
         <span
           className="shrink-0 rounded-lg px-2.5 py-1 font-mono text-[11px] font-semibold tabular-nums"
-        style={{ backgroundColor: "rgba(242,110,1,0.08)", color: "#F26E01" }}
+          style={{ backgroundColor: "rgba(242,110,1,0.08)", color: "#F26E01" }}
         >
           {count}
         </span>
@@ -150,7 +140,7 @@ export function EvidenceEmpty({
       <div className="max-w-sm">
         <span
           className="mx-auto grid h-12 w-12 place-items-center rounded-full"
-        style={{ backgroundColor: "rgba(242,110,1,0.08)", color: "#F26E01" }}
+          style={{ backgroundColor: "rgba(242,110,1,0.08)", color: "#F26E01" }}
         >
           <Icon size={20} strokeWidth={1.8} aria-hidden="true" />
         </span>
@@ -168,7 +158,7 @@ export function BackButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="-ml-2 mb-4 flex min-h-10 w-fit items-center gap-2 rounded-lg px-3 text-sm font-medium text-cream/70 outline-none transition hover:bg-cream/10 hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/60"
+      className="-ml-2 mb-4 flex min-h-11 w-fit items-center gap-2 rounded-lg px-3 text-base font-medium text-cream/70 outline-none transition hover:bg-cream/10 hover:text-cream focus-visible:ring-2 focus-visible:ring-cream/60"
     >
       <ArrowLeft size={15} aria-hidden="true" />
       <span>Back</span>

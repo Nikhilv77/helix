@@ -6,6 +6,7 @@ import type {
   DashboardInterviewContinuation,
   DashboardPracticeContinuation
 } from "@/lib/dashboard/dashboard-overview";
+import { DashboardScoreRing } from "./dashboard-score-ring";
 
 export function DashboardSecondRow({ data }: { data: DashboardContinuation }) {
   return (
@@ -135,41 +136,13 @@ function TeacherAdvicePanel({ practice }: { practice: DashboardPracticeContinuat
 }
 
 function ProgressRing({ value, ariaLabel }: { value: number; ariaLabel: string }) {
-  const progress = Math.min(100, Math.max(0, value));
-
   return (
-    <div
-      role="img"
-      aria-label={ariaLabel}
-      className="relative grid h-[7.25rem] w-[7.25rem] place-items-center"
-    >
-      <svg className="absolute inset-0 -rotate-90" viewBox="0 0 120 120" aria-hidden="true">
-        <circle
-          cx="60"
-          cy="60"
-          r="52"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="7"
-          className="text-cream/[0.055]"
-        />
-        <circle
-          cx="60"
-          cy="60"
-          r="52"
-          fill="none"
-          pathLength="100"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeWidth="7"
-          strokeDasharray={`${progress} ${100 - progress}`}
-          className="text-[var(--workspace-accent)]"
-        />
-      </svg>
-      <span className="font-mono text-[1.45rem] font-semibold tracking-[-0.04em] text-cream">
-        {progress}%
-      </span>
-    </div>
+    <DashboardScoreRing
+      value={value}
+      ariaLabel={ariaLabel}
+      className="h-32 w-32"
+      valueClassName="text-[1.75rem]"
+    />
   );
 }
 

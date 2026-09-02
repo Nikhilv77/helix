@@ -213,6 +213,7 @@ model InterviewSession {
   id             String                   @id @db.Uuid
   ownerId        String
   state          Json
+  reportSnapshot Json?
   version        Int                      @default(0)
   startedAt      DateTime
   touchedAt      DateTime                 @updatedAt

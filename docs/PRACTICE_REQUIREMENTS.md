@@ -272,6 +272,359 @@ This inverts the original order: **replacement content must land before any incu
 content is retired.** Removal steps stay blocked until the session they empty has enough
 non-legacy items to clear its floor on its own.
 
+### DSA test coverage
+
+**Goal.** Every DSA question grades on more than the cases the problem shows. A solution
+that special-cases the visible examples must fail.
+
+The rule: **nobody hand-writes an expected value.** Each question gets a reference
+solution in `scripts/dsa-cases/references/`, which is first replayed against that
+question's own authored cases. A reference that disagrees with even one is skipped and
+reported — that check catches a wrong reference *and* a wrong original case. Only a
+verified reference is trusted to produce expectations for the hidden inputs.
+
+`npx tsx scripts/dsa-cases/generate.mjs` reports; `--write` rewrites the bank in place
+and is idempotent.
+
+| Phase | Questions | Hidden cases | State |
+| --- | --- | --- | --- |
+| 1 — Arrays | 25 | 124 | done |
+| 2 — Strings | 20 | 169 | done |
+| 3 — Sliding Window | 13 | 102 | done |
+| 4 — Binary Search | 15 | 115 | 14 of 15 |
+| 5 — Linked List | 20 | 123 | 16 of 20 |
+| 6 — Stack & Queue | 17 | 143 | done |
+| 7 — Trees | 30 | 198 | 29 of 30 |
+| 8 — Heap | 9 | 71 | done |
+| 9 — Graphs | 20 | 133 | 19 of 20 |
+| 10 — Dynamic Programming | 24 | 193 | done |
+| 11 — Tries & Backtracking | 7 | 47 | done |
+
+**200 questions · 1,936 cases · 1,468 hidden · every question has hidden cases.**
+
+### Wrong complexity now runs out of time
+
+Every case used to be inlined, and Java compiles a literal into roughly one bytecode
+instruction per element against a 64KB method cap — so inputs were capped near 2,000, and
+at 2,000 a quadratic solution finishes in milliseconds. Measured before the fix, by
+submitting deliberately quadratic solutions:
+
+| Question | Wanted | Submitted | Result |
+| --- | --- | --- | --- |
+| `two-sum` | O(n) hash map | O(n²) nested scan | passed 7/7 in 1ms |
+| `contains-duplicate` | O(n) set | O(n²) pairwise | passed 9/9 in 2ms |
+| `best-time-to-buy-and-sell-stock` | O(n) single pass | O(n²) all pairs | passed 8/8 in 91ms |
+
+A case may now declare `build` instead of a literal, and the generated program constructs
+the input itself. No literal means no bytecode ceiling, so 200,000 elements costs nothing
+in source size — the `contains-duplicate` harness is still under 10KB.
+
+Picking the generator was the crux. MINSTD (`seed = seed * 48271 % 2147483647`) keeps its
+intermediate product under 2^53, so a JavaScript double holds it exactly while Java `long`,
+C++ `long long` and Python integers all agree. The generator the reference scripts used
+before multiplied by 1103515245, reaching 2.3e18 — past 2^53 — so **JavaScript had already
+diverged from exact integer arithmetic** and could never have matched Java. Verified by
+summing a built 200,000-element array in all four languages plus the TypeScript reference:
+every one returns -406894.
+
+After the fix, on the same questions:
+
+| | Correct solution | Quadratic solution |
+| --- | --- | --- |
+| `contains-duplicate` | 21ms | **10,002ms** — over the 5s limit |
+| `best-time-to-buy-and-sell-stock` | 16ms | **28,093ms** — over the 5s limit |
+
+13 scale cases across 11 questions. Expected values still come from replaying the verified
+reference over the same generated array, and the generator refuses a scale case whose
+answer is large, since the answer is written into the bank.
+
+**What this catches and what it does not.** It separates quadratic from linear, which is
+the mistake candidates actually make. It cannot separate logarithmic from linear — a linear
+scan of 200,000 elements is still only 200,000 operations — so binary-search questions
+remain unpoliced on complexity.
+
+### Two questions replaced rather than patched
+
+Both remaining problem questions had the same shape: the harness could not express what
+they asked for, so neither graded anything, and both ran in only two languages.
+
+| Removed | Replaced by | Why |
+| --- | --- | --- |
+| `flatten-a-multilevel-doubly-linked-list` | **Partition List** | Its input is a flat array where nulls encode child pointers. Even with an adapter the question would mostly test parsing that format, and it is rarely asked. |
+| `serialize-and-deserialize-binary-tree` | **Maximum Width of Binary Tree** | The contract is a *string* round trip, so the harness would have to call the candidate twice. Genuinely fixable, but it needs a codec driver in four languages. |
+
+The replacements were chosen to need **no new machinery**: Partition List uses the existing
+`linked-list` adapter, Maximum Width uses `tree-input`, and both have a single unambiguous
+answer. Both run in all four languages, where the questions they replaced ran in two — so
+the bank gained four language contracts by shrinking nothing.
+
+Partition List teaches the two-dummy-heads technique nothing else in the phase covers, and
+its trap is real: forget to terminate the second list and the result is circular. Maximum
+Width turns a shape question into index arithmetic, and its trap — indices overflowing on a
+deep tree unless you normalise per level — is the reason it is asked.
+
+Serialize/Deserialize is the more famous question and losing it is a real cost. It is worth
+bringing back when the codec driver exists; an ungradeable question in the bank was worse
+than a gap.
+
+### Deep copies, graded as copies
+
+`copy-list-with-random-pointer` and `clone-graph` were handed their own input as an array
+and handed it straight back — `return head` and `return adjList` passed every case. The
+new `linked-list-random` and `graph-clone` adapters build real nodes, and the output check
+walks the result rejecting any node that came from the input, reporting
+`returned the original nodes rather than a copy`. A correct copy still serialises to the
+same shape as its input; the identity check is what makes that round trip mean anything.
+
+Verified both ways with solutions that differ from the references — the O(1)-space
+interleaving trick rather than a hash map, and breadth-first rather than depth-first.
+Real solutions pass every case; the shortcuts now fail all but the empty one, which
+legitimately has no nodes to alias.
+
+**`clone-graph` dropped from four languages to two, deliberately.** Only the JavaScript and
+Python adapters can tell a real copy from the original nodes; Java and C++ would still see
+the old array shape and still pass the shortcut. A question graded correctly in two
+languages beats one graded in none, so it waits for the Java and C++ node builders.
+
+### Java and C++ class runners
+
+Eleven class-operation questions used to throw for Java and C++ — the runner said so
+outright: *"Java and C++ class runners are next."* They are here now.
+
+The trick is that the call sequence is known when the harness is built, so both runners
+**unroll** it into typed statements rather than dispatching by name. Java has no way to
+call a method from a string without reflection, and unrolling also keeps the generated
+program readable when something fails to compile:
+
+```java
+LRUCache instance = new LRUCache(2);
+instance.put(1, 1); results.add(null);
+results.add(instance.get(1));
+```
+
+The only thing a statically-typed runner needs that JavaScript gets for free is knowing
+whether an operation returns anything — `VOID_OPERATIONS` records that per question,
+mirroring `trailgradOperationValue`.
+
+**The starters had to be rewritten too.** They were bare shells with a no-argument
+constructor, so `new BrowserHistory("home")` would not have compiled. Each class now
+declares its real signature, which the candidate needed anyway.
+
+| Language | Before | After |
+| --- | --- | --- |
+| javascript | 200 of 200 | 200 |
+| python | 200 of 200 | 200 |
+| cpp | 185 of 200 | **196** |
+| java | 183 of 200 | **194** |
+
+Verified by writing a real implementation of all eleven in both languages, compiling, and
+checking every visible and hidden case through the harness's own parser — 11 for 11 in
+each. The opt-in compiler audit passes over the 22 new contracts.
+
+### A wrong expected value in `design-browser-history`
+
+Writing its reference turned up a case a correct implementation could not pass. The runner
+reports one null per void call — the constructor and every `visit` — so
+`BrowserHistory("a.com"); visit("b.com"); back(1); forward(1)` produces four values. The
+authored example and the case copied from it both listed three. Corrected in the question
+JSON and the bank.
+
+Left out so far, and why:
+
+- **Two questions are still degenerate** — see below.
+- **`flatten-a-multilevel-doubly-linked-list`** has no adapter either, so it asks the
+  candidate to parse LeetCode's multilevel serialization rather than flatten a list.
+  Testing the wrong skill rather than none.
+
+**Class-operation questions turned out to need no new machinery.** Their `arguments`
+already *are* the call sequence, so a reference that simulates the structure and returns
+the results array fits `solve(...operations)` unchanged. All five in Phase 6 are covered;
+`time-based-key-value-store`, `design-browser-history` and `lru-cache` follow the same
+shape and are simply not written yet. Each reference has to match the runner's own
+bookkeeping, which differs per question — `min-stack` reports null for `pop` even though a
+real `pop` returns a value, while the queue reports what it removed — and the replay
+against authored cases is what catches getting that wrong.
+
+### A bug in the case writer
+
+Writing Phase 6 corrupted `test-cases-batch-6.ts`. The writer finds a slug's array by
+counting `[` and `]` from the opening bracket, and `valid-parentheses` has `"]"` as an
+input — the bracket inside the string literal closed the array early and truncated the
+file mid-case. `decode-string` had been passing through the same writer for two phases
+only because its brackets happen to be balanced.
+
+The scan now skips string literals. The regenerated cases are pinned by a solution test,
+and `tsc` fails loudly if the file is ever truncated again.
+
+### Linked-list adapters
+
+Four questions used to grade nothing. `linked-list-cycle`, `linked-list-cycle-ii`,
+`intersection-of-two-linked-lists` and `copy-list-with-random-pointer` had **no adapter**,
+so the structure each question is about was never built: the candidate received plain
+arrays plus the very value being asked for, and these all passed every case.
+
+```
+linkedListCycle(head, pos)                       -> return pos !== -1
+linkedListCycleIi(head, pos)                     -> return pos
+intersectionOfTwoLinkedLists(a, b, skipA, skipB) -> return a[skipA]
+copyListWithRandomPointer(head)                  -> return head
+```
+
+Three now have adapters, in all four languages:
+
+| Adapter | Builds | Reports back |
+| --- | --- | --- |
+| `linked-list-cycle` | A chain with `tail.next` wired to node `pos` | The boolean unchanged |
+| `linked-list-cycle-entry` | The same chain | The returned node's **index**, by identity |
+| `linked-list-intersection` | Two chains sharing a tail from `skipA`/`skipB` | The returned node's **value**, but only if that node is in list A by identity |
+
+The candidate's function is called with the heads alone, so the consumed parameters are
+gone from the starter signature too (`ADAPTER_CONSUMED_PARAMETERS` in
+`dsa-code-templates.ts`) — a signature that still took `pos` would be a signature the
+harness never calls.
+
+Identity, not value, is what makes the intersection check real: a solution that finds the
+first value present in both lists returns a node it did not receive, and fails. Reporting
+the value rather than an index keeps the authored expectations and the problem statement
+("Intersected at node 8") intact.
+
+Verified by compiling and running the generated program in **Java, C++, Python and
+JavaScript** against every case — all four agree on every expected value — and
+`dsa-runner-contract.spec.ts` asserts both directions: a real traversal passes everything,
+and each former shortcut now fails.
+
+**Three questions are still unfixed**, and an adapter alone would not be enough for any of
+them. `copy-list-with-random-pointer` and `clone-graph` need the check to verify the
+returned nodes are *new*; `serialize-and-deserialize-binary-tree` needs the candidate to
+produce a string and read it back. All three round-trip through an array encoding that
+cannot express what matters, so `return head` / `return root` / `return adjList` still
+passes. All three are pinned by a test.
+
+### Backtracking: the comparison was already right
+
+Every backtracking question returns a collection whose *outer* order is arbitrary but
+whose *inner* order is part of the answer — a permutation is its order, a board's rows are
+its rows, a combination is conventionally non-decreasing. That is exactly what
+`unordered-nested` compares, so these needed neither a new mode nor the `accepted` hook.
+
+The binding constraint was **answer size**, since the whole collection is written into the
+bank: subsets double per element, permutations grow factorially, and eight queens is 92
+boards of eight rows. Inputs are capped so one case stays readable.
+
+Two generated inputs were replaced for the same reason as the graph ones: LeetCode
+guarantees unique elements for `subsets` and `permutations`, and a repeated value produces
+positionally-distinct entries with identical content — a case the problem never promises.
+
+### Dynamic programming: one hazard, and a bank-wide guard
+
+No adapters and no ambiguity — every question takes plain arguments and returns a scalar.
+The single hazard is that **Java and C++ return `int`**, and these are exactly the
+questions whose answers explode: `climbing-stairs` is Fibonacci, `decode-ways` is
+Fibonacci in disguise, `unique-paths` is a binomial coefficient. An expected value past
+2,147,483,647 would be one no correct Java solution could produce.
+
+Inputs are sized against that ceiling — `climbing-stairs(45)` is 1,836,311,903 and 46
+overflows; `unique-paths(17,17)` is 601,080,390 and 18 overflows. A test in
+`dsa-runner-contract.spec.ts` now checks **every numeric expected value in the whole
+bank**, not just this phase, so the next phase inherits the guard. Raising
+`climbing-stairs` to 46 makes it fail, which is how it was verified.
+
+### Graphs: no new adapter, but two invalid inputs
+
+Every Phase 9 question takes plain arrays — grids, edge lists, adjacency lists — so
+nothing new was needed in the harness. Two things did need care.
+
+`course-schedule-ii` and `alien-dictionary` both ask for *a* topological order and most
+graphs have several, so both use the `accepted` hook, enumerating every valid order and
+skipping any input whose set grows past a cap. `evaluate-division` returns ratios compared
+exactly across four languages, so every generated value is a power of two — all products
+and quotients are then dyadic and exact, where something like 1/3 would differ in the last
+bit between runtimes.
+
+Two inputs I first wrote violated their own problem's guarantees: an itinerary with two
+tickets out of JFK and no way back (the problem guarantees a valid itinerary exists), and
+merged accounts carrying different names (accounts sharing an email are the same person).
+Both produce a defined but meaningless answer, which is exactly the kind of expectation
+that fails a correct solution. Replaced rather than recorded.
+
+### `find-median-from-data-stream` was a syntax error
+
+Expanding Phase 8 executed this question for the first time, and its generated JavaScript
+did not parse. The operation runner emitted
+
+```js
+... for (const value of input[0]) instance.addNum(value); results.push(instance.findMedian()) console.log(...)
+```
+
+— no semicolon after the `findMedian()` push, so the statement ran straight into
+`console.log`. **Every JavaScript submission to this question has failed with
+`SyntaxError` since the runner was written.** Python was unaffected; it takes a different
+branch of the same generator. Fixed, and the question now has 8 hidden cases exercised by
+a real two-heap implementation in both languages.
+
+This is the argument for executing a question rather than only reading its data: the
+question had authored cases, appeared in the bank, and was broken.
+
+### Trees: a third adapter, and a helper that lied
+
+`convert-sorted-array-to-binary-search-tree` and
+`construct-binary-tree-from-preorder-and-inorder-traversal` had no adapter, so the starter
+returned `int[]` and the candidate had to emit the level-order array by hand — impossible
+in Java and C++, whose `int[]` and `vector<int>` cannot hold the nulls the expected arrays
+contain. The new **`tree-result`** adapter leaves arguments alone and serializes the
+returned node, so both now take a natural `TreeNode` return in all four languages.
+Verified by compiling and running each.
+
+The BST-from-sorted-array question also has several correct answers, so it uses the
+`accepted` hook: every tree reachable by taking either middle at each step. That is wider
+than the two the authored cases allowed, though still not literally every height-balanced
+BST. A test proves it is load-bearing — the independent solution takes the *upper* middle
+where the reference takes the lower, and fails if `one-of` is removed.
+
+**A generator helper was quietly wrong.** `leftSkew` and `rightSkew` produced the same
+array, so every question that asked for a left-leaning tree got a right-leaning one — the
+cases verified, they just tested less than their names claimed. Both are correct now, and
+`binary-tree-right-side-view` genuinely exercises the case where the rightmost node of a
+level is a left child.
+
+### predict-run for every editor language
+
+The editor offers **javascript, python, cpp, java**. Until now every `predict-run`
+question was JavaScript, and `predict-run` is language-*bound* by design — the exercise is
+predicting what one runtime prints. The language gate therefore withheld all ten from
+anyone using another language, and `core-technical` fell back to twelve typed essays: the
+exact format the artifact work replaced, reverted silently and only for them.
+
+Measured before and after, through the real selector:
+
+| Candidate | Before | After |
+| --- | --- | --- |
+| javascript | predict-run 5, typed 7 | unchanged |
+| python | **typed 12** | predict-run 3, typed 9 |
+| java | **typed 12** | predict-run 4, typed 8 |
+| cpp | **typed 12** | predict-run 4, typed 8 |
+
+Thirty new questions — ten each for Python, Java and C++ — in
+`src/data/prep/{python,java,cpp}-runtime-predict.json`.
+
+**No expected output is written by hand.** `scripts/prep-predict/` holds the runnable
+snippets plus a builder that compiles and executes each one; whatever it prints becomes
+`answerKey.expectedStdout`. Run without `--write` it re-executes everything and fails if a
+committed bank has drifted, so a snippet edited without a rebuild is caught rather than
+grading candidates against a stale answer.
+
+Three questions were rejected during authoring because execution disagreed with intent:
+`257 is 257` prints True under constant folding (version-dependent, so unfair), returning
+from a `finally` block now raises a SyntaxWarning, and a Java overload example did not
+compile at all. A fourth relied on C++17 `<<` sequencing and was rewritten to be
+order-independent.
+
+**One chapter per language, deliberately.** Placement round-robins across chapters, so the
+number of chapters a language spans decides its share of the session. `prepChapterKey`
+already collapses every `javascript-*` competency into one chapter; the three new banks set
+`chapterKey` explicitly to match. Splitting them finer would have quietly given the new
+languages a larger share than JavaScript.
+
 ### Left
 
 | Step | Status |
@@ -287,7 +640,7 @@ seeded — the first session with real headroom.
 
 ### Suite
 
-Lint clean. Vitest 669 passed, Jest 485 passed (68 suites).
+Lint clean. Vitest 689 passed; DSA and Practice suites green.
 
 Every session now has headroom above its floor:
 

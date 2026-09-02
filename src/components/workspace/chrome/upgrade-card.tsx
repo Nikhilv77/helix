@@ -19,9 +19,9 @@ import { ArrowUpRight, Compass } from "lucide-react";
  * an earlier version to "Human…". The arrow is positioned out of the flow
  * instead, and the title reserves room for it with `pr-5`.
  *
- * The description wraps rather than truncating: at this width it needs three
- * lines, and a clipped sentence tells the reader less than no sentence at all.
- * Only the title truncates, and "Trailguide" never reaches that limit.
+ * The description wraps rather than truncating across the available width; a
+ * clipped sentence tells the reader less than no sentence at all. Only the
+ * title truncates, and "Trailguide" never reaches that limit.
  *
  * The mark is inline with the title rather than a tile beside the whole card,
  * so it costs width on that one line instead of on every line of description.
@@ -39,28 +39,28 @@ export function UpgradeCard({ onNavigate }: { onNavigate?: () => void }) {
     <Link
       href={HREF}
       onClick={onNavigate}
-      className="upgrade-card group mt-3 block shrink-0 rounded-xl px-3 py-2.5 outline-none hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+      className="upgrade-card group mt-3 block shrink-0 rounded-xl px-3 py-3 outline-none hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
     >
       <ArrowUpRight
-        size={13}
+        size={14}
         aria-hidden="true"
         className="absolute right-2.5 top-2.5 text-cream/30 transition-[transform,color] duration-300 ease-out group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-cream/70"
       />
 
       <span className="relative flex items-center gap-1.5 pr-5">
         <Compass
-          size={14}
+          size={16}
           strokeWidth={2}
           aria-hidden="true"
           className="upgrade-card-mark shrink-0"
         />
-        <span className="truncate text-[0.82rem] font-semibold leading-tight text-cream">
+        <span className="truncate text-[0.92rem] font-semibold leading-tight text-cream">
           Trailguide
         </span>
       </span>
 
-      <span className="relative mt-1.5 block text-[0.72rem] leading-[1.45] text-cream/65">
-        1:1 sessions with senior engineers who have run the loop you are preparing for
+      <span className="relative mt-2 block text-pretty text-[0.82rem] leading-[1.55] text-cream/72">
+        1:1 sessions with senior engineers who have run real interview loops
       </span>
     </Link>
   );

@@ -8,9 +8,7 @@ export function ProgressSkeleton() {
     <main className="min-h-[100svh] w-full bg-black" aria-busy="true" aria-label="Loading progress">
       <div className="mx-auto flex min-h-[100svh] w-full max-w-5xl flex-col items-center px-4 pb-20 pt-8 sm:px-6 sm:pt-10 lg:px-8 lg:pt-12">
         <section className="flex min-h-[calc(100svh-9rem)] w-full flex-col items-center justify-center py-8">
-          <span className="h-56 w-56 rounded-full border border-white/[0.08] bg-white/[0.035] sm:h-64 sm:w-64" />
-
-          <div className="-mt-8 w-full max-w-2xl sm:-mt-10">
+          <div className="w-full max-w-2xl">
             <div className="rounded-2xl bg-[#17181b] px-5 py-5 sm:px-7 sm:py-6">
               <SkeletonLine className="h-5 w-3/4" />
               <SkeletonLine className="mt-3 h-5 w-full" />

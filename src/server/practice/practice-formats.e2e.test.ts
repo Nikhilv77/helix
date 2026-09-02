@@ -70,7 +70,25 @@ const diagnose = loadPrepTemplates<Template>("diagnose");
 
 describe("predict-run submits end to end", () => {
   it("has questions to test", () => {
-    expect(predictRun.length).toBeGreaterThanOrEqual(10);
+    expect(predictRun.length).toBeGreaterThanOrEqual(40);
+  });
+
+  /**
+   * The session is gated on language: a `predict-run` question is bound to the
+   * runtime it asks about, so a bank covering only JavaScript leaves everyone
+   * else with none. These are the four languages the editor offers.
+   */
+  it("covers every language the editor offers", () => {
+    const languages = new Set(
+      predictRun.map((template) => (template.answerKey as { language: string }).language)
+    );
+    expect([...languages].sort()).toEqual(["cpp", "java", "javascript", "python"]);
+    for (const language of languages) {
+      const forLanguage = predictRun.filter(
+        (template) => (template.answerKey as { language: string }).language === language
+      );
+      expect(forLanguage.length, language).toBeGreaterThanOrEqual(10);
+    }
   });
 
   it("marks the authored output correct without calling the model", async () => {
@@ -108,7 +126,7 @@ describe("predict-run submits end to end", () => {
   it("reveals the real output only in the review", async () => {
     const { evaluator } = evaluatorWithSpy();
     const template = predictRun[0]!;
-    const key = template.answerKey as { expectedStdout: string; code: string };
+    const key = template.answerKey as { expectedStdout: string; code: string; language: string };
 
     // Before submitting, the client receives this and nothing more.
     //
@@ -117,7 +135,7 @@ describe("predict-run submits end to end", () => {
     // the authored `expectedStdout` field itself, which would let the page
     // compare without the candidate reasoning at all.
     const snippet = predictRunSnippet(template.answerKey);
-    expect(snippet).toEqual({ code: key.code, language: "javascript" });
+    expect(snippet).toEqual({ code: key.code, language: key.language });
     expect(Object.keys(snippet!)).toEqual(["code", "language"]);
 
     const review = await evaluator.evaluate(evaluable(template), {

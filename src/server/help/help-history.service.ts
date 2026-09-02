@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 import type {
   ActivePeerHelp,
@@ -18,6 +18,23 @@ import { HelpRequestStatus } from "./help-request.types";
 
 export const HELP_HISTORY_DEFAULT_LIMIT = 10;
 export const HELP_HISTORY_MAX_LIMIT = 25;
+const TOP_HELPERS_CACHE_MS = 45_000;
+const TOP_HELPERS_CACHE_LIMIT = 10;
+
+interface OverviewCountsRow {
+  helpReceived: number;
+  peopleHelped: number;
+  activeReceived: number;
+  activeGiven: number;
+  positiveHelps: number;
+  availabilityCredits: number;
+}
+
+interface TopHelperAggregateRow {
+  helperId: string;
+  helpedCount: number;
+  thankedCount: number;
+}
 
 interface HistoryCursor {
   createdAt: string;
@@ -27,47 +44,14 @@ interface HistoryCursor {
 export class InvalidHelpHistoryCursorError extends Error {}
 
 export class HelpHistoryService {
+  private topHelpersCache: { expiresAt: number; helpers: TopPeerHelper[] } | null = null;
+  private topHelpersInFlight: Promise<TopPeerHelper[]> | null = null;
+
   constructor(private readonly prisma: PrismaService) {}
 
   async overview(ownerId: string): Promise<HelpOverview> {
-    const liveStatuses = [HelpRequestStatus.OPEN, HelpRequestStatus.CLAIMED];
-    const [
-      helpReceived,
-      helpedPeople,
-      activeReceived,
-      activeGiven,
-      positiveHelps,
-      availabilityCredits,
-      activeConversation,
-      topHelpers,
-      viewer
-    ] = await Promise.all([
-      this.prisma.helpRequest.count({ where: { learnerId: ownerId } }),
-      this.prisma.helpRequest.findMany({
-        where: { helperId: ownerId, status: HelpRequestStatus.RESOLVED },
-        select: { learnerId: true },
-        distinct: ["learnerId"]
-      }),
-      this.prisma.helpRequest.count({
-        where: { learnerId: ownerId, status: { in: liveStatuses } }
-      }),
-      this.prisma.helpRequest.count({
-        where: { helperId: ownerId, status: HelpRequestStatus.CLAIMED }
-      }),
-      this.prisma.helpSession.count({
-        where: {
-          learnerRating: 5,
-          learnerJoinedAt: { not: null },
-          helperJoinedAt: { not: null },
-          request: { helperId: ownerId }
-        }
-      }),
-      this.prisma.helpSession.count({
-        where: {
-          helperWaitCreditAt: { not: null },
-          request: { helperId: ownerId }
-        }
-      }),
+    const [counts, activeConversation, topHelpers, viewer] = await Promise.all([
+      this.overviewCounts(ownerId),
       this.activeConversation(ownerId),
       this.topHelpers(),
       this.participant(ownerId)
@@ -75,12 +59,7 @@ export class HelpHistoryService {
 
     return {
       viewer,
-      helpReceived,
-      peopleHelped: new Set(helpedPeople.map((row) => row.learnerId)).size,
-      activeReceived,
-      activeGiven,
-      positiveHelps,
-      availabilityCredits,
+      ...counts,
       activeConversation,
       topHelpers
     };
@@ -88,21 +67,72 @@ export class HelpHistoryService {
 
   /** Lightweight read for the home dashboard; skips rankings and recognition queries. */
   async dashboardOverview(ownerId: string): Promise<HelpDashboardOverview> {
-    const [helpReceived, helpedPeople, activeConversation] = await Promise.all([
-      this.prisma.helpRequest.count({ where: { learnerId: ownerId } }),
-      this.prisma.helpRequest.findMany({
-        where: { helperId: ownerId, status: HelpRequestStatus.RESOLVED },
-        select: { learnerId: true },
-        distinct: ["learnerId"]
-      }),
+    const [counts, activeConversation] = await Promise.all([
+      this.overviewCounts(ownerId),
       this.activeConversation(ownerId)
     ]);
 
     return {
-      helpReceived,
-      peopleHelped: new Set(helpedPeople.map((row) => row.learnerId)).size,
+      helpReceived: counts.helpReceived,
+      peopleHelped: counts.peopleHelped,
       activeConversation
     };
+  }
+
+  /** All recognition counters for one person in one database round trip. */
+  private async overviewCounts(ownerId: string): Promise<OverviewCountsRow> {
+    const rows = await this.prisma.$queryRaw<OverviewCountsRow[]>(Prisma.sql`
+      WITH request_counts AS (
+        SELECT
+          COUNT(*) FILTER (WHERE request."learnerId" = ${ownerId})::int AS "helpReceived",
+          COUNT(DISTINCT request."learnerId") FILTER (
+            WHERE request."helperId" = ${ownerId}
+              AND request."status" = 'RESOLVED'::"HelpRequestStatus"
+          )::int AS "peopleHelped",
+          COUNT(*) FILTER (
+            WHERE request."learnerId" = ${ownerId}
+              AND request."status" IN (
+                'OPEN'::"HelpRequestStatus",
+                'CLAIMED'::"HelpRequestStatus"
+              )
+          )::int AS "activeReceived",
+          COUNT(*) FILTER (
+            WHERE request."helperId" = ${ownerId}
+              AND request."status" = 'CLAIMED'::"HelpRequestStatus"
+          )::int AS "activeGiven"
+        FROM "HelpRequest" request
+        WHERE request."learnerId" = ${ownerId}
+           OR request."helperId" = ${ownerId}
+      ),
+      session_counts AS (
+        SELECT
+          COUNT(*) FILTER (
+            WHERE session."learnerRating" = 5
+              AND session."learnerJoinedAt" IS NOT NULL
+              AND session."helperJoinedAt" IS NOT NULL
+          )::int AS "positiveHelps",
+          COUNT(*) FILTER (
+            WHERE session."helperWaitCreditAt" IS NOT NULL
+          )::int AS "availabilityCredits"
+        FROM "HelpSession" session
+        INNER JOIN "HelpRequest" request ON request."id" = session."requestId"
+        WHERE request."helperId" = ${ownerId}
+      )
+      SELECT request_counts.*, session_counts.*
+      FROM request_counts
+      CROSS JOIN session_counts
+    `);
+
+    return (
+      rows[0] ?? {
+        helpReceived: 0,
+        peopleHelped: 0,
+        activeReceived: 0,
+        activeGiven: 0,
+        positiveHelps: 0,
+        availabilityCredits: 0
+      }
+    );
   }
 
   async activeConversation(ownerId: string): Promise<ActivePeerHelp | null> {
@@ -183,31 +213,46 @@ export class HelpHistoryService {
   }
 
   async topHelpers(limit = 5): Promise<TopPeerHelper[]> {
-    const rows = await this.prisma.helpRequest.findMany({
-      where: { status: HelpRequestStatus.RESOLVED, helperId: { not: null } },
-      orderBy: { resolvedAt: "desc" },
-      take: 1_000,
-      select: {
-        helperId: true,
-        session: { select: { learnerRating: true } }
-      }
-    });
-    const totals = new Map<string, { helpedCount: number; thankedCount: number }>();
-    for (const row of rows) {
-      if (!row.helperId) continue;
-      const current = totals.get(row.helperId) ?? { helpedCount: 0, thankedCount: 0 };
-      current.helpedCount += 1;
-      if (row.session?.learnerRating === 5) current.thankedCount += 1;
-      totals.set(row.helperId, current);
+    const normalizedLimit = Math.min(Math.max(limit, 1), TOP_HELPERS_CACHE_LIMIT);
+    const now = Date.now();
+    if (this.topHelpersCache && this.topHelpersCache.expiresAt > now) {
+      return this.topHelpersCache.helpers.slice(0, normalizedLimit);
     }
 
-    const ranked = [...totals.entries()]
-      .sort(([, a], [, b]) => b.thankedCount - a.thankedCount || b.helpedCount - a.helpedCount)
-      .slice(0, Math.min(Math.max(limit, 1), 10));
-    const profiles = await this.participants(ranked.map(([ownerId]) => ownerId));
-    return ranked.map(([ownerId, totalsForHelper]) => ({
-      participant: profiles.get(ownerId) ?? presentHelpParticipant(null),
-      ...totalsForHelper
+    if (!this.topHelpersInFlight) {
+      this.topHelpersInFlight = this.loadTopHelpers()
+        .then((helpers) => {
+          this.topHelpersCache = { expiresAt: Date.now() + TOP_HELPERS_CACHE_MS, helpers };
+          return helpers;
+        })
+        .finally(() => {
+          this.topHelpersInFlight = null;
+        });
+    }
+
+    const helpers = await this.topHelpersInFlight;
+    return helpers.slice(0, normalizedLimit);
+  }
+
+  private async loadTopHelpers(): Promise<TopPeerHelper[]> {
+    const ranked = await this.prisma.$queryRaw<TopHelperAggregateRow[]>(Prisma.sql`
+      SELECT
+        request."helperId" AS "helperId",
+        COUNT(*)::int AS "helpedCount",
+        COUNT(*) FILTER (WHERE session."learnerRating" = 5)::int AS "thankedCount"
+      FROM "HelpRequest" request
+      LEFT JOIN "HelpSession" session ON session."requestId" = request."id"
+      WHERE request."status" = 'RESOLVED'::"HelpRequestStatus"
+        AND request."helperId" IS NOT NULL
+      GROUP BY request."helperId"
+      ORDER BY "thankedCount" DESC, "helpedCount" DESC, request."helperId" ASC
+      LIMIT ${TOP_HELPERS_CACHE_LIMIT}
+    `);
+    const profiles = await this.participants(ranked.map((row) => row.helperId));
+    return ranked.map(({ helperId, helpedCount, thankedCount }) => ({
+      participant: profiles.get(helperId) ?? presentHelpParticipant(null),
+      helpedCount,
+      thankedCount
     }));
   }
 

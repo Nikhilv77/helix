@@ -1,4 +1,11 @@
-import { createHistoryItem, createInterviewReport, createWorkspaceInsights } from "./report";
+import {
+  createHistoryItem,
+  createInterviewReport,
+  createInterviewReportSnapshot,
+  createWorkspaceInsights,
+  createWorkspaceInsightsFromReports,
+  readInterviewReportSnapshot
+} from "./report";
 import type { InterviewState } from "./types";
 
 const state: InterviewState = {
@@ -114,6 +121,26 @@ describe("interview report", () => {
     expect(history.durationMs).toBe(12_000);
   });
 
+  it("rehydrates a compact report snapshot without exposing its transcript", () => {
+    const active = { ...state, phase: "questioning" as const };
+    const snapshot = createInterviewReportSnapshot({ state: active, touchedAt: 14_000 }, 14_000);
+    const report = readInterviewReportSnapshot(snapshot, 14_000, 20_000);
+
+    expect(snapshot.report).not.toHaveProperty("transcript");
+    expect(report.transcript).toEqual([]);
+    expect(report.status).toBe("in_progress");
+    expect(report.durationMs).toBe(19_000);
+  });
+
+  it("expires a compact report using the last turn rather than idle wall time", () => {
+    const active = { ...state, phase: "questioning" as const };
+    const snapshot = createInterviewReportSnapshot({ state: active, touchedAt: 14_000 }, 14_000);
+    const report = readInterviewReportSnapshot(snapshot, 14_000, 14_000 + 60 * 60 * 1000 + 1);
+
+    expect(report.status).toBe("expired");
+    expect(report.durationMs).toBe(12_000);
+  });
+
   it("uses persisted technical correctness instead of fluent-answer heuristics", () => {
     const evaluated: InterviewState = {
       ...state,
@@ -165,6 +192,18 @@ describe("interview report", () => {
         expect.objectContaining({ label: "Ownership", attempts: 1 }),
         expect.objectContaining({ label: "Implementation", attempts: 1 })
       ])
+    );
+  });
+
+  it("builds the same workspace insights from transcript-free snapshots", () => {
+    const report = createInterviewReport({ state, touchedAt: 14_000 }, 20_000);
+    const compactInsights = createWorkspaceInsightsFromReports(
+      [{ ...report, transcript: [] }],
+      20_000
+    );
+
+    expect(compactInsights).toEqual(
+      createWorkspaceInsights([{ state, touchedAt: 14_000 }], 20_000)
     );
   });
 });

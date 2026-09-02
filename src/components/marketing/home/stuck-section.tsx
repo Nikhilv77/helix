@@ -33,11 +33,13 @@ function clamp(value: number, min: number, max: number) {
 export function Stuck() {
   const sectionRef = useRef<HTMLElement>(null);
   const frameRef = useRef<number | null>(null);
-  const [progress, setProgress] = useState(0);
+  const [activeStep, setActiveStep] = useState(0);
 
   useEffect(() => {
+    let nearby = false;
+
     function updateProgress() {
-      if (frameRef.current !== null) return;
+      if (!nearby || frameRef.current !== null) return;
 
       frameRef.current = window.requestAnimationFrame(() => {
         frameRef.current = null;
@@ -46,52 +48,74 @@ export function Stuck() {
 
         const rect = section.getBoundingClientRect();
         const travel = Math.max(1, rect.height - window.innerHeight);
-        const next = clamp(-rect.top / travel, 0, 1);
+        const progress = clamp(-rect.top / travel, 0, 1);
+        const nextStep = Math.min(
+          helpSteps.length - 1,
+          Math.round(progress * (helpSteps.length - 1))
+        );
 
-        setProgress((current) => (Math.abs(current - next) > 0.004 ? next : current));
+        // Four state changes across the whole scene instead of a React render
+        // on almost every scroll frame. This is especially noticeable on
+        // mobile while the browser chrome is also resizing the viewport.
+        setActiveStep((current) => (current === nextStep ? current : nextStep));
       });
     }
 
-    updateProgress();
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        nearby = Boolean(entry?.isIntersecting);
+        if (nearby) updateProgress();
+      },
+      { rootMargin: "100% 0px", threshold: 0 }
+    );
+
+    const section = sectionRef.current;
+    if (section) observer.observe(section);
     window.addEventListener("scroll", updateProgress, { passive: true });
     window.addEventListener("resize", updateProgress);
 
     return () => {
+      observer.disconnect();
       window.removeEventListener("scroll", updateProgress);
       window.removeEventListener("resize", updateProgress);
       if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
     };
   }, []);
 
-  // Snap the copy to clear scroll zones. This also makes the final message
-  // reachable before the very last pixel of the section.
-  const activeStep = Math.min(helpSteps.length - 1, Math.round(progress * (helpSteps.length - 1)));
-
   return (
     <section
       ref={sectionRef}
       id="help"
-      className="marketing-theme-section relative z-10 min-h-[185vh] px-5 sm:min-h-[170vh] sm:px-10"
+      className="marketing-theme-section relative z-10 min-h-[190svh] px-5 sm:min-h-[170svh] sm:px-10"
     >
-      <div className="sticky top-0 flex min-h-screen items-start pb-20 pt-28 sm:pb-24 sm:pt-36">
+      <div className="sticky top-0 flex min-h-[100svh] items-start pb-8 pt-16 sm:pb-24 sm:pt-36">
         <div className="mx-auto w-full max-w-[58rem]">
           <Reveal delay={80}>
-            <div className="max-w-3xl">
-              <h2
-                className="display-heading help-heading max-w-3xl text-center text-cream"
-                style={{ fontSize: "clamp(2rem, 4.4vw, 3.6rem)" }}
-              >
+            <div className="mx-auto max-w-3xl">
+              <h2 className="marketing-section-title display-heading help-heading max-w-3xl text-center text-cream">
                 You&rsquo;re never completely stuck.
               </h2>
-              <p className="mx-auto mt-6 max-w-xl text-center text-lg leading-relaxed text-cream/70">
+              <p className="marketing-lede mx-auto mt-5 max-w-xl text-center text-cream/68 sm:mt-6">
                 Get a quick answer first. When you want a person, we connect you with someone who
                 has already solved it.
               </p>
             </div>
           </Reveal>
 
-          <Reveal delay={180} className="mt-16 sm:mt-24">
-            <div aria-live="polite" className="relative min-h-[13rem] sm:min-h-[11rem]">
+          <Reveal delay={180} className="mt-10 sm:mt-20">
+            <div aria-hidden="true" className="mb-7 grid grid-cols-4 gap-2 sm:mb-9">
+              {helpSteps.map((step, index) => (
+                <span
+                  key={step.number}
+                  className={[
+                    "h-[3px] rounded-full transition-colors duration-500",
+                    index <= activeStep ? "accent-rail" : "bg-white/[0.12]"
+                  ].join(" ")}
+                />
+              ))}
+            </div>
+
+            <div aria-live="polite" className="relative min-h-[13rem] sm:min-h-[12rem]">
               {helpSteps.map((step, index) => {
                 const isActive = index === activeStep;
 
@@ -102,14 +126,17 @@ export function Stuck() {
                     className={[
                       "absolute inset-0 max-w-3xl transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
                       isActive
-                        ? "translate-y-0 opacity-100 blur-0"
+                        ? "translate-y-0 opacity-100 sm:blur-0"
                         : index < activeStep
-                          ? "pointer-events-none -translate-y-8 opacity-0 blur-[6px]"
-                          : "pointer-events-none translate-y-8 opacity-0 blur-[6px]"
+                          ? "pointer-events-none -translate-y-6 opacity-0 sm:-translate-y-8 sm:blur-[6px]"
+                          : "pointer-events-none translate-y-6 opacity-0 sm:translate-y-8 sm:blur-[6px]"
                     ].join(" ")}
                   >
-                    <p className="max-w-3xl text-2xl font-medium leading-[1.12] tracking-[-0.025em] text-cream sm:text-4xl">
-                      <span>{step.title}</span> <span className="text-cream/58">{step.body}</span>
+                    <p className="text-[1.625rem] font-semibold leading-[1.15] tracking-[-0.028em] text-cream sm:text-4xl">
+                      {step.title}
+                    </p>
+                    <p className="mt-4 max-w-[42rem] text-[1.0625rem] leading-[1.7] text-cream/60 sm:mt-5 sm:text-lg">
+                      {step.body}
                     </p>
                   </div>
                 );

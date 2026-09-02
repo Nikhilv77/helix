@@ -8,6 +8,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { HelpRequestToast } from "./help-request-toast";
+import { WorkspaceHelpPollingProvider } from "./workspace-help-polling";
 
 const request = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -24,6 +25,14 @@ function jsonResponse(payload: unknown, ok = true) {
   } as unknown as Response;
 }
 
+function renderToast() {
+  render(
+    <WorkspaceHelpPollingProvider>
+      <HelpRequestToast />
+    </WorkspaceHelpPollingProvider>
+  );
+}
+
 describe("HelpRequestToast", () => {
   beforeEach(() => {
     routerPush.mockReset();
@@ -35,15 +44,24 @@ describe("HelpRequestToast", () => {
   });
 
   it("lets a helper accept and go directly to the voice room", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        jsonResponse({ success: true, data: { open: [request], claimed: [], helpedPeople: 0 } })
-      )
-      .mockResolvedValue(jsonResponse({ success: true, data: { claimed: true } }));
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url === "/api/help/inbox") {
+        return Promise.resolve(
+          jsonResponse({
+            success: true,
+            data: { open: [request], claimed: [], helpedPeopleCount: 0 }
+          })
+        );
+      }
+      if (url === "/api/help/active") {
+        return Promise.resolve(jsonResponse({ success: true, data: null }));
+      }
+      return Promise.resolve(jsonResponse({ success: true, data: { claimed: true } }));
+    });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<HelpRequestToast />);
+    renderToast();
 
     fireEvent.click(await screen.findByRole("button", { name: "Join them" }));
 
@@ -60,15 +78,24 @@ describe("HelpRequestToast", () => {
   });
 
   it("lets a helper quietly decline without navigating", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        jsonResponse({ success: true, data: { open: [request], claimed: [], helpedPeople: 0 } })
-      )
-      .mockResolvedValue(jsonResponse({ success: true, data: { declined: true } }));
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url === "/api/help/inbox") {
+        return Promise.resolve(
+          jsonResponse({
+            success: true,
+            data: { open: [request], claimed: [], helpedPeopleCount: 0 }
+          })
+        );
+      }
+      if (url === "/api/help/active") {
+        return Promise.resolve(jsonResponse({ success: true, data: null }));
+      }
+      return Promise.resolve(jsonResponse({ success: true, data: { declined: true } }));
+    });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<HelpRequestToast />);
+    renderToast();
 
     fireEvent.click(await screen.findByRole("button", { name: "Decline" }));
 
@@ -86,22 +113,32 @@ describe("HelpRequestToast", () => {
   });
 
   it("discovers a request after page load without a refresh", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        jsonResponse({ success: true, data: { open: [], claimed: [], helpedPeople: 0 } })
-      )
-      .mockResolvedValueOnce(
-        jsonResponse({ success: true, data: { open: [request], claimed: [], helpedPeople: 0 } })
+    let inboxLoads = 0;
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url === "/api/help/active") {
+        return Promise.resolve(jsonResponse({ success: true, data: null }));
+      }
+      inboxLoads += 1;
+      return Promise.resolve(
+        jsonResponse({
+          success: true,
+          data: {
+            open: inboxLoads === 1 ? [] : [request],
+            claimed: [],
+            helpedPeopleCount: 0
+          }
+        })
       );
+    });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<HelpRequestToast />);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    renderToast();
+    await waitFor(() => expect(inboxLoads).toBe(1));
 
     window.dispatchEvent(new Event("focus"));
 
     expect(await screen.findByText("LRU Cache")).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(inboxLoads).toBe(2);
   });
 });

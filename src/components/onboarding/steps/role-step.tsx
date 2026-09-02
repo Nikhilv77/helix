@@ -65,20 +65,16 @@ export function RoleStep({
                 ) : null}
               </div>
 
-              <span
-                className="mt-5 block text-[1.45rem] font-semibold leading-tight tracking-tight"
-                style={{ color: INK }}
-              >
+              <span className="onboarding-card-title mt-5 block" style={{ color: INK }}>
                 {option.label}
               </span>
-              <span className="mt-2 block min-h-[3rem] text-[15px] leading-6 text-cream/65">
+              <span className="onboarding-lede mt-2 block min-h-[3rem] text-cream/65">
                 {option.detail}
               </span>
             </button>
           );
         })}
       </div>
-
     </>
   );
 }

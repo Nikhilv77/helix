@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useSyncExternalStore } from "react";
 
+import type { AvatarPerformanceProfile } from "@/components/interview/voice/avatar-stage";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
 /**
@@ -37,10 +38,12 @@ function AvatarPlaceholder() {
 
 export function MayaStage({
   speaking = false,
-  transparent = false
+  transparent = false,
+  performanceProfile = "default"
 }: {
   speaking?: boolean;
   transparent?: boolean;
+  performanceProfile?: AvatarPerformanceProfile;
 }) {
   const teacher = useWorkspaceTeacher();
   const hydrated = useSyncExternalStore(
@@ -63,6 +66,7 @@ export function MayaStage({
       url={teacher.model}
       rig={teacher.rig}
       framing="default"
+      performanceProfile={performanceProfile}
       showStatus={!transparent}
       feather={!transparent}
     />

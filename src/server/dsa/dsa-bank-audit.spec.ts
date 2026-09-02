@@ -14,7 +14,15 @@ describe("DSA bank regression audit", () => {
     expect(report.incompleteQuestions).toEqual([]);
     expect(report.editorialIssues).toEqual([]);
     expect(report.unrunnableExamples).toEqual([]);
-    expect(report.counts.advertisedLanguageContracts).toBe(772);
+    // 794, up from 772. The eleven class-operation questions gained Java and C++
+    // runners (+22), and two questions that only ran in JavaScript and Python
+    // were replaced by ones that run everywhere (+4). Four are still withheld:
+    // `string-compression` and `remove-duplicates-from-sorted-array` are graded
+    // on a first argument the solution must shrink, which a fixed-length Java
+    // array cannot do; and `clone-graph` withholds Java and C++ because only the
+    // JavaScript and Python adapters can tell a real deep copy from the
+    // original nodes.
+    expect(report.counts.advertisedLanguageContracts).toBe(794);
     expect(report.starterContractErrors).toEqual([]);
   });
 

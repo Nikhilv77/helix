@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import {
   BriefcaseBusiness,
   Check,
@@ -144,11 +145,12 @@ export function CoverPicker({
               className="relative block overflow-hidden rounded-xl bg-[#1a1b1f]"
               style={{ aspectRatio: `${cover.width} / ${cover.height}` }}
             >
-              <img
-                src={cover.displaySrc}
+              <Image
+                src={cover.src}
                 alt=""
-                width={cover.width}
-                height={cover.height}
+                fill
+                sizes="(max-width: 639px) calc(100vw - 3.75rem), (max-width: 1279px) calc(50vw - 11rem), 20rem"
+                quality={72}
                 className="absolute inset-0 h-full w-full object-cover"
               />
               <span
@@ -208,11 +210,13 @@ export function AvatarPicker({
                 : "ring-1 ring-cream/10 hover:-translate-y-0.5 hover:bg-white/[0.09] hover:ring-cream/28"
             ].join(" ")}
           >
-            <img
-              src={avatar.displaySrc}
+            <Image
+              src={avatar.src}
               alt=""
               width={avatar.width}
               height={avatar.height}
+              sizes="(max-width: 639px) 80px, 96px"
+              quality={72}
               className="h-full w-full rounded-full object-cover object-center"
             />
             {selected ? (
@@ -250,6 +254,17 @@ export function ImagePickerOverlay({
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   if (!open || !mounted) return null;
 
   const choosingCover = open === "cover";
@@ -258,7 +273,7 @@ export function ImagePickerOverlay({
     <div
       className={[
         "image-picker-backdrop-slow",
-        "fixed inset-0 z-[1000] flex min-h-dvh items-center justify-center bg-[#01030a]/64 px-4 py-6 backdrop-blur-sm"
+        "fixed inset-0 z-[1000] flex min-h-dvh items-center justify-center bg-[#01030a]/64 p-2 backdrop-blur-sm sm:p-6"
       ].join(" ")}
     >
       {requireAvatar ? null : (
@@ -272,13 +287,11 @@ export function ImagePickerOverlay({
       <section
         className={[
           "image-picker-panel-slow",
-          "relative w-full overflow-hidden rounded-2xl border border-white/[0.1] bg-[#17181b] text-cream shadow-[0_28px_90px_-48px_rgba(0,0,0,0.9)]",
-          choosingCover
-            ? "max-h-[min(50rem,calc(100dvh-2rem))] max-w-6xl"
-            : "max-h-[min(36rem,calc(100dvh-2rem))] max-w-3xl"
+          "relative flex max-h-[calc(100dvh-1rem)] w-full flex-col overflow-hidden rounded-[1.25rem] border border-white/[0.1] bg-[#17181b] text-cream shadow-[0_28px_90px_-48px_rgba(0,0,0,0.9)] sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl",
+          choosingCover ? "max-w-6xl" : "max-w-4xl"
         ].join(" ")}
       >
-        <div className="relative flex items-center justify-center px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
+        <div className="sticky top-0 z-20 flex shrink-0 items-center justify-center bg-[#17181b] px-4 pb-3 pt-4 sm:px-6 sm:pb-2 sm:pt-6">
           <div className="max-w-xl text-center">
             <h2 className="text-2xl font-medium text-cream sm:text-3xl">
               {choosingCover ? "Pick your cover" : "Pick your avatar"}
@@ -301,14 +314,7 @@ export function ImagePickerOverlay({
           )}
         </div>
 
-        <div
-          className={[
-            "thin-scroll overflow-y-auto px-5 pb-6 pt-4 sm:px-6",
-            choosingCover
-              ? "max-h-[calc(min(50rem,100dvh-2rem)-5.25rem)]"
-              : "max-h-[calc(min(36rem,100dvh-2rem)-5.25rem)]"
-          ].join(" ")}
-        >
+        <div className="thin-scroll min-h-0 flex-1 overscroll-contain overflow-y-auto px-4 pb-4 pt-3 sm:px-6 sm:pb-6 sm:pt-4">
           {choosingCover ? (
             <div className="grid gap-4 sm:grid-cols-2">
               {profileCovers.map((cover, index) => {
@@ -328,11 +334,12 @@ export function ImagePickerOverlay({
                     ].join(" ")}
                   >
                     <span className="relative block aspect-[3.2/1] overflow-hidden rounded-xl bg-[#1a1b1f] sm:aspect-[4/1]">
-                      <img
-                        src={cover.displaySrc}
+                      <Image
+                        src={cover.src}
                         alt=""
-                        width={cover.width}
-                        height={cover.height}
+                        fill
+                        sizes="(max-width: 639px) calc(100vw - 3.75rem), (max-width: 1279px) calc(50vw - 3.5rem), 34rem"
+                        quality={72}
                         className="absolute inset-0 h-full w-full object-cover object-center"
                       />
                       <span
@@ -350,7 +357,7 @@ export function ImagePickerOverlay({
               })}
             </div>
           ) : (
-            <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+            <div className="grid grid-cols-4 gap-3 sm:grid-cols-5 sm:gap-4 md:grid-cols-6 lg:grid-cols-7">
               {profileAvatars.map((avatar, index) => {
                 const selected = profile.profileImage === avatar.src;
                 return (
@@ -363,15 +370,17 @@ export function ImagePickerOverlay({
                     style={{ "--choice-delay": `${90 + index * 38}ms` } as CSSProperties}
                     className={[
                       "image-picker-choice",
-                      "group relative grid h-[5.5rem] w-[5.5rem] place-items-center overflow-hidden rounded-full bg-cream p-0.5 outline-none transition duration-300 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-cream/45 sm:h-[6.5rem] sm:w-[6.5rem]",
+                      "group relative grid aspect-square w-full max-w-[6.5rem] place-self-center place-items-center overflow-hidden rounded-full bg-cream p-0.5 outline-none transition duration-300 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-cream/45",
                       selected ? "ring-1 ring-cream/46" : "ring-1 ring-cream/10 hover:ring-cream/24"
                     ].join(" ")}
                   >
-                    <img
-                      src={avatar.displaySrc}
+                    <Image
+                      src={avatar.src}
                       alt=""
                       width={avatar.width}
                       height={avatar.height}
+                      sizes="(max-width: 639px) 88px, 104px"
+                      quality={72}
                       className="h-full w-full rounded-full object-cover object-center"
                     />
                     <span

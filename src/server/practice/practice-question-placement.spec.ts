@@ -160,6 +160,71 @@ describe("language gating", () => {
   });
 });
 
+/**
+ * The gap this bank was written to close.
+ *
+ * `predict-run` is bound to the runtime it asks about, so the language gate
+ * withheld all ten JavaScript questions from anyone using another language —
+ * and core-technical fell back to twelve typed essays, the exact format the
+ * artifact work replaced. Every language the editor offers now needs its own
+ * questions, and the session has to actually place them.
+ *
+ * The counts are not identical across languages: chapters are visited in
+ * alphabetical order, so `python-runtime` sorts after `javascript-runtime` and
+ * loses a tie for the last slot. That is a deterministic tiebreak, not a gap —
+ * what matters is that no language gets zero.
+ */
+describe("every editor language gets artifact questions", () => {
+  const EDITOR_LANGUAGES = ["javascript", "python", "java", "cpp"];
+
+  /** Ten language-bound predict-run questions per language, in one chapter each. */
+  const predictRun = EDITOR_LANGUAGES.flatMap((language) =>
+    Array.from({ length: 10 }, (_, index) => ({
+      ...bank("core-technical", 1, 1)[0]!,
+      questionProgressId: `${language}-predict-${index}`,
+      sourceQuestionId: `${language}-predict-source-${index}`,
+      chapterKey: `${language}-runtime`,
+      languages: [language],
+      format: "predict-run"
+    }))
+  );
+  // The language-agnostic essays that used to be all anyone else could get.
+  const essays = bank("core-technical", 12, 3).map((candidate, index) => ({
+    ...candidate,
+    questionProgressId: `essay-${index}`,
+    sourceQuestionId: `essay-source-${index}`,
+    format: "typed"
+  }));
+
+  it.each(EDITOR_LANGUAGES)("places predict-run questions for a %s candidate", (language) => {
+    const placed = selectPracticeQuestionPlacements(
+      [...predictRun, ...essays],
+      plan(),
+      "3-5",
+      language
+    ).filter((item) => item.practiceSessionKey === "core-technical");
+
+    const forLanguage = placed.filter((item) =>
+      item.questionProgressId.startsWith(`${language}-predict-`)
+    );
+    expect(forLanguage.length).toBeGreaterThan(0);
+
+    // And never another language's runtime questions.
+    const foreign = placed.filter((item) =>
+      EDITOR_LANGUAGES.some(
+        (other) => other !== language && item.questionProgressId.startsWith(`${other}-predict-`)
+      )
+    );
+    expect(foreign).toEqual([]);
+  });
+
+  it("withholds every language-bound question when no language is set", () => {
+    const placed = selectPracticeQuestionPlacements([...predictRun, ...essays], plan(), "3-5", null)
+      .filter((item) => item.practiceSessionKey === "core-technical");
+    expect(placed.every((item) => item.questionProgressId.startsWith("essay-"))).toBe(true);
+  });
+});
+
 function count(
   placements: ReturnType<typeof selectPracticeQuestionPlacements>,
   sessionKey: string

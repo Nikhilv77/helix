@@ -99,7 +99,7 @@ export function LevelStep({
               onClick={() => onSelect(option.value)}
               className={[
                 "onboarding-card-reveal",
-                "group relative min-h-[6.4rem] overflow-hidden rounded-[1.45rem] border p-5 text-left outline-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-[#F26E01]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101113] sm:p-6",
+                "group relative min-h-[6.4rem] overflow-hidden rounded-[1.45rem] border p-5 text-left outline-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] focus-visible:ring-2 focus-visible:ring-[#F26E01]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101113] sm:p-6 lg:hover:-translate-y-1",
                 active
                   ? "border-none bg-[linear-gradient(145deg,#1d1e22,#18191c)] shadow-[0_22px_64px_-48px_rgba(242,110,1,0.25)]"
                   : "border-none bg-[linear-gradient(145deg,#1b1c20,#16171a)] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-white/22 hover:bg-[#1d1e22]"
@@ -115,7 +115,7 @@ export function LevelStep({
                 className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[#F26E01]/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
               />
 
-              <span className="relative flex min-h-full items-center justify-between gap-6">
+              <span className="relative flex min-h-full items-center justify-between gap-6 pr-10 sm:pr-0">
                 <span className="min-w-0">
                   <span className="block text-[13px] font-semibold text-cream/58">
                     {option.label}
@@ -130,14 +130,12 @@ export function LevelStep({
                     text={copy.line}
                     delay={baseDelay + 430}
                     duration={1250}
-                    className="mt-2.5 max-w-2xl text-[14.5px] leading-6 text-cream/72 sm:text-[15px]"
+                    className="mt-2.5 max-w-2xl text-base leading-[1.7] text-cream/72"
                   />
                 </span>
 
                 <span className="hidden shrink-0 text-right sm:block">
-                  <span className="text-[13px] font-medium text-cream/52">
-                    {option.detail}
-                  </span>
+                  <span className="text-[13px] font-medium text-cream/52">{option.detail}</span>
                 </span>
               </span>
 

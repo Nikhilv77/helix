@@ -10,12 +10,15 @@ import {
   formatShortDate,
   roundShortLabel
 } from "@/lib/shared/labels";
-import { createThemedReportPdf, type ReportPdfBriefing } from "@/lib/reports/report-pdf";
+import type { ReportPdfBriefing } from "@/lib/reports/report-pdf";
 import type { ReportsOverview } from "@/lib/reports/reports";
 import { useMayaVoice } from "@/lib/voice/use-maya-voice";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
 const openingPhaseTimers = [1900, 3900];
+const emptyReportVoiceLine = "Take your first interview to unlock your reports.";
+const exhaustedEmptyReportVoiceLine =
+  "Your daily interview limit is reached. Come back tomorrow for your report.";
 
 export type ReportCandidate = {
   /** Full name from the parsed resume; blank until one is uploaded. */
@@ -448,6 +451,38 @@ export function ReportEmptyStage({
   exhausted: boolean;
 }) {
   const teacher = useWorkspaceTeacher();
+  const { state, speak, awaitingGesture, setAwaitingGesture } = useMayaVoice();
+  const voiceAttempted = useRef(false);
+  const voiceLine = exhausted ? exhaustedEmptyReportVoiceLine : emptyReportVoiceLine;
+  const speaking = state === "speaking";
+  const speakEmptyState = useCallback(() => {
+    if (voiceAttempted.current) return;
+    voiceAttempted.current = true;
+    void speak(voiceLine).then((result) => {
+      if (result === "blocked") voiceAttempted.current = false;
+    });
+  }, [speak, voiceLine]);
+
+  useEffect(() => {
+    if (awaitingGesture || voiceAttempted.current) return;
+    const timer = window.setTimeout(speakEmptyState, 480);
+    return () => window.clearTimeout(timer);
+  }, [awaitingGesture, speakEmptyState]);
+
+  useEffect(() => {
+    if (!awaitingGesture) return;
+    const unlock = () => {
+      setAwaitingGesture(false);
+      speakEmptyState();
+    };
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, [awaitingGesture, setAwaitingGesture, speakEmptyState]);
+
   return (
     <div className="relative z-10 mx-auto flex min-h-[calc(100svh-11rem)] w-full max-w-3xl flex-col items-center justify-center py-8 text-center">
       <div className="relative mx-auto w-full max-w-[26rem]">
@@ -460,13 +495,13 @@ export function ReportEmptyStage({
           className="report-maya-glow-b pointer-events-none absolute bottom-4 left-1/2 z-0 h-28 w-60 -translate-x-1/2 rounded-full bg-[var(--workspace-accent)] opacity-30 blur-[64px]"
         />
         <div className="relative z-10">
-          <ReportMayaAvatar delay={120} size="compact" transparent />
+          <ReportMayaAvatar delay={120} size="compact" transparent speaking={speaking} />
         </div>
       </div>
 
       <div className="relative z-10 mx-auto -mt-8 flex w-full max-w-2xl flex-col items-center sm:-mt-10">
         <section className="identity-stage-in w-full">
-          <div className="report-glass-card relative mx-auto max-w-xl rounded-2xl px-5 py-4 text-left sm:px-6">
+          <div className="report-maya-speech-card report-glass-card relative mx-auto max-w-xl rounded-2xl px-5 py-4 text-left sm:px-6">
             <span
               aria-hidden
               className="report-glass-tail absolute -top-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45"
@@ -493,6 +528,8 @@ export function ReportEmptyStage({
               />
             </p>
           </div>
+
+          {awaitingGesture ? <VoiceUnlockNudge /> : null}
 
           <div
             className="report-action-panel mx-auto mt-6"
@@ -570,6 +607,7 @@ function InlineWaveLoader() {
 }
 
 async function downloadReportPdf(briefing: ReportBriefingCopy) {
+  const { createThemedReportPdf } = await import("@/lib/reports/report-pdf");
   const pdf = await createThemedReportPdf(briefing);
   const url = URL.createObjectURL(new Blob([new Uint8Array(pdf)], { type: "application/pdf" }));
   const link = document.createElement("a");

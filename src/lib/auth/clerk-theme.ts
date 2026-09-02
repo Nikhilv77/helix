@@ -33,7 +33,8 @@ export const clerkAppearance = {
     cardBox:
       "!w-[min(28rem,calc(100vw-2rem))] !max-h-[calc(100svh-1rem)] !overflow-y-auto !overflow-x-hidden !rounded-2xl !border !border-white/[0.07] !bg-[#121315] !shadow-[0_32px_90px_-48px_rgba(0,0,0,0.95)] !backdrop-blur-none max-sm:!w-[min(28rem,calc(100vw-1.25rem))]",
     card: "!border-none !bg-[radial-gradient(circle_at_50%_0%,rgba(242,110,1,0.025),transparent_42%)] !shadow-none max-sm:!p-5",
-    modalBackdrop: "trailgrad-auth-backdrop !bg-[#080909] !backdrop-blur-none",
+    modalBackdrop:
+      "trailgrad-auth-backdrop trailgrad-auth-backdrop--plain !bg-[#080909] !backdrop-blur-none",
     modalContent: "!max-h-[100svh] !overflow-y-auto !px-4 !py-4 max-sm:!px-2 max-sm:!py-2",
     modalCloseButton:
       "!text-cream/55 transition hover:!bg-cream/10 hover:!text-cream focus-visible:!ring-2 focus-visible:!ring-cream/40",

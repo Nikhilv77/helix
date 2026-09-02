@@ -11,8 +11,6 @@ export function isWorkspaceChromeRoute(pathname: string): boolean {
     pathname === "/trailmate" ||
     pathname.startsWith("/trailmate/") ||
     pathname === "/profile" ||
-    pathname === "/manage" ||
-    pathname.startsWith("/sessions/") ||
-    pathname.startsWith("/session/")
+    pathname === "/manage"
   );
 }

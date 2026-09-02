@@ -41,13 +41,8 @@ export function BlogIndexPage() {
         <div className="mx-auto w-full max-w-[58rem]">
           <header className="text-center">
             <p className="blueprint-label text-[color:var(--dm-accent-soft)]">Trailgrad notes</p>
-            <h1
-              className="display-heading mt-5 text-cream"
-              style={{ fontSize: "clamp(2rem, 4.4vw, 3.6rem)" }}
-            >
-              Clearer practice starts here.
-            </h1>
-            <p className="mx-auto mt-6 max-w-md text-lg leading-relaxed text-cream/70">
+            <h1 className="marketing-page-title mt-5 text-cream">Clearer practice starts here.</h1>
+            <p className="marketing-page-lede mx-auto mt-5 max-w-lg text-cream/70 sm:mt-6">
               Short reads on resumes, interview answers, and the small fixes that make practice
               easier.
             </p>
@@ -67,14 +62,12 @@ export function BlogIndexPage() {
               <span className="text-sm text-cream/35">{featured.readTime}</span>
             </div>
 
-            <h2 className="mt-5 max-w-2xl text-2xl font-medium tracking-tight text-cream sm:text-3xl">
-              {featured.title}
-            </h2>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-cream/60">{featured.dek}</p>
+            <h2 className="marketing-card-title mt-5 max-w-2xl text-cream">{featured.title}</h2>
+            <p className="marketing-reading-copy mt-4 max-w-2xl text-cream/60">{featured.dek}</p>
 
             <ul className="mt-7 grid gap-3 border-t border-white/[0.06] pt-7">
               {featured.summary.map((item) => (
-                <li key={item} className="flex gap-3 text-sm leading-6 text-cream/55">
+                <li key={item} className="flex gap-3 text-base leading-[1.7] text-cream/55">
                   <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[color:var(--dm-accent)]" />
                   {item}
                 </li>
@@ -99,10 +92,10 @@ export function BlogIndexPage() {
                     <span className="text-cream/15">·</span>
                     <span className="text-sm text-cream/30">{post.readTime}</span>
                   </div>
-                  <h3 className="mt-3 text-xl font-medium tracking-tight text-cream sm:text-2xl">
-                    {post.title}
-                  </h3>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-cream/50">{post.dek}</p>
+                  <h3 className="marketing-list-title mt-3 text-cream">{post.title}</h3>
+                  <p className="mt-2 max-w-2xl text-base leading-[1.7] text-cream/50">
+                    {post.dek}
+                  </p>
                 </div>
 
                 <ArrowRight

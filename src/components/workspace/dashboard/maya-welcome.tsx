@@ -45,7 +45,7 @@ const FALLBACK_WELCOME_SLIDE = {
   icon: Check
 };
 const SESSION_CARD_META: Record<string, { label: string; detail: string }> = {
-  "dsa": {
+  dsa: {
     label: "Pattern practice",
     detail: "Warmups, traps, and solve rhythm."
   },
@@ -84,12 +84,24 @@ const SESSION_ICON_RULES: Array<{ keywords: string[]; icon: LucideIcon }> = [
   { keywords: ["security", "auth", "safe"], icon: ShieldCheck }
 ];
 
-function sessionIcon(session: {
-  id: string;
-  title?: string;
-  purpose?: string;
-  covers: string[];
-}) {
+/**
+ * The session name without its personalised suffix.
+ *
+ * The plan generator titles sessions "Core Technical · Java", "Architecture &
+ * Design · Full Stack" and so on, which reads well on the practice page where
+ * there is room for it. These cards are two-up in a modal and truncate, so the
+ * suffix pushed out the part that identifies the session — "Applied Engineering
+ * · Java &…" told the candidate nothing the shorter name does not.
+ *
+ * Display only: `sessionIcon` still matches on the full title, where the
+ * language in the suffix is a useful signal.
+ */
+function sessionCardTitle(title: string): string {
+  const name = title.split(" · ")[0]?.trim();
+  return name || title;
+}
+
+function sessionIcon(session: { id: string; title?: string; purpose?: string; covers: string[] }) {
   // Title and purpose are optional so a projected Practice session, which
   // carries a personalised title but no static purpose, can be matched too.
   const haystack = [session.id, session.title ?? "", session.purpose ?? "", ...session.covers]
@@ -311,14 +323,13 @@ export function MayaWelcome({
   // The candidate's real sessions when the roadmap generated, the static path
   // otherwise — a fresh profile whose plan is still building should still see
   // something rather than an empty grid.
-  const previewSessions =
-    practiceSessions?.length
-      ? practiceSessions
-      : PREP_SESSIONS.map((session) => ({
-          key: session.id,
-          title: session.title,
-          covers: session.covers
-        }));
+  const previewSessions = practiceSessions?.length
+    ? practiceSessions
+    : PREP_SESSIONS.map((session) => ({
+        key: session.id,
+        title: session.title,
+        covers: session.covers
+      }));
   // Maya introduces herself out loud by default; muting her turns this off for
   // the rest of the walkthrough.
   const voiceEnabled = useRef(true);
@@ -361,13 +372,13 @@ export function MayaWelcome({
             {
               eyebrow: "Roadmap ready",
               title: `Hi ${firstName}, I’m ${teacher.name}.`,
-              body: `I prepared your full-stack interview roadmap: ${frontendStats.sessions} focused sessions, starting with DSA and ending in a full mock. I used your target role and resume evidence so this feels like your path, not a generic checklist.`,
+              body: `I prepared your Software Engineering interview roadmap: ${frontendStats.sessions} focused sessions, starting with DSA and ending in Architecture. I used your target role and resume evidence so this feels like your path, not a generic checklist.`,
               icon: Check
             },
             {
               eyebrow: "Six-session path",
               title: "Here is the loop I built for you.",
-              body: "We will move through DSA, JavaScript and React Core, real product feature builds, production quality, resume and behavioral defense, then the final full-stack mock. Each session is scoped so one step makes the next one sharper.",
+              body: "We will move through DSA, core technical depth, applied engineering, and architecture and design. From coding patterns to systems, production quality, and real-world engineering, each session builds on the last so every step makes the next one sharper.",
               icon: Map
             },
             {
@@ -530,19 +541,19 @@ export function MayaWelcome({
       aria-modal="true"
       aria-labelledby="maya-welcome-title"
       data-workspace-accent={profile.workspaceAccent}
-      className="workspace-black fixed inset-0 z-[90] grid place-items-center overflow-x-clip bg-black p-3 sm:p-6"
+      className="maya-welcome-backdrop workspace-black fixed inset-0 z-[90] grid place-items-center overflow-x-clip bg-black p-3 sm:p-6"
     >
       <span
         aria-hidden
-        className="pointer-events-none absolute left-[18%] top-1/2 h-[24rem] w-[24rem] -translate-y-1/2 rounded-full bg-[var(--workspace-accent-soft)] opacity-15 blur-[140px]"
+        className="maya-welcome-ambient pointer-events-none absolute left-[18%] top-1/2 h-[24rem] w-[24rem] -translate-y-1/2 rounded-full bg-[var(--workspace-accent-soft)] opacity-15 blur-[140px]"
       />
       <span
         aria-hidden
-        className="pointer-events-none absolute right-[15%] top-[38%] h-[22rem] w-[22rem] rounded-full bg-[var(--workspace-accent-soft)] opacity-15 blur-[150px]"
+        className="maya-welcome-ambient pointer-events-none absolute right-[15%] top-[38%] h-[22rem] w-[22rem] rounded-full bg-[var(--workspace-accent-soft)] opacity-15 blur-[150px]"
       />
       {/* Rows on small screens: the avatar takes a capped share and the copy
           scrolls, so a short phone never clips the slide or its buttons. */}
-      <section className="route-enter relative grid min-w-0 h-[min(46rem,calc(100svh-1.5rem))] w-[min(100%,72rem)] max-w-full grid-rows-[minmax(12rem,30svh)_minmax(0,1fr)] overflow-hidden rounded-[1.35rem] border border-white/[0.1] bg-[rgba(27,28,32,0.62)] shadow-[0_32px_90px_-54px_rgba(0,0,0,0.92)] backdrop-blur-2xl sm:grid-rows-[minmax(16rem,34svh)_minmax(0,1fr)] md:h-[min(43rem,calc(100svh-2rem))] md:grid-cols-[minmax(17rem,0.72fr)_minmax(0,1.28fr)] md:grid-rows-1">
+      <section className="maya-welcome-panel route-enter relative grid min-w-0 h-[min(46rem,calc(100svh-1.5rem))] w-[min(100%,72rem)] max-w-full grid-rows-[minmax(12rem,30svh)_minmax(0,1fr)] overflow-hidden rounded-[1.35rem] border border-white/[0.1] bg-[rgba(27,28,32,0.62)] shadow-[0_32px_90px_-54px_rgba(0,0,0,0.92)] backdrop-blur-2xl sm:grid-rows-[minmax(16rem,34svh)_minmax(0,1fr)] md:h-[min(43rem,calc(100svh-2rem))] md:grid-cols-[minmax(17rem,0.72fr)_minmax(0,1.28fr)] md:grid-rows-1">
         <button
           type="button"
           onClick={() => dismiss()}
@@ -561,8 +572,30 @@ export function MayaWelcome({
             state={speaking ? "speaking" : "listening"}
             url={teacher.model}
             rig={teacher.rig}
+            performanceProfile="welcome"
           />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[rgba(17,18,20,0.7)] to-transparent" />
+          <button
+            type="button"
+            onClick={toggleVoice}
+            aria-label={voiceLabel(voiceState, teacher.name)}
+            aria-pressed={speaking}
+            title={voiceLabel(voiceState, teacher.name)}
+            className={[
+              "absolute bottom-3 left-3 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border shadow-[0_12px_32px_rgba(0,0,0,0.34)] transition hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)] sm:bottom-5 sm:left-5",
+              awaitingGesture
+                ? "animate-pulse border-[var(--workspace-accent)] bg-[var(--workspace-accent)] text-white"
+                : "border-white/15 bg-black/65 text-cream/78 hover:bg-black/80 hover:text-cream"
+            ].join(" ")}
+          >
+            {voiceState === "loading" ? (
+              <Loader2 size={17} className="animate-spin" />
+            ) : speaking ? (
+              <VolumeX size={17} />
+            ) : (
+              <Volume2 size={17} />
+            )}
+          </button>
         </div>
 
         <div className="relative z-10 flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden bg-transparent px-5 pb-5 pt-5 sm:px-10 sm:pb-8 sm:pt-8 lg:px-14 lg:pb-9 lg:pt-10">
@@ -633,7 +666,7 @@ export function MayaWelcome({
                     return (
                       <div
                         key={session.key}
-                        className="onboarding-card-reveal flex min-w-0 max-w-full min-h-[5.4rem] items-start gap-3 overflow-hidden rounded-lg border border-white/[0.09] bg-white/[0.035] px-4 py-3.5 text-cream backdrop-blur-xl"
+                        className="maya-welcome-card onboarding-card-reveal flex min-w-0 max-w-full min-h-[5.4rem] items-start gap-3 overflow-hidden rounded-lg border border-white/[0.09] bg-white/[0.035] px-4 py-3.5 text-cream backdrop-blur-xl"
                         style={
                           {
                             "--card-delay": `${240 + index * 70}ms`
@@ -648,7 +681,7 @@ export function MayaWelcome({
                         />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[1.05rem] font-medium leading-5 text-cream">
-                            {session.title}
+                            {sessionCardTitle(session.title)}
                           </p>
                           <p className="mt-2 line-clamp-2 text-[0.92rem] font-normal leading-5 text-cream/55">
                             {meta.label}. {meta.detail}
@@ -678,22 +711,8 @@ export function MayaWelcome({
             </div>
           </div>
 
-          <div className="relative z-10 flex shrink-0 flex-col-reverse gap-3 border-t border-cream/[0.1] pt-4 sm:flex-row sm:items-center sm:pt-5">
-            <button
-              type="button"
-              onClick={toggleVoice}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-cream/12 bg-cream/[0.04] px-4 text-[0.95rem] font-medium text-cream/72 shadow-soft-inset transition hover:bg-cream/[0.08] hover:text-cream disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              {voiceState === "loading" ? (
-                <Loader2 size={15} className="animate-spin" />
-              ) : speaking ? (
-                <VolumeX size={15} />
-              ) : (
-                <Volume2 size={15} />
-              )}
-              {voiceLabel(voiceState, teacher.name)}
-            </button>
-            <div className="sm:ml-auto">
+          <div className="relative z-10 flex shrink-0 border-t border-cream/[0.1] pt-4 sm:items-center sm:pt-5">
+            <div className="w-full sm:ml-auto sm:w-auto">
               {step < slides.length - 1 ? (
                 <button
                   type="button"

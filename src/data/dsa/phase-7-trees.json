@@ -1,5 +1,5 @@
 {
-  "phase": "Phase 7 — Trees",
+  "phase": "Phase 7 \u2014 Trees",
   "questions": [
     {
       "title": "Maximum Depth of Binary Tree",
@@ -7,7 +7,11 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/maximum-depth-of-binary-tree/",
       "primaryPattern": "tree",
-      "subPatterns": ["dfs-recursion", "post-order-aggregation", "bfs-level-order"],
+      "subPatterns": [
+        "dfs-recursion",
+        "post-order-aggregation",
+        "bfs-level-order"
+      ],
       "difficulty": "easy",
       "expectedTimeMinutes": 10,
       "recommendedOrder": 1,
@@ -65,7 +69,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -79,7 +83,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Recurse into both children and return one plus the greater depth; a level-counting BFS produces the same answer without recursion.",
           "steps": [
             "Track the state needed for post-order recursion returning a value upward.",
@@ -112,11 +116,16 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/minimum-depth-of-binary-tree/",
       "primaryPattern": "tree",
-      "subPatterns": ["dfs-recursion", "bfs-level-order"],
+      "subPatterns": [
+        "dfs-recursion",
+        "bfs-level-order"
+      ],
       "difficulty": "easy",
       "expectedTimeMinutes": 15,
       "recommendedOrder": 2,
-      "prerequisites": ["maximum-depth-of-binary-tree"],
+      "prerequisites": [
+        "maximum-depth-of-binary-tree"
+      ],
       "conceptsTested": [
         "a leaf being a node with no children at all",
         "BFS reaching the shallowest leaf first",
@@ -170,7 +179,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -184,7 +193,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Recurse but ignore a null child whenever the other child exists, or run BFS and return the depth of the first leaf reached.",
           "steps": [
             "Track the state needed for a leaf being a node with no children at all.",
@@ -217,11 +226,15 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/same-tree/",
       "primaryPattern": "tree",
-      "subPatterns": ["dfs-recursion"],
+      "subPatterns": [
+        "dfs-recursion"
+      ],
       "difficulty": "easy",
       "expectedTimeMinutes": 10,
       "recommendedOrder": 3,
-      "prerequisites": ["maximum-depth-of-binary-tree"],
+      "prerequisites": [
+        "maximum-depth-of-binary-tree"
+      ],
       "conceptsTested": [
         "walking two trees in lockstep",
         "null agreement as the base case",
@@ -280,7 +293,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -294,7 +307,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Recurse on both trees together: two nulls agree, exactly one null disagrees, otherwise compare the values and both pairs of children.",
           "steps": [
             "Track the state needed for walking two trees in lockstep.",
@@ -327,11 +340,15 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/symmetric-tree/",
       "primaryPattern": "tree",
-      "subPatterns": ["dfs-recursion"],
+      "subPatterns": [
+        "dfs-recursion"
+      ],
       "difficulty": "easy",
       "expectedTimeMinutes": 15,
       "recommendedOrder": 4,
-      "prerequisites": ["same-tree"],
+      "prerequisites": [
+        "same-tree"
+      ],
       "conceptsTested": [
         "comparing the left subtree against the right in mirror order",
         "a helper that takes two nodes rather than one",
@@ -385,7 +402,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -399,7 +416,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Compare the two subtrees with a helper that pairs each node's left child against the other node's right child, and vice versa.",
           "steps": [
             "Track the state needed for comparing the left subtree against the right in mirror order.",
@@ -432,11 +449,17 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/invert-binary-tree/",
       "primaryPattern": "tree",
-      "subPatterns": ["dfs-recursion", "pointer-rewiring", "bfs-level-order"],
+      "subPatterns": [
+        "dfs-recursion",
+        "pointer-rewiring",
+        "bfs-level-order"
+      ],
       "difficulty": "easy",
       "expectedTimeMinutes": 10,
       "recommendedOrder": 5,
-      "prerequisites": ["maximum-depth-of-binary-tree"],
+      "prerequisites": [
+        "maximum-depth-of-binary-tree"
+      ],
       "conceptsTested": [
         "swapping children at every node",
         "the swap being order-independent with respect to the recursion",
@@ -480,7 +503,11 @@
           "output": "[2,3,1]",
           "explanation": "The two children of the root are swapped."
         },
-        { "input": "root = []", "output": "[]", "explanation": "An empty tree remains empty." }
+        {
+          "input": "root = []",
+          "output": "[]",
+          "explanation": "An empty tree remains empty."
+        }
       ],
       "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around swapping children at every node. Once that invariant is clear, the implementation is mostly careful state updates.",
       "hints": [
@@ -491,7 +518,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -505,7 +532,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Visit every node, swap its two children and recurse into both; any traversal order yields the same result.",
           "steps": [
             "Track the state needed for swapping children at every node.",
@@ -539,11 +566,16 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/subtree-of-another-tree/",
       "primaryPattern": "tree",
-      "subPatterns": ["dfs-recursion", "tree-serialization"],
+      "subPatterns": [
+        "dfs-recursion",
+        "tree-serialization"
+      ],
       "difficulty": "easy",
       "expectedTimeMinutes": 20,
       "recommendedOrder": 6,
-      "prerequisites": ["same-tree"],
+      "prerequisites": [
+        "same-tree"
+      ],
       "conceptsTested": [
         "reusing the identical-trees check at every candidate root",
         "the O(n*m) bound and when it matters",
@@ -598,7 +630,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -612,7 +644,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Run the identical-trees check at each node of the larger tree, or serialize both with explicit null markers and search for one string inside the other.",
           "steps": [
             "Track the state needed for reusing the identical-trees check at every candidate root.",
@@ -646,11 +678,16 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/balanced-binary-tree/",
       "primaryPattern": "tree",
-      "subPatterns": ["dfs-recursion", "post-order-aggregation"],
+      "subPatterns": [
+        "dfs-recursion",
+        "post-order-aggregation"
+      ],
       "difficulty": "easy",
       "expectedTimeMinutes": 20,
       "recommendedOrder": 7,
-      "prerequisites": ["maximum-depth-of-binary-tree"],
+      "prerequisites": [
+        "maximum-depth-of-binary-tree"
+      ],
       "conceptsTested": [
         "computing height and balance in one post-order pass",
         "propagating a failure sentinel upward",
@@ -704,7 +741,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -718,7 +755,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "A post-order recursion returns each subtree's height, or a sentinel once any subtree is unbalanced, so the whole check costs a single pass.",
           "steps": [
             "Track the state needed for computing height and balance in one post-order pass.",
@@ -752,11 +789,17 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/diameter-of-binary-tree/",
       "primaryPattern": "tree",
-      "subPatterns": ["dfs-recursion", "post-order-aggregation", "running-aggregate"],
+      "subPatterns": [
+        "dfs-recursion",
+        "post-order-aggregation",
+        "running-aggregate"
+      ],
       "difficulty": "easy",
       "expectedTimeMinutes": 20,
       "recommendedOrder": 8,
-      "prerequisites": ["balanced-binary-tree"],
+      "prerequisites": [
+        "balanced-binary-tree"
+      ],
       "conceptsTested": [
         "the longest path not necessarily passing through the root",
         "returning height upward while recording a global best",
@@ -810,7 +853,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -824,7 +867,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Post-order recursion returns each subtree's height while a running maximum records the best left-plus-right total seen at any node.",
           "steps": [
             "Track the state needed for the longest path not necessarily passing through the root.",
@@ -858,11 +901,17 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/path-sum/",
       "primaryPattern": "tree",
-      "subPatterns": ["dfs-recursion", "post-order-aggregation", "running-aggregate"],
+      "subPatterns": [
+        "dfs-recursion",
+        "post-order-aggregation",
+        "running-aggregate"
+      ],
       "difficulty": "easy",
       "expectedTimeMinutes": 15,
       "recommendedOrder": 9,
-      "prerequisites": ["maximum-depth-of-binary-tree"],
+      "prerequisites": [
+        "maximum-depth-of-binary-tree"
+      ],
       "conceptsTested": [
         "subtracting on the way down instead of summing on the way up",
         "leaf detection as the base case",
@@ -917,7 +966,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -931,7 +980,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Carry the remaining target down the tree and report success at a leaf whose value finishes it exactly.",
           "steps": [
             "Track the state needed for subtracting on the way down instead of summing on the way up.",
@@ -965,11 +1014,16 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/sum-root-to-leaf-numbers/",
       "primaryPattern": "tree",
-      "subPatterns": ["dfs-recursion", "post-order-aggregation"],
+      "subPatterns": [
+        "dfs-recursion",
+        "post-order-aggregation"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 20,
       "recommendedOrder": 10,
-      "prerequisites": ["path-sum"],
+      "prerequisites": [
+        "path-sum"
+      ],
       "conceptsTested": [
         "building a number by multiplying by ten while descending",
         "accumulating into the total only at leaves",
@@ -1024,7 +1078,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1038,7 +1092,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Descend carrying the number built so far, multiplying by ten and adding the current digit, then add to the running total on reaching a leaf.",
           "steps": [
             "Track the state needed for building a number by multiplying by ten while descending.",
@@ -1072,11 +1126,17 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/path-sum-ii/",
       "primaryPattern": "tree",
-      "subPatterns": ["dfs-recursion", "backtracking", "post-order-aggregation"],
+      "subPatterns": [
+        "dfs-recursion",
+        "backtracking",
+        "post-order-aggregation"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 25,
       "recommendedOrder": 11,
-      "prerequisites": ["path-sum"],
+      "prerequisites": [
+        "path-sum"
+      ],
       "conceptsTested": [
         "backtracking a shared path buffer",
         "copying the buffer when recording a match",
@@ -1129,7 +1189,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1143,7 +1203,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Depth-first search carrying a mutable path buffer, appending on entry and popping on exit, copying the buffer whenever a leaf completes the target.",
           "steps": [
             "Track the state needed for backtracking a shared path buffer.",
@@ -1177,7 +1237,10 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/binary-tree-level-order-traversal/",
       "primaryPattern": "tree",
-      "subPatterns": ["bfs-level-order", "fixed-window"],
+      "subPatterns": [
+        "bfs-level-order",
+        "fixed-window"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 20,
       "recommendedOrder": 12,
@@ -1238,7 +1301,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1252,7 +1315,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Run BFS with a queue, recording the queue's size at the start of each round so exactly the nodes of that level are consumed together.",
           "steps": [
             "Track the state needed for a queue driving breadth-first traversal.",
@@ -1286,11 +1349,15 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/binary-tree-zigzag-level-order-traversal/",
       "primaryPattern": "tree",
-      "subPatterns": ["bfs-level-order"],
+      "subPatterns": [
+        "bfs-level-order"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 20,
       "recommendedOrder": 13,
-      "prerequisites": ["binary-tree-level-order-traversal"],
+      "prerequisites": [
+        "binary-tree-level-order-traversal"
+      ],
       "conceptsTested": [
         "alternating output direction per level",
         "reversing the collected level rather than the traversal",
@@ -1347,7 +1414,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1361,7 +1428,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Run the standard level-order BFS and reverse the collected values on alternate levels, or insert into a deque from the appropriate end.",
           "steps": [
             "Track the state needed for alternating output direction per level.",
@@ -1395,11 +1462,15 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/binary-tree-right-side-view/",
       "primaryPattern": "tree",
-      "subPatterns": ["bfs-level-order"],
+      "subPatterns": [
+        "bfs-level-order"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 20,
       "recommendedOrder": 14,
-      "prerequisites": ["binary-tree-level-order-traversal"],
+      "prerequisites": [
+        "binary-tree-level-order-traversal"
+      ],
       "conceptsTested": [
         "exactly one node visible per depth",
         "taking the last node of each BFS level",
@@ -1456,7 +1527,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1470,7 +1541,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Take the last node of every BFS level, or run a right-first DFS that records the first node met at each newly reached depth.",
           "steps": [
             "Track the state needed for exactly one node visible per depth.",
@@ -1504,11 +1575,17 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/populating-next-right-pointers-in-each-node/",
       "primaryPattern": "tree",
-      "subPatterns": ["bfs-level-order", "pointer-rewiring", "in-place-mutation"],
+      "subPatterns": [
+        "bfs-level-order",
+        "pointer-rewiring",
+        "in-place-mutation"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 25,
       "recommendedOrder": 15,
-      "prerequisites": ["binary-tree-level-order-traversal"],
+      "prerequisites": [
+        "binary-tree-level-order-traversal"
+      ],
       "conceptsTested": [
         "using an already-linked level to wire the level below",
         "the perfect-tree guarantee removing gap handling",
@@ -1561,7 +1638,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1575,7 +1652,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Walk each level along the next pointers already set, linking each node's left child to its right child and that right child to the following node's left child.",
           "steps": [
             "Track the state needed for using an already-linked level to wire the level below.",
@@ -1609,11 +1686,16 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/validate-binary-search-tree/",
       "primaryPattern": "binary-search-tree",
-      "subPatterns": ["dfs-recursion", "inorder-traversal"],
+      "subPatterns": [
+        "dfs-recursion",
+        "inorder-traversal"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 25,
       "recommendedOrder": 16,
-      "prerequisites": ["maximum-depth-of-binary-tree"],
+      "prerequisites": [
+        "maximum-depth-of-binary-tree"
+      ],
       "conceptsTested": [
         "the ordering invariant binding whole subtrees, not just children",
         "propagating tightening bounds down the recursion",
@@ -1665,7 +1747,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1679,7 +1761,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — BST ordering",
+          "name": "Intended \u2014 BST ordering",
           "idea": "Recurse carrying an open lower and upper bound that tightens at each step, or walk the tree inorder and confirm the values strictly increase.",
           "steps": [
             "Track the state needed for the ordering invariant binding whole subtrees, not just children.",
@@ -1713,11 +1795,16 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/kth-smallest-element-in-a-bst/",
       "primaryPattern": "binary-search-tree",
-      "subPatterns": ["inorder-traversal", "stack-simulation"],
+      "subPatterns": [
+        "inorder-traversal",
+        "stack-simulation"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 25,
       "recommendedOrder": 17,
-      "prerequisites": ["validate-binary-search-tree"],
+      "prerequisites": [
+        "validate-binary-search-tree"
+      ],
       "conceptsTested": [
         "inorder traversal visiting values in sorted order",
         "stopping at the kth visit rather than traversing everything",
@@ -1770,7 +1857,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1784,7 +1871,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — BST ordering",
+          "name": "Intended \u2014 BST ordering",
           "idea": "Walk the tree inorder with an explicit stack and return the kth value visited; storing subtree sizes turns repeated queries into single descents.",
           "steps": [
             "Track the state needed for inorder traversal visiting values in sorted order.",
@@ -1816,11 +1903,15 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/convert-sorted-array-to-binary-search-tree/",
       "primaryPattern": "binary-search-tree",
-      "subPatterns": ["divide-and-conquer"],
+      "subPatterns": [
+        "divide-and-conquer"
+      ],
       "difficulty": "easy",
       "expectedTimeMinutes": 20,
       "recommendedOrder": 18,
-      "prerequisites": ["validate-binary-search-tree"],
+      "prerequisites": [
+        "validate-binary-search-tree"
+      ],
       "conceptsTested": [
         "the middle element as root keeping the tree balanced",
         "recursing on index ranges rather than copied slices",
@@ -1873,7 +1964,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1887,7 +1978,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — BST ordering",
+          "name": "Intended \u2014 BST ordering",
           "idea": "Take the middle of the current index range as the root and recurse on the two halves, which keeps the two subtree heights within one of each other.",
           "steps": [
             "Track the state needed for the middle element as root keeping the tree balanced.",
@@ -1919,11 +2010,17 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/recover-binary-search-tree/",
       "primaryPattern": "binary-search-tree",
-      "subPatterns": ["inorder-traversal", "boundary-scan"],
+      "subPatterns": [
+        "inorder-traversal",
+        "boundary-scan"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 35,
       "recommendedOrder": 19,
-      "prerequisites": ["validate-binary-search-tree", "kth-smallest-element-in-a-bst"],
+      "prerequisites": [
+        "validate-binary-search-tree",
+        "kth-smallest-element-in-a-bst"
+      ],
       "conceptsTested": [
         "two swapped nodes producing one or two inorder descents",
         "capturing the first and the last offending node",
@@ -1976,7 +2073,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -1990,7 +2087,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — BST ordering",
+          "name": "Intended \u2014 BST ordering",
           "idea": "Traverse inorder tracking descents: the first descent identifies the first offender and the last identifies the second, then swap those two values.",
           "steps": [
             "Track the state needed for two swapped nodes producing one or two inorder descents.",
@@ -2023,11 +2120,17 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/flatten-binary-tree-to-linked-list/",
       "primaryPattern": "tree",
-      "subPatterns": ["post-order-aggregation", "in-place-mutation", "pointer-rewiring"],
+      "subPatterns": [
+        "post-order-aggregation",
+        "in-place-mutation",
+        "pointer-rewiring"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 25,
       "recommendedOrder": 20,
-      "prerequisites": ["invert-binary-tree"],
+      "prerequisites": [
+        "invert-binary-tree"
+      ],
       "conceptsTested": [
         "producing a right-leaning list in preorder",
         "rewiring in reverse preorder so no subtree is lost",
@@ -2084,7 +2187,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -2098,7 +2201,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Walk in reverse preorder keeping the last flattened node and attach it as the current node's right child while clearing the left; alternatively thread each left subtree's rightmost node to the right subtree.",
           "steps": [
             "Track the state needed for producing a right-leaning list in preorder.",
@@ -2132,11 +2235,18 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal/",
       "primaryPattern": "tree",
-      "subPatterns": ["divide-and-conquer", "canonical-key", "tree-serialization"],
+      "subPatterns": [
+        "divide-and-conquer",
+        "canonical-key",
+        "tree-serialization"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 35,
       "recommendedOrder": 21,
-      "prerequisites": ["binary-tree-level-order-traversal", "validate-binary-search-tree"],
+      "prerequisites": [
+        "binary-tree-level-order-traversal",
+        "validate-binary-search-tree"
+      ],
       "conceptsTested": [
         "preorder supplying the root while inorder splits the subtrees",
         "a value-to-index map replacing repeated linear searches",
@@ -2191,7 +2301,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -2205,7 +2315,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Take the next preorder value as the root, find it in the inorder sequence through a precomputed index map to size both subtrees, and recurse on those ranges.",
           "steps": [
             "Track the state needed for preorder supplying the root while inorder splits the subtrees.",
@@ -2234,72 +2344,82 @@
       ]
     },
     {
-      "title": "Serialize and Deserialize Binary Tree",
-      "slug": "serialize-and-deserialize-binary-tree",
+      "title": "Maximum Width of Binary Tree",
+      "slug": "maximum-width-of-binary-tree",
       "source": "leetcode",
-      "externalUrl": "https://leetcode.com/problems/serialize-and-deserialize-binary-tree/",
+      "externalUrl": "https://leetcode.com/problems/maximum-width-of-binary-tree/",
       "primaryPattern": "tree",
-      "subPatterns": ["tree-serialization", "design-problem"],
-      "difficulty": "hard",
-      "expectedTimeMinutes": 35,
+      "subPatterns": [
+        "bfs",
+        "index-arithmetic"
+      ],
+      "difficulty": "medium",
+      "expectedTimeMinutes": 30,
       "recommendedOrder": 22,
       "prerequisites": [
-        "construct-binary-tree-from-preorder-and-inorder-traversal",
         "binary-tree-level-order-traversal"
       ],
       "conceptsTested": [
-        "null markers making a single traversal sufficient",
-        "a shared cursor while rebuilding",
-        "the format as a contract between the two halves"
+        "indexing a tree as if it were a complete array",
+        "measuring a level by its first and last occupied index",
+        "normalising indices per level so they stay small"
       ],
       "commonMistakes": [
-        "Omitting null markers so the structure becomes ambiguous",
-        "Choosing a delimiter that can occur inside a value",
-        "Re-parsing the whole string at each recursive step"
+        "Counting nodes on a level instead of measuring the span between them",
+        "Letting the indices grow unbounded on a deep skewed tree",
+        "Pushing null children and losing track of which positions are occupied"
       ],
       "interviewSignals": [
-        "Explains why one traversal plus null markers is enough",
-        "Picks the delimiter after asking about the value domain"
+        "Assigns each node the index it would have in a complete tree",
+        "Measures width as last minus first plus one, counting the gaps",
+        "Subtracts the level's first index to keep the numbers from exploding"
       ],
       "followUpPrompts": [
-        "Serialize a search tree more compactly.",
-        "Make the format language-independent.",
-        "What if the tree does not fit in memory?"
+        "What is the largest index you could see on a tree of depth fifty?",
+        "How would you return the level that was widest, not just the width?",
+        "Could you do this depth-first instead?"
       ],
-      "promptSummary": "Design a serialization format for a binary tree along with the deserializer that rebuilds it exactly.",
-      "highLevelApproach": "Emit a preorder walk with explicit markers for absent children, then rebuild by consuming that token stream through a shared cursor, recursing on each non-null token.",
+      "promptSummary": "Return the maximum width of a binary tree, where a level's width counts the gaps between its outermost nodes as if the missing children were present.",
+      "highLevelApproach": "Walk the tree level by level carrying the index each node would have in a complete tree, and take the width of a level as its last index minus its first plus one, subtracting the first index as you descend so the numbers stay small.",
       "complexity": {
         "time": "O(n)",
         "space": "O(n)"
       },
-      "problemStatement": "Design an algorithm to serialize a binary tree to a string and deserialize that string back into the original tree. The serialized format must preserve both node values and the tree structure.",
+      "problemStatement": "Given the root of a binary tree, return the maximum width of the tree. The width of one level is the number of positions between its leftmost and rightmost non-null nodes, counting the null positions between them as if they held nodes.",
       "constraints": [
-        "The number of nodes in the tree is in the range [0, 10^4].",
-        "-1000 <= Node.val <= 1000.",
-        "The serialized string must be unambiguous for all valid trees."
+        "Use the public problem constraints as the source of truth for bounds.",
+        "Aim for the intended O(n) time target.",
+        "The number of nodes in the tree is in the range [1, 3000].",
+        "-100 <= Node.val <= 100.",
+        "The answer is guaranteed to fit in a 32-bit signed integer."
       ],
       "examples": [
         {
-          "input": "root = [1,2,3,null,null,4,5]",
-          "output": "deserialize(serialize(root)) = [1,2,3,null,null,4,5]",
-          "explanation": "Null markers preserve the missing children, so deserialization rebuilds the same structure."
+          "input": "root = [1,3,2,5,3,null,9]",
+          "output": "4",
+          "explanation": "The widest level holds 5, 3 and 9, spanning four positions once the missing one is counted."
         },
         {
-          "input": "root = []",
-          "output": "deserialize(serialize(root)) = []",
-          "explanation": "The empty tree is represented by the chosen null marker and reconstructs as null."
+          "input": "root = [1,3,2,5,null,null,9,6,null,7]",
+          "output": "7",
+          "explanation": "The last level spans seven positions between 6 and 7."
+        },
+        {
+          "input": "root = [1,3,2,5]",
+          "output": "2",
+          "explanation": "The second level holds two adjacent nodes."
         }
       ],
-      "keyInsight": "The key is to recognize the tree traversal pattern and maintain the right invariant around null markers making a single traversal sufficient. Once that invariant is clear, the implementation is mostly careful state updates.",
+      "keyInsight": "Treating the tree as a complete array turns a shape question into arithmetic: a level's width is just the distance between the first and last index it occupies. Subtracting the level's first index before descending is what keeps those indices from overflowing on a deep tree.",
       "hints": [
         "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
-        "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
-        "Be careful about this common trap: Omitting null markers so the structure becomes ambiguous.",
-        "The intended path is: Emit a preorder walk with explicit markers for absent children, then rebuild by consuming that token stream through a shared cursor, recursing on each non-null token."
+        "If the tree were complete, what index would each node have, and what would the width be then?",
+        "Be careful about this common trap: Letting the indices grow unbounded on a deep skewed tree.",
+        "The intended path is: carry each node's complete-tree index level by level and measure last minus first plus one."
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -2307,38 +2427,38 @@
             "Compare the result with the required output and identify repeated work."
           ],
           "complexity": {
-            "time": "Often O(nodes * repeated work)",
-            "space": "O(depth or queue)"
+            "time": "Often O(n^2) or worse",
+            "space": "Varies"
           },
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
-          "idea": "Emit a preorder walk with explicit markers for absent children, then rebuild by consuming that token stream through a shared cursor, recursing on each non-null token.",
+          "name": "Intended \u2014 indexed level order",
+          "idea": "Walk the tree level by level carrying the index each node would have in a complete tree, and take the width of a level as its last index minus its first plus one, subtracting the first index as you descend so the numbers stay small.",
           "steps": [
-            "Track the state needed for null markers making a single traversal sufficient.",
+            "Track the state needed for the index each node occupies within its level.",
             "Update that state in a single disciplined pass, traversal, or recursive branch.",
             "Preserve the invariant after every update and return the value the prompt asks for."
           ],
           "complexity": {
             "time": "O(n)",
-            "space": "O(n)"
+            "space": "O(1)"
           },
           "tradeoff": "This is the interview-ready approach: it connects the recognizable pattern to the expected complexity."
         }
       ],
       "edgeCases": [
-        "Empty or minimum-size input if the problem allows it",
-        "All values identical, all values distinct, or repeated values when duplicates affect correctness",
-        "Negative values, zeros, or boundary values when arithmetic is involved",
-        "Omitting null markers so the structure becomes ambiguous"
+        "A single node, where the width is one",
+        "A fully skewed tree, where every level has width one",
+        "A perfect tree, where the widest level is the last",
+        "A deep tree where unnormalised indices would overflow"
       ],
       "relatedQuestions": [
-        "construct-binary-tree-from-preorder-and-inorder-traversal",
         "binary-tree-level-order-traversal",
-        "maximum-depth-of-binary-tree",
-        "minimum-depth-of-binary-tree",
-        "lowest-common-ancestor-of-a-binary-tree"
+        "binary-tree-right-side-view",
+        "count-complete-tree-nodes",
+        "vertical-order-traversal-of-a-binary-tree",
+        "binary-tree-zigzag-level-order-traversal"
       ]
     },
     {
@@ -2347,11 +2467,16 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree/",
       "primaryPattern": "tree",
-      "subPatterns": ["dfs-recursion", "post-order-aggregation"],
+      "subPatterns": [
+        "dfs-recursion",
+        "post-order-aggregation"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 30,
       "recommendedOrder": 23,
-      "prerequisites": ["path-sum"],
+      "prerequisites": [
+        "path-sum"
+      ],
       "conceptsTested": [
         "returning a found node upward and merging the two results",
         "the node where both sides report a hit",
@@ -2405,7 +2530,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -2419,7 +2544,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Recurse returning either a matched target or null; the first node whose two subtrees both return non-null is the lowest common ancestor.",
           "steps": [
             "Track the state needed for returning a found node upward and merging the two results.",
@@ -2444,7 +2569,7 @@
         "maximum-depth-of-binary-tree",
         "minimum-depth-of-binary-tree",
         "same-tree",
-        "serialize-and-deserialize-binary-tree"
+        "maximum-width-of-binary-tree"
       ]
     },
     {
@@ -2453,7 +2578,11 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/all-nodes-distance-k-in-binary-tree/",
       "primaryPattern": "tree",
-      "subPatterns": ["pointer-rewiring", "graph-modeling", "bfs-level-order"],
+      "subPatterns": [
+        "pointer-rewiring",
+        "graph-modeling",
+        "bfs-level-order"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 35,
       "recommendedOrder": 24,
@@ -2515,7 +2644,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -2529,7 +2658,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Record each node's parent in one pass so the tree becomes an undirected graph, then breadth-first search exactly k levels outward from the target, skipping visited nodes.",
           "steps": [
             "Track the state needed for treating the tree as an undirected graph.",
@@ -2563,11 +2692,17 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/path-sum-iii/",
       "primaryPattern": "tree",
-      "subPatterns": ["running-aggregate", "dfs-recursion", "frequency-map"],
+      "subPatterns": [
+        "running-aggregate",
+        "dfs-recursion",
+        "frequency-map"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 35,
       "recommendedOrder": 25,
-      "prerequisites": ["path-sum-ii"],
+      "prerequisites": [
+        "path-sum-ii"
+      ],
       "conceptsTested": [
         "prefix sums along the current root-to-node path",
         "counting earlier prefixes that complete the target",
@@ -2620,7 +2755,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -2634,7 +2769,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Depth-first search carrying the running prefix sum and a map of prefix counts along the current path, adding the count of prefixes that complete the target and removing the entry on backtrack.",
           "steps": [
             "Track the state needed for prefix sums along the current root-to-node path.",
@@ -2668,11 +2803,16 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/house-robber-iii/",
       "primaryPattern": "tree",
-      "subPatterns": ["tree-dp", "post-order-aggregation"],
+      "subPatterns": [
+        "tree-dp",
+        "post-order-aggregation"
+      ],
       "difficulty": "medium",
       "expectedTimeMinutes": 30,
       "recommendedOrder": 26,
-      "prerequisites": ["diameter-of-binary-tree"],
+      "prerequisites": [
+        "diameter-of-binary-tree"
+      ],
       "conceptsTested": [
         "returning a pair of results per node: robbed and not robbed",
         "combining children's states without recomputation",
@@ -2693,7 +2833,7 @@
         "What changes for an n-ary tree?"
       ],
       "promptSummary": "Rob a binary tree of houses for maximum total value without robbing two directly connected nodes.",
-      "highLevelApproach": "Post-order recursion returns two values per node — the best with that node robbed and the best without — so each parent combines its children's states in constant time.",
+      "highLevelApproach": "Post-order recursion returns two values per node \u2014 the best with that node robbed and the best without \u2014 so each parent combines its children's states in constant time.",
       "complexity": {
         "time": "O(n)",
         "space": "O(h)"
@@ -2720,11 +2860,11 @@
         "Start with the most direct brute-force idea and say why it is too slow or too memory-heavy.",
         "Look for the tree traversal structure: what state can be carried forward instead of recomputed?",
         "Be careful about this common trap: Returning one number and recursing into grandchildren, causing exponential work.",
-        "The intended path is: Post-order recursion returns two values per node — the best with that node robbed and the best without — so each parent combines its children's states in constant time."
+        "The intended path is: Post-order recursion returns two values per node \u2014 the best with that node robbed and the best without \u2014 so each parent combines its children's states in constant time."
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -2738,8 +2878,8 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
-          "idea": "Post-order recursion returns two values per node — the best with that node robbed and the best without — so each parent combines its children's states in constant time.",
+          "name": "Intended \u2014 tree traversal",
+          "idea": "Post-order recursion returns two values per node \u2014 the best with that node robbed and the best without \u2014 so each parent combines its children's states in constant time.",
           "steps": [
             "Track the state needed for returning a pair of results per node: robbed and not robbed.",
             "Update that state in a single disciplined pass, traversal, or recursive branch.",
@@ -2772,11 +2912,18 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/binary-tree-maximum-path-sum/",
       "primaryPattern": "tree",
-      "subPatterns": ["tree-dp", "post-order-aggregation", "running-aggregate"],
+      "subPatterns": [
+        "tree-dp",
+        "post-order-aggregation",
+        "running-aggregate"
+      ],
       "difficulty": "hard",
       "expectedTimeMinutes": 35,
       "recommendedOrder": 27,
-      "prerequisites": ["diameter-of-binary-tree", "house-robber-iii"],
+      "prerequisites": [
+        "diameter-of-binary-tree",
+        "house-robber-iii"
+      ],
       "conceptsTested": [
         "distinguishing the value passed upward from the best path recorded",
         "clamping negative contributions to zero",
@@ -2828,7 +2975,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -2842,7 +2989,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Post-order recursion returns the best downward branch from each node, clamped at zero, while a global maximum records the best left-plus-node-plus-right combination.",
           "steps": [
             "Track the state needed for distinguishing the value passed upward from the best path recorded.",
@@ -2876,11 +3023,18 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/binary-tree-cameras/",
       "primaryPattern": "tree",
-      "subPatterns": ["tree-dp", "greedy-choice", "post-order-aggregation"],
+      "subPatterns": [
+        "tree-dp",
+        "greedy-choice",
+        "post-order-aggregation"
+      ],
       "difficulty": "hard",
       "expectedTimeMinutes": 40,
       "recommendedOrder": 28,
-      "prerequisites": ["house-robber-iii", "binary-tree-maximum-path-sum"],
+      "prerequisites": [
+        "house-robber-iii",
+        "binary-tree-maximum-path-sum"
+      ],
       "conceptsTested": [
         "three node states: uncovered, covered, and holding a camera",
         "placing cameras at the parents of leaves, bottom-up",
@@ -2932,7 +3086,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -2946,7 +3100,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Post-order recursion reports one of three states per node, placing a camera exactly when a child comes back uncovered, then adds one more if the root itself ends uncovered.",
           "steps": [
             "Track the state needed for three node states: uncovered, covered, and holding a camera.",
@@ -2980,11 +3134,16 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/count-complete-tree-nodes/",
       "primaryPattern": "tree",
-      "subPatterns": ["boundary-scan", "binary-search-template"],
+      "subPatterns": [
+        "boundary-scan",
+        "binary-search-template"
+      ],
       "difficulty": "easy",
       "expectedTimeMinutes": 30,
       "recommendedOrder": 29,
-      "prerequisites": ["maximum-depth-of-binary-tree"],
+      "prerequisites": [
+        "maximum-depth-of-binary-tree"
+      ],
       "conceptsTested": [
         "matching left and right spine heights revealing a perfect subtree",
         "the closed-form node count of a perfect subtree",
@@ -3037,7 +3196,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -3051,7 +3210,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Compare the leftmost and rightmost spine depths: equal depths mean the subtree is perfect and its size is a closed form, otherwise recurse into both children, only one of which is imperfect.",
           "steps": [
             "Track the state needed for matching left and right spine heights revealing a perfect subtree.",
@@ -3085,11 +3244,17 @@
       "source": "leetcode",
       "externalUrl": "https://leetcode.com/problems/vertical-order-traversal-of-a-binary-tree/",
       "primaryPattern": "tree",
-      "subPatterns": ["tree-serialization", "bfs-level-order", "sort-then-scan"],
+      "subPatterns": [
+        "tree-serialization",
+        "bfs-level-order",
+        "sort-then-scan"
+      ],
       "difficulty": "hard",
       "expectedTimeMinutes": 35,
       "recommendedOrder": 30,
-      "prerequisites": ["binary-tree-level-order-traversal"],
+      "prerequisites": [
+        "binary-tree-level-order-traversal"
+      ],
       "conceptsTested": [
         "assigning column and row coordinates during traversal",
         "the tie-break by row and then by value",
@@ -3141,7 +3306,7 @@
       ],
       "approaches": [
         {
-          "name": "Baseline — direct search or simulation",
+          "name": "Baseline \u2014 direct search or simulation",
           "idea": "Use the straightforward interpretation of the prompt first. This is useful in an interview because it proves you understand the task before optimizing.",
           "steps": [
             "Restate what each candidate answer would need to check.",
@@ -3155,7 +3320,7 @@
           "tradeoff": "Good for explaining the problem, but usually misses the target complexity and should be improved before finalizing."
         },
         {
-          "name": "Intended — tree traversal",
+          "name": "Intended \u2014 tree traversal",
           "idea": "Traverse recording each node's column and row, then emit the columns in increasing order with each column's entries sorted by row and then by value.",
           "steps": [
             "Track the state needed for assigning column and row coordinates during traversal.",

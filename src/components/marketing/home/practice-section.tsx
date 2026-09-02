@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import type { CSSProperties } from "react";
-import { Reveal, useInView, useRotator } from "./visuals/reveal";
+import { Reveal, useRotator, useViewportPresence } from "./visuals/reveal";
 
 interface PracticePair {
   question: string;
@@ -182,7 +182,7 @@ function LiveEditor({
   active: boolean;
 }) {
   return (
-    <div className="flex h-full flex-col">
+    <div className="marketing-animation-scope flex h-full flex-col" data-running={active}>
       <div className="flex items-center gap-2.5 border-b border-white/[0.06] px-7 py-4 sm:px-9">
         <span className="h-2 w-2 rounded-full bg-[color:var(--dm-accent)]/70" />
         <span className="font-mono text-[11px] tracking-wide text-cream/40">{scene.file}</span>
@@ -216,7 +216,7 @@ function LiveEditor({
 
 export function Practice() {
   const stageRef = useRef<HTMLDivElement>(null);
-  const inView = useInView(stageRef);
+  const inView = useViewportPresence(stageRef);
   const { index: groupIndex, phase } = useRotator({
     length: 3,
     holdMs: GROUP_HOLD_MS,
@@ -226,36 +226,33 @@ export function Practice() {
 
   const group = practicePairs.slice(groupIndex * 3, groupIndex * 3 + 3);
   const scene = codeScenes[groupIndex] ?? codeScenes[0];
-  const active = inView && phase === "in";
+  const animate = inView;
 
   return (
     <section
       id="practice"
-      className="marketing-theme-section relative z-10 overflow-hidden px-5 py-20 sm:px-10 sm:py-28"
+      className="marketing-deferred-section marketing-theme-section relative z-10 overflow-hidden px-5 py-20 sm:px-10 sm:py-28"
     >
       <div className="relative mx-auto flex w-full max-w-[72rem] flex-col items-center">
         <Reveal>
-          <h2
-            className="display-heading practice-heading max-w-3xl text-center text-cream"
-            style={{ fontSize: "clamp(2rem, 4.4vw, 3.6rem)" }}
-          >
+          <h2 className="marketing-section-title display-heading practice-heading max-w-3xl text-center text-cream">
             Always know what to practise next.
           </h2>
         </Reveal>
 
         <Reveal delay={90}>
-          <p className="mx-auto mt-6 max-w-xl text-center text-lg leading-relaxed text-cream/70">
+          <p className="marketing-lede mx-auto mt-5 max-w-xl text-center text-cream/68 sm:mt-6">
             Short coding questions, clear explanations, and a little more confidence each time you
             practise.
           </p>
         </Reveal>
 
         <Reveal delay={230} className="w-full">
-          <div ref={stageRef} className="mx-auto mt-14 w-full max-w-[58rem]">
+          <div ref={stageRef} className="mx-auto mt-11 w-full max-w-[58rem] sm:mt-14">
             <div className="public-glass min-h-[48rem] overflow-hidden rounded-[1.5rem] sm:min-h-[27rem]">
               <div className="grid content-start items-start md:grid-cols-[1fr_1fr]">
                 <div className="min-w-0">
-                  <LiveEditor scene={scene} phase={phase} active={active} />
+                  <LiveEditor scene={scene} phase={phase} active={animate} />
                 </div>
 
                 <div className="practice-zone self-start border-t border-white/[0.07] px-7 py-7 md:border-l md:border-t-0 sm:px-9">
@@ -264,13 +261,13 @@ export function Practice() {
                       <div
                         key={`${pair.question}-explanation`}
                         className="stagger-fade border-t border-white/[0.07] py-5 first:border-t-0"
-                        data-phase={active ? phase : undefined}
+                        data-phase={animate ? phase : undefined}
                         style={{ "--base": `${pairIndex * 150 + 80}ms`, "--n": 0 } as CSSProperties}
                       >
-                        <p className="text-[11px] uppercase tracking-[0.12em] text-cream/35">
+                        <p className="text-xs font-medium uppercase tracking-[0.1em] text-cream/42">
                           {pair.question}
                         </p>
-                        <p className="mt-2 text-[0.9rem] leading-relaxed text-cream/68">
+                        <p className="mt-2 text-base leading-[1.7] text-cream/68">
                           {pair.explanation}
                         </p>
                       </div>

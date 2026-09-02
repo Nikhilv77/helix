@@ -132,6 +132,13 @@ select {
   opacity: 0.12;
 }
 
+/* Sign-in and sign-up use a quiet backdrop. Keep the ambient dark gradient,
+   but remove the circular rings and masked stripe/wave decoration. */
+.trailgrad-auth-backdrop--plain::before,
+.trailgrad-auth-backdrop--plain::after {
+  content: none;
+}
+
 @keyframes float-in {
   from {
     opacity: 0;
@@ -473,9 +480,8 @@ select {
 .profile-theme .surface-raised,
 .profile-theme .profile-glass {
   border-color: rgba(151, 146, 135, 0.18);
-  background: rgba(31, 32, 36, 0.58);
+  background: rgba(31, 32, 36, 0.92);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(16px);
 }
 
 .profile-theme {
@@ -1154,7 +1160,6 @@ select {
 
 .profile-cover-image-change {
   animation: profile-cover-image-change 580ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: transform, opacity, filter;
 }
 
 .profile-cover-change-sweep {
@@ -1171,7 +1176,6 @@ select {
 
 .profile-avatar-orbit {
   animation: profile-avatar-orbit 620ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
-  will-change: transform, opacity, filter;
 }
 
 .profile-avatar-ring {
@@ -1184,7 +1188,6 @@ select {
 .profile-avatar-image-change {
   animation: profile-avatar-image-change 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
   transform-origin: center;
-  will-change: transform, opacity, filter;
 }
 
 .profile-avatar-change-pulse {
@@ -1205,12 +1208,22 @@ select {
   opacity: 0;
   animation: profile-soft-reveal 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: var(--profile-reveal-delay, 0ms);
-  will-change: opacity, translate, scale;
 }
 
 @media (max-width: 640px) {
   .profile-soft-reveal {
     animation-duration: 340ms;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  /* Filter animation on large profile media is disproportionately expensive on
+     phone GPUs. Opacity and transforms preserve the reveal without the blur pass. */
+  .profile-cover-stage,
+  .profile-cover-image-change,
+  .profile-avatar-orbit,
+  .profile-avatar-image-change {
+    filter: none !important;
   }
 }
 
@@ -1602,127 +1615,52 @@ html {
   );
   background-size: 220% 100%;
   background-clip: text;
-  animation: thinking-shimmer 2.25s ease-in-out infinite;
-}
-
-.manage-copy-word {
-  color: rgba(241, 234, 216, 0.76);
+  /* One pass keeps the intended polished reveal without continuously repainting
+     every visible word for the lifetime of the welcome modal. */
+  animation: thinking-shimmer 2.25s ease-in-out 1 both;
 }
 
 @keyframes manage-avatar-arrive {
-  0% {
-    opacity: 0;
-    transform: translate3d(var(--avatar-from-x, -190px), var(--avatar-from-y, 310px), 0) scale(0.28)
-      rotate(-8deg);
-    filter: blur(8px);
-  }
-  58% {
-    opacity: 1;
-    filter: blur(0);
-  }
-  76% {
-    transform: translate3d(0, -8px, 0) scale(1.035) rotate(1.2deg);
-  }
-  100% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
-    filter: blur(0);
-  }
-}
-
-@keyframes manage-avatar-pulse {
-  0% {
-    opacity: 0;
-    transform: scale(0.74);
-  }
-  40% {
-    opacity: 0.68;
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.36);
-  }
-}
-
-@keyframes manage-line-in {
   from {
     opacity: 0;
-    transform: translateY(12px);
-    filter: blur(5px);
+    transform: translateY(8px) scale(0.96);
   }
   to {
     opacity: 1;
     transform: none;
-    filter: blur(0);
-  }
-}
-
-@keyframes manage-link-shine {
-  from {
-    background-position: 160% 50%;
-  }
-  to {
-    background-position: -60% 50%;
   }
 }
 
 .manage-avatar-arrive {
-  animation: manage-avatar-arrive 920ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: manage-avatar-arrive 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
   transform-origin: 50% 50%;
-  will-change: transform, opacity, filter;
 }
 
-.manage-avatar-pulse {
-  animation: manage-avatar-pulse 1150ms cubic-bezier(0.16, 1, 0.3, 1) 620ms both;
+.manage-panel {
+  border: 1px solid rgba(151, 146, 135, 0.18);
+  background: #1f2024;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
 }
 
-.manage-sequence-line,
-.manage-action-line {
-  opacity: 0;
-  animation: manage-line-in 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: var(--line-delay, 520ms);
+.manage-loading .skeleton::after {
+  content: none;
 }
 
-.manage-shine-link,
-.manage-soft-link {
-  border-radius: 9999px;
-  color: var(--bp-cream, #f1ead8);
-  font-weight: 650;
-  outline: none;
-  text-decoration-line: underline;
-  text-decoration-color: rgba(241, 234, 216, 0.42);
-  text-underline-offset: 0.2em;
-  transition:
-    color 180ms ease,
-    text-decoration-color 180ms ease,
-    transform 180ms ease;
-}
+/* Trailmate lists can mount many cards at once. On touch hardware, opaque
+   graphite surfaces preserve their near-black appearance without asking the
+   compositor to blur the page behind every card during scroll. */
+@media (hover: none), (pointer: coarse) {
+  .trailmate-ranking-card {
+    background: #111214;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 
-.manage-shine-link {
-  color: transparent;
-  background-image: linear-gradient(
-    105deg,
-    rgba(241, 234, 216, 0.76) 0%,
-    #ffffff 44%,
-    rgba(241, 234, 216, 0.78) 58%,
-    rgba(241, 234, 216, 0.76) 100%
-  );
-  background-size: 220% 100%;
-  background-clip: text;
-  animation: manage-link-shine 2.1s ease-in-out infinite;
-}
-
-.manage-shine-link:hover,
-.manage-soft-link:hover,
-.manage-shine-link:focus-visible,
-.manage-soft-link:focus-visible {
-  color: var(--bp-cream, #f1ead8);
-  text-decoration-color: rgba(241, 234, 216, 0.9);
-  transform: translateY(-1px);
-}
-
-.manage-soft-link {
-  color: rgba(241, 234, 216, 0.72);
+  .trailmate-history-card {
+    background: #0e0f12;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 @keyframes report-signal-core {
@@ -1923,6 +1861,84 @@ html {
   animation: report-link-shine 2.35s ease-in-out infinite;
 }
 
+@media (hover: none), (pointer: coarse) {
+  /* Reports combines WebGL with several large decorative layers. Keep its
+     depth on touch hardware without continuously repainting blurred glows or
+     compositing translucent speech cards over the live canvas. */
+  .report-maya-glow-a,
+  .report-maya-glow-b {
+    animation: none;
+    filter: none;
+  }
+
+  .report-maya-glow-a {
+    width: 18rem;
+    height: 18rem;
+    background: radial-gradient(
+      ellipse 48% 48% at center,
+      var(--workspace-accent-soft),
+      transparent 100%
+    );
+    opacity: 1;
+  }
+
+  .report-maya-glow-b {
+    bottom: -1.5rem;
+    width: 20rem;
+    height: 12rem;
+    background: radial-gradient(
+      ellipse 48% 46% at center,
+      var(--workspace-accent),
+      transparent 100%
+    );
+    opacity: 0.22;
+  }
+
+  .report-glass-card,
+  .report-glass-tail {
+    background: #1f2024;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .report-maya-speech-card {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .report-maya-speech-card .report-glass-tail {
+    display: none;
+  }
+
+  .report-maya-bottom-soften {
+    display: none;
+  }
+
+  .report-primary-action {
+    animation: report-link-shine 2.35s ease-in-out 3 both;
+  }
+
+  /* Progress keeps the live teacher, but its text surfaces do not need to
+     re-composite translucent backdrops over that WebGL canvas on touch. */
+  .progress-maya-bubble,
+  .progress-maya-tail,
+  .progress-question-card {
+    background: #1f2024;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .progress-maya-bubble,
+  .progress-question-card {
+    box-shadow: none;
+  }
+
+  .progress-cta-shimmer::after {
+    animation-iteration-count: 3;
+    animation-fill-mode: both;
+  }
+}
+
 .onboarding-card-reveal {
   opacity: 0;
   animation: onboarding-card-reveal 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -2075,10 +2091,6 @@ html {
 }
 
 @media (max-width: 640px) {
-  .onboarding-card-reveal {
-    animation-duration: 560ms;
-  }
-
   .upload-float,
   .upload-scan-line {
     animation: none;
@@ -2088,9 +2100,55 @@ html {
     display: none;
   }
 
-  .browse-nudge {
-    animation-duration: 2.8s;
+  .browse-nudge,
+  .teacher-carousel-continue::after {
+    animation: none;
   }
+}
+
+/* Touch hardware can have a wide CSS viewport (landscape phones and tablets)
+   while still carrying a modest mobile GPU. Keep the upload interaction and
+   its one-time text reveal, but park the three decorative infinite loops. */
+@media (hover: none), (pointer: coarse) {
+  .upload-float,
+  .browse-nudge {
+    animation: none;
+  }
+
+  .upload-scan-line {
+    display: none;
+    animation: none;
+  }
+
+  /* The welcome dialog already owns the screen on touch devices. A static
+     accent wash keeps its depth without asking the compositor to combine two
+     huge blur layers with a continuously updating WebGL canvas. */
+  .maya-welcome-backdrop {
+    background:
+      radial-gradient(circle at 50% 8%, var(--workspace-accent-soft), transparent 42%), #000;
+  }
+
+  .maya-welcome-ambient {
+    display: none;
+  }
+
+  .maya-welcome-panel {
+    background-color: rgba(27, 28, 32, 0.96);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .maya-welcome-card {
+    background-color: rgba(255, 255, 255, 0.05);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* The post-upload story intentionally keeps its original action nudge on
+   phones; it is a small transform animation and does not trigger layout. */
+.onboarding-review-nudge {
+  animation: browse-nudge 2s ease-in-out infinite;
 }
 
 /* The two brighter rules that frame the content column. */
@@ -2350,6 +2408,13 @@ html {
   background: #030304 !important;
 }
 
+/* Paint containment keeps the dense product demonstrations from invalidating
+   neighbouring sections while they rotate. It preserves their measured height,
+   unlike content-visibility placeholders, so anchor links never jump. */
+.marketing-deferred-section {
+  contain: paint;
+}
+
 /*
  * Translucent accent fills.
  *
@@ -2435,7 +2500,6 @@ html {
   }
 }
 
-/* A restrained orange glow integrated into the Help headline itself. */
 .help-heading {
   text-shadow:
     0 0 24px rgba(242, 110, 1, 0.16),
@@ -2469,6 +2533,12 @@ html {
 .site-nav-rule.is-active {
   opacity: 1;
   transform: scaleX(1);
+}
+
+.site-nav-surface {
+  background: rgba(6, 6, 7, 0.76);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
 }
 
 .marketing-theme-section .rounded-2xl.bg-cream\/\[0\.065\],
@@ -2557,6 +2627,129 @@ html {
   line-height: 0.94;
 }
 
+/* A deliberate marketing type scale. The mobile values no longer inherit
+   desktop-first clamps that make headings small and supporting copy oversized
+   at the same time. Balance is progressive enhancement; unsupported browsers
+   simply keep the same measured widths. */
+.marketing-hero-title {
+  font-size: clamp(2.45rem, 10.4vw, 3.8rem);
+  letter-spacing: -0.042em;
+  line-height: 0.94;
+  text-wrap: balance;
+}
+
+.marketing-section-title {
+  font-size: clamp(2.15rem, 8.6vw, 3.6rem);
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.marketing-closing-title {
+  font-size: clamp(2.5rem, 10vw, 4.4rem);
+  letter-spacing: -0.04em;
+  line-height: 0.94;
+  text-wrap: balance;
+}
+
+.marketing-lede {
+  font-size: clamp(1.125rem, 2.4vw, 1.25rem);
+  line-height: 1.65;
+  letter-spacing: -0.012em;
+  text-wrap: pretty;
+}
+
+/* Onboarding uses the same compact, product-led hierarchy as the signed-in
+   app. Mobile headings stay authoritative without consuming half the screen,
+   and supporting copy remains comfortably readable at a 15px floor. */
+.onboarding-page-title {
+  font-size: clamp(2rem, 8.25vw, 3.5rem);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  text-wrap: balance;
+}
+
+.onboarding-story-title {
+  font-size: clamp(1.375rem, 5.75vw, 2.7rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.onboarding-section-title {
+  font-size: clamp(1.75rem, 7vw, 2.8rem);
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.onboarding-card-title {
+  font-size: clamp(1.25rem, 4.75vw, 1.7rem);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.18;
+}
+
+.onboarding-lede {
+  font-size: clamp(1rem, 2.75vw, 1.0625rem);
+  letter-spacing: -0.008em;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+
+/* Shared type system for the quieter marketing surfaces: blog index, article,
+   privacy and terms. It uses the same semibold hierarchy and compact tracking
+   as the signed-in app, while keeping long-form copy at a comfortable measure. */
+.marketing-page-title {
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(2.5rem, 7.5vw, 3.75rem);
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+
+.marketing-page-lede {
+  font-size: clamp(1.125rem, 2.4vw, 1.25rem);
+  font-weight: 400;
+  letter-spacing: -0.012em;
+  line-height: 1.7;
+  text-wrap: pretty;
+}
+
+.marketing-card-title {
+  font-size: clamp(1.5rem, 4.5vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.18;
+  text-wrap: balance;
+}
+
+.marketing-list-title {
+  font-size: clamp(1.25rem, 3.5vw, 1.5rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.marketing-reading-title {
+  font-size: clamp(1.375rem, 3.5vw, 1.625rem);
+  font-weight: 600;
+  letter-spacing: -0.026em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.marketing-reading-copy {
+  font-size: clamp(1.0625rem, 2vw, 1.125rem);
+  letter-spacing: -0.006em;
+  line-height: 1.8;
+  text-wrap: pretty;
+}
+
 /*
  * Hero content reacts to scroll via --p, set by the page in rAF.
  *
@@ -2576,6 +2769,145 @@ html {
   opacity: clamp(0, calc(1 - var(--p, 0) * 1.35), 1);
   transform: translateY(calc(var(--p, 0) * -60px)) scale(calc(1 - var(--p, 0) * 0.07));
   will-change: transform, opacity;
+}
+
+/* Infinite decorative motion is parked when its scene or the document is not
+   visible. The current frame stays painted, so returning to the section never
+   produces a blank flash or resets the visual treatment. */
+.marketing-theme-hero[data-running="false"]::before,
+[data-running="false"] > .begin-ember,
+.marketing-animation-scope[data-running="false"] .wave-bar,
+.marketing-animation-scope[data-running="false"] .practice-editor-caret {
+  animation-play-state: paused;
+}
+
+.marketing-theme-hero[data-running="false"]::before,
+[data-running="false"] > .begin-ember {
+  will-change: auto;
+}
+
+@media (max-width: 639px) {
+  /* Large animated blur filters and full-surface backdrop filters are the two
+     expensive effects on mobile GPUs. The movement, timing and fades remain;
+     only their costly blur pass is exchanged for cleaner opacity/translation. */
+  @keyframes stagger-word-in-mobile {
+    from {
+      opacity: 0;
+      transform: translateY(0.65em);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes stagger-word-out-mobile {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-0.35em);
+    }
+  }
+
+  @keyframes stagger-fade-in-mobile {
+    from {
+      opacity: 0;
+      transform: translateY(0.75rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes stagger-fade-out-mobile {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-0.4rem);
+    }
+  }
+
+  @keyframes hero-ember-breathe-mobile {
+    from {
+      opacity: 0.92;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(-1.25%);
+    }
+  }
+
+  .stagger-line[data-phase="in"] .stagger-word {
+    animation-name: stagger-word-in-mobile;
+  }
+
+  .stagger-line[data-phase="out"] .stagger-word {
+    animation-name: stagger-word-out-mobile;
+  }
+
+  .stagger-fade[data-phase="in"] {
+    animation-name: stagger-fade-in-mobile;
+  }
+
+  .stagger-fade[data-phase="out"] {
+    animation-name: stagger-fade-out-mobile;
+  }
+
+  .marketing-theme-hero::before,
+  .begin-ember {
+    animation-name: hero-ember-breathe-mobile;
+  }
+
+  .public-glass {
+    background: linear-gradient(145deg, rgba(27, 28, 32, 0.97), rgba(13, 14, 16, 0.97));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .glass-cta,
+  .site-nav-action > * {
+    background: rgba(18, 19, 22, 0.96);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .site-nav-surface {
+    background: rgba(6, 6, 7, 0.96);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .marketing-theme > footer {
+    background: rgba(18, 19, 22, 0.96);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Keep the full hero composition inside compact 320px-class phones without
+   shrinking the tap target or clipping the CTA below the section. */
+@media (max-width: 380px) and (max-height: 640px) {
+  .marketing-theme-hero {
+    padding-top: 4rem;
+    padding-bottom: 3rem;
+  }
+
+  .marketing-theme-hero .marketing-hero-title {
+    font-size: 2.25rem;
+  }
+
+  .marketing-theme-hero .marketing-lede {
+    font-size: 1rem;
+    line-height: 1.55;
+  }
 }
 
 /* Scroll reveal. */
@@ -2694,6 +3026,62 @@ html {
 
 .report-score-ring {
   animation: report-ring 1.4s cubic-bezier(0.16, 1, 0.3, 1) 180ms both;
+}
+
+@keyframes dashboard-score-ring-reveal {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: var(--dashboard-ring-offset);
+  }
+}
+
+.dashboard-score-ring-halo {
+  background: radial-gradient(
+    circle,
+    var(--workspace-accent-soft) 0%,
+    color-mix(in srgb, var(--workspace-accent) 8%, transparent) 42%,
+    transparent 70%
+  );
+  opacity: 0.82;
+}
+
+.dashboard-score-ring-core {
+  inset: 20%;
+  border: 1px solid rgba(241, 234, 216, 0.045);
+  background: radial-gradient(circle at 50% 36%, rgba(241, 234, 216, 0.045), transparent 66%);
+  box-shadow:
+    inset 0 1px 0 rgba(241, 234, 216, 0.035),
+    0 14px 28px -24px rgba(0, 0, 0, 0.9);
+}
+
+.dashboard-score-ring-track {
+  stroke: rgba(241, 234, 216, 0.065);
+  stroke-width: 14;
+}
+
+.dashboard-score-ring-segment {
+  stroke-dasharray: 100;
+  stroke-dashoffset: var(--dashboard-ring-offset);
+  animation: dashboard-score-ring-reveal 1.05s cubic-bezier(0.16, 1, 0.3, 1) 140ms both;
+}
+
+.dashboard-score-ring-glow {
+  stroke: var(--workspace-accent);
+  stroke-width: 20;
+  opacity: 0.13;
+}
+
+.dashboard-score-ring-value {
+  stroke: var(--workspace-accent);
+  stroke-width: 13;
+}
+
+.dashboard-score-ring-highlight {
+  stroke: rgba(255, 255, 255, 0.32);
+  stroke-width: 2;
+  opacity: 0.48;
 }
 
 .report-evidence-bar {
@@ -3128,9 +3516,25 @@ body {
     transparent 70%
   );
   background-size: 260% 100%;
-  animation: upgrade-sheen 7s ease-in-out infinite;
+  animation: none;
   content: "";
   pointer-events: none;
+}
+
+/* The mobile sidebar remains mounted while translated offscreen. Run its
+   paint-heavy background-position sheen only while the drawer is actually
+   open. Desktop keeps the welcome flourish, but it is bounded so an idle
+   workspace eventually becomes completely still. */
+@media (max-width: 767px) {
+  [data-mobile-open="true"] .upgrade-card::before {
+    animation: upgrade-sheen 7s ease-in-out infinite;
+  }
+}
+
+@media (min-width: 768px) {
+  .upgrade-card::before {
+    animation: upgrade-sheen 7s ease-in-out 12;
+  }
 }
 
 @keyframes upgrade-sheen {

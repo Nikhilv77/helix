@@ -36,11 +36,9 @@ export function ResumeReadinessStep({
   const [visibleSkillCount, setVisibleSkillCount] = useState(0);
   const [visibleFocusCount, setVisibleFocusCount] = useState(0);
   const skillsTitle = useWordReveal("Good, your skills are in great shape.", true, 180);
-  const showRouteTitle =
-    skillsTitle.done && visibleSkillCount >= Math.max(visibleSkills.length, 1);
+  const showRouteTitle = skillsTitle.done && visibleSkillCount >= Math.max(visibleSkills.length, 1);
   const routeTitle = useWordReveal("We have prepared a trail for you.", showRouteTitle, 360);
-  const showCta =
-    routeTitle.done && visibleFocusCount >= Math.max(visibleFocusAreas.length, 1);
+  const showCta = routeTitle.done && visibleFocusCount >= Math.max(visibleFocusAreas.length, 1);
 
   useEffect(() => {
     setVisibleSkillCount(0);
@@ -126,7 +124,7 @@ export function ResumeReadinessStep({
       <section className="mx-auto flex min-h-[calc(100svh-9rem)] w-full max-w-4xl flex-col items-center justify-center pb-28 pt-16 text-center sm:mt-8 sm:min-h-[32rem] sm:py-0">
         <div className="identity-stage-in flex w-full flex-col items-center">
           <Tags size={58} strokeWidth={1.25} className="text-cream/78" aria-hidden="true" />
-          <h1 className="mt-7 min-h-[3.5rem] text-balance text-[2.25rem] font-bold leading-tight tracking-tight text-cream sm:min-h-[4.5rem] sm:text-[3.35rem]">
+          <h1 className="mt-7 min-h-[3.5rem] text-balance text-[2.25rem] font-bold leading-tight tracking-[-0.035em] text-cream sm:min-h-[4.5rem] sm:text-[3.35rem]">
             <WordRevealLine
               words={skillsTitle.words}
               visibleCount={skillsTitle.visibleCount}
@@ -139,9 +137,9 @@ export function ResumeReadinessStep({
               visibleSkills.slice(0, visibleSkillCount).map((skill, index) => (
                 <span
                   key={skill}
-                  className="step-in rounded-lg border border-white/25 px-3 py-1.5 text-[15px] font-semibold leading-7 text-cream/72 sm:text-base"
+                  className="step-in rounded-lg border border-white/25 px-3.5 py-1.5 text-base font-semibold leading-7 text-cream/72 sm:text-[1.0625rem]"
                   style={
-                      {
+                    {
                       "--step-delay": `${index * 24}ms`
                     } as CSSProperties
                   }
@@ -150,7 +148,7 @@ export function ResumeReadinessStep({
                 </span>
               ))
             ) : visibleSkillCount ? (
-              <span className="step-in text-[15px] leading-7 text-cream/58">
+              <span className="step-in text-base leading-7 text-cream/58 sm:text-[1.0625rem]">
                 No explicit skills found yet.
               </span>
             ) : null}
@@ -160,7 +158,7 @@ export function ResumeReadinessStep({
         {showRouteTitle ? (
           <div className="step-in mt-12 flex w-full flex-col items-center">
             <Target size={54} strokeWidth={1.25} className="text-cream/76" aria-hidden="true" />
-            <h2 className="mt-7 min-h-[3rem] text-balance text-[2rem] font-bold leading-tight tracking-tight text-cream sm:min-h-[3.75rem] sm:text-[2.8rem]">
+            <h2 className="mt-7 min-h-[3rem] text-balance text-[2rem] font-bold leading-tight tracking-[-0.035em] text-cream sm:min-h-[3.75rem] sm:text-[2.8rem]">
               <WordRevealLine
                 words={routeTitle.words}
                 visibleCount={routeTitle.visibleCount}
@@ -183,11 +181,11 @@ export function ResumeReadinessStep({
                     <span className="font-mono text-[12px] font-semibold tabular-nums text-cream/42">
                       {String(index + 1).padStart(2, "0")}
                     </span>
-                    <span className="text-[15px] font-semibold sm:text-base">{area}</span>
+                    <span className="text-base font-semibold sm:text-[1.0625rem]">{area}</span>
                   </li>
                 ))
               ) : visibleFocusCount ? (
-                <li className="step-in text-center text-[15px] leading-7 text-cream/58">
+                <li className="step-in text-center text-base leading-7 text-cream/58 sm:text-[1.0625rem]">
                   Maya will start with a broad baseline.
                 </li>
               ) : null}
@@ -202,12 +200,12 @@ export function ResumeReadinessStep({
                 type="button"
                 onClick={onContinue}
                 disabled={continuing}
-                className={`browse-nudge ${PRIMARY_BUTTON} disabled:pointer-events-none disabled:opacity-70`}
+                className={`browse-nudge onboarding-review-nudge ${PRIMARY_BUTTON} disabled:pointer-events-none disabled:opacity-70`}
               >
                 {continuing ? "Entering..." : "Enter"} <ArrowRight size={15} />
               </button>
               {error ? (
-                <p className="max-w-sm text-center text-sm font-semibold leading-6 text-cream/68">
+                <p className="max-w-sm text-center text-base font-semibold leading-relaxed text-cream/68">
                   {error}
                 </p>
               ) : null}

@@ -98,10 +98,14 @@ export function SiteNav({
     // compositor paints, and every raw event was reading scrollY — a forced
     // layout flush — before React could bail out on the unchanged value.
     let frame = 0;
+    let wasScrolled: boolean | null = null;
 
     function read() {
       frame = 0;
-      setScrolled(window.scrollY > 24);
+      const next = window.scrollY > 24;
+      if (next === wasScrolled) return;
+      wasScrolled = next;
+      setScrolled(next);
     }
 
     function onScroll() {
@@ -128,9 +132,9 @@ export function SiteNav({
   return (
     <header
       className={[
-        "fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
         scrolled || menuOpen
-          ? "border-white/[0.07] bg-[#060607]/72 backdrop-blur-xl"
+          ? "site-nav-surface border-white/[0.07]"
           : "border-transparent bg-transparent"
       ].join(" ")}
     >
@@ -201,7 +205,7 @@ export function SiteNav({
                 onClick={() => setMenuOpen(false)}
                 aria-current={active ? "true" : undefined}
                 className={[
-                  "flex min-h-12 items-center text-[0.95rem] font-medium tracking-tight transition-[color,opacity,transform] duration-300",
+                  "flex min-h-12 items-center text-base font-medium tracking-tight transition-[color,opacity,transform] duration-300",
                   menuOpen ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0",
                   active ? "text-cream" : "text-cream/60"
                 ].join(" ")}
@@ -252,19 +256,19 @@ export function SiteFooter({ sectionHrefPrefix = "" }: { sectionHrefPrefix?: str
         </div>
 
         <div className="flex flex-col gap-3 border-t border-white/[0.05] pt-7 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-cream/30">
+          <p className="text-[0.8125rem] text-cream/34">
             © {new Date().getFullYear()} Trailgrad · AI interview practice
           </p>
           <div className="flex gap-6">
             <Link
               href="/terms"
-              className="text-xs text-cream/40 transition-colors duration-300 hover:text-cream/80"
+              className="text-[0.8125rem] text-cream/42 transition-colors duration-300 hover:text-cream/80"
             >
               Terms
             </Link>
             <Link
               href="/privacy"
-              className="text-xs text-cream/40 transition-colors duration-300 hover:text-cream/80"
+              className="text-[0.8125rem] text-cream/42 transition-colors duration-300 hover:text-cream/80"
             >
               Privacy
             </Link>

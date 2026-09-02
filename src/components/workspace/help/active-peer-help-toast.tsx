@@ -3,9 +3,8 @@
 import Image from "next/image";
 import { ArrowRight, Mic2, UsersRound } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
-import type { CurrentPeerHelpEngagement } from "@/lib/help/help-history";
 import { peerHelpRoomHref } from "@/lib/help/help-room-navigation";
 import {
   isPeerHelpPromptVisible,
@@ -13,44 +12,17 @@ import {
   PEER_HELP_PROMPT_VISIBILITY_EVENT
 } from "@/lib/help/help-ui-events";
 import { ProfileAvatar } from "../profile/profile-avatar";
-
-const POLL_MS = 15_000;
+import { useWorkspaceHelpPolling } from "./workspace-help-polling";
 
 /** Persistent, non-blocking way back to a live peer-help room for either seat. */
 export function ActivePeerHelpToast() {
   const pathname = usePathname();
   const router = useRouter();
-  const [active, setActive] = useState<CurrentPeerHelpEngagement | null>(null);
+  const { activeEngagement, clearActiveEngagement, refresh } = useWorkspaceHelpPolling();
   const [promptVisible, setPromptVisible] = useState(isPeerHelpPromptVisible);
-
-  const load = useCallback(async () => {
-    try {
-      const response = await fetch("/api/help/active");
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload?.success) return;
-      const next = (payload.data as CurrentPeerHelpEngagement | null) ?? null;
-      // Waiting requests have their own inline status. This nudge is only a way
-      // back to a room that both people can actually join.
-      setActive(next?.status === "CLAIMED" ? next : null);
-    } catch {
-      // The room remains reachable from Peer Help if a quiet poll misses.
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-    const refreshVisible = () => {
-      if (document.visibilityState === "visible") void load();
-    };
-    const timer = window.setInterval(refreshVisible, POLL_MS);
-    window.addEventListener("focus", refreshVisible);
-    document.addEventListener("visibilitychange", refreshVisible);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener("focus", refreshVisible);
-      document.removeEventListener("visibilitychange", refreshVisible);
-    };
-  }, [load]);
+  // Waiting requests have their own inline status. This nudge is only a way
+  // back to a room that both people can actually join.
+  const active = activeEngagement?.status === "CLAIMED" ? activeEngagement : null;
 
   useEffect(() => {
     const onPromptVisibility = (event: Event) => {
@@ -58,7 +30,8 @@ export function ActivePeerHelpToast() {
     };
     const onEnded = (event: Event) => {
       const requestId = (event as CustomEvent<{ requestId: string }>).detail.requestId;
-      setActive((current) => (current?.requestId === requestId ? null : current));
+      clearActiveEngagement(requestId);
+      void refresh();
     };
     window.addEventListener(PEER_HELP_PROMPT_VISIBILITY_EVENT, onPromptVisibility);
     window.addEventListener(PEER_HELP_ENDED_EVENT, onEnded);
@@ -67,7 +40,7 @@ export function ActivePeerHelpToast() {
       window.removeEventListener(PEER_HELP_PROMPT_VISIBILITY_EVENT, onPromptVisibility);
       window.removeEventListener(PEER_HELP_ENDED_EVENT, onEnded);
     };
-  }, []);
+  }, [clearActiveEngagement, refresh]);
 
   if (!active?.peer || promptVisible || pathname?.startsWith("/trailmate/room/")) return null;
 

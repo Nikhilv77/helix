@@ -17,10 +17,11 @@
  * caps a method at 64KB, so a 20,000-element case produced "code too large" and
  * broke the question for Java candidates while working fine in JavaScript.
  *
- * The cost is real and worth stating: at 2,000 elements a quadratic solution
- * still finishes in milliseconds, so these no longer catch wrong complexity.
- * Doing that needs the harness to build large inputs with a loop rather than a
- * literal — a change across all four languages, not a sizing tweak.
+ * That cap applies to inlined inputs only. A reference may also declare `scale`
+ * cases, whose arguments the generated program builds for itself with a shared
+ * generator — no literal, so they can be large enough that a quadratic solution
+ * runs out of time. Those are what catch wrong complexity; the inlined cases
+ * catch wrong answers.
  */
 
 const seeded = (seed) => () => {
@@ -35,6 +36,13 @@ const randomInts = (n, lo, hi, seed = 7) => {
 
 export const phase1 = {
   "contains-duplicate": {
+    // All distinct, so a correct solution must look at every element — and a
+    // pairwise comparison does 2*10^10 of them.
+    scale: () => [
+      { arguments: [[0]], build: [{ sequence: { n: 200_000, start: 0, step: 1 } }] },
+      { arguments: [[0]], build: [{ ints: { n: 200_000, lo: 0, hi: 1_000, seed: 11 } }] }
+    ],
+
     solve: (nums) => new Set(nums).size !== nums.length,
     generate: () => [
       [[1]],
@@ -47,6 +55,12 @@ export const phase1 = {
   },
 
   "two-sum": {
+    // 0..n-1 with a target only the final pair reaches, so a nested scan walks
+    // the entire search space before finding it.
+    scale: () => [
+      { arguments: [[0], 399_997], build: [{ sequence: { n: 200_000, start: 0, step: 1 } }, null] }
+    ],
+
     // Returns the single valid pair; the bank compares unordered where needed.
     solve: (nums, target) => {
       const seen = new Map();
@@ -66,6 +80,11 @@ export const phase1 = {
   },
 
   "best-time-to-buy-and-sell-stock": {
+    scale: () => [
+      { arguments: [[0]], build: [{ ints: { n: 200_000, lo: 0, hi: 10_000, seed: 13 } }] },
+      { arguments: [[0]], build: [{ sequence: { n: 200_000, start: 200_000, step: -1 } }] }
+    ],
+
     solve: (prices) => {
       let min = Infinity;
       let best = 0;
@@ -86,6 +105,10 @@ export const phase1 = {
   },
 
   "maximum-subarray": {
+    scale: () => [
+      { arguments: [[0]], build: [{ ints: { n: 200_000, lo: -1_000, hi: 1_000, seed: 17 } }] }
+    ],
+
     solve: (nums) => {
       let best = -Infinity;
       let running = 0;
@@ -263,6 +286,10 @@ export const phase1Rest = {
   },
 
   "container-with-most-water": {
+    scale: () => [
+      { arguments: [[0]], build: [{ ints: { n: 200_000, lo: 0, hi: 10_000, seed: 19 } }] }
+    ],
+
     solve: (height) => {
       let left = 0;
       let right = height.length - 1;
@@ -334,6 +361,10 @@ export const phase1Rest = {
   },
 
   "trapping-rain-water": {
+    scale: () => [
+      { arguments: [[0]], build: [{ ints: { n: 200_000, lo: 0, hi: 1_000, seed: 23 } }] }
+    ],
+
     solve: (height) => {
       let left = 0;
       let right = height.length - 1;
@@ -375,6 +406,7 @@ export const phase1Rest = {
   },
 
   "find-the-duplicate-number": {
+
     solve: (nums) => {
       let slow = nums[0];
       let fast = nums[0];

@@ -1,5 +1,5 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { HelpOverview } from "@/lib/help/help-history";
 import { HelpHub } from "./help-hub";
@@ -22,7 +22,12 @@ const overview: HelpOverview = {
 
 const emptyHistory = { items: [], nextCursor: null };
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe("peer support hub", () => {
   it("uses the profile-led layout without the old marketing hero", () => {
@@ -59,5 +64,45 @@ describe("peer support hub", () => {
     expect(dialog.parentElement?.className).not.toContain("backdrop-blur");
     expect(screen.getByText("Trusted Mate")).toBeTruthy();
     expect(screen.getByText("Trail Guide")).toBeTruthy();
+  });
+
+  it("pauses active-conversation polling while hidden and refreshes when visible", async () => {
+    vi.useFakeTimers();
+    let visibility: DocumentVisibilityState = "hidden";
+    vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true, data: overview })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <HelpHub
+        initialOverview={{
+          ...overview,
+          activeConversation: {
+            requestId: "request-1",
+            seat: "learner",
+            slug: "two-sum",
+            title: "Two Sum",
+            language: "typescript",
+            started: true,
+            peer: { label: "Maya", headline: null, profileImage: null }
+          }
+        }}
+        initialReceivedHistory={emptyHistory}
+        initialGivenHistory={emptyHistory}
+      />
+    );
+
+    act(() => vi.advanceTimersByTime(20_000));
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    visibility = "visible";
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+      await Promise.resolve();
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

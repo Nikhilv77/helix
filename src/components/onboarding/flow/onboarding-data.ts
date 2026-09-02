@@ -24,11 +24,11 @@ export const CARD_INNER = "rounded-lg border border-white/[0.07] bg-[#121316]";
 
 /** Marketing's primary: compact cream action with a soft blueprint glow. */
 export const PRIMARY_BUTTON =
-  "group inline-flex min-h-11 items-center justify-center gap-2.5 rounded-lg border border-white/15 bg-[#f3f1ec] px-6 text-sm font-bold tracking-wide text-[#17181b] shadow-[0_18px_48px_-36px_rgba(0,0,0,0.9)] transition duration-300 hover:-translate-y-0.5 hover:border-white/30 hover:bg-white";
+  "group inline-flex min-h-12 items-center justify-center gap-2.5 rounded-lg border border-white/15 bg-[#f3f1ec] px-6 text-base font-bold tracking-wide text-[#17181b] shadow-[0_18px_48px_-36px_rgba(0,0,0,0.9)] transition duration-300 hover:-translate-y-0.5 hover:border-white/30 hover:bg-white";
 
 /** Quiet companion to the primary: hairline, fills with cream on hover. */
 export const SECONDARY_BUTTON =
-  "ghost-button inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/15 px-5 text-sm font-semibold text-cream/70 hover:border-[#F26E01]/35 hover:text-cream";
+  "ghost-button inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/15 px-5 text-base font-semibold text-cream/70 hover:border-[#F26E01]/35 hover:text-cream";
 
 export const roles: Array<{
   value: Role;

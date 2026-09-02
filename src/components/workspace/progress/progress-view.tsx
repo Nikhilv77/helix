@@ -5,7 +5,7 @@ import { ArrowRight, Braces, Flame, Target, TrendingUp, type LucideIcon } from "
 import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { DocumentTitle } from "@/components/document-title";
 import { ReportMayaAvatar } from "@/components/workspace/reports/report-maya-avatar";
-import type { ProgressOverview } from "@/lib/roadmap/progress";
+import type { ProgressBriefingOverview } from "@/lib/roadmap/progress";
 import { useMayaVoice } from "@/lib/voice/use-maya-voice";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
@@ -16,7 +16,6 @@ type ProgressInsight = {
 };
 
 type ProgressBriefing = {
-  hasProgress: boolean;
   hasPracticeProgress: boolean;
   greeting: string;
   insights: ProgressInsight[];
@@ -42,7 +41,7 @@ export function ProgressView({
   firstName,
   starterQuestions
 }: {
-  overview: ProgressOverview;
+  overview: ProgressBriefingOverview;
   firstName: string;
   starterQuestions: ProgressStarterQuestion[];
 }) {
@@ -106,7 +105,7 @@ export function ProgressView({
           <div className="progress-maya-bubble relative w-full rounded-2xl px-5 py-5 text-left sm:px-7 sm:py-6">
             <span
               aria-hidden
-              className="absolute -top-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-[#1b1c20]/70"
+              className="progress-maya-tail absolute -top-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-[#1b1c20]/70"
             />
 
             <p className="relative text-base font-medium leading-7 text-cream sm:text-lg sm:leading-8">
@@ -196,50 +195,38 @@ function StarterQuestionCards({ questions }: { questions: ProgressStarterQuestio
   );
 }
 
-function buildProgressBriefing(overview: ProgressOverview, firstName: string): ProgressBriefing {
+function buildProgressBriefing(
+  overview: ProgressBriefingOverview,
+  firstName: string
+): ProgressBriefing {
   const recentDays = overview.activity.slice(-7);
   const recentSolved = recentDays.reduce((total, day) => total + day.solved, 0);
   const activeDays = recentDays.filter((day) => day.solved > 0 || day.attempts > 0).length;
   const currentStreak = overview.streak.currentDays;
   const longestStreak = overview.streak.longestDays;
   const target = sustainableSessionTarget(recentSolved, activeDays);
-  const hasProgress =
-    overview.totals.totalAttempts > 0 ||
-    overview.totals.completedQuestions > 0 ||
-    overview.interview.completedSessions > 0;
-  const hasPracticeProgress =
-    overview.totals.totalAttempts > 0 || overview.totals.completedQuestions > 0;
+  const hasPracticeProgress = overview.totals.completedQuestions > 0;
   const name = firstName.trim() || "there";
 
   if (!hasPracticeProgress) {
     const hasInterviewEvidence = overview.interview.completedSessions > 0;
     return {
-      hasProgress,
       hasPracticeProgress,
       greeting:
-        "Good, " +
         name +
         (hasInterviewEvidence
-          ? ". Your interview gave me a useful starting signal. I have prepared a few questions for you below so we can begin building your practice rhythm."
-          : ". This page is quiet until you begin. I have prepared a few questions for you below. Choose whichever feels most comfortable—one focused practice block is enough to give me a rhythm I can read."),
+          ? ", you haven't solved a practice question yet. Your interview gives us a starting signal, and one completed question will begin your progress history."
+          : ", you haven't solved a practice question yet. Complete one question below to start tracking your progress."),
       insights: [
         {
-          icon: TrendingUp,
-          label: "Pace",
-          text: "It is still forming. Finish one focused block and we will have a useful baseline."
-        },
-        {
           icon: Target,
-          label: "Next move",
-          text: "Keep it small: choose one thing in practice and stay with it until you reach a clear stopping point."
+          label: "Start here",
+          text: "Choose any suggested question. Your pace and consistency will appear after your first solve."
         }
       ],
       voiceLine:
-        "Good, " +
-        name +
-        (hasInterviewEvidence
-          ? ". Your interview gave me a useful starting signal. I have prepared a few questions for you so we can begin building your practice rhythm."
-          : ". I have prepared a few questions for you. Choose whichever feels most comfortable, and finish one focused practice block so I can start reading your rhythm."),
+        `${name}, you haven't started practice yet. ` +
+        "Complete one question to unlock your progress.",
       primaryCta: "Start practice",
       primaryHref: "/practice"
     };
@@ -250,7 +237,6 @@ function buildProgressBriefing(overview: ProgressOverview, firstName: string): P
   const nextMove = nextMoveCopy(activeDays, currentStreak, target);
 
   return {
-    hasProgress,
     hasPracticeProgress,
     greeting:
       "Good, " +
@@ -273,18 +259,27 @@ function buildProgressBriefing(overview: ProgressOverview, firstName: string): P
         text: nextMove
       }
     ],
-    voiceLine:
-      "Good, " +
-      name +
-      ". Here is your progress update. Pace. " +
-      pace +
-      " Continuity. " +
-      continuity +
-      " Next move. " +
-      nextMove,
+    voiceLine: conciseProgressVoiceLine(name, recentSolved, activeDays, currentStreak, target),
     primaryCta: "Continue practice",
     primaryHref: "/practice"
   };
+}
+
+function conciseProgressVoiceLine(
+  name: string,
+  recentSolved: number,
+  activeDays: number,
+  currentStreak: number,
+  target: number
+): string {
+  const pace = recentSolved
+    ? `You completed ${recentSolved} focused ${pluralize("block", recentSolved)} across ${activeDays} active ${pluralize("day", activeDays)} in the last seven days.`
+    : "You have no completed practice blocks in the last seven days.";
+  const continuity = currentStreak
+    ? `Your streak is ${currentStreak} ${pluralize("day", currentStreak)}.`
+    : "Your next session is a clean restart.";
+
+  return `Good, ${name}. ${pace} ${continuity} Keep the next session to ${target} focused ${pluralize("completion", target)}.`;
 }
 
 function paceCopy(recentSolved: number, activeDays: number): string {

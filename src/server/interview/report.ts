@@ -6,8 +6,15 @@ import type {
   WorkspaceCompetency,
   WorkspaceInsights
 } from "@/lib/shared/types";
-import { SESSION_TTL_MS, type StoredInterviewSession } from "./session-store";
+import { SESSION_TTL_MS } from "./session-constants";
+import type { StoredInterviewSession } from "./session-store";
 import type { QuestionEvaluation } from "./types";
+
+export interface InterviewReportSnapshot {
+  report: Omit<InterviewReport, "transcript">;
+  phase: StoredInterviewSession["state"]["phase"];
+  lastTurnEndMs: number;
+}
 
 export function createHistoryItem(
   session: StoredInterviewSession,
@@ -130,13 +137,59 @@ export function createInterviewReport(
   };
 }
 
+/**
+ * Compact persisted read model for report indexes. The transcript is the
+ * largest part of a session and is only needed by the single-session view.
+ */
+export function createInterviewReportSnapshot(
+  session: StoredInterviewSession,
+  now = Date.now()
+): InterviewReportSnapshot {
+  const report = { ...createInterviewReport(session, now) };
+  Reflect.deleteProperty(report, "transcript");
+  return {
+    report,
+    phase: session.state.phase,
+    lastTurnEndMs: Math.max(0, ...session.state.turns.map((turn) => turn.endMs))
+  };
+}
+
+/** Rehydrates current status/duration without loading the source transcript. */
+export function readInterviewReportSnapshot(
+  snapshot: InterviewReportSnapshot,
+  touchedAt: number,
+  now = Date.now()
+): InterviewReport {
+  const status = getStatus(snapshot.phase, touchedAt, now);
+  const durationMs =
+    snapshot.phase === "done" || status === "expired"
+      ? snapshot.lastTurnEndMs
+      : Math.max(snapshot.lastTurnEndMs, now - snapshot.report.startedAt);
+
+  return {
+    ...snapshot.report,
+    status,
+    durationMs,
+    transcript: []
+  };
+}
+
 export function createWorkspaceInsights(
   sessions: StoredInterviewSession[],
   now = Date.now()
 ): WorkspaceInsights {
-  const reports = sessions
-    .map((session) => createInterviewReport(session, now))
-    .filter((report) => report.answerCount > 0);
+  return createWorkspaceInsightsFromReports(
+    sessions.map((session) => createInterviewReport(session, now)),
+    now
+  );
+}
+
+/** Builds workspace coaching from compact, transcript-free report snapshots. */
+export function createWorkspaceInsightsFromReports(
+  sourceReports: InterviewReport[],
+  now = Date.now()
+): WorkspaceInsights {
+  const reports = sourceReports.filter((report) => report.answerCount > 0);
   const completedSessions = reports.filter((report) => report.status === "completed").length;
   const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
   const sessionsThisWeek = reports.filter((report) => report.startedAt >= weekAgo).length;
@@ -145,8 +198,7 @@ export function createWorkspaceInsights(
 
   for (const report of reports) {
     for (const competency of report.competencies.filter(
-      (item) =>
-        item.answered && item.technicalEvaluation?.source !== "evaluation-unavailable"
+      (item) => item.answered && item.technicalEvaluation?.source !== "evaluation-unavailable"
     )) {
       const key = normaliseCompetency(competency.label);
       const existing = groups.get(key) ?? { label: competency.label, scores: [] };

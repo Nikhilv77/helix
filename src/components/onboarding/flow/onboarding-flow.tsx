@@ -69,7 +69,8 @@ export function OnboardingFlow({
   }, []);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    const touchDevice = window.matchMedia("(pointer: coarse)").matches;
+    window.scrollTo({ top: 0, behavior: touchDevice ? "auto" : "smooth" });
   }, [step]);
 
   useEffect(() => {
@@ -167,9 +168,7 @@ export function OnboardingFlow({
     try {
       await completeOnboarding(result, teacherId);
       router.push(
-        replacingResume
-          ? "/profile"
-          : `/?welcome=${encodeURIComponent(teacherId ?? "maya")}`
+        replacingResume ? "/profile" : `/?welcome=${encodeURIComponent(teacherId ?? "maya")}`
       );
       router.refresh();
     } catch (caught) {
@@ -307,7 +306,6 @@ export function OnboardingFlow({
           </section>
         </div>
       </div>
-
     </main>
   );
 }

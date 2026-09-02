@@ -114,13 +114,30 @@ export function HelpHub({
 
   useEffect(() => {
     if (!activeRequestId) return;
+    let controller: AbortController | null = null;
     const refresh = async () => {
-      const response = await fetch("/api/help/overview").catch(() => null);
+      if (document.visibilityState !== "visible" || controller) return;
+      controller = new AbortController();
+      const response = await fetch("/api/help/overview", { signal: controller.signal }).catch(
+        () => null
+      );
       const payload = await response?.json().catch(() => null);
       if (response?.ok && payload?.success && payload.data) setOverview(payload.data);
+      controller = null;
     };
-    const timer = window.setInterval(() => void refresh(), 10_000);
-    return () => window.clearInterval(timer);
+    const refreshVisible = () => {
+      if (document.visibilityState === "visible") void refresh();
+      else controller?.abort();
+    };
+    const timer = window.setInterval(refreshVisible, 10_000);
+    window.addEventListener("focus", refreshVisible);
+    document.addEventListener("visibilitychange", refreshVisible);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshVisible);
+      document.removeEventListener("visibilitychange", refreshVisible);
+      controller?.abort();
+    };
   }, [activeRequestId]);
 
   useEffect(() => {
@@ -377,7 +394,7 @@ function TopHelpers({ helpers }: { helpers: TopPeerHelper[] }) {
             return (
               <article
                 key={`${helper.participant.label}-${index}`}
-                className="group rounded-[1.25rem] bg-[rgba(20,21,24,0.72)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_20px_60px_-40px_rgba(0,0,0,0.9)] backdrop-blur-xl transition hover:bg-[rgba(24,25,28,0.8)] sm:p-5"
+                className="trailmate-ranking-card group rounded-[1.25rem] bg-[rgba(20,21,24,0.72)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_20px_60px_-40px_rgba(0,0,0,0.9)] backdrop-blur-xl transition hover:bg-[rgba(24,25,28,0.8)] sm:p-5"
               >
                 <div className="flex items-start gap-3.5">
                   <PeerAvatar
@@ -538,7 +555,7 @@ function HistoryCard({
   const participantLabel = item.participant?.label ?? "Trailgrad candidate";
   const relationship = side === "given" ? "You supported" : "Supported you";
   return (
-    <article className="rounded-[1.25rem] bg-[rgba(16,17,20,0.78)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_20px_60px_-40px_rgba(0,0,0,0.9)] backdrop-blur-xl transition hover:bg-[rgba(20,21,24,0.86)] sm:p-5">
+    <article className="trailmate-history-card rounded-[1.25rem] bg-[rgba(16,17,20,0.78)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_20px_60px_-40px_rgba(0,0,0,0.9)] backdrop-blur-xl transition hover:bg-[rgba(20,21,24,0.86)] sm:p-5">
       <div className="flex items-start gap-4">
         <ParticipantAvatar item={item} />
         <div className="min-w-0 flex-1">

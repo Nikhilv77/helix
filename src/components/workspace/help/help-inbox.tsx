@@ -6,35 +6,14 @@ import { Clock, Loader2, MessageSquare, UserRound } from "lucide-react";
 import { HelpCall } from "./help-call";
 import { LearnerWorkspaceView } from "./learner-workspace-view";
 import { SafetyControls } from "./safety-controls";
-import type { HelpSnapshot, WorkspaceState } from "@/lib/help/snapshot";
-import type { HelpHistoryParticipant } from "@/lib/help/help-history";
+import type { HelpSnapshot } from "@/lib/help/snapshot";
+import type { HelpInboxRequest } from "@/lib/help/help-inbox";
 import { peerHelpRoomHref } from "@/lib/help/help-room-navigation";
 import { announcePeerHelpEnded, showCurrentPeerHelp } from "@/lib/help/help-ui-events";
 import { useCallback, useEffect, useState } from "react";
-
-interface InboxRequest {
-  id: string;
-  slug: string;
-  title: string;
-  questionPrompt: string | null;
-  difficulty: string | null;
-  language: string;
-  status: string;
-  headline: string | null;
-  blockedOn: string | null;
-  understands: string[];
-  opener: string | null;
-  estimatedMinutes: number | null;
-  failingTests: number | null;
-  hintsUsed: number;
-  timeSpentMs: number;
-  askedAt: number;
-  capturedWorkspace: WorkspaceState | null;
-  learner: HelpHistoryParticipant | null;
-}
+import { useWorkspaceHelpPolling } from "./workspace-help-polling";
 
 type Action = "claim" | "decline" | "release" | "resolve";
-const INBOX_POLL_MS = 30_000;
 
 export interface HelpInboxStats {
   available: number;
@@ -57,13 +36,14 @@ export function HelpInbox({
   showOpen?: boolean;
 } = {}) {
   const router = useRouter();
-  const [open, setOpen] = useState<InboxRequest[]>([]);
-  const [claimed, setClaimed] = useState<InboxRequest[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { inbox, inboxError, inboxLoaded, refresh } = useWorkspaceHelpPolling();
   const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [targetRequestId, setTargetRequestId] = useState<string | null>(null);
   const [autoJoinRequestId, setAutoJoinRequestId] = useState<string | null>(null);
+  const open = inbox?.open ?? [];
+  const claimed = inbox?.claimed ?? [];
+  const error = actionError ?? inboxError;
 
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
@@ -72,47 +52,24 @@ export function HelpInbox({
     setAutoJoinRequestId(query.get("join") === "1" ? target : null);
   }, []);
 
-  const load = useCallback(async () => {
-    try {
-      const response = await fetch("/api/help/inbox");
-      const payload = await response.json().catch(() => null);
-      if (!payload?.success || !payload.data) return;
-      const nextOpen = payload.data.open ?? [];
-      const nextClaimed = payload.data.claimed ?? [];
-      setOpen(nextOpen);
-      setClaimed(nextClaimed);
-      onStatsChange?.({
-        available: nextOpen.length,
-        claimed: nextClaimed.length,
-        helpedPeople: payload.data.helpedPeopleCount ?? 0
-      });
-    } catch {
-      setError("Could not load the Trailmate inbox.");
-    } finally {
-      setLoading(false);
-    }
-  }, [onStatsChange]);
+  useEffect(() => {
+    if (!inbox) return;
+    onStatsChange?.({
+      available: inbox.open.length,
+      claimed: inbox.claimed.length,
+      helpedPeople: inbox.helpedPeopleCount
+    });
+  }, [inbox, onStatsChange]);
 
   useEffect(() => {
-    void load();
-    const timer = window.setInterval(() => void load(), INBOX_POLL_MS);
-    const onFocus = () => void load();
-    window.addEventListener("focus", onFocus);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener("focus", onFocus);
-    };
-  }, [load]);
-
-  useEffect(() => {
-    if (loading || !targetRequestId) return;
+    if (!inboxLoaded || !targetRequestId) return;
     const frame = window.requestAnimationFrame(() => {
       document
         .getElementById(`help-request-${targetRequestId}`)
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [claimed, loading, open, targetRequestId]);
+  }, [claimed, inboxLoaded, open, targetRequestId]);
 
   useEffect(() => {
     if (!autoJoinRequestId) return;
@@ -123,7 +80,7 @@ export function HelpInbox({
   const act = useCallback(
     async (id: string, action: Action) => {
       setBusy(id);
-      setError(null);
+      setActionError(null);
 
       try {
         const response = await fetch(`/api/help/request/${encodeURIComponent(id)}`, {
@@ -136,6 +93,7 @@ export function HelpInbox({
         if (!response.ok || !payload?.success) {
           if (action === "claim" && payload?.error?.code === "HELP_HELPER_UNAVAILABLE") {
             showCurrentPeerHelp();
+            void refresh();
             return;
           }
           // An already-accepted request is the common one and is not a bug —
@@ -144,26 +102,27 @@ export function HelpInbox({
         }
 
         if (action === "claim") {
+          void refresh();
           router.push(peerHelpRoomHref(id, `${window.location.pathname}${window.location.search}`));
           return;
         }
         if (action === "release" || action === "resolve") announcePeerHelpEnded(id);
-        await load();
+        await refresh();
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : "That did not work.");
-        await load();
+        setActionError(caught instanceof Error ? caught.message : "That did not work.");
+        await refresh();
       } finally {
         setBusy(null);
       }
     },
-    [load, router]
+    [refresh, router]
   );
 
   const visibleOpen = showOpen
     ? open
     : open.filter((item) => item.id === targetRequestId).slice(0, 1);
 
-  if (loading) {
+  if (!inboxLoaded) {
     return (
       <div className="flex items-center gap-2 px-1 py-10 text-[13px] text-cream/45">
         <Loader2 size={14} className="animate-spin" aria-hidden="true" />
@@ -192,7 +151,7 @@ export function HelpInbox({
                 primary={{ label: "Mark complete", action: "resolve" }}
                 secondary={{ label: "Hand back", action: "release" }}
                 onAct={act}
-                onCallEnded={() => void load()}
+                onCallEnded={() => void refresh()}
                 highlighted={targetRequestId === item.id}
                 autoJoin={autoJoinRequestId === item.id}
               />
@@ -221,7 +180,7 @@ export function HelpInbox({
                   primary={{ label: "Join them", action: "claim" }}
                   secondary={{ label: "Not this one", action: "decline" }}
                   onAct={act}
-                  onCallEnded={() => void load()}
+                  onCallEnded={() => void refresh()}
                   highlighted={targetRequestId === item.id}
                 />
               ))}
@@ -247,7 +206,7 @@ function RequestCard({
   highlighted = false,
   autoJoin = false
 }: {
-  request: InboxRequest;
+  request: HelpInboxRequest;
   busy: boolean;
   primary: { label: string; action: Action };
   secondary?: { label: string; action: Action };
