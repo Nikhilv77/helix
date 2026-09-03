@@ -179,11 +179,12 @@ function dependencies(params: {
   storedPlan?: PersonalizedInterviewPlan | null;
   generatedPlan?: PersonalizedInterviewPlan;
   workspaceProfile?: CandidateProfile;
+  candidate?: CandidateInterviewProfile;
   performance?: CandidatePerformanceProfile | null;
   practice?: CandidatePracticeEvidence | null;
 }) {
   const store = {
-    ensureCandidateProfile: vi.fn().mockResolvedValue(candidateProfile()),
+    ensureCandidateProfile: vi.fn().mockResolvedValue(params.candidate ?? candidateProfile()),
     getActivePlan: vi.fn().mockResolvedValue(params.storedPlan ?? null),
     saveReadyPlan: vi.fn().mockImplementation(async (_ownerId, plan) => ({
       ...plan,
@@ -218,6 +219,24 @@ describe("PersonalizedInterviewPlanningService", () => {
   it("reuses the active plan when the profile and target role inputs still match", async () => {
     const current = activePlan();
     const { service, store, generator } = dependencies({ storedPlan: current });
+
+    await expect(service.activePlan(OWNER_ID, NOW)).resolves.toBe(current);
+    expect(generator.generate).not.toHaveBeenCalled();
+    expect(store.saveReadyPlan).not.toHaveBeenCalled();
+  });
+
+  it("keeps the active Interview plan when only the resume profile revision changes", async () => {
+    const current = activePlan();
+    const changedResume = {
+      ...candidateProfile(),
+      id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      revision: 3,
+      sourceResumeFingerprint: "sha256-new-resume"
+    };
+    const { service, store, generator } = dependencies({
+      storedPlan: current,
+      candidate: changedResume
+    });
 
     await expect(service.activePlan(OWNER_ID, NOW)).resolves.toBe(current);
     expect(generator.generate).not.toHaveBeenCalled();

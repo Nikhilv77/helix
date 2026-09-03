@@ -45,23 +45,28 @@ export class PersonalizedInterviewPlanningService {
   ) {}
 
   async activePlan(ownerId: string, now = Date.now()): Promise<PersonalizedInterviewPlan> {
-    const [candidateProfile, profile, performanceProfile, practiceEvidence] = await Promise.all([
-      this.store.ensureCandidateProfile(ownerId, now),
-      this.profiles.get(ownerId),
-      this.performanceProfiles?.refresh(ownerId, now) ?? Promise.resolve(null),
-      this.practiceEvidence?.refresh(ownerId, now) ?? Promise.resolve(null)
-    ]);
-    const targetRole = targetRoleContext(profile, candidateProfile);
-    const existing = await this.store.getActivePlan(ownerId);
+    const [candidateProfile, profile, performanceProfile, practiceEvidence, existing] =
+      await Promise.all([
+        this.store.ensureCandidateProfile(ownerId, now),
+        this.profiles.get(ownerId),
+        this.performanceProfiles?.refresh(ownerId, now) ?? Promise.resolve(null),
+        this.practiceEvidence?.refresh(ownerId, now) ?? Promise.resolve(null),
+        this.store.getActivePlan(ownerId)
+      ]);
+    const targetRole =
+      !profile.targetRole && existing
+        ? existing.sourceSnapshot.targetRole
+        : targetRoleContext(profile, candidateProfile);
     if (
       existing &&
-      matchesCurrentInputs(
+      (matchesCurrentInputs(
         existing,
         candidateProfile,
         targetRole,
         performanceProfile,
         practiceEvidence
-      )
+      ) ||
+        matchesInputsExceptResume(existing, targetRole, performanceProfile, practiceEvidence))
     ) {
       return existing;
     }
@@ -138,6 +143,23 @@ export class PersonalizedInterviewPlanningService {
 
     return { plan, blueprint };
   }
+}
+
+function matchesInputsExceptResume(
+  plan: PersonalizedInterviewPlan,
+  targetRole: TargetRoleRelevanceContext,
+  performanceProfile: CandidatePerformanceProfile | null,
+  practiceEvidence: CandidatePracticeEvidence | null
+): boolean {
+  const source = plan.sourceSnapshot;
+  return (
+    source.targetRole.title === targetRole.title &&
+    source.targetRole.family === targetRole.family &&
+    source.targetRole.source === targetRole.source &&
+    source.jobDescription === null &&
+    matchesPerformanceSnapshot(source.performanceProfile, performanceProfile) &&
+    matchesPracticeSnapshot(source.practiceEvidence, practiceEvidence)
+  );
 }
 
 export function targetRoleContext(

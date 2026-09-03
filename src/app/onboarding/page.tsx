@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { OnboardingFlow } from "@/components/onboarding/flow/onboarding-flow";
 import { privatePageMetadata } from "@/lib/shared/seo";
+import type { CandidateProfile } from "@/lib/shared/types";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
 
@@ -20,12 +21,11 @@ export default async function OnboardingPage({
   if (!userId) redirect("/");
 
   const replacingResume = (await searchParams).replace === "resume";
-  let teacherId: string | null = null;
+  let profile: CandidateProfile | null = null;
 
   try {
-    const profile = await getAppContainer().profileService.get(authenticatedOwnerId(userId));
+    profile = await getAppContainer().profileService.get(authenticatedOwnerId(userId));
     if (profile.onboardingCompletedAt && !replacingResume) redirect("/");
-    teacherId = profile.teacherId;
   } catch (error) {
     // A database hiccup should not block onboarding outright; the upload route
     // authorises and persists on its own. Re-throw the redirect Next.js raises.
@@ -37,8 +37,10 @@ export default async function OnboardingPage({
       replacingResume={replacingResume}
       // Someone swapping their resume already has a teacher; send them straight
       // past the picker rather than making them choose again.
-      initialStep={replacingResume && teacherId ? "level" : "teacher"}
-      initialTeacherId={teacherId}
+      initialStep={replacingResume ? "resume" : "teacher"}
+      initialTeacherId={profile?.teacherId ?? null}
+      initialRole={profile?.targetRole ?? undefined}
+      initialLevel={profile?.level ?? undefined}
     />
   );
 }

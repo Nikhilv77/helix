@@ -43,6 +43,7 @@ import {
 import { ResumeTab } from "./candidate-profile-editor-resume";
 import { SaveBar, SavedFooter } from "./candidate-profile-editor-ui";
 import { toInput } from "./candidate-profile-editor-utils";
+import { ResumeUpdateModal } from "./resume-update-modal";
 
 export function CandidateProfileEditor({ initialProfile }: { initialProfile: CandidateProfile }) {
   const [profile, setProfile] = useState<CandidateProfileInput>(toInput(initialProfile));
@@ -52,6 +53,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
   const [mode, setMode] = useState<"view" | "edit" | "resume">("view");
   const [imagePicker, setImagePicker] = useState<"cover" | "avatar" | null>(null);
   const [openStory, setOpenStory] = useState<string | null>(null);
+  const [resumeUpdateOpen, setResumeUpdateOpen] = useState(false);
 
   const dirty = useMemo(
     () => JSON.stringify(profile) !== JSON.stringify(toInput(saved)),
@@ -165,6 +167,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
           saved={saved}
           onCoverEdit={() => setImagePicker("cover")}
           onAvatarEdit={() => setImagePicker("avatar")}
+          onResumeUpdate={() => setResumeUpdateOpen(true)}
         />
 
         <ImagePickerOverlay
@@ -178,6 +181,17 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
           }}
           onCoverChange={(coverImage) => void saveImagePatch({ coverImage })}
           onAvatarChange={(profileImage) => void saveImagePatch({ profileImage })}
+        />
+
+        <ResumeUpdateModal
+          open={resumeUpdateOpen}
+          profile={saved}
+          onClose={() => setResumeUpdateOpen(false)}
+          onUpdated={(next) => {
+            setSaved(next);
+            setProfile(toInput(next));
+            setResumeUpdateOpen(false);
+          }}
         />
 
         <SignatureStoryCard story={profile.stories[0]} />

@@ -18,11 +18,13 @@ import {
 export function ResumeIdentityStep({
   result,
   teacherName,
+  showBack = true,
   onReplace,
   onContinue
 }: {
   result: ResumeExtractionResponse;
   teacherName: string;
+  showBack?: boolean;
   onReplace: () => void;
   onContinue: () => void;
 }) {
@@ -98,9 +100,11 @@ export function ResumeIdentityStep({
 
   return (
     <div className="relative w-full">
-      <div className="absolute left-0 top-0 z-10">
-        <BackButton onClick={onReplace} />
-      </div>
+      {showBack ? (
+        <div className="absolute left-0 top-0 z-10">
+          <BackButton onClick={onReplace} />
+        </div>
+      ) : null}
 
       <div className="mx-auto flex min-h-[calc(100svh-9rem)] w-full max-w-5xl flex-col items-center justify-center pb-10 pt-14 text-center sm:mt-10 sm:min-h-[31rem] sm:py-0">
         {phase === 0 ? (

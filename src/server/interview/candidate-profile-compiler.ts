@@ -1017,6 +1017,7 @@ function fingerprintResume(resume: CandidateResume): string {
     skills: resume.skills,
     experience: resume.experience,
     education: resume.education,
+    certifications: resume.certifications ?? [],
     projects: resume.projects,
     achievements: resume.achievements
   };

@@ -1,4 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
+import type { CandidateInterviewProfile } from "@/lib/interviews/personalized-plan";
+import {
+  CANDIDATE_INTERVIEW_PROFILE_SCHEMA_VERSION,
+  parseCandidateInterviewProfile
+} from "@/lib/interviews/personalized-plan";
 import type {
   CandidateProfile,
   CandidateProfileInput,
@@ -21,6 +27,7 @@ import type {
 } from "@/lib/shared/types";
 import type { Curriculum, CurriculumSession } from "@/lib/curriculum/curriculum";
 import { DEFAULT_WORKSPACE_ACCENT, isWorkspaceAccent } from "@/lib/workspace/accent";
+import { compileCandidateInterviewProfile } from "../interview/candidate-profile-compiler";
 import type { PrismaService } from "../database/prisma.service";
 
 const roles = new Set<Role>(["backend", "frontend", "fullstack", "data", "ai-ml", "pm"]);
@@ -66,7 +73,12 @@ export class ProfileService {
   }
 
   async get(ownerId: string): Promise<CandidateProfile> {
-    const stored = await this.prisma.candidateProfile.findUnique({ where: { ownerId } });
+    const stored = await this.prisma.candidateProfile.findUnique({
+      where: { ownerId },
+      include: {
+        activeResumeVersion: { select: { sourceResumeFingerprint: true } }
+      }
+    });
 
     if (!stored) return emptyProfile();
 
@@ -94,7 +106,10 @@ export class ProfileService {
         stored.resumeAnalysis,
         stored.resumeFileName,
         stored.resumeUploadedAt,
-        stored.resumeConfidence
+        stored.resumeConfidence,
+        stored.activeResumeVersionId,
+        stored.activeResumeVersion?.sourceResumeFingerprint ?? null,
+        stored.resumeMimeType
       )
     } satisfies CandidateProfile);
   }
@@ -206,12 +221,14 @@ export class ProfileService {
       resume: {
         fileName: string;
         mimeType: string;
+        contentFingerprint?: string;
         confidence: number;
         fullName: string;
         skills: string[];
         warnings: string[];
         experience: ResumeExperienceEntry[];
         education: ResumeEducationEntry[];
+        certifications?: string[];
         projects: ResumeProjectEntry[];
         achievements: string[];
         practiceQuestions: ResumePracticeQuestion[];
@@ -228,6 +245,7 @@ export class ProfileService {
       warnings: input.resume.warnings,
       experience: input.resume.experience,
       education: input.resume.education,
+      certifications: input.resume.certifications ?? [],
       projects: input.resume.projects,
       achievements: input.resume.achievements,
       practiceQuestions: input.resume.practiceQuestions,
@@ -236,51 +254,179 @@ export class ProfileService {
       evidence: input.resume.evidence
     };
 
-    await this.prisma.candidateProfile.upsert({
-      where: { ownerId },
-      create: {
+    await runResumeTransaction(this.prisma, async (transaction) => {
+      await transaction.candidateProfile.upsert({
+        where: { ownerId },
+        create: {
+          ownerId,
+          targetRole: input.targetRole,
+          level: input.level,
+          teacherId: input.teacherId,
+          headline: clean(input.headline),
+          context: clean(input.context),
+          coverImage: null,
+          profileImage: null,
+          focusAreas: toJson(input.focusAreas),
+          stories: toJson(input.stories),
+          resumeFileName: input.resume.fileName,
+          resumeMimeType: input.resume.mimeType,
+          resumeAnalysis: toJson(analysis),
+          resumeUploadedAt: now,
+          resumeVerifiedAt: now,
+          resumeConfidence: input.resume.confidence,
+          onboardingCompletedAt: now
+        },
+        update: {
+          targetRole: input.targetRole,
+          level: input.level,
+          teacherId: input.teacherId,
+          headline: clean(input.headline),
+          context: clean(input.context),
+          coverImage: null,
+          profileImage: null,
+          focusAreas: toJson(input.focusAreas),
+          stories: toJson(input.stories),
+          resumeFileName: input.resume.fileName,
+          resumeMimeType: input.resume.mimeType,
+          resumeAnalysis: toJson(analysis),
+          resumeUploadedAt: now,
+          resumeVerifiedAt: now,
+          resumeConfidence: input.resume.confidence,
+          onboardingCompletedAt: now,
+          // The plan is built from resume evidence, so a new resume invalidates it.
+          curriculum: Prisma.DbNull,
+          curriculumBuiltAt: null
+        }
+      });
+
+      const resume = candidateResume(input.resume, now);
+      const version = await resolveResumeVersion(transaction, {
         ownerId,
+        resume,
+        mimeType: input.resume.mimeType,
+        headline: input.headline,
         targetRole: input.targetRole,
         level: input.level,
-        teacherId: input.teacherId,
-        headline: clean(input.headline),
-        context: clean(input.context),
-        coverImage: null,
-        profileImage: null,
-        focusAreas: toJson(input.focusAreas),
-        stories: toJson(input.stories),
-        resumeFileName: input.resume.fileName,
-        resumeMimeType: input.resume.mimeType,
-        resumeAnalysis: toJson(analysis),
-        resumeUploadedAt: now,
-        resumeVerifiedAt: now,
-        resumeConfidence: input.resume.confidence,
-        onboardingCompletedAt: now
-      },
-      update: {
-        targetRole: input.targetRole,
-        level: input.level,
-        teacherId: input.teacherId,
-        headline: clean(input.headline),
-        context: clean(input.context),
-        coverImage: null,
-        profileImage: null,
-        focusAreas: toJson(input.focusAreas),
-        stories: toJson(input.stories),
-        resumeFileName: input.resume.fileName,
-        resumeMimeType: input.resume.mimeType,
-        resumeAnalysis: toJson(analysis),
-        resumeUploadedAt: now,
-        resumeVerifiedAt: now,
-        resumeConfidence: input.resume.confidence,
-        onboardingCompletedAt: now,
-        // The plan is built from resume evidence, so a new resume invalidates it.
-        curriculum: Prisma.DbNull,
-        curriculumBuiltAt: null
-      }
+        contentFingerprint: input.resume.contentFingerprint,
+        now
+      });
+      await transaction.candidateProfile.update({
+        where: { ownerId },
+        data: { activeResumeVersionId: version.id }
+      });
     });
 
     return this.get(ownerId);
+  }
+
+  /**
+   * Atomically activates one immutable resume version and updates only the
+   * resume-derived projection. Every user-controlled field and every Practice
+   * or Interview record is intentionally outside this transaction.
+   */
+  async confirmResumeUpdate(
+    ownerId: string,
+    input: {
+      fileName: string;
+      mimeType: string;
+      contentFingerprint: string;
+      confidence: number;
+      fullName: string;
+      skills: string[];
+      warnings: string[];
+      experience: ResumeExperienceEntry[];
+      education: ResumeEducationEntry[];
+      certifications?: string[];
+      projects: ResumeProjectEntry[];
+      achievements: string[];
+      practiceQuestions: ResumePracticeQuestion[];
+      roadmap: ResumeRoadmapItem[];
+      document: ResumeDocumentSummary;
+      evidence: ResumeEvidenceSummary;
+    }
+  ): Promise<CandidateProfile> {
+    const now = new Date();
+    await runResumeTransaction(this.prisma, async (transaction) => {
+      const current = await transaction.candidateProfile.findUnique({ where: { ownerId } });
+      if (!current) throw new Error("Candidate profile not found");
+
+      const proposed = candidateResume(input, now);
+      const version = await resolveResumeVersion(transaction, {
+        ownerId,
+        resume: proposed,
+        mimeType: input.mimeType,
+        headline: current.headline ?? "",
+        targetRole: isRole(current.targetRole) ? current.targetRole : null,
+        level: isLevel(current.level) ? current.level : null,
+        contentFingerprint: input.contentFingerprint,
+        now
+      });
+
+      // Retrying the same confirmation is a true no-op, including timestamps.
+      if (current.activeResumeVersionId === version.id) return;
+
+      const snapshot = resumeFromJson(
+        version.resumeSnapshot,
+        version.resumeFileName,
+        version.resumeUploadedAt,
+        version.resumeConfidence,
+        version.id,
+        version.sourceResumeFingerprint,
+        version.resumeMimeType
+      );
+      const active = snapshot ?? proposed;
+      await transaction.candidateProfile.update({
+        where: { ownerId },
+        data: {
+          activeResumeVersionId: version.id,
+          resumeFileName: active.fileName,
+          resumeMimeType: version.resumeMimeType ?? input.mimeType,
+          resumeAnalysis: toJson(resumeAnalysis(active)),
+          resumeUploadedAt: new Date(active.uploadedAt),
+          resumeVerifiedAt: new Date(active.uploadedAt),
+          resumeConfidence: active.confidence
+        }
+      });
+    });
+    return this.get(ownerId);
+  }
+
+  /** Creates/resolves the live resume snapshot without touching any plan. */
+  async ensureActiveResumeVersion(
+    ownerId: string,
+    now = Date.now()
+  ): Promise<CandidateInterviewProfile> {
+    const stored = await this.prisma.candidateProfile.findUnique({ where: { ownerId } });
+    if (!stored) throw new Error("Candidate profile not found");
+
+    if (stored.activeResumeVersionId) {
+      const active = await this.prisma.candidateInterviewProfileVersion.findFirst({
+        where: { id: stored.activeResumeVersionId, ownerId }
+      });
+      if (active) return profileVersionFromRecord(active);
+    }
+
+    const profile = await this.get(ownerId);
+    if (!profile.resume) throw new Error("Resume required");
+    const generatedAt = new Date(now);
+    const version = await runResumeTransaction(this.prisma, async (transaction) => {
+      const resolved = await resolveResumeVersion(transaction, {
+        ownerId,
+        resume: profile.resume!,
+        mimeType: stored.resumeMimeType ?? "application/pdf",
+        headline: profile.headline,
+        targetRole: profile.targetRole,
+        level: profile.level,
+        contentFingerprint: profile.resume?.contentFingerprint ?? undefined,
+        now: generatedAt
+      });
+      await transaction.candidateProfile.update({
+        where: { ownerId },
+        data: { activeResumeVersionId: resolved.id }
+      });
+      return resolved;
+    });
+    return profileVersionFromRecord(version);
   }
 }
 
@@ -383,16 +529,41 @@ function toJson(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
+async function runResumeTransaction<T>(
+  prisma: PrismaService,
+  work: (transaction: Prisma.TransactionClient) => Promise<T>
+): Promise<T> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await prisma.$transaction(work, {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable
+      });
+    } catch (error) {
+      const retryable =
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === "P2002" || error.code === "P2034");
+      if (!retryable || attempt === 2) throw error;
+    }
+  }
+  throw new Error("Resume transaction retry exhausted");
+}
+
 function resumeFromJson(
   value: Prisma.JsonValue | null,
   fileName: string | null,
   uploadedAt: Date | null,
-  confidence: number | null
+  confidence: number | null,
+  versionId: string | null = null,
+  contentFingerprint: string | null = null,
+  mimeType: string | null = null
 ): CandidateResume | null {
   if (!fileName || !uploadedAt || !isRecord(value)) return null;
 
   return {
+    versionId,
+    contentFingerprint,
     fileName,
+    mimeType,
     uploadedAt: uploadedAt.getTime(),
     confidence: confidence ?? 0,
     fullName: typeof value.fullName === "string" ? value.fullName : "",
@@ -406,6 +577,7 @@ function resumeFromJson(
       : [],
     experience: resumeExperienceFromJson(value.experience),
     education: resumeEducationFromJson(value.education),
+    certifications: plainStringArray(value.certifications, 16),
     projects: resumeProjectsFromJson(value.projects),
     achievements: plainStringArray(value.achievements, 8),
     practiceQuestions: resumeQuestionsFromJson(value.practiceQuestions),
@@ -414,6 +586,156 @@ function resumeFromJson(
     evidence: resumeEvidenceFromJson(value.evidence),
     interviewKit: resumeInterviewKitFromJson(value.interviewKit)
   };
+}
+
+function candidateResume(
+  input: {
+    fileName: string;
+    confidence: number;
+    fullName: string;
+    skills: string[];
+    warnings: string[];
+    experience: ResumeExperienceEntry[];
+    education: ResumeEducationEntry[];
+    certifications?: string[];
+    projects: ResumeProjectEntry[];
+    achievements: string[];
+    practiceQuestions: ResumePracticeQuestion[];
+    roadmap: ResumeRoadmapItem[];
+    document: ResumeDocumentSummary;
+    evidence: ResumeEvidenceSummary;
+  },
+  uploadedAt: Date
+): CandidateResume {
+  return {
+    versionId: null,
+    contentFingerprint:
+      "contentFingerprint" in input && typeof input.contentFingerprint === "string"
+        ? input.contentFingerprint
+        : null,
+    fileName: input.fileName,
+    mimeType: "mimeType" in input && typeof input.mimeType === "string" ? input.mimeType : null,
+    uploadedAt: uploadedAt.getTime(),
+    confidence: input.confidence,
+    fullName: input.fullName,
+    skills: input.skills,
+    warnings: input.warnings,
+    experience: input.experience,
+    education: input.education,
+    certifications: input.certifications ?? [],
+    projects: input.projects,
+    achievements: input.achievements,
+    practiceQuestions: input.practiceQuestions,
+    roadmap: input.roadmap,
+    document: input.document,
+    evidence: input.evidence,
+    interviewKit: null
+  };
+}
+
+function resumeAnalysis(resume: CandidateResume) {
+  return {
+    fullName: resume.fullName,
+    skills: resume.skills,
+    warnings: resume.warnings,
+    experience: resume.experience,
+    education: resume.education,
+    certifications: resume.certifications ?? [],
+    projects: resume.projects,
+    achievements: resume.achievements,
+    practiceQuestions: resume.practiceQuestions,
+    roadmap: resume.roadmap,
+    document: resume.document,
+    evidence: resume.evidence,
+    interviewKit: resume.interviewKit
+  };
+}
+
+async function resolveResumeVersion(
+  transaction: Prisma.TransactionClient,
+  input: {
+    ownerId: string;
+    resume: CandidateResume;
+    mimeType: string;
+    headline: string;
+    targetRole: Role | null;
+    level: Level | null;
+    contentFingerprint?: string;
+    now: Date;
+  }
+) {
+  const probe = compileCandidateInterviewProfile({
+    resume: input.resume,
+    headline: input.headline,
+    selectedRole: input.targetRole,
+    selectedLevel: input.level,
+    profileId: randomUUID(),
+    revision: 1,
+    generatedAt: input.now.getTime(),
+    sourceResumeFingerprint: input.contentFingerprint
+  });
+  const key = {
+    ownerId: input.ownerId,
+    sourceResumeFingerprint: probe.sourceResumeFingerprint,
+    schemaVersion: CANDIDATE_INTERVIEW_PROFILE_SCHEMA_VERSION
+  };
+  const existing = await transaction.candidateInterviewProfileVersion.findUnique({
+    where: { ownerId_sourceResumeFingerprint_schemaVersion: key }
+  });
+  if (existing) return existing;
+
+  const latest = await transaction.candidateInterviewProfileVersion.findFirst({
+    where: { ownerId: input.ownerId },
+    orderBy: { revision: "desc" },
+    select: { revision: true }
+  });
+  const profile = compileCandidateInterviewProfile({
+    resume: input.resume,
+    headline: input.headline,
+    selectedRole: input.targetRole,
+    selectedLevel: input.level,
+    profileId: randomUUID(),
+    revision: (latest?.revision ?? 0) + 1,
+    generatedAt: input.now.getTime(),
+    sourceResumeFingerprint: probe.sourceResumeFingerprint
+  });
+  return transaction.candidateInterviewProfileVersion.create({
+    data: {
+      id: profile.id,
+      ownerId: input.ownerId,
+      revision: profile.revision,
+      schemaVersion: profile.schemaVersion,
+      sourceResumeFingerprint: profile.sourceResumeFingerprint,
+      profile: toJson(profile),
+      resumeSnapshot: toJson(resumeAnalysis(input.resume)),
+      resumeFileName: input.resume.fileName,
+      resumeMimeType: input.mimeType,
+      resumeUploadedAt: input.now,
+      resumeConfidence: input.resume.confidence,
+      generatedAt: input.now
+    }
+  });
+}
+
+function profileVersionFromRecord(record: {
+  id: string;
+  revision: number;
+  schemaVersion: number;
+  sourceResumeFingerprint: string;
+  generatedAt: Date;
+  profile: Prisma.JsonValue;
+}): CandidateInterviewProfile {
+  const profile = parseCandidateInterviewProfile(record.profile);
+  if (
+    profile.id !== record.id ||
+    profile.revision !== record.revision ||
+    profile.schemaVersion !== record.schemaVersion ||
+    profile.sourceResumeFingerprint !== record.sourceResumeFingerprint ||
+    profile.generatedAt !== record.generatedAt.getTime()
+  ) {
+    throw new Error("Stored candidate profile version does not match its immutable snapshot");
+  }
+  return profile;
 }
 
 function resumeInterviewKitFromJson(

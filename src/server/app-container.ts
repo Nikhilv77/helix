@@ -124,7 +124,6 @@ export function getAppContainer(): AppContainer {
   const resumeRoastStore = new ResumeRoastStore(prisma);
   const resumeRoastService = new ResumeRoastService(
     profileService,
-    personalizedPlanningStore,
     resumeRoastStore,
     new ResumeRoastGenerator(geminiAi)
   );

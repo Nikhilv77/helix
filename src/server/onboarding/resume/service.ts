@@ -121,6 +121,7 @@ const resumeAnalysisSchema = z.object({
   stories: entryList(storySchema, 4),
   experience: entryList(experienceSchema, 6),
   education: entryList(educationSchema, 4),
+  certifications: textList(8, 180),
   projects: entryList(projectSchema, 5),
   achievements: textList(8, 200),
   practiceQuestions: entryList(practiceQuestionSchema, 6),
@@ -215,6 +216,7 @@ Rules:
 - stories contains up to four evidence-backed projects or accomplishments. Leave a field empty when the resume does not provide it.
 - experience preserves the exact organization, role, visible date range, location, scope, achievements, and explicitly associated skills for each supported role. Keep unknown strings empty. Do not merge separate roles.
 - education preserves each supported institution, credential, field, and visible date range. Keep unknown strings empty.
+- certifications contains only named certifications, licences, or completed professional courses explicitly present in the resume.
 - projects preserves only named candidate projects. Do not reinterpret an ordinary work bullet as a separate project.
 - evidenceQuote on every experience, education, and project entry must be a short VERBATIM quote from the resume that uniquely supports the entry. Never paraphrase this field.
 - achievements contains only concrete, attributable outcomes copied verbatim from the resume. Preserve numbers and units exactly as written.

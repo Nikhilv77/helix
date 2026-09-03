@@ -273,6 +273,9 @@ model CandidateProfile {
   resumeUploadedAt            DateTime?
   resumeVerifiedAt            DateTime?
   resumeConfidence            Float?
+  /// Immutable resume/profile revision currently projected into this row.
+  activeResumeVersionId       String?                              @db.Uuid
+  activeResumeVersion         CandidateInterviewProfileVersion?    @relation("CandidateActiveResumeVersion", fields: [activeResumeVersionId], references: [id], onDelete: SetNull)
   onboardingCompletedAt       DateTime?
   /// Maya's curated session plan for this candidate, generated from the resume.
   curriculum                  Json?
@@ -295,6 +298,7 @@ model CandidateProfile {
   notifications               Notification[]                       @relation("CandidateNotifications")
 
   @@index([updatedAt])
+  @@index([activeResumeVersionId])
 }
 
 /// Immutable aggregate of demonstrated skill evidence from completed
@@ -557,11 +561,18 @@ model CandidateInterviewProfileVersion {
   schemaVersion           Int
   sourceResumeFingerprint String
   profile                 Json
+  /// Confirmed resume projection and file metadata for safe historical reuse.
+  resumeSnapshot          Json?
+  resumeFileName          String?
+  resumeMimeType          String?
+  resumeUploadedAt        DateTime?
+  resumeConfidence        Float?
   generatedAt             DateTime
   createdAt               DateTime                           @default(now())
   owner                   CandidateProfile                   @relation("CandidateInterviewProfileVersions", fields: [ownerId], references: [ownerId], onDelete: Cascade)
   plans                   PersonalizedInterviewPlanVersion[]
   resumeRoasts            ResumeRoast[]                      @relation("CandidateInterviewProfileVersionResumeRoasts")
+  activeForProfiles       CandidateProfile[]                 @relation("CandidateActiveResumeVersion")
 
   @@unique([ownerId, revision])
   @@unique([ownerId, sourceResumeFingerprint, schemaVersion])

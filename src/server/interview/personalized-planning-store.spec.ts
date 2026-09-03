@@ -227,14 +227,7 @@ describe("PersonalizedPlanningStore profile versions", () => {
 
     await expect(store.ensureCandidateProfile(OWNER_ID, NOW)).resolves.toEqual(compiledProfile());
     expect(mock.$transaction).not.toHaveBeenCalled();
-    expect(mock.personalizedInterviewPlanVersion.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          ownerId: OWNER_ID,
-          profileVersionId: { not: PROFILE_ID }
-        })
-      })
-    );
+    expect(mock.personalizedInterviewPlanVersion.updateMany).not.toHaveBeenCalled();
   });
 
   it("lazily backfills an existing candidate and increments the immutable revision", async () => {

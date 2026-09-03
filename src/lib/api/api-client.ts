@@ -198,12 +198,14 @@ export async function uploadResume(input: {
   file: File;
   targetRole: Role;
   level: Level;
+  mode?: "onboarding" | "replace";
   signal?: AbortSignal;
 }): Promise<ResumeExtractionResponse> {
   const body = new FormData();
   body.set("resume", input.file);
   body.set("targetRole", input.targetRole);
   body.set("level", input.level);
+  if (input.mode === "replace") body.set("mode", "replace");
 
   const response = await fetch("/api/onboarding/resume", {
     method: "POST",
@@ -233,6 +235,20 @@ export async function uploadResume(input: {
   }
 
   return payload.data as ResumeExtractionResponse;
+}
+
+export function confirmResumeUpdate(
+  result: ResumeExtractionResponse
+): Promise<{ profile: CandidateProfile }> {
+  return request<{ profile: CandidateProfile }>("/api/profile/resume", {
+    method: "POST",
+    body: {
+      resumeFile: result.resumeFile,
+      extraction: result.extraction,
+      confirmationToken: result.confirmationToken,
+      previewExpiresAt: result.previewExpiresAt
+    }
+  });
 }
 
 export function completeOnboarding(

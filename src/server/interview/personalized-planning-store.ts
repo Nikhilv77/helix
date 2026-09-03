@@ -50,6 +50,17 @@ export class PersonalizedPlanningStore {
     ownerId: string,
     now = Date.now()
   ): Promise<CandidateInterviewProfile> {
+    return this.ensureCandidateProfileVersion(ownerId, now);
+  }
+
+  /**
+   * Resolves the immutable resume profile without reconciling Interview plans.
+   * Resume replacement and Resume Roast must use this side-effect-free path.
+   */
+  async ensureCandidateProfileVersion(
+    ownerId: string,
+    now = Date.now()
+  ): Promise<CandidateInterviewProfile> {
     const source = await this.profiles.get(ownerId);
     if (!source.resume) {
       throw new BadRequestErrorException(
@@ -69,7 +80,8 @@ export class PersonalizedPlanningStore {
       selectedLevel: source.level,
       profileId: randomUUID(),
       revision: 1,
-      generatedAt: now
+      generatedAt: now,
+      sourceResumeFingerprint: resume.contentFingerprint ?? undefined
     });
     const existing = await this.prisma.candidateInterviewProfileVersion.findUnique({
       where: {
@@ -82,9 +94,7 @@ export class PersonalizedPlanningStore {
     });
 
     if (existing) {
-      const profile = profileFromRecord(existing);
-      await this.supersedePlansForDifferentProfile(ownerId, profile.id, now);
-      return profile;
+      return profileFromRecord(existing);
     }
 
     const stored = await this.prisma.$transaction(async (transaction) => {
@@ -129,9 +139,7 @@ export class PersonalizedPlanningStore {
         }
       });
     });
-    const profile = profileFromRecord(stored);
-    await this.supersedePlansForDifferentProfile(ownerId, profile.id, now);
-    return profile;
+    return profileFromRecord(stored);
   }
 
   async getLatestCandidateProfile(ownerId: string): Promise<CandidateInterviewProfile | null> {
@@ -280,24 +288,6 @@ export class PersonalizedPlanningStore {
         { practiceEvidenceVersionId: snapshot.id }
       );
     }
-  }
-
-  private async supersedePlansForDifferentProfile(
-    ownerId: string,
-    profileVersionId: string,
-    now: number
-  ): Promise<void> {
-    await this.prisma.personalizedInterviewPlanVersion.updateMany({
-      where: {
-        ownerId,
-        status: "READY",
-        profileVersionId: { not: profileVersionId }
-      },
-      data: {
-        status: "SUPERSEDED",
-        supersededAt: new Date(now)
-      }
-    });
   }
 }
 

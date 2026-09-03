@@ -50,6 +50,9 @@ interface RoastRecord {
   id: string;
   target: ResumeRoastTarget;
   result: ResumeRoastResult;
+  resumeVersionId?: string;
+  resumeFileName?: string | null;
+  createdAt?: number;
 }
 
 interface RoastState {
@@ -57,6 +60,7 @@ interface RoastState {
   target: ResumeRoastTarget | null;
   suggestedTarget: Partial<ResumeRoastTarget> | null;
   previousRoast: RoastRecord | null;
+  history: RoastRecord[];
 }
 
 type ScreenState = "loading" | "selecting" | "streaming" | "ready" | "failed";
@@ -359,6 +363,23 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
     void startRoast(selected);
   };
 
+  const showHistoricalRoast = (roast: RoastRecord) => {
+    cancelRoast();
+    stop();
+    setTarget(roast.target);
+    setEvents(
+      resumeRoastResultEvents({
+        roastId: roast.id,
+        replayed: true,
+        target: roast.target,
+        result: roast.result
+      })
+    );
+    setFailure(null);
+    setShowingPrevious(true);
+    setScreen("ready");
+  };
+
   if (screen === "loading") return <ResumeRoastLoading />;
   if (!state && screen === "failed")
     return <LoadFailure message={failure} onRetry={requestState} />;
@@ -397,6 +418,8 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
             const selected = completeTarget(target);
             if (selected) void startRoast(selected);
           }}
+          history={state.history ?? []}
+          onShowHistory={showHistoricalRoast}
         />
       </div>
     </main>
@@ -629,7 +652,9 @@ function JamesChat({
   onChooseCompany,
   onChooseLevel,
   onChangeTarget,
-  onRetry
+  onRetry,
+  history,
+  onShowHistory
 }: {
   target: Partial<ResumeRoastTarget>;
   events: ResumeRoastStreamEvent[];
@@ -643,6 +668,8 @@ function JamesChat({
   onChooseLevel: (level: ResumeRoastTarget["level"]) => void;
   onChangeTarget: () => void;
   onRetry: () => void;
+  history: RoastRecord[];
+  onShowHistory: (roast: RoastRecord) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const completionScrollTimer = useRef<number | null>(null);
@@ -773,6 +800,33 @@ function JamesChat({
             >
               {showingPrevious ? "Start a fresh analysis" : "Analyse another target"}
             </button>
+          ) : null}
+
+          {history.length ? (
+            <details className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4">
+              <summary className="cursor-pointer text-sm font-semibold text-cream/68">
+                Resume Roast history ({history.length})
+              </summary>
+              <div className="mt-3.5 grid gap-2.5">
+                {history.map((roast) => (
+                  <button
+                    key={roast.id}
+                    type="button"
+                    onClick={() => onShowHistory(roast)}
+                    className="rounded-xl bg-white/[0.035] px-3.5 py-2.5 text-left text-sm text-cream/68 transition hover:bg-white/[0.07] hover:text-cream"
+                  >
+                    <span className="block font-semibold leading-5">
+                      {roast.resumeFileName || "Resume version"}
+                    </span>
+                    <span className="mt-1 block text-xs leading-4 text-cream/46">
+                      {roast.createdAt
+                        ? new Date(roast.createdAt).toLocaleDateString()
+                        : "Saved analysis"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </details>
           ) : null}
 
           {failure ? (

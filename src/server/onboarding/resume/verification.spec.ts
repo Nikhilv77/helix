@@ -42,6 +42,7 @@ function analysis(overrides: Partial<ResumeAnalysis> = {}): ResumeAnalysis {
     stories: [],
     experience: [],
     education: [],
+    certifications: [],
     projects: [],
     achievements: [],
     practiceQuestions: [],
@@ -207,4 +208,3 @@ describe("groundResumeEvidence", () => {
     expect(hasGroundedEvidence(grounded)).toBe(false);
   });
 });
-

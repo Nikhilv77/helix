@@ -4,7 +4,11 @@ import { ArrowRight, Loader2, Tags, Target } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { PRIMARY_BUTTON } from "../flow/onboarding-data";
 import { BackButton } from "../shared/onboarding-ui";
-import type { ResumeExtractionResponse } from "@/lib/shared/types";
+import type {
+  ResumeCollectionChange,
+  ResumeExtractionResponse,
+  ResumeUpdateComparison
+} from "@/lib/shared/types";
 import {
   FINAL_AUTO_SCROLL_DELAY_MS,
   TRAIL_FOCUS_STAGGER_MS,
@@ -23,13 +27,16 @@ const entryStages = [
 export function ResumeReadinessStep({
   result,
   teacherName,
+  showBack = true,
   onBack,
   onContinue,
+  replacingResume,
   continuing = false,
   error = null
 }: {
   result: ResumeExtractionResponse;
   teacherName: string;
+  showBack?: boolean;
   replacingResume: boolean;
   onBack: () => void;
   onContinue: () => void;
@@ -37,17 +44,29 @@ export function ResumeReadinessStep({
   error?: string | null;
 }) {
   const { extraction } = result;
-  const visibleSkills = extraction.skills.slice(0, 14);
-  const visibleFocusAreas = extraction.focusAreas.slice(0, 6);
+  const visibleSkills = replacingResume
+    ? resumeUpdateSkillChanges(result.comparison).slice(0, 14)
+    : extraction.skills.slice(0, 14);
+  const visibleFocusAreas = replacingResume
+    ? resumeUpdateEvidenceChanges(result.comparison)
+    : extraction.focusAreas.slice(0, 6);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const userStoppedAutoScrollRef = useRef(false);
   const finalAutoScrollRanRef = useRef(false);
   const [visibleSkillCount, setVisibleSkillCount] = useState(0);
   const [visibleFocusCount, setVisibleFocusCount] = useState(0);
   const [entryStage, setEntryStage] = useState(0);
-  const skillsTitle = useWordReveal("Good, your skills are in great shape.", true, 180);
+  const skillsTitle = useWordReveal(
+    replacingResume ? "Review your skill changes." : "Good, your skills are in great shape.",
+    true,
+    180
+  );
   const showRouteTitle = skillsTitle.done && visibleSkillCount >= Math.max(visibleSkills.length, 1);
-  const routeTitle = useWordReveal("We have prepared a trail for you.", showRouteTitle, 360);
+  const routeTitle = useWordReveal(
+    replacingResume ? "Review your evidence changes." : "We have prepared a trail for you.",
+    showRouteTitle,
+    360
+  );
   const showCta = routeTitle.done && visibleFocusCount >= Math.max(visibleFocusAreas.length, 1);
 
   useEffect(() => {
@@ -139,9 +158,11 @@ export function ResumeReadinessStep({
 
   return (
     <div className="relative w-full">
-      <div className="absolute left-0 top-0 z-10">
-        <BackButton onClick={onBack} />
-      </div>
+      {showBack ? (
+        <div className="absolute left-0 top-0 z-10">
+          <BackButton onClick={onBack} />
+        </div>
+      ) : null}
 
       <section className="mx-auto flex min-h-[calc(100svh-9rem)] w-full max-w-4xl flex-col items-center justify-center pb-28 pt-16 text-center sm:mt-8 sm:min-h-[32rem] sm:py-0">
         <div className="identity-stage-in flex w-full flex-col items-center">
@@ -208,7 +229,9 @@ export function ResumeReadinessStep({
                 ))
               ) : visibleFocusCount ? (
                 <li className="step-in text-center text-base leading-7 text-cream/58 sm:text-[1.0625rem]">
-                  {teacherName} will start with a broad baseline.
+                  {replacingResume
+                    ? "No evidence changes detected."
+                    : `${teacherName} will start with a broad baseline.`}
                 </li>
               ) : null}
             </ol>
@@ -224,7 +247,14 @@ export function ResumeReadinessStep({
                 disabled={continuing}
                 className={`browse-nudge onboarding-review-nudge ${PRIMARY_BUTTON} disabled:pointer-events-none disabled:opacity-70`}
               >
-                {continuing ? "Entering..." : "Enter"} <ArrowRight size={15} />
+                {continuing
+                  ? replacingResume
+                    ? "Updating..."
+                    : "Entering..."
+                  : replacingResume
+                    ? "Confirm update"
+                    : "Enter"}{" "}
+                <ArrowRight size={15} />
               </button>
               <div className="min-h-5">
                 {continuing ? <EntryProgress activeStage={entryStage} /> : null}
@@ -240,6 +270,73 @@ export function ResumeReadinessStep({
       </section>
     </div>
   );
+}
+
+function resumeUpdateSkillChanges(comparison?: ResumeUpdateComparison | null): string[] {
+  if (!comparison) return [];
+  return [
+    ...comparison.skillsAdded.map((skill) => `+ ${skill}`),
+    ...comparison.skillsNoLongerMentioned.map((skill) => `− ${skill}`)
+  ];
+}
+
+function resumeUpdateEvidenceChanges(comparison?: ResumeUpdateComparison | null): string[] {
+  if (!comparison) return [];
+
+  const changedSignals = [
+    comparison.seniorityChanged ? "seniority" : null,
+    comparison.leadershipSignalsChanged ? "leadership" : null
+  ].filter((value): value is string => Boolean(value));
+  const suggestions = [
+    comparison.suggestions.headline ? "headline" : null,
+    comparison.suggestions.context ? "bio" : null,
+    comparison.suggestions.targetRole ? "target role" : null,
+    comparison.suggestions.level ? "level" : null
+  ].filter((value): value is string => Boolean(value));
+
+  return [
+    summarizeCollectionChanges("Experience", comparison.experience),
+    summarizeCollectionChanges("Projects", comparison.projects),
+    summarizeCollectionChanges("Education", comparison.education),
+    summarizeStringChanges(
+      "Certifications",
+      comparison.certificationsAdded,
+      comparison.certificationsNoLongerMentioned,
+      comparison.certificationsChanged
+    ),
+    summarizeStringChanges(
+      "Achievements",
+      comparison.achievementsAdded,
+      comparison.achievementsNoLongerMentioned
+    ),
+    `Career signals: ${changedSignals.length ? `${changedSignals.join(" and ")} changed` : "no changes"}`,
+    `Profile suggestions: ${suggestions.length ? suggestions.join(", ") : "none"}`
+  ];
+}
+
+function summarizeCollectionChanges(label: string, changes: ResumeCollectionChange[]): string {
+  const added = changes.filter((change) => change.kind === "added").length;
+  const changed = changes.filter((change) => change.kind === "changed").length;
+  const removed = changes.filter((change) => change.kind === "removed").length;
+  return `${label}: ${formatChangeCounts(added, changed, removed)}`;
+}
+
+function summarizeStringChanges(
+  label: string,
+  addedValues: string[],
+  removedValues: string[],
+  changed = false
+): string {
+  return `${label}: ${formatChangeCounts(addedValues.length, changed ? 1 : 0, removedValues.length)}`;
+}
+
+function formatChangeCounts(added: number, changed: number, removed: number): string {
+  const counts = [
+    added ? `${added} added` : null,
+    changed ? `${changed} changed` : null,
+    removed ? `${removed} removed` : null
+  ].filter((value): value is string => Boolean(value));
+  return counts.length ? counts.join(" · ") : "no changes";
 }
 
 function EntryProgress({ activeStage }: { activeStage: number }) {

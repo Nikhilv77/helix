@@ -189,6 +189,16 @@ export function ResumeTab({ resume }: { resume: CandidateProfile["resume"] }) {
           </Card>
         ) : null}
 
+        {resume.certifications?.length ? (
+          <Card icon={BadgeCheck} tone="sky" title="Certifications" size="large">
+            <div className="flex flex-wrap gap-2.5">
+              {resume.certifications.map((certification) => (
+                <Tag key={certification}>{certification}</Tag>
+              ))}
+            </div>
+          </Card>
+        ) : null}
+
         {resume.warnings.length ? (
           <div className="surface overflow-hidden p-6">
             <CardPattern variant="waves" />

@@ -14,6 +14,28 @@ describe("ResumeStep analysis recovery status", () => {
 
     expect(screen.getByText("TRYING RESUME ANALYSIS AGAIN...")).toBeInTheDocument();
   });
+
+  it("keeps compact loading status inside the upload panel", () => {
+    render(
+      <ResumeStep
+        file={new File(["resume"], "candidate.pdf", { type: "application/pdf" })}
+        dragging={false}
+        error={null}
+        inputRef={createRef<HTMLInputElement>()}
+        uploading
+        retryingAnalysis={false}
+        activeStage={0}
+        compact
+        showBack={false}
+        onFile={() => undefined}
+        onChooseAnother={() => undefined}
+        onDragging={() => undefined}
+        onBack={() => undefined}
+      />
+    );
+
+    expect(screen.getByRole("status").closest("[data-resume-drop-panel]")).not.toBeNull();
+  });
 });
 
 function renderStep(retryingAnalysis: boolean) {

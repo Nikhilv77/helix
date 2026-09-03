@@ -64,6 +64,47 @@ const roadmapItemSchema = z.object({
   actions: stringList(8)
 });
 
+export const resumeFileSchema = z.object({
+  fileName: z.string().trim().min(1).max(160),
+  mimeType: z.string().trim().min(1).max(200),
+  contentFingerprint: z
+    .string()
+    .regex(/^sha256-[a-f0-9]{64}$/)
+    .optional()
+});
+
+export const resumeExtractionSchema = z.object({
+  fullName: z.string().trim().max(160),
+  headline: z.string().trim().min(1).max(240),
+  context: z.string().trim().min(1).max(3_000),
+  skills: stringList(32),
+  focusAreas: stringList(12),
+  stories: z.array(storySchema).max(16),
+  experience: z.array(experienceSchema).max(20),
+  education: z.array(educationSchema).max(12),
+  certifications: stringList(16).default([]),
+  projects: z.array(projectSchema).max(20),
+  achievements: stringList(16),
+  practiceQuestions: z.array(practiceQuestionSchema).max(40),
+  roadmap: z.array(roadmapItemSchema).max(24),
+  confidence: z.number().min(0).max(100),
+  warnings: stringList(10),
+  document: z.object({
+    format: z.enum(["pdf", "docx"]),
+    pageCount: z.number().int().min(1).max(80),
+    pageCountEstimated: z.boolean(),
+    sections: stringList(24)
+  }),
+  evidence: z.object({
+    dateRanges: z.number().int().min(0).max(500),
+    achievementLines: z.number().int().min(0).max(1_000),
+    quantifiedAchievements: z.number().int().min(0).max(1_000),
+    experienceEntries: z.number().int().min(0).max(200),
+    projectEntries: z.number().int().min(0).max(200),
+    educationEntries: z.number().int().min(0).max(100)
+  })
+});
+
 const completeSchema = z.object({
   targetRole: z.enum(ROLES),
   level: z.enum(LEVELS),
@@ -78,40 +119,8 @@ const completeSchema = z.object({
     .max(60)
     .nullish()
     .transform((id) => personaById(id)?.id ?? null),
-  resumeFile: z.object({
-    fileName: z.string().trim().min(1).max(160),
-    mimeType: z.string().trim().min(1).max(200)
-  }),
-  extraction: z.object({
-    fullName: z.string().trim().max(160),
-    headline: z.string().trim().min(1).max(240),
-    context: z.string().trim().min(1).max(3_000),
-    skills: stringList(32),
-    focusAreas: stringList(12),
-    stories: z.array(storySchema).max(16),
-    experience: z.array(experienceSchema).max(20),
-    education: z.array(educationSchema).max(12),
-    projects: z.array(projectSchema).max(20),
-    achievements: stringList(16),
-    practiceQuestions: z.array(practiceQuestionSchema).max(40),
-    roadmap: z.array(roadmapItemSchema).max(24),
-    confidence: z.number().min(0).max(100),
-    warnings: stringList(10),
-    document: z.object({
-      format: z.enum(["pdf", "docx"]),
-      pageCount: z.number().int().min(1).max(80),
-      pageCountEstimated: z.boolean(),
-      sections: stringList(24)
-    }),
-    evidence: z.object({
-      dateRanges: z.number().int().min(0).max(500),
-      achievementLines: z.number().int().min(0).max(1_000),
-      quantifiedAchievements: z.number().int().min(0).max(1_000),
-      experienceEntries: z.number().int().min(0).max(200),
-      projectEntries: z.number().int().min(0).max(200),
-      educationEntries: z.number().int().min(0).max(100)
-    })
-  })
+  resumeFile: resumeFileSchema,
+  extraction: resumeExtractionSchema
 });
 
 export async function POST(request: NextRequest) {
@@ -130,6 +139,14 @@ export async function POST(request: NextRequest) {
 
     const ownerId = authenticatedOwnerId(userId);
     const app = getAppContainer();
+    const existing = await app.profileService.get(ownerId);
+    if (existing.onboardingCompletedAt) {
+      throw new ApiRouteError(
+        409,
+        "ONBOARDING_ALREADY_COMPLETED",
+        "Use the resume update review to replace an existing resume."
+      );
+    }
     const { targetRole, level, teacherId, extraction, resumeFile } = body.data;
     const profile = await app.profileService.completeOnboarding(ownerId, {
       targetRole,
@@ -142,12 +159,14 @@ export async function POST(request: NextRequest) {
       resume: {
         fileName: resumeFile.fileName,
         mimeType: resumeFile.mimeType,
+        contentFingerprint: resumeFile.contentFingerprint,
         confidence: extraction.confidence,
         fullName: extraction.fullName,
         skills: extraction.skills,
         warnings: extraction.warnings,
         experience: extraction.experience,
         education: extraction.education,
+        certifications: extraction.certifications,
         projects: extraction.projects,
         achievements: extraction.achievements,
         practiceQuestions: extraction.practiceQuestions,

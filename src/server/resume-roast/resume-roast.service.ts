@@ -4,10 +4,8 @@ import {
   type ResumeRoastResult,
   type ResumeRoastTarget
 } from "@/lib/resume-roast/contracts";
-import type { CandidateInterviewProfile } from "@/lib/interviews/personalized-plan";
 import { AiProviderException } from "../ai/ai-provider.exception";
 import { ApiRouteError } from "../http/api-error";
-import type { PersonalizedPlanningStore } from "../interview/personalized-planning-store";
 import type { ProfileService } from "../profile/profile.service";
 import { buildResumeRoastSnapshot, type ResumeRoastSnapshot } from "./resume-signals";
 import { RESUME_ROAST_PROMPT_VERSION } from "./resume-roast.prompt";
@@ -23,6 +21,9 @@ export interface ResumeRoastPublicRecord {
   id: string;
   target: ResumeRoastTarget;
   result: ResumeRoastResult;
+  resumeVersionId?: string;
+  resumeFileName?: string | null;
+  createdAt?: number;
 }
 
 /** JSON-safe state used by the Roast tab. It deliberately excludes resume data and version ids. */
@@ -31,6 +32,7 @@ export interface ResumeRoastState {
   target: ResumeRoastTarget | null;
   suggestedTarget: ResumeRoastSuggestion | null;
   previousRoast: ResumeRoastPublicRecord | null;
+  history: ResumeRoastPublicRecord[];
 }
 
 export interface ResumeRoastClaimedGeneration {
@@ -43,8 +45,7 @@ export interface ResumeRoastClaimedGeneration {
 
 export type ResumeRoastPreparation = ResumeRoastClaimedGeneration;
 
-type ProfileReader = Pick<ProfileService, "get">;
-type CandidateProfileStore = Pick<PersonalizedPlanningStore, "ensureCandidateProfile">;
+type ProfileReader = Pick<ProfileService, "get" | "ensureActiveResumeVersion">;
 
 /**
  * Authenticated application boundary for Resume Roast. Completed rows are
@@ -53,7 +54,6 @@ type CandidateProfileStore = Pick<PersonalizedPlanningStore, "ensureCandidatePro
 export class ResumeRoastService {
   constructor(
     private readonly profiles: ProfileReader,
-    private readonly planningStore: CandidateProfileStore,
     private readonly store: ResumeRoastStore,
     private readonly generator: Pick<ResumeRoastGenerator, "generate">
   ) {}
@@ -61,16 +61,24 @@ export class ResumeRoastService {
   async state(ownerId: string): Promise<ResumeRoastState> {
     const current = await this.currentResume(ownerId);
     if (!current) {
-      return { hasResume: false, target: null, suggestedTarget: null, previousRoast: null };
+      return {
+        hasResume: false,
+        target: null,
+        suggestedTarget: null,
+        previousRoast: null,
+        history: []
+      };
     }
 
     const target = await this.store.getTarget(ownerId);
-    const previousRoast = await this.store.getLatestReady(ownerId);
+    const previousRoast = await this.store.getLatestReady(ownerId, current.version.id);
+    const history = await this.store.getReadyHistory(ownerId);
     return {
       hasResume: true,
       target,
       suggestedTarget: suggestTarget(current.profile),
-      previousRoast: previousRoast ? publicRecord(previousRoast) : null
+      previousRoast: previousRoast ? publicRecord(previousRoast) : null,
+      history: history.map(publicHistoryRecord)
     };
   }
 
@@ -149,9 +157,11 @@ export class ResumeRoastService {
     const snapshot = buildResumeRoastSnapshot(profile.resume);
     if (!snapshot) return null;
 
-    let version: CandidateInterviewProfile;
+    let version: { id: string };
     try {
-      version = await this.planningStore.ensureCandidateProfile(ownerId);
+      version = profile.resume?.versionId
+        ? { id: profile.resume.versionId }
+        : await this.profiles.ensureActiveResumeVersion(ownerId);
     } catch (error) {
       // A concurrent resume removal is still the regular Profile handoff, not
       // a failed Roast session. Avoid propagating profile details into logs.
@@ -165,7 +175,7 @@ export class ResumeRoastService {
 interface CurrentResume {
   profile: CandidateProfile;
   snapshot: ResumeRoastSnapshot;
-  version: CandidateInterviewProfile;
+  version: { id: string };
 }
 
 function publicRecord(record: StoredResumeRoast): ResumeRoastPublicRecord {
@@ -177,6 +187,15 @@ function publicRecord(record: StoredResumeRoast): ResumeRoastPublicRecord {
       level: record.level
     },
     result: record.result
+  };
+}
+
+function publicHistoryRecord(record: StoredResumeRoast): ResumeRoastPublicRecord {
+  return {
+    ...publicRecord(record),
+    resumeVersionId: record.resumeProfileVersionId,
+    resumeFileName: record.resumeFileName ?? null,
+    createdAt: record.createdAt.getTime()
   };
 }
 

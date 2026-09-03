@@ -10,12 +10,14 @@ import { AUTO_SCROLL_IDLE_MS } from "./shared";
 export function ResumeEvidenceStep({
   result,
   teacherName,
+  showBack = true,
   onBack,
   onReplace,
   onContinue
 }: {
   result: ResumeExtractionResponse;
   teacherName: string;
+  showBack?: boolean;
   onBack: () => void;
   onReplace: () => void;
   onContinue: () => void;
@@ -93,9 +95,11 @@ export function ResumeEvidenceStep({
 
   return (
     <div className="relative w-full">
-      <div className="absolute left-0 top-0 z-10">
-        <BackButton onClick={onBack} />
-      </div>
+      {showBack ? (
+        <div className="absolute left-0 top-0 z-10">
+          <BackButton onClick={onBack} />
+        </div>
+      ) : null}
 
       <section className="mx-auto flex min-h-[calc(100svh-9rem)] w-full max-w-6xl flex-col items-center justify-center pb-10 pt-16 text-center sm:mt-8 sm:min-h-[34rem] sm:py-0">
         <div className="identity-stage-in w-full">

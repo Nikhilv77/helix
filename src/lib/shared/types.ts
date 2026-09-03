@@ -65,7 +65,12 @@ export interface CandidateProfile extends CandidateProfileInput {
 }
 
 export interface CandidateResume {
+  /** Immutable active resume-version id. Null only for legacy, not-yet-backfilled data. */
+  versionId?: string | null;
+  /** SHA-256 fingerprint of the confirmed file (or legacy normalized evidence). */
+  contentFingerprint?: string | null;
   fileName: string;
+  mimeType?: string | null;
   uploadedAt: number;
   confidence: number;
   fullName: string;
@@ -73,6 +78,7 @@ export interface CandidateResume {
   warnings: string[];
   experience: ResumeExperienceEntry[];
   education: ResumeEducationEntry[];
+  certifications?: string[];
   projects: ResumeProjectEntry[];
   achievements: string[];
   practiceQuestions: ResumePracticeQuestion[];
@@ -180,11 +186,16 @@ export interface ResumeEvidenceSummary {
 }
 
 export interface ResumeExtractionResponse {
+  /** Short-lived server signature binding this exact preview to the owner. */
+  confirmationToken?: string;
+  previewExpiresAt?: number;
   profile: CandidateProfile;
   resumeFile: {
     fileName: string;
     mimeType: string;
+    contentFingerprint?: string;
   };
+  comparison?: ResumeUpdateComparison | null;
   frontendRoadmap: {
     roadmapId: string;
     created: boolean;
@@ -206,6 +217,7 @@ export interface ResumeExtractionResponse {
     stories: CandidateStory[];
     experience: ResumeExperienceEntry[];
     education: ResumeEducationEntry[];
+    certifications: string[];
     projects: ResumeProjectEntry[];
     achievements: string[];
     practiceQuestions: ResumePracticeQuestion[];
@@ -215,6 +227,32 @@ export interface ResumeExtractionResponse {
     document: ResumeDocumentSummary;
     evidence: ResumeEvidenceSummary;
   };
+}
+
+export interface ResumeUpdateComparison {
+  skillsAdded: string[];
+  skillsNoLongerMentioned: string[];
+  experience: ResumeCollectionChange[];
+  projects: ResumeCollectionChange[];
+  education: ResumeCollectionChange[];
+  achievementsAdded: string[];
+  achievementsNoLongerMentioned: string[];
+  certificationsChanged: boolean;
+  certificationsAdded: string[];
+  certificationsNoLongerMentioned: string[];
+  seniorityChanged: boolean;
+  leadershipSignalsChanged: boolean;
+  suggestions: {
+    headline: string | null;
+    context: string | null;
+    targetRole: Role | null;
+    level: Level | null;
+  };
+}
+
+export interface ResumeCollectionChange {
+  label: string;
+  kind: "added" | "removed" | "changed";
 }
 
 export type Phase = "intro" | "questioning" | "wrap" | "done";

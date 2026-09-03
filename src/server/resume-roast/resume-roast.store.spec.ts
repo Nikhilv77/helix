@@ -114,6 +114,15 @@ function makePrisma(initialRows: Row[] = []) {
             .filter((candidate) => matches(candidate, where))
             .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0] ?? null
       ),
+      findMany: vi.fn(async ({ where }: { where: Record<string, unknown> }) =>
+        [...rows]
+          .filter((candidate) => matches(candidate, where))
+          .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+          .map((candidate) => ({
+            ...candidate,
+            resumeProfileVersion: { resumeFileName: "candidate.pdf" }
+          }))
+      ),
       create,
       updateMany: vi.fn(
         async ({ where, data }: { where: Record<string, unknown>; data: Partial<Row> }) => {
@@ -193,6 +202,11 @@ describe("ResumeRoastStore", () => {
     const { prisma } = makePrisma([
       row(),
       latest,
+      row({
+        id: "77777777-7777-4777-8777-777777777777",
+        resumeProfileVersionId: "99999999-9999-4999-8999-999999999999",
+        createdAt: new Date(NOW.getTime() + 4_000)
+      }),
       row({ id: "44444444-4444-4444-8444-444444444444", ownerId: "user-b" }),
       row({
         id: "55555555-5555-4555-8555-555555555555",
@@ -203,8 +217,31 @@ describe("ResumeRoastStore", () => {
     ]);
     const store = new ResumeRoastStore(prisma);
 
-    await expect(store.getLatestReady("user-a")).resolves.toMatchObject({ id: latest.id });
-    await expect(store.getLatestReady("missing-user")).resolves.toBeNull();
+    await expect(
+      store.getLatestReady("user-a", input.resumeProfileVersionId)
+    ).resolves.toMatchObject({ id: latest.id });
+    await expect(
+      store.getLatestReady("missing-user", input.resumeProfileVersionId)
+    ).resolves.toBeNull();
+  });
+
+  it("keeps completed roasts from every resume version in owner history", async () => {
+    const oldVersionId = "99999999-9999-4999-8999-999999999999";
+    const { prisma } = makePrisma([
+      row(),
+      row({
+        id: "77777777-7777-4777-8777-777777777777",
+        resumeProfileVersionId: oldVersionId,
+        createdAt: new Date(NOW.getTime() + 1_000)
+      }),
+      row({ id: "88888888-8888-4888-8888-888888888888", ownerId: "user-b" })
+    ]);
+    const store = new ResumeRoastStore(prisma);
+
+    await expect(store.getReadyHistory("user-a")).resolves.toEqual([
+      expect.objectContaining({ resumeProfileVersionId: oldVersionId }),
+      expect.objectContaining({ resumeProfileVersionId: input.resumeProfileVersionId })
+    ]);
   });
 
   it("creates a new row for every analysis, including identical targets", async () => {
@@ -271,7 +308,7 @@ describe("ResumeRoastStore", () => {
     const { prisma } = makePrisma([row({ result: malformed })]);
     const store = new ResumeRoastStore(prisma);
 
-    await expect(store.getLatestReady("user-a")).resolves.toBeNull();
+    await expect(store.getLatestReady("user-a", input.resumeProfileVersionId)).resolves.toBeNull();
     await expect(
       store.complete("user-a", "22222222-2222-4222-8222-222222222222", "token", malformed)
     ).rejects.toMatchObject({ name: "ZodError" });

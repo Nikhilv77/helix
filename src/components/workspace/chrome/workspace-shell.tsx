@@ -56,7 +56,7 @@ const navGroups = [
       { label: "Home", href: "/", icon: House },
       { label: "Practice", href: "/practice", icon: Braces },
       { label: "Interviews", href: "/interviews", icon: Mic },
-      { label: "Resume Roast", href: "/resume-roast", icon: Flame },
+      { label: "Roastumé", href: "/resume-roast", icon: Flame },
       { label: "Progress", href: "/progress", icon: ChartNoAxesCombined },
       { label: "Reports", href: "/reports", icon: ClipboardList }
     ]

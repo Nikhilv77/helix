@@ -34,6 +34,7 @@ export type StoredResumeRoast = CreateResumeRoastInput & {
   result: ResumeRoastResult;
   createdAt: Date;
   updatedAt: Date;
+  resumeFileName?: string | null;
 };
 
 export interface ResumeRoastGeneration {
@@ -75,13 +76,38 @@ export class ResumeRoastStore {
     return parseTarget(stored);
   }
 
-  async getLatestReady(ownerId: string): Promise<StoredResumeRoast | null> {
+  async getLatestReady(
+    ownerId: string,
+    resumeProfileVersionId: string
+  ): Promise<StoredResumeRoast | null> {
     const parsedOwnerId = z.string().trim().min(1).max(191).parse(ownerId);
     const record = await this.prisma.resumeRoast.findFirst({
-      where: { ownerId: parsedOwnerId, status: ResumeRoastStatus.READY },
+      where: {
+        ownerId: parsedOwnerId,
+        resumeProfileVersionId,
+        status: ResumeRoastStatus.READY
+      },
       orderBy: { createdAt: "desc" }
     });
     return record ? readyFromRecord(record) : null;
+  }
+
+  async getReadyHistory(ownerId: string): Promise<StoredResumeRoast[]> {
+    const parsedOwnerId = z.string().trim().min(1).max(191).parse(ownerId);
+    const records = await this.prisma.resumeRoast.findMany({
+      where: { ownerId: parsedOwnerId, status: ResumeRoastStatus.READY },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+      include: {
+        resumeProfileVersion: { select: { resumeFileName: true } }
+      }
+    });
+    return records.flatMap((record) => {
+      const parsed = readyFromRecord(record);
+      return parsed
+        ? [{ ...parsed, resumeFileName: record.resumeProfileVersion.resumeFileName }]
+        : [];
+    });
   }
 
   async createGeneration(input: CreateResumeRoastInput): Promise<ResumeRoastGeneration> {

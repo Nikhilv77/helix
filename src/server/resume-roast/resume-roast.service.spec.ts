@@ -112,6 +112,7 @@ function setup(
   const store = {
     getTarget: vi.fn().mockResolvedValue(overrides.target ?? null),
     getLatestReady: vi.fn().mockResolvedValue(overrides.previous ?? null),
+    getReadyHistory: vi.fn().mockResolvedValue(overrides.previous ? [overrides.previous] : []),
     saveTarget: vi.fn().mockResolvedValue(target),
     createGeneration: vi.fn().mockResolvedValue({
       roastId: ROAST_ID,
@@ -122,18 +123,18 @@ function setup(
     delete: vi.fn().mockResolvedValue(true)
   };
   const generator = { generate: vi.fn().mockResolvedValue(overrides.generated ?? result) };
-  const profiles = { get: vi.fn().mockResolvedValue(overrides.getProfile ?? profile()) };
-  const planningStore = {
-    ensureCandidateProfile: vi
+  const profiles = {
+    get: vi.fn().mockResolvedValue(overrides.getProfile ?? profile()),
+    ensureActiveResumeVersion: vi
       .fn()
       .mockResolvedValue({ id: VERSION_ID } as CandidateInterviewProfile)
   };
   return {
-    service: new ResumeRoastService(profiles, planningStore, store as never, generator),
+    service: new ResumeRoastService(profiles, store as never, generator),
     store,
     generator,
     profiles,
-    planningStore
+    planningStore: profiles
   };
 }
 
@@ -145,9 +146,10 @@ describe("ResumeRoastService", () => {
       hasResume: false,
       target: null,
       suggestedTarget: null,
-      previousRoast: null
+      previousRoast: null,
+      history: []
     });
-    expect(planningStore.ensureCandidateProfile).not.toHaveBeenCalled();
+    expect(planningStore.ensureActiveResumeVersion).not.toHaveBeenCalled();
     expect(store.getTarget).not.toHaveBeenCalled();
     expect(store.getLatestReady).not.toHaveBeenCalled();
   });
@@ -170,9 +172,12 @@ describe("ResumeRoastService", () => {
       hasResume: true,
       target,
       suggestedTarget: { role: "backend-engineer", level: "senior" },
-      previousRoast: { id: ROAST_ID, target, result }
+      previousRoast: { id: ROAST_ID, target, result },
+      history: [
+        expect.objectContaining({ id: ROAST_ID, resumeVersionId: VERSION_ID, target, result })
+      ]
     });
-    expect(store.getLatestReady).toHaveBeenCalledWith("user-a");
+    expect(store.getLatestReady).toHaveBeenCalledWith("user-a", VERSION_ID);
   });
 
   it("creates a fresh history row for every requested analysis", async () => {
