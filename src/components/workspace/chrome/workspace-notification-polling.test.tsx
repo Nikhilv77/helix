@@ -5,6 +5,7 @@ import {
   useWorkspaceNotifications,
   WorkspaceNotificationPollingProvider
 } from "./workspace-notification-polling";
+import { WORKSPACE_NOTIFICATIONS_CHANGED_EVENT } from "@/lib/notifications/notification-ui-events";
 
 function Probe() {
   const { unread } = useWorkspaceNotifications();
@@ -148,5 +149,43 @@ describe("WorkspaceNotificationPollingProvider", () => {
 
     await act(async () => vi.advanceTimersByTimeAsync(60_000));
     expect(calls).toEqual({ full: 2, status: 5 });
+  });
+
+  it("refreshes the inbox immediately after an in-page notification is created", async () => {
+    const calls = { full: 0, status: 0 };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: string | URL | Request) => {
+        if (String(input) === "/api/notifications/status") {
+          calls.status += 1;
+          return Promise.resolve({
+            ok: true,
+            json: vi.fn().mockResolvedValue({
+              success: true,
+              data: { version: `v${calls.status}`, unread: calls.status > 1 ? 1 : 0 }
+            })
+          } as unknown as Response);
+        }
+        calls.full += 1;
+        return Promise.resolve({
+          ok: true,
+          json: vi.fn().mockResolvedValue({
+            success: true,
+            data: { items: [], unread: calls.full > 1 ? 1 : 0 }
+          })
+        } as unknown as Response);
+      })
+    );
+
+    render(
+      <WorkspaceNotificationPollingProvider>
+        <Probe />
+      </WorkspaceNotificationPollingProvider>
+    );
+    await waitFor(() => expect(calls).toEqual({ full: 1, status: 1 }));
+
+    window.dispatchEvent(new Event(WORKSPACE_NOTIFICATIONS_CHANGED_EVENT));
+
+    await waitFor(() => expect(calls).toEqual({ full: 2, status: 2 }));
   });
 });

@@ -46,15 +46,21 @@ export class GeminiProvider implements SystemDesignerAIProvider {
     const model = this.selectModel(request.modelClass);
     const maxAttempts = request.maxAttempts ?? this.config.aiMaxRetries + 1;
 
+    if (request.signal?.aborted) {
+      throw this.cancelledError(request.operation);
+    }
+
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      if (request.signal?.aborted) throw this.cancelledError(request.operation);
       const startedAt = Date.now();
       this.logRequestMetadata(request, model, attempt, maxAttempts);
 
       try {
         const response = await this.withTimeout(
-          () => this.generateContent(request, model),
+          (signal) => this.generateContent(request, model, signal),
           request.operation,
-          request.timeoutMs ?? this.config.aiTimeoutMs
+          request.timeoutMs ?? this.config.aiTimeoutMs,
+          request.signal
         );
         const result = this.parseAndValidateResponse(response, request);
 
@@ -110,7 +116,8 @@ export class GeminiProvider implements SystemDesignerAIProvider {
 
   private generateContent<T>(
     request: GenerateStructuredRequest<T>,
-    model: string
+    model: string,
+    abortSignal: AbortSignal
   ): Promise<GeminiGenerateContentResponse> {
     const contents = request.attachments?.length
       ? [
@@ -133,6 +140,7 @@ export class GeminiProvider implements SystemDesignerAIProvider {
       contents,
       config: {
         systemInstruction: request.systemInstruction,
+        abortSignal,
         temperature: request.temperature ?? DEFAULT_TEMPERATURE,
         responseMimeType: "application/json",
         responseJsonSchema: toGeminiResponseSchema(request.schema)
@@ -179,34 +187,56 @@ export class GeminiProvider implements SystemDesignerAIProvider {
   }
 
   private async withTimeout<T>(
-    operation: () => Promise<T>,
+    operation: (signal: AbortSignal) => Promise<T>,
     requestOperation: string,
-    timeoutMs: number
+    timeoutMs: number,
+    callerSignal?: AbortSignal
   ): Promise<T> {
-    let timeoutId: NodeJS.Timeout | undefined;
+    if (callerSignal?.aborted) throw this.cancelledError(requestOperation);
 
-    try {
-      return await Promise.race([
-        operation(),
-        new Promise<never>((_resolve, reject) => {
-          timeoutId = setTimeout(() => {
-            reject(
-              new AiProviderException({
-                code: "AI_TIMEOUT",
-                message: "AI provider request timed out",
-                provider: PROVIDER_NAME,
-                operation: requestOperation,
-                retryable: true
-              })
-            );
-          }, timeoutMs);
-        })
-      ]);
-    } finally {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    }
+    const controller = new AbortController();
+    let settled = false;
+    let callerAborted = false;
+    const cleanup = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      callerSignal?.removeEventListener("abort", onCallerAbort);
+    };
+    const settle = <R>(callback: (value: R) => void, value: R) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      callback(value);
+    };
+    const onCallerAbort = () => {
+      callerAborted = true;
+      controller.abort();
+    };
+
+    callerSignal?.addEventListener("abort", onCallerAbort, { once: true });
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    return new Promise<T>((resolve, reject) => {
+      const rejectForAbort = () => {
+        settle(
+          reject,
+          callerAborted || callerSignal?.aborted
+            ? this.cancelledError(requestOperation)
+            : this.timeoutError(requestOperation)
+        );
+      };
+      controller.signal.addEventListener("abort", rejectForAbort, { once: true });
+
+      void operation(controller.signal).then(
+        (result) => settle(resolve, result),
+        (error: unknown) => {
+          if (controller.signal.aborted) {
+            rejectForAbort();
+            return;
+          }
+          settle(reject, error);
+        }
+      );
+    });
   }
 
   private mapError(error: unknown, operation: string): AiProviderException {
@@ -236,6 +266,26 @@ export class GeminiProvider implements SystemDesignerAIProvider {
       operation,
       retryable: false,
       cause
+    });
+  }
+
+  private timeoutError(operation: string): AiProviderException {
+    return new AiProviderException({
+      code: "AI_TIMEOUT",
+      message: "AI provider request timed out",
+      provider: PROVIDER_NAME,
+      operation,
+      retryable: true
+    });
+  }
+
+  private cancelledError(operation: string): AiProviderException {
+    return new AiProviderException({
+      code: "AI_CANCELLED",
+      message: "AI provider request was cancelled",
+      provider: PROVIDER_NAME,
+      operation,
+      retryable: false
     });
   }
 

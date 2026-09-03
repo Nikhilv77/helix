@@ -114,6 +114,12 @@ enum PersonalizedInterviewSessionKind {
   FINAL_MOCK
 }
 
+enum ResumeRoastStatus {
+  GENERATING
+  READY
+  FAILED
+}
+
 model Project {
   id             String          @id @default(uuid()) @db.Uuid
   ownerId        String          @default("local-dev")
@@ -282,6 +288,8 @@ model CandidateProfile {
   interviewPlanVersions       PersonalizedInterviewPlanVersion[]   @relation("CandidateInterviewPlanVersions")
   performanceProfileVersions  CandidatePerformanceProfileVersion[] @relation("CandidatePerformanceProfileVersions")
   practiceEvidenceVersions    CandidatePracticeEvidenceVersion[]   @relation("CandidatePracticeEvidenceVersions")
+  resumeRoastTarget           ResumeRoastTarget?                   @relation("CandidateResumeRoastTarget")
+  resumeRoasts                ResumeRoast[]                        @relation("CandidateResumeRoasts")
   helpRequests                HelpRequest[]                        @relation("HelpRequestsAsked")
   helpRequestDeclines         HelpRequestDecline[]                 @relation("HelpRequestsDeclined")
   notifications               Notification[]                       @relation("CandidateNotifications")
@@ -406,6 +414,8 @@ enum NotificationKind {
   HELP_REQUEST_EXPIRED
   /// The learner explicitly thanked their helper after a completed conversation.
   HELP_FEEDBACK_RECEIVED
+  /// James completed and persisted a Resume Roast for the candidate.
+  RESUME_ROAST_COMPLETED
 }
 
 /// One item in a candidate's inbox.
@@ -551,11 +561,43 @@ model CandidateInterviewProfileVersion {
   createdAt               DateTime                           @default(now())
   owner                   CandidateProfile                   @relation("CandidateInterviewProfileVersions", fields: [ownerId], references: [ownerId], onDelete: Cascade)
   plans                   PersonalizedInterviewPlanVersion[]
+  resumeRoasts            ResumeRoast[]                      @relation("CandidateInterviewProfileVersionResumeRoasts")
 
   @@unique([ownerId, revision])
   @@unique([ownerId, sourceResumeFingerprint, schemaVersion])
+  @@unique([ownerId, id])
   @@index([ownerId, generatedAt])
   @@index([sourceResumeFingerprint])
+}
+
+model ResumeRoastTarget {
+  ownerId            String           @id
+  role               String
+  companyEnvironment String
+  level              String
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  owner              CandidateProfile @relation("CandidateResumeRoastTarget", fields: [ownerId], references: [ownerId], onDelete: Cascade)
+}
+
+model ResumeRoast {
+  id                     String                           @id @default(uuid()) @db.Uuid
+  ownerId                String
+  resumeProfileVersionId String                           @db.Uuid
+  role                   String
+  companyEnvironment     String
+  level                  String
+  promptVersion          String
+  status                 ResumeRoastStatus                @default(GENERATING)
+  generationToken        String?                          @db.Uuid
+  result                 Json?
+  createdAt              DateTime                         @default(now())
+  updatedAt              DateTime                         @updatedAt
+  owner                  CandidateProfile                 @relation("CandidateResumeRoasts", fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  resumeProfileVersion   CandidateInterviewProfileVersion @relation("CandidateInterviewProfileVersionResumeRoasts", fields: [ownerId, resumeProfileVersionId], references: [ownerId, id], onDelete: Cascade)
+
+  @@index([ownerId, status, createdAt])
+  @@index([resumeProfileVersionId])
 }
 
 /// Versioned five-session plan. READY is the active revision; saving a newer

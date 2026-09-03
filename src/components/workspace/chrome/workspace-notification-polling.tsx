@@ -11,6 +11,7 @@ import {
   type ReactNode
 } from "react";
 import { WORKSPACE_HELP_CHANGED_EVENT } from "@/lib/help/help-ui-events";
+import { WORKSPACE_NOTIFICATIONS_CHANGED_EVENT } from "@/lib/notifications/notification-ui-events";
 
 const POLL_BACKOFF_MS = [60_000, 120_000, 300_000] as const;
 
@@ -166,19 +167,21 @@ export function WorkspaceNotificationPollingProvider({ children }: { children: R
         statusControllerRef.current?.abort();
       }
     };
-    const refreshUrgentHelp = () => {
+    const refreshUrgentNotification = () => {
       backoffIndex = 0;
       void checkStatus(true);
     };
     window.addEventListener("focus", refreshVisible);
-    window.addEventListener(WORKSPACE_HELP_CHANGED_EVENT, refreshUrgentHelp);
+    window.addEventListener(WORKSPACE_HELP_CHANGED_EVENT, refreshUrgentNotification);
+    window.addEventListener(WORKSPACE_NOTIFICATIONS_CHANGED_EVENT, refreshUrgentNotification);
     document.addEventListener("visibilitychange", refreshVisible);
 
     return () => {
       mountedRef.current = false;
       if (timer !== null) window.clearTimeout(timer);
       window.removeEventListener("focus", refreshVisible);
-      window.removeEventListener(WORKSPACE_HELP_CHANGED_EVENT, refreshUrgentHelp);
+      window.removeEventListener(WORKSPACE_HELP_CHANGED_EVENT, refreshUrgentNotification);
+      window.removeEventListener(WORKSPACE_NOTIFICATIONS_CHANGED_EVENT, refreshUrgentNotification);
       document.removeEventListener("visibilitychange", refreshVisible);
       controllerRef.current?.abort();
       statusControllerRef.current?.abort();

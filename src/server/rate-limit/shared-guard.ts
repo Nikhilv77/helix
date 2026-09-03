@@ -119,6 +119,13 @@ export const RATE_LIMIT_POLICIES = {
     windowMs: 60_000,
     code: "SEARCH_RATE_LIMITED",
     message: "Search is being used too quickly. Wait a moment and try again."
+  },
+  resumeRoastGeneration: {
+    namespace: "resume-roast-generate",
+    limit: 6,
+    windowMs: 10 * 60_000,
+    code: "RESUME_ROAST_RATE_LIMITED",
+    message: "Too many Resume Roasts were requested recently. Try again in a few minutes."
   }
 } as const satisfies Record<string, RateLimitPolicy>;
 

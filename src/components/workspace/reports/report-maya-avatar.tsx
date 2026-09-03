@@ -8,23 +8,27 @@ export function ReportMayaAvatar({
   delay = 120,
   speaking = false,
   size = "default",
-  transparent = false
+  transparent = false,
+  personaId
 }: {
   delay?: number;
   speaking?: boolean;
-  size?: "default" | "compact" | "summary";
+  size?: "default" | "compact" | "summary" | "roast";
   transparent?: boolean;
+  personaId?: string;
 }) {
   return (
     <div
       className={`report-maya-portrait relative w-full max-w-[34rem] ${
         transparent ? "overflow-visible rounded-none" : "overflow-hidden rounded-2xl"
       } ${
-        size === "summary"
-          ? "h-[14rem] sm:h-[16rem]"
-          : size === "compact"
-            ? "h-[15rem] sm:h-[18rem] lg:h-[20rem]"
-            : "h-[18rem] sm:h-[24rem] lg:h-[29rem]"
+        size === "roast"
+          ? "h-[9rem] sm:h-[11rem] lg:h-[13rem]"
+          : size === "summary"
+            ? "h-[14rem] sm:h-[16rem]"
+            : size === "compact"
+              ? "h-[15rem] sm:h-[18rem] lg:h-[20rem]"
+              : "h-[18rem] sm:h-[24rem] lg:h-[29rem]"
       }`}
       style={{ "--report-delay": `${delay}ms` } as CSSProperties}
     >
@@ -47,7 +51,12 @@ export function ReportMayaAvatar({
             : "linear-gradient(180deg,#000 0%,#000 86%,transparent 100%)"
         }}
       >
-        <MayaStage speaking={speaking} transparent={transparent} performanceProfile="report" />
+        <MayaStage
+          speaking={speaking}
+          transparent={transparent}
+          performanceProfile="report"
+          personaId={personaId}
+        />
       </div>
       {transparent ? <div aria-hidden className="report-maya-bottom-soften" /> : null}
       {!transparent ? (

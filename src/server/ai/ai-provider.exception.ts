@@ -2,7 +2,8 @@ export type AiProviderErrorCode =
   | "AI_INVALID_EMBEDDING_RESPONSE"
   | "AI_INVALID_RESPONSE"
   | "AI_PROVIDER_ERROR"
-  | "AI_TIMEOUT";
+  | "AI_TIMEOUT"
+  | "AI_CANCELLED";
 
 interface AiProviderExceptionOptions {
   code: AiProviderErrorCode;

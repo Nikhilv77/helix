@@ -8,6 +8,7 @@ import {
   Bell,
   CheckCheck,
   ChevronRight,
+  Flame,
   HandHelping,
   MessageCircleHeart,
   Route,
@@ -17,7 +18,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { InterviewerPersona } from "@/lib/avatars/personas";
+import { personaById, type InterviewerPersona } from "@/lib/avatars/personas";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { ProfileAvatar } from "@/components/workspace/profile/profile-avatar";
 import {
@@ -29,6 +30,7 @@ interface NotificationPresentation {
   label: string;
   icon: LucideIcon;
   teacher: boolean;
+  personaId?: string;
 }
 
 function notificationPresentation(kind: string, teacherName: string): NotificationPresentation {
@@ -87,6 +89,13 @@ function notificationPresentation(kind: string, teacherName: string): Notificati
         icon: MessageCircleHeart,
         teacher: false
       };
+    case "RESUME_ROAST_COMPLETED":
+      return {
+        label: "Resume Roast",
+        icon: Flame,
+        teacher: false,
+        personaId: "james"
+      };
     default:
       return {
         label: "Trailgrad update",
@@ -105,13 +114,21 @@ function NotificationSource({
   teacher: InterviewerPersona;
   sender: NotificationSender | null;
 }) {
-  if (presentation.teacher) {
+  const persona = presentation.personaId
+    ? personaById(presentation.personaId)
+    : presentation.teacher
+      ? teacher
+      : null;
+
+  if (persona) {
     return (
       <div
-        aria-label={`${teacher.name}, your teacher`}
+        aria-label={
+          presentation.teacher ? `${persona.name}, your teacher` : `${persona.name}, Resume Roast`
+        }
         className="relative h-11 w-11 shrink-0 overflow-hidden rounded-[0.9rem] bg-[#202126] ring-1 ring-inset ring-white/[0.09]"
       >
-        <Image src={teacher.portrait} alt="" fill sizes="44px" className="object-cover" />
+        <Image src={persona.portrait} alt="" fill sizes="44px" className="object-cover" />
       </div>
     );
   }
@@ -257,7 +274,7 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
                       ) : null}
                     </div>
                     <p className="mt-1 truncate text-[11.5px] text-cream/42 sm:text-[12px]">
-                      Coaching, reminders, and help activity
+                      Coaching, resume feedback, reminders, and help activity
                     </p>
                   </div>
 

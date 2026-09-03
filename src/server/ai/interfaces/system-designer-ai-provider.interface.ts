@@ -20,6 +20,8 @@ export interface GenerateStructuredRequest<T> {
   timeoutMs?: number;
   /** Overrides AI_MAX_RETRIES + 1 for this call only. */
   maxAttempts?: number;
+  /** Cancels this request without retrying or exposing provider details. */
+  signal?: AbortSignal;
 }
 
 export interface SystemDesignerAIProvider {

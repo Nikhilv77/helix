@@ -274,4 +274,53 @@ describe("GeminiProvider", () => {
       retryable: true
     });
   });
+
+  it("forwards caller cancellation to Gemini without retrying", async () => {
+    const generateContent = vi.fn(
+      (params: GenerateContentParameters) =>
+        new Promise<GeminiGenerateContentResponse>((_resolve, reject) => {
+          params.config?.abortSignal?.addEventListener("abort", () => {
+            reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+          });
+        })
+    );
+    const provider = new GeminiProvider(
+      createConfig({ aiMaxRetries: 3 }),
+      createClient(generateContent)
+    );
+    const controller = new AbortController();
+    const pending = provider.generateStructured(createRequest({ signal: controller.signal }));
+
+    controller.abort();
+
+    await expect(pending).rejects.toMatchObject({
+      code: "AI_CANCELLED",
+      message: "AI provider request was cancelled",
+      retryable: false
+    });
+    expect(generateContent).toHaveBeenCalledTimes(1);
+  });
+
+  it("aborts the Gemini SDK request when its timeout expires", async () => {
+    let aborted = false;
+    const generateContent = vi.fn(
+      (params: GenerateContentParameters) =>
+        new Promise<GeminiGenerateContentResponse>((_resolve, reject) => {
+          params.config?.abortSignal?.addEventListener("abort", () => {
+            aborted = true;
+            reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+          });
+        })
+    );
+    const provider = new GeminiProvider(
+      createConfig({ aiTimeoutMs: 20, aiMaxRetries: 0 }),
+      createClient(generateContent)
+    );
+
+    await expect(provider.generateStructured(createRequest())).rejects.toMatchObject({
+      code: "AI_TIMEOUT",
+      retryable: true
+    });
+    expect(aborted).toBe(true);
+  });
 });

@@ -54,6 +54,15 @@ describe("SharedGuard", () => {
     });
   });
 
+  it("keeps Resume Roast generation to six requests per ten minutes", () => {
+    expect(RATE_LIMIT_POLICIES.resumeRoastGeneration).toMatchObject({
+      namespace: "resume-roast-generate",
+      limit: 6,
+      windowMs: 10 * 60_000,
+      code: "RESUME_ROAST_RATE_LIMITED"
+    });
+  });
+
   it("supports weighted limits such as TTS characters", async () => {
     await guard.enforce({ ...ratePolicy, limit: 10 }, "user-a", 7);
 

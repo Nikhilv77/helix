@@ -5,6 +5,7 @@ import { useSyncExternalStore } from "react";
 
 import type { AvatarPerformanceProfile } from "@/components/interview/voice/avatar-stage";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
+import { personaById } from "@/lib/avatars/personas";
 
 /**
  * The selected teacher on workspace pages. The 3D stage is client-only and
@@ -39,13 +40,17 @@ function AvatarPlaceholder() {
 export function MayaStage({
   speaking = false,
   transparent = false,
-  performanceProfile = "default"
+  performanceProfile = "default",
+  personaId
 }: {
   speaking?: boolean;
   transparent?: boolean;
   performanceProfile?: AvatarPerformanceProfile;
+  /** Override the workspace teacher for product-owned hosts such as James. */
+  personaId?: string;
 }) {
   const teacher = useWorkspaceTeacher();
+  const persona = personaById(personaId) ?? teacher;
   const hydrated = useSyncExternalStore(
     subscribeToHydration,
     () => true,
@@ -63,8 +68,8 @@ export function MayaStage({
     <Stage
       agentTrack={null}
       state={speaking ? "speaking" : "listening"}
-      url={teacher.model}
-      rig={teacher.rig}
+      url={persona.model}
+      rig={persona.rig}
       framing="default"
       performanceProfile={performanceProfile}
       showStatus={!transparent}

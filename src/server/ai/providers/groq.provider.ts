@@ -38,7 +38,10 @@ export class GroqProvider implements SystemDesignerAIProvider {
   async generateStructured<T>(request: GenerateStructuredRequest<T>): Promise<T> {
     const maxAttempts = request.maxAttempts ?? this.config.aiMaxRetries + 1;
 
+    if (request.signal?.aborted) throw this.cancelledError(request.operation);
+
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      if (request.signal?.aborted) throw this.cancelledError(request.operation);
       const startedAt = Date.now();
 
       this.logger.log(
@@ -101,44 +104,60 @@ export class GroqProvider implements SystemDesignerAIProvider {
 
   private async requestCompletion<T>(request: GenerateStructuredRequest<T>): Promise<string> {
     const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      request.timeoutMs ?? this.config.aiTimeoutMs
-    );
+    let callerAborted = false;
+    let timedOut = false;
+    const onCallerAbort = () => {
+      callerAborted = true;
+      controller.abort();
+    };
+    if (request.signal?.aborted) throw this.cancelledError(request.operation);
+    request.signal?.addEventListener("abort", onCallerAbort, { once: true });
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, request.timeoutMs ?? this.config.aiTimeoutMs);
 
     try {
-      const response = await fetch(ENDPOINT, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${this.apiKey}`,
-          "content-type": "application/json"
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          model: this.model,
-          temperature: request.temperature ?? DEFAULT_TEMPERATURE,
-          messages: [
-            { role: "system", content: request.systemInstruction },
-            { role: "user", content: request.prompt }
-          ],
-          response_format: {
-            type: "json_schema",
-            json_schema: {
-              name: request.operation.replace(/[^a-zA-Z0-9_]/g, "_"),
-              strict: true,
-              schema: toStrictJsonSchema(
-                convertZodToJsonSchema(request.schema, { $refStrategy: "none" })
-              )
+      let response: Response;
+      try {
+        response = await fetch(ENDPOINT, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${this.apiKey}`,
+            "content-type": "application/json"
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: this.model,
+            temperature: request.temperature ?? DEFAULT_TEMPERATURE,
+            messages: [
+              { role: "system", content: request.systemInstruction },
+              { role: "user", content: request.prompt }
+            ],
+            response_format: {
+              type: "json_schema",
+              json_schema: {
+                name: request.operation.replace(/[^a-zA-Z0-9_]/g, "_"),
+                strict: true,
+                schema: toStrictJsonSchema(
+                  convertZodToJsonSchema(request.schema, { $refStrategy: "none" })
+                )
+              }
             }
-          }
-        })
-      });
+          })
+        });
+      } catch (error) {
+        if (callerAborted || request.signal?.aborted) throw this.cancelledError(request.operation);
+        if (timedOut) throw this.timeoutError(request.operation);
+        throw error;
+      }
+      if (callerAborted || request.signal?.aborted) throw this.cancelledError(request.operation);
+      if (timedOut) throw this.timeoutError(request.operation);
 
       if (!response.ok) {
-        const detail = (await response.text()).replace(/\s+/g, " ").trim().slice(0, 500);
         throw new AiProviderException({
           code: "AI_PROVIDER_ERROR",
-          message: `Groq responded with ${response.status}${detail ? `: ${detail}` : ""}`,
+          message: `Groq request failed with status ${response.status}`,
           provider: PROVIDER_NAME,
           operation: request.operation,
           retryable: TRANSIENT_STATUS_CODES.has(response.status)
@@ -146,6 +165,8 @@ export class GroqProvider implements SystemDesignerAIProvider {
       }
 
       const payload: unknown = await response.json();
+      if (callerAborted || request.signal?.aborted) throw this.cancelledError(request.operation);
+      if (timedOut) throw this.timeoutError(request.operation);
       const content = extractContent(payload);
 
       if (!content) {
@@ -161,6 +182,7 @@ export class GroqProvider implements SystemDesignerAIProvider {
       return content;
     } finally {
       clearTimeout(timeout);
+      request.signal?.removeEventListener("abort", onCallerAbort);
     }
   }
 
@@ -176,6 +198,26 @@ export class GroqProvider implements SystemDesignerAIProvider {
       provider: PROVIDER_NAME,
       operation,
       retryable: aborted
+    });
+  }
+
+  private timeoutError(operation: string): AiProviderException {
+    return new AiProviderException({
+      code: "AI_TIMEOUT",
+      message: "AI provider request timed out",
+      provider: PROVIDER_NAME,
+      operation,
+      retryable: true
+    });
+  }
+
+  private cancelledError(operation: string): AiProviderException {
+    return new AiProviderException({
+      code: "AI_CANCELLED",
+      message: "AI provider request was cancelled",
+      provider: PROVIDER_NAME,
+      operation,
+      retryable: false
     });
   }
 }

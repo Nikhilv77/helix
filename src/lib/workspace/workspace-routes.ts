@@ -6,6 +6,7 @@ export function isWorkspaceChromeRoute(pathname: string): boolean {
     pathname === "/dsa-questions" ||
     pathname.startsWith("/dsa-questions/") ||
     pathname === "/interviews" ||
+    pathname === "/resume-roast" ||
     pathname === "/progress" ||
     pathname === "/reports" ||
     pathname === "/trailmate" ||

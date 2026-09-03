@@ -42,6 +42,9 @@ import { PrepPracticeEvaluator } from "./practice/prep-practice-evaluator";
 import { PracticeEvidenceStore } from "./practice/practice-evidence-store";
 import { WorkspaceSearchService } from "./search/workspace-search.service";
 import { TeacherNotificationService } from "./notifications/teacher-notification.service";
+import { ResumeRoastGenerator } from "./resume-roast/resume-roast.generator";
+import { ResumeRoastService } from "./resume-roast/resume-roast.service";
+import { ResumeRoastStore } from "./resume-roast/resume-roast.store";
 
 export interface AppContainer {
   config: AppConfigService;
@@ -74,6 +77,7 @@ export interface AppContainer {
   practiceRoadmapService: PracticeRoadmapService;
   prepPracticeService: PrepPracticeService;
   workspaceSearchService: WorkspaceSearchService;
+  resumeRoastService: ResumeRoastService;
 }
 
 let container: AppContainer | null = null;
@@ -107,7 +111,6 @@ export function getAppContainer(): AppContainer {
     practiceEvidenceStore
   );
   const frontendRoadmapService = new FrontendRoadmapService(prisma);
-
   const notifications = new NotificationService(prisma);
   const notificationDispatcher = new NotificationDispatcher(
     notifications,
@@ -117,6 +120,13 @@ export function getAppContainer(): AppContainer {
       clerkAddressBook
     ),
     config.appOrigin
+  );
+  const resumeRoastStore = new ResumeRoastStore(prisma);
+  const resumeRoastService = new ResumeRoastService(
+    profileService,
+    personalizedPlanningStore,
+    resumeRoastStore,
+    new ResumeRoastGenerator(geminiAi)
   );
   const helpSafety = new HelpSafetyService(prisma);
   const helperEligibility = new HelperEligibilityService(prisma);
@@ -168,6 +178,9 @@ export function getAppContainer(): AppContainer {
       new PrepPracticeEvaluator(geminiAi)
     ),
     workspaceSearchService: new WorkspaceSearchService(prisma),
+    // Resume Roast reuses the profile's immutable candidate revision and the
+    // same Gemini client as structured resume extraction.
+    resumeRoastService,
     // Curriculum generation remains independent from the adaptive interview plan.
     curriculumService: new CurriculumService(geminiAi),
     // Resume classification benefits from the document-oriented model path;
