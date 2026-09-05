@@ -77,6 +77,16 @@ function candidateProfile(candidateResume: CandidateResume | null = resume()): C
     updatedAt: NOW,
     completeness: 80,
     onboardingCompletedAt: NOW,
+    preparationOnboarding: {
+      stage: "completed",
+      updatedAt: NOW,
+      completedAt: NOW,
+      baselineStartedAt: NOW,
+      answers: {},
+      questionIds: {},
+      questions: {},
+      skillProfile: null
+    },
     resume: candidateResume
   };
 }
@@ -218,6 +228,31 @@ function storeWith(mock: ReturnType<typeof createPrismaMock>, profile = candidat
   });
 }
 
+function preparePlanPersistence(
+  mock: ReturnType<typeof createPrismaMock>,
+  profile = compiledProfile(),
+  latestRevision = 4
+) {
+  mock.candidateInterviewProfileVersion.findFirst.mockResolvedValue(profileRecord(profile));
+  mock.personalizedInterviewPlanVersion.findFirst.mockResolvedValue({ revision: latestRevision });
+  mock.personalizedInterviewPlanVersion.create.mockImplementation(
+    async ({ data }: { data: Record<string, unknown> }) => {
+      const nested = data.sessionBlueprints as { create: Array<Record<string, unknown>> };
+      return {
+        ...data,
+        sessionBlueprints: nested.create.map((session) => ({
+          ...session,
+          planVersionId: data.id,
+          createdAt: new Date(NOW)
+        })),
+        createdAt: new Date(NOW),
+        updatedAt: new Date(NOW),
+        supersededAt: null
+      };
+    }
+  );
+}
+
 describe("PersonalizedPlanningStore profile versions", () => {
   it("returns the fingerprint-matched revision without creating a duplicate", async () => {
     const mock = createPrismaMock();
@@ -272,24 +307,7 @@ describe("PersonalizedPlanningStore plan versions", () => {
   it("publishes five blueprint rows and supersedes the previous READY plan atomically", async () => {
     const mock = createPrismaMock();
     const profile = compiledProfile();
-    mock.candidateInterviewProfileVersion.findFirst.mockResolvedValue(profileRecord(profile));
-    mock.personalizedInterviewPlanVersion.findFirst.mockResolvedValue({ revision: 4 });
-    mock.personalizedInterviewPlanVersion.create.mockImplementation(
-      async ({ data }: { data: Record<string, unknown> }) => {
-        const nested = data.sessionBlueprints as { create: Array<Record<string, unknown>> };
-        return {
-          ...data,
-          sessionBlueprints: nested.create.map((session) => ({
-            ...session,
-            planVersionId: data.id,
-            createdAt: new Date(NOW)
-          })),
-          createdAt: new Date(NOW),
-          updatedAt: new Date(NOW),
-          supersededAt: null
-        };
-      }
-    );
+    preparePlanPersistence(mock, profile);
     const store = storeWith(mock);
 
     const saved = await store.saveReadyPlan(OWNER_ID, plan(profile));
@@ -320,6 +338,37 @@ describe("PersonalizedPlanningStore plan versions", () => {
         })
       })
     );
+  });
+
+  it("accepts the current owner's completed qualitative baseline without querying it as a UUID", async () => {
+    const mock = createPrismaMock();
+    const profile = compiledProfile();
+    preparePlanPersistence(mock, profile);
+    const workspace = candidateProfile();
+    workspace.preparationOnboarding.skillProfile = {
+      source: "initial-baseline",
+      generatedAt: NOW,
+      signals: [
+        {
+          areaId: "dsa",
+          score: null,
+          confidence: 0.4,
+          evidence: "baseline",
+          topics: [{ label: "Arrays & Hashing", familiarity: "needs-refresh" }]
+        }
+      ]
+    };
+    const candidatePlan = plan(profile);
+    candidatePlan.sourceSnapshot.performanceProfile = {
+      id: `baseline-${NOW}`,
+      revision: 1
+    };
+    const store = storeWith(mock, workspace);
+
+    await expect(store.saveReadyPlan(OWNER_ID, candidatePlan)).resolves.toMatchObject({
+      status: "ready"
+    });
+    expect(mock.candidatePerformanceProfileVersion.findFirst).not.toHaveBeenCalled();
   });
 
   it("rejects plans built from a different immutable profile snapshot", async () => {

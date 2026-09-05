@@ -1,4 +1,5 @@
 import type { SessionBlueprint } from "@/lib/interviews/personalized-plan";
+import type { PreparationOnboardingState } from "@/lib/preparation/preparation-onboarding";
 
 export type Role = "backend" | "frontend" | "fullstack" | "data" | "ai-ml" | "pm";
 export type Level = "fresher" | "0-2" | "3-5" | "5-plus";
@@ -28,6 +29,13 @@ export interface InterviewSetup {
   resumeRound?: boolean;
   /** Marks the computer fundamentals round. */
   fundamentalsRound?: boolean;
+  dsaBlockAssessment?: {
+    kind: "dsa-block-assessment";
+    blockId: string;
+    assessmentId: string;
+    snapshotVersion: number;
+    rubricVersion: number;
+  };
 }
 
 export interface CandidateStory {
@@ -61,6 +69,8 @@ export interface CandidateProfile extends CandidateProfileInput {
   updatedAt: number | null;
   completeness: number;
   onboardingCompletedAt: number | null;
+  /** Required target setup and baseline that precede the personalized workspace. */
+  preparationOnboarding: PreparationOnboardingState;
   resume: CandidateResume | null;
 }
 
@@ -308,6 +318,19 @@ export interface InterviewQuestion {
   language: string | null;
   codeTask: string | null;
   codeSnippet: string | null;
+  /** Public-only immutable transfer problem data for a block assessment. */
+  dsaTransferQuestion?: {
+    slug: string;
+    title: string;
+    primaryPattern: string;
+    difficulty: string;
+    expectedTimeMinutes: number;
+    problemStatement: string | null;
+    promptSummary: string;
+    constraints: string[];
+    examples: Array<{ input: string; output: string; explanation?: string }>;
+    starterCode: Record<"javascript" | "python" | "cpp" | "java", string>;
+  } | null;
   stage: InterviewStage | null;
   /** The resume skill a skills-stage question came from. */
   skill: string | null;

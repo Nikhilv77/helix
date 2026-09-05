@@ -317,6 +317,61 @@ describe("PersonalizedInterviewPlanningService", () => {
     expect(store.saveReadyPlan).toHaveBeenCalledWith(OWNER_ID, generated);
   });
 
+  it("uses completed qualitative baseline evidence to order the first plan", async () => {
+    const generated = activePlan({
+      status: "draft",
+      sourceSnapshot: {
+        ...activePlan().sourceSnapshot,
+        performanceProfile: { id: `baseline-${NOW}`, revision: 1 }
+      }
+    });
+    const { service, generator } = dependencies({
+      generatedPlan: generated,
+      workspaceProfile: {
+        ...candidateWorkspaceProfile(),
+        preparationOnboarding: {
+          completedAt: NOW,
+          skillProfile: {
+            source: "initial-baseline",
+            generatedAt: NOW,
+            signals: [
+              {
+                areaId: "dsa",
+                score: null,
+                confidence: 0.34,
+                evidence: "baseline",
+                topics: [{ label: "Arrays & Hashing", familiarity: "needs-refresh" }]
+              },
+              {
+                areaId: "core-technical",
+                score: null,
+                confidence: 0.32,
+                evidence: "baseline",
+                topics: [{ label: "Target-stack decisions", familiarity: "familiar" }]
+              },
+              { areaId: "applied-engineering", score: null, confidence: 0, evidence: "not-enough-evidence" },
+              { areaId: "architecture-design", score: null, confidence: 0, evidence: "not-enough-evidence" }
+            ]
+          }
+        }
+      } as CandidateProfile
+    });
+
+    await service.activePlan(OWNER_ID, NOW);
+
+    expect(generator.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        performance: expect.objectContaining({
+          snapshot: { id: `baseline-${NOW}`, revision: 1 },
+          skills: expect.arrayContaining([
+            expect.objectContaining({ skillKey: "problem-solving", score: 40 }),
+            expect.objectContaining({ score: 60 })
+          ])
+        })
+      })
+    );
+  });
+
   it("reuses a plan already generated from the latest performance revision", async () => {
     const performance = performanceProfile();
     const current = activePlan({

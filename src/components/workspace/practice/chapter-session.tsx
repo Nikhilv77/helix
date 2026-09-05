@@ -609,12 +609,19 @@ function QuestionRow({
         </span>
 
         <span className="min-w-0 flex-1">
-          <span
-            className={`block truncate text-[14px] font-semibold ${
-              done ? "text-cream/50 line-through decoration-cream/25" : "text-cream/85"
-            }`}
-          >
-            {title}
+          <span className="flex min-w-0 flex-wrap items-center gap-2">
+            <span
+              className={`min-w-0 truncate text-[14px] font-semibold ${
+                done ? "text-cream/50 line-through decoration-cream/25" : "text-cream/85"
+              }`}
+            >
+              {title}
+            </span>
+            {skipped ? (
+              <span className="shrink-0 rounded-full border border-[#e3a15b]/15 bg-[#e3a15b]/10 px-2 py-0.5 text-[10px] font-semibold text-[#e7bd83]">
+                Skipped · Learn &amp; retry
+              </span>
+            ) : null}
           </span>
           <span className="mt-0.5 flex items-center gap-2 text-[12px] font-medium text-cream/42">
             <span className="text-cream/50">{difficulty}</span>

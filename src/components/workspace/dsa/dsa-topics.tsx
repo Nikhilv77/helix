@@ -1,21 +1,41 @@
 import Link from "next/link";
-import { ArrowRight, Check, ChevronDown, Clock3, SkipForward } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Clock3, SkipForward } from "lucide-react";
+import { BlockAssessmentPreview } from "@/components/workspace/dsa/block-assessment-preview";
 import { PracticeCoachCard, PracticeIntro } from "@/components/workspace/practice/practice-intro";
+import type { DsaRecommendation } from "@/lib/practice/dsa-recommendation";
 import type { DsaChapter, FrontendDsaPlan, PlanQuestion } from "@/lib/roadmap/frontend-plan";
 import { PREP_SESSIONS } from "@/lib/roadmap/frontend-plan";
 import type { FrontendRoadmapChapter, FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
+import type { DsaBlockHistoryView } from "@/server/dsa/dsa-block-history.service";
 
 /** The DSA roadmap: current pattern first, then the complete numbered path. */
 export function DsaTopics({
   plan,
   roadmap = null,
-  questionStatuses
+  questionStatuses,
+  recommendation = null,
+  blockHistory = null,
+  panel = "overview",
+  allowEarlyAssessmentStart = false
 }: {
   plan: FrontendDsaPlan;
   roadmap?: FrontendRoadmapHome | null;
   questionStatuses?: Record<string, string>;
+  recommendation?: DsaRecommendation | null;
+  blockHistory?: DsaBlockHistoryView | null;
+  panel?: "overview" | "transcript";
+  allowEarlyAssessmentStart?: boolean;
 }) {
   const statusBySlug = questionStatuses ? new Map(Object.entries(questionStatuses)) : null;
+  const selectedRecommendation = blockHistory?.selected.recommendation ?? recommendation;
+  const selectedStatusBySlug = blockHistory
+    ? new Map(
+        blockHistory.selected.recommendation.questions.map((question) => [
+          question.slug,
+          question.status
+        ])
+      )
+    : statusBySlug;
   const activeSession =
     roadmap?.sessions.find((session) => session.id === roadmap.currentSessionTemplateSlug) ??
     roadmap?.sessions[0] ??
@@ -26,17 +46,20 @@ export function DsaTopics({
     (roadmap?.chapters ?? []).map((chapter) => [chapter.id, chapter])
   );
   const currentChapterId =
+    selectedRecommendation?.focusChapterId ??
     roadmap?.currentChapterTemplateSlug ??
     roadmap?.chapters.find((chapter) => chapter.status === "IN_PROGRESS")?.id ??
     plan.chapters[0]?.id ??
     null;
-  const nextQuestion = findNextQuestion(
-    plan,
-    roadmap?.nextQuestionHref,
-    currentChapterId,
-    statusBySlug
-  );
-  const completed = roadmap?.completedQuestions ?? 0;
+  const nextQuestion = selectedRecommendation
+    ? (selectedRecommendation.questions.find((question) => {
+        const status = selectedStatusBySlug?.get(question.slug);
+        return status !== "COMPLETED" && status !== "SKIPPED";
+      }) ?? null)
+    : findNextQuestion(plan, roadmap?.nextQuestionHref, currentChapterId, statusBySlug);
+  const completed = [...(statusBySlug?.values() ?? [])].filter(
+    (status) => status === "COMPLETED"
+  ).length;
 
   return (
     <section id="plan" className="relative scroll-mt-20 lg:scroll-mt-8">
@@ -45,9 +68,13 @@ export function DsaTopics({
           <PracticeIntro
             purpose={purpose}
             roadmap={roadmap}
+            recommendation={selectedRecommendation}
+            completedQuestions={completed}
             nextHref={
-              roadmap?.nextQuestionHref ??
-              (plan.firstQuestionSlug ? `/dsa-questions/${plan.firstQuestionSlug}` : null)
+              nextQuestion
+                ? `/dsa-questions/${nextQuestion.slug}`
+                : (roadmap?.nextQuestionHref ??
+                  (plan.firstQuestionSlug ? `/dsa-questions/${plan.firstQuestionSlug}` : null))
             }
             nextLabel={completed > 0 ? "Continue" : "Start"}
             nextQuestionTitle={nextQuestion?.title ?? null}
@@ -62,12 +89,25 @@ export function DsaTopics({
           className="min-w-0 xl:col-start-1 xl:row-start-2"
           aria-labelledby="dsa-path-heading"
         >
+          {selectedRecommendation ? (
+            <RecommendationBlock
+              recommendation={selectedRecommendation}
+              statusBySlug={selectedStatusBySlug}
+              blockHistory={blockHistory}
+              panel={panel}
+              allowEarlyAssessmentStart={allowEarlyAssessmentStart}
+            />
+          ) : null}
+
           <h2
             id="dsa-path-heading"
-            className="text-[12px] font-semibold uppercase tracking-[0.14em] text-cream/52"
+            className={`${recommendation ? "mt-9" : ""} text-[12px] font-semibold uppercase tracking-[0.14em] text-cream/52`}
           >
-            Your path
+            Explore all DSA
           </h2>
+          <p className="mt-2 max-w-[42rem] text-[14px] leading-6 text-cream/52">
+            Browse the full {plan.totalQuestions}-question library anytime.
+          </p>
 
           <div className="mt-4 space-y-3">
             {plan.chapters.map((chapter, index) => (
@@ -87,6 +127,188 @@ export function DsaTopics({
   );
 }
 
+function RecommendationBlock({
+  recommendation,
+  statusBySlug,
+  blockHistory,
+  panel,
+  allowEarlyAssessmentStart
+}: {
+  recommendation: DsaRecommendation;
+  statusBySlug: Map<string, string> | null;
+  blockHistory: DsaBlockHistoryView | null;
+  panel: "overview" | "transcript";
+  allowEarlyAssessmentStart: boolean;
+}) {
+  return (
+    <section aria-labelledby="recommended-now-heading">
+      <div className="flex flex-col gap-4 rounded-[1.4rem] bg-[#17181b] px-5 py-5 sm:px-6 sm:py-6">
+        {blockHistory ? <BlockHistoryNavigation history={blockHistory} /> : null}
+        {blockHistory && panel === "transcript" ? (
+          <BlockTranscript history={blockHistory} />
+        ) : (
+          <>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="max-w-[42rem]">
+                <h2
+                  id="recommended-now-heading"
+                  className="font-display text-[1.45rem] font-semibold tracking-[-0.025em] text-cream"
+                >
+                  Your {recommendation.questions.length}-question practice block
+                </h2>
+                <p className="mt-2 text-[13px] leading-5 text-cream/54">
+                  {recommendation.focusLabel}, selected for your current level.
+                </p>
+              </div>
+
+              <div className="shrink-0 rounded-xl bg-[#111214] px-4 py-3 text-[12px] leading-5 text-cream/56">
+                <p className="font-semibold text-cream/78">
+                  {recommendation.questions.length} questions ·{" "}
+                  {formatDuration(recommendation.minutes)}
+                </p>
+                <p className="mt-0.5 capitalize">
+                  {recommendation.mix.easy} easy · {recommendation.mix.medium} medium ·{" "}
+                  {recommendation.mix.hard} hard
+                </p>
+              </div>
+            </div>
+
+            <ul className="grid gap-2.5 lg:grid-cols-2">
+              {recommendation.questions.map((question, index) => (
+                <QuestionRow
+                  key={question.slug}
+                  question={question}
+                  index={index}
+                  status={statusBySlug?.get(question.slug) ?? null}
+                  next={
+                    question.slug ===
+                    recommendation.questions.find((candidate) => {
+                      const status = statusBySlug?.get(candidate.slug);
+                      return status !== "COMPLETED" && status !== "SKIPPED";
+                    })?.slug
+                  }
+                />
+              ))}
+            </ul>
+
+            {blockHistory ? (
+              <BlockAssessmentPreview
+                block={blockHistory.selected}
+                nextBlockId={blockHistory.nextBlockId}
+                allowEarlyStart={allowEarlyAssessmentStart}
+              />
+            ) : null}
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function BlockHistoryNavigation({ history }: { history: DsaBlockHistoryView }) {
+  return (
+    <nav
+      className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] pb-4"
+      aria-label="DSA block history"
+    >
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cream/38">
+          Practice history
+        </p>
+        <p className="mt-1 text-sm font-semibold text-cream/75">
+          Block {history.selected.ordinal} of {history.totalBlocks}
+          {history.selected.current ? " · Current" : " · Completed"}
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        {history.previousBlockId ? (
+          <Link
+            href={`/practice/dsa?block=${encodeURIComponent(history.previousBlockId)}&panel=overview`}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/[0.08] px-3 text-xs font-semibold text-cream/62 hover:text-cream"
+          >
+            <ArrowLeft size={13} aria-hidden="true" /> Previous
+          </Link>
+        ) : (
+          <span className="inline-flex min-h-9 items-center rounded-lg border border-white/[0.04] px-3 text-xs text-cream/24">
+            Previous
+          </span>
+        )}
+        {history.nextBlockId ? (
+          <Link
+            href={`/practice/dsa?block=${encodeURIComponent(history.nextBlockId)}&panel=overview`}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/[0.08] px-3 text-xs font-semibold text-cream/62 hover:text-cream"
+          >
+            Next <ArrowRight size={13} aria-hidden="true" />
+          </Link>
+        ) : (
+          <span className="inline-flex min-h-9 items-center rounded-lg border border-white/[0.04] px-3 text-xs text-cream/24">
+            Next
+          </span>
+        )}
+      </div>
+    </nav>
+  );
+}
+
+function BlockTranscript({ history }: { history: DsaBlockHistoryView }) {
+  const turns = history.selected.transcript;
+  return (
+    <section aria-labelledby="block-transcript-heading">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2
+            id="block-transcript-heading"
+            className="font-display text-[1.45rem] font-semibold text-cream"
+          >
+            Block {history.selected.ordinal} assessment transcript
+          </h2>
+          <p className="mt-1 text-[13px] text-cream/48">Saved teacher and candidate turns.</p>
+        </div>
+        <Link
+          href={`/practice/dsa?block=${encodeURIComponent(history.selected.id)}&panel=overview`}
+          className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-white/[0.08] px-3 text-xs font-semibold text-cream/65"
+        >
+          <ArrowLeft size={13} aria-hidden="true" /> Return to overview
+        </Link>
+      </div>
+      {turns?.length ? (
+        <ol className="mt-5 space-y-3">
+          {turns.map((turn, index) => (
+            <li
+              key={`${turn.speaker}-${turn.startMs}-${index}`}
+              className="rounded-xl bg-[#111214] px-4 py-3"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.11em] text-[var(--workspace-accent)]">
+                  {turn.speaker === "agent" ? "Teacher" : "Candidate"}
+                </p>
+                <time className="font-mono text-[10px] tabular-nums text-cream/35">
+                  {formatTranscriptTime(turn.startMs)}
+                </time>
+              </div>
+              <p className="mt-2 whitespace-pre-wrap text-[13px] leading-6 text-cream/68">
+                {turn.text}
+              </p>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <div
+          role="status"
+          className="mt-5 rounded-xl border border-white/[0.07] bg-[#111214] px-4 py-5 text-sm leading-6 text-cream/48"
+        >
+          No saved transcript is available for this assessment.
+        </div>
+      )}
+    </section>
+  );
+}
+
+function formatTranscriptTime(milliseconds: number): string {
+  const totalSeconds = Math.floor(milliseconds / 1_000);
+  return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}`;
+}
+
 function ChapterBlock({
   chapter,
   index,
@@ -103,7 +325,7 @@ function ChapterBlock({
   const completedQuestions =
     progress?.completedQuestions ??
     chapter.questions.filter((question) => statusBySlug?.get(question.slug) === "COMPLETED").length;
-  const done = progress?.status === "COMPLETED" || completedQuestions === chapter.questions.length;
+  const done = completedQuestions === chapter.questions.length;
   const percent =
     chapter.questions.length > 0
       ? Math.round((completedQuestions / chapter.questions.length) * 100)
@@ -144,7 +366,7 @@ function ChapterBlock({
               </span>
             ) : null}
           </span>
-          <span className="mt-1.5 block text-[12px] text-cream/42">
+          <span className="mt-1.5 block text-[13px] text-cream/50">
             {chapter.questions.length} {chapter.questions.length === 1 ? "problem" : "problems"}
           </span>
         </span>
@@ -285,13 +507,17 @@ function QuestionRow({
               <span className="rounded-full bg-[var(--workspace-accent-soft)] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--workspace-accent)]">
                 Solved
               </span>
+            ) : skipped ? (
+              <span className="rounded-full border border-[#e3a15b]/15 bg-[#e3a15b]/10 px-2.5 py-1 text-[10px] font-semibold text-[#e7bd83]">
+                Skipped · Learn &amp; retry
+              </span>
             ) : next ? (
               <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-cream/52">
                 Up next
               </span>
             ) : null}
           </span>
-          <span className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 text-[11.5px] text-cream/42">
+          <span className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 text-[12.5px] text-cream/50">
             <span className="truncate">{formatPattern(question.primaryPattern)}</span>
             <span className="text-cream/22">•</span>
             <span className="capitalize">{question.difficulty}</span>
@@ -359,4 +585,11 @@ function formatPattern(pattern: string): string {
     .split("-")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder ? `${hours} hr ${remainder} min` : `${hours} hr`;
 }

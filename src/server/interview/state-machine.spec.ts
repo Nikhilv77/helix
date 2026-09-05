@@ -147,6 +147,28 @@ describe("per-round time caps", () => {
     expect(ended.state.phase).toBe("done");
   });
 
+  it("does not time-finalize a block assessment with unanswered prompts", () => {
+    const assessment = stateWith({
+      setup: {
+        ...setup,
+        durationMinutes: 40,
+        dsaBlockAssessment: {
+          kind: "dsa-block-assessment",
+          blockId: "11111111-1111-4111-8111-111111111111",
+          assessmentId: "22222222-2222-4222-8222-222222222222",
+          snapshotVersion: 1,
+          rubricVersion: 1
+        }
+      }
+    });
+
+    const result = advance(assessment, "probe", 41 * 60 * 1000);
+
+    expect(result.state.phase).toBe("questioning");
+    expect(result.state.questionIndex).toBe(0);
+    expect(result.forcedBy).toBeNull();
+  });
+
   it("does not extend a default round past the shared hard cap", () => {
     expect(advance(stateWith(), "probe", HARD_CAP_MS + 1).forcedBy).toBe("hard-time");
   });

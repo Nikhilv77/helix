@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import { ArrowRight, AudioLines, Loader2, Play, Volume2 } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
+import type { DsaRecommendation } from "@/lib/practice/dsa-recommendation";
 import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
 import { useMayaVoice, voiceUrl } from "@/lib/voice/use-maya-voice";
 
@@ -12,12 +13,16 @@ import { useMayaVoice, voiceUrl } from "@/lib/voice/use-maya-voice";
 export function PracticeIntro({
   purpose,
   roadmap,
+  recommendation = null,
+  completedQuestions,
   nextHref,
   nextLabel,
   nextQuestionTitle
 }: {
   purpose: string;
   roadmap: FrontendRoadmapHome | null;
+  recommendation?: DsaRecommendation | null;
+  completedQuestions?: number;
   nextHref: string | null;
   nextLabel: string;
   nextQuestionTitle: string | null;
@@ -25,9 +30,10 @@ export function PracticeIntro({
   const teacher = useWorkspaceTeacher();
   const { state, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
   const speaking = state === "speaking";
-  const completed = roadmap?.completedQuestions ?? 0;
+  const completed = completedQuestions ?? roadmap?.completedQuestions ?? 0;
   const total = roadmap?.totalQuestions ?? 0;
-  const exactPercent = total > 0 ? (completed / total) * 100 : 0;
+  const progressTotal = recommendation?.estimatedPathQuestions ?? total;
+  const exactPercent = progressTotal > 0 ? (completed / progressTotal) * 100 : 0;
   const activeChapter = useMemo(
     () =>
       roadmap?.chapters.find((chapter) => chapter.id === roadmap.currentChapterTemplateSlug) ??
@@ -38,6 +44,13 @@ export function PracticeIntro({
   const chapterPercent = Math.round(activeChapter?.progressPercent ?? 0);
 
   const script = useMemo(() => {
+    if (recommendation) {
+      const reason =
+        recommendation.source === "performance"
+          ? `Your recent solutions make ${recommendation.focusLabel} the best next focus.`
+          : `Your assessment makes ${recommendation.focusLabel} the best place to start.`;
+      return `${reason} ${recommendation.rationale}`;
+    }
     if (!roadmap || total === 0) {
       return `${purpose} Focus on recognizing the pattern before you write code.`;
     }
@@ -48,7 +61,7 @@ export function PracticeIntro({
       return `You finished the DSA path. Revisit anything you skipped, then carry these patterns into your next interview.`;
     }
     return `You’re ${chapterPercent}% through this pattern. Keep the approach clear before you optimise it.`;
-  }, [activeChapter, chapterPercent, completed, purpose, roadmap, total]);
+  }, [activeChapter, chapterPercent, completed, purpose, recommendation, roadmap, total]);
 
   const say = useCallback(() => {
     setAwaitingGesture(false);
@@ -95,17 +108,31 @@ export function PracticeIntro({
 
         <div className="w-full rounded-xl border border-white/[0.08] bg-[#141619] px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:max-w-[19rem]">
           <p className="text-[14px] font-medium leading-6 text-cream/72">
-            You’ve solved{" "}
-            <strong className="font-semibold tabular-nums text-cream">{completed}</strong> of{" "}
-            <strong className="font-semibold tabular-nums text-cream">{total || 0}</strong>{" "}
-            questions.
+            {recommendation ? (
+              <>
+                <strong className="font-semibold tabular-nums text-cream">
+                  {recommendation.questions.length}
+                </strong>{" "}
+                recommended now
+                <span className="block text-cream/42">
+                  {recommendation.availableQuestions} in the full library
+                </span>
+              </>
+            ) : (
+              <>
+                You’ve solved{" "}
+                <strong className="font-semibold tabular-nums text-cream">{completed}</strong> of{" "}
+                <strong className="font-semibold tabular-nums text-cream">{total || 0}</strong>{" "}
+                questions.
+              </>
+            )}
           </p>
           <div
             className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.075]"
             role="progressbar"
             aria-label="Questions solved"
             aria-valuemin={0}
-            aria-valuemax={Math.max(total, 1)}
+            aria-valuemax={Math.max(recommendation?.estimatedPathQuestions ?? total, 1)}
             aria-valuenow={completed}
           >
             <span
@@ -118,20 +145,24 @@ export function PracticeIntro({
 
       <section className="relative mt-6 flex flex-col overflow-hidden rounded-2xl border border-white/[0.085] bg-[#141619] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:mt-7 md:block md:min-h-[13.5rem]">
         <div className="relative z-20 order-2 flex max-w-none flex-col items-start justify-start px-5 py-7 sm:px-7 md:min-h-[13.5rem] md:max-w-[52%] md:justify-center lg:px-8">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--workspace-accent)]">
-            {completed > 0 ? "Continue where you left off" : "Start your DSA path"}
-          </p>
-          <h2 className="mt-4 font-display text-[1.55rem] font-semibold leading-tight tracking-[-0.025em] text-cream sm:text-[1.7rem]">
-            {activeChapter?.title ?? "Arrays & Hashing"}
+          {!recommendation ? (
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-cream/44">
+              {completed > 0 ? "Continue where you left off" : "Start your DSA path"}
+            </p>
+          ) : null}
+          <h2
+            className={`${recommendation ? "" : "mt-4"} font-display text-[1.55rem] font-semibold leading-tight tracking-[-0.025em] text-cream sm:text-[1.7rem]`}
+          >
+            {recommendation?.focusLabel ?? activeChapter?.title ?? "Arrays & Hashing"}
           </h2>
-          <p className="mt-2 max-w-[24rem] text-[13px] leading-5 text-cream/62">
-            {activeChapter?.whyItMatters ?? purpose}
+          <p className="mt-2 max-w-[24rem] text-[14px] leading-6 text-cream/66">
+            {recommendation?.rationale ?? activeChapter?.whyItMatters ?? purpose}
           </p>
 
           {nextHref ? (
             <Link
               href={nextHref}
-              className="group mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-cream px-4 py-2.5 text-[13px] font-semibold text-[#17181a] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:w-auto sm:px-5"
+              className="group mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-cream px-4 py-2.5 text-[14px] font-semibold text-[#17181a] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:w-auto sm:px-5"
             >
               <Play size={14} aria-hidden="true" fill="currentColor" />
               <span>{nextLabel}</span>
@@ -162,7 +193,7 @@ export function PracticeIntro({
           <MayaStage speaking={speaking} transparent />
         </div>
 
-        <div className="absolute right-6 top-9 z-20 hidden w-[12.5rem] rounded-xl border border-white/[0.07] bg-[#1a1c20]/95 px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.28)] lg:block">
+        <div className="absolute right-5 top-5 z-20 hidden w-[clamp(14.5rem,22vw,17rem)] max-w-[40%] rounded-xl border border-white/[0.07] bg-[#1a1c20]/95 px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.28)] lg:block">
           <span
             aria-hidden
             className="absolute -left-2 top-8 h-4 w-4 rotate-45 border-b border-l border-white/[0.07] bg-[#1a1c20]"
@@ -174,14 +205,16 @@ export function PracticeIntro({
               aria-hidden="true"
               className="mt-0.5 shrink-0 text-[var(--workspace-accent)]"
             />
-            <p className="text-[13px] leading-6 text-cream/78">“{script}”</p>
+            <p className="min-w-0 break-words text-pretty text-[14px] leading-6 text-cream/82">
+              “{script}”
+            </p>
           </div>
         </div>
 
         <button
           type="button"
           onClick={say}
-          className="absolute bottom-5 right-6 z-20 hidden h-10 items-center gap-2 rounded-lg border border-white/[0.055] bg-[#1a1c20] px-3.5 text-[12px] font-semibold text-cream/72 transition hover:bg-[#202226] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] lg:inline-flex"
+          className="absolute bottom-4 right-5 z-20 hidden h-10 items-center gap-2 rounded-lg border border-white/[0.055] bg-[#1a1c20] px-3.5 text-[13px] font-semibold text-cream/76 transition hover:bg-[#202226] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] lg:inline-flex"
         >
           {state === "loading" ? (
             <Loader2 size={14} aria-hidden="true" className="animate-spin" />
@@ -200,10 +233,7 @@ export function PracticeCoachCard() {
   return (
     <aside className="overflow-hidden rounded-[1.45rem] border border-white/[0.085] bg-[#141619] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:px-6">
       <div>
-        <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--workspace-accent)]">
-          How to practise
-        </p>
-        <h2 className="mt-2.5 font-display text-[1.2rem] font-semibold leading-6 tracking-[-0.025em] text-cream">
+        <h2 className="font-display text-[1.2rem] font-semibold leading-6 tracking-[-0.025em] text-cream">
           Use this simple loop.
         </h2>
 
@@ -223,7 +253,7 @@ function ApproachStep({ number, title }: { number: string; title: string }) {
       <span className="font-mono text-[9px] font-semibold text-[var(--workspace-accent)]">
         {number}
       </span>
-      <span className="text-[12px] font-medium leading-5 text-cream/72">{title}</span>
+      <span className="text-[13px] font-medium leading-5 text-cream/76">{title}</span>
     </li>
   );
 }

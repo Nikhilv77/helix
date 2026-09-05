@@ -35,9 +35,13 @@ import { personaById, personaForSession } from "@/lib/avatars/personas";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { AvatarStage } from "@/components/interview/voice/avatar-stage";
 import type { PresenceState } from "@/components/interview/voice/interviewer-presence";
-import { ApiClientError, endInterview, getSession } from "@/lib/api/api-client";
+import {
+  ApiClientError,
+  endInterview,
+  getSession,
+  skipDsaBlockAssessmentCode
+} from "@/lib/api/api-client";
 import { findQuestion } from "@/lib/dsa/dsa";
-import type { DsaQuestion } from "@/lib/dsa/dsa";
 import { dsaStarterCode } from "@/lib/dsa/dsa-code-templates";
 import { pageTitle } from "@/lib/shared/seo";
 import type {
@@ -54,6 +58,7 @@ import { INTERVIEW_PANEL_RULE, INTERVIEW_PANEL_SHELL } from "./components/panel-
 import { ResumeLiveWorkspace, resumeEditorLanguage } from "./components/resume-live-workspace";
 import { stageCounts } from "./components/interview-question-panel";
 import { FundamentalsLiveWorkspace } from "./components/fundamentals-live-workspace";
+import { BlockAssessmentReviewWorkspace } from "./components/block-assessment-review-workspace";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 import type { AgentState, DsaLanguage, DsaRunResult, VoiceStatus } from "./types";
 import {
@@ -85,6 +90,17 @@ const AGENT_JOIN_TIMEOUT_MS = 15_000;
 const MIC_SILENCE_WARNING_MS = 6_000;
 const MIC_DEVICE_STORAGE_KEY = "trailgrad.preferredMicrophone";
 const TYPED_ANSWER_TOPIC = "trailgrad.typed-answer";
+
+interface DsaWorkspaceQuestion {
+  title: string;
+  primaryPattern: string;
+  difficulty: string;
+  expectedTimeMinutes: number;
+  problemStatement?: string | null;
+  promptSummary: string;
+  examples?: Array<{ input: string; output: string; explanation?: string }>;
+  constraints?: string[];
+}
 
 function turnKey(turn: Turn): string {
   return `${turn.speaker}-${turn.startMs}-${turn.endMs}-${turn.text}`;
@@ -172,6 +188,7 @@ export function VoiceInterviewClient({
   const turnsRef = useRef<Turn[]>([]);
   const startedAtRef = useRef<number | null>(null);
   const typedUserTurnsRef = useRef(0);
+  const dsaSkipPendingRef = useRef(false);
   const candidateCameraStreamRef = useRef<MediaStream | null>(null);
   const [connectionAttempt, setConnectionAttempt] = useState(0);
   const elapsed = useInterviewClock({
@@ -614,7 +631,10 @@ export function VoiceInterviewClient({
     if (userTurns <= typedUserTurnsRef.current) return;
 
     setTypedSending(false);
-    if (setup?.templateTitle === "DSA practice interview") {
+    if (
+      setup?.templateTitle === "DSA practice interview" ||
+      setup?.dsaBlockAssessment?.kind === "dsa-block-assessment"
+    ) {
       setTypedStartedAt(Date.now());
       return;
     }
@@ -644,6 +664,30 @@ export function VoiceInterviewClient({
     // Keyed on the question index so a follow-up on the same question keeps
     // whatever the candidate has already written.
   }, [progress.index, setup?.fundamentalsRound, setup?.resumeRound]);
+
+  useEffect(() => {
+    if (setup?.dsaBlockAssessment?.kind !== "dsa-block-assessment") return;
+    // Assessment questions are a strict sequence. Do not carry a previous
+    // answer, language output, or explanation into the next frozen prompt.
+    setSelectedOption(null);
+    setTypedError(null);
+    setDsaRunResult(null);
+    setTypedNotes("");
+    setTypedDraft(
+      currentQuestion?.kind === "code"
+        ? (currentQuestion.dsaTransferQuestion?.starterCode?.[dsaLanguage] ?? "")
+        : ""
+    );
+    setTypedStartedAt(Date.now());
+    dsaSkipPendingRef.current = false;
+  }, [
+    currentQuestion?.dsaTransferQuestion?.slug,
+    currentQuestion?.dsaTransferQuestion?.starterCode?.[dsaLanguage],
+    currentQuestion?.kind,
+    dsaLanguage,
+    progress.index,
+    setup?.dsaBlockAssessment?.kind
+  ]);
 
   useEffect(() => {
     if (setup?.templateTitle !== "DSA practice interview" || !dsaQuestionSlug) return;
@@ -830,6 +874,36 @@ export function VoiceInterviewClient({
     }
   }
 
+  async function skipDsaCode() {
+    if (
+      !sessionId ||
+      !startedAt ||
+      typedSending ||
+      dsaSkipPendingRef.current ||
+      setup?.dsaBlockAssessment?.kind !== "dsa-block-assessment" ||
+      currentQuestion?.kind !== "code"
+    ) {
+      return;
+    }
+
+    const now = Date.now();
+    dsaSkipPendingRef.current = true;
+    setTypedSending(true);
+    setTypedError(null);
+    try {
+      await skipDsaBlockAssessmentCode({
+        sessionId,
+        startMs: Math.max(0, (typedStartedAt ?? now) - startedAt),
+        endMs: Math.max(0, now - startedAt)
+      });
+      await poll();
+    } catch (caught) {
+      dsaSkipPendingRef.current = false;
+      setTypedSending(false);
+      setTypedError(caught instanceof Error ? caught.message : "The problem could not be skipped.");
+    }
+  }
+
   /**
    * The resume round's task is written for this candidate, so there are no
    * stored test cases. The code is run as-is and its output reported back.
@@ -870,7 +944,9 @@ export function VoiceInterviewClient({
   }
 
   async function runDsaCode() {
-    if (!typedDraft.trim() || !dsaQuestionSlug || dsaRunning || !sessionId) return;
+    const frozenAssessment = setup?.dsaBlockAssessment?.kind === "dsa-block-assessment";
+    if (!typedDraft.trim() || (!dsaQuestionSlug && !frozenAssessment) || dsaRunning || !sessionId)
+      return;
     setDsaRunning(true);
     setDsaRunResult(null);
     setTypedError(null);
@@ -881,7 +957,9 @@ export function VoiceInterviewClient({
         body: JSON.stringify({
           code: typedDraft,
           language: dsaLanguage,
-          slug: dsaQuestionSlug,
+          // Assessment runs deliberately omit a slug. The server resolves the
+          // active transfer problem through the owned frozen snapshot.
+          ...(frozenAssessment ? {} : { slug: dsaQuestionSlug }),
           stdin: "",
           sessionId,
           questionIndex: progress.index
@@ -905,18 +983,30 @@ export function VoiceInterviewClient({
 
   const stop = useCallback(async () => {
     if (!sessionId) return;
+
+    const blockId = setup?.dsaBlockAssessment?.blockId;
+    if (blockId) {
+      // Leaving never submits a partial block assessment. The same frozen
+      // session stays resumable until every prompt is answered or skipped.
+      intentionalDisconnectRef.current = true;
+      await roomRef.current?.disconnect().catch(() => null);
+      router.push(`/practice/dsa?block=${encodeURIComponent(blockId)}`);
+      return;
+    }
+
     sessionCompleteRef.current = true;
     setError(null);
     setStatus("ended");
     await endInterview(sessionId).catch(() => null);
     intentionalDisconnectRef.current = true;
     await roomRef.current?.disconnect();
-  }, [sessionId]);
+  }, [router, sessionId, setup?.dsaBlockAssessment?.blockId]);
 
   useEffect(() => {
     if (elapsed < hardCapMs || status === "ended" || sessionUnavailable) return;
+    if (setup?.dsaBlockAssessment?.kind === "dsa-block-assessment") return;
     void stop();
-  }, [elapsed, sessionUnavailable, status, stop]);
+  }, [elapsed, sessionUnavailable, setup?.dsaBlockAssessment?.kind, status, stop]);
 
   async function reconnect() {
     if (agentWaitTimerRef.current !== null) {
@@ -990,6 +1080,7 @@ export function VoiceInterviewClient({
     audioInputs.find((device) => device.deviceId === selectedInputId)?.label ||
     "Selected microphone";
   const isDsaInterview = setup?.templateTitle === "DSA practice interview";
+  const isBlockAssessment = setup?.dsaBlockAssessment?.kind === "dsa-block-assessment";
   const isResumeRound = setup?.resumeRound === true;
   const isFundamentalsRound = setup?.fundamentalsRound === true;
 
@@ -1013,6 +1104,11 @@ export function VoiceInterviewClient({
   const selectedDsaSlug = setup?.dsaQuestionSlugs?.[progress.index];
   const dsaQuestion =
     isDsaInterview && selectedDsaSlug ? (findQuestion(selectedDsaSlug)?.question ?? null) : null;
+  const frozenTransferQuestion =
+    isBlockAssessment && currentQuestion?.kind === "code"
+      ? (currentQuestion.dsaTransferQuestion ?? null)
+      : null;
+  const activeDsaQuestion: DsaWorkspaceQuestion | null = dsaQuestion ?? frozenTransferQuestion;
 
   if (sessionUnavailable) {
     return <SessionStateScreen kind="expired" workspaceAccent={workspaceAccent} />;
@@ -1038,6 +1134,7 @@ export function VoiceInterviewClient({
         kind="complete"
         duration={Math.min(elapsed, hardCapMs)}
         answers={turns.filter((turn) => turn.speaker === "user").length}
+        blockAssessmentBlockId={setup?.dsaBlockAssessment?.blockId ?? null}
       />
     );
   }
@@ -1107,7 +1204,7 @@ export function VoiceInterviewClient({
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-white/[0.045] px-3 text-sm font-semibold text-cream/65 transition hover:bg-white/[0.08] hover:text-cream"
           >
             <Square size={11} aria-hidden="true" />
-            <span className="hidden sm:inline">End</span>
+            <span className="hidden sm:inline">{isBlockAssessment ? "Save & exit" : "End"}</span>
           </button>
         </div>
       </header>
@@ -1120,6 +1217,33 @@ export function VoiceInterviewClient({
           counts={stageProgress}
           grade={lastGrade}
           concept={answeredConcept}
+          turns={displayTurns}
+          spokenAgentTurnKeys={spokenAgentTurnKeys}
+          liveUserText={liveTranscript}
+          startedAt={startedAt}
+          setup={setup}
+          thinking={agentState === "thinking"}
+          bottomRef={bottomRef}
+          agentSlot={interviewerSlot()}
+          micOn={micOn}
+          sending={typedSending}
+          error={typedError}
+          draft={typedDraft}
+          selectedOption={selectedOption}
+          onDraftChange={setTypedDraft}
+          onSelectOption={(option) => void submitOptionAnswer(option)}
+          onSubmit={() => void submitTypedAnswer()}
+          onRequestMic={() => void toggleMic()}
+          candidateCameraStream={candidateCameraStream}
+          onDisableCamera={disableCandidateCamera}
+        />
+      ) : isBlockAssessment && currentQuestion?.kind === "mcq" ? (
+        <BlockAssessmentReviewWorkspace
+          question={currentQuestion}
+          questionIndex={progress.index}
+          questionCount={progress.count}
+          counts={stageProgress}
+          grade={lastGrade}
           turns={displayTurns}
           spokenAgentTurnKeys={spokenAgentTurnKeys}
           liveUserText={liveTranscript}
@@ -1173,9 +1297,9 @@ export function VoiceInterviewClient({
           candidateCameraStream={candidateCameraStream}
           onDisableCamera={disableCandidateCamera}
         />
-      ) : isDsaInterview ? (
+      ) : isDsaInterview || (isBlockAssessment && currentQuestion?.kind === "code") ? (
         <DsaLiveWorkspace
-          question={dsaQuestion}
+          question={activeDsaQuestion}
           questionSlug={selectedDsaSlug ?? null}
           turns={displayTurns}
           spokenAgentTurnKeys={spokenAgentTurnKeys}
@@ -1200,6 +1324,7 @@ export function VoiceInterviewClient({
           onDraftChange={setTypedDraft}
           onNotesChange={setTypedNotes}
           onSubmit={() => void submitDsaAnswer()}
+          onSkip={isBlockAssessment ? () => void skipDsaCode() : undefined}
           candidateCameraStream={candidateCameraStream}
           onDisableCamera={disableCandidateCamera}
         />
@@ -1472,10 +1597,11 @@ function DsaLiveWorkspace({
   onDraftChange,
   onNotesChange,
   onSubmit,
+  onSkip,
   candidateCameraStream,
   onDisableCamera
 }: {
-  question: DsaQuestion | null;
+  question: DsaWorkspaceQuestion | null;
   questionSlug: string | null;
   turns: Turn[];
   spokenAgentTurnKeys: ReadonlySet<string>;
@@ -1501,6 +1627,7 @@ function DsaLiveWorkspace({
   onLanguageChange: (language: DsaLanguage) => void;
   onRun: () => void;
   onSubmit: () => void;
+  onSkip?: () => void;
   candidateCameraStream: MediaStream | null;
   onDisableCamera: () => void;
 }) {
@@ -1509,6 +1636,7 @@ function DsaLiveWorkspace({
   const splitWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const [questionPaneWidth, setQuestionPaneWidth] = useState(38);
   const [expandedPane, setExpandedPane] = useState<"question" | "editor" | null>(null);
+  const [skipConfirmationVisible, setSkipConfirmationVisible] = useState(false);
 
   const beginPaneResize = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
     const workspace = splitWorkspaceRef.current;
@@ -1794,20 +1922,76 @@ function DsaLiveWorkspace({
                 containerClassName="min-w-0 flex-1"
                 textareaClassName="rounded-xl border-0 bg-black/20 px-3.5 py-2.5 font-sans text-sm leading-6 text-cream outline-none ring-1 ring-inset ring-white/[0.045] transition placeholder:text-cream/26 focus:bg-black/30 focus:ring-white/[0.1]"
               />
-              <button
-                type="button"
-                onClick={onSubmit}
-                disabled={!canSubmit}
-                className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white disabled:pointer-events-none disabled:opacity-35"
-              >
-                {sending ? (
-                  <Loader2 size={15} className="animate-spin" aria-hidden="true" />
-                ) : (
-                  <Send size={15} aria-hidden="true" />
-                )}
-                {sending ? `${teacher.name} is reviewing` : `Send solution to ${teacher.name}`}
-              </button>
+              <div className="flex shrink-0 flex-col gap-1.5 sm:items-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSkipConfirmationVisible(false);
+                    onSubmit();
+                  }}
+                  disabled={!canSubmit}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white disabled:pointer-events-none disabled:opacity-35"
+                >
+                  {sending ? (
+                    <Loader2 size={15} className="animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Send size={15} aria-hidden="true" />
+                  )}
+                  {sending ? `${teacher.name} is reviewing` : `Send solution to ${teacher.name}`}
+                </button>
+                {onSkip && !skipConfirmationVisible ? (
+                  <button
+                    type="button"
+                    onClick={() => setSkipConfirmationVisible(true)}
+                    disabled={sending}
+                    className="min-h-9 px-2 text-sm font-semibold text-cream/48 transition hover:text-cream disabled:cursor-wait disabled:opacity-40"
+                  >
+                    I can&apos;t solve this
+                  </button>
+                ) : null}
+              </div>
             </div>
+            {onSkip && skipConfirmationVisible ? (
+              <div
+                role="alertdialog"
+                aria-labelledby="skip-code-confirmation-title"
+                aria-describedby="skip-code-confirmation-description"
+                className="mt-3 flex flex-col gap-3 rounded-xl border border-white/[0.08] bg-white/[0.035] p-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <p id="skip-code-confirmation-title" className="text-sm font-semibold text-cream">
+                    Skip this coding question?
+                  </p>
+                  <p
+                    id="skip-code-confirmation-description"
+                    className="mt-0.5 text-sm leading-5 text-cream/52"
+                  >
+                    You will receive 0 points for this question. This cannot be undone.
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSkipConfirmationVisible(false)}
+                    disabled={sending}
+                    className="min-h-10 rounded-lg px-3 text-sm font-semibold text-cream/62 transition hover:bg-white/[0.04] hover:text-cream"
+                  >
+                    Keep trying
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSkipConfirmationVisible(false);
+                      onSkip();
+                    }}
+                    disabled={sending}
+                    className="min-h-10 rounded-lg border border-white/[0.1] bg-white/[0.06] px-3 text-sm font-semibold text-cream transition hover:bg-white/[0.1] disabled:cursor-wait disabled:opacity-40"
+                  >
+                    Yes, skip question
+                  </button>
+                </div>
+              </div>
+            ) : null}
             {error ? <p className="mt-2 text-sm text-[#ffb4b4]">{error}</p> : null}
           </div>
         </section>
@@ -1835,7 +2019,7 @@ function DsaOutputPanel({
   result,
   running
 }: {
-  examples: NonNullable<DsaQuestion["examples"]>;
+  examples: NonNullable<DsaWorkspaceQuestion["examples"]>;
   result: DsaRunResult | null;
   running: boolean;
 }) {

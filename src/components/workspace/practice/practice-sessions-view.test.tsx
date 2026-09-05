@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { PracticeRoadmapHome } from "@/lib/practice/practice-roadmap";
-import type { WorkspaceInsights } from "@/lib/shared/types";
+import type { DsaRecommendation } from "@/lib/practice/dsa-recommendation";
 import { PracticeSessionsView } from "./practice-sessions-view";
 
 const practiceRoadmap: PracticeRoadmapHome = {
@@ -109,24 +109,64 @@ describe("PracticeSessionsView", () => {
     expect(screen.queryByText("Your weekly rhythm starts with one solved question.")).toBeNull();
   });
 
-  it("uses completed interview evidence for the strongest and weakest signals", () => {
-    const insights: WorkspaceInsights = {
-      readinessScore: 72,
-      completedSessions: 3,
-      sessionsThisWeek: 1,
-      answeredQuestions: 12,
-      competencyMap: [
-        { label: "Technical depth", score: 81, attempts: 3, trend: 4 },
-        { label: "Concise communication", score: 54, attempts: 3, trend: -2 }
-      ],
-      strongest: { label: "Technical depth", score: 81, attempts: 3, trend: 4 },
-      recommendedFocus: { label: "Concise communication", score: 54, attempts: 3, trend: -2 }
+  it("uses the adaptive DSA block for the target, strength, and priority cards", () => {
+    const recommendation = {
+      tier: "building",
+      source: "performance",
+      targetLabel: "Full Stack mid-level",
+      focusChapterId: "arrays-hashing",
+      focusLabel: "Arrays & Hashing",
+      strengthLabel: "Trees",
+      blockTitle: "Arrays & Hashing focus block",
+      rationale: "Verified solutions show this is the clearest gap.",
+      questions: [],
+      minutes: 75,
+      mix: { easy: 2, medium: 5, hard: 1 },
+      estimatedPathQuestions: 72,
+      availableQuestions: 200
+    } satisfies DsaRecommendation;
+
+    render(
+      <PracticeSessionsView practiceRoadmap={practiceRoadmap} dsaRecommendation={recommendation} />
+    );
+
+    expect(screen.getByText("Arrays & Hashing block")).toBeInTheDocument();
+    expect(screen.getByText("Trees is a strength")).toBeInTheDocument();
+    expect(screen.getByText("Why Arrays & Hashing")).toBeInTheDocument();
+  });
+
+  it("separates overall DSA solves from progress inside the current block", () => {
+    const started = {
+      ...practiceRoadmap,
+      sessions: practiceRoadmap.sessions.map((session, index) =>
+        index === 0 ? { ...session, completedQuestions: 1, progressPercent: 1 } : session
+      )
     };
+    const recommendation = {
+      tier: "building",
+      source: "performance",
+      targetLabel: "Full Stack mid-level",
+      focusChapterId: "arrays-hashing",
+      focusLabel: "Arrays & Hashing",
+      strengthLabel: null,
+      blockTitle: "Arrays & Hashing",
+      rationale: "This is the clearest next step.",
+      questions: Array.from({ length: 8 }, (_, index) => ({ slug: `block-${index + 1}` })),
+      minutes: 120,
+      mix: { easy: 2, medium: 5, hard: 1 },
+      estimatedPathQuestions: 72,
+      availableQuestions: 200
+    } as unknown as DsaRecommendation;
 
-    render(<PracticeSessionsView practiceRoadmap={practiceRoadmap} insights={insights} />);
+    render(
+      <PracticeSessionsView
+        practiceRoadmap={started}
+        dsaRecommendation={recommendation}
+        dsaBlockCompletedQuestions={0}
+      />
+    );
 
-    expect(screen.getByText("Strongest point: Technical depth")).toBeInTheDocument();
-    expect(screen.getByText("Weakest point: Concise communication")).toBeInTheDocument();
-    expect(screen.queryByText("No signal yet")).toBeNull();
+    expect(screen.getByText("1 solved overall · 0/8 current block")).toBeInTheDocument();
+    expect(screen.getByText("0/8 current block · 2 hr")).toBeInTheDocument();
   });
 });

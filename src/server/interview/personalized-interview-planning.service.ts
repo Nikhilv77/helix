@@ -45,7 +45,7 @@ export class PersonalizedInterviewPlanningService {
   ) {}
 
   async activePlan(ownerId: string, now = Date.now()): Promise<PersonalizedInterviewPlan> {
-    const [candidateProfile, profile, performanceProfile, practiceEvidence, existing] =
+    const [candidateProfile, profile, observedPerformanceProfile, practiceEvidence, existing] =
       await Promise.all([
         this.store.ensureCandidateProfile(ownerId, now),
         this.profiles.get(ownerId),
@@ -53,6 +53,8 @@ export class PersonalizedInterviewPlanningService {
         this.practiceEvidence?.refresh(ownerId, now) ?? Promise.resolve(null),
         this.store.getActivePlan(ownerId)
       ]);
+    const performanceProfile =
+      observedPerformanceProfile ?? baselinePerformanceProfile(profile, candidateProfile);
     const targetRole =
       !profile.targetRole && existing
         ? existing.sourceSnapshot.targetRole
@@ -143,6 +145,85 @@ export class PersonalizedInterviewPlanningService {
 
     return { plan, blueprint };
   }
+}
+
+/**
+ * A baseline is intentionally sparse and low-confidence, but it is still real
+ * evidence. Until completed interviews exist, let it steer the first plan.
+ */
+function baselinePerformanceProfile(
+  profile: CandidateProfile,
+  candidate: CandidateInterviewProfile
+): CandidatePerformanceProfile | null {
+  // Older test fixtures and profiles predate this checkpoint. They simply
+  // have no baseline evidence rather than blocking plan reads.
+  const onboarding = profile.preparationOnboarding;
+  const baseline = onboarding?.skillProfile;
+  const completedAt = onboarding?.completedAt;
+  if (!baseline || !completedAt) return null;
+
+  const firstSkill = candidate.skills[0]?.key ?? "role-fundamentals";
+  const projectSkill = candidate.importantProjects[0]?.skillKeys[0] ?? firstSkill;
+  const skillKeyByArea = {
+    dsa: "problem-solving",
+    "core-technical": firstSkill,
+    "applied-engineering": projectSkill,
+    "architecture-design": projectSkill
+  } as const;
+  const aggregate = new Map<string, { totalScore: number; totalConfidence: number; count: number }>();
+  for (const signal of baseline.signals) {
+    if (signal.evidence !== "baseline") continue;
+    const score = baselinePlanningScore(signal.topics);
+    if (score === null) continue;
+    const skillKey = skillKeyByArea[signal.areaId];
+    const existing = aggregate.get(skillKey) ?? { totalScore: 0, totalConfidence: 0, count: 0 };
+    aggregate.set(skillKey, {
+      totalScore: existing.totalScore + score,
+      totalConfidence: existing.totalConfidence + signal.confidence,
+      count: existing.count + 1
+    });
+  }
+  const skills = [...aggregate.entries()].map(([skillKey, value]) => ({
+    skillKey,
+    // This is an internal ordering hint only. It is never stored as or shown
+    // as a readiness score; real attempts replace it on the next plan build.
+    score: Math.round(value.totalScore / value.count),
+    confidence: Math.min(0.4, value.totalConfidence / value.count),
+    sampleSize: 1,
+    lastObservedAt: baseline.generatedAt
+  }));
+  if (!skills.length) return null;
+
+  const id = `baseline-${completedAt}`;
+  return {
+    schemaVersion: 3,
+    id,
+    revision: 1,
+    sourceSessionFingerprint: id,
+    generatedAt: baseline.generatedAt,
+    completedSessionCount: 1,
+    answeredQuestionCount: skills.length,
+    sourceSessionIds: [id],
+    skills: skills.map((skill) => ({
+      ...skill,
+      trend: null,
+      topicKeys: [skill.skillKey],
+      rubricPerformance: []
+    }))
+  };
+}
+
+/** Converts qualitative baseline familiarity into a deliberately narrow plan-ordering hint. */
+function baselinePlanningScore(
+  topics: Array<{ label: string; familiarity: "familiar" | "needs-refresh" | "unknown" }> | undefined
+): number | null {
+  const observed = topics?.filter((topic) => topic.familiarity !== "unknown") ?? [];
+  if (!observed.length) return null;
+  const total = observed.reduce(
+    (sum, topic) => sum + (topic.familiarity === "familiar" ? 60 : 40),
+    0
+  );
+  return total / observed.length;
 }
 
 function matchesInputsExceptResume(

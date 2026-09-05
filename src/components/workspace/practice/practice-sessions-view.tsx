@@ -14,11 +14,11 @@ import {
 } from "lucide-react";
 import { DocumentTitle } from "@/components/document-title";
 import { PracticeWeeklyActivityChart } from "@/components/workspace/shared/practice-weekly-activity-chart";
+import type { DsaRecommendation } from "@/lib/practice/dsa-recommendation";
 import type { PracticeRoadmapHome, PracticeRoadmapSession } from "@/lib/practice/practice-roadmap";
-import type { WorkspaceInsights } from "@/lib/shared/types";
 
 const sessionIcons: Record<string, LucideIcon> = {
-  "dsa": CodeXml,
+  dsa: CodeXml,
   "resume-behavioral-defense": BadgeCheck,
   "core-technical": Atom,
   "applied-engineering": Cpu,
@@ -28,13 +28,15 @@ const sessionIcons: Record<string, LucideIcon> = {
 
 export function PracticeSessionsView({
   practiceRoadmap,
-  insights = null,
   activity = [],
+  dsaRecommendation = null,
+  dsaBlockCompletedQuestions = 0,
   generationFailed = false
 }: {
   practiceRoadmap: PracticeRoadmapHome | null;
-  insights?: WorkspaceInsights | null;
   activity?: Array<{ date: string; solved: number }>;
+  dsaRecommendation?: DsaRecommendation | null;
+  dsaBlockCompletedQuestions?: number;
   generationFailed?: boolean;
 }) {
   const sessions = practiceRoadmap?.sessions ?? [];
@@ -58,40 +60,44 @@ export function PracticeSessionsView({
           />
           <PracticeSummaryCard
             text={
-              completedQuestions
-                ? "Keep your practice momentum going"
-                : "Start your practice momentum"
+              dsaRecommendation
+                ? `${dsaRecommendation.focusLabel} block`
+                : completedQuestions
+                  ? "Keep your practice momentum going"
+                  : "Start your practice momentum"
             }
             detail={
-              totalQuestions
-                ? completedQuestions
-                  ? `You’ve solved ${completedQuestions} question${completedQuestions === 1 ? "" : "s"} so far. ${Math.max(totalQuestions - completedQuestions, 0)} questions are waiting in your practice path.`
-                  : `${totalQuestions} questions are waiting in your practice path. Your first completed question starts the momentum.`
-                : null
+              dsaRecommendation
+                ? `${dsaBlockCompletedQuestions}/${dsaRecommendation.questions.length} current block · ${formatDuration(dsaRecommendation.minutes)}`
+                : totalQuestions
+                  ? completedQuestions
+                    ? `You’ve solved ${completedQuestions} question${completedQuestions === 1 ? "" : "s"} so far. ${Math.max(totalQuestions - completedQuestions, 0)} questions are waiting in your practice path.`
+                    : `${totalQuestions} questions are waiting in your practice path. Your first completed question starts the momentum.`
+                  : null
             }
           />
           <PracticeSummaryCard
             text={
-              insights?.strongest
-                ? `Strongest point: ${insights.strongest.label}`
-                : "Finish an interview to see your strongest point"
+              dsaRecommendation?.strengthLabel
+                ? `${dsaRecommendation.strengthLabel} is a strength`
+                : dsaRecommendation
+                  ? `Built for ${dsaRecommendation.targetLabel}`
+                  : "Your target sets the practice bar"
             }
             detail={
-              insights?.strongest
-                ? "This is the signal you demonstrate most consistently."
-                : "Your interview reports will surface the strength you show most consistently."
+              dsaRecommendation?.strengthLabel
+                ? "The plan keeps this skill active while you strengthen the next one."
+                : "The patterns and difficulty match your interview target."
             }
           />
           <PracticeSummaryCard
             text={
-              insights?.recommendedFocus
-                ? `Weakest point: ${insights.recommendedFocus.label}`
-                : "Finish an interview to see your weakest point"
+              dsaRecommendation ? `Why ${dsaRecommendation.focusLabel}` : "Why this comes first"
             }
             detail={
-              insights?.recommendedFocus
-                ? "Keep working on this to make your answers land more clearly."
-                : "Your interview reports will highlight the point to focus on next."
+              dsaRecommendation
+                ? dsaRecommendation.rationale
+                : "Your starting assessment identifies the best place to begin."
             }
           />
         </div>
@@ -104,7 +110,15 @@ export function PracticeSessionsView({
         <div className="relative z-10 grid gap-y-4">
           {sessions.length ? (
             sessions.map((session, index) => (
-              <PracticeSessionCard key={session.key} session={session} delay={index * 70} />
+              <PracticeSessionCard
+                key={session.key}
+                session={session}
+                delay={index * 70}
+                dsaRecommendation={session.key === "dsa" ? dsaRecommendation : null}
+                dsaBlockCompletedQuestions={
+                  session.key === "dsa" ? dsaBlockCompletedQuestions : 0
+                }
+              />
             ))
           ) : (
             <p
@@ -158,20 +172,33 @@ function PracticeSummaryCard({ text, detail = null }: { text: string; detail?: s
   );
 }
 
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder ? `${hours} hr ${remainder} min` : `${hours} hr`;
+}
+
 function PracticeSessionCard({
   session,
-  delay
+  delay,
+  dsaRecommendation = null,
+  dsaBlockCompletedQuestions = 0
 }: {
   session: PracticeRoadmapSession;
   delay: number;
+  dsaRecommendation?: DsaRecommendation | null;
+  dsaBlockCompletedQuestions?: number;
 }) {
   const SessionIcon = sessionIcons[session.key] ?? FileCode2;
   const href = session.href;
   const available = session.availability === "available" && Boolean(href);
   const statusLabel = available
-    ? session.completedQuestions > 0
-      ? `${session.completedQuestions}/${session.totalQuestions} complete`
-      : `${session.totalQuestions} questions`
+    ? dsaRecommendation
+      ? `${session.completedQuestions} solved overall · ${dsaBlockCompletedQuestions}/${dsaRecommendation.questions.length} current block`
+      : session.completedQuestions > 0
+        ? `${session.completedQuestions}/${session.totalQuestions} complete`
+        : `${session.totalQuestions} questions`
     : session.availability === "available"
       ? `${session.totalQuestions} questions · workspace coming next`
       : "Question bank coming next";

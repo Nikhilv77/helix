@@ -50,7 +50,9 @@ const data: Pick<DashboardOverviewData, "coaching" | "readiness"> = {
     delta: 8,
     scoredRounds: 3,
     label: "Developing",
-    detail: "Based on your 3 most recent scored rounds."
+    detail: "Based on your 3 most recent scored rounds.",
+    actionLabel: "Open reports",
+    actionHref: "/reports"
   }
 };
 
@@ -93,13 +95,15 @@ describe("DashboardFirstRow", () => {
             delta: null,
             scoredRounds: 0,
             label: "Still forming",
-            detail: "Answer an interview question to establish a signal."
+            detail: "Answer an interview question to establish a signal.",
+            actionLabel: "Start interview",
+            actionHref: "/interview"
           }
         }}
       />
     );
 
-    expect(screen.getByRole("heading", { name: "Take your first interview" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Still forming" })).toBeTruthy();
     expect(screen.queryByText("0")).toBeNull();
     expect(screen.queryByRole("img")).toBeNull();
     expect(screen.getByRole("link", { name: "Start interview" }).getAttribute("href")).toBe(

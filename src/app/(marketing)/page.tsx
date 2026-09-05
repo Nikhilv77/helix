@@ -74,7 +74,8 @@ export default async function HomePage({
   const welcomePersona = welcomePersonaFromQuery(
     typeof query.welcome === "string" ? query.welcome : null
   );
-  const showMayaWelcome = welcomePersona !== null;
+  const preparationRequired = profile.preparationOnboarding.completedAt === null;
+  const showMayaWelcome = preparationRequired || welcomePersona !== null;
 
   if (!showMayaWelcome) {
     return (
@@ -86,7 +87,7 @@ export default async function HomePage({
 
   return (
     <Suspense fallback={<MayaWelcomeLoading />}>
-      <MayaWelcomeHome userId={userId} profile={profile} />
+      <MayaWelcomeHome profile={profile} blocking={preparationRequired} />
     </Suspense>
   );
 }
@@ -114,33 +115,12 @@ async function DashboardOverviewHome({
   );
 }
 
-async function MayaWelcomeHome({ userId, profile }: { userId: string; profile: CandidateProfile }) {
-  const ownerId = authenticatedOwnerId(userId);
-  const [frontendRoadmap, frontendPlan, practiceRoadmap] =
-    profile.targetRole === "fullstack"
-      ? await Promise.all([
-          getAppContainer()
-            .frontendRoadmapService.home(ownerId)
-            .catch(() => null),
-          getAppContainer()
-            .dsaService.frontendPlan()
-            .catch(() => null),
-          // The welcome screen previews the candidate's own sessions; without
-          // this it fell back to the static PREP_SESSIONS list and promised
-          // everyone the same four generic titles.
-          getAppContainer()
-            .practiceRoadmapService.home(ownerId)
-            .catch(() => null)
-        ])
-      : [null, null, null];
-
+function MayaWelcomeHome({ profile, blocking }: { profile: CandidateProfile; blocking: boolean }) {
   return (
     <Dashboard
       profile={profile}
       showMayaWelcome
-      frontendRoadmap={frontendRoadmap}
-      frontendPlan={frontendPlan}
-      practiceSessions={practiceRoadmap?.sessions ?? null}
+      welcomeBlocking={blocking}
     />
   );
 }

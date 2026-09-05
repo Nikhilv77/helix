@@ -28,7 +28,10 @@ describe("POST /api/practice/attempt", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.auth.mockResolvedValue({ userId: "user-1" });
-    mocks.profile.mockResolvedValue({ onboardingCompletedAt: new Date() });
+    mocks.profile.mockResolvedValue({
+      onboardingCompletedAt: new Date(),
+      preparationOnboarding: { completedAt: Date.now() }
+    });
     mocks.attempt.mockResolvedValue({ recorded: true, replayed: false, status: "COMPLETED" });
   });
 
@@ -37,6 +40,18 @@ describe("POST /api/practice/attempt", () => {
     const response = await POST(request({}));
 
     expect(response.status).toBe(401);
+    expect(mocks.attempt).not.toHaveBeenCalled();
+  });
+
+  it("requires the preparation baseline before allowing Practice", async () => {
+    mocks.profile.mockResolvedValue({
+      onboardingCompletedAt: new Date(),
+      preparationOnboarding: { completedAt: null }
+    });
+
+    const response = await POST(request({}));
+
+    expect(response.status).toBe(409);
     expect(mocks.attempt).not.toHaveBeenCalled();
   });
 

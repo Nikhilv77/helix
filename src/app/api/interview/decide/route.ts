@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { after } from "next/server";
 import type { NextRequest } from "next/server";
 import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
         startMs: parsed.data.startMs ?? defaultEnd,
         endMs: parsed.data.endMs ?? defaultEnd
       };
-      const { response } =
+      const answerResult =
         access.kind === "owner"
           ? await app.interviewService.answerOwned(
               access.ownerId,
@@ -83,6 +84,15 @@ export async function POST(request: NextRequest) {
               now,
               parsed.data.turnId
             );
+      const { response } = answerResult;
+      if (response.phase === "done") {
+        after(() =>
+          (access.kind === "owner"
+            ? app.dsaBlockAssessmentFinalizationService.finalizeOwned(access.ownerId, parsed.data.sessionId)
+            : app.dsaBlockAssessmentFinalizationService.finalizeBySession(parsed.data.sessionId)
+          ).catch(() => null)
+        );
+      }
 
       return apiSuccess(response);
     } finally {

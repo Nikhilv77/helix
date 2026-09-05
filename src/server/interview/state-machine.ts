@@ -60,12 +60,13 @@ export function followUpLimit(state: InterviewState): number {
 
 export function advance(state: InterviewState, requested: DecisionAction, now: number): Advance {
   const elapsed = elapsedMs(state, now);
+  const isBlockAssessment = state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment";
   // Caps depend on the round: a three-stage resume round needs longer than a
   // single-arc conversation, and the guards must use the same budget the room
   // is counting down.
   const { softWrapMs, hardCapMs } = roundCaps(state.setup);
 
-  if (elapsed >= hardCapMs) {
+  if (!isBlockAssessment && elapsed >= hardCapMs) {
     return {
       state: { ...state, phase: "done" },
       action: "move_on",
@@ -81,7 +82,7 @@ export function advance(state: InterviewState, requested: DecisionAction, now: n
     forcedBy = "follow-up-budget";
   }
 
-  if (action !== "move_on" && elapsed >= softWrapMs) {
+  if (!isBlockAssessment && action !== "move_on" && elapsed >= softWrapMs) {
     action = "move_on";
     forcedBy = "soft-time";
   }
@@ -96,7 +97,7 @@ export function advance(state: InterviewState, requested: DecisionAction, now: n
 
   const questionIndex = state.questionIndex + 1;
   const outOfQuestions = questionIndex >= state.plan.length;
-  const outOfTime = elapsed >= softWrapMs;
+  const outOfTime = !isBlockAssessment && elapsed >= softWrapMs;
 
   return {
     state: {

@@ -27,6 +27,10 @@ import type {
 } from "@/lib/shared/types";
 import type { Curriculum, CurriculumSession } from "@/lib/curriculum/curriculum";
 import { DEFAULT_WORKSPACE_ACCENT, isWorkspaceAccent } from "@/lib/workspace/accent";
+import {
+  initialPreparationOnboardingState,
+  publicPreparationOnboardingState
+} from "@/server/preparation/preparation-onboarding-state";
 import { compileCandidateInterviewProfile } from "../interview/candidate-profile-compiler";
 import type { PrismaService } from "../database/prisma.service";
 
@@ -102,6 +106,7 @@ export class ProfileService {
       updatedAt: stored.updatedAt.getTime(),
       completeness: 0,
       onboardingCompletedAt: stored.onboardingCompletedAt?.getTime() ?? null,
+      preparationOnboarding: publicPreparationOnboardingState(stored.preparationOnboarding),
       resume: resumeFromJson(
         stored.resumeAnalysis,
         stored.resumeFileName,
@@ -274,7 +279,9 @@ export class ProfileService {
           resumeUploadedAt: now,
           resumeVerifiedAt: now,
           resumeConfidence: input.resume.confidence,
-          onboardingCompletedAt: now
+          onboardingCompletedAt: now,
+          preparationOnboarding: toJson(initialPreparationOnboardingState(now.getTime())),
+          preparationOnboardingCompletedAt: null
         },
         update: {
           targetRole: input.targetRole,
@@ -293,6 +300,8 @@ export class ProfileService {
           resumeVerifiedAt: now,
           resumeConfidence: input.resume.confidence,
           onboardingCompletedAt: now,
+          preparationOnboarding: toJson(initialPreparationOnboardingState(now.getTime())),
+          preparationOnboardingCompletedAt: null,
           // The plan is built from resume evidence, so a new resume invalidates it.
           curriculum: Prisma.DbNull,
           curriculumBuiltAt: null
@@ -465,6 +474,7 @@ function emptyProfile(): CandidateProfile {
     updatedAt: null,
     completeness: 0,
     onboardingCompletedAt: null,
+    preparationOnboarding: initialPreparationOnboardingState(),
     resume: null
   };
 }

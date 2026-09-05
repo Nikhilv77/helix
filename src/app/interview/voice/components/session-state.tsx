@@ -109,12 +109,14 @@ export function SessionStateScreen({
   kind,
   duration = 0,
   answers = 0,
-  workspaceAccent
+  workspaceAccent,
+  blockAssessmentBlockId = null
 }: {
   kind: "expired" | "complete";
   duration?: number;
   answers?: number;
   workspaceAccent: WorkspaceAccent;
+  blockAssessmentBlockId?: string | null;
 }) {
   const teacher = useWorkspaceTeacher();
   const complete = kind === "complete";
@@ -138,8 +140,9 @@ export function SessionStateScreen({
                 Interview complete.
               </h1>
               <p className="mx-auto mt-4 max-w-2xl text-pretty text-sm leading-7 text-cream/62 sm:text-base">
-                Your conversation is safely recorded. Take a breath, then review the signals
-                {` ${teacher.name} found`} or begin another focused round.
+                {blockAssessmentBlockId
+                  ? `Your assessment is saved. Review the five scores and feedback ${teacher.name} recorded for this block.`
+                  : `Your conversation is safely recorded. Take a breath, then review the signals ${teacher.name} found or begin another focused round.`}
               </p>
             </div>
 
@@ -166,21 +169,43 @@ export function SessionStateScreen({
             </div>
 
             <div className="mx-auto mt-5 flex max-w-xs flex-col gap-2.5">
-              <Link
-                href="/reports"
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white"
-              >
-                <FileText size={15} aria-hidden="true" />
-                View report
-                <ArrowRight size={15} aria-hidden="true" />
-              </Link>
-              <Link
-                href="/interview?resume=1"
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-cream/58 transition hover:bg-white/[0.04] hover:text-cream"
-              >
-                Practice another round
-                <ArrowRight size={15} aria-hidden="true" />
-              </Link>
+              {blockAssessmentBlockId ? (
+                <>
+                  <Link
+                    href={`/practice/dsa?block=${encodeURIComponent(blockAssessmentBlockId)}`}
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white"
+                  >
+                    <FileText size={15} aria-hidden="true" />
+                    View block results
+                    <ArrowRight size={15} aria-hidden="true" />
+                  </Link>
+                  <Link
+                    href="/practice/dsa"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-cream/58 transition hover:bg-white/[0.04] hover:text-cream"
+                  >
+                    Return to current DSA practice
+                    <ArrowRight size={15} aria-hidden="true" />
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/reports"
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white"
+                  >
+                    <FileText size={15} aria-hidden="true" />
+                    View report
+                    <ArrowRight size={15} aria-hidden="true" />
+                  </Link>
+                  <Link
+                    href="/interview?resume=1"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-cream/58 transition hover:bg-white/[0.04] hover:text-cream"
+                  >
+                    Practice another round
+                    <ArrowRight size={15} aria-hidden="true" />
+                  </Link>
+                </>
+              )}
               <Link
                 href="/"
                 className="py-1 text-center text-sm font-medium text-cream/36 transition hover:text-cream/70"

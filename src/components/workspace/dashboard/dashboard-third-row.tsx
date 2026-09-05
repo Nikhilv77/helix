@@ -48,12 +48,12 @@ function ProgressSummaryCard({ progress }: { progress: DashboardProgressSummary 
       <h2 className="mt-4 text-[1.2rem] font-semibold leading-tight tracking-[-0.02em] text-cream">
         {progress.title}
       </h2>
-      <p className="mt-2 max-w-[29rem] text-[12.5px] leading-5 text-cream/46">{progress.detail}</p>
+      <p className="mt-2 max-w-[29rem] text-[13.5px] leading-5 text-cream/54">{progress.detail}</p>
 
       <div className="mt-auto pt-4">
         <div className="flex items-center justify-between gap-4">
-          <span className="text-[10.5px] font-medium text-cream/38">Practice path</span>
-          <span className="font-mono text-[11.5px] font-semibold text-cream/64">
+          <span className="text-[11.5px] font-medium text-cream/46">Practice path</span>
+          <span className="font-mono text-[12.5px] font-semibold text-cream/68">
             {progress.state === "unavailable" ? "—" : `${progressPercent}%`}
           </span>
         </div>
@@ -94,7 +94,7 @@ function ReportsSummaryCard({ reports }: { reports: DashboardReportsSummary }) {
       <h2 className="mt-4 text-[1.2rem] font-semibold leading-tight tracking-[-0.02em] text-cream">
         {reports.title}
       </h2>
-      <p className="mt-2 text-[12.5px] leading-5 text-cream/46">{reports.detail}</p>
+      <p className="mt-2 text-[13.5px] leading-5 text-cream/54">{reports.detail}</p>
 
       <div className="mt-auto flex items-end justify-between gap-4 pt-4">
         <div className="flex min-w-0 items-end gap-6">
@@ -142,7 +142,7 @@ function TrailmateSummaryCard({ trailmate }: { trailmate: DashboardTrailmateSumm
       <h2 className="mt-4 text-[1.2rem] font-semibold leading-tight tracking-[-0.02em] text-cream">
         {trailmate.title}
       </h2>
-      <p className="mt-2 text-[12.5px] leading-5 text-cream/46">{trailmate.detail}</p>
+      <p className="mt-2 text-[13.5px] leading-5 text-cream/54">{trailmate.detail}</p>
 
       <div className="mt-auto flex items-end justify-between gap-4 pt-4">
         <div className="flex min-w-0 items-end gap-6">
@@ -186,7 +186,7 @@ function SummaryMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
       <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-cream/28">{label}</p>
-      <p className="mt-1 truncate text-[11.5px] font-semibold text-cream/68">{value}</p>
+      <p className="mt-1 truncate text-[12.5px] font-semibold text-cream/72">{value}</p>
     </div>
   );
 }
@@ -200,7 +200,7 @@ function ActivityDots({ values, activeDays }: { values: number[]; activeDays: nu
       aria-label="Activity over the last seven days"
       className="flex min-w-0 items-center gap-2"
     >
-      <span className="shrink-0 text-[9.5px] font-medium text-cream/30">
+      <span className="shrink-0 text-[10.5px] font-medium text-cream/38">
         {activeDays > 0
           ? `${activeDays} active ${activeDays === 1 ? "day" : "days"}`
           : "No activity yet"}
@@ -219,7 +219,7 @@ function SummaryAction({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="group inline-flex shrink-0 items-center gap-1.5 text-[11.5px] font-semibold text-cream/62 transition hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
+      className="group inline-flex shrink-0 items-center gap-1.5 text-[12.5px] font-semibold text-cream/68 transition hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
     >
       {label}
       <ArrowRight

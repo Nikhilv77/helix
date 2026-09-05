@@ -15,6 +15,7 @@ export async function requireOnboardedProfile(): Promise<{
   const ownerId = authenticatedOwnerId(userId);
   const profile = await getProfileForRequest(ownerId);
   if (!profile.onboardingCompletedAt) redirect("/onboarding");
+  if (!profile.preparationOnboarding.completedAt) redirect("/");
 
   return { userId, ownerId, profile };
 }

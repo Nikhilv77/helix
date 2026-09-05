@@ -1,7 +1,8 @@
 import { InterviewDecider } from "./decider";
 import { buildFundamentalsPlan } from "./fundamentals-round";
 import { InterviewPlanner } from "./planner";
-import { InterviewService } from "./interview.service";
+import { executionForEvaluation, InterviewService, rubricFor } from "./interview.service";
+import { codeFingerprint } from "./code-fingerprint";
 import { MemorySessionStore } from "./session-store";
 import type { TechnicalAnswerEvaluator } from "./technical-answer-evaluator";
 import type { InterviewSetup, PlannedQuestion, QuestionEvaluation } from "./types";
@@ -61,6 +62,173 @@ const mcqQuestion: PlannedQuestion = {
 };
 
 describe("InterviewService resume round", () => {
+  it("uses the frozen five-metric rubric and excludes stale block execution from evaluation", () => {
+    const blockSetup: InterviewSetup = {
+      ...setup,
+      dsaBlockAssessment: {
+        kind: "dsa-block-assessment",
+        blockId: "11111111-1111-4111-8111-111111111111",
+        assessmentId: "22222222-2222-4222-8222-222222222222",
+        snapshotVersion: 2,
+        rubricVersion: 1
+      }
+    };
+    const question = {
+      ...questions[0]!,
+      rubricKeys: [
+        "pattern-recognition",
+        "correctness-edge-cases",
+        "efficiency",
+        "code-quality",
+        "communication"
+      ]
+    };
+    expect(rubricFor(blockSetup, question)?.map((item) => [item.key, item.weightPercent])).toEqual([
+      ["pattern-recognition", 20],
+      ["correctness-edge-cases", 30],
+      ["efficiency", 20],
+      ["code-quality", 15],
+      ["communication", 15]
+    ]);
+    const code = "function solve() {}";
+    const state = {
+      setup: blockSetup,
+      codeExecutions: { "0": { codeHash: codeFingerprint(code) } }
+    } as unknown as import("./types").InterviewState;
+    expect(executionForEvaluation(state, 0, [`\`\`\`javascript\n${code}\n\`\`\``])).not.toBeNull();
+    expect(
+      executionForEvaluation(state, 0, ["```javascript\nfunction changed() {}\n```"])
+    ).toBeNull();
+  });
+
+  it("reuses a reserved session ID without creating a second interview", async () => {
+    const { service, store } = harness();
+    const reserved = "11111111-1111-4111-8111-111111111111";
+    const first = await service.start(setup, "user-1", 1_000, questions, reserved);
+    const resumed = await service.start(setup, "user-1", 2_000, questions, reserved);
+
+    expect(first.created).toBe(true);
+    expect(resumed.created).toBe(false);
+    expect(resumed.state.id).toBe(reserved);
+    expect(await store.countStartedSince("user-1", 0)).toBe(1);
+  });
+
+  it("keeps an incomplete block assessment resumable instead of submitting it", async () => {
+    const { service, store } = harness();
+    const assessmentSetup: InterviewSetup = {
+      ...setup,
+      dsaBlockAssessment: {
+        kind: "dsa-block-assessment",
+        blockId: "11111111-1111-4111-8111-111111111111",
+        assessmentId: "22222222-2222-4222-8222-222222222222",
+        snapshotVersion: 1,
+        rubricVersion: 1
+      }
+    };
+    const started = await service.start(assessmentSetup, "user-1", 1_000, questions);
+
+    await expect(service.endOwned("user-1", started.state.id)).rejects.toMatchObject({
+      code: "ASSESSMENT_INCOMPLETE"
+    });
+    expect((await store.get(started.state.id))?.phase).not.toBe("done");
+  });
+
+  it("records an idempotent zero for a skipped transfer problem and advances", async () => {
+    const { service, store, decide } = harness();
+    const assessmentSetup: InterviewSetup = {
+      ...setup,
+      dsaBlockAssessment: {
+        kind: "dsa-block-assessment",
+        blockId: "11111111-1111-4111-8111-111111111111",
+        assessmentId: "22222222-2222-4222-8222-222222222222",
+        snapshotVersion: 1,
+        rubricVersion: 1
+      }
+    };
+    const codeQuestion: PlannedQuestion = {
+      ...questions[0]!,
+      kind: "code",
+      rubricKeys: [
+        "pattern-recognition",
+        "correctness-edge-cases",
+        "efficiency",
+        "code-quality",
+        "communication"
+      ]
+    };
+    const started = await service.start(assessmentSetup, "user-1", 1_000, [
+      codeQuestion,
+      codeQuestion
+    ]);
+    const turnId = "33333333-3333-4333-8333-333333333333";
+
+    const first = await service.skipBlockAssessmentCodeOwned(
+      "user-1",
+      started.state.id,
+      { startMs: 100, endMs: 200 },
+      1_200,
+      turnId
+    );
+    const replay = await service.skipBlockAssessmentCodeOwned(
+      "user-1",
+      started.state.id,
+      { startMs: 100, endMs: 200 },
+      1_300,
+      turnId
+    );
+
+    expect(first.state.questionIndex).toBe(1);
+    expect(replay.state.questionIndex).toBe(1);
+    expect(replay.state.turns.filter((turn) => turn.skipped)).toHaveLength(1);
+    expect(replay.state.questionEvaluations?.["0"]?.rubricScores).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ rubricKey: "correctness-edge-cases", score: 0 })
+      ])
+    );
+    expect(decide).not.toHaveBeenCalled();
+    expect((await store.get(started.state.id))?.phase).toBe("questioning");
+  });
+
+  it("grades a frozen block-review MCQ through the server-side resolver, not a plan answer index", async () => {
+    const { service, decide } = harness();
+    service.setBlockAssessmentMcqGrader({
+      gradeReviewAnswer: vi.fn().mockResolvedValue({
+        correct: true,
+        explanation: "The persisted execution evidence supports this option."
+      })
+    });
+    const assessmentSetup: InterviewSetup = {
+      ...setup,
+      dsaBlockAssessment: {
+        kind: "dsa-block-assessment",
+        blockId: "11111111-1111-4111-8111-111111111111",
+        assessmentId: "22222222-2222-4222-8222-222222222222",
+        snapshotVersion: 1,
+        rubricVersion: 1
+      }
+    };
+    const started = await service.start(assessmentSetup, "user-1", 1_000, [
+      {
+        ...mcqQuestion,
+        dsaAssessmentReviewItemId: "review-1",
+        // A deliberately incorrect local key proves only the trusted resolver
+        // is used for a frozen assessment.
+        answerIndex: 0,
+        explanation: undefined
+      }
+    ]);
+
+    const result = await service.answerOwned(
+      "user-1",
+      started.state.id,
+      { text: "useRef", startMs: 100, endMs: 200 },
+      1_200
+    );
+    expect(result.state.turns.at(-1)).toMatchObject({ correct: true });
+    expect(result.response.utterance).toContain("persisted execution evidence");
+    expect(decide).not.toHaveBeenCalled();
+  });
+
   it("does not expose a live session to a different owner", async () => {
     const { service } = harness();
     const started = await service.start(setup, "user-1", 1_000);

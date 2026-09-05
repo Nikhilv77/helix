@@ -36,6 +36,7 @@ import {
 } from "@/server/onboarding/resume/technology-detector";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import { signResumePreview } from "@/server/profile/resume-preview-token";
+import { initialPreparationOnboardingState } from "@/server/preparation/preparation-onboarding-state";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -341,6 +342,7 @@ export async function POST(request: NextRequest) {
           100
       ),
       onboardingCompletedAt: null,
+      preparationOnboarding: initialPreparationOnboardingState(),
       resume: {
         versionId: null,
         contentFingerprint,

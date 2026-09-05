@@ -164,6 +164,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   if (userId) {
     const profile = await getProfileForRequest(authenticatedOwnerId(userId)).catch(() => null);
     if (workspaceRoute && !welcomeHome && !profile?.onboardingCompletedAt) redirect("/onboarding");
+    if (
+      workspaceRoute &&
+      pathname !== "/" &&
+      profile?.onboardingCompletedAt &&
+      profile.preparationOnboarding.completedAt === null
+    ) {
+      redirect("/");
+    }
     if (profile) {
       initialTeacherId = profile.teacherId;
       initialProfileImage = profile.profileImage;

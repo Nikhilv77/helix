@@ -36,7 +36,7 @@ function WeeklyRhythmCard({ rhythm }: { rhythm: DashboardWeeklyRhythm }) {
         <h2 className="mt-4 max-w-[28rem] text-[1.4rem] font-semibold leading-tight tracking-[-0.03em] text-cream">
           {rhythm.title}
         </h2>
-        <p className="mt-1.5 max-w-[31rem] text-[12px] leading-[1.55] text-cream/44">
+        <p className="mt-1.5 max-w-[31rem] text-[13px] leading-[1.55] text-cream/52">
           {rhythm.detail}
         </p>
 
@@ -83,7 +83,7 @@ function NextFocusCard({ focus }: { focus: DashboardNextFocus }) {
       <h2 className="mt-4 text-[1.4rem] font-semibold leading-tight tracking-[-0.03em] text-cream">
         {focus.title}
       </h2>
-      <p className="mt-2 text-[12px] leading-[1.55] text-cream/46">{focus.detail}</p>
+      <p className="mt-2 text-[13px] leading-[1.55] text-cream/54">{focus.detail}</p>
 
       {focus.itemLabel ? (
         <div className="mt-4 flex items-end justify-between gap-4">
@@ -91,12 +91,12 @@ function NextFocusCard({ focus }: { focus: DashboardNextFocus }) {
             <p className="text-[9px] font-semibold uppercase tracking-[0.13em] text-cream/28">
               Next question
             </p>
-            <p className="mt-1 truncate text-[12.5px] font-semibold text-cream/72">
+            <p className="mt-1 truncate text-[13.5px] font-semibold text-cream/76">
               {focus.itemLabel}
             </p>
           </div>
           {focus.supportingLabel ? (
-            <p className="shrink-0 text-[10px] font-medium text-cream/30">
+            <p className="shrink-0 text-[11px] font-medium text-cream/38">
               {focus.supportingLabel}
             </p>
           ) : null}
@@ -105,7 +105,7 @@ function NextFocusCard({ focus }: { focus: DashboardNextFocus }) {
 
       <div className="mt-auto flex flex-wrap items-center justify-between gap-4 pt-5">
         {!focus.itemLabel && focus.supportingLabel ? (
-          <p className="text-[10px] font-medium text-cream/30">{focus.supportingLabel}</p>
+          <p className="text-[11px] font-medium text-cream/38">{focus.supportingLabel}</p>
         ) : null}
         <PrimaryAction href={focus.actionHref} label={focus.actionLabel} />
       </div>
@@ -130,7 +130,7 @@ function RhythmMetric({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-cream/26">{label}</p>
-      <p className="mt-1 font-mono text-[13px] font-semibold text-cream/68">{value}</p>
+      <p className="mt-1 font-mono text-[14px] font-semibold text-cream/72">{value}</p>
     </div>
   );
 }
@@ -139,7 +139,7 @@ function TextAction({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="group inline-flex shrink-0 items-center gap-1.5 text-[11.5px] font-semibold text-cream/62 transition hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
+      className="group inline-flex shrink-0 items-center gap-1.5 text-[12.5px] font-semibold text-cream/68 transition hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
     >
       {label}
       <ArrowRight
@@ -155,7 +155,7 @@ function PrimaryAction({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="group ml-auto inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-cream px-3.5 text-[12px] font-semibold text-[#191a1d] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#17181b]"
+      className="group ml-auto inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-cream px-3.5 text-[13px] font-semibold text-[#191a1d] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#17181b]"
     >
       {label}
       <ArrowRight

@@ -9,6 +9,7 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/server/interview/owner";
 import { practiceTelemetry } from "@/server/practice/practice-telemetry";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
+import { requireCompletedPreparationOnboarding } from "@/server/auth/preparation-onboarding-api-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -45,9 +46,7 @@ export async function PUT(request: NextRequest) {
     }
     ownerId = authenticatedOwnerId(userId);
     const profile = await app.profileService.get(ownerId);
-    if (!profile.onboardingCompletedAt) {
-      throw new ApiRouteError(409, "ONBOARDING_REQUIRED", "Finish onboarding first.");
-    }
+    requireCompletedPreparationOnboarding(profile);
     const parsed = stateSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
       throw new ApiRouteError(400, "BAD_REQUEST", "Practice state validation failed", {

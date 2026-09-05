@@ -92,6 +92,16 @@ enum PracticeAttemptVerificationStatus {
   NOT_APPLICABLE
 }
 
+/// Lifecycle for a saved adaptive DSA cohort. A block stays current through
+/// assessment completion so its recommendation and evidence cannot be replaced
+/// while a candidate is reviewing or resuming that assessment.
+enum DsaPracticeBlockStatus {
+  PRACTISING
+  ASSESSMENT_READY
+  ASSESSMENT_IN_PROGRESS
+  ASSESSED
+}
+
 enum MayaInsightKind {
   NEXT_PRIORITY
   COMMON_TRAP
@@ -277,6 +287,11 @@ model CandidateProfile {
   activeResumeVersionId       String?                              @db.Uuid
   activeResumeVersion         CandidateInterviewProfileVersion?    @relation("CandidateActiveResumeVersion", fields: [activeResumeVersionId], references: [id], onDelete: SetNull)
   onboardingCompletedAt       DateTime?
+  /// Durable target-setup and initial-baseline checkpoint. Null legacy rows enter at target setup.
+  preparationOnboarding       Json?
+  preparationOnboardingCompletedAt DateTime?
+  /// Immutable per-candidate baseline question snapshots, retained for audit and resume safety.
+  preparationBaselineQuestions PreparationBaselineQuestion[]
   /// Maya's curated session plan for this candidate, generated from the resume.
   curriculum                  Json?
   curriculumBuiltAt           DateTime?
@@ -291,6 +306,8 @@ model CandidateProfile {
   interviewPlanVersions       PersonalizedInterviewPlanVersion[]   @relation("CandidateInterviewPlanVersions")
   performanceProfileVersions  CandidatePerformanceProfileVersion[] @relation("CandidatePerformanceProfileVersions")
   practiceEvidenceVersions    CandidatePracticeEvidenceVersion[]   @relation("CandidatePracticeEvidenceVersions")
+  dsaPracticeBlocks           DsaPracticeBlock[]
+  dsaBlockAssessments         DsaBlockAssessment[]
   resumeRoastTarget           ResumeRoastTarget?                   @relation("CandidateResumeRoastTarget")
   resumeRoasts                ResumeRoast[]                        @relation("CandidateResumeRoasts")
   helpRequests                HelpRequest[]                        @relation("HelpRequestsAsked")
@@ -299,6 +316,68 @@ model CandidateProfile {
 
   @@index([updatedAt])
   @@index([activeResumeVersionId])
+}
+
+/// The exact question and answer-key shown in one candidate's baseline. The
+/// source question banks may evolve, but a started assessment must not.
+model PreparationBaselineQuestion {
+  id         String           @id @default(uuid()) @db.Uuid
+  ownerId    String
+  section    String
+  questionId String
+  question   Json
+  createdAt  DateTime         @default(now())
+  owner      CandidateProfile @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+
+  @@unique([ownerId, section])
+  @@index([ownerId])
+}
+
+/// Immutable cohort selected for one adaptive DSA practice block. `ordinal`
+/// gives each owner's history a stable order. The database migration enforces
+/// that at most one row per owner has `isCurrent = true` with a partial unique
+/// index; Prisma cannot express that conditional uniqueness directly.
+model DsaPracticeBlock {
+  id                     String                 @id @default(uuid()) @db.Uuid
+  ownerId                String
+  ordinal                Int
+  isCurrent              Boolean                @default(true)
+  status                 DsaPracticeBlockStatus @default(PRACTISING)
+  recommendationSnapshot Json
+  questionSlugs          String[]
+  assessmentReadyAt      DateTime?
+  assessedAt             DateTime?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  owner                  CandidateProfile       @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  assessment             DsaBlockAssessment?
+
+  @@unique([ownerId, ordinal])
+  @@index([ownerId, isCurrent])
+  @@index([ownerId, createdAt])
+  @@index([status])
+}
+
+/// One durable assessment record per DSA block. Question and rubric snapshots
+/// are populated when the assessment is prepared; session and report fields
+/// are intentionally nullable until the later interview/scoring phases.
+model DsaBlockAssessment {
+  id                 String           @id @default(uuid()) @db.Uuid
+  blockId            String           @unique @db.Uuid
+  ownerId            String
+  assessmentSnapshot Json?
+  interviewSessionId String?          @db.Uuid
+  reportSnapshot     Json?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  startedAt          DateTime?
+  completedAt        DateTime?
+  block              DsaPracticeBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  owner              CandidateProfile @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+
+  @@index([ownerId, createdAt])
+  @@index([ownerId, completedAt])
+  @@index([interviewSessionId])
 }
 
 /// Immutable aggregate of demonstrated skill evidence from completed

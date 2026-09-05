@@ -43,6 +43,16 @@ const profile: CandidateProfile = {
   updatedAt: Date.now(),
   completeness: 80,
   onboardingCompletedAt: Date.now(),
+  preparationOnboarding: {
+    stage: "completed",
+    updatedAt: Date.now(),
+    completedAt: Date.now(),
+    baselineStartedAt: Date.now(),
+    answers: {},
+    questionIds: {},
+    questions: {},
+    skillProfile: null
+  },
   resume: {
     versionId: "11111111-1111-4111-8111-111111111111",
     contentFingerprint: `sha256-${"a".repeat(64)}`,

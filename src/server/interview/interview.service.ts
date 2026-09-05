@@ -48,6 +48,7 @@ import {
   shouldEvaluateTechnicalAnswer,
   type TechnicalAnswerEvaluator
 } from "./technical-answer-evaluator";
+import { fencedCodeFingerprint } from "./code-fingerprint";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** A spoken conversation should never wait on the model's full provider timeout. */
@@ -57,6 +58,7 @@ const EVALUATOR_BUDGET_MS = 3_500;
 export interface StartResult {
   state: InterviewState;
   utterance: string;
+  created: boolean;
 }
 
 export interface AnswerResult {
@@ -65,11 +67,24 @@ export interface AnswerResult {
   response: InterviewAnswerResponse;
 }
 
+type AnswerMode = "answer" | "skip-block-assessment-code";
+
+/** Server-only source of answer keys for frozen block-assessment review MCQs. */
+export interface BlockAssessmentMcqGrader {
+  gradeReviewAnswer(
+    ownerId: string | undefined,
+    setup: InterviewSetup,
+    reviewItemId: string,
+    answer: string
+  ): Promise<{ correct: boolean; explanation: string } | null>;
+}
+
 const ANSWER_REPLAY_WAIT_MS = 5_000;
 const ANSWER_REPLAY_POLL_MS = 100;
 
 export class InterviewService {
   private readonly logger = new Logger(InterviewService.name);
+  private blockAssessmentMcqGrader?: BlockAssessmentMcqGrader;
 
   constructor(
     private readonly planner: InterviewPlanner,
@@ -80,6 +95,11 @@ export class InterviewService {
     private readonly answerEvaluator?: TechnicalAnswerEvaluator
   ) {}
 
+  /** Wired after the runtime service is created to avoid a construction cycle. */
+  setBlockAssessmentMcqGrader(grader: BlockAssessmentMcqGrader): void {
+    this.blockAssessmentMcqGrader = grader;
+  }
+
   /**
    * `prebuiltPlan` is for rounds that are assembled from stored content rather
    * than planned by the model, which is what makes the resume round free to
@@ -89,8 +109,21 @@ export class InterviewService {
     setup: InterviewSetup,
     ownerId: string,
     now = Date.now(),
-    prebuiltPlan?: PlannedQuestion[]
+    prebuiltPlan?: PlannedQuestion[],
+    sessionId?: string
   ): Promise<StartResult> {
+    if (sessionId) {
+      const existing = await this.store.getOwned(sessionId, ownerId);
+      if (existing) {
+        return {
+          state: existing.state,
+          utterance:
+            existing.state.turns.find((turn) => turn.speaker === "agent" && turn.action === "intro")
+              ?.text ?? introUtterance(existing.state),
+          created: false
+        };
+      }
+    }
     const used = await this.store.countStartedSince(ownerId, now - DAY_MS);
     if (used >= this.dailyLimit) {
       throw new BadRequestErrorException("SESSION_LIMIT_REACHED", "Daily session limit reached", {
@@ -104,7 +137,7 @@ export class InterviewService {
       throw new BadRequestErrorException("PLAN_EMPTY", "No questions could be planned", {});
     }
 
-    const state = createState({ id: randomUUID(), setup, plan, startedAt: now });
+    const state = createState({ id: sessionId ?? randomUUID(), setup, plan, startedAt: now });
     const utterance = introUtterance(state);
     const withIntro = appendTurn(beginQuestioning(state), {
       speaker: "agent",
@@ -129,7 +162,7 @@ export class InterviewService {
       })
     );
 
-    return { state: withIntro, utterance };
+    return { state: withIntro, utterance, created: true };
   }
 
   /** Backs the "sessions left today" indicator in the workspace sidebar. */
@@ -271,12 +304,30 @@ export class InterviewService {
     return this.answerInternal(sessionId, answer, now, ownerId, turnId);
   }
 
+  async skipBlockAssessmentCodeOwned(
+    ownerId: string,
+    sessionId: string,
+    timing: { startMs: number; endMs: number },
+    now = Date.now(),
+    turnId?: string
+  ): Promise<AnswerResult> {
+    return this.answerInternal(
+      sessionId,
+      { text: "I can't solve this problem.", ...timing },
+      now,
+      ownerId,
+      turnId,
+      "skip-block-assessment-code"
+    );
+  }
+
   private async answerInternal(
     sessionId: string,
     answer: { text: string; startMs: number; endMs: number },
     now: number,
     ownerId?: string,
-    turnId?: string
+    turnId?: string,
+    mode: AnswerMode = "answer"
   ): Promise<AnswerResult> {
     // Establish ownership/capability-backed access before creating an
     // idempotency row, so a guessed UUID cannot cause writes to another user.
@@ -289,7 +340,7 @@ export class InterviewService {
     }
 
     try {
-      return await this.processAnswer(session, sessionId, answer, now, turnId);
+      return await this.processAnswer(session, sessionId, answer, now, ownerId, turnId, mode);
     } catch (error) {
       if (turnId) {
         if (error instanceof SessionVersionConflictError) {
@@ -311,7 +362,9 @@ export class InterviewService {
     sessionId: string,
     answer: { text: string; startMs: number; endMs: number },
     now: number,
-    turnId?: string
+    ownerId?: string,
+    turnId?: string,
+    mode: AnswerMode = "answer"
   ): Promise<AnswerResult> {
     const existing = session.state;
 
@@ -330,17 +383,55 @@ export class InterviewService {
       return { state: closed, decision, response };
     }
 
+    if (
+      mode === "skip-block-assessment-code" &&
+      (existing.setup.dsaBlockAssessment?.kind !== "dsa-block-assessment" ||
+        question.kind !== "code")
+    ) {
+      throw new BadRequestErrorException(
+        "ASSESSMENT_SKIP_NOT_ALLOWED",
+        "Only an active block-assessment coding problem can be skipped.",
+        { sessionId }
+      );
+    }
+
     const withAnswer = appendTurn(existing, {
       speaker: "user",
       text: answer.text,
       startMs: answer.startMs,
       endMs: answer.endMs,
-      questionIndex: existing.questionIndex
+      questionIndex: existing.questionIndex,
+      ...(mode === "skip-block-assessment-code" ? { skipped: true } : {})
     });
+
+    if (mode === "skip-block-assessment-code") {
+      return this.completeSkippedBlockAssessmentCode(
+        withAnswer,
+        question,
+        now,
+        session.version,
+        turnId
+      );
+    }
 
     // A multiple choice answer is decided by comparison, not by the model. The
     // correct option and its explanation were written when the resume was read.
-    const graded = gradeMultipleChoice(question, answer.text);
+    if (question.dsaAssessmentReviewItemId && !this.blockAssessmentMcqGrader) {
+      throw new BadRequestErrorException(
+        "ASSESSMENT_ANSWER_KEY_UNAVAILABLE",
+        "This assessment answer key is unavailable.",
+        { sessionId }
+      );
+    }
+    const assessmentGrade = question.dsaAssessmentReviewItemId
+      ? await this.blockAssessmentMcqGrader!.gradeReviewAnswer(
+          ownerId,
+          withAnswer.setup,
+          question.dsaAssessmentReviewItemId,
+          answer.text
+        )
+      : null;
+    const graded = assessmentGrade ?? gradeMultipleChoice(question, answer.text);
     if (graded) {
       return this.completeGradedAnswer(
         withAnswer,
@@ -348,7 +439,8 @@ export class InterviewService {
         graded.correct,
         now,
         session.version,
-        turnId
+        turnId,
+        assessmentGrade?.explanation
       );
     }
 
@@ -463,7 +555,8 @@ export class InterviewService {
     correct: boolean,
     now: number,
     expectedVersion: number,
-    turnId?: string
+    turnId?: string,
+    serverExplanation?: string
   ): Promise<AnswerResult> {
     const evaluatedState: InterviewState = {
       ...state,
@@ -476,7 +569,12 @@ export class InterviewService {
     const utterance = this.composeUtterance(
       result.state,
       result.action,
-      multipleChoiceReply(question, correct)
+      multipleChoiceReply(
+        serverExplanation === undefined
+          ? question
+          : { ...question, explanation: serverExplanation },
+        correct
+      )
     );
     const spokenAt = elapsedMs(result.state, now);
     const finalState = appendTurn(result.state, {
@@ -520,8 +618,62 @@ export class InterviewService {
     };
   }
 
+  private async completeSkippedBlockAssessmentCode(
+    state: InterviewState,
+    question: PlannedQuestion,
+    now: number,
+    expectedVersion: number,
+    turnId?: string
+  ): Promise<AnswerResult> {
+    const questionIndex = state.questionIndex;
+    const evaluatedState: InterviewState = {
+      ...state,
+      questionEvaluations: {
+        ...state.questionEvaluations,
+        [String(questionIndex)]: skippedCodeEvaluation(question, now)
+      }
+    };
+    const result = advance(evaluatedState, "move_on", now);
+    const utterance = this.composeUtterance(
+      result.state,
+      "move_on",
+      "Okay. I've marked this problem as skipped."
+    );
+    const spokenAt = elapsedMs(result.state, now);
+    const finalState = appendTurn(result.state, {
+      speaker: "agent",
+      text: utterance,
+      startMs: spokenAt,
+      endMs: spokenAt,
+      action: "move_on",
+      forcedBy: result.forcedBy,
+      questionIndex: result.state.questionIndex,
+      gradedQuestionIndex: questionIndex
+    });
+    const decision: Decision = {
+      action: "move_on",
+      missing: "specificity",
+      reason: "candidate explicitly skipped the coding problem",
+      utterance,
+      forcedBy: result.forcedBy
+    };
+    const response = answerResponse(finalState, decision, now);
+    await this.persistAnswer(finalState, expectedVersion, turnId, response);
+    return { state: finalState, decision, response };
+  }
+
   async end(sessionId: string, ownerId?: string): Promise<InterviewState> {
     const session = await this.versionedSession(sessionId, ownerId);
+    if (
+      session.state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment" &&
+      session.state.phase !== "done"
+    ) {
+      throw new BadRequestErrorException(
+        "ASSESSMENT_INCOMPLETE",
+        "Complete or explicitly skip every assessment question before submitting.",
+        { sessionId }
+      );
+    }
     const closed = finish(session.state);
     try {
       await this.store.save(closed, session.version);
@@ -635,7 +787,7 @@ export class InterviewService {
           question,
           answers,
           rubric: rubricFor(state.setup, question) ?? [],
-          execution: state.codeExecutions?.[String(questionIndex)] ?? null,
+          execution: executionForEvaluation(state, questionIndex, answers),
           evaluatedAt: now
         }),
         EVALUATOR_BUDGET_MS,
@@ -784,6 +936,26 @@ function multipleChoiceEvaluation(
       }
     ],
     answerExcerpts: answer ? [answer.replace(/\s+/g, " ").trim().slice(0, 240)] : [],
+    execution: null,
+    evaluatedAt
+  };
+}
+
+function skippedCodeEvaluation(question: PlannedQuestion, evaluatedAt: number): QuestionEvaluation {
+  return {
+    source: "evaluation-unavailable",
+    score: 0,
+    verdict: "insufficient-evidence",
+    confidence: 1,
+    summary: "The candidate explicitly skipped this coding problem.",
+    strengths: [],
+    gaps: ["No solution evidence was submitted for this coding problem."],
+    rubricScores: (question.rubricKeys ?? []).map((rubricKey) => ({
+      rubricKey,
+      score: 0,
+      rationale: "The candidate explicitly skipped this coding problem."
+    })),
+    answerExcerpts: [],
     execution: null,
     evaluatedAt
   };
@@ -990,10 +1162,64 @@ function topicLabelFor(setup: InterviewSetup, question: PlannedQuestion): string
     ?.label;
 }
 
-function rubricFor(setup: InterviewSetup, question: PlannedQuestion) {
+export function rubricFor(setup: InterviewSetup, question: PlannedQuestion) {
   const rubricKeys = new Set(question.rubricKeys ?? []);
   if (!rubricKeys.size) return undefined;
+  if (setup.dsaBlockAssessment?.kind === "dsa-block-assessment") {
+    return BLOCK_ASSESSMENT_RUBRIC.filter((rubric) => rubricKeys.has(rubric.key));
+  }
   return setup.personalizedBlueprint?.rubric.filter((rubric) => rubricKeys.has(rubric.key));
+}
+
+const BLOCK_ASSESSMENT_RUBRIC = [
+  {
+    key: "pattern-recognition",
+    label: "Pattern recognition",
+    weightPercent: 20,
+    strongSignals: ["Identifies the relevant DSA pattern and explains why it fits the inputs."],
+    weakSignals: ["Selects a pattern without connecting it to the problem constraints."]
+  },
+  {
+    key: "correctness-edge-cases",
+    label: "Correctness and edge cases",
+    weightPercent: 30,
+    strongSignals: ["Produces results that pass the frozen tests and addresses boundary cases."],
+    weakSignals: ["Has failing cases, unsupported assumptions, or misses boundary behavior."]
+  },
+  {
+    key: "efficiency",
+    label: "Time and space efficiency",
+    weightPercent: 20,
+    strongSignals: ["States and implements an appropriate time and space complexity trade-off."],
+    weakSignals: ["Uses avoidable repeated work or cannot justify the complexity."]
+  },
+  {
+    key: "code-quality",
+    label: "Code quality",
+    weightPercent: 15,
+    strongSignals: ["Code is readable, structured, and uses data structures consistently."],
+    weakSignals: ["Code is difficult to follow, fragile, or has avoidable implementation errors."]
+  },
+  {
+    key: "communication",
+    label: "Communication",
+    weightPercent: 15,
+    strongSignals: ["Explains the approach, invariants, and complexity clearly while coding."],
+    weakSignals: ["Leaves reasoning, correctness, or complexity unexplained."]
+  }
+];
+
+export function executionForEvaluation(
+  state: InterviewState,
+  questionIndex: number,
+  answers: string[]
+) {
+  const execution = state.codeExecutions?.[String(questionIndex)] ?? null;
+  if (state.setup.dsaBlockAssessment?.kind !== "dsa-block-assessment") return execution;
+  const latest = answers.at(-1);
+  return execution?.codeHash && latest && execution.codeHash === fencedCodeFingerprint(latest)
+    ? execution
+    : null;
 }
 
 function evidenceDimensionForMissing(value: string): EvidenceDimension | null {
@@ -1054,13 +1280,15 @@ function introUtterance(state: InterviewState): string {
   const first = state.plan[0];
   const minutes = Math.round(roundCaps(state.setup).hardCapMs / 60000);
   const intro =
-    state.setup.templateTitle === "DSA practice interview"
-      ? "Hi, I'm Maya. Welcome to your DSA interview. I picked a few problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful."
-      : state.setup.fundamentalsRound
-        ? "Hi, I'm Maya. This is a computer fundamentals round, in three parts. A few quick checks first, then I'll ask you to explain the mechanism behind some of them, and we'll finish by diagnosing something real. After each answer I'll show you what I was listening for."
-        : isResumeRound(state.setup)
-          ? "Hi, I'm Maya. Let's have a relaxed conversation about the work on your resume. I'll pick a few threads and ask about what actually happened, what you did, and what changed. Take your time."
-          : `Hi, I'm Maya, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
+    state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment"
+      ? "Hi, I'm Maya. This is your DSA block assessment. We’ll begin with rapid code-review questions grounded in your verified submissions. Then you’ll solve two new transfer problems in the editor. Explain your approach and complexity as you go; take your time."
+      : state.setup.templateTitle === "DSA practice interview"
+        ? "Hi, I'm Maya. Welcome to your DSA interview. I picked a few problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful."
+        : state.setup.fundamentalsRound
+          ? "Hi, I'm Maya. This is a computer fundamentals round, in three parts. A few quick checks first, then I'll ask you to explain the mechanism behind some of them, and we'll finish by diagnosing something real. After each answer I'll show you what I was listening for."
+          : isResumeRound(state.setup)
+            ? "Hi, I'm Maya. Let's have a relaxed conversation about the work on your resume. I'll pick a few threads and ask about what actually happened, what you did, and what changed. Take your time."
+            : `Hi, I'm Maya, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
 
   return first ? `${intro} ${first.text}` : intro;
 }

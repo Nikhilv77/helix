@@ -16,6 +16,54 @@ const profile = {
   }
 } as unknown as CandidateProfile;
 
+const baselineProfile = {
+  ...profile,
+  targetRole: "backend",
+  level: "3-5",
+  preparationOnboarding: {
+    stage: "completed",
+    completedAt: NOW - 1_000,
+    skillProfile: {
+      source: "initial-baseline",
+      generatedAt: NOW - 1_000,
+      signals: [
+        {
+          areaId: "dsa",
+          score: null,
+          confidence: 0.55,
+          evidence: "baseline",
+          startingState: "experienced-rusty",
+          topics: [
+            { label: "Arrays & Hashing", familiarity: "familiar" },
+            { label: "Search patterns", familiarity: "needs-refresh" },
+            { label: "Dynamic Programming", familiarity: "unknown" }
+          ]
+        },
+        {
+          areaId: "core-technical",
+          score: null,
+          confidence: 0.5,
+          evidence: "baseline",
+          topics: [{ label: "Target-stack decisions", familiarity: "needs-refresh" }]
+        },
+        {
+          areaId: "applied-engineering",
+          score: null,
+          confidence: 0.3,
+          evidence: "not-enough-evidence"
+        },
+        {
+          areaId: "architecture-design",
+          score: null,
+          confidence: 0.55,
+          evidence: "baseline",
+          topics: [{ label: "System design judgment", familiarity: "familiar" }]
+        }
+      ]
+    }
+  }
+} as unknown as CandidateProfile;
+
 function reports(overrides: Partial<ReportsOverview> = {}): ReportsOverview {
   return {
     totalRounds: 0,
@@ -79,6 +127,219 @@ const latestInterview = {
 } as ReportsOverview["latest"];
 
 describe("buildDashboardOverview", () => {
+  it("turns a completed baseline into the first dashboard plan without inventing a score", () => {
+    const result = buildDashboardOverview(baselineProfile, reports(), practice(), NOW);
+
+    expect(result.coaching).toMatchObject({
+      state: "baseline-priority",
+      title: "You showed a solid starting grasp of Arrays & Hashing. Now sharpen Search patterns.",
+      actionLabel: "Open focused practice",
+      actionHref: "/practice"
+    });
+    expect(result.coaching.body).toContain("needs a refresh");
+    expect(result.coaching.body).toContain("resume shows experience with Python");
+    expect(result.coaching.body).toContain("Backend Engineer at SDE-2 level");
+    expect(result.coaching.body).toContain("plan adapts to your performance");
+    expect(result.coaching.body).not.toContain("resume-based");
+    expect(result.readiness).toMatchObject({
+      status: "forming",
+      score: null,
+      label: "Your starting profile",
+      actionLabel: "Build evidence"
+    });
+    expect(result.readiness.detail).toContain("mapped 4 preparation areas");
+    expect(result.readiness.detail).toContain("not a readiness score");
+    expect(result.continuation.interviews).toMatchObject({
+      state: "start",
+      statusLabel: "Baseline complete",
+      title: "Your first proof check comes after focused practice."
+    });
+    expect(result.direction.focus).toMatchObject({
+      state: "baseline",
+      sourceLabel: "From your baseline",
+      title: "Target-stack decisions",
+      supportingLabel: "Early opportunity · verify in practice"
+    });
+    expect(result.direction.rhythm.title).toBe("Your first evidence week starts here");
+    expect(result.continuation.practice).toMatchObject({
+      statusLabel: "First evidence block",
+      actionLabel: "Start recommended problem"
+    });
+  });
+
+  it("describes a familiar baseline signal as something to verify, not a weakness", () => {
+    const familiarProfile = {
+      ...baselineProfile,
+      targetRole: "frontend",
+      preparationOnboarding: {
+        ...baselineProfile.preparationOnboarding,
+        skillProfile: {
+          source: "initial-baseline",
+          generatedAt: NOW,
+          signals: [
+            {
+              areaId: "core-technical",
+              score: null,
+              confidence: 0.6,
+              evidence: "baseline",
+              startingState: "experienced-active",
+              topics: [{ label: "React state", familiarity: "familiar" }]
+            }
+          ]
+        }
+      }
+    } as unknown as CandidateProfile;
+
+    const result = buildDashboardOverview(familiarProfile, reports(), practice(), NOW);
+
+    expect(result.coaching.title).toBe("Pressure-test React state next.");
+    expect(result.coaching.body).toContain("React state is ready for a deeper check");
+    expect(result.coaching.body).not.toMatch(/weak|needs a refresh/i);
+  });
+
+  it("celebrates a strong DSA baseline before naming the next gap", () => {
+    const strongDsaProfile = {
+      ...baselineProfile,
+      preparationOnboarding: {
+        ...baselineProfile.preparationOnboarding,
+        skillProfile: {
+          source: "initial-baseline",
+          generatedAt: NOW,
+          signals: [
+            {
+              areaId: "dsa",
+              score: null,
+              confidence: 0.72,
+              evidence: "baseline",
+              startingState: "experienced-active",
+              topics: [
+                { label: "Arrays & Hashing", familiarity: "familiar" },
+                { label: "Search patterns", familiarity: "familiar" },
+                { label: "Trees", familiarity: "familiar" },
+                { label: "Sliding Window", familiarity: "familiar" }
+              ]
+            },
+            {
+              areaId: "core-technical",
+              score: null,
+              confidence: 0.42,
+              evidence: "baseline",
+              topics: [{ label: "Target-stack decisions", familiarity: "needs-refresh" }]
+            }
+          ]
+        }
+      }
+    } as unknown as CandidateProfile;
+
+    const firstVisit = buildDashboardOverview(strongDsaProfile, reports(), practice(), NOW);
+    expect(firstVisit.coaching.title).toBe(
+      "Your algorithms and data structures understanding is strong. Now sharpen Target-stack decisions."
+    );
+    expect(firstVisit.coaching.spokenSummary).toContain("Based on your resume and assessment");
+
+    const afterOpeningProblem = buildDashboardOverview(
+      strongDsaProfile,
+      reports(),
+      practice({ attempts: 1, lastActiveAt: NOW }),
+      NOW
+    );
+    expect(afterOpeningProblem.coaching).toMatchObject({
+      state: "baseline-priority",
+      actionLabel: "Finish first problem"
+    });
+    expect(afterOpeningProblem.continuation.practice.statusLabel).toBe("Attempt in progress");
+    expect(afterOpeningProblem.continuation.interviews.statusLabel).toBe("Baseline complete");
+
+    const afterFirstSolve = buildDashboardOverview(
+      strongDsaProfile,
+      reports(),
+      practice({ completed: 1, attempts: 1, lastActiveAt: NOW }),
+      NOW
+    );
+    expect(afterFirstSolve.coaching.state).toBe("practice-momentum");
+    expect(afterFirstSolve.coaching.title).toContain("Good start");
+    expect(afterFirstSolve.coaching.body).not.toContain("assessment suggests");
+  });
+
+  it("links directly only when the available question matches the baseline focus", () => {
+    const matchingPath = {
+      ...practice(),
+      nextUp: {
+        title: "Binary Search",
+        href: "/dsa-questions/binary-search",
+        chapterTitle: "Search patterns",
+        difficulty: "easy",
+        minutes: 15
+      }
+    } as unknown as ProgressOverview;
+
+    const result = buildDashboardOverview(baselineProfile, reports(), matchingPath, NOW);
+
+    expect(result.coaching).toMatchObject({
+      actionLabel: "Start recommended question",
+      actionHref: "/dsa-questions/binary-search"
+    });
+    expect(result.readiness.actionHref).toBe("/dsa-questions/binary-search");
+  });
+
+  it("does not let a pre-baseline interview override the new preparation cycle", () => {
+    const oldRound = {
+      sessionId: "old-round",
+      status: "in_progress",
+      roundType: "behavioral",
+      startedAt: NOW - 10_000,
+      evidenceScore: 74,
+      recommendedFocus: "Old interview focus",
+      nextStep: "Continue the old plan",
+      href: "/interview/voice?session=old-round"
+    } as ReportsOverview["rounds"][number];
+    const result = buildDashboardOverview(
+      baselineProfile,
+      reports({
+        totalRounds: 1,
+        inProgressRounds: 1,
+        scoredRounds: 1,
+        readinessScore: 74,
+        latestScore: 74,
+        rounds: [oldRound],
+        latest: oldRound
+      }),
+      practice(),
+      NOW
+    );
+
+    expect(result.coaching.state).toBe("baseline-priority");
+    expect(result.coaching.title).toContain("Search patterns");
+    expect(result.readiness).toMatchObject({ status: "forming", score: null });
+    expect(result.continuation.interviews.statusLabel).toBe("Baseline complete");
+    expect(result.explore.reports.state).toBe("empty");
+    expect(result.direction.focus.state).toBe("baseline");
+  });
+
+  it("still prioritizes an interview opened after the baseline", () => {
+    const currentRound = {
+      sessionId: "current-round",
+      status: "in_progress",
+      roundType: "technical",
+      startedAt: NOW,
+      answerCount: 1,
+      evidenceScore: 58,
+      href: "/interview/voice?session=current-round"
+    } as ReportsOverview["rounds"][number];
+    const result = buildDashboardOverview(
+      baselineProfile,
+      reports({ totalRounds: 1, inProgressRounds: 1, rounds: [currentRound] }),
+      practice(),
+      NOW
+    );
+
+    expect(result.coaching).toMatchObject({
+      state: "interview-in-progress",
+      actionHref: "/interview/voice?session=current-round"
+    });
+    expect(result.continuation.interviews.state).toBe("resume");
+  });
+
   it("uses resume priorities only when both evidence sources confirm no activity", () => {
     const result = buildDashboardOverview(profile, reports(), practice(), NOW);
 

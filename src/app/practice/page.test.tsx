@@ -7,6 +7,9 @@ const mocks = vi.hoisted(() => ({
   home: vi.fn(),
   insights: vi.fn(),
   activity: vi.fn(),
+  fullPlan: vi.fn(),
+  questionStatuses: vi.fn(),
+  practiceEvidence: vi.fn(),
   logError: vi.fn()
 }));
 
@@ -19,7 +22,10 @@ vi.mock("@/server/auth/onboarding-guard", () => ({
 vi.mock("@/server/app-container", () => ({
   getAppContainer: () => ({
     practiceRoadmapService: { home: mocks.home, activity: mocks.activity },
-    interviewService: { insights: mocks.insights }
+    interviewService: { insights: mocks.insights },
+    dsaService: { fullPlan: mocks.fullPlan },
+    frontendRoadmapService: { questionStatuses: mocks.questionStatuses },
+    practiceEvidenceStore: { refresh: mocks.practiceEvidence }
   })
 }));
 
@@ -36,6 +42,9 @@ describe("PracticePage", () => {
     vi.clearAllMocks();
     mocks.insights.mockResolvedValue(null);
     mocks.activity.mockResolvedValue([]);
+    mocks.fullPlan.mockResolvedValue(null);
+    mocks.questionStatuses.mockResolvedValue({});
+    mocks.practiceEvidence.mockResolvedValue(null);
   });
 
   it("does not reach the Practice generator when the onboarding guard rejects access", async () => {

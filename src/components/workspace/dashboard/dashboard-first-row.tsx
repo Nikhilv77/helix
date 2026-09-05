@@ -78,12 +78,12 @@ export function DashboardFirstRow({
             <h2 className="relative z-10 mt-3 max-w-[30rem] text-[1.45rem] font-semibold leading-[1.2] tracking-[-0.025em] text-cream sm:text-[1.65rem]">
               <StaggeredWords text={data.coaching.title} baseMs={70} />
             </h2>
-            <p className="relative z-10 mt-4 max-w-[34rem] text-[14px] leading-6 text-cream/56">
+            <p className="relative z-10 mt-4 max-w-[34rem] text-[15px] leading-6 text-cream/60">
               <StaggeredWords text={data.coaching.body} baseMs={250} stepMs={20} />
             </p>
 
             <div className="relative z-10 mt-auto flex flex-wrap items-center justify-between gap-4 pt-7">
-              <p className="min-h-4 text-[11px] leading-4 text-cream/34" aria-live="polite">
+              <p className="min-h-4 text-[12px] leading-4 text-cream/40" aria-live="polite">
                 {state === "unavailable"
                   ? "Voice unavailable — tap to retry"
                   : awaitingGesture
@@ -94,7 +94,7 @@ export function DashboardFirstRow({
               </p>
               <Link
                 href={data.coaching.actionHref}
-                className="group inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-cream px-4 text-[13px] font-semibold text-[#171a16] shadow-[0_12px_30px_-20px_rgba(239,232,214,0.9)] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#17181b]"
+                className="group inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-cream px-4 text-[14px] font-semibold text-[#171a16] shadow-[0_12px_30px_-20px_rgba(239,232,214,0.9)] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#17181b]"
               >
                 {data.coaching.actionLabel}
                 <ArrowRight
@@ -121,20 +121,16 @@ function ReadinessCard({ readiness }: { readiness: DashboardOverviewData["readin
         className="dashboard-overview-card relative flex min-h-[21rem] min-w-0 flex-col items-start justify-center overflow-hidden rounded-[1.65rem] bg-[#151619] px-7 py-8"
       >
         <h2 className="max-w-[17rem] text-[1.55rem] font-semibold leading-tight tracking-[-0.025em] text-cream">
-          <StaggeredWords text="Take your first interview" baseMs={120} />
+          <StaggeredWords text={readiness.label} baseMs={120} />
         </h2>
-        <p className="mt-4 max-w-[18rem] text-[14px] leading-6 text-cream/52">
-          <StaggeredWords
-            text="Complete one interview to establish your readiness score and receive evidence-based coaching."
-            baseMs={260}
-            stepMs={24}
-          />
+        <p className="mt-4 max-w-[18rem] text-[15px] leading-6 text-cream/58">
+          <StaggeredWords text={readiness.detail} baseMs={260} stepMs={24} />
         </p>
         <Link
-          href="/interview"
-          className="mt-7 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-cream px-4 text-[13px] font-semibold text-[#171a16] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#151619]"
+          href={readiness.actionHref}
+          className="mt-7 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-cream px-4 text-[14px] font-semibold text-[#171a16] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#151619]"
         >
-          Start interview <ArrowRight size={15} aria-hidden="true" />
+          {readiness.actionLabel} <ArrowRight size={15} aria-hidden="true" />
         </Link>
       </article>
     );
@@ -149,12 +145,12 @@ function ReadinessCard({ readiness }: { readiness: DashboardOverviewData["readin
         <h2 className="text-[1.4rem] font-semibold tracking-[-0.02em] text-cream">
           {readiness.label}
         </h2>
-        <p className="mt-3 max-w-[18rem] text-[14px] leading-6 text-cream/52">{readiness.detail}</p>
+        <p className="mt-3 max-w-[18rem] text-[15px] leading-6 text-cream/58">{readiness.detail}</p>
         <Link
-          href="/interview"
-          className="mt-7 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-cream px-4 text-[13px] font-semibold text-[#171a16] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#151619]"
+          href={readiness.actionHref}
+          className="mt-7 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-cream px-4 text-[14px] font-semibold text-[#171a16] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#151619]"
         >
-          Open interviews <ArrowRight size={15} aria-hidden="true" />
+          {readiness.actionLabel} <ArrowRight size={15} aria-hidden="true" />
         </Link>
       </article>
     );
@@ -188,10 +184,10 @@ function ReadinessCard({ readiness }: { readiness: DashboardOverviewData["readin
         <p className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-cream/34">
           What this means
         </p>
-        <p className="mt-1.5 text-[11.5px] font-medium leading-[1.45] text-cream/70">
+        <p className="mt-1.5 text-[12.5px] font-medium leading-[1.5] text-cream/74">
           {readinessSummary(score)}
         </p>
-        <p className="mt-1.5 text-[10px] leading-4 text-cream/34">
+        <p className="mt-1.5 text-[11px] leading-[1.5] text-cream/42">
           <StaggeredWords text={readiness.detail} baseMs={520} stepMs={30} />
         </p>
       </div>

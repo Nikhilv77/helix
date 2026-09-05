@@ -34,7 +34,7 @@ function PracticeContinuationCard({ practice }: { practice: DashboardPracticeCon
         <h2 className="mt-4 max-w-[27rem] text-[1.3rem] font-semibold leading-tight tracking-[-0.025em] text-cream">
           {practice.title}
         </h2>
-        <p className="mt-2 max-w-[32rem] text-[13px] leading-5 text-cream/50">{practice.detail}</p>
+        <p className="mt-2 max-w-[32rem] text-[14px] leading-6 text-cream/56">{practice.detail}</p>
 
         <div className="mt-auto pt-4">
           <DashboardAction href={practice.actionHref} label={practice.actionLabel} />
@@ -62,7 +62,7 @@ function InterviewContinuationCard({ interviews }: { interviews: DashboardInterv
         <h2 className="mt-4 max-w-[27rem] text-[1.3rem] font-semibold leading-tight tracking-[-0.025em] text-cream">
           {interviews.title}
         </h2>
-        <p className="mt-2 max-w-[32rem] text-[13px] leading-5 text-cream/50">
+        <p className="mt-2 max-w-[32rem] text-[14px] leading-6 text-cream/56">
           {interviews.detail}
         </p>
 
@@ -102,7 +102,7 @@ function TeacherAdvicePanel({ practice }: { practice: DashboardPracticeContinuat
       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cream/34">
         A note from your teacher
       </p>
-      <p className="mx-auto mt-4 max-w-[14.5rem] text-[12.5px] font-medium leading-5 text-cream/72">
+      <p className="mx-auto mt-4 max-w-[14.5rem] text-[13.5px] font-medium leading-5 text-cream/76">
         {practice.teacherAdvice}
       </p>
 
@@ -110,7 +110,7 @@ function TeacherAdvicePanel({ practice }: { practice: DashboardPracticeContinuat
         {hasProgress ? (
           <>
             <div className="flex items-end justify-between gap-3">
-              <span className="text-[11px] font-medium text-cream/42">Practice path</span>
+              <span className="text-[12px] font-medium text-cream/48">Practice path</span>
               <span className="font-mono text-[14px] font-semibold text-cream/72">
                 {practice.progressPercent}%
               </span>
@@ -121,7 +121,7 @@ function TeacherAdvicePanel({ practice }: { practice: DashboardPracticeContinuat
                 style={{ width: `${practice.progressPercent}%` }}
               />
             </div>
-            <p className="mt-2 text-[10.5px] text-cream/36">
+            <p className="mt-2 text-[11.5px] text-cream/44">
               {practice.completedQuestions} of {practice.totalQuestions} questions complete
             </p>
           </>
@@ -154,8 +154,8 @@ function InterviewVisual({ interviews }: { interviews: DashboardInterviewContinu
           value={interviews.latestScore}
           ariaLabel={`Latest interview score ${interviews.latestScore}%`}
         />
-        <p className="mt-4 text-[12px] font-semibold text-cream/68">Latest score</p>
-        <p className="mt-1 text-[11px] text-cream/34">
+        <p className="mt-4 text-[13px] font-semibold text-cream/72">Latest score</p>
+        <p className="mt-1 text-[12px] text-cream/42">
           {interviews.completedRounds} completed{" "}
           {interviews.completedRounds === 1 ? "round" : "rounds"}
         </p>
@@ -169,8 +169,8 @@ function InterviewVisual({ interviews }: { interviews: DashboardInterviewContinu
         <span className="grid h-[4.5rem] w-[4.5rem] place-items-center rounded-full bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]">
           <Play size={24} fill="currentColor" strokeWidth={1.6} aria-hidden="true" />
         </span>
-        <p className="mt-4 text-[13px] font-semibold text-cream/76">Round in progress</p>
-        <p className="mt-1 text-[11px] text-cream/34">Your answers are saved</p>
+        <p className="mt-4 text-[14px] font-semibold text-cream/80">Round in progress</p>
+        <p className="mt-1 text-[12px] text-cream/42">Your answers are saved</p>
       </div>
     );
   }
@@ -181,8 +181,8 @@ function InterviewVisual({ interviews }: { interviews: DashboardInterviewContinu
         <span className="grid h-[4.5rem] w-[4.5rem] place-items-center rounded-full bg-cream/[0.055] text-cream/54">
           <Mic2 size={25} strokeWidth={1.6} aria-hidden="true" />
         </span>
-        <p className="mt-4 text-[13px] font-semibold text-cream/76">Try again shortly</p>
-        <p className="mt-1 text-[11px] text-cream/34">Your saved rounds are safe</p>
+        <p className="mt-4 text-[14px] font-semibold text-cream/80">Try again shortly</p>
+        <p className="mt-1 text-[12px] text-cream/42">Your saved rounds are safe</p>
       </div>
     );
   }
@@ -212,7 +212,7 @@ function InterviewVisual({ interviews }: { interviews: DashboardInterviewContinu
             >
               {index + 1}
             </span>
-            <p className="min-w-0 text-[11.5px] font-medium text-cream/62">{step}</p>
+            <p className="min-w-0 text-[12.5px] font-medium text-cream/68">{step}</p>
           </li>
         ))}
       </ol>
@@ -224,7 +224,7 @@ function DashboardAction({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="group inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-cream px-3.5 text-[12.5px] font-semibold text-[#191a1d] transition hover:bg-cream/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
+      className="group inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-cream px-3.5 text-[13.5px] font-semibold text-[#191a1d] transition hover:bg-cream/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
     >
       {label}
       <ArrowRight

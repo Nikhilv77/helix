@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { DsaTopics } from "@/components/workspace/dsa/dsa-topics";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
+import { buildStableDsaRecommendation } from "@/server/dsa/stable-dsa-recommendation";
+import { DsaBlockHistoryError } from "@/server/dsa/dsa-block-history.service";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
@@ -12,14 +15,56 @@ export const metadata = privatePageMetadata(
 );
 
 /** The existing, fully implemented first Practice session. */
-export default async function DsaPracticePage() {
-  const { ownerId } = await requireOnboardedProfile();
+export default async function DsaPracticePage({
+  searchParams
+}: {
+  searchParams: Promise<{
+    block?: string | string[];
+    panel?: string | string[];
+  }>;
+}) {
+  const { ownerId, profile } = await requireOnboardedProfile();
   const container = getAppContainer();
-  const [plan, roadmap, questionStatuses] = await Promise.all([
-    container.dsaService.frontendPlan().catch(() => null),
+  const query = await searchParams;
+  const requestedBlockId = typeof query.block === "string" ? query.block : null;
+  const panel = query.panel === "transcript" ? "transcript" : "overview";
+  const allowEarlyAssessmentStart = container.config.nodeEnv === "development";
+
+  if (allowEarlyAssessmentStart) {
+    await container.dsaPracticeBlockStore.refreshReadiness(ownerId, { allowIncomplete: true });
+  }
+
+  // This is deliberately awaited before recommendation/history reads. It
+  // repairs a terminal interview whose deferred finalizer failed.
+  await container.dsaBlockAssessmentFinalizationService.recoverCurrent(ownerId);
+  const [plan, roadmap, questionStatuses, practiceEvidence] = await Promise.all([
+    container.dsaService.fullPlan().catch(() => null),
     container.frontendRoadmapService.home(ownerId).catch(() => null),
-    container.frontendRoadmapService.questionStatuses(ownerId).catch(() => ({}))
+    container.frontendRoadmapService.questionStatuses(ownerId).catch(() => ({})),
+    container.practiceEvidenceStore.refresh(ownerId).catch(() => null)
   ]);
+  const recommendation = plan
+    ? await buildStableDsaRecommendation({
+        ownerId,
+        plan,
+        profile,
+        evidence: practiceEvidence,
+        statuses: questionStatuses,
+        blockStore: container.dsaPracticeBlockStore
+        // Recovery already ran above, before every Practice read.
+      })
+    : null;
+  let blockHistory = null;
+  try {
+    blockHistory = await container.dsaBlockHistoryService.read(
+      ownerId,
+      requestedBlockId,
+      questionStatuses
+    );
+  } catch (error) {
+    if (error instanceof DsaBlockHistoryError && error.code === "BLOCK_NOT_FOUND") notFound();
+    throw error;
+  }
 
   return (
     <div className="mx-auto w-full max-w-[86rem] px-4 pb-20 pt-7 sm:px-7 sm:pt-9 lg:px-8 lg:pt-8">
@@ -31,7 +76,15 @@ export default async function DsaPracticePage() {
         Back to Practice
       </Link>
       {plan ? (
-        <DsaTopics plan={plan} roadmap={roadmap} questionStatuses={questionStatuses} />
+        <DsaTopics
+          plan={plan}
+          roadmap={roadmap}
+          questionStatuses={questionStatuses}
+          recommendation={recommendation}
+          blockHistory={blockHistory}
+          panel={panel}
+          allowEarlyAssessmentStart={allowEarlyAssessmentStart}
+        />
       ) : (
         <div
           role="alert"

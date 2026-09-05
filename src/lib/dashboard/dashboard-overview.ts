@@ -1,8 +1,10 @@
 import type { ReportsOverview } from "@/lib/reports/reports";
 import type { ProgressDashboardOverview } from "@/lib/roadmap/progress";
 import type { HelpDashboardOverview } from "@/lib/help/help-history";
+import type { CandidateSkillSignal } from "@/lib/preparation/preparation-onboarding";
+import type { PreparationAreaId } from "@/lib/preparation/preparation-areas";
 import { roundShortLabel } from "@/lib/shared/labels";
-import type { CandidateProfile } from "@/lib/shared/types";
+import type { CandidateProfile, Level, Role } from "@/lib/shared/types";
 
 const RETURNING_AFTER_DAYS = 7;
 const SHORT_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("en-US", {
@@ -45,6 +47,7 @@ export type DashboardCoachingState =
   | "practice-returning"
   | "practice-momentum"
   | "practice-started"
+  | "baseline-priority"
   | "resume-priority"
   | "evidence-unavailable";
 
@@ -65,6 +68,8 @@ export interface DashboardReadiness {
   scoredRounds: number;
   label: string;
   detail: string;
+  actionLabel: string;
+  actionHref: string;
 }
 
 export interface DashboardPracticeContinuation {
@@ -154,7 +159,7 @@ export interface DashboardWeeklyRhythm {
 }
 
 export interface DashboardNextFocus {
-  state: "interview" | "practice" | "profile" | "empty" | "unavailable";
+  state: "interview" | "practice" | "baseline" | "profile" | "empty" | "unavailable";
   sourceLabel: string;
   title: string;
   detail: string;
@@ -186,9 +191,9 @@ export function buildDashboardOverview(
 ): DashboardOverviewData {
   return {
     coaching: buildCoaching(profile, reports, practice, now),
-    readiness: buildReadiness(reports),
-    continuation: buildContinuation(reports, practice),
-    explore: buildExplore(reports, practice, trailmate),
+    readiness: buildReadiness(profile, reports, practice),
+    continuation: buildContinuation(profile, reports, practice),
+    explore: buildExplore(profile, reports, practice, trailmate),
     direction: buildDirection(profile, reports, practice, now)
   };
 }
@@ -200,12 +205,14 @@ function buildDirection(
   now: number
 ): DashboardDirection {
   return {
-    rhythm: buildWeeklyRhythm(practice, now),
+    rhythm: buildWeeklyRhythm(profile, reports, practice, now),
     focus: buildNextFocus(profile, reports, practice)
   };
 }
 
 function buildWeeklyRhythm(
+  profile: CandidateProfile,
+  reports: ReportsOverview | null,
   practice: ProgressDashboardOverview | null,
   now: number
 ): DashboardWeeklyRhythm {
@@ -241,6 +248,7 @@ function buildWeeklyRhythm(
   const attempts = days.reduce((total, day) => total + day.attempts, 0);
   const activeDays = days.filter((day) => day.solved > 0 || day.attempts > 0).length;
   const active = solved > 0 || attempts > 0;
+  const startingFromBaseline = isBaselineCalibrationPhase(profile, reports, practice);
 
   return {
     state: active ? "active" : "empty",
@@ -248,12 +256,16 @@ function buildWeeklyRhythm(
       ? solved > 0
         ? `${solved} ${plural(solved, "question")} solved`
         : `${attempts} focused ${plural(attempts, "attempt")}`
-      : "Start your first focused week",
+      : startingFromBaseline
+        ? "Your first evidence week starts here"
+        : "Start your first focused week",
     detail: active
       ? activeDays >= 4
         ? "You are spreading the work across the week. Keep the next session short and deliberate."
         : "The signal is moving. Add one short session to make the rhythm easier to repeat."
-      : "Show up once, finish one clear block, and the week will begin taking shape here.",
+      : startingFromBaseline
+        ? "Solve one recommended problem. Your plan will begin adapting from what you actually do."
+        : "Show up once, finish one clear block, and the week will begin taking shape here.",
     solved,
     attempts,
     activeDays,
@@ -267,7 +279,13 @@ function buildNextFocus(
   reports: ReportsOverview | null,
   practice: ProgressDashboardOverview | null
 ): DashboardNextFocus {
-  const gap = reports?.recurringGaps[0] ?? null;
+  const currentRounds = currentCycleRounds(profile, reports);
+  const currentScoredRounds = currentRounds.filter((round) => round.evidenceScore !== null);
+  const latest = currentCycleLatest(profile, reports);
+  const gap =
+    baselineCutoff(profile) === null || currentScoredRounds.length >= 2
+      ? (reports?.recurringGaps[0] ?? null)
+      : null;
   if (gap) {
     const occurrences = gap.occurrences ?? 0;
     return {
@@ -287,7 +305,6 @@ function buildNextFocus(
     };
   }
 
-  const latest = reports?.latest ?? null;
   if (latest?.recommendedFocus) {
     return {
       state: "interview",
@@ -298,6 +315,27 @@ function buildNextFocus(
       supportingLabel: latest.strongest ? `Keep using: ${latest.strongest}` : null,
       actionLabel: "Practice this focus",
       actionHref: practice?.nextUp?.href ?? "/practice"
+    };
+  }
+
+  const baselinePriorities = buildBaselinePriorities(profile);
+  if (isFreshEvidenceState(profile, reports, practice) && baselinePriorities.length > 0) {
+    const primary = baselinePriorities[0]!;
+    const focus = baselinePriorities[1] ?? primary;
+    return {
+      state: "baseline",
+      sourceLabel: "From your baseline",
+      title: focus.label,
+      detail: baselineFocusDetail(focus),
+      itemLabel: null,
+      supportingLabel:
+        focus.mode === "strengthen"
+          ? "Early opportunity · verify in practice"
+          : focus.mode === "measure"
+            ? "Not enough evidence yet"
+            : "Early signal · verify at depth",
+      actionLabel: focus === primary ? "Open focused practice" : "Explore this focus",
+      actionHref: baselineAction(focus, practice).href
     };
   }
 
@@ -363,13 +401,14 @@ function buildNextFocus(
 }
 
 function buildExplore(
+  profile: CandidateProfile,
   reports: ReportsOverview | null,
   practice: ProgressDashboardOverview | null,
   trailmate: HelpDashboardOverview | null
 ): DashboardExplore {
   return {
     progress: buildProgressSummary(practice),
-    reports: buildReportsSummary(reports),
+    reports: buildReportsSummary(profile, reports),
     trailmate: buildTrailmateSummary(trailmate)
   };
 }
@@ -420,7 +459,10 @@ function buildProgressSummary(
   };
 }
 
-function buildReportsSummary(reports: ReportsOverview | null): DashboardReportsSummary {
+function buildReportsSummary(
+  profile: CandidateProfile,
+  reports: ReportsOverview | null
+): DashboardReportsSummary {
   if (!reports) {
     return {
       state: "unavailable",
@@ -432,19 +474,22 @@ function buildReportsSummary(reports: ReportsOverview | null): DashboardReportsS
     };
   }
 
-  if (!reports.latest) {
+  const latest = currentCycleLatest(profile, reports);
+  const currentRounds = currentCycleRounds(profile, reports);
+  const completedRounds = currentRounds.filter((round) => round.status === "completed").length;
+  if (!latest) {
     return {
       state: "empty",
       title: "Your first report starts with one round.",
       detail: "Complete an interview to turn your answers into strengths, gaps, and next steps.",
       latestScore: null,
-      completedRounds: reports.completedRounds,
+      completedRounds,
       actionHref: "/reports"
     };
   }
 
-  const latestScore = reports.latestScore ?? reports.latest.evidenceScore;
-  const focus = reports.latest.recommendedFocus;
+  const latestScore = latest.evidenceScore;
+  const focus = latest.recommendedFocus;
   return {
     state: "available",
     title: latestScore === null ? "Your latest report is ready." : `${latestScore}% latest signal`,
@@ -452,7 +497,7 @@ function buildReportsSummary(reports: ReportsOverview | null): DashboardReportsS
       ? `Your clearest next focus is ${focus.toLowerCase()}.`
       : "Review the evidence from your latest round and choose the next skill to strengthen.",
     latestScore,
-    completedRounds: reports.completedRounds,
+    completedRounds,
     actionHref: "/reports"
   };
 }
@@ -504,16 +549,19 @@ function buildTrailmateSummary(trailmate: HelpDashboardOverview | null): Dashboa
 }
 
 function buildContinuation(
+  profile: CandidateProfile,
   reports: ReportsOverview | null,
   practice: ProgressDashboardOverview | null
 ): DashboardContinuation {
   return {
-    practice: buildPracticeContinuation(practice),
-    interviews: buildInterviewContinuation(reports)
+    practice: buildPracticeContinuation(profile, reports, practice),
+    interviews: buildInterviewContinuation(profile, reports, practice)
   };
 }
 
 function buildPracticeContinuation(
+  profile: CandidateProfile,
+  reports: ReportsOverview | null,
   practice: ProgressDashboardOverview | null
 ): DashboardPracticeContinuation {
   if (!practice) {
@@ -538,6 +586,7 @@ function buildPracticeContinuation(
   const progressPercent = clampPercent(totals.completionPercent);
   const hasActivity = totals.totalAttempts > 0 || completed > 0;
   const complete = total > 0 && completed >= total;
+  const startingFromBaseline = isBaselineCalibrationPhase(profile, reports, practice);
 
   if (complete) {
     return {
@@ -568,12 +617,25 @@ function buildPracticeContinuation(
 
     return {
       state: hasActivity ? "continue" : "start",
-      statusLabel: completed > 0 ? `${completed}/${total} complete` : "Ready to start",
+      statusLabel:
+        completed > 0
+          ? `${completed}/${total} complete`
+          : hasActivity
+            ? "Attempt in progress"
+            : startingFromBaseline
+              ? "First evidence block"
+              : "Ready to start",
       title: next.title,
       detail: meta || "Your next recommended question is ready.",
-      actionLabel: hasActivity ? "Continue question" : "Start question",
+      actionLabel: hasActivity
+        ? "Continue question"
+        : startingFromBaseline
+          ? "Start recommended problem"
+          : "Start question",
       actionHref: next.href,
-      teacherAdvice: randomPracticeAdvice(),
+      teacherAdvice: startingFromBaseline
+        ? "Show your reasoning, test one edge case, and finish cleanly—this attempt starts shaping your plan."
+        : randomPracticeAdvice(),
       completedQuestions: completed,
       totalQuestions: total,
       progressPercent,
@@ -603,7 +665,9 @@ function randomPracticeAdvice(): string {
 }
 
 function buildInterviewContinuation(
-  reports: ReportsOverview | null
+  profile: CandidateProfile,
+  reports: ReportsOverview | null,
+  practice: ProgressDashboardOverview | null
 ): DashboardInterviewContinuation {
   if (!reports) {
     return {
@@ -619,7 +683,10 @@ function buildInterviewContinuation(
     };
   }
 
-  const active = reports.rounds.find((round) => round.status === "in_progress") ?? null;
+  const active =
+    currentCycleRounds(profile, reports).find(
+      (round) => round.status === "in_progress" && isActionableInterview(profile, round)
+    ) ?? null;
   if (active) {
     const roundName = active.templateTitle ?? `${roundShortLabel(active.roundType)} interview`;
     const answered = active.answerCount || active.questionsCovered;
@@ -637,9 +704,10 @@ function buildInterviewContinuation(
     };
   }
 
-  if (reports.latest) {
-    const latestKind = roundShortLabel(reports.latest.roundType);
-    const focus = reports.latest.recommendedFocus;
+  const latest = currentCycleLatest(profile, reports);
+  if (latest) {
+    const latestKind = roundShortLabel(latest.roundType);
+    const focus = latest.recommendedFocus;
     return {
       state: "next",
       statusLabel: `${reports.completedRounds} completed ${plural(reports.completedRounds, "round")}`,
@@ -650,11 +718,25 @@ function buildInterviewContinuation(
       actionLabel: "Choose next interview",
       actionHref: "/interviews",
       completedRounds: reports.completedRounds,
-      latestScore: reports.latestScore ?? reports.latest.evidenceScore
+      latestScore: latest.evidenceScore
     };
   }
 
-  const hasPreviousAttempt = reports.totalRounds > 0;
+  if (isBaselineCalibrationPhase(profile, reports, practice)) {
+    return {
+      state: "start",
+      statusLabel: "Baseline complete",
+      title: "Your first proof check comes after focused practice.",
+      detail:
+        "Your baseline set the direction. Build one clean practice signal first, then use an interview to verify it under pressure.",
+      actionLabel: "View interview path",
+      actionHref: "/interviews",
+      completedRounds: reports.completedRounds,
+      latestScore: null
+    };
+  }
+
+  const hasPreviousAttempt = currentCycleRounds(profile, reports).length > 0;
   return {
     state: "start",
     statusLabel: hasPreviousAttempt ? "Previous attempt saved" : "No rounds yet",
@@ -675,13 +757,21 @@ function buildCoaching(
   practice: ProgressDashboardOverview | null,
   now: number
 ): DashboardCoaching {
-  const activeInterview = reports?.rounds.find((round) => round.status === "in_progress") ?? null;
-  const latestInterview = reports?.latest ?? null;
-  const gap =
-    latestInterview?.recommendedFocus ?? reports?.recurringGaps[0]?.label ?? "answer specificity";
+  const currentRounds = currentCycleRounds(profile, reports);
+  const currentScoredRounds = currentRounds.filter((round) => round.evidenceScore !== null);
+  const activeInterview =
+    currentRounds.find(
+      (round) => round.status === "in_progress" && isActionableInterview(profile, round)
+    ) ?? null;
+  const latestInterview = currentCycleLatest(profile, reports);
+  const recurringGap =
+    baselineCutoff(profile) === null || currentScoredRounds.length >= 2
+      ? (reports?.recurringGaps[0] ?? null)
+      : null;
+  const gap = latestInterview?.recommendedFocus ?? recurringGap?.label ?? "answer specificity";
   const nextStep = cleanSentence(
     latestInterview?.nextStep ??
-      reports?.recurringGaps[0]?.nextStep ??
+      recurringGap?.nextStep ??
       `Practise ${gap.toLowerCase()} with one concrete example from your own work.`
   );
   const completed = practice?.totals.completedQuestions ?? 0;
@@ -689,7 +779,7 @@ function buildCoaching(
   const solvedThisWeek = practice?.totals.solvedThisWeek ?? 0;
   const nextQuestion = practice?.nextUp?.title ?? null;
   const nextQuestionHref = practice?.nextUp?.href ?? "/practice";
-  const practiceAction = reports?.recurringGaps[0]?.practiceHref ?? nextQuestionHref;
+  const practiceAction = recurringGap?.practiceHref ?? nextQuestionHref;
 
   if (activeInterview) {
     const previousSignal = latestInterview
@@ -773,7 +863,7 @@ function buildCoaching(
     };
   }
 
-  if (attempts > 0) {
+  if (attempts > 0 && buildBaselinePriorities(profile).length === 0) {
     const next = nextQuestion ? ` Return to “${nextQuestion}”` : " Return to Practice";
     return {
       state: "practice-started",
@@ -799,6 +889,49 @@ function buildCoaching(
     };
   }
 
+  const baselinePriority = buildBaselinePriorities(profile)[0] ?? null;
+  if (baselinePriority) {
+    const action = baselineAction(baselinePriority, practice);
+    const target = targetDescription(profile);
+    const strength = buildBaselineStrengths(profile).find(
+      (item) => normalizedFocus(item.label) !== normalizedFocus(baselinePriority.label)
+    );
+    const prioritySentence =
+      baselinePriority.mode === "strengthen"
+        ? `${baselinePriority.label} needs a refresh`
+        : baselinePriority.mode === "measure"
+          ? `${baselinePriority.label} needs more evidence`
+          : `${baselinePriority.label} is ready for a deeper check`;
+    const transition =
+      attempts > 0
+        ? "Finish your current problem; then the plan adapts to your performance."
+        : "Solve one focused problem; then the plan adapts to your performance.";
+    const body = `${resumeContextSentence(profile)}. For ${target}, the assessment shows ${prioritySentence}. ${transition}`;
+
+    return {
+      state: "baseline-priority",
+      eyebrow: "Resume + baseline",
+      title: strength
+        ? `${strengthHeadline(strength)} Now sharpen ${baselinePriority.label}.`
+        : baselinePriority.mode === "strengthen"
+          ? `Strengthen ${baselinePriority.label} first.`
+          : baselinePriority.mode === "measure"
+            ? `Build evidence in ${baselinePriority.label} next.`
+            : `Pressure-test ${baselinePriority.label} next.`,
+      body,
+      spokenSummary: strength
+        ? `${strengthHeadline(strength)} Based on your resume and assessment, sharpen ${baselinePriority.label} next. One solved problem will start personalizing the plan from your performance.`
+        : `Based on your resume and assessment, start with ${baselinePriority.label}. One solved problem will start personalizing the plan from your performance.`,
+      actionLabel:
+        attempts > 0
+          ? "Finish first problem"
+          : action.direct
+            ? "Start recommended question"
+            : "Open focused practice",
+      actionHref: action.href
+    };
+  }
+
   const priorities = resumePriorities(profile);
   const priorityText = joinPriorities(priorities);
   const next = nextQuestion
@@ -816,7 +949,11 @@ function buildCoaching(
   };
 }
 
-function buildReadiness(reports: ReportsOverview | null): DashboardReadiness {
+function buildReadiness(
+  profile: CandidateProfile,
+  reports: ReportsOverview | null,
+  practice: ProgressDashboardOverview | null
+): DashboardReadiness {
   if (!reports) {
     return {
       status: "unavailable",
@@ -824,31 +961,378 @@ function buildReadiness(reports: ReportsOverview | null): DashboardReadiness {
       delta: null,
       scoredRounds: 0,
       label: "Unavailable",
-      detail: "The latest interview evidence could not be loaded."
+      detail: "The latest interview evidence could not be loaded.",
+      actionLabel: "Open interviews",
+      actionHref: "/interviews"
     };
   }
 
-  if (reports.readinessScore === null) {
+  const readiness = currentCycleReadiness(profile, reports);
+  if (readiness.score === null) {
+    const priorities = buildBaselinePriorities(profile);
+    const priority = priorities[0] ?? null;
+    if (priority) {
+      const sampledAreas = profile.preparationOnboarding?.skillProfile?.signals.length ?? 0;
+      const action = baselineAction(priority, practice);
+      const signal =
+        priority.mode === "strengthen"
+          ? `${priority.label} is the clearest early opportunity.`
+          : priority.mode === "measure"
+            ? `${priority.label} still needs a stronger sample.`
+            : `${priority.label} is ready for a deeper check.`;
+      return {
+        status: "forming",
+        score: null,
+        delta: null,
+        scoredRounds: 0,
+        label: "Your starting profile",
+        detail: `Resume and baseline mapped ${sampledAreas} ${plural(sampledAreas, "preparation area")}. ${signal} This is a starting map—not a readiness score.`,
+        actionLabel: "Build evidence",
+        actionHref: action.href
+      };
+    }
+
     return {
       status: "forming",
       score: null,
       delta: null,
       scoredRounds: 0,
       label: "Still forming",
-      detail: "Answer at least one interview question to establish a readiness signal."
+      detail: "Answer at least one interview question to establish a readiness signal.",
+      actionLabel: "Start interview",
+      actionHref: "/interview"
     };
   }
 
   return {
     status: "scored",
-    score: reports.readinessScore,
-    delta: reports.scoreDelta,
-    scoredRounds: reports.scoredRounds,
-    label: readinessLabel(reports.readinessScore),
+    score: readiness.score,
+    delta: readiness.delta,
+    scoredRounds: readiness.scoredRounds,
+    label: readinessLabel(readiness.score),
     detail:
-      reports.scoredRounds === 1
+      readiness.scoredRounds === 1
         ? "Based on your first scored interview."
-        : `Based on your ${Math.min(reports.scoredRounds, 5)} most recent scored rounds.`
+        : `Based on your ${Math.min(readiness.scoredRounds, 5)} most recent scored rounds.`,
+    actionLabel: "Open reports",
+    actionHref: "/reports"
+  };
+}
+
+type BaselinePriorityMode = "strengthen" | "measure" | "verify";
+
+interface BaselinePriority {
+  areaId: PreparationAreaId;
+  areaLabel: string;
+  label: string;
+  mode: BaselinePriorityMode;
+}
+
+interface BaselineStrength {
+  areaId: PreparationAreaId;
+  label: string;
+  broadDsaSignal: boolean;
+}
+
+const AREA_LABELS: Record<PreparationAreaId, string> = {
+  dsa: "DSA problem solving",
+  "core-technical": "Core technical depth",
+  "applied-engineering": "Applied engineering judgment",
+  "architecture-design": "Architecture and design"
+};
+
+const ROLE_AREA_ORDER: Record<Role, PreparationAreaId[]> = {
+  frontend: ["core-technical", "dsa", "applied-engineering", "architecture-design"],
+  backend: ["dsa", "core-technical", "applied-engineering", "architecture-design"],
+  fullstack: ["dsa", "core-technical", "applied-engineering", "architecture-design"],
+  data: ["core-technical", "applied-engineering", "architecture-design", "dsa"],
+  "ai-ml": ["core-technical", "applied-engineering", "architecture-design", "dsa"],
+  pm: ["core-technical", "applied-engineering", "architecture-design", "dsa"]
+};
+
+function buildBaselinePriorities(profile: CandidateProfile): BaselinePriority[] {
+  const skillProfile = profile.preparationOnboarding?.skillProfile;
+  if (!skillProfile?.signals.length) return [];
+
+  const role = profile.targetRole ?? "backend";
+  const areaOrder = ROLE_AREA_ORDER[role];
+  const orderedSignals = [...skillProfile.signals].sort(
+    (left, right) => areaOrder.indexOf(left.areaId) - areaOrder.indexOf(right.areaId)
+  );
+  const buckets: Record<BaselinePriorityMode, BaselinePriority[]> = {
+    strengthen: [],
+    measure: [],
+    verify: []
+  };
+
+  for (const signal of orderedSignals) {
+    const priorities = prioritiesFromSignal(signal);
+    for (const priority of priorities) buckets[priority.mode].push(priority);
+  }
+
+  return [...buckets.strengthen, ...buckets.measure, ...buckets.verify];
+}
+
+function buildBaselineStrengths(profile: CandidateProfile): BaselineStrength[] {
+  const signals = profile.preparationOnboarding?.skillProfile?.signals;
+  if (!signals?.length) return [];
+
+  const role = profile.targetRole ?? "backend";
+  const areaOrder = ROLE_AREA_ORDER[role];
+  const orderedSignals = [...signals].sort(
+    (left, right) => areaOrder.indexOf(left.areaId) - areaOrder.indexOf(right.areaId)
+  );
+  const strengths: BaselineStrength[] = [];
+
+  for (const signal of orderedSignals) {
+    if (signal.evidence !== "baseline") continue;
+    const topics = signal.topics ?? [];
+    const familiar = topics.filter((topic) => topic.familiarity === "familiar");
+    const needsRefresh = topics.filter((topic) => topic.familiarity === "needs-refresh");
+    const broadDsaSignal =
+      signal.areaId === "dsa" && familiar.length >= 3 && familiar.length > needsRefresh.length;
+
+    if (broadDsaSignal) {
+      strengths.push({
+        areaId: signal.areaId,
+        label: "algorithms and data structures",
+        broadDsaSignal: true
+      });
+      continue;
+    }
+
+    for (const topic of familiar) {
+      strengths.push({ areaId: signal.areaId, label: topic.label, broadDsaSignal: false });
+    }
+
+    if (
+      familiar.length === 0 &&
+      needsRefresh.length === 0 &&
+      signal.startingState === "experienced-active"
+    ) {
+      strengths.push({
+        areaId: signal.areaId,
+        label: AREA_LABELS[signal.areaId],
+        broadDsaSignal: signal.areaId === "dsa"
+      });
+    }
+  }
+
+  return strengths;
+}
+
+function strengthHeadline(strength: BaselineStrength): string {
+  return strength.broadDsaSignal
+    ? "Your algorithms and data structures understanding is strong."
+    : `You showed a solid starting grasp of ${strength.label}.`;
+}
+
+function resumeContextSentence(profile: CandidateProfile): string {
+  const skills = profile.resume?.skills
+    .map((skill) => skill.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, 2);
+  if (skills?.length) {
+    return `Your resume shows experience with ${joinPriorities(skills)}`;
+  }
+
+  const experienceRole = profile.resume?.experience?.[0]?.role?.trim();
+  if (experienceRole) return `Your resume shows experience as ${experienceRole}`;
+
+  const focus = profile.focusAreas[0]?.trim();
+  if (focus) return `Your resume points to ${focus} as relevant experience`;
+  return "Your profile gives us initial context";
+}
+
+function prioritiesFromSignal(signal: CandidateSkillSignal): BaselinePriority[] {
+  const areaLabel = AREA_LABELS[signal.areaId];
+  if (signal.evidence === "not-enough-evidence") {
+    return [{ areaId: signal.areaId, areaLabel, label: areaLabel, mode: "measure" }];
+  }
+
+  const topics = signal.topics ?? [];
+  const needsRefresh = topics
+    .filter((topic) => topic.familiarity === "needs-refresh")
+    .map((topic) => ({
+      areaId: signal.areaId,
+      areaLabel,
+      label: topic.label,
+      mode: "strengthen" as const
+    }));
+  if (needsRefresh.length > 0) return needsRefresh;
+
+  if (
+    signal.startingState === "needs-foundations" ||
+    signal.startingState === "experienced-rusty" ||
+    signal.startingState === "some-familiarity"
+  ) {
+    return [{ areaId: signal.areaId, areaLabel, label: areaLabel, mode: "strengthen" }];
+  }
+
+  const familiar = topics.find((topic) => topic.familiarity === "familiar");
+  if (familiar) {
+    return [{ areaId: signal.areaId, areaLabel, label: familiar.label, mode: "verify" }];
+  }
+
+  return [
+    {
+      areaId: signal.areaId,
+      areaLabel,
+      label: areaLabel,
+      mode: signal.startingState === "experienced-active" ? "verify" : "measure"
+    }
+  ];
+}
+
+function baselineAction(
+  priority: BaselinePriority,
+  practice: ProgressDashboardOverview | null
+): { href: string; direct: boolean } {
+  const next = practice?.nextUp;
+  if (!next) return { href: "/practice", direct: false };
+
+  const priorityKey = normalizedFocus(priority.label);
+  const matches = [next.chapterTitle, next.title]
+    .filter((value): value is string => Boolean(value))
+    .some((value) => normalizedFocus(value) === priorityKey);
+  return matches ? { href: next.href, direct: true } : { href: "/practice", direct: false };
+}
+
+function baselineFocusDetail(priority: BaselinePriority): string {
+  if (priority.mode === "strengthen") {
+    return `Your starting signal suggests ${priority.label} needs a refresh. Use one focused block to verify and strengthen it.`;
+  }
+  if (priority.mode === "measure") {
+    return `The baseline did not collect enough evidence here. A focused attempt will make the next recommendation sharper.`;
+  }
+  return `The baseline suggests familiarity here. Test it at greater depth before moving on.`;
+}
+
+function targetDescription(profile: CandidateProfile): string {
+  const role = profile.targetRole ? ROLE_LABELS[profile.targetRole] : "your target role";
+  const level = profile.level ? LEVEL_LABELS[profile.level] : null;
+  return level ? `${role} at ${level}` : role;
+}
+
+const ROLE_LABELS: Record<Role, string> = {
+  backend: "a Backend Engineer",
+  frontend: "a Frontend Engineer",
+  fullstack: "a Full Stack Engineer",
+  data: "a Data Engineer",
+  "ai-ml": "an AI / ML Engineer",
+  pm: "a Product Manager"
+};
+
+const LEVEL_LABELS: Record<Level, string> = {
+  fresher: "entry level",
+  "0-2": "SDE-1 level",
+  "3-5": "SDE-2 level",
+  "5-plus": "senior level"
+};
+
+function normalizedFocus(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function isFreshEvidenceState(
+  profile: CandidateProfile,
+  reports: ReportsOverview | null,
+  practice: ProgressDashboardOverview | null
+): boolean {
+  if (!reports || !practice) return false;
+  return (
+    !currentCycleRounds(profile, reports).some(
+      (round) => round.answerCount > 0 || round.evidenceScore !== null
+    ) &&
+    !currentCycleLatest(profile, reports) &&
+    practice.totals.totalAttempts === 0 &&
+    practice.totals.completedQuestions === 0
+  );
+}
+
+function isBaselineCalibrationPhase(
+  profile: CandidateProfile,
+  reports: ReportsOverview | null,
+  practice: ProgressDashboardOverview | null
+): boolean {
+  if (!reports || !practice || buildBaselinePriorities(profile).length === 0) return false;
+  const hasInterviewAnswer = currentCycleRounds(profile, reports).some(
+    (round) => round.answerCount > 0 || round.evidenceScore !== null
+  );
+  return !hasInterviewAnswer && practice.totals.completedQuestions === 0;
+}
+
+function isActionableInterview(
+  profile: CandidateProfile,
+  round: ReportsOverview["rounds"][number]
+): boolean {
+  // Legacy profiles predate the baseline flow, so preserve their existing resume behavior.
+  // Once a baseline exists, merely opening a room is not stronger evidence than completing it.
+  return baselineCutoff(profile) === null || round.answerCount > 0;
+}
+
+function baselineCutoff(profile: CandidateProfile): number | null {
+  const onboarding = profile.preparationOnboarding;
+  const generatedAt = onboarding?.skillProfile?.generatedAt ?? null;
+  const completedAt = onboarding?.completedAt ?? null;
+  if (generatedAt === null) return completedAt;
+  if (completedAt === null) return generatedAt;
+  return Math.max(generatedAt, completedAt);
+}
+
+function currentCycleRounds(
+  profile: CandidateProfile,
+  reports: ReportsOverview | null
+): ReportsOverview["rounds"] {
+  if (!reports) return [];
+  const cutoff = baselineCutoff(profile);
+  if (cutoff === null) return reports.rounds;
+  return reports.rounds.filter(
+    (round) => !Number.isFinite(round.startedAt) || round.startedAt >= cutoff
+  );
+}
+
+function currentCycleLatest(
+  profile: CandidateProfile,
+  reports: ReportsOverview | null
+): ReportsOverview["latest"] {
+  if (!reports) return null;
+  const cutoff = baselineCutoff(profile);
+  if (cutoff === null) return reports.latest;
+  return currentCycleRounds(profile, reports).find((round) => round.evidenceScore !== null) ?? null;
+}
+
+function currentCycleReadiness(
+  profile: CandidateProfile,
+  reports: ReportsOverview
+): { score: number | null; delta: number | null; scoredRounds: number } {
+  if (baselineCutoff(profile) === null) {
+    return {
+      score: reports.readinessScore,
+      delta: reports.scoreDelta,
+      scoredRounds: reports.scoredRounds
+    };
+  }
+
+  const scores = currentCycleRounds(profile, reports)
+    .filter(
+      (round): round is typeof round & { evidenceScore: number } => round.evidenceScore !== null
+    )
+    .sort((left, right) => left.startedAt - right.startedAt)
+    .map((round) => round.evidenceScore);
+  const recent = scores.slice(-5);
+  const score = recent.length
+    ? Math.round(recent.reduce((total, value) => total + value, 0) / recent.length)
+    : null;
+  const first = scores[0] ?? null;
+  const latest = scores.at(-1) ?? null;
+  return {
+    score,
+    delta: first !== null && latest !== null && scores.length > 1 ? latest - first : null,
+    scoredRounds: scores.length
   };
 }
 

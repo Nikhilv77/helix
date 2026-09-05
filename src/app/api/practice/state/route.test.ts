@@ -36,7 +36,10 @@ describe("PUT /api/practice/state", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.auth.mockResolvedValue({ userId: "user-1" });
-    mocks.profile.mockResolvedValue({ onboardingCompletedAt: new Date() });
+    mocks.profile.mockResolvedValue({
+      onboardingCompletedAt: new Date(),
+      preparationOnboarding: { completedAt: Date.now() }
+    });
     mocks.saveState.mockResolvedValue({ savedAt: 1, revealedHintCount: 0 });
   });
 

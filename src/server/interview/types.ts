@@ -50,6 +50,18 @@ export interface InterviewSetup {
    * question bank rather than from a model call.
    */
   fundamentalsRound?: boolean;
+  /**
+   * Explicit durable identity for the frozen end-of-block DSA assessment.
+   * This deliberately does not depend on a display title: both answer grading
+   * and code execution use these IDs to resolve the server-only snapshot.
+   */
+  dsaBlockAssessment?: {
+    kind: "dsa-block-assessment";
+    blockId: string;
+    assessmentId: string;
+    snapshotVersion: number;
+    rubricVersion: number;
+  };
 }
 
 export type InterviewStage =
@@ -71,6 +83,21 @@ export interface PlannedQuestion {
   language?: string;
   codeTask?: string;
   codeSnippet?: string;
+  /** Stable ID into the server-only assessment snapshot's answer key. */
+  dsaAssessmentReviewItemId?: string;
+  /** Public, immutable render contract for a frozen transfer coding problem. */
+  dsaTransferQuestion?: {
+    slug: string;
+    title: string;
+    primaryPattern: string;
+    difficulty: string;
+    expectedTimeMinutes: number;
+    problemStatement: string | null;
+    promptSummary: string;
+    constraints: string[];
+    examples: Array<{ input: string; output: string; explanation?: string }>;
+    starterCode: Record<"javascript" | "python" | "cpp" | "java", string>;
+  };
   /** Which stage of a resume round this question belongs to. */
   stage?: InterviewStage;
   /** The resume skill a skills-stage question came from. */
@@ -149,6 +176,8 @@ export interface CodeExecutionEvidence {
   time: string | null;
   memory: number | null;
   recordedAt: number;
+  /** SHA-256 of the candidate editor text; binds a run to the later submission. */
+  codeHash?: string;
 }
 
 /** Persisted technical judgement used by reports and adaptive planning. */
@@ -185,6 +214,8 @@ export interface Turn {
   correct?: boolean;
   /** The question `correct` refers to, since the turn itself already advanced. */
   gradedQuestionIndex?: number;
+  /** Explicit candidate opt-out for an assessment prompt; scored as zero. */
+  skipped?: boolean;
 }
 
 export type TurnAction = DecisionAction | "interrupt" | "intro";

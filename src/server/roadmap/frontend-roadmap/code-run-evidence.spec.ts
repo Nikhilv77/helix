@@ -32,6 +32,42 @@ function serviceFixture(
       async update({ data }: { data: Record<string, unknown> }) {
         writes.push({ model: "progress", data });
         return {};
+      },
+      async aggregate() {
+        return { _max: { order: 140 } };
+      },
+      async create({ data }: { data: Record<string, unknown> }) {
+        writes.push({ model: "enrollment", data });
+        return {
+          id: "progress-enrolled",
+          sourceType: RoadmapQuestionSourceType.DSA,
+          dsaQuestionSlug: "two-sum",
+          prepQuestionTemplateId: null,
+          status: RoadmapProgressStatus.ACTIVE,
+          bestScore: null,
+          dsaQuestion: { contentVersion: 3 }
+        };
+      }
+    },
+    dsaQuestion: {
+      async findUnique() {
+        return {
+          slug: "two-sum",
+          title: "Two Sum",
+          difficulty: "easy",
+          expectedTimeMinutes: 10,
+          primaryPattern: "arrays-hashing"
+        };
+      }
+    },
+    userSessionProgress: {
+      async findFirst() {
+        return { id: "dsa-session" };
+      }
+    },
+    userChapterProgress: {
+      async findFirst() {
+        return { id: "arrays-chapter" };
       }
     },
     userQuestionAttempt: {
@@ -68,6 +104,7 @@ describe("code-run helper evidence", () => {
         idempotencyKey: "10000000-0000-4000-8000-000000000001",
         dsaQuestionSlug: "two-sum",
         language: "python",
+        sourceCode: "def twoSum(nums, target):\n    return []",
         score: 0.8,
         accepted: false,
         testsPassed: 4,
@@ -82,6 +119,7 @@ describe("code-run helper evidence", () => {
         dsaQuestionSlug: "two-sum",
         status: RoadmapQuestionAttemptStatus.SUBMITTED,
         language: "python",
+        answer: "def twoSum(nums, target):\n    return []",
         score: 0.8,
         correctness: "not-accepted",
         questionContentVersion: 3,
@@ -115,7 +153,63 @@ describe("code-run helper evidence", () => {
     expect(writes[1]).toMatchObject({ model: "progress", data: { bestScore: 0.95 } });
   });
 
-  it("does not invent an attempt when no roadmap progress owns the question", async () => {
+  it("retains only bounded visible test facts for a later code-review assessment", async () => {
+    const { service, writes } = serviceFixture();
+    const oversized = "x".repeat(620);
+
+    await service.recordCodeRunEvidence("helper-1", {
+      idempotencyKey: "10000000-0000-4000-8000-000000000006",
+      dsaQuestionSlug: "two-sum",
+      language: "javascript",
+      sourceCode: "function twoSum() { return []; }",
+      score: 0.4,
+      accepted: false,
+      testsPassed: 1,
+      testCount: 4,
+      visibleTestEvidence: [
+        {
+          input: oversized,
+          expectedOutput: "[0, 1]",
+          actualOutput: "[]",
+          error: null,
+          passed: false
+        },
+        {
+          input: "[2, 7]",
+          expectedOutput: "[0, 1]",
+          actualOutput: "[0, 1]",
+          error: null,
+          passed: true
+        },
+        {
+          input: "[3, 3]",
+          expectedOutput: "[0, 1]",
+          actualOutput: "[0, 1]",
+          error: null,
+          passed: true
+        },
+        {
+          input: "fourth visible example",
+          expectedOutput: "[0, 1]",
+          actualOutput: "[0, 1]",
+          error: null,
+          passed: true
+        }
+      ]
+    });
+
+    const attempt = writes.find((write) => write.model === "attempt");
+    const feedback = (attempt?.data.feedback ?? {}) as {
+      visibleTestEvidence?: Array<{ input: string; expectedOutput: string }>;
+    };
+    expect(feedback.visibleTestEvidence).toHaveLength(3);
+    expect(feedback.visibleTestEvidence?.[0]?.input).toHaveLength(500);
+    expect(feedback.visibleTestEvidence?.flatMap((test) => [test.input])).not.toContain(
+      "fourth visible example"
+    );
+  });
+
+  it("enrolls an Explore-all question on demand before recording its evidence", async () => {
     const { service, writes } = serviceFixture({ progress: false });
 
     await expect(
@@ -128,8 +222,18 @@ describe("code-run helper evidence", () => {
         testsPassed: 5,
         testCount: 5
       })
-    ).resolves.toBe(false);
-    expect(writes).toEqual([]);
+    ).resolves.toBe(true);
+    expect(writes[0]).toMatchObject({
+      model: "enrollment",
+      data: {
+        dsaQuestionSlug: "two-sum",
+        sessionProgressId: "dsa-session",
+        chapterProgressId: "arrays-chapter",
+        order: 141
+      }
+    });
+    expect(writes[1]).toMatchObject({ model: "attempt" });
+    expect(writes[2]).toMatchObject({ model: "progress" });
   });
 
   it("returns quickly when the user has no compatible roadmap", async () => {

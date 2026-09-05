@@ -4,6 +4,7 @@ import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/server/interview/owner";
+import { requireCompletedPreparationOnboarding } from "@/server/auth/preparation-onboarding-api-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,9 @@ export async function GET(request: NextRequest) {
     if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
 
     const ownerId = authenticatedOwnerId(userId);
-    const plan = await getAppContainer().personalizedInterviewPlanningService.activePlan(ownerId);
+    const app = getAppContainer();
+    requireCompletedPreparationOnboarding(await app.profileService.get(ownerId));
+    const plan = await app.personalizedInterviewPlanningService.activePlan(ownerId);
     return apiSuccess(plan);
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);

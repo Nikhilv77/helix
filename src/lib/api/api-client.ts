@@ -12,6 +12,11 @@ import type {
   StartResponse,
   WorkspaceAccent
 } from "../shared/types";
+import type {
+  BaselineSection,
+  PreparationOnboardingStage,
+  PreparationOnboardingState
+} from "../preparation/preparation-onboarding";
 import type { PersonalizedInterviewPlan } from "../interviews/personalized-plan";
 import type { WorkspaceSearchResponse } from "../search/workspace-search";
 
@@ -102,6 +107,18 @@ export function submitAnswer(params: {
   });
 }
 
+export function skipDsaBlockAssessmentCode(params: {
+  sessionId: string;
+  turnId?: string;
+  startMs: number;
+  endMs: number;
+}): Promise<DecideResponse> {
+  return request<DecideResponse>("/api/interview/dsa/block-assessment/skip", {
+    method: "POST",
+    body: { ...params, turnId: params.turnId ?? crypto.randomUUID() }
+  });
+}
+
 export function getSession(sessionId: string): Promise<SessionResponse> {
   return request<SessionResponse>(`/api/interview/${sessionId}`);
 }
@@ -124,6 +141,38 @@ export function getPersonalizedInterviewPlan(): Promise<PersonalizedInterviewPla
 
 export function saveProfile(profile: CandidateProfileInput): Promise<CandidateProfile> {
   return request<CandidateProfile>("/api/profile", { method: "PUT", body: profile });
+}
+
+type PreparationOnboardingResponse = { state: PreparationOnboardingState; planReady: boolean };
+
+export function advancePreparationTarget(input: {
+  targetRole: Role;
+  level: Level;
+  targetCompany: string;
+  targetDate: string | null;
+  nextStage: PreparationOnboardingStage;
+}): Promise<PreparationOnboardingResponse> {
+  return request<PreparationOnboardingResponse>("/api/preparation-onboarding", {
+    method: "POST",
+    body: { action: "advance-target", ...input }
+  });
+}
+
+export function startPreparationBaseline(): Promise<PreparationOnboardingResponse> {
+  return request<PreparationOnboardingResponse>("/api/preparation-onboarding", {
+    method: "POST",
+    body: { action: "start-baseline" }
+  });
+}
+
+export function submitPreparationBaseline(input: {
+  section: BaselineSection;
+  choiceId: string;
+}): Promise<PreparationOnboardingResponse> {
+  return request<PreparationOnboardingResponse>("/api/preparation-onboarding", {
+    method: "POST",
+    body: { action: "submit-baseline", ...input }
+  });
 }
 
 export async function deleteAccount(): Promise<{ deleted: boolean }> {

@@ -6,15 +6,11 @@
  * single constant means a change to the room's look lands in both.
  */
 export const INTERVIEW_PANEL_SHELL =
-  "workspace-accent-card-glow rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_24%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_24px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl";
+  "rounded-2xl border border-white/[0.075] bg-[#111215] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]";
 
 /**
- * There is deliberately no background utility above. Inside `.workspace-black`,
- * `.workspace-accent-card-glow` sets the `background` shorthand, which both
- * paints the accent gradient and resets `background-color` — and it does so at
- * a higher specificity than any Tailwind `bg-*` class. A background here would
- * be silently dropped, so the panel's surface belongs in globals.css with the
- * glow rule itself.
+ * Keep this surface opaque and neutral. Accent is reserved for small state and
+ * progress cues, avoiding large blurred colour fields behind interview content.
  */
 
 /** Hairline rule between a panel's header, body, and footer. */

@@ -233,6 +233,10 @@ export const DSA_CHAPTERS: DsaChapterConfig[] = [
   }
 ];
 
+export function dsaChapterIdForPattern(pattern: string): string | null {
+  return DSA_CHAPTERS.find((chapter) => chapter.patterns.includes(pattern))?.id ?? null;
+}
+
 /** The minimum a question needs to appear in the plan. */
 export interface PlanQuestion {
   slug: string;
@@ -297,18 +301,40 @@ function selectChapter(config: DsaChapterConfig, pool: PlanQuestion[]): PlanQues
   );
 }
 
+function allChapterQuestions(config: DsaChapterConfig, pool: PlanQuestion[]): PlanQuestion[] {
+  const patterns = new Set(config.patterns);
+  return pool
+    .filter((question) => patterns.has(question.primaryPattern))
+    .sort(
+      (a, b) =>
+        DIFFICULTY_RANK[a.difficulty] - DIFFICULTY_RANK[b.difficulty] || byTeachingOrder(a, b)
+    );
+}
+
 /**
  * Builds the curated DSA path from the full bank. A question is only
  * ever claimed by the first chapter whose patterns match, so nothing is
  * duplicated across chapters.
  */
 export function curateFrontendDsa(all: PlanQuestion[]): DsaChapter[] {
+  return buildChapters(all, selectChapter);
+}
+
+/** The complete bank, kept below the adaptive path as an always-available library. */
+export function groupFullDsaBank(all: PlanQuestion[]): DsaChapter[] {
+  return buildChapters(all, allChapterQuestions);
+}
+
+function buildChapters(
+  all: PlanQuestion[],
+  select: (config: DsaChapterConfig, pool: PlanQuestion[]) => PlanQuestion[]
+): DsaChapter[] {
   const claimed = new Set<string>();
   const chapters: DsaChapter[] = [];
 
   for (const config of DSA_CHAPTERS) {
     const pool = all.filter((question) => !claimed.has(question.slug));
-    const questions = selectChapter(config, pool);
+    const questions = select(config, pool);
     for (const question of questions) claimed.add(question.slug);
 
     chapters.push({
@@ -355,6 +381,15 @@ export interface FrontendDsaPlan {
 
 export function buildFrontendDsaPlan(all: PlanQuestion[]): FrontendDsaPlan {
   const chapters = curateFrontendDsa(all);
+  return planFromChapters(chapters);
+}
+
+/** Builds the unfiltered Explore-all plan without changing the curated roadmap template. */
+export function buildFullDsaPlan(all: PlanQuestion[]): FrontendDsaPlan {
+  return planFromChapters(groupFullDsaBank(all));
+}
+
+function planFromChapters(chapters: DsaChapter[]): FrontendDsaPlan {
   const questions = chapters.flatMap((chapter) => chapter.questions);
 
   return {

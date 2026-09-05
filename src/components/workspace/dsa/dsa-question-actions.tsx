@@ -99,7 +99,7 @@ export function DsaQuestionActions({
               ) : (
                 <SkipForward size={13} aria-hidden="true" />
               )}
-              {done ? "Solved" : "Skipped"}
+              {done ? "Solved" : "Skipped · Learn & retry"}
               {pending ? <Loader2 size={12} aria-hidden="true" className="animate-spin" /> : null}
             </span>
           </>

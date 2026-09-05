@@ -14,6 +14,7 @@ import type { PracticeRoadmapSession } from "@/lib/practice/practice-roadmap";
 interface DashboardProps {
   profile: CandidateProfile;
   showMayaWelcome?: boolean;
+  welcomeBlocking?: boolean;
   frontendRoadmap?: FrontendRoadmapHome | null;
   frontendPlan?: FrontendDsaPlan | null;
   /** The candidate's own Practice sessions, for the welcome preview. */
@@ -24,6 +25,7 @@ interface DashboardProps {
 export function Dashboard({
   profile,
   showMayaWelcome = false,
+  welcomeBlocking = true,
   frontendRoadmap = null,
   frontendPlan = null,
   practiceSessions = null,
@@ -35,6 +37,7 @@ export function Dashboard({
         <DocumentTitle title="Home" />
         <MayaWelcome
           profile={profile}
+          blocking={welcomeBlocking}
           practiceHref={buildPracticeHref(
             profile.targetRole,
             profile.level,

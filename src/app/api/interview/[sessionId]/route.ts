@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { after } from "next/server";
 import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
@@ -38,6 +39,12 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       access.kind === "owner"
         ? await app.interviewService.endOwned(access.ownerId, id)
         : await app.interviewService.end(id);
+    after(() =>
+      (access.kind === "owner"
+        ? app.dsaBlockAssessmentFinalizationService.finalizeOwned(access.ownerId, id)
+        : app.dsaBlockAssessmentFinalizationService.finalizeBySession(id)
+      ).catch(() => null)
+    );
     return apiSuccess(serialise(state));
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
@@ -77,6 +84,10 @@ function serialise(state: InterviewState) {
           language: question.language || null,
           codeTask: question.codeTask || null,
           codeSnippet: question.codeSnippet || null,
+          // This is deliberately the public render contract only. The saved
+          // assessment snapshot's answer keys, rationales, hints and hidden
+          // runner material never leave the server before completion.
+          dsaTransferQuestion: question.dsaTransferQuestion ?? null,
           stage: question.stage ?? null,
           skill: question.skill || null,
           // `answerIndex` stays on the server. Grading happens there, so the

@@ -154,6 +154,12 @@ export function InterviewQuestionPanel({
               </p>
             ) : null}
 
+            {question.codeSnippet ? (
+              <pre className="thin-scroll mt-5 max-h-80 overflow-auto rounded-xl bg-black/35 p-4 font-mono text-sm leading-6 text-cream/78 ring-1 ring-inset ring-white/[0.06]">
+                <code>{question.codeSnippet}</code>
+              </pre>
+            ) : null}
+
             {question.expects?.length && format !== "mcq" ? (
               <div className="mt-6">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cream/38">

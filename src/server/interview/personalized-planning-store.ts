@@ -244,6 +244,24 @@ export class PersonalizedPlanningStore {
   ): Promise<void> {
     const snapshot = plan.sourceSnapshot.performanceProfile;
     if (!snapshot) return;
+    if (snapshot.id.startsWith("baseline-")) {
+      const profile = await this.profiles.get(ownerId);
+      const completedAt = profile.preparationOnboarding?.completedAt ?? null;
+      const hasBaseline = Boolean(profile.preparationOnboarding?.skillProfile);
+      if (
+        hasBaseline &&
+        completedAt &&
+        snapshot.id === `baseline-${completedAt}` &&
+        snapshot.revision === 1
+      ) {
+        return;
+      }
+      throw new NotFoundErrorException(
+        "PERFORMANCE_PROFILE_VERSION_NOT_FOUND",
+        "The baseline evidence revision for this plan was not found.",
+        { performanceProfileVersionId: snapshot.id }
+      );
+    }
     const stored = await this.prisma.candidatePerformanceProfileVersion.findFirst({
       where: { id: snapshot.id, ownerId },
       select: { id: true, revision: true }

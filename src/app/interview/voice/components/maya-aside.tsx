@@ -62,7 +62,7 @@ export function MayaAside({
       >
         <div className="absolute inset-x-[-24%] bottom-[-12%] top-0">{agentSlot}</div>
         <div className="absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full border border-white/[0.07] bg-black/45 px-2.5 py-1.5 text-[11px] font-medium text-cream/72 backdrop-blur-xl">
-          <span className="h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_9px_var(--workspace-accent)]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)]" />
           {teacher.name}
         </div>
       </div>

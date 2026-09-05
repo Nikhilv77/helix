@@ -61,6 +61,16 @@ function profile(resume = true): CandidateProfile {
     updatedAt: null,
     completeness: 0,
     onboardingCompletedAt: null,
+    preparationOnboarding: {
+      stage: "completed",
+      updatedAt: 1,
+      completedAt: 1,
+      baselineStartedAt: 1,
+      answers: {},
+      questionIds: {},
+      questions: {},
+      skillProfile: null
+    },
     resume: resume
       ? {
           fileName: "resume.pdf",

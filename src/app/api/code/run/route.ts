@@ -8,6 +8,7 @@ import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
+import { codeFingerprint } from "@/server/interview/code-fingerprint";
 import {
   buildTestCases,
   buildTestHarness,
@@ -90,11 +91,43 @@ export async function POST(request: NextRequest) {
       "X-RapidAPI-Key": config.rapidApiKey,
       "X-RapidAPI-Host": config.rapidApiHost
     };
-    const slug = parsed.data.slug;
+    let slug = parsed.data.slug;
     let testCases: ReturnType<typeof buildTestCases> = [];
     let sourceCode = parsed.data.code;
 
-    if (slug) {
+    // A block assessment is pinned to the immutable assessment record. The
+    // browser's slug is ignored entirely for these sessions, so an old tab or
+    // crafted request cannot execute a changed/live-bank question instead.
+    const frozenTransfer =
+      parsed.data.sessionId !== undefined && parsed.data.questionIndex !== undefined
+        ? await app.dsaBlockAssessmentRuntimeService.frozenTransferForRun(
+            ownerId,
+            parsed.data.sessionId,
+            parsed.data.questionIndex
+          )
+        : null;
+
+    if (frozenTransfer) {
+      slug = frozenTransfer.slug;
+      try {
+        // The full public + hidden runner contract was captured with the
+        // assessment. Do not ask the mutable authored bank for structured
+        // cases here; a completed assessment must remain reproducible.
+        testCases = frozenTransfer.runnerContract.testCases;
+        sourceCode = buildTestHarness(
+          parsed.data.code,
+          parsed.data.language,
+          frozenTransfer.runnerContract.functionName,
+          testCases
+        );
+      } catch (error) {
+        throw new ApiRouteError(
+          422,
+          "TEST_HARNESS_UNAVAILABLE",
+          error instanceof Error ? error.message : "This frozen problem cannot be run yet."
+        );
+      }
+    } else if (slug) {
       const question = findQuestion(slug)?.question;
       if (!question) throw new ApiRouteError(404, "DSA_QUESTION_NOT_FOUND", "Question not found.");
       if (!question.examples?.length) {
@@ -197,10 +230,27 @@ export async function POST(request: NextRequest) {
               idempotencyKey: parsed.data.requestId!,
               dsaQuestionSlug: slug,
               language: parsed.data.language,
+              // Persist the candidate's editor text, never the generated
+              // harness. Later block assessments must review exactly what the
+              // candidate wrote alongside the verified runner result.
+              sourceCode: parsed.data.code,
               score: tests.length > 0 ? passedCount / tests.length : data.accepted ? 1 : 0,
               accepted: data.accepted,
               testsPassed: passedCount,
-              testCount: tests.length
+              testCount: tests.length,
+              // Only visible examples are retained as individual evidence.
+              // Hidden cases remain aggregate-only and are never exposed to a
+              // later assessment question.
+              visibleTestEvidence: tests
+                .filter((test) => test.visible)
+                .slice(0, 3)
+                .map((test) => ({
+                  input: test.input,
+                  expectedOutput: test.expectedOutput,
+                  actualOutput: test.actualOutput,
+                  error: test.error,
+                  passed: test.passed
+                }))
             })
             .catch(() => false)
         );
@@ -221,7 +271,8 @@ export async function POST(request: NextRequest) {
             stderr: data.stderr.slice(0, 2_000),
             time: data.time,
             memory: data.memory,
-            recordedAt: Date.now()
+            recordedAt: Date.now(),
+            codeHash: codeFingerprint(parsed.data.code)
           }
         );
       }

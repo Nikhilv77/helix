@@ -5,6 +5,7 @@ import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/server/interview/owner";
+import { requireCompletedPreparationOnboarding } from "@/server/auth/preparation-onboarding-api-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +29,7 @@ export async function POST(request: NextRequest) {
     if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
     const ownerId = authenticatedOwnerId(userId);
     const profile = await getAppContainer().profileService.get(ownerId);
-    if (!profile.onboardingCompletedAt) {
-      throw new ApiRouteError(409, "ONBOARDING_REQUIRED", "Finish onboarding first.");
-    }
+    requireCompletedPreparationOnboarding(profile);
 
     const parsed = attemptSchema.safeParse(await readJson(request));
     if (!parsed.success) {

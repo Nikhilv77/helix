@@ -15,6 +15,11 @@ import { PrismaSessionStore } from "./interview/session-store";
 import { CurriculumService } from "./curriculum/curriculum.service";
 import { DsaService } from "./dsa/dsa.service";
 import { DsaNotesService } from "./dsa/dsa-notes.service";
+import { DsaPracticeBlockStore } from "./dsa/dsa-practice-block.store";
+import { DsaBlockAssessmentPreparationService } from "./dsa/dsa-block-assessment-preparation.service";
+import { DsaBlockAssessmentRuntimeService } from "./dsa/dsa-block-assessment-runtime.service";
+import { DsaBlockAssessmentFinalizationService } from "./dsa/dsa-block-assessment-finalization.service";
+import { DsaBlockHistoryService } from "./dsa/dsa-block-history.service";
 import { HelpRequestService } from "./help/help-request.service";
 import { StuckSummaryService } from "./help/stuck-summary";
 import { HelperMatchingService } from "./help/helper-matching";
@@ -45,6 +50,7 @@ import { TeacherNotificationService } from "./notifications/teacher-notification
 import { ResumeRoastGenerator } from "./resume-roast/resume-roast.generator";
 import { ResumeRoastService } from "./resume-roast/resume-roast.service";
 import { ResumeRoastStore } from "./resume-roast/resume-roast.store";
+import { PreparationOnboardingService } from "./preparation/preparation-onboarding.service";
 
 export interface AppContainer {
   config: AppConfigService;
@@ -56,6 +62,11 @@ export interface AppContainer {
   resumeInterviewKitService: ResumeInterviewKitService;
   dsaService: DsaService;
   dsaNotesService: DsaNotesService;
+  dsaPracticeBlockStore: DsaPracticeBlockStore;
+  dsaBlockAssessmentPreparationService: DsaBlockAssessmentPreparationService;
+  dsaBlockAssessmentRuntimeService: DsaBlockAssessmentRuntimeService;
+  dsaBlockAssessmentFinalizationService: DsaBlockAssessmentFinalizationService;
+  dsaBlockHistoryService: DsaBlockHistoryService;
   helpRequestService: HelpRequestService;
   stuckSummaryService: StuckSummaryService;
   helperMatchingService: HelperMatchingService;
@@ -78,6 +89,7 @@ export interface AppContainer {
   prepPracticeService: PrepPracticeService;
   workspaceSearchService: WorkspaceSearchService;
   resumeRoastService: ResumeRoastService;
+  preparationOnboardingService: PreparationOnboardingService;
 }
 
 let container: AppContainer | null = null;
@@ -99,6 +111,7 @@ export function getAppContainer(): AppContainer {
     : geminiAi;
 
   const profileService = new ProfileService(prisma);
+  const preparationOnboardingService = new PreparationOnboardingService(prisma);
   const personalizedPlanningStore = new PersonalizedPlanningStore(prisma, profileService);
   const personalizedPerformanceStore = new PersonalizedPerformanceStore(prisma);
   const practiceEvidenceStore = new PracticeEvidenceStore(prisma);
@@ -111,6 +124,23 @@ export function getAppContainer(): AppContainer {
     practiceEvidenceStore
   );
   const frontendRoadmapService = new FrontendRoadmapService(prisma);
+  const dsaPracticeBlockStore = new DsaPracticeBlockStore(prisma);
+  const dsaBlockAssessmentPreparationService = new DsaBlockAssessmentPreparationService(prisma);
+  const interviewService = new InterviewService(
+    new InterviewPlanner(interviewAi),
+    new InterviewDecider(interviewAi),
+    new PrismaSessionStore(prisma),
+    config.interviewDailyLimit,
+    new TechnicalAnswerEvaluator(interviewAi)
+  );
+  const dsaBlockAssessmentRuntimeService = new DsaBlockAssessmentRuntimeService(
+    prisma,
+    dsaBlockAssessmentPreparationService,
+    interviewService
+  );
+  const dsaBlockAssessmentFinalizationService = new DsaBlockAssessmentFinalizationService(prisma);
+  const dsaBlockHistoryService = new DsaBlockHistoryService(dsaPracticeBlockStore, prisma);
+  interviewService.setBlockAssessmentMcqGrader(dsaBlockAssessmentRuntimeService);
   const notifications = new NotificationService(prisma);
   const notificationDispatcher = new NotificationDispatcher(
     notifications,
@@ -134,9 +164,15 @@ export function getAppContainer(): AppContainer {
     config,
     healthService: new HealthService(config, prisma),
     profileService,
+    preparationOnboardingService,
     // Seeded content, identical for every user, so the service caches it.
     dsaService: new DsaService(prisma),
     dsaNotesService: new DsaNotesService(prisma),
+    dsaPracticeBlockStore,
+    dsaBlockAssessmentPreparationService,
+    dsaBlockAssessmentRuntimeService,
+    dsaBlockAssessmentFinalizationService,
+    dsaBlockHistoryService,
     helpRequestService: new HelpRequestService(prisma, helpSafety, helperEligibility),
     stuckSummaryService: new StuckSummaryService(geminiAi),
     helperMatchingService: new HelperMatchingService(prisma),
@@ -188,13 +224,7 @@ export function getAppContainer(): AppContainer {
     // Written once per resume and read by every later resume round, so the
     // round itself never spends a model call on planning.
     resumeInterviewKitService: new ResumeInterviewKitService(geminiAi, profileService),
-    interviewService: new InterviewService(
-      new InterviewPlanner(interviewAi),
-      new InterviewDecider(interviewAi),
-      new PrismaSessionStore(prisma),
-      config.interviewDailyLimit,
-      new TechnicalAnswerEvaluator(interviewAi)
-    )
+    interviewService
   };
 
   return container;
