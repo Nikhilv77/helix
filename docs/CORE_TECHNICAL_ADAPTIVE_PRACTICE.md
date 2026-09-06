@@ -1,9 +1,14 @@
 # Core Technical Adaptive Practice
 
+> **Superseded:** This document describes the removed fixed-bank non-DSA Practice flow and must
+> not be used as the implementation plan. Use
+> [STORY_DRIVEN_CORE_TECHNICAL.md](./STORY_DRIVEN_CORE_TECHNICAL.md) for the current end-to-end
+> Core Technical specification. This file remains only as historical design context.
+
 ## Status
 
-This document is the product and implementation specification for the Core Technical
-Practice session. It completes implementation **Step 1: document the requirements**.
+This document is archived historical context for the removed fixed-bank Core Technical
+design. It is not an active product or implementation specification.
 
 The first delivery target is a candidate whose confirmed interview stack is:
 

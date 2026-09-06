@@ -48,7 +48,7 @@ export function PracticeSessionsView({
             }
             detail={
               dsaRecommendation
-                ? `${dsaBlockCompletedQuestions}/${dsaRecommendation.questions.length} current block · ${formatDuration(dsaRecommendation.minutes)}`
+                ? `${dsaBlockCompletedQuestions}/${dsaRecommendation.questions.length} current block · ${formatDuration(dsaRecommendation.minutes)}. Finish this focused set to unlock your next adaptive block.`
                 : totalQuestions
                   ? completedQuestions
                     ? `You’ve solved ${completedQuestions} question${completedQuestions === 1 ? "" : "s"} so far. ${Math.max(totalQuestions - completedQuestions, 0)} questions are waiting in your practice path.`

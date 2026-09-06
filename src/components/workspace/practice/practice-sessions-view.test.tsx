@@ -142,6 +142,10 @@ describe("PracticeSessionsView", () => {
     );
 
     expect(screen.getByText("1 solved overall · 0/8 current block")).toBeInTheDocument();
-    expect(screen.getByText("0/8 current block · 2 hr")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "0/8 current block · 2 hr. Finish this focused set to unlock your next adaptive block."
+      )
+    ).toBeInTheDocument();
   });
 });

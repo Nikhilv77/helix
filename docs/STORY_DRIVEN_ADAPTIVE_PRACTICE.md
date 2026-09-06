@@ -2,8 +2,8 @@
 
 ## Status and authority
 
-This document is the product requirement, architecture specification, UI handoff, migration
-plan, and acceptance checklist for rebuilding every **non-DSA Practice** experience around
+This document is the product requirement, architecture specification, UI handoff, implementation
+plan, and acceptance checklist for building every **non-DSA Practice** experience around
 real-world stories and candidate-specific frozen question blocks.
 
 This document is intentionally detailed. A future engineer or agent should be able to read it
@@ -14,11 +14,12 @@ The decisions in this document are:
 1. Preserve the existing DSA product, DSA question bank, DSA routes, DSA persistence, DSA
    assessment lifecycle, and DSA history.
 2. Use the DSA Practice page as the visual, interaction, hierarchy, accessibility, and lifecycle
-   reference for the replacement.
-3. Retire and remove the current non-DSA Practice implementations after the replacement is
-   verified. Do not run both old and new non-DSA engines indefinitely.
-4. Preserve historical database records and immutable snapshots. Removing an implementation
-   does not authorize hard-deleting candidate history.
+   reference for the story-driven experience.
+3. Treat the old non-DSA Practice flow as already removed. Build the story-driven experience as
+   the only non-DSA Practice flow; do not restore, wrap, or maintain a compatibility path to the
+   removed product.
+4. Preserve any historical database records and immutable snapshots that still exist. The prior
+   code removal does not authorize hard-deleting candidate history.
 5. Author a small, carefully ordered catalogue of real-world **stories**. Do not manually author
    enormous question banks for every language, framework, role, and specialization.
 6. Generate only the next eight-question Practice block when its story unlocks. Generate the
@@ -28,8 +29,13 @@ The decisions in this document are:
    assessment, results, and the next story. They do not see question-bank sizes, content-module
    registries, generation internals, or “not ready” product cards.
 
-Until the replacement passes its acceptance gates, this is a specification rather than a claim
-that the story-driven product is already implemented.
+Until the implementation passes its acceptance gates, this is a specification rather than a
+claim that the story-driven product is already implemented.
+
+The first delivery is defined separately in
+[STORY_DRIVEN_CORE_TECHNICAL.md](./STORY_DRIVEN_CORE_TECHNICAL.md). That document is authoritative
+for the end-to-end Core Technical vertical slice; this document remains authoritative for shared
+story-driven product rules.
 
 ## One-sentence product definition
 
@@ -37,9 +43,9 @@ that the story-driven product is already implemented.
 > one frozen block of eight questions tailored to the candidate's confirmed role, stack, level,
 > resume, target job, prior evidence, and selected teacher.
 
-## Why this rebuild exists
+## Why this product exists
 
-The current non-DSA design grew around static session catalogues and technology-specific banks.
+The removed non-DSA design grew around static session catalogues and technology-specific banks.
 That creates a combinatorial problem. A candidate may use Java, Go, Python, Rust, JavaScript,
 Ruby, C++, or another language; a frontend candidate may use React, Vue, Angular, or another
 framework; and an AI/ML candidate may be preparing for data science, applied AI, ML engineering,
@@ -49,14 +55,14 @@ Manually pre-authoring a complete bank for every possible combination is not sus
 Falling back to another language is incorrect. Displaying a visible “not ready” session is poor
 product behaviour. Calling every candidate full stack only hides the mismatch.
 
-The replacement therefore makes the **story and its evidence goals** the authored curriculum.
+The new design therefore makes the **story and its evidence goals** the authored curriculum.
 The eight questions are generated or retrieved only after the candidate context and story are
 known. The block remains structured and durable like DSA, without requiring a course-sized bank
 for every technology.
 
 ## What this product is not
 
-The replacement must not become:
+The story-driven product must not become:
 
 - a mandatory course with hundreds of visible lessons;
 - a catalogue of language tracks that the candidate has to understand or configure;
@@ -849,8 +855,8 @@ Do not ask the same question in three sessions. Reuse the story, then change the
 ### Preserve DSA models
 
 Do not modify or migrate working DSA records merely to make the new story models look generic.
-The replacement may reuse DSA lifecycle ideas and shared safety utilities, but DSA remains an
-independent stable product.
+The story-driven system may reuse DSA lifecycle ideas and shared safety utilities, but DSA remains
+an independent stable product.
 
 ### Required story records
 
@@ -1183,14 +1189,22 @@ Track product and reliability signals without logging private question answers o
 Use these signals to improve story contracts and validators, not to punish candidates for using
 hints.
 
-## Removal and migration plan
+## Current implementation baseline
 
-### Meaning of “remove current stuff except DSA”
+### The removed flow is not a migration dependency
 
-This means remove or retire the current **non-DSA Practice product implementations** after the
-story-driven replacement is proven. It does not mean deleting unrelated Interviews, onboarding,
-profiles, resume processing, teachers, notifications, or DSA. It does not mean deleting historical
-database evidence.
+The old **non-DSA Practice product flow has already been removed**. Story-driven Practice starts
+from that clean product baseline. There is no planned dual-run period, cutover flag, traffic
+migration, parity gate against the removed experience, or later phase whose purpose is to delete
+that flow.
+
+Do not recreate old session catalogues, fixed-track confirmation screens, compatible-bank counts,
+static Core/Applied/Architecture delivery, or removed non-DSA routes as scaffolding for this work.
+The story engine and its DSA-parity interface are the only intended non-DSA Practice path.
+
+Some question banks or preparation utilities may still exist because onboarding, Interviews, or
+another live feature uses them. Their presence does not mean the old Practice flow still exists,
+and this project must not delete them without proving that every remaining reference is dead.
 
 ### Preserve without modification unless a verified integration requires it
 
@@ -1204,54 +1218,33 @@ database evidence.
 - shared sandbox adapter where its contract is safe; and
 - shared transcript sanitization and owner-scoping utilities.
 
-### Candidate non-DSA code to retire after replacement parity
-
-Inventory the working tree again before deletion. Expected categories include:
-
-- current Core Technical fixed-track options and confirmation UI;
-- current static compatible-bank count and card semantics;
-- current Core recommendation/eligibility logic tied to monolithic question banks;
-- current Core-specific practice, assessment, history, and track routes superseded by the story
-  engine;
-- current Core block/history UI superseded by DSA-parity story components;
-- static runtime/frontend Core banks and their seed placement;
-- the generated 70-question Node bank as a required product dependency;
-- old non-DSA `PrepPracticeService` paths and static Applied/Architecture question delivery once
-  their story lenses replace them; and
-- obsolete tests that assert the retired catalogue, counts, routes, or track enums.
-
-The 70 Node questions may be retained temporarily as an exact-match reviewed source and quality
-benchmark. They must not remain the architecture's universal dependency. Decide whether to retain,
-archive, or delete them only after the story generator provides equivalent Node coverage and
-historical blocks no longer require live source lookup.
-
-### Database retirement
+### Historical-data safety
 
 - Never hard-delete templates, attempts, blocks, assessments, reports, or transcripts referenced
   by candidate history.
-- Mark old templates/engines retired and stop selecting them for new work.
-- Preserve old route access only when required to render immutable history safely.
-- If old history cannot use a removed UI, create a read-only legacy history adapter before deleting
-  the mutation/runtime path.
-- Seed changes must explicitly retire removed source content; deleting JSON alone does not remove
-  previously seeded rows.
-- Track all destructive source deletion in a reviewed migration checklist.
+- Never reconnect historical rows to the new mutable runtime merely to make them render.
+- If historical non-DSA records remain accessible, render them through an owner-scoped,
+  snapshot-only read model.
+- If no historical records or supported history entrypoint exist, do not build a speculative
+  compatibility adapter.
+- Seed or schema cleanup must account for previously persisted rows; deleting a source file does
+  not remove database data.
+- Track any destructive data or source cleanup in a separately reviewed checklist.
 
-### Safe sequence
+### Safe implementation sequence
 
 1. Freeze DSA behaviour with focused tests.
-2. Add story schemas, persistence, and validators without routing users to them.
-3. Implement one complete story vertical slice.
-4. Implement DSA-parity UI and history.
-5. Run authenticated end-to-end verification.
-6. Route one non-DSA session to the story engine behind a controlled release flag.
-7. Prove new writes no longer enter the retired engine.
-8. Add read-only compatibility for historical non-DSA blocks.
-9. Remove old non-DSA mutations, services, UI, and source banks in small reviewed patches.
-10. Run repository-wide tests, type check, lint, Prisma validation, production build, and private
-    serialization/host-execution searches.
-
-Do not delete old code first and hope to rebuild parity afterward.
+2. Inventory the live non-DSA surface and confirm the removed flow has no reachable routes,
+   mutations, or writers.
+3. Add story schemas, persistence, and validators.
+4. Implement one complete story vertical slice.
+5. Implement DSA-parity UI and snapshot-only history where real historical data requires it.
+6. Run authenticated end-to-end verification.
+7. Make the story-driven path the sole non-DSA Practice writer and entrypoint.
+8. Remove only newly discovered, proven-dead remnants; preserve code used by onboarding,
+   Interviews, DSA, or history.
+9. Run repository-wide tests, type check, lint, Prisma validation, production build, and private
+   serialization/host-execution searches.
 
 ## Implementation order
 
@@ -1308,9 +1301,11 @@ Do not delete old code first and hope to rebuild parity afterward.
 4. Add Applied Engineering and Architecture lenses without duplicating lifecycle.
 5. Measure generator rejection and question-quality signals.
 
-### Phase 7: Retire old non-DSA Practice
+### Phase 7: Launch hardening and residue cleanup
 
-Follow the removal sequence above. Preserve DSA and historical evidence.
+Confirm the story-driven path is the only reachable non-DSA Practice experience. Remove only
+proven-dead residue discovered during implementation, and preserve DSA, onboarding, Interviews,
+and any historical evidence.
 
 ## Verification strategy
 
@@ -1393,7 +1388,7 @@ candidate code execution.
 
 ## Definition of done
 
-The story-driven replacement is complete only when all of the following are true:
+The story-driven implementation is complete only when all of the following are true:
 
 1. DSA is behaviourally and visually unchanged except for explicitly approved shared fixes.
 2. A candidate confirms a plain-language preparation focus.
@@ -1415,8 +1410,8 @@ The story-driven replacement is complete only when all of the following are true
 17. No private evaluation material reaches the browser.
 18. No incompatible language or domain question is used as fallback.
 19. Generation/runtime failures are recoverable without lost progress or partial blocks.
-20. Current non-DSA Practice code is retired only after replacement parity and historical safety
-    are proven.
+20. The story-driven path is the sole reachable non-DSA Practice experience, with no dependency
+    on the removed flow and no loss of historical evidence.
 
 ## Instructions for future agents
 
@@ -1428,8 +1423,9 @@ Before implementing:
 3. Inspect the live DSA page and components listed in the UI section. Do not rely only on
    screenshots.
 4. Inspect the current working tree and preserve unrelated user changes.
-5. Classify every proposed component as **reuse**, **adapt**, **new**, or **retire**.
-6. Write or update the relevant acceptance tests before destructive cleanup.
+5. Classify every proposed component as **reuse**, **adapt**, or **new**; classify existing code
+   for removal only after proving it is unreachable and unused by adjacent products.
+6. Write or update the relevant acceptance tests before any destructive cleanup.
 
 During implementation:
 
@@ -1448,6 +1444,5 @@ At handoff, report:
 - which stories, roles, languages, and formats were actually verified;
 - exact automated and browser verification performed;
 - any remaining private-payload or sandbox risks;
-- which legacy non-DSA paths remain reachable; and
+- whether any stale or unexpectedly reachable non-DSA remnants were discovered; and
 - why the next implementation step is safe.
-

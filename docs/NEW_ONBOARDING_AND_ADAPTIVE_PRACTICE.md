@@ -27,7 +27,7 @@ After account and resume setup, the candidate provides:
 
 Trailgrad suggests a coding preparation track from the resume: focused frontend, backend, data, and AI/ML evidence selects the matching track, while mixed full-stack or irrelevant non-coding evidence falls back to Full Stack. The candidate confirms or changes that suggestion before the baseline begins.
 
-The baseline does not display a fake readiness score. It records signals such as **familiar**, **needs refresh**, **unknown**, or **needs foundations**. Assigned baseline questions are stored as candidate-specific snapshots so refreshes or question-bank changes cannot alter an assessment in progress.
+The baseline does not display a fake readiness score. It reports what the short check actually established: **answered correctly**, **needs practice**, **not assessed**, or the broader DSA starting state **needs foundations**. Assigned baseline questions are stored as candidate-specific snapshots so refreshes or question-bank changes cannot alter an assessment in progress.
 
 For DSA placement, the objective checks set the upper and lower bounds. Self-reported familiarity only distinguishes candidates in the middle band, so confidence alone cannot unlock the advanced path and an overly modest self-report cannot erase strong performance. The code-reading signal combines both code-reading checks.
 

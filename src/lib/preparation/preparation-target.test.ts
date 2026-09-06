@@ -37,6 +37,52 @@ describe("suggestedPreparationRole", () => {
     ).toBe("fullstack");
   });
 
+  it("does not let an isolated AI keyword override strong Java full-stack evidence", () => {
+    expect(
+      suggestedPreparationRole({
+        stage: "target_role",
+        savedRole: "fullstack",
+        resume: {
+          skills: ["Java", "Spring Boot", "React", "Next.js", "PostgreSQL", "REST APIs"],
+          experience: [
+            {
+              role: "Software Engineer",
+              summary: "Built full product features with Java services and React interfaces.",
+              skills: ["Microservices", "HTML", "CSS"]
+            }
+          ],
+          projects: [
+            {
+              name: "Semantic search",
+              summary: "Added document search to an existing backend API.",
+              skills: ["Embedding"]
+            }
+          ]
+        }
+      })
+    ).toBe("fullstack");
+  });
+
+  it("requires credible AI/ML evidence instead of a single incidental keyword", () => {
+    expect(
+      suggestedPreparationRole({
+        stage: "target_role",
+        savedRole: null,
+        resume: {
+          skills: ["Java", "Spring Boot", "PostgreSQL"],
+          experience: [
+            {
+              role: "Backend Engineer",
+              summary: "Built APIs that store embedding metadata.",
+              skills: []
+            }
+          ],
+          projects: []
+        }
+      })
+    ).toBe("backend");
+  });
+
   it("suggests dedicated backend, data, and AI/ML coding tracks", () => {
     expect(
       suggestedPreparationRole({
@@ -71,4 +117,3 @@ describe("suggestedPreparationRole", () => {
     ).toBe("backend");
   });
 });
-
