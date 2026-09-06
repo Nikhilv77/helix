@@ -116,103 +116,23 @@ export class WorkspaceSearchService {
           lower(${query}) AS needle,
           '%' || lower(${query}) || '%' AS contains
       ),
-      assigned_prep AS (
-        SELECT DISTINCT ON (question."id")
-          'prep:' || question."id" AS id,
-          'question'::text AS kind,
-          'Questions'::text AS group_name,
-          question."title" AS title,
-          question."objective" AS description,
-          CASE
-            WHEN placement."practiceSessionKey" IS NULL THEN '/practice'
-            ELSE '/practice/' || placement."practiceSessionKey" || '/' || question."id"
-          END AS href,
-          initcap(question."difficulty") || ' · ' || initcap(question."format") AS badge,
-          question."title" || ' ' || question."prompt" || ' ' || question."objective" || ' ' ||
-          question."competency" || ' ' || array_to_string(question."tags", ' ') || ' ' ||
-            array_to_string(question."whatItTests", ' ') AS search_text,
-          0.35::double precision AS type_boost
-        FROM "PrepQuestionTemplate" question
-        LEFT JOIN LATERAL (
-          SELECT item."practiceSessionKey", item."order"
-          FROM "UserQuestionProgress" progress
-          JOIN "UserRoadmap" roadmap
-            ON roadmap."id" = progress."roadmapId" AND roadmap."ownerId" = ${ownerId}
-          JOIN "PracticeQuestionPlacement" item
-            ON item."questionProgressId" = progress."id"
-          WHERE progress."prepQuestionTemplateId" = question."id"
-          ORDER BY
-            CASE WHEN item."practiceSessionKey" = 'final-mock' THEN 1 ELSE 0 END,
-            item."order"
-          LIMIT 1
-        ) placement ON true
-        WHERE question."publicationStatus" = 'PUBLISHED'
-        ORDER BY question."id"
-      ),
-      prep_notes AS (
-        SELECT DISTINCT ON (note."id")
-          'prep-note:' || note."id"::text AS id,
-          'note'::text AS kind,
-          'Your work'::text AS group_name,
-          'Note · ' || question."title" AS title,
-          left(regexp_replace(note."content", '\\s+', ' ', 'g'), 180) AS description,
-          CASE
-            WHEN placement."practiceSessionKey" IS NULL THEN '/practice'
-            ELSE '/practice/' || placement."practiceSessionKey" || '/' || question."id"
-          END AS href,
-          'Private note'::text AS badge,
-          question."title" || ' ' || note."content" AS search_text,
-          0.2::double precision AS type_boost
-        FROM "UserPrepQuestionNote" note
-        JOIN "PrepQuestionTemplate" question
-          ON question."id" = note."prepQuestionTemplateId"
-        LEFT JOIN LATERAL (
-          SELECT item."practiceSessionKey", item."order"
-          FROM "UserQuestionProgress" progress
-          JOIN "UserRoadmap" roadmap
-            ON roadmap."id" = progress."roadmapId" AND roadmap."ownerId" = note."ownerId"
-          JOIN "PracticeQuestionPlacement" item
-            ON item."questionProgressId" = progress."id"
-          WHERE progress."prepQuestionTemplateId" = question."id"
-          ORDER BY
-            CASE WHEN item."practiceSessionKey" = 'final-mock' THEN 1 ELSE 0 END,
-            item."order"
-          LIMIT 1
-        ) placement ON true
-        WHERE note."ownerId" = ${ownerId}
-        ORDER BY note."id"
-      ),
       draft_answers AS (
         SELECT
           'draft:' || progress."id"::text AS id,
           'note'::text AS kind,
           'Your work'::text AS group_name,
-          'Draft · ' || coalesce(question."title", template."titleSnapshot", 'Practice answer') AS title,
+          'Draft · ' || coalesce(template."titleSnapshot", 'Practice answer') AS title,
           left(regexp_replace(progress."draftAnswer", '\\s+', ' ', 'g'), 180) AS description,
-          CASE
-            WHEN progress."dsaQuestionSlug" IS NOT NULL
-              THEN '/dsa-questions/' || progress."dsaQuestionSlug"
-            WHEN placement."practiceSessionKey" IS NOT NULL
-              THEN '/practice/' || placement."practiceSessionKey" || '/' || progress."prepQuestionTemplateId"
-            ELSE '/practice'
-          END AS href,
+          '/dsa-questions/' || progress."dsaQuestionSlug" AS href,
           'Saved draft'::text AS badge,
-          coalesce(question."title", template."titleSnapshot", '') || ' ' || progress."draftAnswer" AS search_text,
+          coalesce(template."titleSnapshot", '') || ' ' || progress."draftAnswer" AS search_text,
           0.15::double precision AS type_boost
         FROM "UserQuestionProgress" progress
         JOIN "UserRoadmap" roadmap ON roadmap."id" = progress."roadmapId"
-        LEFT JOIN "PrepQuestionTemplate" question
-          ON question."id" = progress."prepQuestionTemplateId"
         LEFT JOIN "RoadmapQuestionTemplate" template
           ON template."id" = progress."roadmapQuestionTemplateId"
-        LEFT JOIN LATERAL (
-          SELECT item."practiceSessionKey"
-          FROM "PracticeQuestionPlacement" item
-          WHERE item."questionProgressId" = progress."id"
-          ORDER BY CASE WHEN item."practiceSessionKey" = 'final-mock' THEN 1 ELSE 0 END, item."order"
-          LIMIT 1
-        ) placement ON true
         WHERE roadmap."ownerId" = ${ownerId}
+          AND progress."dsaQuestionSlug" IS NOT NULL
           AND nullif(btrim(progress."draftAnswer"), '') IS NOT NULL
       ),
       recent_interviews AS (
@@ -238,19 +158,13 @@ export class WorkspaceSearchService {
         FROM "DsaQuestion" question
 
         UNION ALL
-        SELECT * FROM assigned_prep
-
-        UNION ALL
         SELECT
           'practice:' || progress."id"::text,
           'practice'::text,
           'Practice'::text,
           coalesce(progress."titleSnapshot", template."title"),
           coalesce(progress."purposeSnapshot", template."purpose", ''),
-          CASE
-            WHEN progress."practiceSessionKey" = 'frontend-dsa' THEN '/practice/dsa'
-            ELSE '/practice/' || progress."practiceSessionKey"
-          END,
+          '/practice/dsa',
           round(progress."progressPercent")::int::text || '% complete',
           coalesce(progress."titleSnapshot", template."title") || ' ' ||
             coalesce(progress."purposeSnapshot", template."purpose", '') || ' ' ||
@@ -260,6 +174,7 @@ export class WorkspaceSearchService {
         JOIN "UserRoadmap" roadmap ON roadmap."id" = progress."roadmapId"
         JOIN "RoadmapSessionTemplate" template ON template."id" = progress."sessionTemplateId"
         WHERE roadmap."ownerId" = ${ownerId}
+          AND progress."practiceSessionKey" = 'dsa'
 
         UNION ALL
         SELECT
@@ -275,9 +190,6 @@ export class WorkspaceSearchService {
         FROM "UserDsaQuestionNote" note
         JOIN "DsaQuestion" question ON question."slug" = note."slug"
         WHERE note."ownerId" = ${ownerId}
-
-        UNION ALL
-        SELECT * FROM prep_notes
 
         UNION ALL
         SELECT * FROM draft_answers

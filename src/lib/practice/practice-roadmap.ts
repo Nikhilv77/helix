@@ -4,36 +4,14 @@ import type {
   PersonalizedInterviewPlan
 } from "@/lib/interviews/personalized-plan";
 
-export const PRACTICE_ROADMAP_GENERATION_VERSION = 1 as const;
+export const PRACTICE_ROADMAP_GENERATION_VERSION = 2 as const;
 
-/**
- * The four sessions a candidate can actually drill.
- *
- * `final-mock` and `resume-behavioral-defense` were removed. A mock is a
- * timed continuous loop and Practice has no time pressure — its version was
- * literally the top three already-placed questions from each other session,
- * so every question appeared twice under two progress records. And defending
- * your own history is not drillable: there is one right answer, it is whatever
- * happened, and the skill is holding up under follow-ups a textarea cannot ask.
- *
- * Both remain interview rounds, where a continuous loop and live follow-ups
- * make them real. The interview roadmap has its own kinds and is unaffected.
- */
-export const PRACTICE_SESSION_KEYS = [
-  "dsa",
-  "core-technical",
-  "applied-engineering",
-  "architecture-system-design"
-] as const;
+/** DSA is the only active Practice session while the story-driven engine is rebuilt. */
+export const PRACTICE_SESSION_KEYS = ["dsa"] as const;
 
 export type PracticeSessionKey = (typeof PRACTICE_SESSION_KEYS)[number];
 export type PracticeSessionAvailability = "available" | "unavailable";
-export type PracticeProgressStatus =
-  | "LOCKED"
-  | "ACTIVE"
-  | "IN_PROGRESS"
-  | "COMPLETED"
-  | "SKIPPED";
+export type PracticeProgressStatus = "LOCKED" | "ACTIVE" | "IN_PROGRESS" | "COMPLETED" | "SKIPPED";
 
 export interface ProjectedPracticeSession {
   key: PracticeSessionKey;
@@ -72,22 +50,17 @@ export interface PracticeRoadmapHome {
 }
 
 /**
- * Identity, deliberately.
- *
- * Roadmap template slugs used to be a separate generation of names
- * (`javascript-react-core`, `computer-fundamentals`, `production-ui-quality`)
- * translated to Practice keys here. They were renamed to match, so a template
- * row and a Practice session are now one identity. This map is kept as the
- * single place a future divergence would be declared, rather than removed and
- * reintroduced ad hoc at the call sites.
+ * Stable mapping for the current DSA template and its pre-rename legacy slug.
  */
-export const PRACTICE_KEY_BY_TEMPLATE_SLUG: Readonly<Record<string, PracticeSessionKey>> =
-  Object.fromEntries(PRACTICE_SESSION_KEYS.map((key) => [key, key]));
+export const PRACTICE_KEY_BY_TEMPLATE_SLUG: Readonly<Record<string, PracticeSessionKey>> = {
+  dsa: "dsa",
+  "frontend-dsa": "dsa"
+};
 
 /**
- * Projects the interview roadmap into Practice, keeping its titles and order.
- * Interview-only rounds — the resume round and the final mock — are dropped,
- * so Practice shows four sessions where Interviews shows six.
+ * Projects only the interview plan's problem-solving round into Practice.
+ * Core technical, applied engineering, architecture, resume, and final mock
+ * remain interview rounds until their story-driven Practice replacements ship.
  *
  * Attempt history is intentionally excluded: Practice owns its progress state.
  */
@@ -104,7 +77,7 @@ export function projectPracticeSessions(
   );
 
   return visible.flatMap((session): ProjectedPracticeSession[] => {
-    const key = practiceKeyForVisibleSession(session.id, session.kind);
+    const key = practiceKeyForVisibleSession(session.kind);
     if (key === null) return [];
     const blueprint = session.kind ? blueprintByKind.get(session.kind) : undefined;
 
@@ -125,20 +98,9 @@ export function projectPracticeSessions(
 }
 
 /**
- * Returns null for an interview round with no Practice counterpart. The resume
- * and final-mock rounds are interview-only; they are filtered out rather than
- * projected.
+ * Returns null for every interview round without an active Practice counterpart.
  */
-function practiceKeyForVisibleSession(
-  id: string,
-  kind: InterviewSessionKind | null
-): PracticeSessionKey | null {
-  if (id === "resume-behavioral-defense") return null;
+function practiceKeyForVisibleSession(kind: InterviewSessionKind | null): PracticeSessionKey | null {
   if (kind === "problem-solving") return "dsa";
-  if (kind === "core-technical") return "core-technical";
-  if (kind === "applied-engineering") return "applied-engineering";
-  if (kind === "architecture-system-design") return "architecture-system-design";
-  if (kind === "final-mock") return null;
-
-  throw new Error(`Unsupported Practice session: ${kind ?? id}`);
+  return null;
 }

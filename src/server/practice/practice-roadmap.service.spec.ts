@@ -1,12 +1,6 @@
-import {
-  PracticeSessionAvailability,
-  RoadmapProgressStatus
-} from "@prisma/client";
+import { PracticeSessionAvailability, RoadmapProgressStatus } from "@prisma/client";
 import type { PersonalizedInterviewPlan } from "@/lib/interviews/personalized-plan";
-import {
-  PRACTICE_SESSION_KEYS,
-  projectPracticeSessions
-} from "@/lib/practice/practice-roadmap";
+import { PRACTICE_SESSION_KEYS, projectPracticeSessions } from "@/lib/practice/practice-roadmap";
 import type { PrismaService } from "../database/prisma.service";
 import type { PersonalizedInterviewPlanningService } from "../interview/personalized-interview-planning.service";
 import type { FrontendRoadmapService } from "../roadmap/frontend-roadmap.service";
@@ -88,7 +82,7 @@ function plan(): PersonalizedInterviewPlan {
 }
 
 describe("PracticeRoadmapService", () => {
-  it("reconciles all four Practice slots without writing over progress counters", async () => {
+  it("reconciles the DSA Practice slot without writing over progress counters", async () => {
     const activePlan = plan();
     const transaction = practiceTransaction(activePlan, true);
     const prisma = {
@@ -110,9 +104,7 @@ describe("PracticeRoadmapService", () => {
       attemptedQuestions: 7,
       completedQuestions: 4
     });
-    expect(result?.sessions.slice(1).every((session) => session.href === null)).toBe(true);
-    // Four, not six: the resume round and the final mock are interview-only.
-    expect(transaction.userSessionProgress.update).toHaveBeenCalledTimes(4);
+    expect(transaction.userSessionProgress.update).toHaveBeenCalledTimes(1);
     for (const [{ data }] of transaction.userSessionProgress.update.mock.calls) {
       expect(data).not.toHaveProperty("status");
       expect(data).not.toHaveProperty("attemptedQuestions");
@@ -132,13 +124,17 @@ describe("PracticeRoadmapService", () => {
     } as unknown as PrismaService;
     const service = new PracticeRoadmapService(
       prisma,
-      { home: vi.fn().mockResolvedValue({ roadmapId: "roadmap" }) } as unknown as FrontendRoadmapService,
-      { activePlan: vi.fn().mockResolvedValue(activePlan) } as unknown as PersonalizedInterviewPlanningService
+      {
+        home: vi.fn().mockResolvedValue({ roadmapId: "roadmap" })
+      } as unknown as FrontendRoadmapService,
+      {
+        activePlan: vi.fn().mockResolvedValue(activePlan)
+      } as unknown as PersonalizedInterviewPlanningService
     );
 
     const result = await service.home("owner-1");
 
-    expect(result?.sessions).toHaveLength(4);
+    expect(result?.sessions).toHaveLength(1);
     expect(transaction.userSessionProgress.create).not.toHaveBeenCalled();
     expect(transaction.userSessionProgress.update).not.toHaveBeenCalled();
     expect(transaction.userRoadmap.update).not.toHaveBeenCalled();
@@ -159,9 +155,7 @@ function practiceTransaction(activePlan: PersonalizedInterviewPlan, stale: boole
     order: session.order,
     status: RoadmapProgressStatus.IN_PROGRESS,
     availability:
-      index === 0
-        ? PracticeSessionAvailability.AVAILABLE
-        : PracticeSessionAvailability.UNAVAILABLE,
+      index === 0 ? PracticeSessionAvailability.AVAILABLE : PracticeSessionAvailability.UNAVAILABLE,
     titleSnapshot: stale ? `Old ${session.title}` : session.title,
     purposeSnapshot: session.purpose,
     coversSnapshot: session.covers,
@@ -191,13 +185,9 @@ function practiceTransaction(activePlan: PersonalizedInterviewPlan, stale: boole
         generatedAt: new Date(1),
         sourceInterviewPlanId: stale ? null : activePlan.id,
         sourceInterviewPlanRevision: stale ? null : activePlan.revision,
-        sourceProfileVersionId: stale
-          ? null
-          : activePlan.sourceSnapshot.candidateProfile.id,
-        sourceProfileRevision: stale
-          ? null
-          : activePlan.sourceSnapshot.candidateProfile.revision,
-        practiceGenerationVersion: 1
+        sourceProfileVersionId: stale ? null : activePlan.sourceSnapshot.candidateProfile.id,
+        sourceProfileRevision: stale ? null : activePlan.sourceSnapshot.candidateProfile.revision,
+        practiceGenerationVersion: stale ? 1 : 2
       }),
       update: vi.fn().mockResolvedValue({ generatedAt: new Date(2) })
     },

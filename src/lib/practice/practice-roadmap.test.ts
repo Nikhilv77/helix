@@ -6,7 +6,10 @@ import {
 } from "@/lib/interviews/personalized-plan";
 import { PRACTICE_SESSION_KEYS, projectPracticeSessions } from "./practice-roadmap";
 
-function blueprint(kind: (typeof INTERVIEW_SESSION_KINDS)[number], index: number): SessionBlueprint {
+function blueprint(
+  kind: (typeof INTERVIEW_SESSION_KINDS)[number],
+  index: number
+): SessionBlueprint {
   return {
     id: `blueprint-${kind}`,
     kind,
@@ -77,7 +80,7 @@ function plan(idSuffix = "one"): PersonalizedInterviewPlan {
 }
 
 describe("projectPracticeSessions", () => {
-  it("projects the four drillable slots and drops the interview-only rounds", () => {
+  it("projects only DSA while the story-driven non-DSA flow is rebuilt", () => {
     const sessions = projectPracticeSessions(plan());
 
     expect(sessions.map((session) => session.key)).toEqual(PRACTICE_SESSION_KEYS);
@@ -87,10 +90,10 @@ describe("projectPracticeSessions", () => {
       sourceBlueprintId: "blueprint-problem-solving"
     });
 
-    // The resume round and the final mock stay in the interview roadmap: a mock
-    // needs a continuous timed loop, and defending your own history needs live
-    // follow-ups. Neither exists in Practice.
     const keys = sessions.map((session) => session.key as string);
+    expect(keys).not.toContain("core-technical");
+    expect(keys).not.toContain("applied-engineering");
+    expect(keys).not.toContain("architecture-system-design");
     expect(keys).not.toContain("resume-behavioral-defense");
     expect(keys).not.toContain("final-mock");
   });

@@ -7,7 +7,7 @@ import { PracticeSessionsView } from "./practice-sessions-view";
 const practiceRoadmap: PracticeRoadmapHome = {
   roadmapId: "roadmap-1",
   title: "Practice roadmap",
-  generationVersion: 1,
+  generationVersion: 2,
   generatedAt: 1,
   sourcePlan: {
     id: "plan-1",
@@ -15,69 +15,44 @@ const practiceRoadmap: PracticeRoadmapHome = {
     profileVersionId: "profile-1",
     profileRevision: 1
   },
-  sessions: [
-    ["dsa", "DSA · Arrays", "available", "/practice/dsa", 200],
-    ["core-technical", "JavaScript & React", "unavailable", null, 0],
-    ["applied-engineering", "Applied Engineering", "unavailable", null, 0],
-    ["architecture-system-design", "Architecture", "unavailable", null, 0],
-    ["resume-behavioral-defense", "Resume Defense", "unavailable", null, 0],
-    ["final-mock", "Final Mock", "unavailable", null, 0]
-  ].map(([key, title, availability, href, totalQuestions], index) => ({
-    key,
-    order: index + 1,
-    title,
-    purpose: `Purpose ${index + 1}`,
-    covers: [`Topic ${index + 1}`],
-    difficulty: "adaptive",
-    durationMinutes: 20,
-    sourceBlueprintId: null,
-    sourceBlueprintKind: null,
-    availability,
-    status: index === 0 ? "ACTIVE" : "LOCKED",
-    totalQuestions,
-    attemptedQuestions: 0,
-    completedQuestions: 0,
-    progressPercent: 0,
-    href
-  })) as PracticeRoadmapHome["sessions"]
+  sessions: [["dsa", "DSA · Arrays", "available", "/practice/dsa", 200]].map(
+    ([key, title, availability, href, totalQuestions], index) => ({
+      key,
+      order: index + 1,
+      title,
+      purpose: `Purpose ${index + 1}`,
+      covers: [`Topic ${index + 1}`],
+      difficulty: "adaptive",
+      durationMinutes: 20,
+      sourceBlueprintId: null,
+      sourceBlueprintKind: null,
+      availability,
+      status: index === 0 ? "ACTIVE" : "LOCKED",
+      totalQuestions,
+      attemptedQuestions: 0,
+      completedQuestions: 0,
+      progressPercent: 0,
+      href
+    })
+  ) as PracticeRoadmapHome["sessions"]
 };
 
 describe("PracticeSessionsView", () => {
   afterEach(cleanup);
-  it("renders the same six-slot roadmap shape while only enabling an implemented bank", () => {
+  it("renders only the preserved DSA Practice session", () => {
     render(<PracticeSessionsView practiceRoadmap={practiceRoadmap} />);
 
-    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(6);
+    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(1);
     expect(screen.queryByText(/readiness/i)).toBeNull();
     expect(
       screen.getByRole("link", { name: /DSA · Arrays.*Start session/i }).getAttribute("href")
     ).toBe("/practice/dsa");
-    expect(screen.getAllByRole("article")).toHaveLength(5);
-    expect(screen.getAllByText("Coming soon")).toHaveLength(5);
+    expect(screen.queryByRole("article")).toBeNull();
+    expect(screen.queryByText("Coming soon")).toBeNull();
     expect(
       screen.getByText("Your weekly rhythm starts with one solved question.")
     ).toBeInTheDocument();
     expect(screen.getByText("Start your practice momentum")).toBeInTheDocument();
-  });
-
-  it("enables every published Part 4 workspace when the service supplies its href", () => {
-    const launched = {
-      ...practiceRoadmap,
-      sessions: practiceRoadmap.sessions.map((session) => ({
-        ...session,
-        availability: "available" as const,
-        totalQuestions: session.totalQuestions || 12,
-        href: session.href ?? `/practice/${session.key}`
-      }))
-    };
-
-    render(<PracticeSessionsView practiceRoadmap={launched} />);
-
-    expect(screen.getAllByText("Start session")).toHaveLength(6);
-    expect(screen.queryByText("Coming soon")).toBeNull();
-    expect(
-      screen.getByRole("link", { name: /Final Mock.*Start session/i }).getAttribute("href")
-    ).toBe("/practice/final-mock");
   });
 
   it("switches from the first-time message to the weekly chart after the first solve", () => {

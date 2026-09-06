@@ -148,6 +148,7 @@ export class TeacherNotificationService {
     const questions = await this.prisma.userQuestionProgress.findMany({
       where: {
         roadmap: { ownerId },
+        dsaQuestionSlug: { not: null },
         completedAt: null,
         status: { in: ["ACTIVE", "IN_PROGRESS"] }
       },
@@ -158,20 +159,11 @@ export class TeacherNotificationService {
         lastAttemptedAt: true,
         draftUpdatedAt: true,
         dsaQuestionSlug: true,
-        prepQuestionTemplateId: true,
-        sessionProgress: { select: { practiceSessionKey: true } },
         dsaQuestion: {
           select: {
             title: true,
             primaryPattern: true,
             promptSummary: true
-          }
-        },
-        prepQuestionTemplate: {
-          select: {
-            title: true,
-            competency: true,
-            whatItTests: true
           }
         }
       },
@@ -246,10 +238,7 @@ interface DailyQuestion {
   draftUpdatedAt: Date | null;
   lastAttemptedAt: Date | null;
   dsaQuestionSlug: string | null;
-  prepQuestionTemplateId: string | null;
-  sessionProgress: { practiceSessionKey: string };
   dsaQuestion: { title: string; primaryPattern: string; promptSummary: string } | null;
-  prepQuestionTemplate: { title: string; competency: string; whatItTests: string[] } | null;
 }
 
 function questionDetail(question: DailyQuestion): {
@@ -262,17 +251,6 @@ function questionDetail(question: DailyQuestion): {
       title: question.dsaQuestion.title,
       reason: `It sharpens ${question.dsaQuestion.primaryPattern}, a pattern worth being able to explain under pressure.`,
       href: `/dsa-questions/${encodeURIComponent(question.dsaQuestionSlug)}`
-    };
-  }
-
-  if (question.prepQuestionTemplate && question.prepQuestionTemplateId) {
-    const signal = question.prepQuestionTemplate.whatItTests[0];
-    return {
-      title: question.prepQuestionTemplate.title,
-      reason: signal
-        ? `It tests ${sentenceFragment(signal)}, which interviewers will expect you to defend clearly.`
-        : `It strengthens ${question.prepQuestionTemplate.competency}, one of the clearest signals in this practice block.`,
-      href: `/practice/${encodeURIComponent(question.sessionProgress.practiceSessionKey)}/${encodeURIComponent(question.prepQuestionTemplateId)}`
     };
   }
 
@@ -314,11 +292,6 @@ function humanizeRole(role: string): string {
       pm: "product management"
     }[role] ?? "your target role"
   );
-}
-
-function sentenceFragment(value: string): string {
-  const clean = value.trim().replace(/[.!?]+$/, "");
-  return clean ? clean[0]!.toLowerCase() + clean.slice(1) : "clear technical reasoning";
 }
 
 function utcDateKey(value: Date): string {

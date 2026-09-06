@@ -42,8 +42,6 @@ import { PersonalizedPlanningStore } from "./interview/personalized-planning-sto
 import { PersonalizedPerformanceStore } from "./interview/personalized-performance-store";
 import { TechnicalAnswerEvaluator } from "./interview/technical-answer-evaluator";
 import { PracticeRoadmapService } from "./practice/practice-roadmap.service";
-import { PrepPracticeService } from "./practice/prep-practice.service";
-import { PrepPracticeEvaluator } from "./practice/prep-practice-evaluator";
 import { PracticeEvidenceStore } from "./practice/practice-evidence-store";
 import { WorkspaceSearchService } from "./search/workspace-search.service";
 import { TeacherNotificationService } from "./notifications/teacher-notification.service";
@@ -86,7 +84,6 @@ export interface AppContainer {
   personalizedInterviewPlanGenerator: PersonalizedInterviewPlanGenerator;
   personalizedInterviewPlanningService: PersonalizedInterviewPlanningService;
   practiceRoadmapService: PracticeRoadmapService;
-  prepPracticeService: PrepPracticeService;
   workspaceSearchService: WorkspaceSearchService;
   resumeRoastService: ResumeRoastService;
   preparationOnboardingService: PreparationOnboardingService;
@@ -200,17 +197,11 @@ export function getAppContainer(): AppContainer {
     personalizedInterviewPlanGenerator,
     // Reuses or publishes the active immutable plan for the current inputs.
     personalizedInterviewPlanningService,
-    // Persists the six Practice slots from the active immutable interview plan.
+    // Persists the active DSA Practice slot from the immutable interview plan.
     practiceRoadmapService: new PracticeRoadmapService(
       prisma,
       frontendRoadmapService,
-      personalizedInterviewPlanningService,
-      config.practiceNonDsaEnabled
-    ),
-    prepPracticeService: new PrepPracticeService(
-      prisma,
-      frontendRoadmapService,
-      new PrepPracticeEvaluator(geminiAi)
+      personalizedInterviewPlanningService
     ),
     workspaceSearchService: new WorkspaceSearchService(prisma),
     // Resume Roast reuses the profile's immutable candidate revision and the

@@ -18,7 +18,6 @@ type AppConfigInput = Omit<
   | "appOrigin"
   | "deepgramApiKey"
   | "deepgramTtsModel"
-  | "practiceNonDsaEnabled"
 > & {
   clerkSecretKey?: EnvironmentConfig["clerkSecretKey"];
   interviewAuthSecret?: EnvironmentConfig["interviewAuthSecret"];
@@ -36,7 +35,6 @@ type AppConfigInput = Omit<
   appOrigin?: EnvironmentConfig["appOrigin"];
   deepgramApiKey?: EnvironmentConfig["deepgramApiKey"];
   deepgramTtsModel?: EnvironmentConfig["deepgramTtsModel"];
-  practiceNonDsaEnabled?: EnvironmentConfig["practiceNonDsaEnabled"];
 };
 
 export class AppConfigService {
@@ -120,10 +118,6 @@ export class AppConfigService {
 
   get interviewDailyLimit(): EnvironmentConfig["interviewDailyLimit"] {
     return this.config.interviewDailyLimit;
-  }
-
-  get practiceNonDsaEnabled(): EnvironmentConfig["practiceNonDsaEnabled"] {
-    return this.config.practiceNonDsaEnabled ?? true;
   }
 
   get upstashRedisRestUrl(): EnvironmentConfig["upstashRedisRestUrl"] {

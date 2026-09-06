@@ -80,10 +80,6 @@ export const environmentSchema = z
     // interview authorization independent from any third-party credential.
     INTERVIEW_AUTH_SECRET: z.string().min(32).optional(),
     INTERVIEW_DAILY_LIMIT: z.coerce.number().int().min(1).max(100).default(2),
-    PRACTICE_NON_DSA_ENABLED: z
-      .enum(["true", "false"])
-      .default("true")
-      .transform((value) => value === "true"),
     UPSTASH_REDIS_REST_URL: z.string().url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
     GROQ_API_KEY: z.string().optional(),
@@ -179,7 +175,6 @@ export const environmentSchema = z
     clerkSecretKey: env.CLERK_SECRET_KEY,
     interviewAuthSecret: env.INTERVIEW_AUTH_SECRET,
     interviewDailyLimit: env.INTERVIEW_DAILY_LIMIT,
-    practiceNonDsaEnabled: env.PRACTICE_NON_DSA_ENABLED,
     upstashRedisRestUrl: env.UPSTASH_REDIS_REST_URL,
     upstashRedisRestToken: env.UPSTASH_REDIS_REST_TOKEN,
     groqApiKey: env.GROQ_API_KEY,

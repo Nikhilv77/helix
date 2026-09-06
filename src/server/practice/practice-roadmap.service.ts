@@ -11,10 +11,6 @@ import {
 import type { PrismaService } from "../database/prisma.service";
 import type { PersonalizedInterviewPlanningService } from "../interview/personalized-interview-planning.service";
 import type { FrontendRoadmapService } from "../roadmap/frontend-roadmap.service";
-import {
-  placementAvailability,
-  reconcilePracticeQuestionPlacements
-} from "./practice-question-placement";
 
 const PRACTICE_ROADMAP_ROLE = "fullstack";
 const DAY_MS = 86_400_000;
@@ -49,16 +45,15 @@ type PersistedPracticeProgress = Prisma.UserSessionProgressGetPayload<{
 }>;
 
 /**
- * Persists the six candidate-facing Practice slots derived from the active,
- * immutable interview plan. Reconciliation only updates identity and display
+ * Persists the DSA Practice slot derived from the active immutable interview
+ * plan. Reconciliation only updates identity and display
  * snapshots; attempt counters and completion history are never reset.
  */
 export class PracticeRoadmapService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly roadmaps: RoadmapProvisioner,
-    private readonly plans: PlanReader,
-    private readonly nonDsaEnabled = true
+    private readonly plans: PlanReader
   ) {}
 
   async home(ownerId: string): Promise<PracticeRoadmapHome | null> {
@@ -235,34 +230,6 @@ export class PracticeRoadmapService {
           progressRows.push(progress);
         }
 
-        const placementResult = await reconcilePracticeQuestionPlacements(
-          tx,
-          roadmap.id,
-          progressRows.map((progress) => ({
-            id: progress.id,
-            practiceSessionKey: progress.practiceSessionKey
-          })),
-          plan,
-          ownerId
-        );
-        for (const [index, progress] of progressRows.entries()) {
-          const key = progress.practiceSessionKey as PracticeSessionKey;
-          if (key === "dsa") continue;
-          const totalQuestions = placementResult.counts.get(key) ?? 0;
-          const availability = placementAvailability(totalQuestions);
-          if (
-            progress.totalQuestions === totalQuestions &&
-            progress.availability === availability
-          ) {
-            continue;
-          }
-          progressRows[index] = await tx.userSessionProgress.update({
-            where: { id: progress.id },
-            data: { totalQuestions, availability },
-            select: practiceProgressSelect
-          });
-        }
-
         const sourceProfile = plan.sourceSnapshot.candidateProfile;
         const sourceChanged =
           roadmap.sourceInterviewPlanId !== plan.id ||
@@ -318,13 +285,9 @@ export class PracticeRoadmapService {
               completedQuestions: progress.completedQuestions,
               progressPercent: progress.progressPercent,
               href:
-                progress.availability !== PracticeSessionAvailability.AVAILABLE
-                  ? null
-                  : key === "dsa"
-                    ? "/practice/dsa"
-                    : this.nonDsaEnabled
-                      ? `/practice/${key}`
-                      : null
+                progress.availability === PracticeSessionAvailability.AVAILABLE
+                  ? "/practice/dsa"
+                  : null
             };
           })
           .sort((left, right) => left.order - right.order);

@@ -75,14 +75,11 @@ describe("teacher notifications", () => {
             lastAttemptedAt: new Date("2026-08-27T12:00:00.000Z"),
             draftUpdatedAt: new Date("2026-08-27T12:00:00.000Z"),
             dsaQuestionSlug: "contains-duplicate",
-            prepQuestionTemplateId: null,
-            sessionProgress: { practiceSessionKey: "dsa" },
             dsaQuestion: {
               title: "Contains Duplicate",
               primaryPattern: "Hashing",
               promptSummary: "Find a duplicate."
-            },
-            prepQuestionTemplate: null
+            }
           },
           {
             id: "next",
@@ -90,14 +87,11 @@ describe("teacher notifications", () => {
             attemptCount: 0,
             lastAttemptedAt: null,
             draftUpdatedAt: null,
-            dsaQuestionSlug: null,
-            prepQuestionTemplateId: "rate-limiter",
-            sessionProgress: { practiceSessionKey: "system-design" },
-            dsaQuestion: null,
-            prepQuestionTemplate: {
-              title: "Design a Rate Limiter",
-              competency: "System design",
-              whatItTests: ["Scalability trade-offs"]
+            dsaQuestionSlug: "valid-anagram",
+            dsaQuestion: {
+              title: "Valid Anagram",
+              primaryPattern: "Hashing",
+              promptSummary: "Compare character frequencies."
             }
           }
         ])
@@ -118,7 +112,7 @@ describe("teacher notifications", () => {
       expect.objectContaining({
         kind: NotificationKind.TEACHER_RECOMMENDATION,
         subjectId: "2026-08-28:primary",
-        href: "/practice/system-design/rate-limiter"
+        href: "/dsa-questions/valid-anagram"
       })
     );
     expect(dispatch).toHaveBeenNthCalledWith(

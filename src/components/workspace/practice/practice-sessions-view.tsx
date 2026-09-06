@@ -1,30 +1,10 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import type { LucideIcon } from "lucide-react";
-import {
-  ArrowRight,
-  Atom,
-  BadgeCheck,
-  CircleGauge,
-  Clock3,
-  CodeXml,
-  Cpu,
-  FileCode2,
-  Rocket
-} from "lucide-react";
+import { ArrowRight, Clock3, CodeXml } from "lucide-react";
 import { DocumentTitle } from "@/components/document-title";
 import { PracticeWeeklyActivityChart } from "@/components/workspace/shared/practice-weekly-activity-chart";
 import type { DsaRecommendation } from "@/lib/practice/dsa-recommendation";
 import type { PracticeRoadmapHome, PracticeRoadmapSession } from "@/lib/practice/practice-roadmap";
-
-const sessionIcons: Record<string, LucideIcon> = {
-  dsa: CodeXml,
-  "resume-behavioral-defense": BadgeCheck,
-  "core-technical": Atom,
-  "applied-engineering": Cpu,
-  "architecture-system-design": CircleGauge,
-  "final-mock": Rocket
-};
 
 export function PracticeSessionsView({
   practiceRoadmap,
@@ -115,9 +95,7 @@ export function PracticeSessionsView({
                 session={session}
                 delay={index * 70}
                 dsaRecommendation={session.key === "dsa" ? dsaRecommendation : null}
-                dsaBlockCompletedQuestions={
-                  session.key === "dsa" ? dsaBlockCompletedQuestions : 0
-                }
+                dsaBlockCompletedQuestions={session.key === "dsa" ? dsaBlockCompletedQuestions : 0}
               />
             ))
           ) : (
@@ -190,7 +168,7 @@ function PracticeSessionCard({
   dsaRecommendation?: DsaRecommendation | null;
   dsaBlockCompletedQuestions?: number;
 }) {
-  const SessionIcon = sessionIcons[session.key] ?? FileCode2;
+  const SessionIcon = CodeXml;
   const href = session.href;
   const available = session.availability === "available" && Boolean(href);
   const statusLabel = available
