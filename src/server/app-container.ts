@@ -255,7 +255,6 @@ export function getAppContainer(): AppContainer {
   });
   const coreTechnicalGenerationCritic = new CoreTechnicalGenerationCritic({
     ai: generationAi,
-    independentAi: interviewAi,
     patterns: NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS,
     evidenceSources: CORE_TECHNICAL_INTERVIEW_EVIDENCE,
     technicalSources: CORE_TECHNICAL_SOURCES

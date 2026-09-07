@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, ChevronDown, Code2, Loader2, Sparkles } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { ArrowRight, Check, ChevronDown, Code2, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 type Language = "javascript";
 
@@ -11,6 +11,8 @@ const LANGUAGE_OPTIONS: ReadonlyArray<{
   label: string;
   detail: string;
 }> = [{ value: "javascript", label: "JavaScript", detail: "Node.js interview stories" }];
+
+const HEADING_WORDS = ["What", "language", "do", "you", "want", "to", "practise", "in?"];
 
 /** First-entry gate. The browser confirms only language; every other focus signal is server-derived. */
 export function CoreTechnicalPreparation() {
@@ -106,51 +108,38 @@ export function CoreTechnicalPreparation() {
 
   return (
     <div
-      className={`fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-black/75 px-4 py-8 backdrop-blur-md transition-opacity duration-500 motion-reduce:transition-none ${visible ? "opacity-100" : "opacity-0"}`}
+      className={`fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-[#050607]/72 px-4 py-8 backdrop-blur-[7px] transition-opacity duration-500 motion-reduce:transition-none ${visible ? "opacity-100" : "opacity-0"}`}
     >
       <section
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="core-technical-confirm-heading"
-        aria-describedby="core-technical-confirm-description"
-        className={`relative w-full max-w-[29rem] overflow-visible rounded-[1.65rem] border border-white/[0.1] bg-[#17181b] px-5 py-6 shadow-[0_30px_100px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.04)] transition duration-500 ease-out motion-reduce:transition-none sm:px-7 sm:py-7 ${visible ? "translate-y-0 scale-100 opacity-100" : "translate-y-3 scale-[0.98] opacity-0"}`}
+        className={`relative w-full max-w-[36rem] overflow-visible rounded-[1.85rem] border border-white/[0.09] bg-[linear-gradient(145deg,#1b1c20,#151619)] px-5 py-7 shadow-[0_36px_120px_rgba(0,0,0,0.78),inset_0_1px_0_rgba(255,255,255,0.045)] transition duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none sm:px-9 sm:py-9 ${visible ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-[0.975] opacity-0"}`}
       >
-        <div
-          className={`flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)] transition duration-500 motion-reduce:transition-none ${visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}
-          style={{ transitionDelay: "80ms" }}
-        >
-          <Sparkles size={19} aria-hidden="true" />
-        </div>
-
-        <p
-          className={`mt-5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)] transition duration-500 motion-reduce:transition-none ${visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}
-          style={{ transitionDelay: "140ms" }}
-        >
-          One quick choice
-        </p>
         <h1
           id="core-technical-confirm-heading"
-          className={`mt-2 font-display text-[1.85rem] font-semibold leading-[1.08] tracking-[-0.035em] text-cream transition duration-500 motion-reduce:transition-none sm:text-[2rem] ${visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}
-          style={{ transitionDelay: "200ms" }}
+          aria-label="What language do you want to practise in?"
+          className="mx-auto mt-4 flex max-w-[31rem] flex-wrap justify-center gap-x-2.5 gap-y-0.5 text-center font-display text-[2.25rem] font-semibold leading-[1.03] tracking-[-0.045em] text-cream sm:text-[2.75rem]"
         >
-          What language do you want to practise in?
+          {HEADING_WORDS.map((word, index) => (
+            <span
+              key={`${word}-${index}`}
+              aria-hidden="true"
+              className="onboarding-word"
+              style={{ "--word-delay": `${150 + index * 70}ms` } as CSSProperties}
+            >
+              {word}
+            </span>
+          ))}
         </h1>
-        <p
-          id="core-technical-confirm-description"
-          className={`mt-3 text-[13.5px] leading-6 text-cream/52 transition duration-500 motion-reduce:transition-none ${visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}
-          style={{ transitionDelay: "260ms" }}
-        >
-          We’ll use your saved resume and profile for your role, level, stack, framework, experience
-          and story focus. You only need to choose the language.
-        </p>
 
         <div
           ref={selectRef}
-          className={`relative mt-6 transition duration-500 motion-reduce:transition-none ${visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}
-          style={{ transitionDelay: "320ms" }}
+          className={`onboarding-card-reveal relative z-20 mt-8 ${error ? "mb-4" : "mb-7"} ${open ? "is-open" : ""}`}
+          style={{ "--card-delay": "680ms" } as CSSProperties}
         >
-          <label id="core-language-label" className="text-[11px] font-semibold text-cream/62">
+          <label id="core-language-label" className="sr-only">
             Practice language
           </label>
           <button
@@ -167,71 +156,79 @@ export function CoreTechnicalPreparation() {
               }
               if (event.key === "Escape") setOpen(false);
             }}
-            className="mt-2 flex min-h-[3.65rem] w-full items-center gap-3 rounded-xl border border-white/[0.09] bg-[#101214] px-3.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition hover:border-white/[0.16] hover:bg-[#121416] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
+            className="group relative flex min-h-[6.4rem] w-full items-center gap-4 overflow-hidden rounded-[1.45rem] bg-[#1b1c20] px-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition-[background-color,transform,box-shadow] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:bg-[#24252a] hover:shadow-[0_18px_42px_-32px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.055)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)] sm:px-6"
           >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/[0.055] text-cream/68">
-              <Code2 size={16} aria-hidden="true" />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[var(--workspace-accent)]/45 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            />
+            <span className="shrink-0 text-[var(--workspace-accent)] transition-transform duration-300 group-hover:scale-110">
+              <Code2 size={23} strokeWidth={1.8} aria-hidden="true" />
             </span>
             <span className="min-w-0 flex-1">
               <span
                 id="core-language-value"
-                className="block text-[13.5px] font-semibold text-cream"
+                className="block text-[1.35rem] font-semibold tracking-[-0.025em] text-cream"
               >
                 {selected.label}
               </span>
-              <span className="mt-0.5 block text-[11px] text-cream/38">{selected.detail}</span>
+              <span className="mt-1 block text-[12.5px] text-cream/48">{selected.detail}</span>
             </span>
             <ChevronDown
               size={16}
               aria-hidden="true"
-              className={`shrink-0 text-cream/36 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+              className={`shrink-0 text-cream/44 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
             />
           </button>
 
-          {open ? (
-            <ul
-              role="listbox"
-              aria-labelledby="core-language-label"
-              className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-10 overflow-hidden rounded-xl border border-white/[0.1] bg-[#111315] p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.55)]"
-            >
-              {LANGUAGE_OPTIONS.map((option) => (
-                <li
-                  key={option.value}
-                  role="option"
-                  aria-selected={option.value === language}
-                  tabIndex={0}
-                  onClick={() => {
-                    setLanguage(option.value);
-                    setOpen(false);
-                    triggerRef.current?.focus();
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key !== "Enter" && event.key !== " ") return;
-                    event.preventDefault();
-                    setLanguage(option.value);
-                    setOpen(false);
-                    triggerRef.current?.focus();
-                  }}
-                  className="flex min-h-12 cursor-pointer items-center justify-between rounded-lg px-3 text-[13px] font-semibold text-cream/78 outline-none transition hover:bg-white/[0.055] focus-visible:bg-white/[0.055]"
-                >
-                  <span>{option.label}</span>
-                  {option.value === language ? (
-                    <Check
-                      size={14}
-                      className="text-[var(--workspace-accent)]"
-                      aria-hidden="true"
-                    />
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          <div
+            className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${open ? "mt-2 grid-rows-[1fr] opacity-100" : "mt-0 grid-rows-[0fr] opacity-0"}`}
+          >
+            <div className="min-h-0 overflow-hidden rounded-[1.15rem] bg-[#101214] shadow-[0_18px_44px_rgba(0,0,0,0.45)]">
+              <ul
+                role="listbox"
+                aria-labelledby="core-language-label"
+                className="overflow-hidden"
+              >
+                {LANGUAGE_OPTIONS.map((option) => (
+                  <li
+                    key={option.value}
+                    role="option"
+                    aria-selected={option.value === language}
+                    tabIndex={open ? 0 : -1}
+                    onClick={() => {
+                      setLanguage(option.value);
+                      setOpen(false);
+                      triggerRef.current?.focus();
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" && event.key !== " ") return;
+                      event.preventDefault();
+                      setLanguage(option.value);
+                      setOpen(false);
+                      triggerRef.current?.focus();
+                    }}
+                    className="flex min-h-16 w-full cursor-pointer items-center justify-between px-5 text-[13px] font-semibold text-cream/78 outline-none transition-colors duration-200 hover:bg-[#202226] focus-visible:bg-[#202226]"
+                  >
+                    <span>{option.label}</span>
+                    {option.value === language ? (
+                      <Check
+                        size={15}
+                        className="text-[var(--workspace-accent)]"
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
 
         {error ? (
           <p
             role="alert"
-            className="mt-4 rounded-xl border border-[#e3a15b]/20 bg-[#e3a15b]/10 px-4 py-3 text-[12.5px] leading-5 text-[#e7bd83]"
+            className="rounded-xl border border-[#e3a15b]/20 bg-[#e3a15b]/10 px-4 py-3 text-[12.5px] leading-5 text-[#e7bd83]"
           >
             {error}
           </p>
@@ -241,8 +238,8 @@ export function CoreTechnicalPreparation() {
           type="button"
           onClick={() => void prepare()}
           disabled={phase !== "idle"}
-          className={`group mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-cream px-5 text-[13.5px] font-semibold text-[#17181a] transition duration-500 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-wait disabled:opacity-65 motion-reduce:transition-none ${visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}
-          style={{ transitionDelay: "380ms" }}
+          className={`group relative z-10 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-[1.1rem] bg-cream px-5 text-[13.5px] font-semibold text-[#17181a] transition duration-500 hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-wait disabled:opacity-65 motion-reduce:transition-none ${error ? "mt-5" : "mt-0"} ${visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}
+          style={{ transitionDelay: "760ms" }}
         >
           {phase === "idle" ? null : (
             <Loader2 size={15} className="animate-spin" aria-hidden="true" />
@@ -260,10 +257,6 @@ export function CoreTechnicalPreparation() {
             />
           ) : null}
         </button>
-
-        <p className="mt-3 text-center text-[10.5px] leading-4 text-cream/30">
-          Your choice is saved for this Core Technical path.
-        </p>
       </section>
     </div>
   );

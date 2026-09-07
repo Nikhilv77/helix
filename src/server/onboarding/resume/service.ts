@@ -175,7 +175,7 @@ readable is false.`,
 
   analyze(input: {
     text: string;
-    targetRole: Role;
+    targetRole?: Role | null;
     level: Level;
     evidence: ResumeDocumentEvidence;
     timeoutMs?: number;
@@ -184,7 +184,11 @@ readable is false.`,
     return this.ai.generateStructured({
       operation: "resume_extract",
       systemInstruction: SYSTEM_INSTRUCTION,
-      prompt: `Target interview role: ${input.targetRole}
+      prompt: `${
+        input.targetRole
+          ? `Existing target interview role: ${input.targetRole}`
+          : "No target role was selected. Infer the candidate's primary interview role from their grounded work history, project responsibilities, and technologies."
+      }
 Experience level selected by candidate: ${input.level}
 
 Deterministic parser evidence (use this as supporting context, but independently verify it):
@@ -221,7 +225,8 @@ Rules:
 - evidenceQuote on every experience, education, and project entry must be a short VERBATIM quote from the resume that uniquely supports the entry. Never paraphrase this field.
 - achievements contains only concrete, attributable outcomes copied verbatim from the resume. Preserve numbers and units exactly as written.
 - practiceQuestions contains 3-6 natural interview questions tied to a named role, project, achievement, or evidence gap in this resume. evidenceAnchor names that source. Avoid trivia and generic questions.
-- roadmap contains 3-4 ordered preparation stages. Each stage must respond to this candidate's evidence, target role, selected level, and warnings; do not recommend generic resume rewriting.
+- practiceQuestions and roadmap must follow the strongest resume-supported role direction. Do not assume a role that the resume does not support.
+- roadmap contains 3-4 ordered preparation stages. Each stage must respond to this candidate's evidence, resume-supported role direction, selected level, and warnings; do not recommend generic resume rewriting.
 - When isLikelyResume is false, return empty practiceQuestions and roadmap arrays instead of inventing a preparation plan.
 - warnings identifies missing dates, unclear ownership, absent outcomes, or other evidence gaps. Do not use warnings for formatting preferences.
 

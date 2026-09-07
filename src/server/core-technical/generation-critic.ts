@@ -15,6 +15,7 @@ import type {
 import type { FrozenQuestionBlock } from "@/lib/practice/core-technical/question-contracts";
 import type { GeneratedStoryCandidate } from "@/lib/practice/core-technical/story-contracts";
 import type { AiService } from "@/server/ai/ai.service";
+import { z } from "zod";
 
 const STORY_DIMENSIONS: CoreTechnicalCriticDimension[] = [
   "technical-correctness",
@@ -41,11 +42,14 @@ export const CORE_TECHNICAL_CRITIC_MINIMUM_SCORE: Record<CoreTechnicalCriticDime
 
 type GenerationCriticDependencies = {
   ai: Pick<AiService, "generateStructured">;
-  independentAi?: Pick<AiService, "generateStructured">;
   patterns: CoreTechnicalInterviewPattern[];
   evidenceSources: InterviewEvidenceSource[];
   technicalSources: TechnicalSource[];
 };
+
+const criticBatchResponseSchema = z.object({
+  verdicts: z.array(coreTechnicalCriticVerdictSchema).min(4).max(5)
+});
 
 export class CoreTechnicalGenerationCritic {
   constructor(private readonly dependencies: GenerationCriticDependencies) {}
@@ -77,41 +81,57 @@ export class CoreTechnicalGenerationCritic {
     questionBlock?: FrozenQuestionBlock;
   }): Promise<CoreTechnicalCriticReport> {
     const sourceContext = this.sourceContext(input.story);
-    const verdicts = await Promise.all(
-      input.dimensions.map(async (dimension) => {
-        const reviewer = this.reviewerFor(dimension);
-        const verdict = coreTechnicalCriticVerdictSchema.parse(
-          await reviewer.generateStructured({
-            operation: "core-technical-critic-" + input.target + "-" + dimension,
-            modelClass: "reasoning",
-            temperature: 0,
-            schema: coreTechnicalCriticVerdictSchema,
-            systemInstruction: this.systemInstruction(dimension),
-            prompt: JSON.stringify({
-              task: "Audit this generated Core Technical asset. Look for disqualifying errors, not stylistic preferences.",
-              expectedTarget: input.target,
-              expectedDimension: dimension,
-              minimumPassingScore: CORE_TECHNICAL_CRITIC_MINIMUM_SCORE[dimension],
-              story: input.story,
-              questionBlock: input.questionBlock,
-              sourceContext
-            })
-          })
-        );
-
-        if (verdict.target !== input.target || verdict.dimension !== dimension) {
-          throw new Error(
-            "Core Technical critic returned a verdict for the wrong target or dimension"
-          );
-        }
-        return verdict;
+    const response = criticBatchResponseSchema.parse(
+      await this.dependencies.ai.generateStructured({
+        operation: "core-technical-critic-" + input.target,
+        modelClass: "reasoning",
+        temperature: 0,
+        schema: criticBatchResponseSchema,
+        systemInstruction: this.systemInstruction(),
+        prompt: JSON.stringify({
+          task: "Audit this generated Core Technical asset once and return one independent verdict for every requested dimension. Look for disqualifying errors, not stylistic preferences.",
+          expectedTarget: input.target,
+          expectedDimensions: input.dimensions,
+          minimumPassingScores: Object.fromEntries(
+            input.dimensions.map((dimension) => [
+              dimension,
+              CORE_TECHNICAL_CRITIC_MINIMUM_SCORE[dimension]
+            ])
+          ),
+          dimensionInstructions: Object.fromEntries(
+            input.dimensions.map((dimension) => [dimension, DIMENSION_INSTRUCTIONS[dimension]])
+          ),
+          story: input.story,
+          questionBlock: input.questionBlock,
+          sourceContext
+        })
       })
     );
+    const verdictByDimension = new Map(
+      response.verdicts.map((verdict) => [verdict.dimension, verdict])
+    );
+    const verdicts = input.dimensions.map((dimension) => verdictByDimension.get(dimension));
+    if (
+      response.verdicts.length !== input.dimensions.length ||
+      verdictByDimension.size !== input.dimensions.length ||
+      verdicts.some(
+        (verdict, index) =>
+          !verdict ||
+          verdict.target !== input.target ||
+          verdict.dimension !== input.dimensions[index]
+      )
+    ) {
+      throw new Error(
+        "Core Technical critic returned a verdict for the wrong target or dimension"
+      );
+    }
 
     return coreTechnicalCriticReportSchema.parse({
       criticVersion: CORE_TECHNICAL_CRITIC_VERSION,
       target: input.target,
-      approved: verdicts.every(isCoreTechnicalCriticVerdictPassing),
+      approved: verdicts.every(
+        (verdict) => verdict !== undefined && isCoreTechnicalCriticVerdictPassing(verdict)
+      ),
       verdicts
     });
   }
@@ -133,33 +153,16 @@ export class CoreTechnicalGenerationCritic {
     };
   }
 
-  private systemInstruction(dimension: CoreTechnicalCriticDimension): string {
+  private systemInstruction(): string {
     return [
       "You are an independent Core Technical generation critic.",
-      "Review only the " +
-        dimension +
-        " dimension and do not assume another critic will catch its failures.",
-      DIMENSION_INSTRUCTIONS[dimension],
+      "Review every requested dimension independently inside one response; do not let a pass in one dimension hide a failure in another.",
       "Use the supplied pattern catalogue and source metadata as the authority boundary.",
-      "Fail on any factual error, answer leak, invented mechanism, broken story dependency, unsupported stack detail, trivialized interview pattern, misleading rubric, or material difficulty mismatch relevant to your dimension.",
+      "Fail on any factual error, answer leak, invented mechanism, broken story dependency, unsupported stack detail, trivialized interview pattern, misleading rubric, or material difficulty mismatch relevant to a requested dimension.",
       "Every conclusion must cite concrete evidence from the supplied asset or catalogue in evidenceChecks.",
       "A pass requires zero blocking issues, every evidence check passing, and the minimum score supplied in the prompt.",
-      "Return only data matching the supplied schema. Set target and dimension exactly as requested."
+      "Return exactly one verdict for every requested dimension and no others. Set target and dimension exactly as requested. Return only data matching the supplied schema."
     ].join(" ");
-  }
-
-  private reviewerFor(
-    dimension: CoreTechnicalCriticDimension
-  ): Pick<AiService, "generateStructured"> {
-    const crossProviderDimensions: CoreTechnicalCriticDimension[] = [
-      "technical-correctness",
-      "story-continuity",
-      "difficulty"
-    ];
-    if (crossProviderDimensions.includes(dimension)) {
-      return this.dependencies.independentAi ?? this.dependencies.ai;
-    }
-    return this.dependencies.ai;
   }
 }
 

@@ -71,9 +71,13 @@ function createCritic(
     async (request: { prompt: string; modelClass: string; temperature: number }) => {
       const prompt = JSON.parse(request.prompt) as {
         expectedTarget: CoreTechnicalCriticTarget;
-        expectedDimension: CoreTechnicalCriticDimension;
+        expectedDimensions: CoreTechnicalCriticDimension[];
       };
-      return createVerdict(prompt.expectedTarget, prompt.expectedDimension);
+      return {
+        verdicts: prompt.expectedDimensions.map((dimension) =>
+          createVerdict(prompt.expectedTarget, dimension)
+        )
+      };
     }
   );
   const ai = { generateStructured } as unknown as Pick<AiService, "generateStructured">;
@@ -89,7 +93,7 @@ function createCritic(
 }
 
 describe("CoreTechnicalGenerationCritic", () => {
-  it("runs four independent story critics and approves only their combined report", async () => {
+  it("reviews all four story dimensions in one model call", async () => {
     const { critic, generateStructured } = createCritic();
 
     const report = await critic.reviewStory(story());
@@ -101,12 +105,11 @@ describe("CoreTechnicalGenerationCritic", () => {
       "story-continuity",
       "difficulty"
     ]);
-    expect(generateStructured).toHaveBeenCalledTimes(4);
-    for (const [request] of generateStructured.mock.calls) {
-      expect(request.modelClass).toBe("reasoning");
-      expect(request.temperature).toBe(0);
-      expect(request.prompt).not.toContain('"verdicts"');
-    }
+    expect(generateStructured).toHaveBeenCalledTimes(1);
+    const request = generateStructured.mock.calls[0]![0];
+    expect(request.modelClass).toBe("reasoning");
+    expect(request.temperature).toBe(0);
+    expect(request.prompt).toContain('"expectedDimensions"');
   });
 
   it("runs all five block critics including answer quality", async () => {
@@ -119,36 +122,7 @@ describe("CoreTechnicalGenerationCritic", () => {
 
     expect(report.approved).toBe(true);
     expect(report.verdicts.map((item) => item.dimension)).toContain("answer-quality");
-    expect(generateStructured).toHaveBeenCalledTimes(5);
-  });
-
-  it("uses the independent provider for correctness, continuity, and difficulty", async () => {
-    const respond = async (request: { prompt: string }) => {
-      const prompt = JSON.parse(request.prompt) as {
-        expectedTarget: CoreTechnicalCriticTarget;
-        expectedDimension: CoreTechnicalCriticDimension;
-      };
-      return verdict(prompt.expectedTarget, prompt.expectedDimension);
-    };
-    const primaryGenerate = vi.fn(respond);
-    const independentGenerate = vi.fn(respond);
-    const critic = new CoreTechnicalGenerationCritic({
-      ai: { generateStructured: primaryGenerate } as unknown as Pick<
-        AiService,
-        "generateStructured"
-      >,
-      independentAi: {
-        generateStructured: independentGenerate
-      } as unknown as Pick<AiService, "generateStructured">,
-      patterns: NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS,
-      evidenceSources: CORE_TECHNICAL_INTERVIEW_EVIDENCE,
-      technicalSources: CORE_TECHNICAL_SOURCES
-    });
-
-    await critic.reviewStory(story());
-
-    expect(independentGenerate).toHaveBeenCalledTimes(3);
-    expect(primaryGenerate).toHaveBeenCalledTimes(1);
+    expect(generateStructured).toHaveBeenCalledTimes(1);
   });
 
   it("fails closed when a nominal pass is below its dimension threshold", async () => {

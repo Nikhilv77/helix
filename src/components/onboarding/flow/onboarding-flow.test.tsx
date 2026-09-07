@@ -1,9 +1,12 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  uploadResume: vi.fn(() => new Promise(() => undefined))
+  uploadResume: vi.fn((input: unknown) => {
+    void input;
+    return new Promise(() => undefined);
+  })
 }));
 
 vi.mock("next/navigation", () => ({
@@ -19,26 +22,6 @@ vi.mock("@/lib/api/api-client", () => ({
 
 vi.mock("../shared/onboarding-ui", () => ({
   BlueprintBackdrop: () => null
-}));
-
-vi.mock("../steps/role-step", () => ({
-  RoleStep: ({
-    onSelect,
-    onContinue
-  }: {
-    onSelect: (role: "backend") => void;
-    onContinue: () => void;
-  }) => (
-    <button
-      type="button"
-      onClick={() => {
-        onSelect("backend");
-        onContinue();
-      }}
-    >
-      Choose backend
-    </button>
-  )
 }));
 
 vi.mock("../steps/level-step", () => ({
@@ -79,21 +62,24 @@ vi.mock("../resume-review/resume-readiness-step", () => ({
 
 import { OnboardingFlow } from "./onboarding-flow";
 
-describe("OnboardingFlow role selection", () => {
-  it("passes the selected onboarding role and level into resume analysis", async () => {
-    render(<OnboardingFlow embedded initialStep="role" />);
+describe("OnboardingFlow resume-derived role", () => {
+  beforeEach(() => {
+    mocks.uploadResume.mockClear();
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: "Choose backend" }));
+  it("goes from experience to resume analysis without sending a selected role", async () => {
+    render(<OnboardingFlow embedded initialStep="level" />);
+
     fireEvent.click(screen.getByRole("button", { name: "Choose early career" }));
     fireEvent.click(screen.getByRole("button", { name: "Upload resume" }));
 
     await waitFor(() =>
       expect(mocks.uploadResume).toHaveBeenCalledWith(
         expect.objectContaining({
-          targetRole: "backend",
           level: "0-2"
         })
       )
     );
+    expect(mocks.uploadResume.mock.calls[0]?.[0]).not.toHaveProperty("targetRole");
   });
 });

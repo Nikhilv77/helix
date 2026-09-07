@@ -21,7 +21,10 @@ export const NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE: readonly CoreTechnic
         runtime: "nodejs",
         runtimeVersion: "22 LTS",
         frameworks: [],
-        difficulties: ["guided", "standard", "stretch"],
+        // This is the difficulty of the complete, shipped eight-question block.
+        // Advertising unbuilt variants makes preparation fall through to the
+        // expensive live-generation pipeline instead of using the ready block.
+        difficulties: ["guided"],
         prerequisiteStoryKeys: [],
         topicKeys: [
           "async-scheduling",
@@ -48,7 +51,7 @@ export const NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE: readonly CoreTechnic
         runtime: "nodejs",
         runtimeVersion: "22 LTS",
         frameworks: [],
-        difficulties: ["guided", "standard", "stretch"],
+        difficulties: ["standard"],
         prerequisiteStoryKeys: [],
         topicKeys: [
           "errors-and-cancellation",

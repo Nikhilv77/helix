@@ -24,12 +24,9 @@ describe("CoreTechnicalStoryRankingService", () => {
     );
 
     expect(result.policyVersion).toBe(1);
-    expect(result.selectedStory.storyKey).toBe("the-operation-fails-halfway");
+    expect(result.selectedStory.storyKey).toBe("follow-the-operation");
     expect(result.selectedStory.difficulty).toBe("guided");
-    expect(result.selectedStory.emphasizedConceptKeys.slice(0, 2)).toEqual([
-      "nodejs-streams-and-io",
-      "nodejs-event-loop-health"
-    ]);
+    expect(result.selectedStory.emphasizedConceptKeys).toContain("async-scheduling");
     expect(result.selectedStory.scores).toMatchObject({
       baselineGapTransfer: expect.any(Number),
       targetRoleJob: expect.any(Number),
@@ -38,7 +35,7 @@ describe("CoreTechnicalStoryRankingService", () => {
       storyDiversity: expect.any(Number),
       total: expect.any(Number)
     });
-    expect(result.reason).toContain("initial assessment showed a gap");
+    expect(result.reason).toContain("initial assessment supports an unassessed transfer");
     expect(Object.isFrozen(result)).toBe(true);
   });
 
@@ -59,7 +56,7 @@ describe("CoreTechnicalStoryRankingService", () => {
     expect(guided.selectedStory.difficulty).toBe("guided");
     expect(guided.selectedStory.emphasizedConceptKeys[0]).toBe("javascript-values-and-mutation");
     expect(stretch.selectedStory.storyKey).toBe("the-operation-fails-halfway");
-    expect(stretch.selectedStory.difficulty).toBe("stretch");
+    expect(stretch.selectedStory.difficulty).toBe("standard");
     expect(stretch.reason).toContain("unassessed transfer");
   });
 
@@ -69,6 +66,25 @@ describe("CoreTechnicalStoryRankingService", () => {
     expect(result.selectedStory.storyKey).toBe("follow-the-operation");
     expect(result.selectedStory.difficulty).toBe("guided");
     expect(result.reason).toContain("baseline evidence is incomplete");
+  });
+
+  it("selects the shipped standard block instead of generating an unavailable story variant", () => {
+    const service = new CoreTechnicalStoryRankingService(publishedCatalogue);
+    const result = service.rankFirstStory(
+      focus(evidence({ state: "STANDARD" }), {
+        targetJob: "Java Full Stack Developer",
+        resumeEvidence: {
+          topicKeys: ["javascript-values-and-mutation", "javascript-scope-and-closures"],
+          mechanismKeys: ["reference-identity", "lexical-scope"]
+        }
+      })
+    );
+
+    expect(result.selectedStory).toMatchObject({
+      storyKey: "the-operation-fails-halfway",
+      title: "The operation fails halfway",
+      difficulty: "standard"
+    });
   });
 
   it("enforces publication, exact stack, role, framework, prerequisites, and exclusions as hard gates", () => {
@@ -99,6 +115,7 @@ describe("CoreTechnicalStoryRankingService", () => {
       excluded
     );
     expect(result.selectedStory.storyKey).toBe("the-operation-fails-halfway");
+    expect(result.selectedStory.difficulty).toBe("standard");
   });
 
   it("applies recent-story and topic cooldown without changing the frozen focus", () => {
@@ -119,12 +136,13 @@ describe("CoreTechnicalStoryRankingService", () => {
   it("breaks exact score ties by stable story key", () => {
     const duplicateScore = publishedCatalogue.map((story) => ({
       ...story,
+      difficulties: ["standard" as const],
       targetKeywords: [],
       topicKeys: ["async-scheduling"],
       mechanismKeys: ["event-loop"]
     }));
     const result = new CoreTechnicalStoryRankingService(duplicateScore).rankFirstStory(
-      focus(evidence({ state: "STRETCH" }), {
+      focus(evidence({ state: "STANDARD" }), {
         resumeEvidence: { topicKeys: [], mechanismKeys: [] }
       })
     );

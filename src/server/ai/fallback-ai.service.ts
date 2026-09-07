@@ -17,7 +17,7 @@ export class FallbackAiService {
 
   async generateStructured<T>(request: GenerateStructuredRequest<T>): Promise<T> {
     if (this.now() < this.primaryRetryAfter) {
-      return this.generateWithFallback(request);
+      return this.generateDuringPrimaryCooldown(request);
     }
 
     try {
@@ -31,7 +31,23 @@ export class FallbackAiService {
         throw error;
       }
       this.primaryRetryAfter = this.now() + this.primaryCooldownMs;
-      return this.generateWithFallback(request);
+      try {
+        return await this.generateWithFallback(request);
+      } catch (fallbackError) {
+        if (!this.shouldRecoverPrimary(fallbackError)) throw fallbackError;
+        return this.generateWithPrimaryRecovery(request);
+      }
+    }
+  }
+
+  private async generateDuringPrimaryCooldown<T>(
+    request: GenerateStructuredRequest<T>
+  ): Promise<T> {
+    try {
+      return await this.generateWithFallback(request);
+    } catch (fallbackError) {
+      if (!this.shouldRecoverPrimary(fallbackError)) throw fallbackError;
+      return this.generateWithPrimaryRecovery(request);
     }
   }
 
@@ -40,5 +56,24 @@ export class FallbackAiService {
       ...request,
       operation: request.operation + "-fallback"
     });
+  }
+
+  private async generateWithPrimaryRecovery<T>(
+    request: GenerateStructuredRequest<T>
+  ): Promise<T> {
+    const result = await this.primary.generateStructured({
+      ...request,
+      operation: request.operation + "-primary-recovery"
+    });
+    this.primaryRetryAfter = 0;
+    return result;
+  }
+
+  private shouldRecoverPrimary(error: unknown): boolean {
+    return (
+      error instanceof AiProviderException &&
+      !error.retryable &&
+      error.code !== "AI_CANCELLED"
+    );
   }
 }

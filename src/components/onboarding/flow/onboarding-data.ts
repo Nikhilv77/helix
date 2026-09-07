@@ -9,7 +9,7 @@ import {
   Trophy,
   type LucideIcon
 } from "lucide-react";
-import type { Level, Role } from "@/lib/shared/types";
+import type { Level } from "@/lib/shared/types";
 
 /**
  * Onboarding shares the product's graphite canvas and restrained orange accent.
@@ -29,50 +29,6 @@ export const PRIMARY_BUTTON =
 /** Quiet companion to the primary: hairline, fills with cream on hover. */
 export const SECONDARY_BUTTON =
   "ghost-button inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/15 px-5 text-base font-semibold text-cream/70 hover:border-[#F26E01]/35 hover:text-cream";
-
-export const roles: Array<{
-  value: Role;
-  label: string;
-  detail: string;
-  image: string;
-}> = [
-  {
-    value: "frontend",
-    label: "Frontend",
-    detail: "Interfaces that stay fast, accessible and predictable under load.",
-    image: "/images/domain-images/frontend-domain.png"
-  },
-  {
-    value: "backend",
-    label: "Backend",
-    detail: "APIs and data layers that hold up when traffic gets serious.",
-    image: "/images/domain-images/backend-domain.png"
-  },
-  {
-    value: "fullstack",
-    label: "Full-stack",
-    detail: "The whole product, from interface state down to the database.",
-    image: "/images/domain-images/fullstack-domain.png"
-  },
-  {
-    value: "data",
-    label: "Data",
-    detail: "Pipelines that turn messy, untrusted data into decisions.",
-    image: "/images/domain-images/data-domain.png"
-  },
-  {
-    value: "ai-ml",
-    label: "AI / ML",
-    detail: "Models that survive production, not just the evaluation set.",
-    image: "/images/domain-images/ai-ml-domain.png"
-  },
-  {
-    value: "pm",
-    label: "Product",
-    detail: "Strategy and discovery turned into outcomes that actually shipped.",
-    image: "/images/domain-images/pm-domain.png"
-  }
-];
 
 export const levels: Array<{
   value: Level;
@@ -113,11 +69,10 @@ export const analysisStages = [
   { label: "Finalizing verification...", icon: Sparkles }
 ];
 
-export type Step = "teacher" | "role" | "level" | "resume" | "identity" | "evidence" | "readiness";
+export type Step = "teacher" | "level" | "resume" | "identity" | "evidence" | "readiness";
 
 export const onboardingSteps: Array<{ value: Step; label: string }> = [
   { value: "teacher", label: "Teacher" },
-  { value: "role", label: "Role" },
   { value: "level", label: "Experience" },
   { value: "resume", label: "Resume" },
   { value: "identity", label: "Verification" },
@@ -127,7 +82,6 @@ export const onboardingSteps: Array<{ value: Step; label: string }> = [
 
 export const stepTitles: Record<Step, string> = {
   teacher: "Choose Your Teacher",
-  role: "Target Role",
   level: "Experience Level",
   resume: "Upload Resume",
   identity: "Resume Ready",
@@ -141,7 +95,7 @@ export const MIN_FILE_BYTES = 1_000;
 export const MAX_FILE_BYTES = 6 * 1024 * 1024;
 
 export function stepIndex(step: Step): number {
-  return { teacher: 0, role: 1, level: 2, resume: 3, identity: 4, evidence: 5, readiness: 6 }[step];
+  return { teacher: 0, level: 1, resume: 2, identity: 3, evidence: 4, readiness: 5 }[step];
 }
 
 export function formatBytes(bytes: number): string {

@@ -14,7 +14,6 @@ import {
 } from "./onboarding-data";
 import { BlueprintBackdrop } from "../shared/onboarding-ui";
 import { LevelStep } from "../steps/level-step";
-import { RoleStep } from "../steps/role-step";
 import { DEFAULT_TEACHER_ID, TeacherStep } from "../steps/teacher-step";
 import { ResumeStep } from "../steps/resume-upload-step";
 import { ResumeEvidenceStep } from "../resume-review/resume-evidence-step";
@@ -28,7 +27,7 @@ import {
 } from "@/lib/api/api-client";
 import { personaById } from "@/lib/avatars/personas";
 import { pageTitle } from "@/lib/shared/seo";
-import type { CandidateProfile, Level, ResumeExtractionResponse, Role } from "@/lib/shared/types";
+import type { CandidateProfile, Level, ResumeExtractionResponse } from "@/lib/shared/types";
 import { shouldAutoRetryResumeAnalysis } from "./resume-analysis-retry";
 
 const ANALYSIS_RETRY_NOTICE_MS = 700;
@@ -43,7 +42,6 @@ export function OnboardingFlow({
   initialStep = "teacher",
   initialResult = null,
   initialTeacherId = null,
-  initialRole,
   initialLevel,
   onCancel,
   onCompleted,
@@ -55,7 +53,6 @@ export function OnboardingFlow({
   initialResult?: ResumeExtractionResponse | null;
   /** A teacher already on the profile, so returning here does not re-ask. */
   initialTeacherId?: string | null;
-  initialRole?: Role;
   initialLevel?: Level;
   onCancel?: () => void;
   onCompleted?: (profile: CandidateProfile) => void;
@@ -67,7 +64,6 @@ export function OnboardingFlow({
   const uploadRunRef = useRef(0);
   const [step, setStep] = useState<Step>(initialStep);
   const [teacherId, setTeacherId] = useState<string | null>(initialTeacherId);
-  const [role, setRole] = useState<Role | null>(initialRole ?? null);
   const [level, setLevel] = useState<Level | null>(initialLevel ?? null);
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -160,7 +156,7 @@ export function OnboardingFlow({
   }
 
   const analyze = useCallback(async () => {
-    if (!file || !role || !level || uploading) return;
+    if (!file || !level || uploading) return;
     const runId = uploadRunRef.current + 1;
     uploadRunRef.current = runId;
     setUploading(true);
@@ -181,7 +177,6 @@ export function OnboardingFlow({
         try {
           const extracted = await uploadResume({
             file,
-            targetRole: role,
             level,
             mode: replacingResume ? "replace" : "onboarding",
             signal: controller.signal
@@ -227,7 +222,7 @@ export function OnboardingFlow({
         setRetryingAnalysis(false);
       }
     }
-  }, [file, level, replacingResume, role, uploading]);
+  }, [file, level, replacingResume, uploading]);
 
   const finishOnboarding = useCallback(async () => {
     if (!result || completing) return;
@@ -325,11 +320,8 @@ export function OnboardingFlow({
               <TeacherStep
                 selected={teacherId}
                 onSelect={setTeacherId}
-                onContinue={() => setStep("role")}
+                onContinue={() => setStep("level")}
               />
-            ) : null}
-            {step === "role" ? (
-              <RoleStep selected={role} onSelect={setRole} onContinue={() => setStep("level")} />
             ) : null}
             {step === "level" ? (
               <LevelStep
@@ -367,7 +359,7 @@ export function OnboardingFlow({
                   setRetryingAnalysis(false);
                   if (fileInput.current) fileInput.current.value = "";
                   if (replacingResume) cancelReplacement();
-                  else setStep("role");
+                  else setStep("level");
                 }}
               />
             ) : null}

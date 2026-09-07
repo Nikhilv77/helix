@@ -80,7 +80,11 @@ describe("CoreTechnicalPreparation", () => {
     });
 
     renderPreparation();
-    expect(screen.getByRole("dialog", { name: /what language/i })).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: /what language/i });
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).not.toHaveAttribute("aria-describedby");
+    expect(screen.queryByText(/We’ll use your saved resume/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Your choice is saved/i)).not.toBeInTheDocument();
     const selector = screen.getByRole("button", { name: /Practice language JavaScript/i });
     fireEvent.click(selector);
     expect(screen.getByRole("option", { name: "JavaScript" })).toHaveAttribute(

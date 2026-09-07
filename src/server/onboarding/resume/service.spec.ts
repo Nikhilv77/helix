@@ -94,6 +94,19 @@ describe("ResumeService.analyze", () => {
     });
   });
 
+  it("instructs analysis to infer the role when onboarding supplies no selection", async () => {
+    const { ai, requests } = createAi(completeResponse);
+
+    await new ResumeService(ai).analyze({
+      text: input.text,
+      level: input.level,
+      evidence: input.evidence
+    });
+
+    expect(requests[0]?.prompt).toContain("No target role was selected");
+    expect(requests[0]?.prompt).toContain("Infer the candidate's primary interview role");
+  });
+
   it("trims overlong fields instead of failing the whole upload", async () => {
     const { ai } = createAi({
       ...completeResponse,

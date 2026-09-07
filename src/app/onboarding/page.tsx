@@ -9,7 +9,7 @@ import { authenticatedOwnerId } from "@/server/interview/owner";
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
   "Onboarding",
-  "Set your role, experience level, and resume evidence before starting Trailgrad interviews."
+  "Set your experience level and add resume evidence before starting Trailgrad interviews."
 );
 
 export default async function OnboardingPage({
@@ -39,7 +39,6 @@ export default async function OnboardingPage({
       // past the picker rather than making them choose again.
       initialStep={replacingResume ? "resume" : "teacher"}
       initialTeacherId={profile?.teacherId ?? null}
-      initialRole={profile?.targetRole ?? undefined}
       initialLevel={profile?.level ?? undefined}
     />
   );

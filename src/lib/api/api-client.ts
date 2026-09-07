@@ -245,14 +245,14 @@ export function searchWorkspace(
 
 export async function uploadResume(input: {
   file: File;
-  targetRole: Role;
+  targetRole?: Role;
   level: Level;
   mode?: "onboarding" | "replace";
   signal?: AbortSignal;
 }): Promise<ResumeExtractionResponse> {
   const body = new FormData();
   body.set("resume", input.file);
-  body.set("targetRole", input.targetRole);
+  if (input.targetRole) body.set("targetRole", input.targetRole);
   body.set("level", input.level);
   if (input.mode === "replace") body.set("mode", "replace");
 
@@ -307,7 +307,7 @@ export function completeOnboarding(
   if (!result.profile.targetRole || !result.profile.level) {
     throw new ApiClientError({
       code: "ONBOARDING_SELECTION_MISSING",
-      message: "Choose your role and experience level again.",
+      message: "Trailgrad could not infer a role or confirm your experience level from this preview.",
       status: 400
     });
   }

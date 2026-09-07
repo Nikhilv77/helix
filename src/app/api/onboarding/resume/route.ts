@@ -17,7 +17,7 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
 import { authenticatedOwnerId } from "@/server/interview/owner";
 import { compileCandidateInterviewProfile } from "@/server/interview/candidate-profile-compiler";
-import { LEVELS, ROLES } from "@/server/interview/types";
+import { LEVELS } from "@/server/interview/types";
 import {
   extractResumeDocument,
   inspectResumeDocument,
@@ -56,10 +56,7 @@ const RESERVED_FOR_RESPONSE_MS = 3_000;
 
 const logger = new Logger("ResumeUpload");
 
-const selectionSchema = z.object({
-  targetRole: z.enum(ROLES),
-  level: z.enum(LEVELS)
-});
+const levelSchema = z.enum(LEVELS);
 
 export async function POST(request: NextRequest) {
   const startedAt = Date.now();
@@ -75,25 +72,16 @@ export async function POST(request: NextRequest) {
 
     const form = await request.formData();
     const file = form.get("resume");
-    const requestedSelection = selectionSchema.safeParse({
-      targetRole: form.get("targetRole"),
-      level: form.get("level")
-    });
     const replacingResume = form.get("mode") === "replace";
     const currentProfile = replacingResume ? await app.profileService.get(ownerId) : null;
-    const selection = selectionSchema.safeParse({
-      targetRole:
-        currentProfile?.targetRole ??
-        (requestedSelection.success ? requestedSelection.data.targetRole : null),
-      level:
-        currentProfile?.level ?? (requestedSelection.success ? requestedSelection.data.level : null)
-    });
+    const requestedLevel = levelSchema.safeParse(form.get("level"));
+    const level = currentProfile?.level ?? (requestedLevel.success ? requestedLevel.data : null);
 
-    if (!selection.success) {
+    if (!level) {
       throw new ApiRouteError(
         400,
         "ONBOARDING_SELECTION_REQUIRED",
-        "Choose a role and experience level first."
+        "Choose your experience level first."
       );
     }
     if (!(file instanceof File)) {
@@ -144,7 +132,7 @@ export async function POST(request: NextRequest) {
         );
       }
     }
-    const documentEvidence = inspectResumeDocument(document, selection.data.level);
+    const documentEvidence = inspectResumeDocument(document, level);
 
     const analysisBudget = remainingMs() - RESERVED_FOR_RESPONSE_MS;
     if (analysisBudget < 5_000) {
@@ -166,8 +154,10 @@ export async function POST(request: NextRequest) {
     try {
       analysis = await resumeService.analyze({
         text: document.text,
-        targetRole: selection.data.targetRole,
-        level: selection.data.level,
+        // New-account onboarding deliberately supplies no role. Resume updates
+        // retain the saved role while still producing comparison suggestions.
+        targetRole: currentProfile?.targetRole,
+        level,
         evidence: documentEvidence,
         // Two attempts, each inside half the remaining budget.
         timeoutMs: Math.floor(analysisBudget / 2),
@@ -195,7 +185,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (
-      !verifyResumeDocument(analysis, { level: selection.data.level, evidence: documentEvidence })
+      !verifyResumeDocument(analysis, { level, evidence: documentEvidence })
     ) {
       logger.log(
         JSON.stringify({
@@ -313,9 +303,50 @@ export async function POST(request: NextRequest) {
       document: documentSummary,
       evidence: evidenceSummary
     };
+    const previewResume: CandidateResume = {
+      versionId: null,
+      contentFingerprint,
+      fileName: resumeFile.fileName,
+      mimeType: resumeFile.mimeType,
+      uploadedAt: Date.now(),
+      confidence,
+      fullName,
+      skills: extraction.skills,
+      warnings,
+      experience,
+      education,
+      certifications: extraction.certifications,
+      projects,
+      achievements,
+      practiceQuestions,
+      roadmap,
+      document: documentSummary,
+      evidence: evidenceSummary,
+      // Built on demand the first time a resume round starts, so the upload
+      // path stays within its latency budget.
+      interviewKit: null
+    };
+    const targetRole =
+      currentProfile?.targetRole ??
+      roleFromFamily(
+        compileCandidateInterviewProfile({
+          resume: previewResume,
+          headline: extraction.headline,
+          selectedRole: null,
+          selectedLevel: level
+        }).inferredRole.family
+      );
+    if (!targetRole) {
+      throw new ApiRouteError(
+        422,
+        "RESUME_ROLE_UNCLEAR",
+        "Trailgrad could not determine a primary role from this resume. Add clearer role, responsibility, project, or technology evidence and try again."
+      );
+    }
+
     const previewProfile: CandidateProfile = {
-      targetRole: selection.data.targetRole,
-      level: selection.data.level,
+      targetRole,
+      level,
       // The teacher is chosen before the resume step and written at completion;
       // this preview never carries one.
       teacherId: null,
@@ -332,40 +363,12 @@ export async function POST(request: NextRequest) {
       stories,
       updatedAt: null,
       completeness: Math.round(
-        ([
-          selection.data.targetRole,
-          selection.data.level,
-          extraction.headline,
-          extraction.context
-        ].filter(Boolean).length /
-          4) *
+        ([targetRole, level, extraction.headline, extraction.context].filter(Boolean).length / 4) *
           100
       ),
       onboardingCompletedAt: null,
       preparationOnboarding: initialPreparationOnboardingState(),
-      resume: {
-        versionId: null,
-        contentFingerprint,
-        fileName: resumeFile.fileName,
-        mimeType: resumeFile.mimeType,
-        uploadedAt: Date.now(),
-        confidence,
-        fullName,
-        skills: extraction.skills,
-        warnings,
-        experience,
-        education,
-        certifications: extraction.certifications,
-        projects,
-        achievements,
-        practiceQuestions,
-        roadmap,
-        document: documentSummary,
-        evidence: evidenceSummary,
-        // Built on demand the first time a resume round starts, so the upload
-        // path stays within its latency budget.
-        interviewKit: null
-      }
+      resume: previewResume
     };
     const comparison = currentProfile?.resume
       ? compareResumeUpdate(currentProfile, previewProfile.resume!, extraction)

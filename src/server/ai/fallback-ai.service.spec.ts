@@ -79,6 +79,83 @@ describe("FallbackAiService", () => {
     expect(primary.generateStructured).toHaveBeenCalledTimes(2);
   });
 
+  it("recovers through the primary when the cooldown fallback is unavailable", async () => {
+    let now = 1_000;
+    const primary = {
+      generateStructured: vi
+        .fn()
+        .mockRejectedValueOnce(
+          new AiProviderException({
+            code: "AI_PROVIDER_ERROR",
+            message: "Primary temporarily unavailable",
+            provider: "primary",
+            operation: request.operation,
+            retryable: true
+          })
+        )
+        .mockResolvedValue({ ok: true })
+    };
+    const fallback = {
+      generateStructured: vi
+        .fn()
+        .mockResolvedValueOnce({ ok: false })
+        .mockRejectedValueOnce(
+          new AiProviderException({
+            code: "AI_PROVIDER_ERROR",
+            message: "Fallback configuration is unavailable",
+            provider: "fallback",
+            operation: request.operation,
+            retryable: false
+          })
+        )
+    };
+    const service = new FallbackAiService(primary, fallback, 60_000, () => now);
+
+    await expect(service.generateStructured(request)).resolves.toEqual({ ok: false });
+    now += 1_000;
+    await expect(
+      service.generateStructured({ ...request, operation: "generate-question" })
+    ).resolves.toEqual({ ok: true });
+
+    expect(primary.generateStructured).toHaveBeenCalledTimes(2);
+    expect(primary.generateStructured).toHaveBeenLastCalledWith(
+      expect.objectContaining({ operation: "generate-question-primary-recovery" })
+    );
+  });
+
+  it("recovers through the primary when the first fallback is permanently unavailable", async () => {
+    const primary = {
+      generateStructured: vi
+        .fn()
+        .mockRejectedValueOnce(
+          new AiProviderException({
+            code: "AI_TIMEOUT",
+            message: "Primary temporarily unavailable",
+            provider: "primary",
+            operation: request.operation,
+            retryable: true
+          })
+        )
+        .mockResolvedValue({ ok: true })
+    };
+    const fallback = provider(
+      new AiProviderException({
+        code: "AI_PROVIDER_ERROR",
+        message: "Fallback model is unavailable",
+        provider: "fallback",
+        operation: request.operation,
+        retryable: false
+      })
+    );
+    const service = new FallbackAiService(primary, fallback);
+
+    await expect(service.generateStructured(request)).resolves.toEqual({ ok: true });
+    expect(primary.generateStructured).toHaveBeenCalledTimes(2);
+    expect(primary.generateStructured).toHaveBeenLastCalledWith(
+      expect.objectContaining({ operation: "generate-story-primary-recovery" })
+    );
+  });
+
   it("falls back when the primary exhausts retryable invalid responses", async () => {
     const error = new AiProviderException({
       code: "AI_INVALID_RESPONSE",

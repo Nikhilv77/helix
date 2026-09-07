@@ -46,6 +46,19 @@ export default async function CoreTechnicalPracticePage({
     }
   }
 
+  const needsFirstStory =
+    !block &&
+    eligibility.available &&
+    (profile.targetRole === "backend" || profile.targetRole === "fullstack");
+
+  if (needsFirstStory) {
+    return (
+      <main className="min-h-[70vh]" aria-label="Core Technical setup">
+        <CoreTechnicalPreparation />
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto w-full max-w-[86rem] px-4 pb-20 pt-7 sm:px-7 sm:pt-9 lg:px-8 lg:pt-8">
       <Link
@@ -64,29 +77,10 @@ export default async function CoreTechnicalPracticePage({
           storyHistory={historyList}
           allowEarlyAssessmentStart={allowEarlyAssessmentStart}
         />
-      ) : eligibility.available &&
-        (profile.targetRole === "backend" || profile.targetRole === "fullstack") ? (
-        <>
-          <PageHeading />
-          <CoreTechnicalPreparation />
-        </>
       ) : (
         <Unavailable message={eligibility.message} />
       )}
     </main>
-  );
-}
-
-function PageHeading() {
-  return (
-    <header>
-      <h1 className="font-display text-[2rem] font-semibold leading-none tracking-[-0.035em] text-cream sm:text-[2.15rem]">
-        Core Technical Practice
-      </h1>
-      <p className="mt-3 text-[14px] leading-6 text-cream/54">
-        Practical interview depth through one connected production story.
-      </p>
-    </header>
   );
 }
 

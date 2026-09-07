@@ -22,9 +22,7 @@ export type CoreTechnicalFirstStoryRankingContext = {
 
 /** Deterministic, auditable selection. No model may override compatibility gates or weights. */
 export class CoreTechnicalStoryRankingService {
-  constructor(
-    private readonly candidates: readonly CoreTechnicalStoryRankingCandidate[]
-  ) {}
+  constructor(private readonly candidates: readonly CoreTechnicalStoryRankingCandidate[]) {}
 
   rankFirstStory(
     rawFocus: CoreTechnicalConfirmedFocus,
@@ -32,21 +30,29 @@ export class CoreTechnicalStoryRankingService {
   ): CoreTechnicalFirstStorySelection {
     const focus = coreTechnicalConfirmedFocusSchema.parse(rawFocus);
     const candidates = coreTechnicalStoryRankingCandidateSchema.array().parse(this.candidates);
-    const difficulty = difficultyFor(focus);
-    const eligible = candidates.filter((candidate) =>
-      this.isEligible(candidate, focus, difficulty)
+    const requestedDifficulty = difficultyFor(focus);
+    const compatible = candidates.filter((candidate) => this.isEligible(candidate, focus));
+    const exactDifficulty = compatible.filter((candidate) =>
+      candidate.difficulties.includes(requestedDifficulty)
     );
+    // Prefer a ready block at the requested level. If that exact level has not
+    // shipped yet, use the closest ready block instead of generating a new
+    // multi-call pipeline during the user's request.
+    const eligible = exactDifficulty.length > 0 ? exactDifficulty : compatible;
     if (eligible.length === 0) {
       throw new Error(
         "No published Core Technical story is compatible with the confirmed focus and exclusions"
       );
     }
 
-    const rankings = eligible.map((candidate) =>
-      this.score(candidate, focus, difficulty, context)
-    ).sort((left, right) =>
-      right.scores.total - left.scores.total || left.storyKey.localeCompare(right.storyKey)
-    );
+    const rankings = eligible
+      .map((candidate) =>
+        this.score(candidate, focus, availableDifficulty(candidate, requestedDifficulty), context)
+      )
+      .sort(
+        (left, right) =>
+          right.scores.total - left.scores.total || left.storyKey.localeCompare(right.storyKey)
+      );
     const selectedStory = rankings[0]!;
     const selection = coreTechnicalFirstStorySelectionSchema.parse({
       policyVersion: CORE_TECHNICAL_FIRST_STORY_RANKING_POLICY_VERSION,
@@ -65,118 +71,145 @@ export class CoreTechnicalStoryRankingService {
     const focus = coreTechnicalConfirmedFocusSchema.parse(rawFocus);
     const evidence = coreTechnicalAdaptiveEvidenceSchema.parse(rawEvidence);
     const candidates = coreTechnicalStoryRankingCandidateSchema.array().parse(this.candidates);
-    const difficulty = adaptiveDifficulty(evidence);
-    const eligible = candidates.filter((candidate) =>
-      this.isEligibleNext(candidate, focus, difficulty, evidence.priorStoryKeys)
+    const requestedDifficulty = adaptiveDifficulty(evidence);
+    const compatible = candidates.filter((candidate) =>
+      this.isEligibleNext(candidate, focus, evidence.priorStoryKeys)
     );
-    const novel = eligible.filter((candidate) => !evidence.priorStoryKeys.includes(candidate.key));
-    const pool = novel;
+    const novel = compatible.filter(
+      (candidate) => !evidence.priorStoryKeys.includes(candidate.key)
+    );
+    const exactDifficulty = novel.filter((candidate) =>
+      candidate.difficulties.includes(requestedDifficulty)
+    );
+    const pool = exactDifficulty.length > 0 ? exactDifficulty : novel;
     if (pool.length === 0) {
-      throw new Error("No published Core Technical story is compatible with the verified assessment evidence");
-    }
-    const rankings = pool.map((candidate) => {
-      const candidateSignals = new Set([...candidate.topicKeys, ...candidate.mechanismKeys]);
-      const assessmentAverage = average(Object.values(evidence.assessmentScores));
-      const weaknessDeficit = (100 - assessmentAverage) / 100;
-      const weakSignals = [...evidence.practice.weakTopicKeys, ...evidence.practice.weakMechanismKeys];
-      const weakFit = weakSignals.length === 0 ? 0.5 : hitRatio(candidateSignals, weakSignals);
-      const assessmentWeakness = Math.round(30 * weaknessDeficit * (0.5 + 0.5 * weakFit));
-      const practiceWeakness = Math.round(25 * hitRatio(candidateSignals, weakSignals));
-      const targetText = `${focus.targetJob} ${focus.targetCompany ?? ""}`.toLowerCase();
-      const targetMatches = candidate.targetKeywords.filter((keyword) =>
-        targetText.includes(keyword.toLowerCase())
-      ).length;
-      const targetRoleJob = Math.min(20, 12 + targetMatches * 4);
-      const priorTopics = new Set(evidence.priorTopicKeys);
-      const newTopicRatio = candidate.topicKeys.filter((key) => !priorTopics.has(key)).length /
-        candidate.topicKeys.length;
-      const plannedCoverage = Math.round(15 * (0.4 + 0.6 * newTopicRatio));
-      const novelty = Math.round(
-        6 + 4 * candidate.topicKeys.filter((key) => !priorTopics.has(key)).length / candidate.topicKeys.length
+      throw new Error(
+        "No published Core Technical story is compatible with the verified assessment evidence"
       );
-      const scores = {
-        assessmentWeakness,
-        practiceWeakness,
-        targetRoleJob,
-        plannedCoverage,
-        novelty,
-        total: assessmentWeakness + practiceWeakness + targetRoleJob + plannedCoverage + novelty
-      };
-      const emphasizedConceptKeys = [
-        ...candidate.topicKeys.filter((key) => evidence.practice.weakTopicKeys.includes(key)),
-        ...candidate.mechanismKeys.filter((key) => evidence.practice.weakMechanismKeys.includes(key)),
-        ...candidate.topicKeys
-      ].filter((key, index, values) => values.indexOf(key) === index).slice(0, 3);
-      return {
-        storyKey: candidate.key,
-        storyVersion: candidate.version,
-        title: candidate.title,
-        difficulty,
-        emphasizedConceptKeys,
-        scores
-      };
-    }).sort((left, right) =>
-      right.scores.total - left.scores.total || left.storyKey.localeCompare(right.storyKey)
-    );
+    }
+    const rankings = pool
+      .map((candidate) => {
+        const difficulty = availableDifficulty(candidate, requestedDifficulty);
+        const candidateSignals = new Set([...candidate.topicKeys, ...candidate.mechanismKeys]);
+        const assessmentAverage = average(Object.values(evidence.assessmentScores));
+        const weaknessDeficit = (100 - assessmentAverage) / 100;
+        const weakSignals = [
+          ...evidence.practice.weakTopicKeys,
+          ...evidence.practice.weakMechanismKeys
+        ];
+        const weakFit = weakSignals.length === 0 ? 0.5 : hitRatio(candidateSignals, weakSignals);
+        const assessmentWeakness = Math.round(30 * weaknessDeficit * (0.5 + 0.5 * weakFit));
+        const practiceWeakness = Math.round(25 * hitRatio(candidateSignals, weakSignals));
+        const targetText = `${focus.targetJob} ${focus.targetCompany ?? ""}`.toLowerCase();
+        const targetMatches = candidate.targetKeywords.filter((keyword) =>
+          targetText.includes(keyword.toLowerCase())
+        ).length;
+        const targetRoleJob = Math.min(20, 12 + targetMatches * 4);
+        const priorTopics = new Set(evidence.priorTopicKeys);
+        const newTopicRatio =
+          candidate.topicKeys.filter((key) => !priorTopics.has(key)).length /
+          candidate.topicKeys.length;
+        const plannedCoverage = Math.round(15 * (0.4 + 0.6 * newTopicRatio));
+        const novelty = Math.round(
+          6 +
+            (4 * candidate.topicKeys.filter((key) => !priorTopics.has(key)).length) /
+              candidate.topicKeys.length
+        );
+        const scores = {
+          assessmentWeakness,
+          practiceWeakness,
+          targetRoleJob,
+          plannedCoverage,
+          novelty,
+          total: assessmentWeakness + practiceWeakness + targetRoleJob + plannedCoverage + novelty
+        };
+        const emphasizedConceptKeys = [
+          ...candidate.topicKeys.filter((key) => evidence.practice.weakTopicKeys.includes(key)),
+          ...candidate.mechanismKeys.filter((key) =>
+            evidence.practice.weakMechanismKeys.includes(key)
+          ),
+          ...candidate.topicKeys
+        ]
+          .filter((key, index, values) => values.indexOf(key) === index)
+          .slice(0, 3);
+        return {
+          storyKey: candidate.key,
+          storyVersion: candidate.version,
+          title: candidate.title,
+          difficulty,
+          emphasizedConceptKeys,
+          scores
+        };
+      })
+      .sort(
+        (left, right) =>
+          right.scores.total - left.scores.total || left.storyKey.localeCompare(right.storyKey)
+      );
     const selectedStory = rankings[0]!;
-    const weakestDimension = Object.entries(evidence.assessmentScores)
-      .sort((left, right) => left[1] - right[1])[0]?.[0] ?? "technical reasoning";
-    return deepFreeze(coreTechnicalAdaptiveStorySelectionSchema.parse({
-      policyVersion: CORE_TECHNICAL_ADAPTIVE_STORY_RANKING_POLICY_VERSION,
-      focusFingerprint: focus.focusFingerprint,
-      evidence,
-      selectedStory,
-      rankings,
-      reason: bounded(`${selectedStory.title} is next because the assessment's weakest area was ${humanize(weakestDimension)}, verified Practice evidence identified ${evidence.practice.weakTopicKeys[0] ?? "a remaining mechanism gap"}, and this story adds useful coverage for ${focus.targetJob}.`, 420)
-    }));
+    const weakestDimension =
+      Object.entries(evidence.assessmentScores).sort((left, right) => left[1] - right[1])[0]?.[0] ??
+      "technical reasoning";
+    return deepFreeze(
+      coreTechnicalAdaptiveStorySelectionSchema.parse({
+        policyVersion: CORE_TECHNICAL_ADAPTIVE_STORY_RANKING_POLICY_VERSION,
+        focusFingerprint: focus.focusFingerprint,
+        evidence,
+        selectedStory,
+        rankings,
+        reason: bounded(
+          `${selectedStory.title} is next because the assessment's weakest area was ${humanize(weakestDimension)}, verified Practice evidence identified ${evidence.practice.weakTopicKeys[0] ?? "a remaining mechanism gap"}, and this story adds useful coverage for ${focus.targetJob}.`,
+          420
+        )
+      })
+    );
   }
 
   private isEligible(
     candidate: CoreTechnicalStoryRankingCandidate,
-    focus: CoreTechnicalConfirmedFocus,
-    difficulty: CoreTechnicalRankedStory["difficulty"]
+    focus: CoreTechnicalConfirmedFocus
   ): boolean {
     const topics = new Set(NODEJS_CORE_TECHNICAL_DOMAIN_MAP.topics.map((topic) => topic.key));
     const mechanisms = new Set(
       NODEJS_CORE_TECHNICAL_DOMAIN_MAP.topics.flatMap((topic) => topic.mechanismKeys)
     );
-    return candidate.publicationStatus === "published" &&
+    return (
+      candidate.publicationStatus === "published" &&
       candidate.roles.includes(focus.role) &&
       candidate.language === focus.stack.language &&
       candidate.runtime === focus.stack.runtime &&
       candidate.runtimeVersion === focus.stack.runtimeVersion &&
       (candidate.frameworks.length === 0 ||
         (focus.stack.framework !== null && candidate.frameworks.includes(focus.stack.framework))) &&
-      candidate.difficulties.includes(difficulty) &&
       candidate.prerequisiteStoryKeys.length === 0 &&
       (focus.baselineEvidence.state !== "UNKNOWN" || foundationFit(candidate.topicKeys) >= 0.75) &&
       !candidate.topicKeys.some((key) => focus.excludedTopicKeys.includes(key)) &&
       candidate.topicKeys.every((key) => topics.has(key)) &&
-      candidate.mechanismKeys.every((key) => mechanisms.has(key));
+      candidate.mechanismKeys.every((key) => mechanisms.has(key))
+    );
   }
 
   private isEligibleNext(
     candidate: CoreTechnicalStoryRankingCandidate,
     focus: CoreTechnicalConfirmedFocus,
-    difficulty: CoreTechnicalRankedStory["difficulty"],
     completedStoryKeys: string[]
   ): boolean {
     const topics = new Set(NODEJS_CORE_TECHNICAL_DOMAIN_MAP.topics.map((topic) => topic.key));
     const mechanisms = new Set(
       NODEJS_CORE_TECHNICAL_DOMAIN_MAP.topics.flatMap((topic) => topic.mechanismKeys)
     );
-    return candidate.publicationStatus === "published" &&
+    return (
+      candidate.publicationStatus === "published" &&
       candidate.roles.includes(focus.role) &&
       candidate.language === focus.stack.language &&
       candidate.runtime === focus.stack.runtime &&
       candidate.runtimeVersion === focus.stack.runtimeVersion &&
       (candidate.frameworks.length === 0 ||
         (focus.stack.framework !== null && candidate.frameworks.includes(focus.stack.framework))) &&
-      candidate.difficulties.includes(difficulty) &&
       candidate.prerequisiteStoryKeys.every((key) => completedStoryKeys.includes(key)) &&
       !candidate.topicKeys.some((key) => focus.excludedTopicKeys.includes(key)) &&
       candidate.topicKeys.every((key) => topics.has(key)) &&
-      candidate.mechanismKeys.every((key) => mechanisms.has(key));
+      candidate.mechanismKeys.every((key) => mechanisms.has(key))
+    );
   }
 
   private score(
@@ -194,11 +227,16 @@ export class CoreTechnicalStoryRankingService {
       ...focus.baselineEvidence.unassessedConceptKeys,
       ...focus.baselineEvidence.unassessedMechanismKeys
     ];
-    const baselineGapTransfer = focus.baselineEvidence.state === "UNKNOWN"
-      ? Math.round(35 * foundationFit(candidate.topicKeys))
-      : weakSignals.length > 0
-        ? Math.round(35 * (0.7 * hitRatio(candidateSignals, weakSignals) + 0.3 * hitRatio(candidateSignals, unassessedSignals)))
-        : Math.round(35 * hitRatio(candidateSignals, unassessedSignals));
+    const baselineGapTransfer =
+      focus.baselineEvidence.state === "UNKNOWN"
+        ? Math.round(35 * foundationFit(candidate.topicKeys))
+        : weakSignals.length > 0
+          ? Math.round(
+              35 *
+                (0.7 * hitRatio(candidateSignals, weakSignals) +
+                  0.3 * hitRatio(candidateSignals, unassessedSignals))
+            )
+          : Math.round(35 * hitRatio(candidateSignals, unassessedSignals));
 
     const targetText = `${focus.targetJob} ${focus.targetCompany ?? ""}`.toLowerCase();
     const targetMatches = candidate.targetKeywords.filter((keyword) =>
@@ -210,22 +248,29 @@ export class CoreTechnicalStoryRankingService {
       ...focus.resumeEvidence.topicKeys,
       ...focus.resumeEvidence.mechanismKeys
     ]);
-    const resumeProjectRelevance = resumeSignals.size === 0
-      ? 0
-      : Math.round(15 * hitRatio(candidateSignals, [...resumeSignals]));
+    const resumeProjectRelevance =
+      resumeSignals.size === 0
+        ? 0
+        : Math.round(15 * hitRatio(candidateSignals, [...resumeSignals]));
 
-    const topicByKey = new Map(NODEJS_CORE_TECHNICAL_DOMAIN_MAP.topics.map((topic) => [topic.key, topic]));
-    const importance = candidate.topicKeys.reduce((sum, key) => {
-      const level = topicByKey.get(key)?.importance;
-      return sum + (level === "essential" ? 1 : level === "high" ? 0.75 : 0.5);
-    }, 0) / candidate.topicKeys.length;
+    const topicByKey = new Map(
+      NODEJS_CORE_TECHNICAL_DOMAIN_MAP.topics.map((topic) => [topic.key, topic])
+    );
+    const importance =
+      candidate.topicKeys.reduce((sum, key) => {
+        const level = topicByKey.get(key)?.importance;
+        return sum + (level === "essential" ? 1 : level === "high" ? 0.75 : 0.5);
+      }, 0) / candidate.topicKeys.length;
     const plannedCoverage = Math.round(15 * importance);
 
     const recentTopics = new Set(context.recentTopicKeys ?? []);
-    const recentOverlap = candidate.topicKeys.filter((key) => recentTopics.has(key)).length /
+    const recentOverlap =
+      candidate.topicKeys.filter((key) => recentTopics.has(key)).length /
       candidate.topicKeys.length;
     const storyRepeated = (context.recentStoryKeys ?? []).includes(candidate.key);
-    const storyDiversity = Math.round(10 * Math.max(0, 1 - recentOverlap - (storyRepeated ? 0.5 : 0)));
+    const storyDiversity = Math.round(
+      10 * Math.max(0, 1 - recentOverlap - (storyRepeated ? 0.5 : 0))
+    );
 
     const scores = {
       baselineGapTransfer,
@@ -233,7 +278,12 @@ export class CoreTechnicalStoryRankingService {
       resumeProjectRelevance,
       plannedCoverage,
       storyDiversity,
-      total: baselineGapTransfer + targetRoleJob + resumeProjectRelevance + plannedCoverage + storyDiversity
+      total:
+        baselineGapTransfer +
+        targetRoleJob +
+        resumeProjectRelevance +
+        plannedCoverage +
+        storyDiversity
     };
     const emphasizedConceptKeys = prioritizedEmphasis(candidate, focus);
     return {
@@ -251,6 +301,18 @@ function difficultyFor(focus: CoreTechnicalConfirmedFocus): CoreTechnicalRankedS
   if (focus.baselineEvidence.state === "STANDARD") return "standard";
   if (focus.baselineEvidence.state === "STRETCH") return "stretch";
   return "guided";
+}
+
+function availableDifficulty(
+  candidate: CoreTechnicalStoryRankingCandidate,
+  requested: CoreTechnicalRankedStory["difficulty"]
+): CoreTechnicalRankedStory["difficulty"] {
+  if (candidate.difficulties.includes(requested)) return requested;
+  const rank = { guided: 0, standard: 1, stretch: 2 } as const;
+  return [...candidate.difficulties].sort(
+    (left, right) =>
+      Math.abs(rank[left] - rank[requested]) - Math.abs(rank[right] - rank[requested])
+  )[0]!;
 }
 
 function adaptiveDifficulty(
@@ -297,7 +359,9 @@ function prioritizedEmphasis(
 ): string[] {
   const selected = new Set(candidate.topicKeys);
   const weak = focus.baselineEvidence.weakConceptKeys.filter((key) => selected.has(key));
-  const unassessed = focus.baselineEvidence.unassessedConceptKeys.filter((key) => selected.has(key));
+  const unassessed = focus.baselineEvidence.unassessedConceptKeys.filter((key) =>
+    selected.has(key)
+  );
   return [...new Set([...weak, ...unassessed, ...candidate.topicKeys])].slice(0, 3);
 }
 
@@ -305,14 +369,21 @@ function selectionReason(
   story: CoreTechnicalRankedStory,
   focus: CoreTechnicalConfirmedFocus
 ): string {
-  const topicByKey = new Map(NODEJS_CORE_TECHNICAL_DOMAIN_MAP.topics.map((topic) => [topic.key, topic.title]));
+  const topicByKey = new Map(
+    NODEJS_CORE_TECHNICAL_DOMAIN_MAP.topics.map((topic) => [topic.key, topic.title])
+  );
   const emphasized = story.emphasizedConceptKeys[0];
-  const topic = emphasized ? topicByKey.get(emphasized)?.toLowerCase() ?? emphasized : "Node.js foundations";
-  const evidenceReason = focus.baselineEvidence.state === "UNKNOWN"
-    ? `your baseline evidence is incomplete, so it starts with broad ${topic}`
-    : focus.baselineEvidence.weakConceptKeys.some((key) => story.emphasizedConceptKeys.includes(key))
-      ? `your initial assessment showed a gap in ${topic}`
-      : `your initial assessment supports an unassessed transfer into ${topic}`;
+  const topic = emphasized
+    ? (topicByKey.get(emphasized)?.toLowerCase() ?? emphasized)
+    : "Node.js foundations";
+  const evidenceReason =
+    focus.baselineEvidence.state === "UNKNOWN"
+      ? `your baseline evidence is incomplete, so it starts with broad ${topic}`
+      : focus.baselineEvidence.weakConceptKeys.some((key) =>
+            story.emphasizedConceptKeys.includes(key)
+          )
+        ? `your initial assessment showed a gap in ${topic}`
+        : `your initial assessment supports an unassessed transfer into ${topic}`;
   return `We chose ${story.title} because ${evidenceReason}, and it is relevant to your ${focus.targetJob} target.`;
 }
 
