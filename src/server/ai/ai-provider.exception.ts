@@ -11,6 +11,7 @@ interface AiProviderExceptionOptions {
   provider: string;
   operation: string;
   retryable: boolean;
+  retryAfterMs?: number;
   cause?: unknown;
 }
 
@@ -19,6 +20,7 @@ export class AiProviderException extends Error {
   readonly provider: string;
   readonly operation: string;
   readonly retryable: boolean;
+  readonly retryAfterMs?: number;
   readonly cause?: unknown;
 
   constructor(options: AiProviderExceptionOptions) {
@@ -28,6 +30,7 @@ export class AiProviderException extends Error {
     this.provider = options.provider;
     this.operation = options.operation;
     this.retryable = options.retryable;
+    this.retryAfterMs = options.retryAfterMs;
     this.cause = options.cause;
   }
 }

@@ -113,10 +113,11 @@ export const analysisStages = [
   { label: "Finalizing verification...", icon: Sparkles }
 ];
 
-export type Step = "teacher" | "level" | "resume" | "identity" | "evidence" | "readiness";
+export type Step = "teacher" | "role" | "level" | "resume" | "identity" | "evidence" | "readiness";
 
 export const onboardingSteps: Array<{ value: Step; label: string }> = [
   { value: "teacher", label: "Teacher" },
+  { value: "role", label: "Role" },
   { value: "level", label: "Experience" },
   { value: "resume", label: "Resume" },
   { value: "identity", label: "Verification" },
@@ -126,6 +127,7 @@ export const onboardingSteps: Array<{ value: Step; label: string }> = [
 
 export const stepTitles: Record<Step, string> = {
   teacher: "Choose Your Teacher",
+  role: "Target Role",
   level: "Experience Level",
   resume: "Upload Resume",
   identity: "Resume Ready",
@@ -139,7 +141,7 @@ export const MIN_FILE_BYTES = 1_000;
 export const MAX_FILE_BYTES = 6 * 1024 * 1024;
 
 export function stepIndex(step: Step): number {
-  return { teacher: 0, level: 1, resume: 2, identity: 3, evidence: 4, readiness: 5 }[step];
+  return { teacher: 0, role: 1, level: 2, resume: 3, identity: 4, evidence: 5, readiness: 6 }[step];
 }
 
 export function formatBytes(bytes: number): string {

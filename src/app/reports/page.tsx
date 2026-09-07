@@ -43,11 +43,17 @@ function emptyOverview(now: number): ReportsOverview {
 export default async function ReportsPage() {
   const { ownerId, profile } = await requireOnboardedProfile();
   const container = getAppContainer();
+  const now = Date.now();
+  const coreRounds = await container.coreTechnicalWorkspaceAnalyticsService
+    .rounds(ownerId)
+    .catch(() => ({ history: [], reports: [] }));
 
   const [overview, quota] = await Promise.all([
     // History lives in the session store; if it cannot be read the page still
     // renders its empty state rather than failing the whole route.
-    container.interviewService.reportsOverview(ownerId).catch(() => null),
+    container.interviewService
+      .reportsOverview(ownerId, 50, now, coreRounds.reports)
+      .catch(() => null),
     container.interviewService.quota(ownerId).catch(() => ({ used: 0, limit: 2 }))
   ]);
 
@@ -55,7 +61,7 @@ export default async function ReportsPage() {
 
   return (
     <ReportsView
-      overview={overview ?? emptyOverview(Date.now())}
+      overview={overview ?? emptyOverview(now)}
       quota={quota}
       firstName={fullName.split(/\s+/)[0] ?? ""}
       candidate={{

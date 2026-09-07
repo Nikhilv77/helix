@@ -728,9 +728,15 @@ export function AvatarStage({
       scene.environment = null;
       environmentTarget?.dispose();
       pmrem?.dispose();
+      // Detach the last rendered frame before invalidating its WebGL context.
+      // Some browsers briefly composite the context-loss clear colour; when
+      // leaving an assessment that showed up as a white flash over the face.
+      // Once detached, GPU cleanup can happen without another canvas frame
+      // becoming visible.
+      renderer.domElement.style.visibility = "hidden";
+      if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
       renderer.dispose();
       renderer.forceContextLoss();
-      if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
     };
   }, [framing, performanceProfile]);
 

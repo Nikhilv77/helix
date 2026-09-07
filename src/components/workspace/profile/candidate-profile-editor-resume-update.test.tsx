@@ -89,6 +89,23 @@ describe("Profile resume update", () => {
     apiMocks.confirmResumeUpdate.mockReset();
   });
 
+  it("opens the saved onboarding role and level for correction", () => {
+    render(<CandidateProfileEditor initialProfile={profile} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit profile" }));
+
+    expect(
+      screen.getByRole("heading", { name: /Shape the way your teacher interviews you/i })
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: /BackendAPIs, data, reliability/i })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(
+      screen.getByRole("button", { name: /Level3–5 yearsOwns meaningful scope/i })
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("opens the update workflow in a modal without navigating away", () => {
     render(<CandidateProfileEditor initialProfile={profile} />);
 

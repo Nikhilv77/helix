@@ -167,6 +167,7 @@ export function CandidateProfileEditor({ initialProfile }: { initialProfile: Can
           saved={saved}
           onCoverEdit={() => setImagePicker("cover")}
           onAvatarEdit={() => setImagePicker("avatar")}
+          onEdit={() => setMode("edit")}
           onResumeUpdate={() => setResumeUpdateOpen(true)}
         />
 

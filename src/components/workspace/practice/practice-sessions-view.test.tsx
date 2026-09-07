@@ -148,4 +148,56 @@ describe("PracticeSessionsView", () => {
       )
     ).toBeInTheDocument();
   });
+
+  it("adds Core Technical only when the server supplies an eligible or resumable entry", () => {
+    render(
+      <PracticeSessionsView
+        practiceRoadmap={practiceRoadmap}
+        coreTechnicalEntry={{
+          key: "core-technical",
+          order: 2,
+          title: "Core Technical · Node.js",
+          purpose: "Trace one realistic Node.js incident through connected interview questions.",
+          covers: ["Async scheduling", "Production debugging"],
+          difficulty: "adaptive",
+          durationMinutes: 45,
+          availability: "available",
+          status: "ACTIVE",
+          totalQuestions: 8,
+          attemptedQuestions: 0,
+          completedQuestions: 0,
+          progressPercent: 0,
+          href: "/practice/core-technical"
+        }}
+      />
+    );
+
+    expect(
+      screen.getByRole("link", { name: /Core Technical · Node\.js.*Start session/i })
+    ).toHaveAttribute("href", "/practice/core-technical");
+    expect(screen.getByRole("link", { name: /DSA · Arrays.*Start session/i })).toHaveAttribute(
+      "href",
+      "/practice/dsa"
+    );
+  });
+
+  it("includes historical Core Technical questions in the existing Practice totals", () => {
+    render(
+      <PracticeSessionsView
+        practiceRoadmap={practiceRoadmap}
+        activity={[
+          { date: "2026-08-28", solved: 0 },
+          { date: "2026-08-29", solved: 2 }
+        ]}
+        coreTechnicalTotals={{ totalQuestions: 16, completedQuestions: 2 }}
+      />
+    );
+
+    expect(
+      screen.getByText(/You’ve solved 2 questions so far\. 214 questions are waiting/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: /2 questions solved in the last 2 days/i })
+    ).toBeInTheDocument();
+  });
 });

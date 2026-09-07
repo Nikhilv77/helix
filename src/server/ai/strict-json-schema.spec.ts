@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import { toStrictJsonSchema } from "./strict-json-schema";
+import { toPrunedJsonSchema, toStrictJsonSchema } from "./strict-json-schema";
 
 const convert = zodToJsonSchema as (schema: unknown, options: { $refStrategy: "none" }) => unknown;
 
@@ -35,6 +35,33 @@ describe("toStrictJsonSchema", () => {
     expect(strict).toContain("move_on");
   });
 
+  it("converts literals to one-value enums for strict decoder compatibility", () => {
+    const withLiteral = z.object({ schemaVersion: z.literal(1) });
+    const strict = toStrictJsonSchema(convert(withLiteral, { $refStrategy: "none" })) as {
+      properties: { schemaVersion: { enum: number[]; const?: number } };
+    };
+
+    expect(strict.properties.schemaVersion.enum).toEqual([1]);
+    expect(strict.properties.schemaVersion).not.toHaveProperty("const");
+  });
+
+  it("preserves application properties whose names match schema keywords", () => {
+    const collidingNames = z.object({
+      format: z.string().min(2),
+      default: z.string().max(20),
+      minimum: z.number().min(1)
+    });
+    const strict = toStrictJsonSchema(convert(collidingNames, { $refStrategy: "none" })) as {
+      properties: Record<string, Record<string, unknown>>;
+      required: string[];
+    };
+
+    expect(Object.keys(strict.properties).sort()).toEqual(["default", "format", "minimum"]);
+    expect(strict.required.sort()).toEqual(["default", "format", "minimum"]);
+    expect(strict.properties.format).not.toHaveProperty("minLength");
+    expect(strict.properties.minimum).not.toHaveProperty("minimum");
+  });
+
   it("closes every object and requires every key", () => {
     const nested = z.object({
       outer: z.string(),
@@ -52,6 +79,19 @@ describe("toStrictJsonSchema", () => {
     // Optional keys are not a concept in strict mode.
     expect(strict.properties.inner.additionalProperties).toBe(false);
     expect(strict.properties.inner.required.sort()).toEqual(["a", "b"]);
+  });
+
+  it("preserves optional properties in the pruned non-strict form", () => {
+    const schema = z.object({ requiredValue: z.string(), optionalValue: z.string().optional() });
+    const pruned = toPrunedJsonSchema(convert(schema, { $refStrategy: "none" })) as {
+      additionalProperties: boolean;
+      required: string[];
+      properties: Record<string, unknown>;
+    };
+
+    expect(pruned.additionalProperties).toBe(false);
+    expect(pruned.required).toEqual(["requiredValue"]);
+    expect(Object.keys(pruned.properties).sort()).toEqual(["optionalValue", "requiredValue"]);
   });
 
   it("recurses through arrays of schemas", () => {

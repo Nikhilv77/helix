@@ -10,6 +10,9 @@ const mocks = vi.hoisted(() => ({
   fullPlan: vi.fn(),
   questionStatuses: vi.fn(),
   practiceEvidence: vi.fn(),
+  coreTechnicalEligibility: vi.fn(),
+  coreTechnicalCurrent: vi.fn(),
+  coreTechnicalAnalytics: vi.fn(),
   logError: vi.fn()
 }));
 
@@ -25,7 +28,10 @@ vi.mock("@/server/app-container", () => ({
     interviewService: { insights: mocks.insights },
     dsaService: { fullPlan: mocks.fullPlan },
     frontendRoadmapService: { questionStatuses: mocks.questionStatuses },
-    practiceEvidenceStore: { refresh: mocks.practiceEvidence }
+    practiceEvidenceStore: { refresh: mocks.practiceEvidence },
+    coreTechnicalEligibilityService: { forProfile: mocks.coreTechnicalEligibility },
+    coreTechnicalPracticeService: { current: mocks.coreTechnicalCurrent },
+    coreTechnicalWorkspaceAnalyticsService: { practice: mocks.coreTechnicalAnalytics }
   })
 }));
 
@@ -45,6 +51,17 @@ describe("PracticePage", () => {
     mocks.fullPlan.mockResolvedValue(null);
     mocks.questionStatuses.mockResolvedValue({});
     mocks.practiceEvidence.mockResolvedValue(null);
+    mocks.coreTechnicalEligibility.mockResolvedValue({
+      available: false,
+      reason: "CONTENT_UNAVAILABLE",
+      message: "Not published",
+      stack: { language: "javascript", runtime: "nodejs", runtimeVersion: "22 LTS" },
+      requiredStoryCount: 2,
+      publishedStoryCount: 0,
+      stories: []
+    });
+    mocks.coreTechnicalCurrent.mockResolvedValue(null);
+    mocks.coreTechnicalAnalytics.mockResolvedValue(null);
   });
 
   it("does not reach the Practice generator when the onboarding guard rejects access", async () => {

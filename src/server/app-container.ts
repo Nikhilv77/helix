@@ -2,6 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { AiService } from "./ai/ai.service";
 import { GeminiProvider } from "./ai/providers/gemini.provider";
 import { GroqProvider } from "./ai/providers/groq.provider";
+import { FallbackAiService } from "./ai/fallback-ai.service";
 import { AppConfigService } from "./config/app-config.service";
 import { validateEnvironment } from "./config/environment.schema";
 import { PrismaService } from "./database/prisma.service";
@@ -49,6 +50,34 @@ import { ResumeRoastGenerator } from "./resume-roast/resume-roast.generator";
 import { ResumeRoastService } from "./resume-roast/resume-roast.service";
 import { ResumeRoastStore } from "./resume-roast/resume-roast.store";
 import { PreparationOnboardingService } from "./preparation/preparation-onboarding.service";
+import { CoreTechnicalStoryGenerator } from "./core-technical/story-generator";
+import { CoreTechnicalQuestionGenerator } from "./core-technical/question-generator";
+import { CoreTechnicalGenerationCritic } from "./core-technical/generation-critic";
+import { CoreTechnicalGenerationPipeline } from "./core-technical/generation-pipeline";
+import { CoreTechnicalGoldEvaluator } from "./core-technical/gold-evaluator";
+import { CoreTechnicalGoldEvaluationRunner } from "./core-technical/gold-evaluation-runner";
+import { CoreTechnicalBaselineEvidenceService } from "./core-technical/baseline-evidence.service";
+import { CoreTechnicalFocusService } from "./core-technical/focus.service";
+import { CoreTechnicalStoryRankingService } from "./core-technical/story-ranking.service";
+import { CoreTechnicalPersistenceService } from "./core-technical/persistence.service";
+import { CoreTechnicalRunnerService } from "./core-technical/runner.service";
+import { CoreTechnicalAttemptEvaluator } from "./core-technical/attempt-evaluator";
+import { CoreTechnicalPracticeService } from "./core-technical/practice.service";
+import { CoreTechnicalPreparationService } from "./core-technical/preparation.service";
+import { CoreTechnicalAssessmentEvaluator } from "./core-technical/assessment-evaluator";
+import { CoreTechnicalAssessmentService } from "./core-technical/assessment.service";
+import { CoreTechnicalContinuationService } from "./core-technical/continuation.service";
+import { CoreTechnicalHistoryService } from "./core-technical/history.service";
+import { CoreTechnicalEligibilityService } from "./core-technical/eligibility.service";
+import { CoreTechnicalWorkspaceAnalyticsService } from "./core-technical/workspace-analytics.service";
+import { VercelSandboxNode22Executor } from "./core-technical/vercel-sandbox-executor";
+import { NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE } from "../lib/practice/core-technical/story-ranking-catalogue";
+import { NODEJS_CORE_TECHNICAL_DOMAIN_MAP } from "../lib/practice/core-technical/domain-map";
+import {
+  CORE_TECHNICAL_INTERVIEW_EVIDENCE,
+  CORE_TECHNICAL_SOURCES,
+  NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS
+} from "../lib/practice/core-technical/interview-patterns";
 
 export interface AppContainer {
   config: AppConfigService;
@@ -87,6 +116,26 @@ export interface AppContainer {
   workspaceSearchService: WorkspaceSearchService;
   resumeRoastService: ResumeRoastService;
   preparationOnboardingService: PreparationOnboardingService;
+  coreTechnicalStoryGenerator: CoreTechnicalStoryGenerator;
+  coreTechnicalQuestionGenerator: CoreTechnicalQuestionGenerator;
+  coreTechnicalGenerationCritic: CoreTechnicalGenerationCritic;
+  coreTechnicalGenerationPipeline: CoreTechnicalGenerationPipeline;
+  coreTechnicalGoldEvaluator: CoreTechnicalGoldEvaluator;
+  coreTechnicalGoldEvaluationRunner: CoreTechnicalGoldEvaluationRunner;
+  coreTechnicalBaselineEvidenceService: CoreTechnicalBaselineEvidenceService;
+  coreTechnicalFocusService: CoreTechnicalFocusService;
+  coreTechnicalStoryRankingService: CoreTechnicalStoryRankingService;
+  coreTechnicalPersistenceService: CoreTechnicalPersistenceService;
+  coreTechnicalRunnerService: CoreTechnicalRunnerService;
+  coreTechnicalAttemptEvaluator: CoreTechnicalAttemptEvaluator;
+  coreTechnicalPracticeService: CoreTechnicalPracticeService;
+  coreTechnicalPreparationService: CoreTechnicalPreparationService;
+  coreTechnicalAssessmentEvaluator: CoreTechnicalAssessmentEvaluator;
+  coreTechnicalAssessmentService: CoreTechnicalAssessmentService;
+  coreTechnicalContinuationService: CoreTechnicalContinuationService;
+  coreTechnicalHistoryService: CoreTechnicalHistoryService;
+  coreTechnicalWorkspaceAnalyticsService: CoreTechnicalWorkspaceAnalyticsService;
+  coreTechnicalEligibilityService: CoreTechnicalEligibilityService;
 }
 
 let container: AppContainer | null = null;
@@ -106,9 +155,46 @@ export function getAppContainer(): AppContainer {
   const interviewAi = config.groqApiKey
     ? new AiService(new GroqProvider(config, config.groqApiKey, config.groqDeciderModel))
     : geminiAi;
+  const generationAi =
+    interviewAi === geminiAi ? geminiAi : new FallbackAiService(geminiAi, interviewAi);
 
   const profileService = new ProfileService(prisma);
   const preparationOnboardingService = new PreparationOnboardingService(prisma);
+  const coreTechnicalBaselineEvidenceService = new CoreTechnicalBaselineEvidenceService(prisma);
+  const coreTechnicalFocusService = new CoreTechnicalFocusService({
+    prisma,
+    baselineEvidence: coreTechnicalBaselineEvidenceService
+  });
+  const coreTechnicalStoryRankingService = new CoreTechnicalStoryRankingService(
+    NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE
+  );
+  const coreTechnicalPersistenceService = new CoreTechnicalPersistenceService(prisma);
+  const coreTechnicalRunnerService = process.env.VERCEL
+    ? new CoreTechnicalRunnerService(new VercelSandboxNode22Executor())
+    : new CoreTechnicalRunnerService();
+  const coreTechnicalAttemptEvaluator = new CoreTechnicalAttemptEvaluator(generationAi);
+  const coreTechnicalPracticeService = new CoreTechnicalPracticeService(
+    prisma,
+    coreTechnicalRunnerService,
+    coreTechnicalAttemptEvaluator
+  );
+  const coreTechnicalAssessmentEvaluator = new CoreTechnicalAssessmentEvaluator(
+    generationAi,
+    coreTechnicalStoryRankingService
+  );
+  const coreTechnicalAssessmentService = new CoreTechnicalAssessmentService(
+    prisma,
+    coreTechnicalAssessmentEvaluator
+  );
+  const coreTechnicalHistoryService = new CoreTechnicalHistoryService(
+    prisma,
+    coreTechnicalPracticeService
+  );
+  const coreTechnicalEligibilityService = new CoreTechnicalEligibilityService(
+    prisma,
+    coreTechnicalRunnerService
+  );
+  const coreTechnicalWorkspaceAnalyticsService = new CoreTechnicalWorkspaceAnalyticsService(prisma);
   const personalizedPlanningStore = new PersonalizedPlanningStore(prisma, profileService);
   const personalizedPerformanceStore = new PersonalizedPerformanceStore(prisma);
   const practiceEvidenceStore = new PracticeEvidenceStore(prisma);
@@ -157,11 +243,75 @@ export function getAppContainer(): AppContainer {
   const helpSafety = new HelpSafetyService(prisma);
   const helperEligibility = new HelperEligibilityService(prisma);
 
+  const coreTechnicalStoryGenerator = new CoreTechnicalStoryGenerator({
+    ai: generationAi,
+    domainMap: NODEJS_CORE_TECHNICAL_DOMAIN_MAP,
+    patterns: NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS
+  });
+  const coreTechnicalQuestionGenerator = new CoreTechnicalQuestionGenerator({
+    ai: generationAi,
+    patterns: NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS,
+    concurrency: 1
+  });
+  const coreTechnicalGenerationCritic = new CoreTechnicalGenerationCritic({
+    ai: generationAi,
+    independentAi: interviewAi,
+    patterns: NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS,
+    evidenceSources: CORE_TECHNICAL_INTERVIEW_EVIDENCE,
+    technicalSources: CORE_TECHNICAL_SOURCES
+  });
+  const coreTechnicalGenerationPipeline = new CoreTechnicalGenerationPipeline({
+    storyGenerator: coreTechnicalStoryGenerator,
+    questionGenerator: coreTechnicalQuestionGenerator,
+    critic: coreTechnicalGenerationCritic,
+    runner: coreTechnicalRunnerService
+  });
+  const coreTechnicalPreparationService = new CoreTechnicalPreparationService({
+    prisma,
+    focus: coreTechnicalFocusService,
+    ranking: coreTechnicalStoryRankingService,
+    generation: coreTechnicalGenerationPipeline,
+    persistence: coreTechnicalPersistenceService,
+    practice: coreTechnicalPracticeService
+  });
+  const coreTechnicalContinuationService = new CoreTechnicalContinuationService({
+    prisma,
+    generation: coreTechnicalGenerationPipeline,
+    persistence: coreTechnicalPersistenceService,
+    practice: coreTechnicalPracticeService
+  });
+  const coreTechnicalGoldEvaluator = new CoreTechnicalGoldEvaluator({
+    patterns: NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS
+  });
+
   container = {
     config,
     healthService: new HealthService(config, prisma),
     profileService,
     preparationOnboardingService,
+    coreTechnicalBaselineEvidenceService,
+    coreTechnicalFocusService,
+    coreTechnicalStoryRankingService,
+    coreTechnicalPersistenceService,
+    coreTechnicalRunnerService,
+    coreTechnicalAttemptEvaluator,
+    coreTechnicalPracticeService,
+    coreTechnicalPreparationService,
+    coreTechnicalAssessmentEvaluator,
+    coreTechnicalAssessmentService,
+    coreTechnicalContinuationService,
+    coreTechnicalHistoryService,
+    coreTechnicalEligibilityService,
+    coreTechnicalWorkspaceAnalyticsService,
+    coreTechnicalStoryGenerator,
+    coreTechnicalQuestionGenerator,
+    coreTechnicalGenerationCritic,
+    coreTechnicalGenerationPipeline,
+    coreTechnicalGoldEvaluator,
+    coreTechnicalGoldEvaluationRunner: new CoreTechnicalGoldEvaluationRunner({
+      generationPipeline: coreTechnicalGenerationPipeline,
+      evaluator: coreTechnicalGoldEvaluator
+    }),
     // Seeded content, identical for every user, so the service caches it.
     dsaService: new DsaService(prisma),
     dsaNotesService: new DsaNotesService(prisma),

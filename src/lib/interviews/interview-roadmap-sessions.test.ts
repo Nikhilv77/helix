@@ -268,8 +268,28 @@ describe("personalized interview roadmap sessions", () => {
       attemptStatus: "in_progress",
       resumeSessionId: "live-old-plan-session"
     });
-    expect(roadmapSessionHref(applied!)).toBe(
-      "/interview/voice?session=live-old-plan-session"
-    );
+    expect(roadmapSessionHref(applied!)).toBe("/interview/voice?session=live-old-plan-session");
+  });
+
+  it("counts a story-driven Core Technical assessment in the Core Technical interview slot", () => {
+    const sessions = interviewRoadmapSessions({
+      personalizedPlan: plan(),
+      roadmap: null,
+      history: [
+        historyItem("core-technical", {
+          sessionId: "core-technical:assessment-1",
+          status: "in_progress",
+          questionCount: 5,
+          questionsCovered: 0
+        })
+      ]
+    });
+    const core = sessions.find((session) => session.kind === "core-technical");
+
+    expect(core).toMatchObject({
+      attemptStatus: "in_progress",
+      resumeSessionId: "core-technical:assessment-1"
+    });
+    expect(roadmapSessionHref(core!)).toBe("/practice/core-technical");
   });
 });

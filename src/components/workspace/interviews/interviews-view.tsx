@@ -39,7 +39,7 @@ interface InterviewsViewProps {
  * were the old template slugs before they were renamed.
  */
 const sessionIcons: Record<string, LucideIcon> = {
-  "dsa": CodeXml,
+  dsa: CodeXml,
   "problem-solving": CodeXml,
   "core-technical": Atom,
   "applied-engineering": Cpu,
@@ -58,6 +58,15 @@ export function InterviewsView({
   const remaining = Math.max(0, quota.limit - quota.used);
   const exhausted = remaining === 0;
   const active = sessions.find((session) => session.status === "in_progress");
+  const activeQuotaSession = sessions.find(
+    (session) =>
+      session.status === "in_progress" && session.setup.templateId !== "core-technical"
+  );
+  const activeHref = active
+    ? active.setup.templateId === "core-technical"
+      ? "/practice/core-technical"
+      : `/interview/voice?session=${active.sessionId}`
+    : null;
   const roadmapSessions = interviewRoadmapSessions({
     personalizedPlan,
     roadmap,
@@ -93,9 +102,9 @@ export function InterviewsView({
             </span>
           ))}
         </p>
-        {active ? (
+        {active && activeHref ? (
           <Link
-            href={`/interview/voice?session=${active.sessionId}`}
+            href={activeHref}
             className="interviews-active-link group mt-6 inline-flex items-center gap-3 rounded-2xl bg-[#17181b]/90 px-4 py-3 text-left transition hover:-translate-y-0.5 hover:bg-[#1c1e22] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
           >
             <Play
@@ -128,7 +137,7 @@ export function InterviewsView({
               <RoadmapSessionCard
                 key={session.id}
                 session={session}
-                disabled={exhausted && !active}
+                disabled={exhausted && !activeQuotaSession}
                 delay={index * 70}
               />
             ))

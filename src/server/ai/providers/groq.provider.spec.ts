@@ -69,6 +69,115 @@ describe("GroqProvider", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("falls back to best-effort schema generation after Groq constrained decoding fails", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: {
+              code: "json_validate_failed",
+              message: "Failed to validate JSON"
+            }
+          }),
+          { status: 400, headers: { "content-type": "application/json" } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ choices: [{ message: { content: '{"ok":true}' } }] }), {
+          status: 200,
+          headers: { "content-type": "application/json" }
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new GroqProvider(createConfig(), "test-key", "test-model");
+
+    await expect(provider.generateStructured(createRequest())).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    const firstBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    const secondBody = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body));
+    expect(firstBody.response_format.json_schema.strict).toBe(true);
+    expect(secondBody.response_format.json_schema.strict).toBe(false);
+  });
+
+  it("falls back to JSON-object mode when both schema modes fail before generation", async () => {
+    const validationFailure = () =>
+      new Response(
+        JSON.stringify({
+          error: {
+            code: "json_validate_failed",
+            message: "Failed to validate JSON"
+          }
+        }),
+        { status: 400, headers: { "content-type": "application/json" } }
+      );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(validationFailure())
+      .mockResolvedValueOnce(validationFailure())
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ choices: [{ message: { content: '{"ok":true}' } }] }), {
+          status: 200,
+          headers: { "content-type": "application/json" }
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new GroqProvider(createConfig(), "test-key", "test-model");
+
+    await expect(provider.generateStructured(createRequest())).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    const thirdBody = JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body));
+    expect(thirdBody.response_format).toEqual({ type: "json_object" });
+  });
+
+  it("retries model output that does not satisfy the local schema", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ choices: [{ message: { content: '{"ok":"yes"}' } }] })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ choices: [{ message: { content: '{"ok":true}' } }] })
+      });
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new GroqProvider(createConfig({ aiMaxRetries: 1 }), "test-key", "test-model");
+
+    await expect(provider.generateStructured(createRequest())).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("backs off before retrying a rate-limited request", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: { code: "rate_limit_exceeded" } }), {
+          status: 429,
+          headers: { "content-type": "application/json", "retry-after": "1" }
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ choices: [{ message: { content: '{"ok":true}' } }] }), {
+          status: 200,
+          headers: { "content-type": "application/json" }
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new GroqProvider(createConfig({ aiMaxRetries: 1 }), "test-key", "test-model");
+
+    const pending = provider.generateStructured(createRequest());
+    await vi.advanceTimersByTimeAsync(999);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(pending).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("maps caller abort to AI_CANCELLED without retrying", async () => {
     let aborted = false;
     const fetchMock = vi.fn(

@@ -20,12 +20,14 @@ export function ProfileHero({
   saved,
   onCoverEdit,
   onAvatarEdit,
+  onEdit,
   onResumeUpdate
 }: {
   profile: CandidateProfileInput;
   saved: CandidateProfile;
   onCoverEdit: () => void;
   onAvatarEdit: () => void;
+  onEdit: () => void;
   onResumeUpdate: () => void;
 }) {
   const resume = saved.resume;
@@ -160,13 +162,22 @@ export function ProfileHero({
                 <HeroChip icon={BarChart3} label={level?.label ?? "No level set"} muted={!level} />
               </div>
 
-              <button
-                type="button"
-                onClick={onResumeUpdate}
-                className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 text-xs font-semibold text-cream/72 transition hover:bg-white/[0.1] hover:text-cream"
-              >
-                <Upload size={14} /> {resume ? "Update resume" : "Upload resume"}
-              </button>
+              <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 text-xs font-semibold text-cream/72 transition hover:bg-white/[0.1] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/70"
+                >
+                  <Pencil size={14} /> Edit profile
+                </button>
+                <button
+                  type="button"
+                  onClick={onResumeUpdate}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 text-xs font-semibold text-cream/72 transition hover:bg-white/[0.1] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/70"
+                >
+                  <Upload size={14} /> {resume ? "Update resume" : "Upload resume"}
+                </button>
+              </div>
 
               <div
                 className="profile-soft-reveal mt-8 h-px w-full max-w-5xl bg-gradient-to-r from-transparent via-cream/22 to-transparent"

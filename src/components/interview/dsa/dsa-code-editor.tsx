@@ -83,6 +83,7 @@ export function DsaCodeEditor({
   onRun,
   onSelectionChange,
   readOnly = false,
+  autoFocus = true,
   selection = null,
   ariaLabel
 }: {
@@ -92,6 +93,7 @@ export function DsaCodeEditor({
   onRun?: () => void;
   onSelectionChange?: (selection: DsaEditorSelection) => void;
   readOnly?: boolean;
+  autoFocus?: boolean;
   selection?: DsaEditorSelection | null;
   ariaLabel?: string;
 }) {
@@ -137,7 +139,7 @@ export function DsaCodeEditor({
         })
       );
     }
-    if (!readOnly) editor.focus();
+    if (!readOnly && autoFocus) editor.focus();
   };
 
   return (

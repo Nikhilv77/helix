@@ -217,9 +217,9 @@ describe("GeminiProvider", () => {
     await expect(provider.generateStructured(createRequest())).rejects.toMatchObject({
       code: "AI_INVALID_RESPONSE",
       message: "AI provider returned output that did not match the expected schema",
-      retryable: false
+      retryable: true
     });
-    expect(generateContent).toHaveBeenCalledTimes(1);
+    expect(generateContent).toHaveBeenCalledTimes(2);
   });
 
   it("maps provider errors without exposing provider internals in the message", async () => {

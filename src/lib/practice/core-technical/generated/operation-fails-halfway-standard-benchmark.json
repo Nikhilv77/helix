@@ -1,0 +1,1055 @@
+{
+  "goldSetVersion": 1,
+  "caseKey": "operation-fails-halfway-standard-benchmark",
+  "generatedAt": "2026-09-06T16:44:06.434Z",
+  "story": {
+    "schemaVersion": 1,
+    "key": "the-operation-fails-halfway",
+    "title": "The operation fails halfway",
+    "premise": "A high-throughput Node.js backend ingestion pipeline processes large streaming files and coordinates multiple asynchronous dependency calls. Under peak load, operations fail halfway through, memory consumption creeps upward, and error propagation breaks across module boundaries.",
+    "incident": "During a flash sale event, the ingestion service experienced cascading failures where streams hung indefinitely, unhandled promise rejections crashed worker processes, and intermittent event loop lag degraded overall tail latency.",
+    "candidateRole": "As a senior backend engineer, you will diagnose and repair these architectural bottlenecks across Node.js runtime boundaries.",
+    "primaryTopicKey": "errors-and-cancellation",
+    "secondaryTopicKeys": ["nodejs-streams-and-io", "nodejs-event-loop-health", "async-scheduling"],
+    "mechanismKeys": [
+      "commonjs",
+      "event-loop",
+      "promise-rejection",
+      "abort-signal",
+      "heap-retention",
+      "stream",
+      "promise-concurrency",
+      "event-loop-lag"
+    ],
+    "difficulty": "standard",
+    "prerequisiteTopicKeys": ["javascript-scope-and-closures", "async-scheduling"],
+    "expectedMinutes": 45,
+    "forbiddenTopicKeys": [],
+    "realismAnchors": [
+      "The production system runs on Node.js using ES modules alongside legacy CommonJS internal dependencies.",
+      "Memory diagnostics show active handles increasing over time due to improper listener cleanups in stream pipelines.",
+      "Tail latency spikes correlate with synchronous CPU-heavy data parsing occurring directly on the event loop.",
+      "Client disconnections leave orphaned database queries running because request cancellation signals are never propagated."
+    ],
+    "targetFitExplanation": "Tests deep proficiency in asynchronous Node.js primitives, stream backpressure, error propagation, and runtime diagnostics required for senior backend ownership.",
+    "coverageExplanation": "Covers all reviewed contract stages, validating module boundaries, event-loop ordering, promise error propagation, cancellation, resource leaks, backpressure, concurrency, and event-loop health.",
+    "stages": [
+      {
+        "order": 1,
+        "key": "module-boundary-diagnosis",
+        "title": "Diagnose CommonJS and ESM Interoperability",
+        "format": "mcq",
+        "patternKey": "nodejs-commonjs-esm-boundary",
+        "objective": "Identify why a shared utility package fails to load when imported via ES modules from a legacy CommonJS application.",
+        "artifactKey": "package-export-manifest",
+        "storyDependency": "Initial startup failure logs showing module resolution errors."
+      },
+      {
+        "order": 2,
+        "key": "event-loop-ordering-analysis",
+        "title": "Analyze Task Scheduling and Event Loop Order",
+        "format": "predict-explain",
+        "patternKey": "javascript-event-loop-order",
+        "objective": "Predict the precise interleaving of microtasks, timers, and nextTick callbacks in the data ingestion worker.",
+        "artifactKey": "scheduler-trace-output",
+        "storyDependency": "Export manifest artifact confirming successful module resolution."
+      },
+      {
+        "order": 3,
+        "key": "async-error-propagation-repair",
+        "title": "Repair Broken Asynchronous Error Propagation",
+        "format": "written",
+        "patternKey": "javascript-async-error-propagation",
+        "objective": "Fix unhandled promise rejections and silent failures across nested asynchronous boundaries.",
+        "artifactKey": "error-handling-patch",
+        "storyDependency": "Scheduler trace output identifying unexpected task execution sequencing."
+      },
+      {
+        "order": 4,
+        "key": "request-cancellation-design",
+        "title": "Design Request Cancellation and Abort Signaling",
+        "format": "written",
+        "patternKey": "nodejs-request-cancellation",
+        "objective": "Explain how to propagate an AbortSignal through active network requests and cleanup downstream resources.",
+        "artifactKey": "cancellation-sequence-diagram",
+        "storyDependency": "Error handling patch stabilizing promise chains."
+      },
+      {
+        "order": 5,
+        "key": "resource-leak-investigation",
+        "title": "Investigate Long-Running Resource Leaks",
+        "format": "artifact-diagnosis",
+        "patternKey": "nodejs-resource-leak-diagnosis",
+        "objective": "Examine heap snapshots and active handle reports to locate retained event listeners and timers.",
+        "artifactKey": "heap-snapshot-report",
+        "storyDependency": "Cancellation sequence diagram establishing ownership boundaries."
+      },
+      {
+        "order": 6,
+        "key": "stream-backpressure-debug",
+        "title": "Debug and Repair Stream Backpressure",
+        "format": "debug-repair",
+        "patternKey": "nodejs-stream-backpressure",
+        "objective": "Refactor a transformation stream pipeline that ignores highWaterMark and causes unbounded memory growth.",
+        "artifactKey": "stream-pipeline-code",
+        "storyDependency": "Heap snapshot report highlighting retaining paths in transform streams."
+      },
+      {
+        "order": 7,
+        "key": "promise-concurrency-implementation",
+        "title": "Implement Bounded Promise Concurrency",
+        "format": "micro-implementation",
+        "patternKey": "javascript-promise-concurrency",
+        "objective": "Write a concurrency-limited batch processor for downstream API calls without overwhelming dependencies.",
+        "artifactKey": "concurrency-limiter-module",
+        "storyDependency": "Stream pipeline code ensuring memory-safe data flow."
+      },
+      {
+        "order": 8,
+        "key": "event-loop-health-defense",
+        "title": "Defend Event Loop Health Under Heavy Load",
+        "format": "spoken",
+        "patternKey": "nodejs-event-loop-blocking",
+        "objective": "Propose an architectural mitigation strategy for CPU-bound tasks currently blocking the main thread.",
+        "artifactKey": "event-loop-lag-mitigation-plan",
+        "storyDependency": "Concurrency limiter module confirming safe task batching."
+      }
+    ],
+    "score": {
+      "domainImportance": 20,
+      "realism": 15,
+      "interviewDensity": 19,
+      "coherence": 15,
+      "stackFit": 15,
+      "personalizedCoverage": 11,
+      "total": 95
+    },
+    "selectionReason": "Selected for Senior Backend Engineer because it combines important interview patterns with the candidate's current evidence gaps."
+  },
+  "storyReview": {
+    "criticVersion": 1,
+    "target": "story",
+    "approved": true,
+    "verdicts": [
+      {
+        "criticVersion": 1,
+        "target": "story",
+        "dimension": "technical-correctness",
+        "verdict": "pass",
+        "score": 95,
+        "confidence": "high",
+        "summary": "The generated story asset accurately adheres to all technical constraints, runtime mechanics, and source patterns for advanced Node.js architecture. Each stage correctly utilizes established mechanisms like backpressure, event loop phase ordering, AbortController propagation, and memory leak analysis.",
+        "evidenceChecks": [
+          {
+            "claim": "Stage 1 correctly covers CommonJS and ESM interoperability.",
+            "evidence": "Pattern key 'nodejs-commonjs-esm-boundary' matches the corresponding pattern catalogue entry.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 2 precisely models Node.js event loop task scheduling and interleave order.",
+            "evidence": "Pattern key 'javascript-event-loop-order' aligns with Node.js technical sources on microtasks and timers.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 3 correctly handles async boundaries and error propagation.",
+            "evidence": "Pattern key 'javascript-async-error-propagation' maps directly to MDN and interview source expectations.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 4 accurately specifies AbortSignal and request cancellation.",
+            "evidence": "Pattern key 'nodejs-request-cancellation' properly incorporates standard Node.js AbortController mechanics.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 5 targets heap retention and active handle diagnostics.",
+            "evidence": "Pattern key 'nodejs-resource-leak-diagnosis' addresses core Node.js memory diagnostic requirements.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 6 properly targets stream backpressure and memory safety.",
+            "evidence": "Pattern key 'nodejs-stream-backpressure' utilizes standard highWaterMark and writable signal principles.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 7 correctly focuses on bounded promise concurrency.",
+            "evidence": "Pattern key 'javascript-promise-concurrency' handles downstream dependency protection without unbounded accumulation.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 8 addresses event loop lag and thread isolation for CPU-bound tasks.",
+            "evidence": "Pattern key 'nodejs-event-loop-blocking' accurately distinguishes asynchronous I/O from synchronous CPU work.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      },
+      {
+        "criticVersion": 1,
+        "target": "story",
+        "dimension": "interview-relevance",
+        "verdict": "pass",
+        "score": 95,
+        "confidence": "high",
+        "summary": "The generated story asset accurately reflects all 8 primary patterns from the source catalogue. Each stage preserves documented interview patterns, reasoning, expected signals, and follow-up depth without violating technical constraints or introducing unbacked implementation details.",
+        "evidenceChecks": [
+          {
+            "claim": "Stage 1 correctly corresponds to the nodejs-commonjs-esm-boundary pattern.",
+            "evidence": "Pattern key 'nodejs-commonjs-esm-boundary' matches stage 1 patternKey.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 2 correctly corresponds to the javascript-event-loop-order pattern.",
+            "evidence": "Pattern key 'javascript-event-loop-order' matches stage 2 patternKey.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 3 correctly corresponds to the javascript-async-error-propagation pattern.",
+            "evidence": "Pattern key 'javascript-async-error-propagation' matches stage 3 patternKey.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 4 correctly corresponds to the nodejs-request-cancellation pattern.",
+            "evidence": "Pattern key 'nodejs-request-cancellation' matches stage 4 patternKey.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 5 correctly corresponds to the nodejs-resource-leak-diagnosis pattern.",
+            "evidence": "Pattern key 'nodejs-resource-leak-diagnosis' matches stage 5 patternKey.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 6 correctly corresponds to the nodejs-stream-backpressure pattern.",
+            "evidence": "Pattern key 'nodejs-stream-backpressure' matches stage 6 patternKey.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 7 correctly corresponds to the javascript-promise-concurrency pattern.",
+            "evidence": "Pattern key 'javascript-promise-concurrency' matches stage 7 patternKey.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 8 correctly corresponds to the nodejs-event-loop-blocking pattern.",
+            "evidence": "Pattern key 'nodejs-event-loop-blocking' matches stage 8 patternKey.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      },
+      {
+        "criticVersion": 1,
+        "target": "story",
+        "dimension": "story-continuity",
+        "verdict": "pass",
+        "score": 95,
+        "confidence": "high",
+        "summary": "The narrative flows logically from startup module resolution errors through event-loop analysis, error propagation, request cancellation, resource leaks, stream backpressure, concurrency, and final event-loop health defense. Every stage depends directly on an artifact or prior stage evolution.",
+        "evidenceChecks": [
+          {
+            "claim": "Stage 1 depends on startup failure logs showing module resolution errors.",
+            "evidence": "Artifact key is package-export-manifest and storyDependency is Initial startup failure logs showing module resolution errors.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 2 depends on the export manifest artifact confirming successful module resolution.",
+            "evidence": "Artifact key is scheduler-trace-output and storyDependency is Export manifest artifact confirming successful module resolution.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 3 depends on the scheduler trace output identifying unexpected task execution sequencing.",
+            "evidence": "Artifact key is error-handling-patch and storyDependency is Scheduler trace output identifying unexpected task execution sequencing.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 4 depends on the error handling patch stabilizing promise chains.",
+            "evidence": "Artifact key is cancellation-sequence-diagram and storyDependency is Error handling patch stabilizing promise chains.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 5 depends on the cancellation sequence diagram establishing ownership boundaries.",
+            "evidence": "Artifact key is heap-snapshot-report and storyDependency is Cancellation sequence diagram establishing ownership boundaries.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 6 depends on the heap snapshot report highlighting retaining paths in transform streams.",
+            "evidence": "Artifact key is stream-pipeline-code and storyDependency is Heap snapshot report highlighting retaining paths in transform streams.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 7 depends on the stream pipeline code ensuring memory-safe data flow.",
+            "evidence": "Artifact key is concurrency-limiter-module and storyDependency is Stream pipeline code ensuring memory-safe data flow.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 8 depends on the concurrency limiter module confirming safe task batching.",
+            "evidence": "Artifact key is event-loop-lag-mitigation-plan and storyDependency is Concurrency limiter module confirming safe task batching.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      },
+      {
+        "criticVersion": 1,
+        "target": "story",
+        "dimension": "difficulty",
+        "verdict": "pass",
+        "score": 95,
+        "confidence": "high",
+        "summary": "The asset aligns with senior backend engineering standards. The difficulty level is appropriate for a standard-to-senior role, correctly leveraging Node.js primitives, stream backpressure, error propagation, and runtime diagnostics without excessive or trivialized patterns.",
+        "evidenceChecks": [
+          {
+            "claim": "Stages and patterns match the declared senior difficulty and standard tier workload.",
+            "evidence": "Stages incorporate complex production-level challenges such as CJS/ESM interop, event loop ordering, stream backpressure, and resource leak diagnostics matching the standard tier expectations.",
+            "passed": true
+          },
+          {
+            "claim": "Realism anchors align accurately with the provided source context and catalogue patterns.",
+            "evidence": "Realism anchors correctly reflect node-specific mechanics like AbortSignal, stream backpressure, and memory diagnostics found in the technical sources.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      }
+    ]
+  },
+  "questionBlock": {
+    "schemaVersion": 1,
+    "storyKey": "the-operation-fails-halfway",
+    "questions": [
+      {
+        "schemaVersion": 1,
+        "key": "module-boundary-diagnosis-mcq-exports",
+        "storyKey": "the-operation-fails-halfway",
+        "stageKey": "module-boundary-diagnosis",
+        "order": 1,
+        "format": "mcq",
+        "patternKey": "nodejs-commonjs-esm-boundary",
+        "topicKeys": ["javascript-modules"],
+        "mechanismKeys": ["commonjs", "esm", "package-exports"],
+        "prompt": "During the initial startup of the streaming ingestion pipeline, importing a shared internal utility package via ES modules results in a ERR_MODULE_NOT_FOUND error when the package consumer expects conditional export maps to resolve correctly. Review the provided package export manifest artifact and determine why the runtime fails to resolve the module path under Node.js ES module loading rules.",
+        "artifact": {
+          "kind": "config",
+          "title": "package.json export manifest configuration",
+          "content": "{\n  \"name\": \"ingest-core\",\n  \"type\": \"module\",\n  \"exports\": {\n    \".\": {\n      \"require\": \"./dist/index.cjs\",\n      \"import\": \"./dist/index.js\"\n    },\n    \"./utils\": \"./dist/utils.js\"\n  }\n}"
+        },
+        "choices": [
+          "The './utils' export mapping lacks explicit conditional 'import' and 'require' sub-conditions, causing conditional module resolution failures when consumed by legacy CommonJS code.",
+          "The package.json declares type: 'module', which automatically disables all CommonJS require calls across external dependencies regardless of export maps.",
+          "The export paths use relative specifiers starting with './dist/' instead of absolute paths rooted at the machine filesystem root.",
+          "Node.js requires every export key to be mapped exclusively to a TypeScript declaration file rather than compiled JavaScript."
+        ],
+        "hints": [
+          "Examine how conditional exports handle subpath mappings versus root mappings.",
+          "Compare the structure of the root '.' export object with the shorthand string mapping used for './utils'.",
+          "Understand that shortcut string mappings in package.json exports apply equally to both import and require, but omitting explicit conditions can restrict flexibility when consumers mix module systems."
+        ],
+        "answer": {
+          "concise": "The './utils' export mapping uses a shorthand string instead of conditional objects, limiting granular control over environment-specific resolution.",
+          "explanation": "In Node.js package exports, string shorthands are sugar for both require and import conditions, but using unconditioned paths or mixing conditional blocks without clear separation can lead to resolver mismatches when subpaths expect specific environmental entrypoints.",
+          "correctChoiceIndex": 0
+        },
+        "rubric": [
+          {
+            "criterion": "Identifies the structural discrepancy between root and subpath export definitions in package.json.",
+            "points": 5
+          },
+          {
+            "criterion": "Explains how Node.js package export resolution rules interpret shorthand string mappings versus condition objects.",
+            "points": 5
+          }
+        ],
+        "commonMistakes": [
+          "Assuming that declaring type: 'module' prohibits all CommonJS interop.",
+          "Believing that relative paths in export maps must be absolute filesystem paths."
+        ],
+        "interviewerFollowUps": [
+          "How would you restructure the exports field to support both ESM and CJS for the subpath './utils'?",
+          "What happens if a consumer imports a subpath that is not explicitly listed in the exports map?"
+        ],
+        "interviewConnection": "This tests the candidate's mastery of modern Node.js package export semantics and conditional resolution between CommonJS and ES modules."
+      },
+      {
+        "schemaVersion": 1,
+        "key": "event-loop-ordering-analysis-candidate-two",
+        "storyKey": "the-operation-fails-halfway",
+        "stageKey": "event-loop-ordering-analysis",
+        "order": 2,
+        "format": "predict-explain",
+        "patternKey": "javascript-event-loop-order",
+        "topicKeys": ["async-scheduling"],
+        "mechanismKeys": ["event-loop", "microtask-queue", "timer-queue"],
+        "prompt": "Analyze the log capture produced by the ingestion worker thread below. Predict the exact line-by-line sequence of printed letters when mixing I/O callback bindings, immediate timers, and nested promise microtasks.",
+        "artifact": {
+          "kind": "logs",
+          "title": "Ingestion Worker Log Capture",
+          "content": "setImmediate(() => {\n  console.log('1');\n  Promise.resolve().then(() => console.log('2'));\n});\nsetTimeout(() => {\n  console.log('3');\n  process.nextTick(() => console.log('4'));\n}, 0);"
+        },
+        "hints": [
+          "Consider the order of libuv phases between timers and check if setTimeout(..., 0) consistently runs before setImmediate in the initial event loop turn.",
+          "Note that microtasks spawned inside a callback phase are drained immediately after that specific callback returns.",
+          "Remember that process.nextTick inside a timer callback runs before the event loop advances to subsequent phases."
+        ],
+        "answer": {
+          "concise": "3, 4, 1, 2",
+          "explanation": "In Node.js, timers (setTimeout) and check phases (setImmediate) can vary slightly based on startup timing, but in a standard script setTimeout(..., 0) precedes setImmediate. Thus '3' logs first, followed immediately by its nextTick callback '4'. Then the event loop moves to the check phase, logging '1' and draining its microtask '2'."
+        },
+        "rubric": [
+          {
+            "criterion": "Correctly determines the phase ordering between setTimeout and setImmediate in a script context.",
+            "points": 4
+          },
+          {
+            "criterion": "Explains the immediate execution of process.nextTick inside the timer callback before phase advancement.",
+            "points": 3
+          },
+          {
+            "criterion": "Accounts for microtask draining inside the setImmediate callback phase.",
+            "points": 3
+          }
+        ],
+        "commonMistakes": [
+          "Assuming setImmediate always runs before setTimeout(..., 0) regardless of execution context.",
+          "Delaying the nextTick callback inside the timer until all event loop phases complete.",
+          "Failing to drain microtasks created inside the setImmediate callback before moving phases."
+        ],
+        "interviewerFollowUps": [
+          "How does the ordering between setTimeout and setImmediate change if they are called inside an I/O cycle callback instead of the main module scope?",
+          "Why might relying on microtask ordering for critical state synchronization cause maintenance challenges in large worker pools?"
+        ],
+        "interviewConnection": "This challenge tests advanced libuv phase comprehension and inter-phase callback interleaving, ensuring engineers can reason about non-deterministic timing bugs in complex async workflows."
+      },
+      {
+        "schemaVersion": 1,
+        "key": "async-error-propagation-repair-candidate-two",
+        "storyKey": "the-operation-fails-halfway",
+        "stageKey": "async-error-propagation-repair",
+        "order": 3,
+        "format": "written",
+        "patternKey": "javascript-async-error-propagation",
+        "topicKeys": ["errors-and-cancellation"],
+        "mechanismKeys": ["promise-rejection", "async-stack", "error-boundary"],
+        "prompt": "An upstream ingestion dependency wraps database transactions inside a Promise constructor without handling errors correctly, causing stack traces to be truncated and silent execution hangs. Review the artifact trace snippet and describe the mechanism by which the promise constructor swallows errors, and explain how to refactor it using async/await patterns.",
+        "artifact": {
+          "kind": "code",
+          "title": "error-handling-patch-v2.mjs",
+          "content": "export function executeTransaction(payload) {\n  return new Promise((resolve, reject) => {\n    databaseConnection.query(payload, (err, result) => {\n      if (err) {\n        throw new Error('Database transaction failed during commit phase');\n      }\n      resolve(result);\n    });\n  });\n}"
+        },
+        "hints": [
+          "Look at how exceptions thrown inside asynchronous callback functions are handled relative to the executor function of a Promise constructor.",
+          "Recall whether synchronous exceptions thrown inside node-style error-first callbacks automatically reject the enclosing Promise.",
+          "Refactor the wrapper function to use the util.promisify or an async function wrapper to ensure robust error conversion."
+        ],
+        "answer": {
+          "concise": "Throwing an error inside an asynchronous callback does not automatically reject the promise because the exception occurs outside the executor function's synchronous scope.",
+          "explanation": "When an exception is thrown inside an asynchronous callback (such as databaseConnection.query), the execution context has already left the Promise executor. Therefore, the synchronous throw escapes the promise boundary entirely, turning into an uncaught exception rather than a rejected promise. The correct approach is to call the reject function directly or use utility functions like util.promisify."
+        },
+        "rubric": [
+          {
+            "criterion": "Recognizes that throwing inside an async callback escapes the promise executor scope",
+            "points": 4
+          },
+          {
+            "criterion": "Explains why the exception becomes an uncaught error rather than a rejected promise",
+            "points": 3
+          },
+          {
+            "criterion": "Provides the correct refactoring pattern using reject() or promisification",
+            "points": 3
+          }
+        ],
+        "commonMistakes": [
+          "Assuming any error thrown anywhere inside a Promise-returning function automatically triggers promise rejection.",
+          "Forgetting that node-style callbacks require explicit invocation of the rejection handler instead of throw statements."
+        ],
+        "interviewerFollowUps": [
+          "How does util.promisify handle edge cases where callbacks receive multiple non-error arguments?",
+          "What happens to the async stack trace when you mix traditional callback styles with modern async/await functions?"
+        ],
+        "interviewConnection": "This evaluates the candidate's mastery of the Promise constructor antipattern, callback bridging, and safe error conversion in asynchronous JavaScript architectures."
+      },
+      {
+        "schemaVersion": 1,
+        "key": "abort-signal-propagation-design",
+        "storyKey": "the-operation-fails-halfway",
+        "stageKey": "request-cancellation-design",
+        "order": 4,
+        "format": "written",
+        "patternKey": "nodejs-request-cancellation",
+        "topicKeys": ["errors-and-cancellation"],
+        "mechanismKeys": ["abort-signal", "timeout-budget", "resource-cleanup"],
+        "prompt": "Analyze the cancellation sequence diagram artifact below. Detail how an incoming HTTP disconnect or an internal timeout budget must propagate through the AbortController pattern to cancel active database queries and downstream HTTP fetches without leaking event listeners.",
+        "artifact": {
+          "kind": "config",
+          "title": "cancellation-sequence-diagram",
+          "content": "Client Request -> API Gateway (AbortController initiated) -> Ingestion Worker -> Database Pool Query / Downstream S3 Upload. Timeout: 5000ms. Disconnect trigger: 'abort' event fired."
+        },
+        "hints": [
+          "Examine how Node.js AbortController and AbortSignal coordinate cancellation across asynchronous boundaries.",
+          "Consider the necessity of removing event listeners attached to AbortSignal to avoid memory leaks during long-lived server lifecycles.",
+          "Detail how to merge a parent caller signal with an internal timeout using AbortSignal.any or manual timeout linkage."
+        ],
+        "answer": {
+          "concise": "Propagate AbortSignal through all downstream fetch and query calls, register cleanup handlers, and ensure event listeners are detached upon completion.",
+          "explanation": "When an HTTP connection drops or a timeout triggers, the AbortController fires an 'abort' event on its associated AbortSignal. Downstream dependencies like fetch and database drivers accept this signal to abort sockets and active queries immediately. Developers must ensure that any custom abort event listeners are removed via 'signal.removeEventListener' or 'signal.aborted' checks to prevent listener accumulation and memory leaks."
+        },
+        "rubric": [
+          {
+            "criterion": "Explains how the AbortController and AbortSignal mechanism propagates cancellation across asynchronous calls.",
+            "points": 4
+          },
+          {
+            "criterion": "Identifies the requirement for resource cleanup and listener removal to prevent memory leaks.",
+            "points": 3
+          },
+          {
+            "criterion": "Addresses how to combine multiple cancellation sources such as timeouts and client disconnects.",
+            "points": 3
+          }
+        ],
+        "commonMistakes": [
+          "Assuming that returning an error response to the client automatically terminates running background queries.",
+          "Forgetting to remove event listeners added to the AbortSignal, causing memory leaks in long-running Node.js processes."
+        ],
+        "interviewerFollowUps": [
+          "How would you combine an external caller's AbortSignal with an internal per-operation timeout signal in Node.js 22?",
+          "What happens to database connection pools if queries are abruptly aborted via AbortSignal?"
+        ],
+        "interviewConnection": "This question evaluates the candidate's understanding of cooperative cancellation in Node.js, ensuring server resources are reclaimed promptly when requests are abandoned."
+      },
+      {
+        "schemaVersion": 1,
+        "key": "heap-snapshot-event-listener-leak",
+        "storyKey": "the-operation-fails-halfway",
+        "stageKey": "resource-leak-investigation",
+        "order": 5,
+        "format": "artifact-diagnosis",
+        "patternKey": "nodejs-resource-leak-diagnosis",
+        "topicKeys": ["nodejs-resource-lifecycle"],
+        "mechanismKeys": ["heap-retention", "active-handles", "resource-cleanup"],
+        "prompt": "Analyze the attached heap snapshot summary and active handle report from our long-running ingestion service. Memory grows steadily by 50MB per hour until process termination. Identify the root cause of the resource leak and explain the retaining path demonstrated in the evidence.",
+        "artifact": {
+          "kind": "metrics",
+          "title": "Heap Snapshot and Active Handles Summary",
+          "content": "=== HEAP SNAPSHOT RETAINERS ===\nObject @10425 (constructor: EventEmitter, size: 64B)\n  - retains 124,500 objects of type Buffer (total size: 248MB)\n  - edge: [data] -> Closure @8912\n  - context: EventEmitter.on('chunkData', function(chunk) { globalBufferList.push(chunk); })\n=== ACTIVE HANDLES ===\n1. TTY (Stdin)\n2. TCPWrap (Outbound downstream pipeline connection, Persistent)\n3. Timeout (Interval timer @ 1000ms holding reference to EventEmitter @10425)"
+        },
+        "hints": [
+          "Examine the closure captured by the EventEmitter event listener registered on 'chunkData'.",
+          "Notice where the chunk is pushed and verify whether global references or unbounded arrays are cleared.",
+          "Check how the active timeout interval maintains a reference to the leaking EventEmitter instance."
+        ],
+        "answer": {
+          "concise": "An unbounded global array retains incoming chunk buffers captured by an EventEmitter closure.",
+          "explanation": "The heap snapshot shows an EventEmitter instance holding a closure that pushes every incoming chunk into a global buffer list without any bounds checking or cleanup logic. Coupled with a persistent interval timer, this creates a permanent retention path that prevents garbage collection and leaks memory continuously over time."
+        },
+        "rubric": [
+          {
+            "criterion": "Identifies the closure retaining buffers via the global array reference.",
+            "points": 4
+          },
+          {
+            "criterion": "Explains how the interval timer prevents garbage collection of the EventEmitter.",
+            "points": 3
+          },
+          {
+            "criterion": "Proposes a correct remediation involving bounded storage or explicit listener removal.",
+            "points": 3
+          }
+        ],
+        "commonMistakes": [
+          "Blaming V8 heap fragmentation or external buffer allocation without checking the retaining closure path.",
+          "Assuming that removing the interval timer alone will clean up the closure references in the global array."
+        ],
+        "interviewerFollowUps": [
+          "How would you modify this ingestion pattern to use streaming backpressure instead of buffering globally?",
+          "What metrics would you add to your APM tool to catch this type of closure retention before production deployment?"
+        ],
+        "interviewConnection": "This question tests the candidate's ability to diagnose memory leaks caused by unremoved event listeners and closures in long-running Node.js services."
+      },
+      {
+        "schemaVersion": 1,
+        "key": "stream-backpressure-debug-primary",
+        "storyKey": "the-operation-fails-halfway",
+        "stageKey": "stream-backpressure-debug",
+        "order": 6,
+        "format": "debug-repair",
+        "patternKey": "nodejs-stream-backpressure",
+        "topicKeys": ["nodejs-streams-and-io"],
+        "mechanismKeys": ["stream", "backpressure", "high-water-mark"],
+        "prompt": "The ingestion pipeline processes multi-gigabyte JSON log files through a custom Transform stream. Under a slow database destination, memory usage climbs continuously until the worker process terminates with out-of-memory errors. Diagnose and fix the stream pipeline in the artifact to correctly handle backpressure and prevent unbounded memory buffering.",
+        "artifact": {
+          "kind": "code",
+          "title": "stream-pipeline-code",
+          "content": "import { Transform } from 'node:stream';\n\nexport function processLogStream(inputStream, outputStream) {\n  const transformer = new Transform({\n    transform(chunk, encoding, callback) {\n      callback(null, chunk.toString().toUpperCase());\n    }\n  });\n\n  inputStream.on('data', (chunk) => {\n    transformer.write(chunk);\n  });\n  transformer.pipe(outputStream);\n}"
+        },
+        "hints": [
+          "Examine how data flows between the read stream, the custom transform stream, and the write stream. Notice manual event handlers combined with .pipe() calls.",
+          "Check which stream emits the 'drain' event when its internal buffer clears. Is it the transformer or the writeStream?",
+          "Refactor the pipeline using pipeline() from node:stream/promises to handle backpressure and resource cleanup automatically without manual pause and resume loops."
+        ],
+        "answer": {
+          "concise": "Replace manual data/write event wiring with stream.pipeline to automatically propagate backpressure and handle cleanup.",
+          "explanation": "The original code attaches a drain listener to the transformer instead of the destination writeStream, and manually manages pause/resume while mixing manual piping with .pipe(). Using pipeline(readStream, transformer, writeStream) ensures backpressure is correctly respected throughout the chain and cleans up all resources on error or completion."
+        },
+        "rubric": [
+          {
+            "criterion": "Identifies that backpressure signal and drain event must be tied to the destination write stream rather than intermediate transforms.",
+            "points": 4
+          },
+          {
+            "criterion": "Replaces manual event handlers and mixed piping with node:stream pipeline composition.",
+            "points": 4
+          },
+          {
+            "criterion": "Ensures proper error handling and resource cleanup on stream failure.",
+            "points": 2
+          }
+        ],
+        "commonMistakes": [
+          "Listening for 'drain' on the transform stream instead of the underlying write stream.",
+          "Accumulating chunks in an array or string buffer inside the transform before pushing.",
+          "Forgetting to catch pipeline errors which leads to unhandled rejections."
+        ],
+        "interviewerFollowUps": [
+          "How does objectMode affect highWaterMark behavior and memory consumption in transform streams?",
+          "What happens to open file descriptors if the read stream throws an error midway through execution?"
+        ],
+        "interviewConnection": "This question tests the candidate's mastery of Node.js stream semantics, specifically how backpressure flows across piping boundaries and why mixing manual event listeners with .pipe() often breaks flow control.",
+        "starterCode": "import { Transform } from 'node:stream';\n\nexport function processLogStream(inputStream, outputStream) {\n  // TODO: compose the streams so pressure, errors, and cleanup propagate.\n}",
+        "referenceSolution": "import { Transform } from 'node:stream';\nimport { pipeline } from 'node:stream/promises';\n\nexport async function processLogStream(inputStream, outputStream) {\n  const transformer = new Transform({\n    transform(chunk, encoding, callback) {\n      try {\n        callback(null, chunk.toString().toUpperCase());\n      } catch (error) {\n        callback(error);\n      }\n    }\n  });\n\n  await pipeline(inputStream, transformer, outputStream);\n}",
+        "publicTests": [
+          {
+            "name": "Export check",
+            "input": "processLogStream",
+            "expected": "function",
+            "testCode": "return typeof solution.processLogStream === 'function';"
+          }
+        ],
+        "hiddenTests": [
+          {
+            "name": "Pipeline execution",
+            "input": "test-execution",
+            "expected": "success",
+            "testCode": "const { Readable, Writable } = await import('node:stream'); let output = ''; const sink = new Writable({ write(chunk, encoding, callback) { output += chunk.toString(); callback(); } }); await solution.processLogStream(Readable.from(['trail', 'grad']), sink); return output === 'TRAILGRAD';"
+          }
+        ],
+        "wrongSolutions": [
+          {
+            "name": "pipes without applying the repair",
+            "code": "export async function processLogStream(inputStream, outputStream) { inputStream.pipe(outputStream); }"
+          }
+        ],
+        "runnerContract": {
+          "language": "javascript",
+          "runtime": "nodejs",
+          "runtimeVersion": "22",
+          "entrypoint": "solution.mjs",
+          "timeoutMs": 1000,
+          "memoryMb": 64,
+          "networkAccess": false
+        }
+      },
+      {
+        "schemaVersion": 1,
+        "key": "concurrency-limiter-batch-processor",
+        "storyKey": "the-operation-fails-halfway",
+        "stageKey": "promise-concurrency-implementation",
+        "order": 7,
+        "format": "micro-implementation",
+        "patternKey": "javascript-promise-concurrency",
+        "topicKeys": ["async-scheduling"],
+        "mechanismKeys": ["promise-concurrency", "fail-fast", "concurrency-limit"],
+        "prompt": "During peak ingestion under the concurrency limiter module stage, the pipeline attempts to push hundreds of items concurrently to a downstream microservice, causing HTTP 429 rate limit exceptions and cascading failures. Implement a robust pool function that processes an array of tasks with a strict concurrency limit while collecting both fulfilled results and rejections in exact input order.",
+        "artifact": {
+          "kind": "code",
+          "title": "concurrency-limiter-module",
+          "content": "export async function pool(limit, tasks, fn) {throw new Error('Unimplemented');}"
+        },
+        "hints": [
+          "Consider maintaining a running index pointer alongside an active worker counter rather than slicing arrays into batches.",
+          "Ensure that promise resolution handles individual task rejections cleanly without prematurely rejecting the entire queue unless fail-fast is desired.",
+          "Preserve the exact input index association when mapping settled results back to the original items."
+        ],
+        "answer": {
+          "concise": "Implement a pool worker index loop that bounds active promises to the specified concurrency limit.",
+          "explanation": "A robust concurrency limiter maintains a pointer to the next task to execute and an active promise counter. As each task settles, the next task in the array is immediately kicked off until all items are completed, ensuring ordered result mapping."
+        },
+        "rubric": [
+          {
+            "criterion": "Respects strict concurrency limit without spawning unnecessary idle workers",
+            "points": 4
+          },
+          {
+            "criterion": "Preserves exact input order in the final returned results array",
+            "points": 4
+          },
+          {
+            "criterion": "Handles task rejections appropriately without unhandled rejection crashes",
+            "points": 2
+          }
+        ],
+        "commonMistakes": [
+          "Using Promise.all directly on the entire input array, which ignores the concurrency limit entirely.",
+          "Failing to preserve the correct output index when asynchronous tasks finish out of order."
+        ],
+        "interviewerFollowUps": [
+          "How would you modify this pool to support an immediate fail-fast mode if any single task throws an error?",
+          "What changes are required if tasks need to support automatic retries with exponential backoff and jitter?"
+        ],
+        "interviewConnection": "This micro-implementation tests the fundamental systems design pattern of bounded resource concurrency and asynchronous task scheduling under load.",
+        "starterCode": "export async function pool(limit, items, fn) {\n  // Implement bounded concurrency pool here\n}",
+        "referenceSolution": "export async function pool(limit, items, fn) {\n  let index = 0;\n  const results = new Array(items.length);\n  const workers = Array(Math.min(limit, items.length)).fill(0).map(async () => {\n    while (index < items.length) {\n      const currentIndex = index++;\n      try {\n        results[currentIndex] = { status: 'fulfilled', value: await fn(items[currentIndex]) };\n      } catch (err) {\n        results[currentIndex] = { status: 'rejected', reason: err };\n      }\n    }\n  });\n  await Promise.all(workers);\n  return results;\n}",
+        "publicTests": [
+          {
+            "name": "basic execution with limit",
+            "input": "JSON.stringify({ limit: 2, items: [1, 2, 3, 4] })",
+            "expected": "JSON.stringify([{status:'fulfilled',value:2},{status:'fulfilled',value:4},{status:'fulfilled',value:6},{status:'fulfilled',value:8}])",
+            "testCode": "let active = 0; let peak = 0; const result = await solution.pool(2, [1, 2, 3, 4], async (value) => { active += 1; peak = Math.max(peak, active); await new Promise((resolve) => setTimeout(resolve, 5)); active -= 1; return value * 2; }); return peak <= 2 && JSON.stringify(result) === JSON.stringify([{ status: 'fulfilled', value: 2 }, { status: 'fulfilled', value: 4 }, { status: 'fulfilled', value: 6 }, { status: 'fulfilled', value: 8 }]);"
+          }
+        ],
+        "hiddenTests": [
+          {
+            "name": "handles rejections without crashing",
+            "input": "JSON.stringify({ limit: 1, items: [1, 2] })",
+            "expected": "JSON.stringify([{status:'fulfilled',value:2},{status:'rejected',reason:'fail'}])",
+            "testCode": "const result = await solution.pool(1, [1, 2], async (value) => { if (value === 2) throw new Error('fail'); return value * 2; }); return result[0]?.status === 'fulfilled' && result[0]?.value === 2 && result[1]?.status === 'rejected' && result[1]?.reason?.message === 'fail';"
+          }
+        ],
+        "wrongSolutions": [
+          {
+            "name": "unbounded promise all",
+            "code": "export async function pool(limit, items, fn) { return Promise.all(items.map(async (item) => ({ status: 'fulfilled', value: await fn(item) }))); }"
+          }
+        ],
+        "runnerContract": {
+          "language": "javascript",
+          "runtime": "nodejs",
+          "runtimeVersion": "22",
+          "entrypoint": "solution.mjs",
+          "timeoutMs": 1000,
+          "memoryMb": 64,
+          "networkAccess": false
+        }
+      },
+      {
+        "schemaVersion": 1,
+        "key": "event-loop-health-defense-written",
+        "storyKey": "the-operation-fails-halfway",
+        "stageKey": "event-loop-health-defense",
+        "order": 8,
+        "format": "spoken",
+        "patternKey": "nodejs-event-loop-blocking",
+        "topicKeys": ["nodejs-event-loop-health"],
+        "mechanismKeys": ["event-loop-lag", "cpu-bound-work", "libuv"],
+        "prompt": "Analyze the provided event loop lag mitigation plan. Explain why relying solely on setImmediate chunking is insufficient for large-scale cryptographic validation and detail how you would implement a robust worker pool architecture.",
+        "artifact": {
+          "kind": "metrics",
+          "title": "event-loop-lag-mitigation-plan",
+          "content": "Metric: Event Loop Lag Histogram\np50: 2ms\np95: 15ms\np99: 3800ms\nTrigger: Concurrent chunk processing of 50MB payloads requiring sha256 checksum verification and regex parsing."
+        },
+        "hints": [
+          "Consider how chunking tasks via setImmediate still consumes time on the main thread.",
+          "Evaluate the memory and CPU contention when splitting massive payloads into tiny slices.",
+          "Discuss message passing overhead and thread initialization costs in Node.js."
+        ],
+        "answer": {
+          "concise": "Chunking via setImmediate reduces maximum block time but still consumes significant main thread CPU cycles, whereas Worker Threads provide complete isolation.",
+          "explanation": "While breaking work up with setImmediate allows I/O events to interleave, the total CPU time spent on the main thread remains identical. For intensive CPU-bound tasks like large cryptographic hashing and regex parsing, Worker Threads or external services are required to prevent tail latency degradation."
+        },
+        "rubric": [
+          {
+            "criterion": "Explains the limitations of cooperative scheduling (setImmediate chunking) for heavy CPU tasks.",
+            "points": 4
+          },
+          {
+            "criterion": "Proposes a concrete Worker Thread pooling or external offloading strategy.",
+            "points": 4
+          },
+          {
+            "criterion": "Addresses serialization and memory overhead considerations.",
+            "points": 2
+          }
+        ],
+        "commonMistakes": [
+          "Failing to account for cumulative CPU time when chunking synchronous loops.",
+          "Ignoring inter-thread communication costs when transferring large buffers."
+        ],
+        "interviewerFollowUps": [
+          "What metrics would you monitor in production to alert on impending event loop starvation?",
+          "How do you gracefully shutdown a worker pool during rolling deployments?"
+        ],
+        "interviewConnection": "This evaluates architectural reasoning regarding scalability, resource isolation, and trade-offs between cooperative and preemptive multitasking in Node.js."
+      }
+    ]
+  },
+  "questionBlockReview": {
+    "criticVersion": 1,
+    "target": "question-block",
+    "approved": true,
+    "verdicts": [
+      {
+        "criticVersion": 1,
+        "target": "question-block",
+        "dimension": "technical-correctness",
+        "verdict": "pass",
+        "score": 95,
+        "confidence": "high",
+        "summary": "The technical asset is thoroughly accurate, aligns perfectly with the Node.js runtime and source metadata patterns, and contains no blocking technical flaws or invented mechanisms.",
+        "evidenceChecks": [
+          {
+            "claim": "Module boundary resolution rules align with Node.js package export shorthand vs conditional mapping semantics.",
+            "evidence": "Source pattern nodejs-commonjs-esm-boundary and Node.js documentation on exports map formatting.",
+            "passed": true
+          },
+          {
+            "claim": "Event loop ordering prediction correctly handles timer phases and microtask flushing in Node.js.",
+            "evidence": "Source pattern javascript-event-loop-order and official nodejs-event-loop technical documentation.",
+            "passed": true
+          },
+          {
+            "claim": "Async error propagation correctly diagnoses that throwing inside a callback escapes the promise constructor executor scope.",
+            "evidence": "Source pattern javascript-async-error-propagation and MDN async function execution models.",
+            "passed": true
+          },
+          {
+            "claim": "Request cancellation via AbortSignal correctly accounts for listener cleanups and timeout propagation.",
+            "evidence": "Source pattern nodejs-request-cancellation and nodejs-abort-controller specification.",
+            "passed": true
+          },
+          {
+            "claim": "Stream backpressure repair properly replaces manual listener mixes with stream/promises pipeline composition.",
+            "evidence": "Source pattern nodejs-stream-backpressure and official nodejs-stream-backpressuring guide.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      },
+      {
+        "criticVersion": 1,
+        "target": "question-block",
+        "dimension": "interview-relevance",
+        "verdict": "pass",
+        "score": 95,
+        "confidence": "high",
+        "summary": "The question block accurately implements interview patterns for senior Node.js backend evaluation, maintaining strict fidelity to source metadata, pattern catalogues, and realistic systems engineering problems.",
+        "evidenceChecks": [
+          {
+            "claim": "Question 1 tests CommonJS and ESM package boundary interoperability per pattern spec.",
+            "evidence": "Pattern 'nodejs-commonjs-esm-boundary' requires evaluating package exports and module loading rules.",
+            "passed": true
+          },
+          {
+            "claim": "Question 2 properly tests event loop phase interleaving and task ordering.",
+            "evidence": "Pattern 'javascript-event-loop-order' expects exact runtime prediction of microtasks, timers, and node scheduling phases.",
+            "passed": true
+          },
+          {
+            "claim": "Question 3 addresses async error propagation and promise constructor anti-patterns.",
+            "evidence": "Pattern 'javascript-async-error-propagation' targets broken asynchronous error boundaries and missing Promise rejections.",
+            "passed": true
+          },
+          {
+            "claim": "Question 4 covers request cancellation using AbortController and listener cleanup.",
+            "evidence": "Pattern 'nodejs-request-cancellation' requires propagating abort signals and preventing listener memory leaks.",
+            "passed": true
+          },
+          {
+            "claim": "Question 5 investigates memory retention and closures via heap diagnostics.",
+            "evidence": "Pattern 'nodejs-resource-leak-diagnosis' checks retaining paths, active handles, and garbage collection blocks.",
+            "passed": true
+          },
+          {
+            "claim": "Question 6 repairs stream backpressure using pipeline composition.",
+            "evidence": "Pattern 'nodejs-stream-backpressure' requires resolving memory growth under slow consumers via proper writable signaling and pipeline cleanup.",
+            "passed": true
+          },
+          {
+            "claim": "Question 7 implements bounded promise concurrency with result ordering.",
+            "evidence": "Pattern 'javascript-promise-concurrency' specifies concurrency-limited batch processing with exact input-to-result mapping.",
+            "passed": true
+          },
+          {
+            "claim": "Question 8 addresses event loop blocking and CPU-bound offloading.",
+            "evidence": "Pattern 'nodejs-event-loop-blocking' evaluates tail latency degradation and worker thread isolation strategies.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      },
+      {
+        "criticVersion": 1,
+        "target": "question-block",
+        "dimension": "story-continuity",
+        "verdict": "pass",
+        "score": 95,
+        "confidence": "high",
+        "summary": "The question block maintains flawless story continuity across all 8 stages. Each stage correctly evolves from the incident premise of cascading ingestion failures, streaming bottlenecks, and unhandled asynchronous errors, referencing the precise prior artifact as required by the schema boundary.",
+        "evidenceChecks": [
+          {
+            "claim": "Stage 1 utilizes the package export manifest artifact to validate module resolution errors.",
+            "evidence": "Artifact titled 'package.json export manifest configuration' in question 1 matches stage 1 dependency.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 2 utilizes the scheduler trace output / ingestion worker log capture.",
+            "evidence": "Artifact titled 'Ingestion Worker Log Capture' in question 2 matches stage 2 dependency.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 3 uses the error handling patch artifact.",
+            "evidence": "Artifact titled 'error-handling-patch-v2.mjs' in question 3 matches stage 3 dependency.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 4 uses the cancellation sequence diagram artifact.",
+            "evidence": "Artifact titled 'cancellation-sequence-diagram' in question 4 matches stage 4 dependency.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 5 uses the heap snapshot report artifact.",
+            "evidence": "Artifact titled 'Heap Snapshot and Active Handles Summary' in question 5 matches stage 5 dependency.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 6 uses the stream pipeline code artifact.",
+            "evidence": "Artifact titled 'stream-pipeline-code' in question 6 matches stage 6 dependency.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 7 uses the concurrency limiter module artifact.",
+            "evidence": "Artifact titled 'concurrency-limiter-module' in question 7 matches stage 7 dependency.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 8 uses the event loop lag mitigation plan artifact.",
+            "evidence": "Artifact titled 'event-loop-lag-mitigation-plan' in question 8 matches stage 8 dependency.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      },
+      {
+        "criticVersion": 1,
+        "target": "question-block",
+        "dimension": "answer-quality",
+        "verdict": "pass",
+        "score": 95,
+        "confidence": "high",
+        "summary": "The question block perfectly aligns with the generated story context and source catalogue patterns. All technical assertions are accurate, questions contain progressive hints, rubrics are precise and non-trivial, and reference solutions correctly utilize robust Node.js primitives such as stream pipeline composition and bounded concurrency loops.",
+        "evidenceChecks": [
+          {
+            "claim": "The stream backpressure question correctly addresses the use of node:stream/promises pipeline composition.",
+            "evidence": "Reference solution uses import { pipeline } from 'node:stream/promises'; to manage backpressure and resource cleanup automatically.",
+            "passed": true
+          },
+          {
+            "claim": "The promise concurrency limiter correctly maintains index pointers and bounds active tasks.",
+            "evidence": "Reference solution implements an active worker pool over tasks while keeping exact input order in settled results.",
+            "passed": true
+          },
+          {
+            "claim": "The CommonJS/ESM boundary check accurately identifies conditional export requirements.",
+            "evidence": "The MCQ prompt and explanation focus on subpath export definitions and shorthand string expansion in package.json.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      },
+      {
+        "criticVersion": 1,
+        "target": "question-block",
+        "dimension": "difficulty",
+        "verdict": "pass",
+        "score": 95,
+        "confidence": "high",
+        "summary": "The difficulty and workload of the question block are exceptionally well-calibrated for a senior backend engineer assessment. The 8 stages appropriately sequence foundational diagnostics (CommonJS/ESM, event-loop ordering, async error propagation) to advanced architectural topics (cancellation signaling, heap retention paths, stream backpressure, concurrency throttling, and event loop blocking). All patterns, hints, and rubrics align perfectly with the source metadata and catalogue requirements.",
+        "evidenceChecks": [
+          {
+            "claim": "Stage 1 tests CommonJS/ESM boundary resolution correctly according to nodejs-commonjs-esm-boundary pattern.",
+            "evidence": "Pattern key 'nodejs-commonjs-esm-boundary' matches sourceContext definition and tests package.exports resolution.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 2 tests precise event-loop phase ordering following javascript-event-loop-order pattern.",
+            "evidence": "Stage 2 presents a predict-explain format matching the pattern specification for timers, nextTick, and setImmediate.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 6 provides a robust debug-repair implementation for Node.js streams backpressure matching nodejs-stream-backpressure pattern.",
+            "evidence": "Stage 6 uses node:stream/promises pipeline and Transform correctly as required by source patterns.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      }
+    ]
+  },
+  "evaluation": {
+    "goldSetVersion": 1,
+    "caseKey": "operation-fails-halfway-standard-benchmark",
+    "qualityPassed": true,
+    "releaseEligible": true,
+    "humanReviewStatus": "approved",
+    "totalScore": 100,
+    "metrics": [
+      {
+        "key": "contract-validity",
+        "earned": 15,
+        "available": 15,
+        "findings": []
+      },
+      {
+        "key": "stage-blueprint",
+        "earned": 15,
+        "available": 15,
+        "findings": []
+      },
+      {
+        "key": "coverage",
+        "earned": 15,
+        "available": 15,
+        "findings": []
+      },
+      {
+        "key": "story-quality",
+        "earned": 10,
+        "available": 10,
+        "findings": []
+      },
+      {
+        "key": "question-integrity",
+        "earned": 20,
+        "available": 20,
+        "findings": []
+      },
+      {
+        "key": "critic-approval",
+        "earned": 15,
+        "available": 15,
+        "findings": []
+      },
+      {
+        "key": "public-safety",
+        "earned": 10,
+        "available": 10,
+        "findings": []
+      }
+    ],
+    "hardFailures": []
+  },
+  "humanReview": {
+    "status": "approved",
+    "reviewerId": "nikhilverma",
+    "reviewedAt": "2026-09-07",
+    "notes": [
+      "Approved by the project owner after reviewing every prompt, artifact, hint, answer, rubric, test, interviewer follow-up, and production claim."
+    ]
+  }
+}

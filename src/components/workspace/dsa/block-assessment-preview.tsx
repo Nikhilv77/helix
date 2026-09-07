@@ -7,6 +7,7 @@ import { ArrowRight, Check, ChevronDown, Loader2, Play, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
+import { DARK_PORTRAIT_PLACEHOLDER } from "@/lib/avatars/portrait-placeholder";
 import type { DsaBlockHistoryItem } from "@/server/dsa/dsa-block-history.service";
 
 const METRICS = [
@@ -109,7 +110,10 @@ export function BlockAssessmentPreview({
                 fill
                 sizes="(min-width: 1024px) 184px, (min-width: 640px) 152px, 100vw"
                 quality={95}
-                className="object-cover object-[center_25%] opacity-95 sm:origin-top sm:scale-[1.65] sm:object-top"
+                priority
+                placeholder="blur"
+                blurDataURL={DARK_PORTRAIT_PLACEHOLDER}
+                className="bg-[#08090a] object-cover object-[center_25%] opacity-95 sm:origin-top sm:scale-[1.65] sm:object-top"
               />
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,transparent_32%,rgba(4,5,6,0.18)_64%,rgba(4,5,6,0.72)_100%)]" />
               <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_58%,rgba(8,9,10,0.72)_100%)] sm:bg-[linear-gradient(90deg,transparent_58%,rgba(14,16,17,0.9)_100%),linear-gradient(180deg,transparent_62%,rgba(8,9,10,0.68)_100%)]" />
@@ -366,7 +370,9 @@ function CompletedAssessment({
               fill
               sizes="56px"
               quality={90}
-              className="scale-125 object-cover object-[center_22%]"
+              placeholder="blur"
+              blurDataURL={DARK_PORTRAIT_PLACEHOLDER}
+              className="scale-125 bg-[#08090a] object-cover object-[center_22%]"
             />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_55%,rgba(8,9,10,0.58)_100%)]" />
             <div className="absolute inset-y-2 right-0 w-px bg-[linear-gradient(180deg,transparent,var(--workspace-accent),transparent)] opacity-60" />
@@ -545,7 +551,9 @@ function AssessmentNotice({
           alt=""
           width={56}
           height={56}
-          className="h-14 w-14 shrink-0 rounded-2xl object-cover object-top"
+          placeholder="blur"
+          blurDataURL={DARK_PORTRAIT_PLACEHOLDER}
+          className="h-14 w-14 shrink-0 rounded-2xl bg-[#08090a] object-cover object-top"
         />
         <div className="min-w-0 flex-1">
           <p className="text-[16px] font-semibold text-cream">

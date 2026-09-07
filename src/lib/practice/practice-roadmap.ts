@@ -35,6 +35,26 @@ export interface PracticeRoadmapSession extends ProjectedPracticeSession {
   href: string | null;
 }
 
+/** Transient story-driven card data; progress remains owned by Core Technical models. */
+export interface CoreTechnicalPracticeEntry {
+  key: "core-technical";
+  order: number;
+  title: string;
+  purpose: string;
+  covers: string[];
+  difficulty: string | null;
+  durationMinutes: number | null;
+  availability: "available";
+  status: PracticeProgressStatus;
+  totalQuestions: 8;
+  attemptedQuestions: number;
+  completedQuestions: number;
+  progressPercent: number;
+  href: "/practice/core-technical";
+}
+
+export type PracticeDisplaySession = PracticeRoadmapSession | CoreTechnicalPracticeEntry;
+
 export interface PracticeRoadmapHome {
   roadmapId: string;
   title: string;

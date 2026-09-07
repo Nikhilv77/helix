@@ -14,6 +14,7 @@ import {
 } from "./onboarding-data";
 import { BlueprintBackdrop } from "../shared/onboarding-ui";
 import { LevelStep } from "../steps/level-step";
+import { RoleStep } from "../steps/role-step";
 import { DEFAULT_TEACHER_ID, TeacherStep } from "../steps/teacher-step";
 import { ResumeStep } from "../steps/resume-upload-step";
 import { ResumeEvidenceStep } from "../resume-review/resume-evidence-step";
@@ -37,7 +38,7 @@ export function OnboardingFlow({
   embedded = false,
   // Let the dev preview harness open a step directly, with a stand-in
   // extraction for the steps that only exist after an upload. Production
-  // passes neither, so the flow still always begins at the experience picker with
+  // passes neither, so the flow still always begins at the teacher picker with
   // no result.
   initialStep = "teacher",
   initialResult = null,
@@ -66,7 +67,7 @@ export function OnboardingFlow({
   const uploadRunRef = useRef(0);
   const [step, setStep] = useState<Step>(initialStep);
   const [teacherId, setTeacherId] = useState<string | null>(initialTeacherId);
-  const [role] = useState<Role>(initialRole ?? "fullstack");
+  const [role, setRole] = useState<Role | null>(initialRole ?? null);
   const [level, setLevel] = useState<Level | null>(initialLevel ?? null);
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -297,7 +298,7 @@ export function OnboardingFlow({
               </button>
             ) : null}
             <div
-              className="grid w-36 grid-cols-6 gap-1.5 sm:w-60 sm:gap-2"
+              className="grid w-36 grid-cols-7 gap-1.5 sm:w-60 sm:gap-2"
               aria-label={`Onboarding step ${stepIndex(step) + 1} of ${onboardingSteps.length}: ${onboardingSteps[stepIndex(step)]?.label}`}
             >
               {onboardingSteps.map((item, index) => (
@@ -324,8 +325,11 @@ export function OnboardingFlow({
               <TeacherStep
                 selected={teacherId}
                 onSelect={setTeacherId}
-                onContinue={() => setStep("level")}
+                onContinue={() => setStep("role")}
               />
+            ) : null}
+            {step === "role" ? (
+              <RoleStep selected={role} onSelect={setRole} onContinue={() => setStep("level")} />
             ) : null}
             {step === "level" ? (
               <LevelStep
@@ -363,7 +367,7 @@ export function OnboardingFlow({
                   setRetryingAnalysis(false);
                   if (fileInput.current) fileInput.current.value = "";
                   if (replacingResume) cancelReplacement();
-                  else setStep("level");
+                  else setStep("role");
                 }}
               />
             ) : null}

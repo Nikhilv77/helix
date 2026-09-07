@@ -8,6 +8,7 @@ import { DashboardSkeleton } from "@/components/workspace/dashboard/dashboard-sk
 import { MayaWelcomeLoading } from "@/components/workspace/dashboard/maya-welcome-loading";
 import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
 import { buildDashboardOverview } from "@/lib/dashboard/dashboard-overview";
+import { mergeDashboardPractice } from "@/lib/practice/core-technical/workspace-analytics";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared/seo";
 import type { CandidateProfile } from "@/lib/shared/types";
 import { getAppContainer } from "@/server/app-container";
@@ -101,28 +102,30 @@ async function DashboardOverviewHome({
 }) {
   const ownerId = authenticatedOwnerId(userId);
   const container = getAppContainer();
-  const [reports, practice, trailmate] = await Promise.all([
-    container.interviewService.reportsOverview(ownerId).catch(() => null),
+  const now = Date.now();
+  const coreRoundsPromise = container.coreTechnicalWorkspaceAnalyticsService
+    .rounds(ownerId)
+    .catch(() => ({ history: [], reports: [] }));
+  const [reports, practice, corePractice, trailmate] = await Promise.all([
+    coreRoundsPromise.then((core) =>
+      container.interviewService.reportsOverview(ownerId, 50, now, core.reports).catch(() => null)
+    ),
     container.progressService.dashboard(ownerId).catch(() => null),
+    container.coreTechnicalWorkspaceAnalyticsService.practice(ownerId, 126).catch(() => null),
     container.helpHistoryService.dashboardOverview(ownerId).catch(() => null)
   ]);
+  const combinedPractice = corePractice ? mergeDashboardPractice(practice, corePractice) : practice;
 
   return (
     <Dashboard
       profile={profile}
-      overviewData={buildDashboardOverview(profile, reports, practice, Date.now(), trailmate)}
+      overviewData={buildDashboardOverview(profile, reports, combinedPractice, now, trailmate)}
     />
   );
 }
 
 function MayaWelcomeHome({ profile, blocking }: { profile: CandidateProfile; blocking: boolean }) {
-  return (
-    <Dashboard
-      profile={profile}
-      showMayaWelcome
-      welcomeBlocking={blocking}
-    />
-  );
+  return <Dashboard profile={profile} showMayaWelcome welcomeBlocking={blocking} />;
 }
 
 function SoftwareJsonLd() {

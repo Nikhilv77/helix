@@ -51,6 +51,9 @@ export function interviewRoadmapSessions({
 }
 
 export function roadmapSessionHref(session: InterviewRoadmapSession): string {
+  if (session.kind === "core-technical" && session.resumeSessionId?.startsWith("core-technical:")) {
+    return "/practice/core-technical";
+  }
   if (session.resumeSessionId) {
     return `/interview/voice?session=${encodeURIComponent(session.resumeSessionId)}`;
   }
@@ -134,8 +137,7 @@ function dsaRoadmapSession(
   const latest = findLatestSession(
     history,
     (session) =>
-      session.setup.templateId === "dsa" ||
-      session.setup.templateTitle === "DSA practice interview"
+      session.setup.templateId === "dsa" || session.setup.templateTitle === "DSA practice interview"
   );
   const progress = sessionProgress(latest, latest?.questionCount ?? 3);
   const titleSuffix = problemSolvingBlueprint.title.split("·").slice(1).join("·").trim();
@@ -197,15 +199,15 @@ function personalizedBlueprintSession(
   );
   const belongsToStableSlot = (session: InterviewHistoryItem) =>
     session.setup.templateId === blueprint.id ||
-    session.setup.personalizedBlueprint?.kind === blueprint.kind;
+    session.setup.personalizedBlueprint?.kind === blueprint.kind ||
+    (blueprint.kind === "core-technical" && session.setup.templateId === "core-technical");
   const latestActive = findLatestSession(
     history,
     (session) => belongsToStableSlot(session) && session.status === "in_progress"
   );
   const completedCurrentBlueprint = findLatestSession(
     history,
-    (session) =>
-      session.setup.templateId === blueprint.id && session.status === "completed"
+    (session) => session.setup.templateId === blueprint.id && session.status === "completed"
   );
   const latestCompletedSlot = findLatestSession(
     history,
@@ -216,8 +218,8 @@ function personalizedBlueprintSession(
     latestActive ?? completedCurrentBlueprint ?? latestCompletedSlot ?? latestSlotAttempt;
   const updatedPracticeAvailable = Boolean(
     latestCompletedSlot &&
-      latestCompletedSlot.setup.templateId !== blueprint.id &&
-      !completedCurrentBlueprint
+    latestCompletedSlot.setup.templateId !== blueprint.id &&
+    !completedCurrentBlueprint
   );
 
   return {

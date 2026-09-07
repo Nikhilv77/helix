@@ -4,7 +4,7 @@ import { Logger } from "../../common/logger";
 import { isRecord } from "../../common/utils/is-record";
 import { AppConfigService } from "../../config/app-config.service";
 import { AiProviderException } from "../ai-provider.exception";
-import { toStrictJsonSchema } from "../strict-json-schema";
+import { toPrunedJsonSchema } from "../strict-json-schema";
 import type {
   GenerateStructuredRequest,
   SystemDesignerAIProvider
@@ -31,7 +31,7 @@ const convertZodToJsonSchema = zodToJsonSchema as (
  * back.
  */
 export function toGeminiResponseSchema(schema: unknown): unknown {
-  return toStrictJsonSchema(convertZodToJsonSchema(schema, { $refStrategy: "none" }));
+  return toPrunedJsonSchema(convertZodToJsonSchema(schema, { $refStrategy: "none" }));
 }
 
 export class GeminiProvider implements SystemDesignerAIProvider {
@@ -264,7 +264,9 @@ export class GeminiProvider implements SystemDesignerAIProvider {
       message,
       provider: PROVIDER_NAME,
       operation,
-      retryable: false,
+      // The provider accepted the response schema but failed to satisfy it for
+      // this sample. A fresh generation (or another provider) can recover.
+      retryable: true,
       cause
     });
   }

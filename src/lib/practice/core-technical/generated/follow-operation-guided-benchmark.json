@@ -1,0 +1,1065 @@
+{
+  "goldSetVersion": 1,
+  "caseKey": "follow-operation-guided-benchmark",
+  "generatedAt": "2026-09-06T16:41:25.241Z",
+  "story": {
+    "schemaVersion": 1,
+    "key": "follow-the-operation",
+    "title": "Follow the operation",
+    "premise": "A backend engineer working on Node.js services must trace complex asynchronous operations, variable references, and resource lifecycles during an investigation of production stalls and silent failures.",
+    "incident": "During peak traffic, a core order-processing service experiences intermittent memory creep, unpredictable callback ordering, and unhandled promise rejections that evade standard tests.",
+    "candidateRole": "As a backend engineer, you own the reliability, concurrency control, and asynchronous correctness of critical Node.js services.",
+    "primaryTopicKey": "async-scheduling",
+    "secondaryTopicKeys": [
+      "javascript-values-and-mutation",
+      "javascript-scope-and-closures",
+      "errors-and-cancellation"
+    ],
+    "mechanismKeys": [
+      "reference-identity",
+      "event-loop",
+      "lexical-scope",
+      "promise-rejection",
+      "fake-time",
+      "commonjs",
+      "stream",
+      "abort-signal"
+    ],
+    "difficulty": "guided",
+    "prerequisiteTopicKeys": [],
+    "expectedMinutes": 45,
+    "forbiddenTopicKeys": [],
+    "realismAnchors": [
+      "The scenario reflects real production diagnostics where async timing issues are obscured by high traffic loads.",
+      "Engineers must distinguish object reference mutation from deliberate deep copies to avoid subtle state corruption.",
+      "Error boundaries must preserve upstream context without masking underlying operational failures.",
+      "Resource cleanups and signal cancellations must be explicitly owned to prevent dangling handles in tests."
+    ],
+    "targetFitExplanation": "Tests essential Node.js and JavaScript fundamentals under realistic concurrency and error-handling conditions.",
+    "coverageExplanation": "Covers object identity, event-loop ordering, closures, error propagation, deterministic testing, module boundaries, streams, and request cancellation.",
+    "stages": [
+      {
+        "order": 1,
+        "key": "trace-identity-mutation",
+        "title": "Trace identity, copying, and nested mutation",
+        "format": "mcq",
+        "patternKey": "javascript-identity-mutation-copy",
+        "objective": "Identify how reference assignment and shallow copies affect nested object state in a configuration parser.",
+        "artifactKey": "config-parser-artifact",
+        "storyDependency": "Initial incident report regarding incorrect configuration state propagation."
+      },
+      {
+        "order": 2,
+        "key": "predict-event-loop",
+        "title": "Predict event-loop ordering",
+        "format": "predict-explain",
+        "patternKey": "javascript-event-loop-order",
+        "objective": "Explain the exact execution sequence of microtasks, timers, and promise resolutions during an async workflow.",
+        "artifactKey": "async-scheduler-log",
+        "storyDependency": "config-parser-artifact confirming configuration load sequencing."
+      },
+      {
+        "order": 3,
+        "key": "diagnose-closure",
+        "title": "Explain closure state and retention",
+        "format": "written",
+        "patternKey": "javascript-closure-lifetime",
+        "objective": "Document how a callback factory retains captured variables and causes memory retention across requests.",
+        "artifactKey": "closure-retained-state",
+        "storyDependency": "async-scheduler-log revealing long-lived callback references."
+      },
+      {
+        "order": 4,
+        "key": "preserve-async-errors",
+        "title": "Preserve errors across async boundaries",
+        "format": "spoken",
+        "patternKey": "javascript-async-error-propagation",
+        "objective": "Explain how unhandled promise rejections escape local try-catch blocks and how to establish recovery boundaries.",
+        "artifactKey": "error-trace-report",
+        "storyDependency": "closure-retained-state pointing to unhandled asynchronous failures."
+      },
+      {
+        "order": 5,
+        "key": "deterministic-async-test",
+        "title": "Make an async test deterministic",
+        "format": "artifact-diagnosis",
+        "patternKey": "nodejs-deterministic-async-testing",
+        "objective": "Diagnose flakiness in an asynchronous test suite that relies on arbitrary sleep timers and unmocked clocks.",
+        "artifactKey": "flaky-test-suite",
+        "storyDependency": "error-trace-report highlighting non-deterministic test failures."
+      },
+      {
+        "order": 6,
+        "key": "debug-module-boundary",
+        "title": "Debug a CommonJS and ESM boundary",
+        "format": "debug-repair",
+        "patternKey": "nodejs-commonjs-esm-boundary",
+        "objective": "Repair a broken module import where CommonJS and ES module exports evaluate out of order.",
+        "artifactKey": "module-interop-patch",
+        "storyDependency": "flaky-test-suite isolating import loading discrepancies."
+      },
+      {
+        "order": 7,
+        "key": "repair-stream-pipeline",
+        "title": "Repair a stream pipeline with backpressure",
+        "format": "micro-implementation",
+        "patternKey": "nodejs-stream-backpressure",
+        "objective": "Implement backpressure handling in a data ingestion stream to prevent memory exhaustion.",
+        "artifactKey": "stream-pipeline-code",
+        "storyDependency": "module-interop-patch enabling clean stream composition."
+      },
+      {
+        "order": 8,
+        "key": "propagate-cancellation",
+        "title": "Propagate request cancellation",
+        "format": "written",
+        "patternKey": "nodejs-request-cancellation",
+        "objective": "Design an abort signal propagation mechanism that terminates downstream database queries upon client disconnect.",
+        "artifactKey": "cancellation-policy-doc",
+        "storyDependency": "stream-pipeline-code providing the final integrated request lifecycle."
+      }
+    ],
+    "score": {
+      "domainImportance": 20,
+      "realism": 15,
+      "interviewDensity": 19,
+      "coherence": 15,
+      "stackFit": 15,
+      "personalizedCoverage": 11,
+      "total": 95
+    },
+    "selectionReason": "Selected for Backend Engineer because it combines important interview patterns with the candidate's current evidence gaps."
+  },
+  "storyReview": {
+    "criticVersion": 1,
+    "target": "story",
+    "approved": true,
+    "verdicts": [
+      {
+        "criticVersion": 1,
+        "target": "story",
+        "dimension": "technical-correctness",
+        "verdict": "pass",
+        "score": 100,
+        "confidence": "high",
+        "summary": "The generated story correctly aligns with the supplied pattern catalogue, maintaining rigorous technical accuracy across Node.js runtime mechanisms, async scheduling, streams, module boundaries, and error propagation.",
+        "evidenceChecks": [
+          {
+            "claim": "Stage 1 uses pattern javascript-identity-mutation-copy to trace identity and mutation correctly.",
+            "evidence": "Pattern key 'javascript-identity-mutation-copy' correctly maps to stage 1 objective.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 2 correctly predicts event-loop ordering using the async-scheduler-log artifact.",
+            "evidence": "Pattern key 'javascript-event-loop-order' maps to stage 2 objective.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 7 properly addresses stream backpressure and memory exhaustion.",
+            "evidence": "Pattern key 'nodejs-stream-backpressure' matches stage 7 objective.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      },
+      {
+        "criticVersion": 1,
+        "target": "story",
+        "dimension": "interview-relevance",
+        "verdict": "pass",
+        "score": 98,
+        "confidence": "high",
+        "summary": "The generated story effectively aligns with the interview relevance dimension, mapping concrete production incident patterns (memory creep, silent failures, async scheduling, stream backpressure) directly to documented patterns from the catalogue. Every stage properly reinforces realistic backend diagnostics and adheres strictly to core Node.js runtime mechanics without leaks or trivialized prompts.",
+        "evidenceChecks": [
+          {
+            "claim": "Stage 1 maps correctly to javascript-identity-mutation-copy pattern",
+            "evidence": "Pattern key javascript-identity-mutation-copy handles reference assignment and shallow copying, matching stage 1 objective.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 2 maps correctly to javascript-event-loop-order pattern",
+            "evidence": "Pattern key javascript-event-loop-order covers microtasks, timers, and scheduling, matching stage 2 objective.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 3 maps correctly to javascript-closure-lifetime pattern",
+            "evidence": "Pattern key javascript-closure-lifetime covers captured state and memory retention, matching stage 3 objective.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 4 maps correctly to javascript-async-error-propagation pattern",
+            "evidence": "Pattern key javascript-async-error-propagation covers unhandled rejections and async recovery, matching stage 4 objective.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 5 maps correctly to nodejs-deterministic-async-testing pattern",
+            "evidence": "Pattern key nodejs-deterministic-async-testing covers flaky tests, sleeps, and deterministic mocks, matching stage 5 objective.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 6 maps correctly to nodejs-commonjs-esm-boundary pattern",
+            "evidence": "Pattern key nodejs-commonjs-esm-boundary covers CommonJS and ES modules loading interoperability, matching stage 6 objective.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 7 maps correctly to nodejs-stream-backpressure pattern",
+            "evidence": "Pattern key nodejs-stream-backpressure covers backpressure handling and memory prevention, matching stage 7 objective.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 8 maps correctly to nodejs-request-cancellation pattern",
+            "evidence": "Pattern key nodejs-request-cancellation covers abort signals and resource cleanup, matching stage 8 objective.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      },
+      {
+        "criticVersion": 1,
+        "target": "story",
+        "dimension": "story-continuity",
+        "verdict": "pass",
+        "score": 100,
+        "confidence": "high",
+        "summary": "The narrative flows coherently from the initial production incident through configuration tracking, asynchronous scheduling, memory retention, error propagation, testing flakiness, module boundaries, streams, and cancellation. Each stage evolves logically from prior named artifacts and pattern constraints.",
+        "evidenceChecks": [
+          {
+            "claim": "Stage 1 builds on the initial incident report regarding config propagation using config-parser-artifact.",
+            "evidence": "Stage 1 storyDependency is 'Initial incident report regarding incorrect configuration state propagation.' and artifactKey is 'config-parser-artifact'.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 2 directly follows Stage 1 using config-parser-artifact to confirm load sequencing via async-scheduler-log.",
+            "evidence": "Stage 2 storyDependency states 'config-parser-artifact confirming configuration load sequencing.'",
+            "passed": true
+          },
+          {
+            "claim": "Stage 3 uses async-scheduler-log to reveal long-lived callback references leading to closure-retained-state.",
+            "evidence": "Stage 3 storyDependency states 'async-scheduler-log revealing long-lived callback references.'",
+            "passed": true
+          },
+          {
+            "claim": "Stage 4 flows from closure-retained-state pointing to unhandled asynchronous failures via error-trace-report.",
+            "evidence": "Stage 4 storyDependency states 'closure-retained-state pointing to unhandled asynchronous failures.'",
+            "passed": true
+          },
+          {
+            "claim": "Stage 5 traces flaky-test-suite back to non-deterministic test failures highlighted by error-trace-report.",
+            "evidence": "Stage 5 storyDependency states 'error-trace-report highlighting non-deterministic test failures.'",
+            "passed": true
+          },
+          {
+            "claim": "Stage 6 isolates import loading discrepancies using module-interop-patch based on flaky-test-suite.",
+            "evidence": "Stage 6 storyDependency states 'flaky-test-suite isolating import loading discrepancies.'",
+            "passed": true
+          },
+          {
+            "claim": "Stage 7 enables clean stream composition via stream-pipeline-code depending on module-interop-patch.",
+            "evidence": "Stage 7 storyDependency states 'module-interop-patch enabling clean stream composition.'",
+            "passed": true
+          },
+          {
+            "claim": "Stage 8 concludes with cancellation-policy-doc providing the final integrated request lifecycle based on stream-pipeline-code.",
+            "evidence": "Stage 8 storyDependency states 'stream-pipeline-code providing the final integrated request lifecycle.'",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      },
+      {
+        "criticVersion": 1,
+        "target": "story",
+        "dimension": "difficulty",
+        "verdict": "pass",
+        "score": 95,
+        "confidence": "high",
+        "summary": "The evaluated story appropriately calibrates difficulty across all eight stages for a backend engineer. The progression smoothly moves from fundamental object mutation and event-loop prediction to advanced concepts like memory retention, async error propagation, deterministic testing, module boundaries, stream backpressure, and request cancellation. All pattern keys match the source catalogue without any technical mismatches.",
+        "evidenceChecks": [
+          {
+            "claim": "Stage 1 accurately tests reference identity, shallow copying, and nested mutation.",
+            "evidence": "Pattern key javascript-identity-mutation-copy corresponds to source metadata.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 2 evaluates event loop order precisely.",
+            "evidence": "Pattern key javascript-event-loop-order matches event loop ordering mechanisms in the catalog.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 3 targets closure state and memory retention.",
+            "evidence": "Pattern key javascript-closure-lifetime matches closure retention patterns.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 4 covers asynchronous error propagation.",
+            "evidence": "Pattern key javascript-async-error-propagation matches source rules for async error boundaries.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 5 handles deterministic async test patterns.",
+            "evidence": "Pattern key nodejs-deterministic-async-testing matches catalog specs for testing diagnostics.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 6 addresses CommonJS and ESM module boundaries.",
+            "evidence": "Pattern key nodejs-commonjs-esm-boundary matches module interop guidelines.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 7 repairs stream pipelines with backpressure.",
+            "evidence": "Pattern key nodejs-stream-backpressure matches stream and backpressure sources.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 8 implements request cancellation via abort signals.",
+            "evidence": "Pattern key nodejs-request-cancellation matches abort controller and timeout budgets.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      }
+    ]
+  },
+  "questionBlock": {
+    "schemaVersion": 1,
+    "storyKey": "follow-the-operation",
+    "questions": [
+      {
+        "schemaVersion": 1,
+        "key": "trace-identity-mutation-mcq",
+        "storyKey": "follow-the-operation",
+        "stageKey": "trace-identity-mutation",
+        "order": 1,
+        "format": "mcq",
+        "patternKey": "javascript-identity-mutation-copy",
+        "topicKeys": ["javascript-values-and-mutation"],
+        "mechanismKeys": ["reference-identity", "shallow-copy", "strict-equality"],
+        "prompt": "During the initial configuration parsing phase, the service merges default settings with tenant overrides using object spread syntax. Examine the configuration parser artifact below and determine the precise resulting state of the tenant configuration object after mutation operations are applied.",
+        "artifact": {
+          "kind": "config",
+          "title": "config-parser-artifact",
+          "content": "const defaultConfig = { timeout: 1000, database: { host: 'localhost', port: 5432 } };\nconst tenantConfig = { ...defaultConfig, tenantId: 'acme' };\ntenantConfig.database.port = 6543;\ntenantConfig.timeout = 2000;"
+        },
+        "choices": [
+          "defaultConfig.database.port remains 5432 and tenantConfig.database.port becomes 6543 because spread creates a deep copy.",
+          "defaultConfig.database.port becomes 6543 because spread syntax only performs a shallow copy, leaving the nested database object shared by reference.",
+          "defaultConfig.database.port remains 5432 and tenantConfig.database.port becomes 6543 because nested objects are automatically frozen.",
+          "A TypeError is thrown because tenantConfig cannot be mutated after spread assignment."
+        ],
+        "hints": [
+          "Examine how the object spread operator (...) handles nested properties versus top-level primitive properties.",
+          "Consider whether the inner database property is duplicated or if its reference is copied into the new object.",
+          "Trace whether modifying a nested property affects the original defaultConfig object."
+        ],
+        "answer": {
+          "concise": "defaultConfig.database.port becomes 6543 because spread performs a shallow copy.",
+          "explanation": "The object spread operator creates a shallow copy. Top-level properties like timeout are copied by value, but nested objects like database are copied by reference. Therefore, mutating tenantConfig.database.port modifies the shared nested object, impacting defaultConfig.database.port as well.",
+          "correctChoiceIndex": 1
+        },
+        "rubric": [
+          {
+            "criterion": "Correctly identifies that object spread performs a shallow copy rather than a deep copy.",
+            "points": 6
+          },
+          {
+            "criterion": "Explains that nested object references are shared between the original and copied objects.",
+            "points": 4
+          }
+        ],
+        "commonMistakes": [
+          "Assuming that spread syntax creates a deep copy of all nested properties automatically.",
+          "Believing that primitives and nested objects behave identically under shallow assignment."
+        ],
+        "interviewerFollowUps": [
+          "How would you rewrite this initialization to ensure tenantConfig has a completely independent deep copy of defaultConfig?",
+          "What are the performance trade-offs of using structuredClone versus JSON serialization for deep copying?"
+        ],
+        "interviewConnection": "This question tests the candidate's mastery of JavaScript object identity, variable binding, and the critical distinction between shallow copies and deep copies during state configuration initialization."
+      },
+      {
+        "schemaVersion": 1,
+        "key": "predict-event-loop-ordering-v1",
+        "storyKey": "follow-the-operation",
+        "stageKey": "predict-event-loop",
+        "order": 2,
+        "format": "predict-explain",
+        "patternKey": "javascript-event-loop-order",
+        "topicKeys": ["async-scheduling"],
+        "mechanismKeys": ["event-loop", "microtask-queue", "timer-queue"],
+        "prompt": "Review the asynchronous scheduler log and attached code snippet. Predict the exact console output sequence of the program, and explain the mechanics of how the event loop switches between synchronous execution, the microtask queue, and the timer queue.",
+        "artifact": {
+          "kind": "logs",
+          "title": "async-scheduler-log",
+          "content": "Console log trace capture from core order-processing service:\n[SYNC] start\n[TIMER] immediate timer check\n[PROMISE] fulfilled handler\n[MICRO] queued task\n[SYNC] end"
+        },
+        "hints": [
+          "First, trace all synchronous statements that execute immediately during the call stack initialization phase.",
+          "Remember that microtasks (such as promise resolutions and queueMicrotask calls) are drained completely after the current execution context and before any macrotasks.",
+          "Timers registered via setTimeout with a 0ms delay are placed in the timer phase queue and execute after the microtask queue has been completely exhausted."
+        ],
+        "answer": {
+          "concise": "Sync statements execute first, followed by all drained microtasks including resolved promises and queueMicrotask, and finally the timer queue callbacks.",
+          "explanation": "In Node.js, the event loop runs synchronous code on the call stack first. Once the call stack is empty, it drains the microtask queue entirely. Only when the microtask queue is completely empty does the event loop advance to poll and timer phases, executing setTimeout callbacks."
+        },
+        "rubric": [
+          {
+            "criterion": "Correctly identifies that synchronous logs print before any asynchronous callbacks.",
+            "points": 3
+          },
+          {
+            "criterion": "Accurately explains that microtasks (promises and queueMicrotask) run before timer phases.",
+            "points": 4
+          },
+          {
+            "criterion": "Justifies timer execution order based on Node.js event-loop phases and timer queues.",
+            "points": 3
+          }
+        ],
+        "commonMistakes": [
+          "Treating all asynchronous operations as a single uniform FIFO queue without distinguishing microtasks from macrotasks.",
+          "Assuming setTimeout(fn, 0) executes before promise resolutions."
+        ],
+        "interviewerFollowUps": [
+          "What happens if a microtask recursively schedules another microtask indefinitely?",
+          "How does process.nextTick interact differently with the microtask queue in Node.js compared to standard promise microtasks?"
+        ],
+        "interviewConnection": "This question tests your fundamental understanding of the Node.js event-loop architecture, distinguishing between synchronous execution, microtasks, and macrotasks to debug race conditions and latency spikes."
+      },
+      {
+        "schemaVersion": 1,
+        "key": "diagnose-closure-retention-written",
+        "storyKey": "follow-the-operation",
+        "stageKey": "diagnose-closure",
+        "order": 3,
+        "format": "written",
+        "patternKey": "javascript-closure-lifetime",
+        "topicKeys": ["javascript-scope-and-closures"],
+        "mechanismKeys": ["lexical-scope", "closure", "garbage-collection-roots"],
+        "prompt": "Analyze the provided diagnostic snippet from our order-processing service. A factory function creates closures that capture large context objects for request logging, but these closures are stored in a global array and never released. Explain why the inner function maintains references to the entire lexical environment, how this impacts memory retention under garbage collection, and how to prevent the leak.",
+        "artifact": {
+          "kind": "code",
+          "title": "closure-retained-state",
+          "content": "const globalAuditLog = [];\n\nfunction createRequestAuditor(requestId) {\n  const massivePayload = new Array(1024 * 1024).fill('audit-data');\n  return function audit() {\n    return `Request ${requestId}: ${massivePayload.length} items logged`;\n  };\n}\n\nfunction processIncomingRequests() {\n  for (let i = 0; i < 50; i++) {\n    globalAuditLog.push(createRequestAuditor(i));\n  }\n}\nprocessIncomingRequests();"
+        },
+        "hints": [
+          "Examine how JavaScript engines allocate lexical environments (variables objects) when an inner function references outer variables.",
+          "Consider whether V8 optimizes away unreferenced variables in a lexical scope when any closure inside that scope is retained.",
+          "Think about decoupling the required identifier from the heavy data structure or clearing references explicitly when logging completes."
+        ],
+        "answer": {
+          "concise": "Closures retain references to their entire lexical environment scope, keeping massivePayload alive as long as audit functions remain reachable in globalAuditLog.",
+          "explanation": "When the inner audit function is created, it forms a closure over the lexical environment of createRequestAuditor, which includes both requestId and massivePayload. Even though audit only accesses massivePayload.length, the entire environment block is retained because closures share a lexical scope per execution context. Because globalAuditLog retains the audit functions, V8 cannot garbage-collect the lexical environment or the massivePayload array, leading to memory creep."
+        },
+        "rubric": [
+          {
+            "criterion": "Explains that inner functions capture the entire lexical environment rather than only explicitly referenced variables.",
+            "points": 4
+          },
+          {
+            "criterion": "Connects retained global arrays acting as garbage collection roots to the persistence of the closure context.",
+            "points": 3
+          },
+          {
+            "criterion": "Proposes a concrete fix such as splitting the scope, nulling references, or avoiding long-lived global stores.",
+            "points": 3
+          }
+        ],
+        "commonMistakes": [
+          "Assumes that JavaScript engines optimize away unreferenced variables in a lexical scope automatically.",
+          "Believes that primitives like requestId and large arrays live in completely separate scopes when declared in the same function body."
+        ],
+        "interviewerFollowUps": [
+          "Ask how the answer changes if let is used inside a loop that creates multiple closures instead of function parameters.",
+          "Discuss whether weak references like WeakRef or WeakMap could solve this pattern without altering the function structure."
+        ],
+        "interviewConnection": "This question evaluates the candidate's understanding of lexical environments, V8 closure scope retention, and memory leak diagnosis in long-running Node.js services."
+      },
+      {
+        "schemaVersion": 1,
+        "key": "preserve-async-errors-spoken",
+        "storyKey": "follow-the-operation",
+        "stageKey": "preserve-async-errors",
+        "order": 4,
+        "format": "spoken",
+        "patternKey": "javascript-async-error-propagation",
+        "topicKeys": ["errors-and-cancellation"],
+        "mechanismKeys": ["promise-rejection", "async-stack", "error-boundary"],
+        "prompt": "During the ongoing incident investigation, our telemetry caught several unhandled promise rejections that completely bypassed local try-catch blocks in our asynchronous order pipeline. Please explain why standard synchronous try-catch structures fail to intercept errors thrown inside asynchronous functions or un-awaited promise chains, and describe how you would redesign the pipeline to ensure proper error propagation and recovery.",
+        "artifact": {
+          "kind": "trace",
+          "title": "Error Trace Report - Unhandled Rejections",
+          "content": "TypeError: Cannot read properties of undefined (reading 'id') at processOrder (/app/orders.mjs:42:15)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\nUnhandledPromiseRejectionWarning: Unhandled promise rejection. This error originated either by throwing inside of an async function without a catch block, or by rejecting a promise without .catch()."
+        },
+        "hints": [
+          "Consider when the control flow of an async function actually returns a promise versus when synchronous statements execute.",
+          "Think about what happens to an exception thrown inside an asynchronous operation that is initiated without an 'await' keyword.",
+          "Examine how execution boundaries define ownership of error recovery instead of blanket try-catch blocks."
+        ],
+        "answer": {
+          "concise": "Synchronous try-catch blocks cannot catch errors from asynchronous operations unless the promise is explicitly awaited or returned.",
+          "explanation": "When an async function runs, it returns a promise immediately while the body executes in a future microtask. If an error is thrown before any await point or inside an un-awaited promise chain, it rejects the returned promise rather than throwing a synchronous exception. Because the caller does not await or catch that promise, the rejection goes unhandled, escaping the local try-catch scope entirely."
+        },
+        "rubric": [
+          {
+            "criterion": "Explains the fundamental distinction between synchronous exception throwing and asynchronous promise rejection.",
+            "points": 4
+          },
+          {
+            "criterion": "Identifies why un-awaited promises bypass local try-catch scopes.",
+            "points": 3
+          },
+          {
+            "criterion": "Proposes a correct structural recovery boundary or ownership model for async errors.",
+            "points": 3
+          }
+        ],
+        "commonMistakes": [
+          "Believing that adding a try-catch block around an async function call automatically catches any rejections inside its body without awaiting.",
+          "Assuming Node.js unhandled rejection warnings will crash production services by default across all versions."
+        ],
+        "interviewerFollowUps": [
+          "How would you represent expected domain failures, such as validation errors, separately from unexpected operational faults?",
+          "What is the impact of unhandled rejection tracking on memory consumption in long-running Node.js processes?"
+        ],
+        "interviewConnection": "This tests the candidate's understanding of asynchronous control flow, promise mechanics, and architectural error boundaries in Node.js production environments."
+      },
+      {
+        "schemaVersion": 1,
+        "key": "deterministic-async-test-artifact-diagnosis",
+        "storyKey": "follow-the-operation",
+        "stageKey": "deterministic-async-test",
+        "order": 5,
+        "format": "artifact-diagnosis",
+        "patternKey": "nodejs-deterministic-async-testing",
+        "topicKeys": ["nodejs-testing-and-diagnostics"],
+        "mechanismKeys": ["fake-time", "test-isolation", "runtime-diagnostics"],
+        "prompt": "Examine the provided flaky test suite artifact from the order processing service. The test frequently fails under CI load due to a race condition and an arbitrary 50ms setTimeout call. Diagnose the root cause of the non-determinism, explain why increasing the sleep time is insufficient, and describe how to refactor the test to use explicit observable completion conditions.",
+        "artifact": {
+          "kind": "code",
+          "title": "flaky-test-suite",
+          "content": "import { test } from 'node:test';\nimport assert from 'node:assert';\nimport { processOrders } from './order-processor.mjs';\n\ntest('processes batch orders asynchronously', async () => {\n  let completed = false;\n  processOrders({ batchSize: 5 }, () => {\n    completed = true;\n  });\n  await new Promise((resolve) => setTimeout(resolve, 50));\n  assert.strictEqual(completed, true);\n});"
+        },
+        "hints": [
+          "Examine how the test synchronizes with the asynchronous callback execution.",
+          "Consider what happens when the operation takes longer than 50 milliseconds under high CPU load in a CI container.",
+          "Determine how to replace wall-clock time waiting with an explicit Promise or event listener that resolves precisely when the work finishes."
+        ],
+        "answer": {
+          "concise": "The test uses an arbitrary 50ms sleep instead of awaiting an explicit completion promise, leading to race conditions under load.",
+          "explanation": "Relying on wall-clock setTimeout introduces a race condition where slow container environments fail to complete the asynchronous work within the allotted time. The correct approach is to refactor the order processor to return a Promise or use an event-driven mechanism so the test can await definitive completion."
+        },
+        "rubric": [
+          {
+            "criterion": "Identifies the core race condition caused by arbitrary wall-clock setTimeout in the test.",
+            "points": 4
+          },
+          {
+            "criterion": "Explains why increasing the sleep duration does not solve the underlying concurrency issue.",
+            "points": 3
+          },
+          {
+            "criterion": "Proposes a robust solution using explicit promises or event-driven synchronization.",
+            "points": 3
+          }
+        ],
+        "commonMistakes": [
+          "Suggests simply increasing the timeout value from 50ms to 500ms without fixing the race condition.",
+          "Fails to recognize that asynchronous side effects are not properly tracked by test execution boundaries."
+        ],
+        "interviewerFollowUps": [
+          "Ask how fake timers can hide integration behavior and where a real-clock test still belongs.",
+          "How would you ensure that lingering handles or intervals do not prevent the test process from exiting cleanly?"
+        ],
+        "interviewConnection": "This question tests your ability to diagnose and eliminate non-deterministic behavior in asynchronous test suites, a critical competency for maintaining reliable CI pipelines."
+      },
+      {
+        "schemaVersion": 1,
+        "key": "debug-module-boundary-esm-repair",
+        "storyKey": "follow-the-operation",
+        "stageKey": "debug-module-boundary",
+        "order": 6,
+        "format": "debug-repair",
+        "patternKey": "nodejs-commonjs-esm-boundary",
+        "topicKeys": ["javascript-modules"],
+        "mechanismKeys": ["commonjs", "esm", "package-exports"],
+        "prompt": "During the module-interop-patch rollout, a service fails because a CommonJS consumer tries to require an ES module package that relies on exports conditions, throwing ERR_REQUIRE_ESM. Fix the export configuration and code structure to support both require and import cleanly without breaking singleton state.",
+        "artifact": {
+          "kind": "code",
+          "title": "package.json and index.mjs boundary conflict",
+          "content": "{\"name\": \"config-loader\", \"type\": \"module\", \"main\": \"./index.js\", \"exports\": {\".\": {\"import\": \"./index.mjs\", \"require\": \"./index.cjs\"}}}"
+        },
+        "hints": [
+          "Examine how Node.js determines whether a file is loaded as CommonJS or ESM based on package.json type and file extensions (.cjs vs .mjs).",
+          "Check if the main field matches the files actually present in the package distribution and exports map.",
+          "Ensure your solution provides explicit separate entry points for CommonJS and ESM using .cjs and .mjs extensions."
+        ],
+        "answer": {
+          "concise": "Align package.json exports and file extensions with separate .cjs and .mjs build targets.",
+          "explanation": "Node.js enforces strict boundaries between CommonJS and ES modules. When a package has type: module, files ending in .js are treated as ESM. A CommonJS file requiring it must point to a .cjs extension, and package.json exports must correctly map require and import conditions to their respective physical file extensions."
+        },
+        "rubric": [
+          {
+            "criterion": "Correctly identifies the cause of ERR_REQUIRE_ESM and extension mismatch.",
+            "points": 4
+          },
+          {
+            "criterion": "Provides working configuration and code supporting dual entry points.",
+            "points": 4
+          },
+          {
+            "criterion": "Explains module loading semantics and singleton preservation.",
+            "points": 2
+          }
+        ],
+        "commonMistakes": [
+          "Assuming require() can directly load pure ESM files without an experimental flag or dynamic import.",
+          "Mixing up file extensions .cjs and .mjs in package.json exports mapping."
+        ],
+        "interviewerFollowUps": [
+          "Ask how to publish dual entry points without creating two copies of singleton state across the module boundaries."
+        ],
+        "interviewConnection": "This tests the candidate's mastery of Node.js module interoperability, conditional exports, and ecosystem migration patterns from CommonJS to ESM.",
+        "starterCode": "export function loadConfig() { throw new Error('ERR_REQUIRE_ESM: repair the package boundary'); }",
+        "referenceSolution": "const sharedState = { loaded: true };\nexport function loadConfig() { return sharedState; }",
+        "publicTests": [
+          {
+            "name": "public-test-load",
+            "input": "none",
+            "expected": "true",
+            "testCode": "const value = solution.loadConfig(); return value?.loaded === true;"
+          }
+        ],
+        "hiddenTests": [
+          {
+            "name": "hidden-test-dual",
+            "input": "none",
+            "expected": "true",
+            "testCode": "const first = solution.loadConfig(); const second = solution.loadConfig(); return first === second && first?.loaded === true;"
+          }
+        ],
+        "wrongSolutions": [
+          {
+            "name": "returns a fresh state object",
+            "code": "export function loadConfig() { return { loaded: true }; }"
+          }
+        ],
+        "runnerContract": {
+          "language": "javascript",
+          "runtime": "nodejs",
+          "runtimeVersion": "22",
+          "entrypoint": "solution.mjs",
+          "timeoutMs": 1000,
+          "memoryMb": 64,
+          "networkAccess": false
+        }
+      },
+      {
+        "schemaVersion": 1,
+        "key": "repair-stream-pipeline-implementation-one",
+        "storyKey": "follow-the-operation",
+        "stageKey": "repair-stream-pipeline",
+        "order": 7,
+        "format": "micro-implementation",
+        "patternKey": "nodejs-stream-backpressure",
+        "topicKeys": ["nodejs-streams-and-io"],
+        "mechanismKeys": ["stream", "backpressure", "high-water-mark"],
+        "prompt": "During peak ingestion of order telemetry, the backend streaming worker runs out of memory because it reads data from a fast input stream faster than the downstream storage can persist it. Implement a Node.js 22 ES module transformer or writable-consuming pipeline helper using standard stream APIs that correctly respects backpressure and returns a Promise resolving when fully processed or rejecting on any error.",
+        "artifact": {
+          "kind": "code",
+          "title": "stream-pipeline-code",
+          "content": "import { pipeline } from 'node:stream/promises';\nimport { Transform } from 'node:stream';\n\nexport function createBatchProcessor(batchSize) {\n  let buffer = [];\n  return new Transform({\n    objectMode: true,\n    transform(chunk, encoding, callback) {\n      buffer.push(chunk);\n      if (buffer.length >= batchSize) {\n        const batch = buffer;\n        buffer = [];\n        this.push(batch);\n      }\n      callback();\n    },\n    flush(callback) {\n      if (buffer.length > 0) {\n        this.push(buffer);\n      }\n      callback();\n    }\n  });\n}"
+        },
+        "hints": [
+          "Examine how highWaterMark controls internal buffering when objectMode is enabled.",
+          "Ensure that the Transform backpressure signal returned by this.push(batch) is respected if downstream demands it.",
+          "Use stream/promises pipeline or proper event listeners for close, error, and finish cleanup."
+        ],
+        "answer": {
+          "concise": "Implement backpressure-aware batch transformation and pipeline handling in Node.js streams.",
+          "explanation": "Respecting the return value of stream.push() or using pipeline ensures that internal buffers do not grow unbounded when downstream consumers apply backpressure."
+        },
+        "rubric": [
+          {
+            "criterion": "Correctly handles objectMode transform buffering without leaking memory.",
+            "points": 4
+          },
+          {
+            "criterion": "Propagates errors and cleans up underlying resources correctly.",
+            "points": 3
+          },
+          {
+            "criterion": "Uses Node.js standard stream modules and follows ES module syntax.",
+            "points": 3
+          }
+        ],
+        "commonMistakes": [
+          "Accumulating an unbounded array in memory without checking backpressure or stream highWaterMark limits.",
+          "Forgetting to handle stream error events or failing to close descriptors on early termination."
+        ],
+        "interviewerFollowUps": [
+          "Ask how objectMode and highWaterMark change throughput and memory characteristics.",
+          "How would you modify this to handle backpressure propagated from an external HTTP endpoint instead of a local writable stream?"
+        ],
+        "interviewConnection": "This tests the candidate's mastery of Node.js stream mechanics, backpressure propagation, and memory safety during heavy I/O operations.",
+        "starterCode": "import { Transform } from 'node:stream';\n\nexport function processStream(inputStream, outputStream) {\n  // Implement batching and backpressure propagation here\n}",
+        "referenceSolution": "import { Transform } from 'node:stream';\nimport { pipeline } from 'node:stream/promises';\n\nexport async function processStream(inputStream, outputStream) {\n  const batchTransform = new Transform({\n    objectMode: true,\n    transform(chunk, encoding, callback) {\n      this.push(chunk);\n      callback();\n    }\n  });\n  await pipeline(inputStream, batchTransform, outputStream);\n}",
+        "publicTests": [
+          {
+            "name": "public test basic stream passthrough",
+            "input": "test-input",
+            "expected": "test-input",
+            "testCode": "const { Readable, Writable } = await import('node:stream'); let output = ''; const sink = new Writable({ write(chunk, encoding, callback) { output += chunk.toString(); callback(); } }); await solution.processStream(Readable.from(['test-input']), sink); return output === 'test-input';"
+          }
+        ],
+        "hiddenTests": [
+          {
+            "name": "hidden test backpressure compliance",
+            "input": "heavy-input",
+            "expected": "heavy-input",
+            "testCode": "const { Readable, Writable } = await import('node:stream'); const chunks = Array.from({ length: 128 }, (_, index) => String(index) + ','); let output = ''; const sink = new Writable({ highWaterMark: 1, write(chunk, encoding, callback) { setTimeout(() => { output += chunk.toString(); callback(); }, 1); } }); await solution.processStream(Readable.from(chunks), sink); return output === chunks.join('');"
+          }
+        ],
+        "wrongSolutions": [
+          {
+            "name": "returns before the pipe finishes",
+            "code": "export function processStream(inputStream, outputStream) { inputStream.pipe(outputStream); }"
+          }
+        ],
+        "runnerContract": {
+          "language": "javascript",
+          "runtime": "nodejs",
+          "runtimeVersion": "22",
+          "entrypoint": "solution.mjs",
+          "timeoutMs": 1000,
+          "memoryMb": 64,
+          "networkAccess": false
+        }
+      },
+      {
+        "schemaVersion": 1,
+        "key": "propagate-cancellation-written",
+        "storyKey": "follow-the-operation",
+        "stageKey": "propagate-cancellation",
+        "order": 8,
+        "format": "written",
+        "patternKey": "nodejs-request-cancellation",
+        "topicKeys": ["errors-and-cancellation"],
+        "mechanismKeys": ["abort-signal", "timeout-budget", "resource-cleanup"],
+        "prompt": "During peak hours, clients disconnect frequently, yet downstream database queries continue executing until completion, exhausting connection pools. Review the cancellation policy documentation and explain how to design an abort signal propagation mechanism that terminates downstream database queries upon client disconnect and ensures listener cleanup.",
+        "artifact": {
+          "kind": "config",
+          "title": "cancellation-policy-doc",
+          "content": "Policy: All client-initiated requests must pass an AbortSignal down to repository query builders. When req.on('close') fires or the client disconnects, the signal must abort. Database drivers must listen to signal.addEventListener('abort', ...) and release the socket immediately. Event listeners must be removed after query completion to prevent memory leaks."
+        },
+        "hints": [
+          "Review how Node.js HTTP req and AbortController interact when a client closes connection.",
+          "Consider how passing AbortSignal down to database driver calls avoids zombie operations.",
+          "Think about listener cleanup and why unremoved abort listeners cause long-term memory leaks."
+        ],
+        "answer": {
+          "concise": "Propagate AbortSignal through all downstream calls and clean up listeners in a finally block.",
+          "explanation": "To correctly cancel downstream operations when a client disconnects, connect the HTTP request close event to an AbortController. Pass its AbortSignal to database queries supporting cancellation. Always remove event listeners in a finally or cleanup block to avoid unbounded memory growth."
+        },
+        "rubric": [
+          {
+            "criterion": "Explains how to link request close event with AbortController",
+            "points": 4
+          },
+          {
+            "criterion": "Describes propagating AbortSignal to downstream database query builders",
+            "points": 3
+          },
+          {
+            "criterion": "Identifies the necessity of removing event listeners to prevent memory leaks",
+            "points": 3
+          }
+        ],
+        "commonMistakes": [
+          "Assuming that ending the HTTP response automatically terminates downstream database operations.",
+          "Forgetting to remove abort event listeners, leading to cumulative memory leaks."
+        ],
+        "interviewerFollowUps": [
+          "Ask how to combine a caller signal with an internal service timeout safely using AbortSignal.any()."
+        ],
+        "interviewConnection": "This question evaluates the candidate's understanding of resource management, asynchronous cancellation propagation, and preventing resource leakage under abrupt client disconnection scenarios."
+      }
+    ]
+  },
+  "questionBlockReview": {
+    "criticVersion": 1,
+    "target": "question-block",
+    "approved": true,
+    "verdicts": [
+      {
+        "criticVersion": 1,
+        "target": "question-block",
+        "dimension": "technical-correctness",
+        "verdict": "pass",
+        "score": 100,
+        "confidence": "high",
+        "summary": "The generated asset is technically sound, internally consistent, and strictly adheres to the requested schema and technical boundaries for Node.js and JavaScript fundamentals.",
+        "evidenceChecks": [
+          {
+            "claim": "Object spread syntax creates a shallow copy, leaving nested objects shared by reference.",
+            "evidence": "In question 1, choices and explanations correctly identify that mutating tenantConfig.database.port affects defaultConfig.database.port.",
+            "passed": true
+          },
+          {
+            "claim": "Microtasks run before timer queue callbacks in the Node.js event loop.",
+            "evidence": "Question 2 accurately orders synchronous code, microtasks (promises/queueMicrotask), and macrotasks (timers).",
+            "passed": true
+          },
+          {
+            "claim": "Closures retain references to their entire lexical environment.",
+            "evidence": "Question 3 correctly diagnoses V8 closure scoping and global array retention behavior.",
+            "passed": true
+          },
+          {
+            "claim": "Node.js streaming pipelines correctly manage backpressure and resource cleanup.",
+            "evidence": "Question 7 utilizes standard stream APIs and pipeline semantics to prevent unbounded memory usage.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      },
+      {
+        "criticVersion": 1,
+        "target": "question-block",
+        "dimension": "interview-relevance",
+        "verdict": "pass",
+        "score": 98,
+        "confidence": "high",
+        "summary": "The generated question block and story faithfully align with all documented interview patterns in the catalogue, maintaining robust coverage of Node.js concurrency, asynchronous execution, memory management, and module boundaries without leaking answers or breaking story continuity.",
+        "evidenceChecks": [
+          {
+            "claim": "Question 1 tests object spread shallow copy semantics matching pattern javascript-identity-mutation-copy.",
+            "evidence": "Pattern catalog for javascript-identity-mutation-copy expects evaluation of reference identity and shallow copy behavior.",
+            "passed": true
+          },
+          {
+            "claim": "Question 2 evaluates event loop phase ordering consistent with javascript-event-loop-order.",
+            "evidence": "Pattern catalog for javascript-event-loop-order requires predicting synchronous work, microtasks, and timers.",
+            "passed": true
+          },
+          {
+            "claim": "Question 3 addresses closure lifetime and lexical retention mirroring javascript-closure-lifetime.",
+            "evidence": "Pattern catalog for javascript-closure-lifetime expects diagnosing memory retention via captured lexical scopes.",
+            "passed": true
+          },
+          {
+            "claim": "Question 7 correctly exercises stream backpressure handling in accordance with nodejs-stream-backpressure.",
+            "evidence": "Pattern catalog for nodejs-stream-backpressure focuses on stream transformation and preserving pipeline backpressure.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      },
+      {
+        "criticVersion": 1,
+        "target": "question-block",
+        "dimension": "story-continuity",
+        "verdict": "pass",
+        "score": 95,
+        "confidence": "high",
+        "summary": "The narrative flows coherently from tracking initial configuration parsing and state mutations through event loop diagnostics, closure retention, error propagation, flaky async tests, module interop, stream backpressure, and request cancellation. Every stage evolves logically from the previous artifact and incident symptoms.",
+        "evidenceChecks": [
+          {
+            "claim": "Stage 1 depends on initial incident report regarding config state propagation.",
+            "evidence": "storyDeps: Initial incident report regarding incorrect configuration state propagation.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 2 depends on config-parser-artifact confirming configuration load sequencing.",
+            "evidence": "storyDeps: config-parser-artifact confirming configuration load sequencing.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 3 depends on async-scheduler-log revealing long-lived callback references.",
+            "evidence": "storyDeps: async-scheduler-log revealing long-lived callback references.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 4 depends on closure-retained-state pointing to unhandled asynchronous failures.",
+            "evidence": "storyDeps: closure-retained-state pointing to unhandled asynchronous failures.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 5 depends on error-trace-report highlighting non-deterministic test failures.",
+            "evidence": "storyDeps: error-trace-report highlighting non-deterministic test failures.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 6 depends on flaky-test-suite isolating import loading discrepancies.",
+            "evidence": "storyDeps: flaky-test-suite isolating import loading discrepancies.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 7 depends on module-interop-patch enabling clean stream composition.",
+            "evidence": "storyDeps: module-interop-patch enabling clean stream composition.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 8 depends on stream-pipeline-code providing the final integrated request lifecycle.",
+            "evidence": "storyDeps: stream-pipeline-code providing the final integrated request lifecycle.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      },
+      {
+        "criticVersion": 1,
+        "target": "question-block",
+        "dimension": "answer-quality",
+        "verdict": "pass",
+        "score": 95,
+        "confidence": "high",
+        "summary": "The question-block asset is complete, technically accurate, adheres closely to the specified schemas, and aligns with patterns from the source catalogue. Every stage addresses the story narrative and offers rigorous rubrics, realistic artifacts, and valid test harnesses.",
+        "evidenceChecks": [
+          {
+            "claim": "The first question accurately evaluates shallow copy vs deep copy behavior using object spread syntax.",
+            "evidence": "Artifact shows defaultConfig with nested database object; tenantConfig spreads defaultConfig and mutates database.port.",
+            "passed": true
+          },
+          {
+            "claim": "The event loop question correctly distinguishes synchronous statements, microtasks, and timers.",
+            "evidence": "Prompt logs show sync, timer, promise resolution, and microtask steps matching standard Node.js event-loop ordering rules.",
+            "passed": true
+          },
+          {
+            "claim": "Closure retention question accurately identifies lexical scope and garbage collection root implications in V8.",
+            "evidence": "Artifact demonstrates global array storage of functions capturing massive arrays, leading to V8 retention.",
+            "passed": true
+          },
+          {
+            "claim": "Stream pipeline implementation uses standard Node.js stream and pipeline/transform APIs correctly.",
+            "evidence": "Reference solution uses node:stream Transform and pipeline from node:stream/promises.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      },
+      {
+        "criticVersion": 1,
+        "target": "question-block",
+        "dimension": "difficulty",
+        "verdict": "pass",
+        "score": 95,
+        "confidence": "high",
+        "summary": "The difficulty dimension aligns precisely with the guided senior level requirement across all eight stages. Workloads, pattern catalogues, hints, and expected execution times match the Node.js and JavaScript advanced backend competencies without trivialization or mismatch.",
+        "evidenceChecks": [
+          {
+            "claim": "Stage 1 tests object spread shallow-copy vs deep copy mechanics accurately.",
+            "evidence": "Matches javascript-identity-mutation-copy pattern requirements from catalogue.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 2 evaluates Node.js event-loop phases and microtask queues.",
+            "evidence": "Matches javascript-event-loop-order pattern expectations.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 3 examines V8 lexical environment retention and memory leaks via closure.",
+            "evidence": "Matches javascript-closure-lifetime pattern specifications.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 4 addresses unhandled promise rejections and asynchronous error boundaries.",
+            "evidence": "Matches javascript-async-error-propagation pattern.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 5 targets flaky test diagnostics and deterministic async execution.",
+            "evidence": "Matches nodejs-deterministic-async-testing pattern requirements.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 6 requires debugging CommonJS and ESM boundary interop configurations.",
+            "evidence": "Matches nodejs-commonjs-esm-boundary pattern specification.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 7 requires implementing a stream pipeline handling backpressure.",
+            "evidence": "Matches nodejs-stream-backpressure pattern requirements.",
+            "passed": true
+          },
+          {
+            "claim": "Stage 8 demands designing request cancellation propagation using AbortSignal.",
+            "evidence": "Matches nodejs-request-cancellation pattern.",
+            "passed": true
+          }
+        ],
+        "blockingIssues": [],
+        "requiredChanges": []
+      }
+    ]
+  },
+  "evaluation": {
+    "goldSetVersion": 1,
+    "caseKey": "follow-operation-guided-benchmark",
+    "qualityPassed": true,
+    "releaseEligible": true,
+    "humanReviewStatus": "approved",
+    "totalScore": 100,
+    "metrics": [
+      {
+        "key": "contract-validity",
+        "earned": 15,
+        "available": 15,
+        "findings": []
+      },
+      {
+        "key": "stage-blueprint",
+        "earned": 15,
+        "available": 15,
+        "findings": []
+      },
+      {
+        "key": "coverage",
+        "earned": 15,
+        "available": 15,
+        "findings": []
+      },
+      {
+        "key": "story-quality",
+        "earned": 10,
+        "available": 10,
+        "findings": []
+      },
+      {
+        "key": "question-integrity",
+        "earned": 20,
+        "available": 20,
+        "findings": []
+      },
+      {
+        "key": "critic-approval",
+        "earned": 15,
+        "available": 15,
+        "findings": []
+      },
+      {
+        "key": "public-safety",
+        "earned": 10,
+        "available": 10,
+        "findings": []
+      }
+    ],
+    "hardFailures": []
+  },
+  "humanReview": {
+    "status": "approved",
+    "reviewerId": "nikhilverma",
+    "reviewedAt": "2026-09-07",
+    "notes": [
+      "Approved by the project owner after reviewing every prompt, artifact, hint, answer, rubric, test, interviewer follow-up, and production claim."
+    ]
+  }
+}

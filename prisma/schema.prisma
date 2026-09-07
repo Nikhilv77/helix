@@ -153,6 +153,49 @@ enum ResumeRoastStatus {
   FAILED
 }
 
+enum CoreTechnicalStoryPublicationStatus {
+  REVIEW
+  PUBLISHED
+  RETIRED
+}
+
+enum CoreTechnicalStoryProgressStatus {
+  LOCKED
+  AVAILABLE
+  PREPARING
+  PRACTISING
+  ASSESSMENT_READY
+  ASSESSMENT_IN_PROGRESS
+  ASSESSED
+}
+
+enum CoreTechnicalBlockStatus {
+  PRACTISING
+  ASSESSMENT_READY
+  ASSESSMENT_IN_PROGRESS
+  ASSESSED
+}
+
+enum CoreTechnicalQuestionStatus {
+  ACTIVE
+  COMPLETED
+  LEARNED
+}
+
+enum CoreTechnicalPreparationStatus {
+  IN_PROGRESS
+  SUCCEEDED
+  FAILED
+}
+
+enum CoreTechnicalAssessmentStatus {
+  LOCKED
+  READY
+  IN_PROGRESS
+  FINALIZING
+  COMPLETED
+}
+
 model Project {
   id             String          @id @default(uuid()) @db.Uuid
   ownerId        String          @default("local-dev")
@@ -280,76 +323,90 @@ model InterviewAnswerRequest {
 }
 
 model CandidateProfile {
-  ownerId                           String                               @id
-  targetRole                        String?
-  level                             String?
-  targetCompany                     String?
-  targetDate                        DateTime?
-  headline                          String?
-  context                           String?
-  coverImage                        String?
-  profileImage                      String?
-  workspaceAccent                   String                               @default("ember")
+  ownerId                            String                               @id
+  targetRole                         String?
+  level                              String?
+  targetCompany                      String?
+  targetDate                         DateTime?
+  headline                           String?
+  context                            String?
+  coverImage                         String?
+  profileImage                       String?
+  workspaceAccent                    String                               @default("ember")
   /// Preferred language for standalone DSA practice editor sessions.
-  dsaEditorLanguage                 String                               @default("javascript")
+  dsaEditorLanguage                  String                               @default("javascript")
   /// Persona id from src/lib/avatars/personas.ts — the teacher chosen at onboarding.
-  teacherId                         String?
+  teacherId                          String?
   /// False stops this candidate being asked to help with other people's questions.
-  helpNotificationsEnabled          Boolean                              @default(true)
+  helpNotificationsEnabled           Boolean                              @default(true)
   /// False pauses the teacher's optional daily practice recommendations.
-  teacherNotificationsEnabled       Boolean                              @default(true)
-  focusAreas                        Json
-  stories                           Json
-  resumeFileName                    String?
-  resumeMimeType                    String?
-  resumeAnalysis                    Json?
-  resumeUploadedAt                  DateTime?
-  resumeVerifiedAt                  DateTime?
-  resumeConfidence                  Float?
+  teacherNotificationsEnabled        Boolean                              @default(true)
+  focusAreas                         Json
+  stories                            Json
+  resumeFileName                     String?
+  resumeMimeType                     String?
+  resumeAnalysis                     Json?
+  resumeUploadedAt                   DateTime?
+  resumeVerifiedAt                   DateTime?
+  resumeConfidence                   Float?
   /// Immutable resume/profile revision currently projected into this row.
-  activeResumeVersionId             String?                              @db.Uuid
-  activeResumeVersion               CandidateInterviewProfileVersion?    @relation("CandidateActiveResumeVersion", fields: [activeResumeVersionId], references: [id], onDelete: SetNull)
+  activeResumeVersionId              String?                              @db.Uuid
+  activeResumeVersion                CandidateInterviewProfileVersion?    @relation("CandidateActiveResumeVersion", fields: [activeResumeVersionId], references: [id], onDelete: SetNull)
   /// Active immutable Core Technical ecosystem selection. Historical blocks keep their own snapshot.
-  activeCoreTechnicalTrackVersionId String?                              @db.Uuid
-  activeCoreTechnicalTrackVersion   CoreTechnicalTrackVersion?           @relation("CandidateActiveCoreTechnicalTrackVersion", fields: [activeCoreTechnicalTrackVersionId], references: [id], onDelete: SetNull)
-  onboardingCompletedAt             DateTime?
+  activeCoreTechnicalTrackVersionId  String?                              @db.Uuid
+  activeCoreTechnicalTrackVersion    CoreTechnicalTrackVersion?           @relation("CandidateActiveCoreTechnicalTrackVersion", fields: [activeCoreTechnicalTrackVersionId], references: [id], onDelete: SetNull)
+  /// Active story-driven Core Technical focus. This does not reactivate the retired fixed track.
+  activeCoreTechnicalFocusRevisionId String?                              @db.Uuid
+  activeCoreTechnicalFocusRevision   CoreTechnicalFocusRevision?          @relation("CandidateActiveCoreTechnicalFocusRevision", fields: [activeCoreTechnicalFocusRevisionId], references: [id], onDelete: SetNull)
+  onboardingCompletedAt              DateTime?
   /// Durable target-setup and initial-baseline checkpoint. Null legacy rows enter at target setup.
-  preparationOnboarding             Json?
-  preparationOnboardingCompletedAt  DateTime?
+  preparationOnboarding              Json?
+  preparationOnboardingCompletedAt   DateTime?
   /// Immutable per-candidate baseline question snapshots, retained for audit and resume safety.
-  preparationBaselineQuestions      PreparationBaselineQuestion[]
+  preparationBaselineQuestions       PreparationBaselineQuestion[]
   /// Maya's curated session plan for this candidate, generated from the resume.
-  curriculum                        Json?
-  curriculumBuiltAt                 DateTime?
-  createdAt                         DateTime                             @default(now())
-  updatedAt                         DateTime                             @updatedAt
-  roadmaps                          UserRoadmap[]
-  questionAttempts                  UserQuestionAttempt[]
-  mayaInsights                      UserMayaInsight[]
-  dsaNotes                          UserDsaQuestionNote[]
-  prepNotes                         UserPrepQuestionNote[]
-  interviewProfileVersions          CandidateInterviewProfileVersion[]   @relation("CandidateInterviewProfileVersions")
-  coreTechnicalTrackVersions        CoreTechnicalTrackVersion[]          @relation("CandidateCoreTechnicalTrackVersions")
-  interviewPlanVersions             PersonalizedInterviewPlanVersion[]   @relation("CandidateInterviewPlanVersions")
-  performanceProfileVersions        CandidatePerformanceProfileVersion[] @relation("CandidatePerformanceProfileVersions")
-  practiceEvidenceVersions          CandidatePracticeEvidenceVersion[]   @relation("CandidatePracticeEvidenceVersions")
-  dsaPracticeBlocks                 DsaPracticeBlock[]
-  dsaBlockAssessments               DsaBlockAssessment[]
-  prepPracticeBlocks                PrepPracticeBlock[]
-  prepPracticeBlockQuestions        PrepPracticeBlockQuestion[]
-  prepPracticeCodeRuns              PrepPracticeCodeRun[]
-  prepPracticeBlockQuestionStates   PrepPracticeBlockQuestionState[]
-  prepBlockAssessments              PrepBlockAssessment[]
-  prepBlockAssessmentReports        PrepBlockAssessmentReport[]
-  resumeRoastTarget                 ResumeRoastTarget?                   @relation("CandidateResumeRoastTarget")
-  resumeRoasts                      ResumeRoast[]                        @relation("CandidateResumeRoasts")
-  helpRequests                      HelpRequest[]                        @relation("HelpRequestsAsked")
-  helpRequestDeclines               HelpRequestDecline[]                 @relation("HelpRequestsDeclined")
-  notifications                     Notification[]                       @relation("CandidateNotifications")
+  curriculum                         Json?
+  curriculumBuiltAt                  DateTime?
+  createdAt                          DateTime                             @default(now())
+  updatedAt                          DateTime                             @updatedAt
+  roadmaps                           UserRoadmap[]
+  questionAttempts                   UserQuestionAttempt[]
+  mayaInsights                       UserMayaInsight[]
+  dsaNotes                           UserDsaQuestionNote[]
+  prepNotes                          UserPrepQuestionNote[]
+  interviewProfileVersions           CandidateInterviewProfileVersion[]   @relation("CandidateInterviewProfileVersions")
+  coreTechnicalTrackVersions         CoreTechnicalTrackVersion[]          @relation("CandidateCoreTechnicalTrackVersions")
+  coreTechnicalFocusRevisions        CoreTechnicalFocusRevision[]         @relation("CandidateCoreTechnicalFocusRevisions")
+  coreTechnicalStoryProgress         CoreTechnicalStoryProgress[]
+  coreTechnicalBlocks                CoreTechnicalBlock[]
+  coreTechnicalBlockQuestions        CoreTechnicalBlockQuestion[]
+  coreTechnicalQuestionStates        CoreTechnicalQuestionState[]
+  coreTechnicalQuestionAttempts      CoreTechnicalQuestionAttempt[]
+  coreTechnicalCodeRuns              CoreTechnicalCodeRun[]
+  coreTechnicalAssessments           CoreTechnicalAssessment[]
+  coreTechnicalReports               CoreTechnicalAssessmentReport[]
+  coreTechnicalPreparationAttempts   CoreTechnicalPreparationAttempt[]
+  interviewPlanVersions              PersonalizedInterviewPlanVersion[]   @relation("CandidateInterviewPlanVersions")
+  performanceProfileVersions         CandidatePerformanceProfileVersion[] @relation("CandidatePerformanceProfileVersions")
+  practiceEvidenceVersions           CandidatePracticeEvidenceVersion[]   @relation("CandidatePracticeEvidenceVersions")
+  dsaPracticeBlocks                  DsaPracticeBlock[]
+  dsaBlockAssessments                DsaBlockAssessment[]
+  prepPracticeBlocks                 PrepPracticeBlock[]
+  prepPracticeBlockQuestions         PrepPracticeBlockQuestion[]
+  prepPracticeCodeRuns               PrepPracticeCodeRun[]
+  prepPracticeBlockQuestionStates    PrepPracticeBlockQuestionState[]
+  prepBlockAssessments               PrepBlockAssessment[]
+  prepBlockAssessmentReports         PrepBlockAssessmentReport[]
+  resumeRoastTarget                  ResumeRoastTarget?                   @relation("CandidateResumeRoastTarget")
+  resumeRoasts                       ResumeRoast[]                        @relation("CandidateResumeRoasts")
+  helpRequests                       HelpRequest[]                        @relation("HelpRequestsAsked")
+  helpRequestDeclines                HelpRequestDecline[]                 @relation("HelpRequestsDeclined")
+  notifications                      Notification[]                       @relation("CandidateNotifications")
 
   @@index([updatedAt])
   @@index([activeResumeVersionId])
   @@index([activeCoreTechnicalTrackVersionId])
+  @@index([activeCoreTechnicalFocusRevisionId])
 }
 
 /// The exact question and answer-key shown in one candidate's baseline. The
@@ -365,6 +422,270 @@ model PreparationBaselineQuestion {
 
   @@unique([ownerId, section])
   @@index([ownerId])
+}
+
+/// Candidate-confirmed, content-addressed focus. Every block retains the exact
+/// focus and Step 8 evidence snapshot it was prepared against.
+model CoreTechnicalFocusRevision {
+  id                        String                            @id @default(uuid()) @db.Uuid
+  ownerId                   String
+  revision                  Int
+  schemaVersion             Int
+  focusFingerprint          String
+  baselineSchemaVersion     Int
+  baselineSourceFingerprint String
+  focusSnapshot             Json
+  confirmedAt               DateTime
+  createdAt                 DateTime                          @default(now())
+  owner                     CandidateProfile                  @relation("CandidateCoreTechnicalFocusRevisions", fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  activeForProfiles         CandidateProfile[]                @relation("CandidateActiveCoreTechnicalFocusRevision")
+  blocks                    CoreTechnicalBlock[]
+  preparationAttempts       CoreTechnicalPreparationAttempt[]
+
+  @@unique([ownerId, revision])
+  @@unique([ownerId, focusFingerprint, schemaVersion])
+  @@unique([id, ownerId])
+  @@index([ownerId, confirmedAt])
+  @@index([baselineSourceFingerprint])
+}
+
+/// Stable story identity. Candidate history points at immutable versions and
+/// uses Restrict so deleting catalogue sources can never erase that history.
+model CoreTechnicalStoryDefinition {
+  key       String                       @id
+  title     String
+  createdAt DateTime                     @default(now())
+  updatedAt DateTime                     @updatedAt
+  versions  CoreTechnicalStoryVersion[]
+  progress  CoreTechnicalStoryProgress[]
+}
+
+model CoreTechnicalStoryVersion {
+  id                 String                              @id @default(uuid()) @db.Uuid
+  storyKey           String
+  version            Int
+  schemaVersion      Int
+  publicationStatus  CoreTechnicalStoryPublicationStatus @default(REVIEW)
+  contentFingerprint String
+  storySnapshot      Json
+  reviewSnapshot     Json
+  publishedAt        DateTime?
+  retiredAt          DateTime?
+  createdAt          DateTime                            @default(now())
+  story              CoreTechnicalStoryDefinition        @relation(fields: [storyKey], references: [key], onDelete: Restrict)
+  blocks             CoreTechnicalBlock[]
+
+  @@unique([storyKey, version])
+  @@unique([storyKey, contentFingerprint])
+  @@index([publicationStatus, storyKey])
+  @@index([contentFingerprint])
+}
+
+model CoreTechnicalStoryProgress {
+  id         String                           @id @default(uuid()) @db.Uuid
+  ownerId    String
+  storyKey   String
+  status     CoreTechnicalStoryProgressStatus @default(LOCKED)
+  unlockedAt DateTime?
+  startedAt  DateTime?
+  assessedAt DateTime?
+  createdAt  DateTime                         @default(now())
+  updatedAt  DateTime                         @updatedAt
+  owner      CandidateProfile                 @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  story      CoreTechnicalStoryDefinition     @relation(fields: [storyKey], references: [key], onDelete: Restrict)
+
+  @@unique([ownerId, storyKey])
+  @@index([ownerId, status])
+}
+
+/// One fully frozen eight-question cohort. PostgreSQL additionally enforces
+/// one current row per owner through a partial unique index in the migration.
+model CoreTechnicalBlock {
+  id                   String                            @id @default(uuid()) @db.Uuid
+  ownerId              String
+  ordinal              Int
+  isCurrent            Boolean                           @default(true)
+  status               CoreTechnicalBlockStatus          @default(PRACTISING)
+  focusRevisionId      String                            @db.Uuid
+  storyVersionId       String                            @db.Uuid
+  schemaVersion        Int
+  rankingPolicyVersion Int
+  preparationRequestId String                            @db.Uuid
+  contentFingerprint   String
+  selectionSnapshot    Json
+  storySnapshot        Json
+  preparedAt           DateTime
+  assessmentReadyAt    DateTime?
+  assessedAt           DateTime?
+  createdAt            DateTime                          @default(now())
+  updatedAt            DateTime                          @updatedAt
+  owner                CandidateProfile                  @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  focusRevision        CoreTechnicalFocusRevision        @relation(fields: [focusRevisionId, ownerId], references: [id, ownerId], onDelete: Restrict)
+  storyVersion         CoreTechnicalStoryVersion         @relation(fields: [storyVersionId], references: [id], onDelete: Restrict)
+  questions            CoreTechnicalBlockQuestion[]
+  assessment           CoreTechnicalAssessment?
+  preparationAttempts  CoreTechnicalPreparationAttempt[]
+
+  @@unique([ownerId, ordinal])
+  @@unique([ownerId, preparationRequestId])
+  @@unique([id, ownerId])
+  @@index([ownerId, isCurrent])
+  @@index([ownerId, createdAt])
+  @@index([storyVersionId])
+  @@index([status])
+}
+
+model CoreTechnicalBlockQuestion {
+  id                 String                         @id @default(uuid()) @db.Uuid
+  blockId            String                         @db.Uuid
+  ownerId            String
+  order              Int
+  questionKey        String
+  contentVersion     Int
+  contentFingerprint String
+  status             CoreTechnicalQuestionStatus    @default(ACTIVE)
+  publicSnapshot     Json
+  privateSnapshot    Json
+  completedAt        DateTime?
+  learnedAt          DateTime?
+  createdAt          DateTime                       @default(now())
+  updatedAt          DateTime                       @updatedAt
+  block              CoreTechnicalBlock             @relation(fields: [blockId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  owner              CandidateProfile               @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  state              CoreTechnicalQuestionState?
+  attempts           CoreTechnicalQuestionAttempt[]
+  codeRuns           CoreTechnicalCodeRun[]
+
+  @@unique([blockId, order])
+  @@unique([blockId, questionKey])
+  @@unique([id, ownerId])
+  @@index([ownerId, blockId])
+  @@index([ownerId, status])
+  @@index([contentFingerprint])
+}
+
+model CoreTechnicalQuestionState {
+  id                String                     @id @default(uuid()) @db.Uuid
+  blockQuestionId   String                     @unique @db.Uuid
+  ownerId           String
+  draft             Json?
+  revealedHintCount Int                        @default(0)
+  updatedAt         DateTime                   @updatedAt
+  blockQuestion     CoreTechnicalBlockQuestion @relation(fields: [blockQuestionId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  owner             CandidateProfile           @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+
+  @@unique([blockQuestionId, ownerId])
+  @@index([ownerId, updatedAt])
+}
+
+model CoreTechnicalQuestionAttempt {
+  id                 String                            @id @default(uuid()) @db.Uuid
+  ownerId            String
+  blockQuestionId    String                            @db.Uuid
+  requestId          String                            @db.Uuid
+  contentFingerprint String
+  workFingerprint    String
+  answerSnapshot     Json
+  evaluationSnapshot Json
+  verificationStatus PracticeAttemptVerificationStatus @default(UNVERIFIED)
+  score              Float?
+  createdAt          DateTime                          @default(now())
+  owner              CandidateProfile                  @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  blockQuestion      CoreTechnicalBlockQuestion        @relation(fields: [blockQuestionId, ownerId], references: [id, ownerId], onDelete: Cascade)
+
+  @@unique([ownerId, requestId])
+  @@unique([id, ownerId])
+  @@index([ownerId, blockQuestionId, createdAt])
+  @@index([ownerId, workFingerprint])
+}
+
+model CoreTechnicalCodeRun {
+  id                 String                     @id @default(uuid()) @db.Uuid
+  ownerId            String
+  blockQuestionId    String                     @db.Uuid
+  requestId          String                     @db.Uuid
+  contentFingerprint String
+  codeFingerprint    String
+  code               String                     @db.Text
+  runnerVersion      String
+  passed             Boolean
+  resultSnapshot     Json
+  createdAt          DateTime                   @default(now())
+  owner              CandidateProfile           @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  blockQuestion      CoreTechnicalBlockQuestion @relation(fields: [blockQuestionId, ownerId], references: [id, ownerId], onDelete: Cascade)
+
+  @@unique([ownerId, requestId])
+  @@unique([id, ownerId])
+  @@index([ownerId, blockQuestionId, createdAt])
+  @@index([ownerId, codeFingerprint])
+}
+
+model CoreTechnicalAssessment {
+  id                    String                         @id @default(uuid()) @db.Uuid
+  blockId               String                         @unique @db.Uuid
+  ownerId               String
+  status                CoreTechnicalAssessmentStatus  @default(LOCKED)
+  schemaVersion         Int
+  evaluatorVersion      String
+  assessmentSnapshot    Json?
+  startRequestId        String?                        @db.Uuid
+  finalizationRequestId String?                        @db.Uuid
+  readyAt               DateTime?
+  startedAt             DateTime?
+  completedAt           DateTime?
+  createdAt             DateTime                       @default(now())
+  updatedAt             DateTime                       @updatedAt
+  block                 CoreTechnicalBlock             @relation(fields: [blockId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  owner                 CandidateProfile               @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  report                CoreTechnicalAssessmentReport?
+
+  @@unique([ownerId, startRequestId])
+  @@unique([ownerId, finalizationRequestId])
+  @@unique([id, ownerId])
+  @@unique([blockId, ownerId])
+  @@index([ownerId, status, createdAt])
+}
+
+model CoreTechnicalAssessmentReport {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  assessmentId       String                  @unique @db.Uuid
+  ownerId            String
+  schemaVersion      Int
+  evaluatorVersion   String
+  reportSnapshot     Json
+  transcriptSnapshot Json
+  finalizedAt        DateTime
+  createdAt          DateTime                @default(now())
+  assessment         CoreTechnicalAssessment @relation(fields: [assessmentId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  owner              CandidateProfile        @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+
+  @@unique([assessmentId, ownerId])
+  @@index([ownerId, finalizedAt])
+}
+
+model CoreTechnicalPreparationAttempt {
+  id                  String                         @id @default(uuid()) @db.Uuid
+  ownerId             String
+  focusRevisionId     String                         @db.Uuid
+  blockId             String?                        @db.Uuid
+  requestId           String                         @db.Uuid
+  status              CoreTechnicalPreparationStatus @default(IN_PROGRESS)
+  generatorVersion    String
+  validatorVersion    String
+  selectionSnapshot   Json
+  diagnosticsSnapshot Json?
+  startedAt           DateTime
+  completedAt         DateTime?
+  createdAt           DateTime                       @default(now())
+  updatedAt           DateTime                       @updatedAt
+  owner               CandidateProfile               @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  focusRevision       CoreTechnicalFocusRevision     @relation(fields: [focusRevisionId, ownerId], references: [id, ownerId], onDelete: Restrict)
+  block               CoreTechnicalBlock?            @relation(fields: [blockId], references: [id], onDelete: SetNull)
+
+  @@unique([ownerId, requestId])
+  @@index([ownerId, status, createdAt])
+  @@index([focusRevisionId])
+  @@index([blockId])
 }
 
 /// Immutable cohort selected for one adaptive DSA practice block. `ordinal`

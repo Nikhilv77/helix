@@ -198,12 +198,18 @@ export class InterviewService {
    * supplies transcript-free report snapshots so the index does not have to
    * deserialize complete interview states.
    */
-  async reportsOverview(ownerId: string, limit = 50, now = Date.now()): Promise<ReportsOverview> {
+  async reportsOverview(
+    ownerId: string,
+    limit = 50,
+    now = Date.now(),
+    additionalReports: InterviewReport[] = []
+  ): Promise<ReportsOverview> {
     const boundedLimit = Math.max(1, Math.min(limit, 50));
-    return createReportsOverview(
-      await this.store.listReportsByOwner(ownerId, boundedLimit, now),
-      now
-    );
+    const stored = await this.store.listReportsByOwner(ownerId, boundedLimit, now);
+    const combined = [...stored, ...additionalReports]
+      .sort((left, right) => right.startedAt - left.startedAt)
+      .slice(0, boundedLimit);
+    return createReportsOverview(combined, now);
   }
 
   async report(ownerId: string, sessionId: string, now = Date.now()): Promise<InterviewReport> {
