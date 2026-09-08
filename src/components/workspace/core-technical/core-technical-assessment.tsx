@@ -18,7 +18,7 @@ import { DARK_PORTRAIT_PLACEHOLDER } from "@/lib/avatars/portrait-placeholder";
 import { humanizeCoreTechnicalKey } from "@/lib/practice/core-technical/ui-state";
 import type { CoreTechnicalPublicBlock } from "@/server/core-technical/practice.service";
 
-type PublicAssessment = NonNullable<CoreTechnicalPublicBlock["assessment"]>;
+export type PublicAssessment = NonNullable<CoreTechnicalPublicBlock["assessment"]>;
 type AssessmentSnapshot = NonNullable<PublicAssessment["assessment"]>;
 type SavedSubmission = NonNullable<AssessmentSnapshot["submission"]>;
 type AssessmentResponse = AssessmentSnapshot["prompts"][number] extends { id: string }
@@ -26,14 +26,53 @@ type AssessmentResponse = AssessmentSnapshot["prompts"][number] extends { id: st
   : never;
 type PendingAction = "start" | "finalize" | "continue" | null;
 
+export type StoryPracticeAssessmentExperience = {
+  slug: string;
+  label: string;
+  apiBase: string;
+  routeBase: string;
+  subjectNoun: string;
+  measures: readonly string[];
+  scoreRows: (report: PublicAssessment["report"]) => ReadonlyArray<readonly [string, number]>;
+  adaptAssessment: (assessment: unknown) => PublicAssessment;
+};
+
+export const CORE_TECHNICAL_ASSESSMENT_EXPERIENCE: StoryPracticeAssessmentExperience = {
+  slug: "core-technical",
+  label: "Core Technical",
+  apiBase: "/api/practice/core-technical",
+  routeBase: "/practice/core-technical",
+  subjectNoun: "story",
+  measures: [
+    "Technical accuracy",
+    "Mechanism reasoning",
+    "Diagnosis evidence",
+    "Debugging & implementation",
+    "Communication & production"
+  ],
+  scoreRows: (report) =>
+    report
+      ? [
+          ["Technical accuracy", report.scores.technicalAccuracy],
+          ["Mechanism reasoning", report.scores.mechanismReasoning],
+          ["Diagnosis evidence", report.scores.diagnosisEvidence],
+          ["Debugging & implementation", report.scores.debuggingImplementation],
+          ["Communication & production", report.scores.communicationProduction]
+        ]
+      : [],
+  adaptAssessment: (assessment) => assessment as PublicAssessment
+};
+
 export function CoreTechnicalAssessment({
   block,
   terminalCount,
-  allowEarlyStart = false
+  allowEarlyStart = false,
+  experience = CORE_TECHNICAL_ASSESSMENT_EXPERIENCE
 }: {
   block: CoreTechnicalPublicBlock;
   terminalCount: number;
   allowEarlyStart?: boolean;
+  experience?: StoryPracticeAssessmentExperience;
 }) {
   const router = useRouter();
   const teacher = useWorkspaceTeacher();
@@ -54,7 +93,7 @@ export function CoreTechnicalAssessment({
   const snapshot = assessment?.assessment ?? null;
   const report = assessment?.report ?? null;
   const retryingFinalization = status === "FINALIZING" || recoverySubmission !== null;
-  const draftKey = assessment ? `core-technical-assessment-draft:${assessment.id}` : null;
+  const draftKey = assessment ? `${experience.slug}-assessment-draft:${assessment.id}` : null;
 
   useEffect(() => {
     setAssessment(block.assessment);
@@ -93,7 +132,7 @@ export function CoreTechnicalAssessment({
       return (
         <AssessmentPreviewFrame
           id="assessment"
-          label="Core Technical assessment"
+          label={`${experience.label} assessment`}
           teacherName={teacher.name}
           teacherPortrait={teacherPortrait}
         >
@@ -102,6 +141,7 @@ export function CoreTechnicalAssessment({
             starting={pending === "start"}
             error={error}
             early
+            measures={experience.measures}
             onStart={() => void startAssessment()}
           />
         </AssessmentPreviewFrame>
@@ -110,18 +150,18 @@ export function CoreTechnicalAssessment({
     return (
       <AssessmentPreviewFrame
         id="assessment"
-        label="Core Technical assessment"
+        label={`${experience.label} assessment`}
         teacherName={teacher.name}
         teacherPortrait={teacherPortrait}
       >
         <AssessmentHeader
           eyebrow="Block assessment"
           title={`${Math.max(0, 8 - terminalCount)} question${8 - terminalCount === 1 ? "" : "s"} left to unlock`}
-          description={`Finish or Learn every question to unlock your story review with ${teacher.name}.`}
+          description={`Finish or Learn every question to unlock your ${experience.subjectNoun} review with ${teacher.name}.`}
           badge="Locked"
           icon={<LockKeyhole size={13} aria-hidden="true" />}
         />
-        <AssessmentMeasures />
+        <AssessmentMeasures measures={experience.measures} />
       </AssessmentPreviewFrame>
     );
   }
@@ -130,7 +170,7 @@ export function CoreTechnicalAssessment({
     return (
       <AssessmentPreviewFrame
         id="assessment"
-        label="Core Technical assessment"
+        label={`${experience.label} assessment`}
         teacherName={teacher.name}
         teacherPortrait={teacherPortrait}
       >
@@ -138,6 +178,7 @@ export function CoreTechnicalAssessment({
           teacherName={teacher.name}
           starting={pending === "start"}
           error={error}
+          measures={experience.measures}
           onStart={() => void startAssessment()}
         />
       </AssessmentPreviewFrame>
@@ -146,7 +187,7 @@ export function CoreTechnicalAssessment({
 
   if (status === "COMPLETED" && report) {
     return (
-      <AssessmentFrame id="report" label="Core Technical report">
+      <AssessmentFrame id="report" label={`${experience.label} report`}>
         <Report
           block={block}
           assessment={assessment}
@@ -154,13 +195,14 @@ export function CoreTechnicalAssessment({
           pending={pending === "continue"}
           error={error}
           onContinue={() => void continueStory()}
+          experience={experience}
         />
       </AssessmentFrame>
     );
   }
 
   return (
-    <AssessmentFrame id="assessment" label="Core Technical assessment">
+    <AssessmentFrame id="assessment" label={`${experience.label} assessment`}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
@@ -238,7 +280,7 @@ export function CoreTechnicalAssessment({
         </ol>
       ) : (
         <p role="status" className="mt-5 text-[13px] text-cream/52">
-          The frozen prompts are unavailable. Refresh this story before continuing.
+          The frozen prompts are unavailable. Refresh this {experience.subjectNoun} before continuing.
         </p>
       )}
 
@@ -270,15 +312,15 @@ export function CoreTechnicalAssessment({
     pendingRef.current = true;
     setPending("start");
     setError(null);
-    const key = `core-technical-assessment-start:${assessment.id}`;
+    const key = `${experience.slug}-assessment-start:${assessment.id}`;
     const requestId = replaySafeRequestId(key, assessment.id);
     try {
       const data = await post<{ assessment: PublicAssessment }>(
-        "/api/practice/core-technical/assessment/start",
+        `${experience.apiBase}/assessment/start`,
         { assessmentId: assessment.id, requestId }
       );
       window.sessionStorage.removeItem(key);
-      setAssessment(data.assessment);
+      setAssessment(experience.adaptAssessment(data.assessment));
       router.refresh();
     } catch (cause) {
       setError(messageFrom(cause, "The assessment could not start. Try again."));
@@ -309,18 +351,18 @@ export function CoreTechnicalAssessment({
     pendingRef.current = true;
     setPending("finalize");
     setError(null);
-    const key = `core-technical-assessment-finalize:${assessment.id}`;
+    const key = `${experience.slug}-assessment-finalize:${assessment.id}`;
     const signature = JSON.stringify(responses);
     const requestId = effectiveSubmission?.requestId ?? replaySafeRequestId(key, signature);
     try {
       const data = await post<{ assessment: PublicAssessment }>(
-        "/api/practice/core-technical/assessment/finalize",
+        `${experience.apiBase}/assessment/finalize`,
         { assessmentId: assessment.id, requestId, responses }
       );
       window.sessionStorage.removeItem(key);
       if (draftKey) window.sessionStorage.removeItem(draftKey);
       setRecoverySubmission(null);
-      setAssessment(data.assessment);
+      setAssessment(experience.adaptAssessment(data.assessment));
       router.refresh();
     } catch (cause) {
       setRecoverySubmission({ requestId, responses, submittedAt: new Date().toISOString() });
@@ -341,20 +383,20 @@ export function CoreTechnicalAssessment({
     pendingRef.current = true;
     setPending("continue");
     setError(null);
-    const key = `core-technical-continue:${block.id}`;
+    const key = `${experience.slug}-continue:${block.id}`;
     const requestId = replaySafeRequestId(key, block.id);
     try {
       const data = await post<{ replayed: boolean; block: CoreTechnicalPublicBlock | null }>(
-        "/api/practice/core-technical/continue",
+        `${experience.apiBase}/continue`,
         { blockId: block.id, requestId }
       );
-      if (!data.block) throw new Error("The next story was prepared but could not be loaded.");
+      if (!data.block) throw new Error(`The next ${experience.subjectNoun} was prepared but could not be loaded.`);
       window.sessionStorage.removeItem(key);
-      router.replace(`/practice/core-technical?block=${encodeURIComponent(data.block.id)}`);
+      router.replace(`${experience.routeBase}?block=${encodeURIComponent(data.block.id)}`);
       router.refresh();
     } catch (cause) {
       setError(
-        messageFrom(cause, "The next story could not be prepared. This report is still safe.")
+        messageFrom(cause, `The next ${experience.subjectNoun} could not be prepared. This report is still safe.`)
       );
     } finally {
       pendingRef.current = false;
@@ -363,25 +405,19 @@ export function CoreTechnicalAssessment({
   }
 }
 
-const ASSESSMENT_MEASURES = [
-  "Technical accuracy",
-  "Mechanism reasoning",
-  "Diagnosis evidence",
-  "Debugging & implementation",
-  "Communication & production"
-] as const;
-
 function ReadyAssessment({
   teacherName,
   starting,
   error,
   early = false,
+  measures,
   onStart
 }: {
   teacherName: string;
   starting: boolean;
   error: string | null;
   early?: boolean;
+  measures: readonly string[];
   onStart: () => void;
 }) {
   return (
@@ -419,19 +455,19 @@ function ReadyAssessment({
           {error}
         </p>
       ) : null}
-      <AssessmentMeasures />
+      <AssessmentMeasures measures={measures} />
     </div>
   );
 }
 
-function AssessmentMeasures() {
+function AssessmentMeasures({ measures }: { measures: readonly string[] }) {
   return (
     <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/[0.055] pt-3">
       <p className="mr-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-cream/35">
         Measures
       </p>
       <div className="flex flex-wrap gap-1.5">
-        {ASSESSMENT_MEASURES.map((label) => (
+        {measures.map((label) => (
           <div
             key={label}
             className="flex min-h-7 items-center gap-1.5 rounded-lg border border-white/[0.055] bg-white/[0.025] px-2.5 py-1"
@@ -565,7 +601,8 @@ function Report({
   headingRef,
   pending,
   error,
-  onContinue
+  onContinue,
+  experience
 }: {
   block: CoreTechnicalPublicBlock;
   assessment: PublicAssessment;
@@ -573,26 +610,21 @@ function Report({
   pending: boolean;
   error: string | null;
   onContinue: () => void;
+  experience: StoryPracticeAssessmentExperience;
 }) {
   const report = assessment.report!;
   const transcript = assessment.transcript;
   const promptById = new Map(
     assessment.assessment?.prompts.map((prompt) => [prompt.id, prompt]) ?? []
   );
-  const scores = [
-    ["Technical accuracy", report.scores.technicalAccuracy],
-    ["Mechanism reasoning", report.scores.mechanismReasoning],
-    ["Diagnosis evidence", report.scores.diagnosisEvidence],
-    ["Debugging & implementation", report.scores.debuggingImplementation],
-    ["Communication & production", report.scores.communicationProduction]
-  ] as const;
+  const scores = experience.scoreRows(report);
 
   return (
     <>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
-            Story report
+            {capitalize(experience.subjectNoun)} report
           </p>
           <h3
             ref={headingRef}
@@ -692,13 +724,13 @@ function Report({
 
       <section
         className="mt-6 rounded-xl bg-[#141619] px-4 py-5 sm:px-5"
-        aria-labelledby="next-story-heading"
+        aria-labelledby={`next-${experience.slug}-heading`}
       >
         <p className="text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--workspace-accent)]">
-          Recommended next story
+          Recommended next {experience.subjectNoun}
         </p>
         <h4
-          id="next-story-heading"
+          id={`next-${experience.slug}-heading`}
           className="mt-2 font-display text-[1.25rem] font-semibold text-cream"
         >
           {report.nextStory.selectedStory.title}
@@ -726,10 +758,10 @@ function Report({
             <ArrowRight size={15} aria-hidden="true" />
           )}
           {pending
-            ? "Preparing next story…"
+            ? `Preparing next ${experience.subjectNoun}…`
             : error
-              ? "Retry next story"
-              : "Continue to next story"}
+              ? `Retry next ${experience.subjectNoun}`
+              : `Continue to next ${experience.subjectNoun}`}
         </button>
       ) : (
         <p role="status" className="mt-5 text-[12px] text-cream/42">
@@ -738,6 +770,10 @@ function Report({
       )}
     </>
   );
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function ReportList({ title, items }: { title: string; items: string[] }) {

@@ -71,6 +71,21 @@ import { CoreTechnicalHistoryService } from "./core-technical/history.service";
 import { CoreTechnicalEligibilityService } from "./core-technical/eligibility.service";
 import { CoreTechnicalWorkspaceAnalyticsService } from "./core-technical/workspace-analytics.service";
 import { VercelSandboxNode22Executor } from "./core-technical/vercel-sandbox-executor";
+import { AppliedEngineeringBaselineEvidenceService } from "./applied-engineering/baseline-evidence.service";
+import { AppliedEngineeringFocusService } from "./applied-engineering/focus.service";
+import { AppliedEngineeringIncidentRankingService } from "./applied-engineering/incident-ranking.service";
+import { AppliedEngineeringPersistenceService } from "./applied-engineering/persistence.service";
+import { AppliedEngineeringRunnerService } from "./applied-engineering/runner.service";
+import { AppliedEngineeringAttemptEvaluator } from "./applied-engineering/attempt-evaluator";
+import { AppliedEngineeringPracticeService } from "./applied-engineering/practice.service";
+import { AppliedEngineeringAssessmentEvaluator } from "./applied-engineering/assessment-evaluator";
+import { AppliedEngineeringAssessmentService } from "./applied-engineering/assessment.service";
+import { AppliedEngineeringContinuationService } from "./applied-engineering/continuation.service";
+import { AppliedEngineeringHistoryService } from "./applied-engineering/history.service";
+import { AppliedEngineeringEligibilityService } from "./applied-engineering/eligibility.service";
+import { AppliedEngineeringWorkspaceAnalyticsService } from "./applied-engineering/workspace-analytics.service";
+import { AppliedEngineeringPreparationService } from "./applied-engineering/preparation.service";
+import { NODEJS_APPLIED_ENGINEERING_INCIDENT_RANKING_CATALOGUE } from "../lib/practice/applied-engineering/incident-ranking-catalogue";
 import { NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE } from "../lib/practice/core-technical/story-ranking-catalogue";
 import { NODEJS_CORE_TECHNICAL_DOMAIN_MAP } from "../lib/practice/core-technical/domain-map";
 import {
@@ -136,6 +151,20 @@ export interface AppContainer {
   coreTechnicalHistoryService: CoreTechnicalHistoryService;
   coreTechnicalWorkspaceAnalyticsService: CoreTechnicalWorkspaceAnalyticsService;
   coreTechnicalEligibilityService: CoreTechnicalEligibilityService;
+  appliedEngineeringBaselineEvidenceService: AppliedEngineeringBaselineEvidenceService;
+  appliedEngineeringFocusService: AppliedEngineeringFocusService;
+  appliedEngineeringIncidentRankingService: AppliedEngineeringIncidentRankingService;
+  appliedEngineeringPersistenceService: AppliedEngineeringPersistenceService;
+  appliedEngineeringRunnerService: AppliedEngineeringRunnerService;
+  appliedEngineeringAttemptEvaluator: AppliedEngineeringAttemptEvaluator;
+  appliedEngineeringPracticeService: AppliedEngineeringPracticeService;
+  appliedEngineeringAssessmentEvaluator: AppliedEngineeringAssessmentEvaluator;
+  appliedEngineeringAssessmentService: AppliedEngineeringAssessmentService;
+  appliedEngineeringContinuationService: AppliedEngineeringContinuationService;
+  appliedEngineeringHistoryService: AppliedEngineeringHistoryService;
+  appliedEngineeringEligibilityService: AppliedEngineeringEligibilityService;
+  appliedEngineeringWorkspaceAnalyticsService: AppliedEngineeringWorkspaceAnalyticsService;
+  appliedEngineeringPreparationService: AppliedEngineeringPreparationService;
 }
 
 let container: AppContainer | null = null;
@@ -282,6 +311,70 @@ export function getAppContainer(): AppContainer {
   const coreTechnicalGoldEvaluator = new CoreTechnicalGoldEvaluator({
     patterns: NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS
   });
+  const appliedEngineeringRunnerService = new AppliedEngineeringRunnerService(
+    coreTechnicalRunnerService
+  );
+  const appliedEngineeringBaselineEvidenceService = new AppliedEngineeringBaselineEvidenceService(
+    prisma
+  );
+  const appliedEngineeringFocusService = new AppliedEngineeringFocusService({
+    database: prisma,
+    baselineEvidence: appliedEngineeringBaselineEvidenceService
+  });
+  const appliedEngineeringIncidentRankingService = new AppliedEngineeringIncidentRankingService(
+    NODEJS_APPLIED_ENGINEERING_INCIDENT_RANKING_CATALOGUE
+  );
+  const appliedEngineeringPersistenceService = new AppliedEngineeringPersistenceService(prisma);
+  const appliedEngineeringAttemptEvaluator = new AppliedEngineeringAttemptEvaluator(generationAi);
+  const appliedEngineeringPracticeService = new AppliedEngineeringPracticeService(
+    prisma,
+    appliedEngineeringRunnerService,
+    appliedEngineeringAttemptEvaluator
+  );
+  const appliedEngineeringAssessmentEvaluator = new AppliedEngineeringAssessmentEvaluator(
+    generationAi,
+    appliedEngineeringIncidentRankingService
+  );
+  const appliedEngineeringAssessmentService = new AppliedEngineeringAssessmentService(
+    prisma,
+    appliedEngineeringAssessmentEvaluator
+  );
+  const appliedEngineeringContinuationService = new AppliedEngineeringContinuationService({
+    prisma,
+    persistence: appliedEngineeringPersistenceService,
+    practice: appliedEngineeringPracticeService
+  });
+  const appliedEngineeringPreparationService = new AppliedEngineeringPreparationService({
+    prisma,
+    focus: appliedEngineeringFocusService,
+    ranking: appliedEngineeringIncidentRankingService,
+    persistence: appliedEngineeringPersistenceService,
+    practice: appliedEngineeringPracticeService
+  });
+  const appliedEngineeringHistoryService = new AppliedEngineeringHistoryService(
+    prisma,
+    appliedEngineeringPracticeService
+  );
+  const appliedEngineeringEligibilityService = new AppliedEngineeringEligibilityService({
+    publications: {
+      published: async (candidates) => {
+        const rows = await prisma.appliedEngineeringIncidentVersion.findMany({
+          where: {
+            OR: candidates.map((candidate) => ({
+              incidentKey: candidate.key,
+              version: candidate.version,
+              publicationStatus: "PUBLISHED"
+            }))
+          },
+          select: { incidentKey: true, version: true }
+        });
+        return rows.map((row) => ({ key: row.incidentKey, version: row.version }));
+      }
+    },
+    runner: appliedEngineeringRunnerService
+  });
+  const appliedEngineeringWorkspaceAnalyticsService =
+    new AppliedEngineeringWorkspaceAnalyticsService(prisma);
 
   container = {
     config,
@@ -307,6 +400,20 @@ export function getAppContainer(): AppContainer {
     coreTechnicalGenerationCritic,
     coreTechnicalGenerationPipeline,
     coreTechnicalGoldEvaluator,
+    appliedEngineeringBaselineEvidenceService,
+    appliedEngineeringFocusService,
+    appliedEngineeringIncidentRankingService,
+    appliedEngineeringPersistenceService,
+    appliedEngineeringRunnerService,
+    appliedEngineeringAttemptEvaluator,
+    appliedEngineeringPracticeService,
+    appliedEngineeringAssessmentEvaluator,
+    appliedEngineeringAssessmentService,
+    appliedEngineeringContinuationService,
+    appliedEngineeringHistoryService,
+    appliedEngineeringEligibilityService,
+    appliedEngineeringWorkspaceAnalyticsService,
+    appliedEngineeringPreparationService,
     coreTechnicalGoldEvaluationRunner: new CoreTechnicalGoldEvaluationRunner({
       generationPipeline: coreTechnicalGenerationPipeline,
       evaluator: coreTechnicalGoldEvaluator

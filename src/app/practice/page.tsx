@@ -8,6 +8,8 @@ import { buildStableDsaRecommendation } from "@/server/dsa/stable-dsa-recommenda
 import { coreTechnicalPracticeEntry } from "@/lib/practice/core-technical/ui-state";
 import { mergePracticeActivity } from "@/lib/practice/core-technical/workspace-analytics";
 import type { CoreTechnicalEligibility } from "@/server/core-technical/eligibility.service";
+import { appliedEngineeringPracticeEntry } from "@/lib/practice/applied-engineering/ui-state";
+import type { AppliedEngineeringEligibility } from "@/server/applied-engineering/eligibility.service";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
@@ -29,7 +31,10 @@ export default async function PracticePage() {
     practiceEvidence,
     coreTechnicalEligibility,
     coreTechnicalBlock,
-    coreTechnicalAnalytics
+    coreTechnicalAnalytics,
+    appliedEngineeringEligibility,
+    appliedEngineeringBlock,
+    appliedEngineeringAnalytics
   ] = await Promise.all([
     container.practiceRoadmapService.home(ownerId).catch((error) => {
       generationFailed = true;
@@ -50,7 +55,16 @@ export default async function PracticePage() {
       .forProfile(profile)
       .catch((): CoreTechnicalEligibility => unavailableCoreTechnical()),
     container.coreTechnicalPracticeService.current(ownerId).catch(() => null),
-    container.coreTechnicalWorkspaceAnalyticsService.practice(ownerId, 7).catch(() => null)
+    container.coreTechnicalWorkspaceAnalyticsService.practice(ownerId, 7).catch(() => null),
+    container.appliedEngineeringEligibilityService
+      ?.forProfile(profile)
+      .catch((): AppliedEngineeringEligibility => unavailableAppliedEngineering()) ??
+      Promise.resolve(unavailableAppliedEngineering()),
+    container.appliedEngineeringPracticeService?.current(ownerId).catch(() => null) ??
+      Promise.resolve(null),
+    container.appliedEngineeringWorkspaceAnalyticsService
+      ?.practice(ownerId, 7)
+      .catch(() => null) ?? Promise.resolve(null)
   ]);
   const dsaRecommendation = dsaPlan
     ? await buildStableDsaRecommendation({
@@ -71,7 +85,10 @@ export default async function PracticePage() {
   return (
     <PracticeSessionsView
       practiceRoadmap={practiceRoadmap}
-      activity={mergePracticeActivity(activity, coreTechnicalAnalytics?.activity ?? [])}
+      activity={mergePracticeActivity(
+        mergePracticeActivity(activity, coreTechnicalAnalytics?.activity ?? []),
+        appliedEngineeringAnalytics?.activity ?? []
+      )}
       dsaRecommendation={dsaRecommendation}
       dsaBlockCompletedQuestions={dsaBlockCompletedQuestions}
       coreTechnicalEntry={coreTechnicalPracticeEntry(coreTechnicalEligibility, coreTechnicalBlock)}
@@ -83,9 +100,33 @@ export default async function PracticePage() {
             }
           : null
       }
+      appliedEngineeringEntry={appliedEngineeringPracticeEntry(
+        appliedEngineeringEligibility,
+        appliedEngineeringBlock
+      )}
+      appliedEngineeringTotals={
+        appliedEngineeringAnalytics
+          ? {
+              totalQuestions: appliedEngineeringAnalytics.totalQuestions,
+              completedQuestions: appliedEngineeringAnalytics.completedQuestions
+            }
+          : null
+      }
       generationFailed={generationFailed}
     />
   );
+}
+
+function unavailableAppliedEngineering(): AppliedEngineeringEligibility {
+  return {
+    available: false,
+    reason: "CONTENT_UNAVAILABLE",
+    message: "The reviewed Node.js incident path is not available yet.",
+    stack: { language: "javascript", runtime: "nodejs", runtimeVersion: "22 LTS" },
+    requiredIncidentCount: 2,
+    publishedIncidentCount: 0,
+    incidents: []
+  };
 }
 
 function unavailableCoreTechnical(): CoreTechnicalEligibility {

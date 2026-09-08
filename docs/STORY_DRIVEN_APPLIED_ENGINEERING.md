@@ -1,7 +1,7 @@
 # Story-Driven Applied Engineering: Requirements and Build Plan
 
-**Status:** Proposed requirement; not implemented.  
-**Position:** Practice session 3, after DSA and Core Technical.  
+**Status:** Implementation in progress; Steps 1–8 complete. Step 9 remains.
+**Position:** Practice session 3, after DSA and Core Technical.
 **Rule:** Reuse the shipped Core Technical product shape. Do not redesign Practice or change DSA.
 
 ## 1. Product requirement
@@ -280,17 +280,92 @@ metrics, content catalogue, and the shared-lease namespace explicitly named
 
 ## 10. Build order
 
-| Step | Deliverable |
-| --- | --- |
-| 1 | Incident, question, artifact, focus, and assessment contracts |
-| 2 | Two reviewed incident artifacts plus content/privacy/executable audits |
-| 3 | Onboarding baseline, focus derivation, deterministic ranking, and eligibility |
-| 4 | Prisma migration and owner/idempotency/atomicity tests |
-| 5 | Runner integration, written evaluation, practice lifecycle, and history |
-| 6 | Frozen assessment, report, adaptive continuation, and analytics |
-| 7 | API routes and app-container registration |
-| 8 | Shared UI extraction, Applied Engineering wrappers, card, and server pages |
-| 9 | Unit/integration/browser verification and release gate |
+| Step | Deliverable | Status |
+| --- | --- | --- |
+| 1 | Incident, question, artifact, focus, and assessment contracts | Complete |
+| 2 | Two reviewed incident artifacts plus content/privacy/executable audits | Complete — owner approval recorded 2026-09-08 |
+| 3 | Onboarding baseline, focus derivation, deterministic ranking, and eligibility | Complete — first-story recent-history exclusion added |
+| 4 | Prisma migration and owner/idempotency/atomicity tests | Complete — schema, migration, persistence service, and focused tests |
+| 5 | Runner integration, written evaluation, practice lifecycle, and history | Complete — runner adapter, evaluator, lifecycle, history, and focused tests |
+| 6 | Frozen assessment, report, adaptive continuation, and analytics | Complete — semantic evaluation, deterministic evidence caps, retry-safe continuation, and workspace analytics |
+| 7 | API routes and app-container registration | Complete — eleven authenticated routes, strict guards, distributed leases, and full service wiring |
+| 8 | Shared UI extraction, Applied Engineering wrappers, card, and server pages | Complete — shared presentation shell, typed artifacts, order-3 card, owner-safe pages, and boundaries |
+| 9 | Unit/integration/browser verification and release gate | Not started |
+
+### Remaining-step sizing
+
+| Step | Size | Estimated new LOC | Main work |
+| --- | --- | ---: | --- |
+| 8. Frontend integration | Large | 900–1,400 | Shared UI extraction, wrappers, pages, Practice card, and artifacts |
+| 9. Verification | Medium; test-heavy | 1,500–2,500 test LOC | Integration, regression, browser, mobile, and failure testing |
+
+Step 8 was the largest production step. Step 9 adds substantial test code but little production
+code.
+
+Step 4 completion evidence: `prisma/schema.prisma`,
+`prisma/migrations/20260908100000_story_driven_applied_engineering_persistence/migration.sql`,
+`src/server/applied-engineering/persistence.service.ts`, and
+`src/server/applied-engineering/persistence.service.spec.ts`. The Applied Engineering focused
+suite passes with 30 tests; `pnpm exec tsc --noEmit` and `pnpm lint` also pass.
+
+Step 2 approval evidence: project owner `nikhilverma` approved both launch incidents on 2026-09-08.
+The approval identity, date, and review note are frozen in
+`src/lib/practice/applied-engineering/reviewed-incidents.ts`; both catalogue entries are now
+release-eligible and published candidates for the database publication path. The idempotent
+`pnpm applied-engineering:publish` command re-runs the release audit and publishes the matching
+immutable versions before launch eligibility is enabled.
+
+Step 5 completion evidence: `src/server/applied-engineering/runner.service.ts`,
+`src/server/applied-engineering/attempt-evaluator.ts`,
+`src/server/applied-engineering/practice.service.ts`,
+`src/server/applied-engineering/history.service.ts`, and their focused specs. The Applied
+Engineering focused suite passes with 36 tests; the shared Core Technical runner remains unchanged.
+
+Step 6 completion evidence: `src/lib/practice/applied-engineering/assessment-contracts.ts`,
+`src/lib/practice/applied-engineering/workspace-analytics.ts`,
+`src/server/applied-engineering/assessment-blueprint.ts`,
+`src/server/applied-engineering/assessment-evaluator.ts`,
+`src/server/applied-engineering/assessment.service.ts`,
+`src/server/applied-engineering/continuation.service.ts`, and
+`src/server/applied-engineering/workspace-analytics.service.ts`. The assessment freezes five safe
+public prompts at readiness, checkpoints submissions before semantic evaluation, caps unsupported
+implementation claims using owned accepted runs, preserves Learn as zero mastery, ranks one novel
+published incident from verified evidence, keeps the completed report current through retryable
+continuation, and projects Practice plus assessment/report analytics. The focused Applied
+Engineering suite passes with 45 tests; affected Core Technical regressions pass with 20 tests;
+the full repository suite passes with 182 files / 1,167 tests (2 files / 8 tests skipped);
+TypeScript, lint, Prisma validation, and `git diff --check` pass.
+
+Step 7 completion evidence: `src/app/api/practice/applied-engineering/` exposes the public read,
+confirm, prepare, draft, hint, run, attempt, Learn, assessment start/finalize, and Continue routes.
+All mutations use the authenticated onboarded owner, shared rate-limit policies, strict Zod input,
+the shared API envelope, and explicitly named Applied Engineering leases for expensive or
+double-submit-sensitive operations. Confirm now calls the preparation service so the returned focus
+revision is durably persisted before prepare; assessment preview remains development-only; and the
+application container registers the complete Applied Engineering service graph while sharing the
+same environment-appropriate Core Technical Node.js runner instance. Representative request-gate
+and route tests cover authentication, onboarding, strict over-post rejection, eligibility, rate
+limits, persisted confirmation, preparation lease/release, and assessment start. The combined
+Applied Engineering service/API suite passes with 11 files / 54 tests; affected Core Technical
+regressions pass with 2 files / 14 tests; the full repository suite passes with 184 files / 1,176
+tests (2 files / 8 tests skipped); TypeScript, lint, Prisma validation, and `git diff --check` pass.
+
+Step 8 completion evidence: the shipped Core Technical preparation, intro, overview, question
+workspace, assessment, report, and history presentations now accept a bounded experience
+configuration while keeping their Core Technical defaults. Thin adapters in
+`src/components/workspace/applied-engineering/` translate only public Applied Engineering domain
+data and endpoint targets into those shared presentations. A shared typed artifact renderer covers
+scenario, code, logs, trace, metrics, waterfall, query-plan, and config evidence. `/practice`
+appends the server-derived Applied Engineering card at order 3 and independently merges its
+analytics; `/practice/applied-engineering` and its question route provide current/history reads,
+owner-safe not-found behavior, loading and retry boundaries, keyboard/focus behavior inherited from
+the shared shell, and the same responsive layout. Public block reads expose only validated incident,
+public focus, safe assessment prompts, report, and safe transcript snapshots. Focused AE/Core/UI
+regressions pass with 13 files / 48 tests; the full repository suite passes with 188 files / 1,184
+tests (2 files / 8 tests skipped). TypeScript, lint, Prisma validation, production Next.js build,
+and `git diff --check` pass.
+
+The next implementation task is the complete Step 9 verification and release-gate pass.
 
 ## 11. LOC budget and test strategy
 

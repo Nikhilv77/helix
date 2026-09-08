@@ -8,12 +8,31 @@ import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { useMayaVoice, voiceUrl } from "@/lib/voice/use-maya-voice";
 import type { CoreTechnicalPublicBlock } from "@/server/core-technical/practice.service";
 
+export type StoryPracticeIntroExperience = {
+  label: string;
+  routeBase: string;
+  subjectNoun: string;
+  description: string;
+  script: (title: string) => string;
+};
+
+export const CORE_TECHNICAL_INTRO_EXPERIENCE: StoryPracticeIntroExperience = {
+  label: "Core Technical",
+  routeBase: "/practice/core-technical",
+  subjectNoun: "story",
+  description: "Build production depth through one connected technical story.",
+  script: (title) =>
+    `Your next focus is “${title}.” Trace the mechanism, follow the evidence, then prove the repair.`
+};
+
 export function CoreTechnicalIntro({
   block,
-  terminalCount
+  terminalCount,
+  experience = CORE_TECHNICAL_INTRO_EXPERIENCE
 }: {
   block: CoreTechnicalPublicBlock;
   terminalCount: number;
+  experience?: StoryPracticeIntroExperience;
 }) {
   const teacher = useWorkspaceTeacher();
   const { state, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
@@ -21,9 +40,8 @@ export function CoreTechnicalIntro({
   const nextQuestion = block.questions.find(({ status }) => status === "ACTIVE") ?? null;
   const exactPercent = (terminalCount / Math.max(block.questions.length, 1)) * 100;
   const script = useMemo(
-    () =>
-      `Your next focus is “${block.story.title}.” Trace the mechanism, follow the evidence, then prove the repair.`,
-    [block.story.title]
+    () => experience.script(block.story.title),
+    [block.story.title, experience]
   );
 
   const say = useCallback(() => {
@@ -62,10 +80,10 @@ export function CoreTechnicalIntro({
       <header className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-display text-[2rem] font-semibold leading-none tracking-[-0.035em] text-cream sm:text-[2.15rem]">
-            Core Technical Practice
+            {experience.label} Practice
           </h1>
           <p className="mt-3 text-[14px] leading-6 text-cream/54">
-            Build production depth through one connected technical story.
+            {experience.description}
           </p>
         </div>
 
@@ -77,13 +95,13 @@ export function CoreTechnicalIntro({
             </strong>{" "}
             questions complete
             <span className="block text-cream/42">
-              Story {block.ordinal} · {block.isCurrent ? "Current path" : "Completed story"}
+              {capitalize(experience.subjectNoun)} {block.ordinal} · {block.isCurrent ? "Current path" : `Completed ${experience.subjectNoun}`}
             </span>
           </p>
           <div
             className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.075]"
             role="progressbar"
-            aria-label="Core Technical questions completed or learned"
+            aria-label={`${experience.label} questions completed or learned`}
             aria-valuemin={0}
             aria-valuemax={block.questions.length}
             aria-valuenow={terminalCount}
@@ -99,7 +117,7 @@ export function CoreTechnicalIntro({
       <section className="relative mt-6 flex flex-col overflow-hidden rounded-2xl border border-white/[0.085] bg-[#141619] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:mt-7 md:block md:min-h-[13.5rem]">
         <div className="relative z-20 order-2 flex max-w-none flex-col items-start justify-start px-5 py-7 sm:px-7 md:min-h-[13.5rem] md:max-w-[52%] md:justify-center lg:px-8">
           <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--workspace-accent)]">
-            Story {block.ordinal} · {block.selection.difficulty}
+            {capitalize(experience.subjectNoun)} {block.ordinal} · {block.selection.difficulty}
           </p>
           <h2 className="mt-3 font-display text-[1.55rem] font-semibold leading-tight tracking-[-0.025em] text-cream sm:text-[1.7rem]">
             {block.story.title}
@@ -110,11 +128,11 @@ export function CoreTechnicalIntro({
 
           {nextQuestion && block.isCurrent ? (
             <Link
-              href={`/practice/core-technical/questions/${encodeURIComponent(nextQuestion.id)}?block=${encodeURIComponent(block.id)}`}
+              href={`${experience.routeBase}/questions/${encodeURIComponent(nextQuestion.id)}?block=${encodeURIComponent(block.id)}`}
               className="group mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-cream px-4 py-2.5 text-[14px] font-semibold text-[#17181a] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:w-auto sm:px-5"
             >
               <Play size={14} aria-hidden="true" fill="currentColor" />
-              <span>{terminalCount ? "Continue" : "Start story"}</span>
+              <span>{terminalCount ? "Continue" : `Start ${experience.subjectNoun}`}</span>
               <span className="text-black/35">•</span>
               <span>Question {nextQuestion.order}</span>
               <ArrowRight
@@ -171,4 +189,8 @@ export function CoreTechnicalIntro({
       </section>
     </div>
   );
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }

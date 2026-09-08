@@ -14,8 +14,28 @@ const LANGUAGE_OPTIONS: ReadonlyArray<{
 
 const HEADING_WORDS = ["What", "language", "do", "you", "want", "to", "practise", "in?"];
 
+export type StoryPracticePreparationExperience = {
+  slug: string;
+  apiBase: string;
+  routeBase: string;
+  optionDetail: string;
+  subjectNoun: string;
+};
+
+const CORE_TECHNICAL_EXPERIENCE: StoryPracticePreparationExperience = {
+  slug: "core-technical",
+  apiBase: "/api/practice/core-technical",
+  routeBase: "/practice/core-technical",
+  optionDetail: "Node.js interview stories",
+  subjectNoun: "story"
+};
+
 /** First-entry gate. The browser confirms only language; every other focus signal is server-derived. */
-export function CoreTechnicalPreparation() {
+export function CoreTechnicalPreparation({
+  experience = CORE_TECHNICAL_EXPERIENCE
+}: {
+  experience?: StoryPracticePreparationExperience;
+} = {}) {
   const router = useRouter();
   const pending = useRef(false);
   const dialogRef = useRef<HTMLElement>(null);
@@ -81,30 +101,33 @@ export function CoreTechnicalPreparation() {
     setOpen(false);
     setPhase("confirming");
     try {
-      const confirm = await post("/api/practice/core-technical/confirm", { language });
+      const confirm = await post(`${experience.apiBase}/confirm`, { language });
       const focusId = readFocusId(confirm);
       if (!focusId) throw new Error("The confirmed practice focus was not returned.");
 
       setPhase("preparing");
-      const storageKey = `core-technical-prepare:${focusId}`;
+      const storageKey = `${experience.slug}-prepare:${focusId}`;
       const requestId = sessionStorage.getItem(storageKey) ?? crypto.randomUUID();
       sessionStorage.setItem(storageKey, requestId);
-      await post("/api/practice/core-technical/prepare", { requestId, focusRevisionId: focusId });
+      await post(`${experience.apiBase}/prepare`, { requestId, focusRevisionId: focusId });
       sessionStorage.removeItem(storageKey);
-      router.replace("/practice/core-technical");
+      router.replace(experience.routeBase);
       router.refresh();
     } catch (cause) {
       setError(
         cause instanceof Error
           ? cause.message
-          : "The complete story could not be prepared. Your saved progress is safe; try again."
+          : `The complete ${experience.subjectNoun} could not be prepared. Your saved progress is safe; try again.`
       );
       pending.current = false;
       setPhase("idle");
     }
   };
 
-  const selected = LANGUAGE_OPTIONS.find((option) => option.value === language)!;
+  const selected = {
+    ...LANGUAGE_OPTIONS.find((option) => option.value === language)!,
+    detail: experience.optionDetail
+  };
 
   return (
     <div
@@ -114,11 +137,11 @@ export function CoreTechnicalPreparation() {
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="core-technical-confirm-heading"
+        aria-labelledby={`${experience.slug}-confirm-heading`}
         className={`relative w-full max-w-[36rem] overflow-visible rounded-[1.85rem] border border-white/[0.09] bg-[linear-gradient(145deg,#1b1c20,#151619)] px-5 py-7 shadow-[0_36px_120px_rgba(0,0,0,0.78),inset_0_1px_0_rgba(255,255,255,0.045)] transition duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none sm:px-9 sm:py-9 ${visible ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-[0.975] opacity-0"}`}
       >
         <h1
-          id="core-technical-confirm-heading"
+          id={`${experience.slug}-confirm-heading`}
           aria-label="What language do you want to practise in?"
           className="mx-auto mt-4 flex max-w-[31rem] flex-wrap justify-center gap-x-2.5 gap-y-0.5 text-center font-display text-[2.25rem] font-semibold leading-[1.03] tracking-[-0.045em] text-cream sm:text-[2.75rem]"
         >
@@ -139,13 +162,13 @@ export function CoreTechnicalPreparation() {
           className={`onboarding-card-reveal relative z-20 mt-8 ${error ? "mb-4" : "mb-7"} ${open ? "is-open" : ""}`}
           style={{ "--card-delay": "680ms" } as CSSProperties}
         >
-          <label id="core-language-label" className="sr-only">
+          <label id={`${experience.slug}-language-label`} className="sr-only">
             Practice language
           </label>
           <button
             ref={triggerRef}
             type="button"
-            aria-labelledby="core-language-label core-language-value"
+            aria-labelledby={`${experience.slug}-language-label ${experience.slug}-language-value`}
             aria-haspopup="listbox"
             aria-expanded={open}
             onClick={() => setOpen((current) => !current)}
@@ -167,7 +190,7 @@ export function CoreTechnicalPreparation() {
             </span>
             <span className="min-w-0 flex-1">
               <span
-                id="core-language-value"
+                id={`${experience.slug}-language-value`}
                 className="block text-[1.35rem] font-semibold tracking-[-0.025em] text-cream"
               >
                 {selected.label}
@@ -187,7 +210,7 @@ export function CoreTechnicalPreparation() {
             <div className="min-h-0 overflow-hidden rounded-[1.15rem] bg-[#101214] shadow-[0_18px_44px_rgba(0,0,0,0.45)]">
               <ul
                 role="listbox"
-                aria-labelledby="core-language-label"
+                aria-labelledby={`${experience.slug}-language-label`}
                 className="overflow-hidden"
               >
                 {LANGUAGE_OPTIONS.map((option) => (
@@ -248,7 +271,7 @@ export function CoreTechnicalPreparation() {
             ? "Personalising your focus…"
             : phase === "preparing"
               ? "Preparing all 8 questions…"
-              : "Build my first story"}
+              : `Build my first ${experience.subjectNoun}`}
           {phase === "idle" ? (
             <ArrowRight
               size={15}

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DsaCodeEditor } from "@/components/interview/dsa/dsa-code-editor";
+import { StoryPracticeArtifact, type StoryPracticeArtifactData } from "@/components/workspace/shared/story-practice-artifact";
 import {
   coreTechnicalQuestionMinutes,
   coreTechnicalQuestionWorkKind,
@@ -44,14 +45,34 @@ type LocalRun = {
   createdAt: string;
 };
 
+export type StoryPracticeWorkspaceExperience = {
+  slug: string;
+  label: string;
+  apiBase: string;
+  routeBase: string;
+  subjectNoun: string;
+  adaptQuestion: (question: unknown) => CoreTechnicalPublicQuestion;
+};
+
+const CORE_TECHNICAL_EXPERIENCE: StoryPracticeWorkspaceExperience = {
+  slug: "core-technical",
+  label: "Core Technical",
+  apiBase: "/api/practice/core-technical",
+  routeBase: "/practice/core-technical",
+  subjectNoun: "story",
+  adaptQuestion: (question) => question as CoreTechnicalPublicQuestion
+};
+
 export function CoreTechnicalQuestionWorkspace({
   block,
   initialQuestion,
-  stageTitle
+  stageTitle,
+  experience = CORE_TECHNICAL_EXPERIENCE
 }: {
   block: CoreTechnicalPublicBlock;
   initialQuestion: CoreTechnicalPublicQuestion;
   stageTitle: string;
+  experience?: StoryPracticeWorkspaceExperience;
 }) {
   const router = useRouter();
   const [question, setQuestion] = useState(initialQuestion);
@@ -91,7 +112,7 @@ export function CoreTechnicalQuestionWorkspace({
     const sequence = ++draftSequence.current;
     const timer = window.setTimeout(() => {
       setDraftState("saving");
-      void post<{ question: CoreTechnicalPublicQuestion }>("/api/practice/core-technical/draft", {
+      void post<{ question: CoreTechnicalPublicQuestion }>(`${experience.apiBase}/draft`, {
         questionId: question.id,
         draft
       })
@@ -116,10 +137,10 @@ export function CoreTechnicalQuestionWorkspace({
     setError(null);
     try {
       const data = await post<{ question: CoreTechnicalPublicQuestion }>(
-        "/api/practice/core-technical/hint",
+        `${experience.apiBase}/hint`,
         { questionId: question.id, hintNumber }
       );
-      setQuestion(data.question);
+      setQuestion(experience.adaptQuestion(data.question));
       setPanelTab("hints");
     } catch (cause) {
       setError(messageFrom(cause, "The next hint could not be revealed."));
@@ -134,16 +155,16 @@ export function CoreTechnicalQuestionWorkspace({
     setError(null);
     setRun(null);
     setTestCasesOpen(true);
-    const requestId = replaySafeRequestId(`core-technical-run:${question.id}`, code);
+    const requestId = replaySafeRequestId(`${experience.slug}-run:${question.id}`, code);
     try {
-      const data = await post<{ run: Omit<LocalRun, "code"> }>("/api/practice/core-technical/run", {
+      const data = await post<{ run: Omit<LocalRun, "code"> }>(`${experience.apiBase}/run`, {
         questionId: question.id,
         requestId,
         code
       });
       setRun({ ...data.run, code });
       setTestCasesOpen(true);
-      clearReplayRequest(`core-technical-run:${question.id}`);
+      clearReplayRequest(`${experience.slug}-run:${question.id}`);
     } catch (cause) {
       setError(messageFrom(cause, "The isolated runner could not execute this draft."));
     } finally {
@@ -162,19 +183,19 @@ export function CoreTechnicalQuestionWorkspace({
     setPending("attempt");
     setError(null);
     const signature = JSON.stringify(work);
-    const key = `core-technical-attempt:${question.id}`;
+    const key = `${experience.slug}-attempt:${question.id}`;
     const requestId = replaySafeRequestId(key, signature);
     try {
       const data = await post<{
         attempt: NonNullable<CoreTechnicalPublicQuestion["latestAttempt"]>;
         question: CoreTechnicalPublicQuestion;
-      }>("/api/practice/core-technical/attempt", {
+      }>(`${experience.apiBase}/attempt`, {
         questionId: question.id,
         requestId,
         work
       });
       clearReplayRequest(key);
-      setQuestion(data.question);
+      setQuestion(experience.adaptQuestion(data.question));
       setConfirmLearn(false);
       setPanelTab("review");
       router.refresh();
@@ -191,10 +212,10 @@ export function CoreTechnicalQuestionWorkspace({
     setError(null);
     try {
       const data = await post<{ question: CoreTechnicalPublicQuestion }>(
-        "/api/practice/core-technical/learn",
+        `${experience.apiBase}/learn`,
         { questionId: question.id, confirmed: true }
       );
-      setQuestion(data.question);
+      setQuestion(experience.adaptQuestion(data.question));
       setPanelTab("review");
       router.refresh();
     } catch (cause) {
@@ -216,9 +237,9 @@ export function CoreTechnicalQuestionWorkspace({
     <section className="mx-auto flex min-h-0 w-full max-w-[112rem] flex-col gap-2 xl:h-full">
       <header className="flex shrink-0 flex-wrap items-center gap-3 rounded-xl border border-white/[0.08] bg-[#141619] px-3 py-2.5 sm:px-4">
         <Link
-          href={`/practice/core-technical?block=${encodeURIComponent(block.id)}`}
-          aria-label="Back to Core Technical story"
-          title="Back to story"
+          href={`${experience.routeBase}?block=${encodeURIComponent(block.id)}`}
+          aria-label={`Back to ${experience.label} ${experience.subjectNoun}`}
+          title={`Back to ${experience.subjectNoun}`}
           className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-cream/48 transition hover:bg-white/[0.055] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
         >
           <ArrowLeft size={16} aria-hidden="true" />
@@ -250,7 +271,7 @@ export function CoreTechnicalQuestionWorkspace({
               {question.status === "LEARNED" ? "Learned · zero mastery" : "Completed"}
             </span>
           ) : null}
-          <QuestionLink blockId={block.id} question={next} direction="next" />
+          <QuestionLink blockId={block.id} question={next} direction="next" routeBase={experience.routeBase} />
         </div>
       </header>
 
@@ -258,7 +279,7 @@ export function CoreTechnicalQuestionWorkspace({
         <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#141619] xl:h-full">
           <div
             role="tablist"
-            aria-label="Core Technical question reference"
+            aria-label={`${experience.label} question reference`}
             className="thin-scroll flex shrink-0 items-center gap-1 overflow-x-auto border-b border-white/[0.07] px-2 pt-2"
           >
             {panelTabs.map((item) => {
@@ -318,7 +339,7 @@ export function CoreTechnicalQuestionWorkspace({
                 <Artifact question={question} />
                 <section className="rounded-xl bg-black/20 px-4 py-4">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--workspace-accent)]">
-                    Story context
+                    {capitalize(experience.subjectNoun)} context
                   </p>
                   <p className="mt-2 text-[13px] font-semibold leading-5 text-cream/72">
                     {block.story.title}
@@ -465,6 +486,7 @@ export function CoreTechnicalQuestionWorkspace({
                   choices={question.question.choices ?? []}
                   selected={choice}
                   disabled={!mutable || pending !== null}
+                  name={`${experience.slug}-choice`}
                   onChange={setChoice}
                 />
               </div>
@@ -472,6 +494,7 @@ export function CoreTechnicalQuestionWorkspace({
               <CodeInput
                 code={code}
                 disabled={!mutable}
+                ariaLabel={`${experience.label} JavaScript editor`}
                 onChange={(value) => {
                   setCode(value);
                   if (run?.code !== value) {
@@ -572,9 +595,9 @@ export function CoreTechnicalQuestionWorkspace({
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-white/[0.07] bg-[#141619] px-3 py-2 sm:px-4">
             <nav
               className="flex items-center gap-1"
-              aria-label="Core Technical question navigation"
+              aria-label={`${experience.label} question navigation`}
             >
-              <QuestionLink blockId={block.id} question={previous} direction="previous" />
+              <QuestionLink blockId={block.id} question={previous} direction="previous" routeBase={experience.routeBase} />
             </nav>
             {mutable ? (
               <div className="flex items-center gap-2">
@@ -610,106 +633,20 @@ export function CoreTechnicalQuestionWorkspace({
 }
 
 function Artifact({ question }: { question: CoreTechnicalPublicQuestion }) {
-  const artifact = question.question.artifact;
-  const editor = artifactUsesMonaco(artifact.kind, artifact.content);
-  const lines = artifact.content.split("\n");
-  const editorHeight = codeViewerHeight(artifact.content, 440);
-
-  return (
-    <section aria-labelledby="question-artifact-heading">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-3 px-0.5">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--workspace-accent)]">
-            Evidence artifact
-          </p>
-          <h2
-            id="question-artifact-heading"
-            className="mt-1.5 text-[16px] font-semibold tracking-[-0.015em] text-cream/88"
-          >
-            {artifact.title}
-          </h2>
-        </div>
-        <span className="rounded-full border border-white/[0.065] bg-white/[0.035] px-2.5 py-1 text-[9.5px] font-semibold uppercase tracking-[0.12em] text-cream/42">
-          {humanizeCoreTechnicalKey(artifact.kind)}
-        </span>
-      </div>
-
-      <div className="overflow-hidden rounded-xl border border-white/[0.085] bg-[#0b0d10] shadow-[0_16px_45px_rgba(0,0,0,0.2)]">
-        <div className="flex h-10 items-center gap-2 border-b border-white/[0.065] bg-[#15181d] px-3.5">
-          {editor ? (
-            <Code2 size={12} aria-hidden="true" className="text-[var(--workspace-accent)]" />
-          ) : (
-            <FileText size={12} aria-hidden="true" className="text-[var(--workspace-accent)]" />
-          )}
-          <span className="min-w-0 truncate font-mono text-[10.5px] text-cream/42">
-            {artifactFileName(artifact.title, artifact.kind, editor)}
-          </span>
-          <span className="ml-auto inline-flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-[0.11em] text-cream/28">
-            {editor ? <Code2 size={11} aria-hidden="true" /> : null}
-            Read only
-          </span>
-        </div>
-
-        {editor ? (
-          <div style={{ height: editorHeight }}>
-            <DsaCodeEditor
-              language="javascript"
-              value={artifact.content}
-              readOnly
-              autoFocus={false}
-              ariaLabel={`${artifact.title} code artifact, read only`}
-            />
-          </div>
-        ) : (
-          <div className="thin-scroll max-h-[28rem] overflow-auto py-3">
-            <ol className="min-w-max font-mono text-[12px] leading-[1.85] text-cream/64">
-              {lines.map((line, index) => (
-                <li key={`${index}:${line}`} className="flex min-h-6 hover:bg-white/[0.025]">
-                  <span
-                    aria-hidden="true"
-                    className="w-12 shrink-0 select-none border-r border-white/[0.045] pr-3 text-right tabular-nums text-cream/20"
-                  >
-                    {index + 1}
-                  </span>
-                  <span className="whitespace-pre-wrap px-4">{line || " "}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function artifactUsesMonaco(kind: string, content: string): boolean {
-  if (kind === "code") return true;
-  if (kind !== "config" && kind !== "logs") return false;
-  if (kind === "config" && /^\s*[[{]/.test(content)) return true;
-  return /(^|\n)\s*(?:import|export|const|let|var|function|class|setImmediate\(|setTimeout\()/m.test(
-    content
-  );
-}
-
-function artifactFileName(title: string, kind: string, editor: boolean): string {
-  const normalized = title
-    .toLowerCase()
-    .replace(/[^a-z0-9.]+/g, "-")
-    .replace(/^-|-$/g, "");
-  if (normalized.includes(".")) return normalized;
-  if (editor) return `${normalized || "evidence"}.mjs`;
-  return `${normalized || "evidence"}.${kind === "metrics" ? "metrics" : "txt"}`;
+  return <StoryPracticeArtifact artifact={question.question.artifact as StoryPracticeArtifactData} />;
 }
 
 function ChoiceInput({
   choices,
   selected,
   disabled,
+  name,
   onChange
 }: {
   choices: string[];
   selected: number | null;
   disabled: boolean;
+  name: string;
   onChange: (value: number) => void;
 }) {
   return (
@@ -722,7 +659,7 @@ function ChoiceInput({
         >
           <input
             type="radio"
-            name="core-technical-choice"
+            name={name}
             checked={selected === index}
             onChange={() => onChange(index)}
             className="sr-only"
@@ -801,11 +738,13 @@ function ResponseIntro({ format }: { format: CoreTechnicalPublicQuestion["questi
 function CodeInput({
   code,
   disabled,
+  ariaLabel,
   onChange,
   onRun
 }: {
   code: string;
   disabled: boolean;
+  ariaLabel: string;
   onChange: (value: string) => void;
   onRun: () => void;
 }) {
@@ -818,7 +757,7 @@ function CodeInput({
         onRun={onRun}
         readOnly={disabled}
         autoFocus={false}
-        ariaLabel="Core Technical JavaScript editor"
+        ariaLabel={ariaLabel}
       />
     </div>
   );
@@ -971,11 +910,13 @@ function AuthorizedAnswer({ question }: { question: CoreTechnicalPublicQuestion 
 function QuestionLink({
   blockId,
   question,
-  direction
+  direction,
+  routeBase
 }: {
   blockId: string;
   question: CoreTechnicalPublicQuestion | null;
   direction: "previous" | "next";
+  routeBase: string;
 }) {
   const label = direction === "previous" ? "Previous" : "Next question";
   if (!question)
@@ -984,7 +925,7 @@ function QuestionLink({
     );
   return (
     <Link
-      href={`/practice/core-technical/questions/${encodeURIComponent(question.id)}?block=${encodeURIComponent(blockId)}`}
+      href={`${routeBase}/questions/${encodeURIComponent(question.id)}?block=${encodeURIComponent(blockId)}`}
       className="inline-flex h-9 items-center gap-2 rounded-lg bg-white/[0.04] px-3 text-[12.5px] font-semibold text-cream/58 transition hover:bg-white/[0.075] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
     >
       {direction === "previous" ? <ArrowLeft size={13} aria-hidden="true" /> : null}
@@ -1152,4 +1093,8 @@ function messageFrom(cause: unknown, fallback: string): string {
 
 function assertNever(value: never): never {
   throw new Error(`Unhandled Core Technical question format: ${String(value)}`);
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }

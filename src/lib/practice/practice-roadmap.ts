@@ -53,7 +53,28 @@ export interface CoreTechnicalPracticeEntry {
   href: "/practice/core-technical";
 }
 
-export type PracticeDisplaySession = PracticeRoadmapSession | CoreTechnicalPracticeEntry;
+/** Transient story-driven card data; progress remains owned by Applied Engineering models. */
+export interface AppliedEngineeringPracticeEntry {
+  key: "applied-engineering";
+  order: number;
+  title: string;
+  purpose: string;
+  covers: string[];
+  difficulty: string | null;
+  durationMinutes: number | null;
+  availability: "available";
+  status: PracticeProgressStatus;
+  totalQuestions: 8;
+  attemptedQuestions: number;
+  completedQuestions: number;
+  progressPercent: number;
+  href: "/practice/applied-engineering";
+}
+
+export type PracticeDisplaySession =
+  | PracticeRoadmapSession
+  | CoreTechnicalPracticeEntry
+  | AppliedEngineeringPracticeEntry;
 
 export interface PracticeRoadmapHome {
   roadmapId: string;

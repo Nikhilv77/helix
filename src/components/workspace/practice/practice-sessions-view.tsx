@@ -1,10 +1,11 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { ArrowRight, Atom, Clock3, CodeXml } from "lucide-react";
+import { ArrowRight, Atom, Clock3, CodeXml, Wrench } from "lucide-react";
 import { DocumentTitle } from "@/components/document-title";
 import { PracticeWeeklyActivityChart } from "@/components/workspace/shared/practice-weekly-activity-chart";
 import type { DsaRecommendation } from "@/lib/practice/dsa-recommendation";
 import type {
+  AppliedEngineeringPracticeEntry,
   CoreTechnicalPracticeEntry,
   PracticeDisplaySession,
   PracticeRoadmapHome
@@ -17,6 +18,8 @@ export function PracticeSessionsView({
   dsaBlockCompletedQuestions = 0,
   coreTechnicalEntry = null,
   coreTechnicalTotals = null,
+  appliedEngineeringEntry = null,
+  appliedEngineeringTotals = null,
   generationFailed = false
 }: {
   practiceRoadmap: PracticeRoadmapHome | null;
@@ -25,18 +28,24 @@ export function PracticeSessionsView({
   dsaBlockCompletedQuestions?: number;
   coreTechnicalEntry?: CoreTechnicalPracticeEntry | null;
   coreTechnicalTotals?: { totalQuestions: number; completedQuestions: number } | null;
+  appliedEngineeringEntry?: AppliedEngineeringPracticeEntry | null;
+  appliedEngineeringTotals?: { totalQuestions: number; completedQuestions: number } | null;
   generationFailed?: boolean;
 }) {
   const sessions = practiceRoadmap?.sessions ?? [];
-  const displaySessions: PracticeDisplaySession[] = coreTechnicalEntry
-    ? [...sessions, coreTechnicalEntry].sort((left, right) => left.order - right.order)
-    : sessions;
+  const displaySessions: PracticeDisplaySession[] = [
+    ...sessions,
+    ...(coreTechnicalEntry ? [coreTechnicalEntry] : []),
+    ...(appliedEngineeringEntry ? [appliedEngineeringEntry] : [])
+  ].sort((left, right) => left.order - right.order);
   const totalQuestions =
     sessions.reduce((total, session) => total + session.totalQuestions, 0) +
-    (coreTechnicalTotals?.totalQuestions ?? 0);
+    (coreTechnicalTotals?.totalQuestions ?? 0) +
+    (appliedEngineeringTotals?.totalQuestions ?? 0);
   const completedQuestions =
     sessions.reduce((total, session) => total + session.completedQuestions, 0) +
-    (coreTechnicalTotals?.completedQuestions ?? 0);
+    (coreTechnicalTotals?.completedQuestions ?? 0) +
+    (appliedEngineeringTotals?.completedQuestions ?? 0);
   return (
     <main className="relative isolate mx-auto flex w-full max-w-[92rem] flex-col overflow-x-clip px-4 pb-20 pt-10 sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
       <DocumentTitle title="Practice" />
@@ -180,7 +189,12 @@ function PracticeSessionCard({
   dsaRecommendation?: DsaRecommendation | null;
   dsaBlockCompletedQuestions?: number;
 }) {
-  const SessionIcon = session.key === "core-technical" ? Atom : CodeXml;
+  const SessionIcon =
+    session.key === "core-technical"
+      ? Atom
+      : session.key === "applied-engineering"
+        ? Wrench
+        : CodeXml;
   const href = session.href;
   const available = session.availability === "available" && Boolean(href);
   const statusLabel = available

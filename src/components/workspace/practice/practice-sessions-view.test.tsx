@@ -200,4 +200,30 @@ describe("PracticeSessionsView", () => {
       screen.getByRole("img", { name: /2 questions solved in the last 2 days/i })
     ).toBeInTheDocument();
   });
+
+  it("adds Applied Engineering after Core Technical at order three", () => {
+    render(
+      <PracticeSessionsView
+        practiceRoadmap={practiceRoadmap}
+        appliedEngineeringEntry={{
+          key: "applied-engineering",
+          order: 3,
+          title: "Applied Engineering · Node.js",
+          purpose: "Diagnose a production incident.",
+          covers: ["Evidence selection", "Safe delivery"],
+          difficulty: "adaptive",
+          durationMinutes: 50,
+          availability: "available",
+          status: "ACTIVE",
+          totalQuestions: 8,
+          attemptedQuestions: 0,
+          completedQuestions: 0,
+          progressPercent: 0,
+          href: "/practice/applied-engineering"
+        }}
+      />
+    );
+
+    expect(screen.getByRole("link", { name: /Applied Engineering · Node\.js.*Start session/i })).toHaveAttribute("href", "/practice/applied-engineering");
+  });
 });
