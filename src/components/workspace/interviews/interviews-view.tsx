@@ -42,6 +42,7 @@ const sessionIcons: Record<string, LucideIcon> = {
   dsa: CodeXml,
   "problem-solving": CodeXml,
   "core-technical": Atom,
+  "technical-deep-dive": Cpu,
   "applied-engineering": Cpu,
   "architecture-system-design": CircleGauge,
   "resume-behavioral-defense": BadgeCheck,
@@ -58,14 +59,12 @@ export function InterviewsView({
   const remaining = Math.max(0, quota.limit - quota.used);
   const exhausted = remaining === 0;
   const active = sessions.find((session) => session.status === "in_progress");
-  const activeQuotaSession = sessions.find(
-    (session) =>
-      session.status === "in_progress" && session.setup.templateId !== "core-technical"
-  );
   const activeHref = active
-    ? active.setup.templateId === "core-technical"
+    ? active.sessionId.startsWith("core-technical:")
       ? "/practice/core-technical"
-      : `/interview/voice?session=${active.sessionId}`
+      : active.sessionId.startsWith("applied-engineering:")
+        ? "/practice/applied-engineering"
+        : `/interview/voice?session=${active.sessionId}`
     : null;
   const roadmapSessions = interviewRoadmapSessions({
     personalizedPlan,
@@ -137,7 +136,7 @@ export function InterviewsView({
               <RoadmapSessionCard
                 key={session.id}
                 session={session}
-                disabled={exhausted && !activeQuotaSession}
+                disabled={exhausted && !session.resumeSessionId}
                 delay={index * 70}
               />
             ))

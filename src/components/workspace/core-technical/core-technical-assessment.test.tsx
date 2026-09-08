@@ -223,7 +223,11 @@ function makeBlock(
       stages: []
     },
     selection: { difficulty: "guided", reason: "Selected from saved evidence." },
-    questions: [],
+    questions: Array.from({ length: 8 }, (_, index) => ({
+      id: `question-${index + 1}`,
+      order: index + 1,
+      status: index < 6 ? "COMPLETED" : "PENDING"
+    })),
     assessment: makeAssessment(status, snapshotOverrides)
   } as unknown as CoreTechnicalPublicBlock;
 }

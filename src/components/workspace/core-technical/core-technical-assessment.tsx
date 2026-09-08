@@ -13,12 +13,16 @@ import {
   RotateCcw
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import type { StoryPracticeAssessmentExperience as StoryPracticeAssessmentExperienceContract } from "@/components/workspace/story-practice/contracts";
+import type {
+  StoryPracticeAssessmentView,
+  StoryPracticeBlockView
+} from "@/components/workspace/story-practice/view-contracts";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { DARK_PORTRAIT_PLACEHOLDER } from "@/lib/avatars/portrait-placeholder";
 import { humanizeCoreTechnicalKey } from "@/lib/practice/core-technical/ui-state";
-import type { CoreTechnicalPublicBlock } from "@/server/core-technical/practice.service";
 
-export type PublicAssessment = NonNullable<CoreTechnicalPublicBlock["assessment"]>;
+export type PublicAssessment = StoryPracticeAssessmentView;
 type AssessmentSnapshot = NonNullable<PublicAssessment["assessment"]>;
 type SavedSubmission = NonNullable<AssessmentSnapshot["submission"]>;
 type AssessmentResponse = AssessmentSnapshot["prompts"][number] extends { id: string }
@@ -26,16 +30,10 @@ type AssessmentResponse = AssessmentSnapshot["prompts"][number] extends { id: st
   : never;
 type PendingAction = "start" | "finalize" | "continue" | null;
 
-export type StoryPracticeAssessmentExperience = {
-  slug: string;
-  label: string;
-  apiBase: string;
-  routeBase: string;
-  subjectNoun: string;
-  measures: readonly string[];
-  scoreRows: (report: PublicAssessment["report"]) => ReadonlyArray<readonly [string, number]>;
-  adaptAssessment: (assessment: unknown) => PublicAssessment;
-};
+export type StoryPracticeAssessmentExperience = StoryPracticeAssessmentExperienceContract<
+  PublicAssessment,
+  NonNullable<PublicAssessment["report"]>
+>;
 
 export const CORE_TECHNICAL_ASSESSMENT_EXPERIENCE: StoryPracticeAssessmentExperience = {
   slug: "core-technical",
@@ -50,6 +48,11 @@ export const CORE_TECHNICAL_ASSESSMENT_EXPERIENCE: StoryPracticeAssessmentExperi
     "Debugging & implementation",
     "Communication & production"
   ],
+  defenceDescription:
+    "Defend the mechanisms, evidence, repair, and production consequences in five focused prompts.",
+  answerPlaceholder: "Explain the mechanism, evidence, and production consequence.",
+  evidenceSummary: (report) =>
+    `${report.solvedVsLearned.completedCount} solved · ${report.solvedVsLearned.learnedCount} learned · ${report.deterministicEvidence.acceptedCodeQuestionCount}/${report.deterministicEvidence.totalCodeQuestionCount} code questions accepted`,
   scoreRows: (report) =>
     report
       ? [
@@ -69,7 +72,7 @@ export function CoreTechnicalAssessment({
   allowEarlyStart = false,
   experience = CORE_TECHNICAL_ASSESSMENT_EXPERIENCE
 }: {
-  block: CoreTechnicalPublicBlock;
+  block: StoryPracticeBlockView;
   terminalCount: number;
   allowEarlyStart?: boolean;
   experience?: StoryPracticeAssessmentExperience;
@@ -135,6 +138,7 @@ export function CoreTechnicalAssessment({
           label={`${experience.label} assessment`}
           teacherName={teacher.name}
           teacherPortrait={teacherPortrait}
+          coachLabel={`${experience.subjectNoun} coach`}
         >
           <ReadyAssessment
             teacherName={teacher.name}
@@ -142,6 +146,7 @@ export function CoreTechnicalAssessment({
             error={error}
             early
             measures={experience.measures}
+            description={experience.defenceDescription}
             onStart={() => void startAssessment()}
           />
         </AssessmentPreviewFrame>
@@ -153,10 +158,11 @@ export function CoreTechnicalAssessment({
         label={`${experience.label} assessment`}
         teacherName={teacher.name}
         teacherPortrait={teacherPortrait}
+        coachLabel={`${experience.subjectNoun} coach`}
       >
         <AssessmentHeader
           eyebrow="Block assessment"
-          title={`${Math.max(0, 8 - terminalCount)} question${8 - terminalCount === 1 ? "" : "s"} left to unlock`}
+          title={`${Math.max(0, block.questions.length - terminalCount)} question${block.questions.length - terminalCount === 1 ? "" : "s"} left to unlock`}
           description={`Finish or Learn every question to unlock your ${experience.subjectNoun} review with ${teacher.name}.`}
           badge="Locked"
           icon={<LockKeyhole size={13} aria-hidden="true" />}
@@ -173,12 +179,14 @@ export function CoreTechnicalAssessment({
         label={`${experience.label} assessment`}
         teacherName={teacher.name}
         teacherPortrait={teacherPortrait}
+        coachLabel={`${experience.subjectNoun} coach`}
       >
         <ReadyAssessment
           teacherName={teacher.name}
           starting={pending === "start"}
           error={error}
           measures={experience.measures}
+          description={experience.defenceDescription}
           onStart={() => void startAssessment()}
         />
       </AssessmentPreviewFrame>
@@ -266,7 +274,7 @@ export function CoreTechnicalAssessment({
                   rows={5}
                   aria-describedby={`${inputId}-count`}
                   className="mt-4 min-h-32 w-full resize-y rounded-lg border border-white/[0.08] bg-[#111214] px-3.5 py-3 text-[13px] leading-6 text-cream outline-none placeholder:text-cream/28 focus:border-[var(--workspace-accent-border)] focus:ring-2 focus:ring-[var(--workspace-accent-soft)] read-only:cursor-default read-only:text-cream/56"
-                  placeholder="Explain the mechanism, evidence, and production consequence."
+                  placeholder={experience.answerPlaceholder}
                 />
                 <p
                   id={`${inputId}-count`}
@@ -280,7 +288,8 @@ export function CoreTechnicalAssessment({
         </ol>
       ) : (
         <p role="status" className="mt-5 text-[13px] text-cream/52">
-          The frozen prompts are unavailable. Refresh this {experience.subjectNoun} before continuing.
+          The frozen prompts are unavailable. Refresh this {experience.subjectNoun} before
+          continuing.
         </p>
       )}
 
@@ -386,17 +395,21 @@ export function CoreTechnicalAssessment({
     const key = `${experience.slug}-continue:${block.id}`;
     const requestId = replaySafeRequestId(key, block.id);
     try {
-      const data = await post<{ replayed: boolean; block: CoreTechnicalPublicBlock | null }>(
+      const data = await post<{ replayed: boolean; block: StoryPracticeBlockView | null }>(
         `${experience.apiBase}/continue`,
         { blockId: block.id, requestId }
       );
-      if (!data.block) throw new Error(`The next ${experience.subjectNoun} was prepared but could not be loaded.`);
+      if (!data.block)
+        throw new Error(`The next ${experience.subjectNoun} was prepared but could not be loaded.`);
       window.sessionStorage.removeItem(key);
       router.replace(`${experience.routeBase}?block=${encodeURIComponent(data.block.id)}`);
       router.refresh();
     } catch (cause) {
       setError(
-        messageFrom(cause, `The next ${experience.subjectNoun} could not be prepared. This report is still safe.`)
+        messageFrom(
+          cause,
+          `The next ${experience.subjectNoun} could not be prepared. This report is still safe.`
+        )
       );
     } finally {
       pendingRef.current = false;
@@ -411,6 +424,7 @@ function ReadyAssessment({
   error,
   early = false,
   measures,
+  description,
   onStart
 }: {
   teacherName: string;
@@ -418,6 +432,7 @@ function ReadyAssessment({
   error: string | null;
   early?: boolean;
   measures: readonly string[];
+  description: string;
   onStart: () => void;
 }) {
   return (
@@ -428,10 +443,7 @@ function ReadyAssessment({
       <h3 className="mt-2 font-display text-[1.5rem] font-semibold text-cream">
         Your 1:1 with {teacherName} is ready
       </h3>
-      <p className="mt-2 text-[14px] leading-6 text-cream/58">
-        Defend the mechanisms, evidence, repair, and production consequences in five focused
-        prompts.
-      </p>
+      <p className="mt-2 text-[14px] leading-6 text-cream/58">{description}</p>
       {early ? (
         <p className="mt-1 text-[11px] leading-5 text-cream/36">
           Development preview: unfinished questions will be recorded as Learned with zero mastery.
@@ -486,12 +498,14 @@ function AssessmentPreviewFrame({
   label,
   teacherName,
   teacherPortrait,
+  coachLabel,
   children
 }: {
   id: string;
   label: string;
   teacherName: string;
   teacherPortrait: string;
+  coachLabel: string;
   children: React.ReactNode;
 }) {
   return (
@@ -518,7 +532,7 @@ function AssessmentPreviewFrame({
           <span className="absolute left-3 top-3 h-5 w-5 border-l border-t border-[color:var(--workspace-accent-border)]" />
           <span className="absolute bottom-3 right-3 h-5 w-5 border-b border-r border-white/20" />
           <div className="absolute bottom-3 left-3 rounded-full border border-white/10 bg-[#090a0b]/90 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.13em] text-cream/78">
-            {teacherName} · story coach
+            {teacherName} · {coachLabel}
           </div>
         </div>
         <div className="flex min-w-0 flex-col justify-center px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
@@ -604,7 +618,7 @@ function Report({
   onContinue,
   experience
 }: {
-  block: CoreTechnicalPublicBlock;
+  block: StoryPracticeBlockView;
   assessment: PublicAssessment;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
   pending: boolean;
@@ -687,9 +701,7 @@ function Report({
           Practice evidence
         </h4>
         <p className="mt-2 text-[12.5px] leading-5 text-cream/52">
-          {report.solvedVsLearned.completedCount} solved · {report.solvedVsLearned.learnedCount}{" "}
-          learned · {report.deterministicEvidence.acceptedCodeQuestionCount}/
-          {report.deterministicEvidence.totalCodeQuestionCount} code questions accepted
+          {experience.evidenceSummary(report)}
         </p>
         <p className="mt-2 text-[12px] leading-5 text-cream/42">
           {report.solvedVsLearned.masteryCreditNote}

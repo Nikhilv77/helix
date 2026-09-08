@@ -36,6 +36,18 @@ export interface InterviewSetup {
   /** Trusted immutable source copied into the session when a blueprint launches. */
   personalizedPlanId?: string;
   personalizedBlueprint?: SessionBlueprint;
+  /** Source identities retained when Core and Applied launch as one mixed round. */
+  technicalDeepDive?: {
+    kind: "technical-deep-dive";
+    coreBlueprintId: string;
+    appliedBlueprintId: string;
+    questionSources?: Array<{
+      blueprintId: string;
+      blueprintKind: "core-technical" | "applied-engineering";
+      topicKey: string;
+      rubricKeys: string[];
+    }>;
+  };
   /** Slugs selected for the live DSA workspace, in interview order. */
   dsaQuestionSlugs?: string[];
   /** DSA rounds use a compact set of practice questions instead of the default four-question arc. */
@@ -121,6 +133,11 @@ export interface PlannedQuestion {
   topicKey?: string;
   skillKeys?: string[];
   rubricKeys?: string[];
+  /** Original Core/Applied provenance for a derived Technical Deep Dive slot. */
+  sourceBlueprintId?: string;
+  sourceBlueprintKind?: "core-technical" | "applied-engineering";
+  sourceTopicKey?: string;
+  sourceRubricKeys?: string[];
   maxFollowUps?: number;
   /** What the interviewer is trying to learn, not spoken to the candidate. */
   intent?: string;
@@ -147,6 +164,7 @@ export interface EvidenceLedger {
   blueprint?: {
     planId: string;
     blueprintId: string;
+    blueprintKind?: "core-technical" | "applied-engineering";
     stage: BlueprintStageKind;
     topicKey: string;
     skillKeys: string[];

@@ -224,6 +224,74 @@ describe("PracticeSessionsView", () => {
       />
     );
 
-    expect(screen.getByRole("link", { name: /Applied Engineering · Node\.js.*Start session/i })).toHaveAttribute("href", "/practice/applied-engineering");
+    expect(
+      screen.getByRole("link", { name: /Applied Engineering · Node\.js.*Start session/i })
+    ).toHaveAttribute("href", "/practice/applied-engineering");
+  });
+
+  it("adds Architecture & Design as the order-four non-executable session", () => {
+    render(
+      <PracticeSessionsView
+        practiceRoadmap={practiceRoadmap}
+        architectureDesignEntry={{
+          key: "architecture-design",
+          order: 4,
+          title: "Architecture & Design",
+          purpose: "Defend a role-aligned system design.",
+          covers: ["Requirements", "Reliability", "Trade-offs"],
+          difficulty: "adaptive",
+          durationMinutes: 45,
+          availability: "available",
+          status: "ACTIVE",
+          totalQuestions: 4,
+          attemptedQuestions: 0,
+          completedQuestions: 0,
+          progressPercent: 0,
+          href: "/practice/architecture-design"
+        }}
+      />
+    );
+
+    expect(
+      screen.getByRole("link", { name: /Architecture & Design.*Start session/i })
+    ).toHaveAttribute("href", "/practice/architecture-design");
+    expect(
+      screen.getAllByRole("heading", { level: 2 }).map(({ textContent }) => textContent)
+    ).toEqual(["DSA · Arrays", "Architecture & Design"]);
+  });
+
+  it("keeps Architecture & Design discoverable when reviewed scenarios are unavailable", () => {
+    render(
+      <PracticeSessionsView
+        practiceRoadmap={practiceRoadmap}
+        architectureDesignEntry={{
+          key: "architecture-design",
+          order: 4,
+          title: "Architecture & Design",
+          purpose: "Design a role-aligned system.",
+          covers: ["Requirements", "Reliability", "Trade-offs"],
+          difficulty: "adaptive",
+          durationMinutes: 45,
+          availability: "unavailable",
+          availabilityLabel: "Two reviewed scenarios must be published before this opens.",
+          status: "LOCKED",
+          totalQuestions: 4,
+          attemptedQuestions: 0,
+          completedQuestions: 0,
+          progressPercent: 0,
+          href: null
+        }}
+      />
+    );
+
+    expect(screen.getByRole("heading", { name: "Architecture & Design" })).toBeInTheDocument();
+    expect(
+      screen.getByText("Two reviewed scenarios must be published before this opens.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("article", { name: /Architecture & Design/i })).toHaveAttribute(
+      "aria-disabled",
+      "true"
+    );
+    expect(screen.queryByRole("link", { name: /Architecture & Design/i })).toBeNull();
   });
 });

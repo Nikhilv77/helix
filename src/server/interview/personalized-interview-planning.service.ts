@@ -30,6 +30,12 @@ export interface PersonalizedBlueprintSelection {
   blueprint: SessionBlueprint;
 }
 
+export interface TechnicalDeepDiveBlueprintSelection {
+  plan: PersonalizedInterviewPlan;
+  coreBlueprint: SessionBlueprint;
+  appliedBlueprint: SessionBlueprint;
+}
+
 /**
  * Application boundary for the personalized roadmap. It is the only layer
  * that decides whether an existing plan can be reused or a new immutable
@@ -145,6 +151,39 @@ export class PersonalizedInterviewPlanningService {
 
     return { plan, blueprint };
   }
+
+  async technicalDeepDiveBlueprints(
+    ownerId: string,
+    coreBlueprintId: string,
+    appliedBlueprintId: string,
+    expectedPlanId?: string | null,
+    now = Date.now()
+  ): Promise<TechnicalDeepDiveBlueprintSelection> {
+    const plan = await this.activePlan(ownerId, now);
+    if (expectedPlanId && plan.id !== expectedPlanId) {
+      throw new ConflictErrorException(
+        "PERSONALIZED_PLAN_CHANGED",
+        "Your interview plan changed. Choose the session again from the latest roadmap.",
+        { expectedPlanId, activePlanId: plan.id }
+      );
+    }
+
+    const coreBlueprint = plan.sessions.find(
+      (session) => session.id === coreBlueprintId && session.kind === "core-technical"
+    );
+    const appliedBlueprint = plan.sessions.find(
+      (session) => session.id === appliedBlueprintId && session.kind === "applied-engineering"
+    );
+    if (!coreBlueprint || !appliedBlueprint) {
+      throw new NotFoundErrorException(
+        "TECHNICAL_DEEP_DIVE_BLUEPRINTS_NOT_FOUND",
+        "This Technical Deep Dive is not part of your active plan.",
+        { coreBlueprintId, appliedBlueprintId, planId: plan.id }
+      );
+    }
+
+    return { plan, coreBlueprint, appliedBlueprint };
+  }
 }
 
 /**
@@ -170,7 +209,10 @@ function baselinePerformanceProfile(
     "applied-engineering": projectSkill,
     "architecture-design": projectSkill
   } as const;
-  const aggregate = new Map<string, { totalScore: number; totalConfidence: number; count: number }>();
+  const aggregate = new Map<
+    string,
+    { totalScore: number; totalConfidence: number; count: number }
+  >();
   for (const signal of baseline.signals) {
     if (signal.evidence !== "baseline") continue;
     const score = baselinePlanningScore(signal.topics);
@@ -215,7 +257,8 @@ function baselinePerformanceProfile(
 
 /** Converts qualitative baseline familiarity into a deliberately narrow plan-ordering hint. */
 function baselinePlanningScore(
-  topics: Array<{ label: string; familiarity: "familiar" | "needs-refresh" | "unknown" }> | undefined
+  topics:
+    Array<{ label: string; familiarity: "familiar" | "needs-refresh" | "unknown" }> | undefined
 ): number | null {
   const observed = topics?.filter((topic) => topic.familiarity !== "unknown") ?? [];
   if (!observed.length) return null;

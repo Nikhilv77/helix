@@ -71,10 +71,31 @@ export interface AppliedEngineeringPracticeEntry {
   href: "/practice/applied-engineering";
 }
 
+/** Transient story-driven card data; progress remains owned by Architecture models. */
+export interface ArchitectureDesignPracticeEntry {
+  key: "architecture-design";
+  order: 4;
+  title: string;
+  purpose: string;
+  covers: string[];
+  difficulty: string | null;
+  durationMinutes: number | null;
+  availability: PracticeSessionAvailability;
+  /** Candidate-facing reason shown when publication or profile gates block entry. */
+  availabilityLabel?: string | null;
+  status: PracticeProgressStatus;
+  totalQuestions: 4;
+  attemptedQuestions: number;
+  completedQuestions: number;
+  progressPercent: number;
+  href: "/practice/architecture-design" | null;
+}
+
 export type PracticeDisplaySession =
   | PracticeRoadmapSession
   | CoreTechnicalPracticeEntry
-  | AppliedEngineeringPracticeEntry;
+  | AppliedEngineeringPracticeEntry
+  | ArchitectureDesignPracticeEntry;
 
 export interface PracticeRoadmapHome {
   roadmapId: string;
@@ -141,7 +162,9 @@ export function projectPracticeSessions(
 /**
  * Returns null for every interview round without an active Practice counterpart.
  */
-function practiceKeyForVisibleSession(kind: InterviewSessionKind | null): PracticeSessionKey | null {
+function practiceKeyForVisibleSession(
+  kind: InterviewSessionKind | null
+): PracticeSessionKey | null {
   if (kind === "problem-solving") return "dsa";
   return null;
 }

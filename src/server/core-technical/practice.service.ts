@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import {
   CoreTechnicalAssessmentStatus,
   CoreTechnicalBlockStatus,
@@ -41,6 +40,15 @@ import { NotFoundErrorException } from "@/server/common/exceptions/not-found-err
 import { ServiceUnavailableErrorException } from "@/server/common/exceptions/service-unavailable-error.exception";
 import type { PrismaService } from "@/server/database/prisma.service";
 import { codeFingerprint } from "@/server/interview/code-fingerprint";
+import {
+  assertStoryPracticeAttemptReplay,
+  assertStoryPracticeHintOrder,
+  assertStoryPracticeRunBinding,
+  assertStoryPracticeRunReplay,
+  assertStoryPracticeWorkMatchesQuestion,
+  STORY_PRACTICE_TRANSACTION_OPTIONS as transactionOptions,
+  storyPracticeFingerprint as fingerprint
+} from "@/server/story-practice/practice-orchestrator";
 import type { CoreTechnicalAttemptEvaluator } from "./attempt-evaluator";
 import type { CoreTechnicalRunResult } from "./runner-contracts";
 import type { CoreTechnicalRunnerService } from "./runner.service";
@@ -186,12 +194,15 @@ export class CoreTechnicalPracticeService {
         select: { revealedHintCount: true }
       });
       const current = state?.revealedHintCount ?? 0;
-      if (input.hintNumber > current + 1) {
-        throw new ConflictErrorException(
-          "CORE_TECHNICAL_HINT_OUT_OF_ORDER",
-          "Reveal Core Technical hints in order."
-        );
-      }
+      assertStoryPracticeHintOrder(
+        current,
+        input.hintNumber,
+        () =>
+          new ConflictErrorException(
+            "CORE_TECHNICAL_HINT_OUT_OF_ORDER",
+            "Reveal Core Technical hints in order."
+          )
+      );
       if (input.hintNumber > current) {
         await tx.coreTechnicalQuestionState.upsert({
           where: { blockQuestionId_ownerId: { blockQuestionId: input.questionId, ownerId } },
@@ -557,12 +568,15 @@ function replayRun(
   questionId: string,
   fingerprintValue: string
 ) {
-  if (run.blockQuestionId !== questionId || run.codeFingerprint !== fingerprintValue) {
-    throw new ConflictErrorException(
-      "CORE_TECHNICAL_RUN_REQUEST_CONFLICT",
-      "This code-run request ID was already used for different work."
-    );
-  }
+  assertStoryPracticeRunReplay(
+    run,
+    { questionId, codeFingerprint: fingerprintValue },
+    () =>
+      new ConflictErrorException(
+        "CORE_TECHNICAL_RUN_REQUEST_CONFLICT",
+        "This code-run request ID was already used for different work."
+      )
+  );
   return {
     id: run.id,
     result: publicRunResult(run.resultSnapshot),
@@ -575,12 +589,15 @@ function assertAttemptReplay(
   questionId: string,
   workFingerprint: string
 ) {
-  if (attempt.blockQuestionId !== questionId || attempt.workFingerprint !== workFingerprint) {
-    throw new ConflictErrorException(
-      "CORE_TECHNICAL_ATTEMPT_REQUEST_CONFLICT",
-      "This attempt request ID was already used for different work."
-    );
-  }
+  assertStoryPracticeAttemptReplay(
+    attempt,
+    { questionId, workFingerprint },
+    () =>
+      new ConflictErrorException(
+        "CORE_TECHNICAL_ATTEMPT_REQUEST_CONFLICT",
+        "This attempt request ID was already used for different work."
+      )
+  );
 }
 
 function assertWorkMatchesQuestion(
@@ -589,36 +606,22 @@ function assertWorkMatchesQuestion(
 ) {
   if (work === null) return;
   const question = generatedQuestionCandidateSchema.parse(rawQuestion);
-  const executable =
-    question.format === "debug-repair" || question.format === "micro-implementation";
-  if (question.format === "mcq" && work.kind !== "choice") {
-    throw new BadRequestErrorException(
-      "CORE_TECHNICAL_WORK_FORMAT",
-      "This question requires one selected choice."
-    );
-  }
-  if (executable && work.kind !== "code") {
-    throw new BadRequestErrorException(
-      "CORE_TECHNICAL_WORK_FORMAT",
-      "This question requires JavaScript code."
-    );
-  }
-  if (question.format !== "mcq" && !executable && work.kind !== "text") {
-    throw new BadRequestErrorException(
-      "CORE_TECHNICAL_WORK_FORMAT",
-      "This question requires a written response."
-    );
-  }
-  if (
-    work.kind === "choice" &&
-    question.choices &&
-    work.selectedChoiceIndex >= question.choices.length
-  ) {
-    throw new BadRequestErrorException(
-      "CORE_TECHNICAL_CHOICE_INVALID",
-      "That answer choice does not exist."
-    );
-  }
+  assertStoryPracticeWorkMatchesQuestion(question, work, {
+    format: () =>
+      new BadRequestErrorException(
+        "CORE_TECHNICAL_WORK_FORMAT",
+        question.format === "mcq"
+          ? "This question requires one selected choice."
+          : question.format === "debug-repair" || question.format === "micro-implementation"
+            ? "This question requires JavaScript code."
+            : "This question requires a written response."
+      ),
+    choice: () =>
+      new BadRequestErrorException(
+        "CORE_TECHNICAL_CHOICE_INVALID",
+        "That answer choice does not exist."
+      )
+  });
 }
 
 async function mutableQuestion(tx: Prisma.TransactionClient, ownerId: string, questionId: string) {
@@ -658,16 +661,15 @@ function validateRunBinding(
   contentFingerprint: string,
   code: string
 ) {
-  if (
-    !run ||
-    run.contentFingerprint !== contentFingerprint ||
-    run.codeFingerprint !== codeFingerprint(code)
-  ) {
-    throw new ConflictErrorException(
-      "CORE_TECHNICAL_RUN_MISMATCH",
-      "Run this exact code for this question before submitting it."
-    );
-  }
+  assertStoryPracticeRunBinding(
+    run,
+    { contentFingerprint, codeFingerprint: codeFingerprint(code) },
+    () =>
+      new ConflictErrorException(
+        "CORE_TECHNICAL_RUN_MISMATCH",
+        "Run this exact code for this question before submitting it."
+      )
+  );
 }
 
 async function makeAssessmentReadyIfTerminal(
@@ -747,21 +749,6 @@ function questionNotMutable() {
   );
 }
 
-function fingerprint(value: unknown): string {
-  return `sha256:${createHash("sha256").update(stableStringify(value)).digest("hex")}`;
-}
-
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
-  if (typeof value === "object" && value !== null) {
-    return `{${Object.entries(value)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, child]) => `${JSON.stringify(key)}:${stableStringify(child)}`)
-      .join(",")}}`;
-  }
-  return JSON.stringify(value);
-}
-
 function toJson(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
@@ -773,5 +760,3 @@ async function lock(tx: Prisma.TransactionClient, questionId: string) {
 async function lockBlock(tx: Prisma.TransactionClient, blockId: string) {
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`core-technical-block-lifecycle:${blockId}`}))`;
 }
-
-const transactionOptions = { maxWait: 20_000, timeout: 120_000 } as const;

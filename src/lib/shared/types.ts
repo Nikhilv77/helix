@@ -24,6 +24,18 @@ export interface InterviewSetup {
   durationMinutes?: number;
   personalizedPlanId?: string;
   personalizedBlueprint?: SessionBlueprint;
+  /** Requested source IDs on launch, then trusted source IDs in saved state. */
+  technicalDeepDive?: {
+    kind: "technical-deep-dive";
+    coreBlueprintId: string;
+    appliedBlueprintId: string;
+    questionSources?: Array<{
+      blueprintId: string;
+      blueprintKind: "core-technical" | "applied-engineering";
+      topicKey: string;
+      rubricKeys: string[];
+    }>;
+  };
   questionCount?: 3 | 4 | 5 | 6 | 7 | 8;
   dsaQuestionSlugs?: string[]; /** Marks the staged resume round, which the workspace renders differently. */
   resumeRound?: boolean;

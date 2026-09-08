@@ -268,6 +268,41 @@ describe("performance profile aggregation", () => {
     expect(profile?.skills[0]?.score).toBeLessThan(90);
   });
 
+  it("attributes Technical Deep Dive observations to their original source topic and rubric", () => {
+    const session = personalizedSession({
+      plan: [
+        {
+          ...question("How does this runtime mechanism behave?"),
+          sourceBlueprintId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          sourceBlueprintKind: "core-technical",
+          sourceTopicKey: "javascript-event-loop",
+          sourceRubricKeys: ["mechanism-reasoning"]
+        }
+      ],
+      turns: [
+        {
+          speaker: "user",
+          text: "I traced the microtask ordering and verified it with an instrumented reproduction.",
+          startMs: 1_000,
+          endMs: 8_000,
+          questionIndex: 0
+        }
+      ]
+    });
+
+    const profile = aggregateCandidatePerformanceProfile({
+      id: "12121212-1212-4212-8212-121212121212",
+      revision: 1,
+      sessions: [session],
+      generatedAt: NOW
+    });
+
+    expect(profile?.skills.find((skill) => skill.skillKey === "react")).toMatchObject({
+      topicKeys: ["javascript-event-loop"],
+      rubricPerformance: [expect.objectContaining({ rubricKey: "mechanism-reasoning" })]
+    });
+  });
+
   it("uses persisted technical verdicts instead of the no-follow-up score floor", () => {
     const technicalEvaluation = {
       source: "semantic-evaluator" as const,

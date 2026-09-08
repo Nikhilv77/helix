@@ -1,6 +1,6 @@
 "use client";
 
-import { CoreTechnicalQuestionWorkspace } from "@/components/workspace/core-technical/core-technical-question-workspace";
+import { StoryPracticeQuestionWorkspace } from "@/components/workspace/story-practice/story-practice-question-workspace";
 import type {
   AppliedEngineeringPublicBlock,
   AppliedEngineeringPublicQuestion
@@ -21,7 +21,7 @@ export function AppliedEngineeringQuestionWorkspace({
   stageTitle: string;
 }) {
   return (
-    <CoreTechnicalQuestionWorkspace
+    <StoryPracticeQuestionWorkspace
       block={appliedEngineeringBlockView(block)}
       initialQuestion={appliedEngineeringQuestionView(initialQuestion)}
       stageTitle={stageTitle}

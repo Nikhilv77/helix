@@ -13,6 +13,12 @@ const mocks = vi.hoisted(() => ({
   coreTechnicalEligibility: vi.fn(),
   coreTechnicalCurrent: vi.fn(),
   coreTechnicalAnalytics: vi.fn(),
+  appliedEngineeringEligibility: vi.fn(),
+  appliedEngineeringCurrent: vi.fn(),
+  appliedEngineeringAnalytics: vi.fn(),
+  architectureDesignEligibility: vi.fn(),
+  architectureDesignCurrent: vi.fn(),
+  architectureDesignAnalytics: vi.fn(),
   logError: vi.fn()
 }));
 
@@ -31,7 +37,15 @@ vi.mock("@/server/app-container", () => ({
     practiceEvidenceStore: { refresh: mocks.practiceEvidence },
     coreTechnicalEligibilityService: { forProfile: mocks.coreTechnicalEligibility },
     coreTechnicalPracticeService: { current: mocks.coreTechnicalCurrent },
-    coreTechnicalWorkspaceAnalyticsService: { practice: mocks.coreTechnicalAnalytics }
+    coreTechnicalWorkspaceAnalyticsService: { practice: mocks.coreTechnicalAnalytics },
+    appliedEngineeringEligibilityService: { forProfile: mocks.appliedEngineeringEligibility },
+    appliedEngineeringPracticeService: { current: mocks.appliedEngineeringCurrent },
+    appliedEngineeringWorkspaceAnalyticsService: { practice: mocks.appliedEngineeringAnalytics },
+    architectureDesign: {
+      eligibility: { forProfile: mocks.architectureDesignEligibility },
+      practice: { current: mocks.architectureDesignCurrent },
+      workspaceAnalytics: { practice: mocks.architectureDesignAnalytics }
+    }
   })
 }));
 
@@ -62,6 +76,27 @@ describe("PracticePage", () => {
     });
     mocks.coreTechnicalCurrent.mockResolvedValue(null);
     mocks.coreTechnicalAnalytics.mockResolvedValue(null);
+    mocks.appliedEngineeringEligibility.mockResolvedValue({
+      available: false,
+      reason: "CONTENT_UNAVAILABLE",
+      message: "Not published",
+      stack: { language: "javascript", runtime: "nodejs", runtimeVersion: "22 LTS" },
+      requiredIncidentCount: 2,
+      publishedIncidentCount: 0,
+      incidents: []
+    });
+    mocks.appliedEngineeringCurrent.mockResolvedValue(null);
+    mocks.appliedEngineeringAnalytics.mockResolvedValue(null);
+    mocks.architectureDesignEligibility.mockResolvedValue({
+      available: false,
+      reason: "CONTENT_UNAVAILABLE",
+      message: "Not published",
+      requiredScenarioCount: 2,
+      publishedScenarioCount: 0,
+      scenarios: []
+    });
+    mocks.architectureDesignCurrent.mockResolvedValue(null);
+    mocks.architectureDesignAnalytics.mockResolvedValue(null);
   });
 
   it("does not reach the Practice generator when the onboarding guard rejects access", async () => {
@@ -92,4 +127,63 @@ describe("PracticePage", () => {
       reason: "temporary database error"
     });
   });
+
+  it("keeps a disabled Architecture card visible when Architecture reads fail", async () => {
+    mocks.requireOnboardedProfile.mockResolvedValue({
+      userId: "user-1",
+      ownerId: "owner-1",
+      profile: { resume: { fullName: "Asha Verma" } } as CandidateProfile
+    });
+    mocks.home.mockResolvedValue(practiceRoadmap());
+    mocks.architectureDesignEligibility.mockRejectedValue(new Error("temporary failure"));
+    mocks.architectureDesignCurrent.mockRejectedValue(new Error("temporary failure"));
+    mocks.architectureDesignAnalytics.mockRejectedValue(new Error("temporary failure"));
+
+    render(await PracticePage());
+
+    expect(screen.getByRole("link", { name: /DSA.*Start session/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Architecture & Design" })).toBeInTheDocument();
+    expect(
+      screen.getByText("The reviewed Architecture & Design scenario path is not available yet.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("article", { name: /Architecture & Design/i })).toHaveAttribute(
+      "aria-disabled",
+      "true"
+    );
+  });
 });
+
+function practiceRoadmap() {
+  return {
+    roadmapId: "roadmap-1",
+    title: "Practice roadmap",
+    generationVersion: 2,
+    generatedAt: 1,
+    sourcePlan: {
+      id: "plan-1",
+      revision: 1,
+      profileVersionId: "profile-1",
+      profileRevision: 1
+    },
+    sessions: [
+      {
+        key: "dsa",
+        order: 1,
+        title: "DSA",
+        purpose: "Practice algorithms.",
+        covers: ["Arrays"],
+        difficulty: "adaptive",
+        durationMinutes: 20,
+        sourceBlueprintId: null,
+        sourceBlueprintKind: null,
+        availability: "available",
+        status: "ACTIVE",
+        totalQuestions: 1,
+        attemptedQuestions: 0,
+        completedQuestions: 0,
+        progressPercent: 0,
+        href: "/practice/dsa"
+      }
+    ]
+  };
+}

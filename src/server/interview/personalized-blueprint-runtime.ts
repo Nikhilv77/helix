@@ -142,6 +142,7 @@ export function applyPersonalizedBlueprintFormats(
   return slots.map((slot, index) => {
     const question = questions[index] ?? fallbackQuestionForSlot(blueprint, slot);
     const rubric = rubricForSlot(blueprint, slot);
+    const source = setup.technicalDeepDive?.questionSources?.[index];
     const base: PlannedQuestion = {
       ...question,
       competency: question.competency || rubric?.label || slot.topic.label,
@@ -151,6 +152,14 @@ export function applyPersonalizedBlueprintFormats(
       topicKey: slot.topic.key,
       skillKeys: [...slot.topic.skillKeys],
       rubricKeys: [...slot.rubricKeys],
+      ...(source
+        ? {
+            sourceBlueprintId: source.blueprintId,
+            sourceBlueprintKind: source.blueprintKind,
+            sourceTopicKey: source.topicKey,
+            sourceRubricKeys: [...source.rubricKeys]
+          }
+        : {}),
       maxFollowUps: slot.maxFollowUps,
       kind: "conversation",
       answerFormat: answerFormatFor(slot.format),

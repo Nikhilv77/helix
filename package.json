@@ -15,6 +15,7 @@
     "core-technical:generate": "tsx scripts/core-technical-generate.ts",
     "core-technical:publish": "tsx scripts/core-technical-publish.ts",
     "applied-engineering:publish": "tsx scripts/applied-engineering-publish.ts",
+    "architecture-design:publish": "tsx scripts/architecture-design-publish.ts",
     "format": "prettier --write \"{src,test,prisma}/**/*.{ts,tsx,js,json,md,prisma}\" \"*.{json,md,yml}\"",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",

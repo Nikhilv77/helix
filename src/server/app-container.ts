@@ -85,7 +85,21 @@ import { AppliedEngineeringHistoryService } from "./applied-engineering/history.
 import { AppliedEngineeringEligibilityService } from "./applied-engineering/eligibility.service";
 import { AppliedEngineeringWorkspaceAnalyticsService } from "./applied-engineering/workspace-analytics.service";
 import { AppliedEngineeringPreparationService } from "./applied-engineering/preparation.service";
+import { ArchitectureDesignAssessmentEvaluator } from "./architecture-design/assessment-evaluator";
+import { ArchitectureDesignAssessmentService } from "./architecture-design/assessment.service";
+import { ArchitectureDesignAttemptEvaluator } from "./architecture-design/attempt-evaluator";
+import { ArchitectureDesignBaselineEvidenceService } from "./architecture-design/baseline-evidence.service";
+import { ArchitectureDesignContinuationService } from "./architecture-design/continuation.service";
+import { ArchitectureDesignEligibilityService } from "./architecture-design/eligibility.service";
+import { ArchitectureDesignFocusService } from "./architecture-design/focus.service";
+import { ArchitectureDesignHistoryService } from "./architecture-design/history.service";
+import { ArchitectureDesignPracticeService } from "./architecture-design/practice.service";
+import { ArchitectureDesignPreparationService } from "./architecture-design/preparation.service";
+import { ArchitectureDesignRepositoryAdapter } from "./architecture-design/repository-adapter";
+import { ArchitectureDesignScenarioRankingService } from "./architecture-design/scenario-ranking.service";
+import { ArchitectureDesignWorkspaceAnalyticsService } from "./architecture-design/workspace-analytics.service";
 import { NODEJS_APPLIED_ENGINEERING_INCIDENT_RANKING_CATALOGUE } from "../lib/practice/applied-engineering/incident-ranking-catalogue";
+import { ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE } from "../lib/practice/architecture-design/scenario-ranking-catalogue";
 import { NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE } from "../lib/practice/core-technical/story-ranking-catalogue";
 import { NODEJS_CORE_TECHNICAL_DOMAIN_MAP } from "../lib/practice/core-technical/domain-map";
 import {
@@ -165,6 +179,21 @@ export interface AppContainer {
   appliedEngineeringEligibilityService: AppliedEngineeringEligibilityService;
   appliedEngineeringWorkspaceAnalyticsService: AppliedEngineeringWorkspaceAnalyticsService;
   appliedEngineeringPreparationService: AppliedEngineeringPreparationService;
+  architectureDesign: {
+    baselineEvidence: ArchitectureDesignBaselineEvidenceService;
+    focus: ArchitectureDesignFocusService;
+    ranking: ArchitectureDesignScenarioRankingService;
+    repository: ArchitectureDesignRepositoryAdapter;
+    attemptEvaluator: ArchitectureDesignAttemptEvaluator;
+    practice: ArchitectureDesignPracticeService;
+    preparation: ArchitectureDesignPreparationService;
+    assessmentEvaluator: ArchitectureDesignAssessmentEvaluator;
+    assessment: ArchitectureDesignAssessmentService;
+    continuation: ArchitectureDesignContinuationService;
+    history: ArchitectureDesignHistoryService;
+    eligibility: ArchitectureDesignEligibilityService;
+    workspaceAnalytics: ArchitectureDesignWorkspaceAnalyticsService;
+  };
 }
 
 let container: AppContainer | null = null;
@@ -375,6 +404,52 @@ export function getAppContainer(): AppContainer {
   });
   const appliedEngineeringWorkspaceAnalyticsService =
     new AppliedEngineeringWorkspaceAnalyticsService(prisma);
+  const architectureDesignBaselineEvidenceService = new ArchitectureDesignBaselineEvidenceService(
+    prisma
+  );
+  const architectureDesignFocusService = new ArchitectureDesignFocusService({
+    database: prisma,
+    baselineEvidence: architectureDesignBaselineEvidenceService
+  });
+  const architectureDesignScenarioRankingService = new ArchitectureDesignScenarioRankingService(
+    ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE
+  );
+  const architectureDesignRepositoryAdapter = new ArchitectureDesignRepositoryAdapter(prisma);
+  const architectureDesignAttemptEvaluator = new ArchitectureDesignAttemptEvaluator(generationAi);
+  const architectureDesignPracticeService = new ArchitectureDesignPracticeService(
+    prisma,
+    architectureDesignAttemptEvaluator
+  );
+  const architectureDesignPreparationService = new ArchitectureDesignPreparationService({
+    prisma,
+    focus: architectureDesignFocusService,
+    ranking: architectureDesignScenarioRankingService,
+    repository: architectureDesignRepositoryAdapter,
+    practice: architectureDesignPracticeService
+  });
+  const architectureDesignAssessmentEvaluator = new ArchitectureDesignAssessmentEvaluator(
+    generationAi,
+    architectureDesignScenarioRankingService
+  );
+  const architectureDesignAssessmentService = new ArchitectureDesignAssessmentService(
+    prisma,
+    architectureDesignAssessmentEvaluator
+  );
+  const architectureDesignContinuationService = new ArchitectureDesignContinuationService({
+    prisma,
+    repository: architectureDesignRepositoryAdapter,
+    practice: architectureDesignPracticeService
+  });
+  const architectureDesignHistoryService = new ArchitectureDesignHistoryService(
+    prisma,
+    architectureDesignPracticeService
+  );
+  const architectureDesignEligibilityService = new ArchitectureDesignEligibilityService({
+    publications: architectureDesignRepositoryAdapter,
+    catalogue: ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE
+  });
+  const architectureDesignWorkspaceAnalyticsService =
+    new ArchitectureDesignWorkspaceAnalyticsService(prisma);
 
   container = {
     config,
@@ -414,6 +489,21 @@ export function getAppContainer(): AppContainer {
     appliedEngineeringEligibilityService,
     appliedEngineeringWorkspaceAnalyticsService,
     appliedEngineeringPreparationService,
+    architectureDesign: {
+      baselineEvidence: architectureDesignBaselineEvidenceService,
+      focus: architectureDesignFocusService,
+      ranking: architectureDesignScenarioRankingService,
+      repository: architectureDesignRepositoryAdapter,
+      attemptEvaluator: architectureDesignAttemptEvaluator,
+      practice: architectureDesignPracticeService,
+      preparation: architectureDesignPreparationService,
+      assessmentEvaluator: architectureDesignAssessmentEvaluator,
+      assessment: architectureDesignAssessmentService,
+      continuation: architectureDesignContinuationService,
+      history: architectureDesignHistoryService,
+      eligibility: architectureDesignEligibilityService,
+      workspaceAnalytics: architectureDesignWorkspaceAnalyticsService
+    },
     coreTechnicalGoldEvaluationRunner: new CoreTechnicalGoldEvaluationRunner({
       generationPipeline: coreTechnicalGenerationPipeline,
       evaluator: coreTechnicalGoldEvaluator

@@ -239,6 +239,49 @@ enum AppliedEngineeringAssessmentStatus {
   COMPLETED
 }
 
+enum ArchitectureScenarioPublicationStatus {
+  REVIEW
+  PUBLISHED
+  RETIRED
+}
+
+enum ArchitectureScenarioProgressStatus {
+  LOCKED
+  AVAILABLE
+  PREPARING
+  PRACTISING
+  ASSESSMENT_READY
+  ASSESSMENT_IN_PROGRESS
+  ASSESSED
+}
+
+enum ArchitectureBlockStatus {
+  PRACTISING
+  ASSESSMENT_READY
+  ASSESSMENT_IN_PROGRESS
+  ASSESSED
+}
+
+enum ArchitectureQuestionStatus {
+  ACTIVE
+  COMPLETED
+  LEARNED
+}
+
+enum ArchitecturePreparationStatus {
+  IN_PROGRESS
+  SUCCEEDED
+  FAILED
+}
+
+enum ArchitectureAssessmentStatus {
+  LOCKED
+  READY
+  IN_PROGRESS
+  FINALIZING
+  COMPLETED
+}
+
 model Project {
   id             String          @id @default(uuid()) @db.Uuid
   ownerId        String          @default("local-dev")
@@ -366,104 +409,117 @@ model InterviewAnswerRequest {
 }
 
 model CandidateProfile {
-  ownerId                            String                               @id
-  targetRole                         String?
-  level                              String?
-  targetCompany                      String?
-  targetDate                         DateTime?
-  headline                           String?
-  context                            String?
-  coverImage                         String?
-  profileImage                       String?
-  workspaceAccent                    String                               @default("ember")
+  ownerId                                 String                                 @id
+  targetRole                              String?
+  level                                   String?
+  targetCompany                           String?
+  targetDate                              DateTime?
+  headline                                String?
+  context                                 String?
+  coverImage                              String?
+  profileImage                            String?
+  workspaceAccent                         String                                 @default("ember")
   /// Preferred language for standalone DSA practice editor sessions.
-  dsaEditorLanguage                  String                               @default("javascript")
+  dsaEditorLanguage                       String                                 @default("javascript")
   /// Persona id from src/lib/avatars/personas.ts — the teacher chosen at onboarding.
-  teacherId                          String?
+  teacherId                               String?
   /// False stops this candidate being asked to help with other people's questions.
-  helpNotificationsEnabled           Boolean                              @default(true)
+  helpNotificationsEnabled                Boolean                                @default(true)
   /// False pauses the teacher's optional daily practice recommendations.
-  teacherNotificationsEnabled        Boolean                              @default(true)
-  focusAreas                         Json
-  stories                            Json
-  resumeFileName                     String?
-  resumeMimeType                     String?
-  resumeAnalysis                     Json?
-  resumeUploadedAt                   DateTime?
-  resumeVerifiedAt                   DateTime?
-  resumeConfidence                   Float?
+  teacherNotificationsEnabled             Boolean                                @default(true)
+  focusAreas                              Json
+  stories                                 Json
+  resumeFileName                          String?
+  resumeMimeType                          String?
+  resumeAnalysis                          Json?
+  resumeUploadedAt                        DateTime?
+  resumeVerifiedAt                        DateTime?
+  resumeConfidence                        Float?
   /// Immutable resume/profile revision currently projected into this row.
-  activeResumeVersionId              String?                              @db.Uuid
-  activeResumeVersion                CandidateInterviewProfileVersion?    @relation("CandidateActiveResumeVersion", fields: [activeResumeVersionId], references: [id], onDelete: SetNull)
+  activeResumeVersionId                   String?                                @db.Uuid
+  activeResumeVersion                     CandidateInterviewProfileVersion?      @relation("CandidateActiveResumeVersion", fields: [activeResumeVersionId], references: [id], onDelete: SetNull)
   /// Active immutable Core Technical ecosystem selection. Historical blocks keep their own snapshot.
-  activeCoreTechnicalTrackVersionId  String?                              @db.Uuid
-  activeCoreTechnicalTrackVersion    CoreTechnicalTrackVersion?           @relation("CandidateActiveCoreTechnicalTrackVersion", fields: [activeCoreTechnicalTrackVersionId], references: [id], onDelete: SetNull)
+  activeCoreTechnicalTrackVersionId       String?                                @db.Uuid
+  activeCoreTechnicalTrackVersion         CoreTechnicalTrackVersion?             @relation("CandidateActiveCoreTechnicalTrackVersion", fields: [activeCoreTechnicalTrackVersionId], references: [id], onDelete: SetNull)
   /// Active story-driven Core Technical focus. This does not reactivate the retired fixed track.
-  activeCoreTechnicalFocusRevisionId String?                              @db.Uuid
-  activeCoreTechnicalFocusRevision   CoreTechnicalFocusRevision?          @relation("CandidateActiveCoreTechnicalFocusRevision", fields: [activeCoreTechnicalFocusRevisionId], references: [id], onDelete: SetNull)
+  activeCoreTechnicalFocusRevisionId      String?                                @db.Uuid
+  activeCoreTechnicalFocusRevision        CoreTechnicalFocusRevision?            @relation("CandidateActiveCoreTechnicalFocusRevision", fields: [activeCoreTechnicalFocusRevisionId], references: [id], onDelete: SetNull)
   /// Active story-driven Applied Engineering focus. Historical blocks retain their own snapshot.
-  activeAppliedEngineeringFocusRevisionId String?                          @db.Uuid
-  activeAppliedEngineeringFocusRevision   AppliedEngineeringFocusRevision?  @relation("CandidateActiveAppliedEngineeringFocusRevision", fields: [activeAppliedEngineeringFocusRevisionId], references: [id], onDelete: SetNull)
-  onboardingCompletedAt              DateTime?
+  activeAppliedEngineeringFocusRevisionId String?                                @db.Uuid
+  activeAppliedEngineeringFocusRevision   AppliedEngineeringFocusRevision?       @relation("CandidateActiveAppliedEngineeringFocusRevision", fields: [activeAppliedEngineeringFocusRevisionId], references: [id], onDelete: SetNull)
+  /// Active story-driven Architecture & Design focus. Historical blocks retain their own snapshot.
+  activeArchitectureFocusRevisionId       String?                                @db.Uuid
+  activeArchitectureFocusRevision         ArchitectureFocusRevision?             @relation("CandidateActiveArchitectureFocusRevision", fields: [activeArchitectureFocusRevisionId, ownerId], references: [id, ownerId], onDelete: Restrict)
+  onboardingCompletedAt                   DateTime?
   /// Durable target-setup and initial-baseline checkpoint. Null legacy rows enter at target setup.
-  preparationOnboarding              Json?
-  preparationOnboardingCompletedAt   DateTime?
+  preparationOnboarding                   Json?
+  preparationOnboardingCompletedAt        DateTime?
   /// Immutable per-candidate baseline question snapshots, retained for audit and resume safety.
-  preparationBaselineQuestions       PreparationBaselineQuestion[]
+  preparationBaselineQuestions            PreparationBaselineQuestion[]
   /// Maya's curated session plan for this candidate, generated from the resume.
-  curriculum                         Json?
-  curriculumBuiltAt                  DateTime?
-  createdAt                          DateTime                             @default(now())
-  updatedAt                          DateTime                             @updatedAt
-  roadmaps                           UserRoadmap[]
-  questionAttempts                   UserQuestionAttempt[]
-  mayaInsights                       UserMayaInsight[]
-  dsaNotes                           UserDsaQuestionNote[]
-  prepNotes                          UserPrepQuestionNote[]
-  interviewProfileVersions           CandidateInterviewProfileVersion[]   @relation("CandidateInterviewProfileVersions")
-  coreTechnicalTrackVersions         CoreTechnicalTrackVersion[]          @relation("CandidateCoreTechnicalTrackVersions")
-  coreTechnicalFocusRevisions        CoreTechnicalFocusRevision[]         @relation("CandidateCoreTechnicalFocusRevisions")
-  coreTechnicalStoryProgress         CoreTechnicalStoryProgress[]
-  coreTechnicalBlocks                CoreTechnicalBlock[]
-  coreTechnicalBlockQuestions        CoreTechnicalBlockQuestion[]
-  coreTechnicalQuestionStates        CoreTechnicalQuestionState[]
-  coreTechnicalQuestionAttempts      CoreTechnicalQuestionAttempt[]
-  coreTechnicalCodeRuns              CoreTechnicalCodeRun[]
-  coreTechnicalAssessments           CoreTechnicalAssessment[]
-  coreTechnicalReports               CoreTechnicalAssessmentReport[]
-  coreTechnicalPreparationAttempts   CoreTechnicalPreparationAttempt[]
-  appliedEngineeringFocusRevisions  AppliedEngineeringFocusRevision[]      @relation("CandidateAppliedEngineeringFocusRevisions")
-  appliedEngineeringIncidentProgress AppliedEngineeringIncidentProgress[]
-  appliedEngineeringBlocks          AppliedEngineeringBlock[]
-  appliedEngineeringBlockQuestions  AppliedEngineeringBlockQuestion[]
-  appliedEngineeringQuestionStates  AppliedEngineeringQuestionState[]
-  appliedEngineeringQuestionAttempts AppliedEngineeringQuestionAttempt[]
-  appliedEngineeringCodeRuns        AppliedEngineeringCodeRun[]
-  appliedEngineeringAssessments     AppliedEngineeringAssessment[]
-  appliedEngineeringReports         AppliedEngineeringAssessmentReport[]
-  appliedEngineeringPreparationAttempts AppliedEngineeringPreparationAttempt[]
-  interviewPlanVersions              PersonalizedInterviewPlanVersion[]   @relation("CandidateInterviewPlanVersions")
-  performanceProfileVersions         CandidatePerformanceProfileVersion[] @relation("CandidatePerformanceProfileVersions")
-  practiceEvidenceVersions           CandidatePracticeEvidenceVersion[]   @relation("CandidatePracticeEvidenceVersions")
-  dsaPracticeBlocks                  DsaPracticeBlock[]
-  dsaBlockAssessments                DsaBlockAssessment[]
-  prepPracticeBlocks                 PrepPracticeBlock[]
-  prepPracticeBlockQuestions         PrepPracticeBlockQuestion[]
-  prepPracticeCodeRuns               PrepPracticeCodeRun[]
-  prepPracticeBlockQuestionStates    PrepPracticeBlockQuestionState[]
-  prepBlockAssessments               PrepBlockAssessment[]
-  prepBlockAssessmentReports         PrepBlockAssessmentReport[]
-  resumeRoastTarget                  ResumeRoastTarget?                   @relation("CandidateResumeRoastTarget")
-  resumeRoasts                       ResumeRoast[]                        @relation("CandidateResumeRoasts")
-  helpRequests                       HelpRequest[]                        @relation("HelpRequestsAsked")
-  helpRequestDeclines                HelpRequestDecline[]                 @relation("HelpRequestsDeclined")
-  notifications                      Notification[]                       @relation("CandidateNotifications")
+  curriculum                              Json?
+  curriculumBuiltAt                       DateTime?
+  createdAt                               DateTime                               @default(now())
+  updatedAt                               DateTime                               @updatedAt
+  roadmaps                                UserRoadmap[]
+  questionAttempts                        UserQuestionAttempt[]
+  mayaInsights                            UserMayaInsight[]
+  dsaNotes                                UserDsaQuestionNote[]
+  prepNotes                               UserPrepQuestionNote[]
+  interviewProfileVersions                CandidateInterviewProfileVersion[]     @relation("CandidateInterviewProfileVersions")
+  coreTechnicalTrackVersions              CoreTechnicalTrackVersion[]            @relation("CandidateCoreTechnicalTrackVersions")
+  coreTechnicalFocusRevisions             CoreTechnicalFocusRevision[]           @relation("CandidateCoreTechnicalFocusRevisions")
+  coreTechnicalStoryProgress              CoreTechnicalStoryProgress[]
+  coreTechnicalBlocks                     CoreTechnicalBlock[]
+  coreTechnicalBlockQuestions             CoreTechnicalBlockQuestion[]
+  coreTechnicalQuestionStates             CoreTechnicalQuestionState[]
+  coreTechnicalQuestionAttempts           CoreTechnicalQuestionAttempt[]
+  coreTechnicalCodeRuns                   CoreTechnicalCodeRun[]
+  coreTechnicalAssessments                CoreTechnicalAssessment[]
+  coreTechnicalReports                    CoreTechnicalAssessmentReport[]
+  coreTechnicalPreparationAttempts        CoreTechnicalPreparationAttempt[]
+  appliedEngineeringFocusRevisions        AppliedEngineeringFocusRevision[]      @relation("CandidateAppliedEngineeringFocusRevisions")
+  appliedEngineeringIncidentProgress      AppliedEngineeringIncidentProgress[]
+  appliedEngineeringBlocks                AppliedEngineeringBlock[]
+  appliedEngineeringBlockQuestions        AppliedEngineeringBlockQuestion[]
+  appliedEngineeringQuestionStates        AppliedEngineeringQuestionState[]
+  appliedEngineeringQuestionAttempts      AppliedEngineeringQuestionAttempt[]
+  appliedEngineeringCodeRuns              AppliedEngineeringCodeRun[]
+  appliedEngineeringAssessments           AppliedEngineeringAssessment[]
+  appliedEngineeringReports               AppliedEngineeringAssessmentReport[]
+  appliedEngineeringPreparationAttempts   AppliedEngineeringPreparationAttempt[]
+  architectureFocusRevisions              ArchitectureFocusRevision[]            @relation("CandidateArchitectureFocusRevisions")
+  architectureScenarioProgress            ArchitectureScenarioProgress[]
+  architectureBlocks                      ArchitectureBlock[]
+  architectureBlockQuestions              ArchitectureBlockQuestion[]
+  architectureQuestionStates              ArchitectureQuestionState[]
+  architectureQuestionAttempts            ArchitectureQuestionAttempt[]
+  architectureAssessments                 ArchitectureAssessment[]
+  architectureReports                     ArchitectureAssessmentReport[]
+  architecturePreparationAttempts         ArchitecturePreparationAttempt[]
+  interviewPlanVersions                   PersonalizedInterviewPlanVersion[]     @relation("CandidateInterviewPlanVersions")
+  performanceProfileVersions              CandidatePerformanceProfileVersion[]   @relation("CandidatePerformanceProfileVersions")
+  practiceEvidenceVersions                CandidatePracticeEvidenceVersion[]     @relation("CandidatePracticeEvidenceVersions")
+  dsaPracticeBlocks                       DsaPracticeBlock[]
+  dsaBlockAssessments                     DsaBlockAssessment[]
+  prepPracticeBlocks                      PrepPracticeBlock[]
+  prepPracticeBlockQuestions              PrepPracticeBlockQuestion[]
+  prepPracticeCodeRuns                    PrepPracticeCodeRun[]
+  prepPracticeBlockQuestionStates         PrepPracticeBlockQuestionState[]
+  prepBlockAssessments                    PrepBlockAssessment[]
+  prepBlockAssessmentReports              PrepBlockAssessmentReport[]
+  resumeRoastTarget                       ResumeRoastTarget?                     @relation("CandidateResumeRoastTarget")
+  resumeRoasts                            ResumeRoast[]                          @relation("CandidateResumeRoasts")
+  helpRequests                            HelpRequest[]                          @relation("HelpRequestsAsked")
+  helpRequestDeclines                     HelpRequestDecline[]                   @relation("HelpRequestsDeclined")
+  notifications                           Notification[]                         @relation("CandidateNotifications")
 
   @@index([updatedAt])
   @@index([activeResumeVersionId])
   @@index([activeCoreTechnicalTrackVersionId])
   @@index([activeCoreTechnicalFocusRevisionId])
   @@index([activeAppliedEngineeringFocusRevisionId])
+  @@index([activeArchitectureFocusRevisionId])
 }
 
 /// The exact question and answer-key shown in one candidate's baseline. The
@@ -747,7 +803,7 @@ model CoreTechnicalPreparationAttempt {
 
 /// Candidate-confirmed, content-addressed Applied Engineering focus.
 model AppliedEngineeringFocusRevision {
-  id                        String                            @id @default(uuid()) @db.Uuid
+  id                        String                                 @id @default(uuid()) @db.Uuid
   ownerId                   String
   revision                  Int
   schemaVersion             Int
@@ -756,9 +812,9 @@ model AppliedEngineeringFocusRevision {
   baselineSourceFingerprint String
   focusSnapshot             Json
   confirmedAt               DateTime
-  createdAt                 DateTime                          @default(now())
-  owner                     CandidateProfile                  @relation("CandidateAppliedEngineeringFocusRevisions", fields: [ownerId], references: [ownerId], onDelete: Cascade)
-  activeForProfiles         CandidateProfile[]                @relation("CandidateActiveAppliedEngineeringFocusRevision")
+  createdAt                 DateTime                               @default(now())
+  owner                     CandidateProfile                       @relation("CandidateAppliedEngineeringFocusRevisions", fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  activeForProfiles         CandidateProfile[]                     @relation("CandidateActiveAppliedEngineeringFocusRevision")
   blocks                    AppliedEngineeringBlock[]
   preparationAttempts       AppliedEngineeringPreparationAttempt[]
 
@@ -770,10 +826,10 @@ model AppliedEngineeringFocusRevision {
 }
 
 model AppliedEngineeringIncidentDefinition {
-  key       String                                  @id
+  key       String                               @id
   title     String
-  createdAt DateTime                                @default(now())
-  updatedAt DateTime                                @updatedAt
+  createdAt DateTime                             @default(now())
+  updatedAt DateTime                             @updatedAt
   versions  AppliedEngineeringIncidentVersion[]
   progress  AppliedEngineeringIncidentProgress[]
 }
@@ -790,7 +846,7 @@ model AppliedEngineeringIncidentVersion {
   publishedAt        DateTime?
   retiredAt          DateTime?
   createdAt          DateTime                                    @default(now())
-  incident            AppliedEngineeringIncidentDefinition       @relation(fields: [incidentKey], references: [key], onDelete: Restrict)
+  incident           AppliedEngineeringIncidentDefinition        @relation(fields: [incidentKey], references: [key], onDelete: Restrict)
   blocks             AppliedEngineeringBlock[]
 
   @@unique([incidentKey, version])
@@ -800,17 +856,17 @@ model AppliedEngineeringIncidentVersion {
 }
 
 model AppliedEngineeringIncidentProgress {
-  id          String                                      @id @default(uuid()) @db.Uuid
+  id          String                                   @id @default(uuid()) @db.Uuid
   ownerId     String
   incidentKey String
-  status      AppliedEngineeringIncidentProgressStatus    @default(LOCKED)
+  status      AppliedEngineeringIncidentProgressStatus @default(LOCKED)
   unlockedAt  DateTime?
   startedAt   DateTime?
   assessedAt  DateTime?
-  createdAt   DateTime                                    @default(now())
-  updatedAt   DateTime                                    @updatedAt
-  owner       CandidateProfile                            @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
-  incident    AppliedEngineeringIncidentDefinition       @relation(fields: [incidentKey], references: [key], onDelete: Restrict)
+  createdAt   DateTime                                 @default(now())
+  updatedAt   DateTime                                 @updatedAt
+  owner       CandidateProfile                         @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  incident    AppliedEngineeringIncidentDefinition     @relation(fields: [incidentKey], references: [key], onDelete: Restrict)
 
   @@unique([ownerId, incidentKey])
   @@index([ownerId, status])
@@ -818,27 +874,27 @@ model AppliedEngineeringIncidentProgress {
 
 /// One immutable eight-question Applied Engineering incident block.
 model AppliedEngineeringBlock {
-  id                   String                            @id @default(uuid()) @db.Uuid
+  id                   String                                 @id @default(uuid()) @db.Uuid
   ownerId              String
   ordinal              Int
-  isCurrent            Boolean                           @default(true)
-  status               AppliedEngineeringBlockStatus     @default(PRACTISING)
-  focusRevisionId      String                            @db.Uuid
-  incidentVersionId    String                            @db.Uuid
+  isCurrent            Boolean                                @default(true)
+  status               AppliedEngineeringBlockStatus          @default(PRACTISING)
+  focusRevisionId      String                                 @db.Uuid
+  incidentVersionId    String                                 @db.Uuid
   schemaVersion        Int
   rankingPolicyVersion Int
-  preparationRequestId String                            @db.Uuid
+  preparationRequestId String                                 @db.Uuid
   contentFingerprint   String
   selectionSnapshot    Json
   incidentSnapshot     Json
   preparedAt           DateTime
   assessmentReadyAt    DateTime?
   assessedAt           DateTime?
-  createdAt            DateTime                          @default(now())
-  updatedAt            DateTime                          @updatedAt
-  owner                CandidateProfile                  @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
-  focusRevision        AppliedEngineeringFocusRevision   @relation(fields: [focusRevisionId, ownerId], references: [id, ownerId], onDelete: Restrict)
-  incidentVersion      AppliedEngineeringIncidentVersion @relation(fields: [incidentVersionId], references: [id], onDelete: Restrict)
+  createdAt            DateTime                               @default(now())
+  updatedAt            DateTime                               @updatedAt
+  owner                CandidateProfile                       @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  focusRevision        AppliedEngineeringFocusRevision        @relation(fields: [focusRevisionId, ownerId], references: [id, ownerId], onDelete: Restrict)
+  incidentVersion      AppliedEngineeringIncidentVersion      @relation(fields: [incidentVersionId], references: [id], onDelete: Restrict)
   questions            AppliedEngineeringBlockQuestion[]
   assessment           AppliedEngineeringAssessment?
   preparationAttempts  AppliedEngineeringPreparationAttempt[]
@@ -853,22 +909,22 @@ model AppliedEngineeringBlock {
 }
 
 model AppliedEngineeringBlockQuestion {
-  id                 String                           @id @default(uuid()) @db.Uuid
-  blockId            String                           @db.Uuid
+  id                 String                              @id @default(uuid()) @db.Uuid
+  blockId            String                              @db.Uuid
   ownerId            String
   order              Int
   questionKey        String
   contentVersion     Int
   contentFingerprint String
-  status             AppliedEngineeringQuestionStatus @default(ACTIVE)
+  status             AppliedEngineeringQuestionStatus    @default(ACTIVE)
   publicSnapshot     Json
   privateSnapshot    Json
   completedAt        DateTime?
   learnedAt          DateTime?
-  createdAt          DateTime                         @default(now())
-  updatedAt          DateTime                         @updatedAt
-  block              AppliedEngineeringBlock          @relation(fields: [blockId, ownerId], references: [id, ownerId], onDelete: Cascade)
-  owner              CandidateProfile                 @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  createdAt          DateTime                            @default(now())
+  updatedAt          DateTime                            @updatedAt
+  block              AppliedEngineeringBlock             @relation(fields: [blockId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  owner              CandidateProfile                    @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
   state              AppliedEngineeringQuestionState?
   attempts           AppliedEngineeringQuestionAttempt[]
   codeRuns           AppliedEngineeringCodeRun[]
@@ -882,14 +938,14 @@ model AppliedEngineeringBlockQuestion {
 }
 
 model AppliedEngineeringQuestionState {
-  id                String                           @id @default(uuid()) @db.Uuid
-  blockQuestionId   String                           @unique @db.Uuid
+  id                String                          @id @default(uuid()) @db.Uuid
+  blockQuestionId   String                          @unique @db.Uuid
   ownerId           String
   draft             Json?
-  revealedHintCount Int                              @default(0)
-  updatedAt         DateTime                         @updatedAt
-  blockQuestion     AppliedEngineeringBlockQuestion  @relation(fields: [blockQuestionId, ownerId], references: [id, ownerId], onDelete: Cascade)
-  owner             CandidateProfile                 @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  revealedHintCount Int                             @default(0)
+  updatedAt         DateTime                        @updatedAt
+  blockQuestion     AppliedEngineeringBlockQuestion @relation(fields: [blockQuestionId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  owner             CandidateProfile                @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
 
   @@unique([blockQuestionId, ownerId])
   @@index([ownerId, updatedAt])
@@ -917,19 +973,19 @@ model AppliedEngineeringQuestionAttempt {
 }
 
 model AppliedEngineeringCodeRun {
-  id                 String                           @id @default(uuid()) @db.Uuid
+  id                 String                          @id @default(uuid()) @db.Uuid
   ownerId            String
-  blockQuestionId    String                           @db.Uuid
-  requestId          String                           @db.Uuid
+  blockQuestionId    String                          @db.Uuid
+  requestId          String                          @db.Uuid
   contentFingerprint String
   codeFingerprint    String
-  code               String                           @db.Text
+  code               String                          @db.Text
   runnerVersion      String
   passed             Boolean
   resultSnapshot     Json
-  createdAt          DateTime                         @default(now())
-  owner              CandidateProfile                 @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
-  blockQuestion      AppliedEngineeringBlockQuestion  @relation(fields: [blockQuestionId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  createdAt          DateTime                        @default(now())
+  owner              CandidateProfile                @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  blockQuestion      AppliedEngineeringBlockQuestion @relation(fields: [blockQuestionId, ownerId], references: [id, ownerId], onDelete: Cascade)
 
   @@unique([ownerId, requestId])
   @@unique([id, ownerId])
@@ -938,22 +994,22 @@ model AppliedEngineeringCodeRun {
 }
 
 model AppliedEngineeringAssessment {
-  id                    String                            @id @default(uuid()) @db.Uuid
-  blockId               String                            @unique @db.Uuid
+  id                    String                              @id @default(uuid()) @db.Uuid
+  blockId               String                              @unique @db.Uuid
   ownerId               String
-  status                AppliedEngineeringAssessmentStatus @default(LOCKED)
+  status                AppliedEngineeringAssessmentStatus  @default(LOCKED)
   schemaVersion         Int
   evaluatorVersion      String
   assessmentSnapshot    Json?
-  startRequestId        String?                           @db.Uuid
-  finalizationRequestId String?                           @db.Uuid
+  startRequestId        String?                             @db.Uuid
+  finalizationRequestId String?                             @db.Uuid
   readyAt               DateTime?
   startedAt             DateTime?
   completedAt           DateTime?
-  createdAt             DateTime                          @default(now())
-  updatedAt             DateTime                          @updatedAt
-  block                 AppliedEngineeringBlock            @relation(fields: [blockId, ownerId], references: [id, ownerId], onDelete: Cascade)
-  owner                 CandidateProfile                  @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  createdAt             DateTime                            @default(now())
+  updatedAt             DateTime                            @updatedAt
+  block                 AppliedEngineeringBlock             @relation(fields: [blockId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  owner                 CandidateProfile                    @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
   report                AppliedEngineeringAssessmentReport?
 
   @@unique([ownerId, startRequestId])
@@ -964,17 +1020,17 @@ model AppliedEngineeringAssessment {
 }
 
 model AppliedEngineeringAssessmentReport {
-  id                 String                           @id @default(uuid()) @db.Uuid
-  assessmentId       String                           @unique @db.Uuid
+  id                 String                       @id @default(uuid()) @db.Uuid
+  assessmentId       String                       @unique @db.Uuid
   ownerId            String
   schemaVersion      Int
   evaluatorVersion   String
   reportSnapshot     Json
   transcriptSnapshot Json
   finalizedAt        DateTime
-  createdAt          DateTime                         @default(now())
-  assessment         AppliedEngineeringAssessment     @relation(fields: [assessmentId, ownerId], references: [id, ownerId], onDelete: Cascade)
-  owner              CandidateProfile                @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  createdAt          DateTime                     @default(now())
+  assessment         AppliedEngineeringAssessment @relation(fields: [assessmentId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  owner              CandidateProfile             @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
 
   @@unique([assessmentId, ownerId])
   @@index([ownerId, finalizedAt])
@@ -995,9 +1051,254 @@ model AppliedEngineeringPreparationAttempt {
   completedAt         DateTime?
   createdAt           DateTime                            @default(now())
   updatedAt           DateTime                            @updatedAt
-  owner               CandidateProfile                   @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  owner               CandidateProfile                    @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
   focusRevision       AppliedEngineeringFocusRevision     @relation(fields: [focusRevisionId, ownerId], references: [id, ownerId], onDelete: Restrict)
   block               AppliedEngineeringBlock?            @relation(fields: [blockId, ownerId], references: [id, ownerId], onDelete: Restrict)
+
+  @@unique([ownerId, requestId])
+  @@index([ownerId, status, createdAt])
+  @@index([focusRevisionId])
+  @@index([blockId])
+}
+
+/// Candidate-confirmed, content-addressed Architecture & Design focus.
+model ArchitectureFocusRevision {
+  id                        String                           @id @default(uuid()) @db.Uuid
+  ownerId                   String
+  revision                  Int
+  schemaVersion             Int
+  focusFingerprint          String
+  baselineSchemaVersion     Int
+  baselineSourceFingerprint String
+  focusSnapshot             Json
+  confirmedAt               DateTime
+  createdAt                 DateTime                         @default(now())
+  owner                     CandidateProfile                 @relation("CandidateArchitectureFocusRevisions", fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  activeForProfiles         CandidateProfile[]               @relation("CandidateActiveArchitectureFocusRevision")
+  blocks                    ArchitectureBlock[]
+  preparationAttempts       ArchitecturePreparationAttempt[]
+
+  @@unique([ownerId, revision])
+  @@unique([ownerId, focusFingerprint, schemaVersion])
+  @@unique([id, ownerId])
+  @@index([ownerId, confirmedAt])
+  @@index([baselineSourceFingerprint])
+}
+
+/// Stable catalogue identity retained even when an immutable version is retired.
+model ArchitectureScenarioDefinition {
+  key       String                         @id
+  title     String
+  createdAt DateTime                       @default(now())
+  updatedAt DateTime                       @updatedAt
+  versions  ArchitectureScenarioVersion[]
+  progress  ArchitectureScenarioProgress[]
+}
+
+model ArchitectureScenarioVersion {
+  id                      String                                @id @default(uuid()) @db.Uuid
+  scenarioKey             String
+  version                 Int
+  schemaVersion           Int
+  publicationStatus       ArchitectureScenarioPublicationStatus @default(REVIEW)
+  contentFingerprint      String
+  scenarioSnapshot        Json
+  publicQuestionSnapshot  Json
+  privateQuestionSnapshot Json
+  reviewSnapshot          Json
+  publishedAt             DateTime?
+  retiredAt               DateTime?
+  createdAt               DateTime                              @default(now())
+  scenario                ArchitectureScenarioDefinition        @relation(fields: [scenarioKey], references: [key], onDelete: Restrict)
+  blocks                  ArchitectureBlock[]
+
+  @@unique([scenarioKey, version])
+  @@unique([scenarioKey, contentFingerprint])
+  @@index([publicationStatus, scenarioKey])
+  @@index([contentFingerprint])
+}
+
+model ArchitectureScenarioProgress {
+  id          String                             @id @default(uuid()) @db.Uuid
+  ownerId     String
+  scenarioKey String
+  status      ArchitectureScenarioProgressStatus @default(LOCKED)
+  unlockedAt  DateTime?
+  startedAt   DateTime?
+  assessedAt  DateTime?
+  createdAt   DateTime                           @default(now())
+  updatedAt   DateTime                           @updatedAt
+  owner       CandidateProfile                   @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  scenario    ArchitectureScenarioDefinition     @relation(fields: [scenarioKey], references: [key], onDelete: Restrict)
+
+  @@unique([ownerId, scenarioKey])
+  @@index([ownerId, status])
+}
+
+/// One immutable four-question Architecture & Design block.
+model ArchitectureBlock {
+  id                   String                           @id @default(uuid()) @db.Uuid
+  ownerId              String
+  ordinal              Int
+  isCurrent            Boolean                          @default(true)
+  status               ArchitectureBlockStatus          @default(PRACTISING)
+  focusRevisionId      String                           @db.Uuid
+  scenarioVersionId    String                           @db.Uuid
+  schemaVersion        Int
+  rankingPolicyVersion Int
+  preparationRequestId String                           @db.Uuid
+  contentFingerprint   String
+  selectionSnapshot    Json
+  scenarioSnapshot     Json
+  preparedAt           DateTime
+  assessmentReadyAt    DateTime?
+  assessedAt           DateTime?
+  createdAt            DateTime                         @default(now())
+  updatedAt            DateTime                         @updatedAt
+  owner                CandidateProfile                 @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  focusRevision        ArchitectureFocusRevision        @relation(fields: [focusRevisionId, ownerId], references: [id, ownerId], onDelete: Restrict)
+  scenarioVersion      ArchitectureScenarioVersion      @relation(fields: [scenarioVersionId], references: [id], onDelete: Restrict)
+  questions            ArchitectureBlockQuestion[]
+  assessment           ArchitectureAssessment?
+  preparationAttempts  ArchitecturePreparationAttempt[]
+
+  @@unique([ownerId, ordinal])
+  @@unique([ownerId, preparationRequestId])
+  @@unique([id, ownerId])
+  @@index([ownerId, isCurrent])
+  @@index([ownerId, createdAt])
+  @@index([scenarioVersionId])
+  @@index([status])
+}
+
+model ArchitectureBlockQuestion {
+  id                 String                        @id @default(uuid()) @db.Uuid
+  blockId            String                        @db.Uuid
+  ownerId            String
+  order              Int
+  questionKey        String
+  contentVersion     Int
+  contentFingerprint String
+  status             ArchitectureQuestionStatus    @default(ACTIVE)
+  publicSnapshot     Json
+  privateSnapshot    Json
+  completedAt        DateTime?
+  learnedAt          DateTime?
+  createdAt          DateTime                      @default(now())
+  updatedAt          DateTime                      @updatedAt
+  block              ArchitectureBlock             @relation(fields: [blockId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  owner              CandidateProfile              @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  state              ArchitectureQuestionState?
+  attempts           ArchitectureQuestionAttempt[]
+
+  @@unique([blockId, order])
+  @@unique([blockId, questionKey])
+  @@unique([id, ownerId])
+  @@index([ownerId, blockId])
+  @@index([ownerId, status])
+  @@index([contentFingerprint])
+}
+
+model ArchitectureQuestionState {
+  id                String                    @id @default(uuid()) @db.Uuid
+  blockQuestionId   String                    @unique @db.Uuid
+  ownerId           String
+  draft             Json?
+  revealedHintCount Int                       @default(0)
+  updatedAt         DateTime                  @updatedAt
+  blockQuestion     ArchitectureBlockQuestion @relation(fields: [blockQuestionId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  owner             CandidateProfile          @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+
+  @@unique([blockQuestionId, ownerId])
+  @@index([ownerId, updatedAt])
+}
+
+model ArchitectureQuestionAttempt {
+  id                   String                            @id @default(uuid()) @db.Uuid
+  ownerId              String
+  blockQuestionId      String                            @db.Uuid
+  requestId            String                            @db.Uuid
+  contentFingerprint   String
+  workFingerprint      String
+  evaluatorVersion     String
+  evaluatorFingerprint String
+  answerSnapshot       Json
+  evaluationSnapshot   Json
+  verificationStatus   PracticeAttemptVerificationStatus @default(UNVERIFIED)
+  score                Float?
+  createdAt            DateTime                          @default(now())
+  owner                CandidateProfile                  @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  blockQuestion        ArchitectureBlockQuestion         @relation(fields: [blockQuestionId, ownerId], references: [id, ownerId], onDelete: Cascade)
+
+  @@unique([ownerId, requestId])
+  @@unique([id, ownerId])
+  @@index([ownerId, blockQuestionId, createdAt])
+  @@index([ownerId, workFingerprint])
+}
+
+model ArchitectureAssessment {
+  id                    String                        @id @default(uuid()) @db.Uuid
+  blockId               String                        @unique @db.Uuid
+  ownerId               String
+  status                ArchitectureAssessmentStatus  @default(LOCKED)
+  schemaVersion         Int
+  evaluatorVersion      String
+  evaluatorFingerprint  String
+  assessmentSnapshot    Json?
+  startRequestId        String?                       @db.Uuid
+  finalizationRequestId String?                       @db.Uuid
+  readyAt               DateTime?
+  startedAt             DateTime?
+  completedAt           DateTime?
+  createdAt             DateTime                      @default(now())
+  updatedAt             DateTime                      @updatedAt
+  block                 ArchitectureBlock             @relation(fields: [blockId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  owner                 CandidateProfile              @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  report                ArchitectureAssessmentReport?
+
+  @@unique([ownerId, startRequestId])
+  @@unique([ownerId, finalizationRequestId])
+  @@unique([id, ownerId])
+  @@unique([blockId, ownerId])
+  @@index([ownerId, status, createdAt])
+}
+
+model ArchitectureAssessmentReport {
+  id                   String                 @id @default(uuid()) @db.Uuid
+  assessmentId         String                 @unique @db.Uuid
+  ownerId              String
+  schemaVersion        Int
+  evaluatorVersion     String
+  evaluatorFingerprint String
+  reportSnapshot       Json
+  transcriptSnapshot   Json
+  finalizedAt          DateTime
+  createdAt            DateTime               @default(now())
+  assessment           ArchitectureAssessment @relation(fields: [assessmentId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  owner                CandidateProfile       @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+
+  @@unique([assessmentId, ownerId])
+  @@index([ownerId, finalizedAt])
+}
+
+model ArchitecturePreparationAttempt {
+  id                  String                        @id @default(uuid()) @db.Uuid
+  ownerId             String
+  focusRevisionId     String                        @db.Uuid
+  blockId             String?                       @db.Uuid
+  requestId           String                        @db.Uuid
+  status              ArchitecturePreparationStatus @default(IN_PROGRESS)
+  generatorVersion    String
+  validatorVersion    String
+  selectionSnapshot   Json
+  diagnosticsSnapshot Json?
+  startedAt           DateTime
+  completedAt         DateTime?
+  createdAt           DateTime                      @default(now())
+  updatedAt           DateTime                      @updatedAt
+  owner               CandidateProfile              @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+  focusRevision       ArchitectureFocusRevision     @relation(fields: [focusRevisionId, ownerId], references: [id, ownerId], onDelete: Restrict)
+  block               ArchitectureBlock?            @relation(fields: [blockId, ownerId], references: [id, ownerId], onDelete: Restrict)
 
   @@unique([ownerId, requestId])
   @@index([ownerId, status, createdAt])

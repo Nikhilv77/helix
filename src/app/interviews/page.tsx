@@ -16,16 +16,20 @@ export default async function InterviewsPage() {
   const { ownerId, profile: candidateProfile } = await requireOnboardedProfile();
 
   try {
-    const [quota, sessions, coreRounds, personalizedPlan, roadmap] = await Promise.all([
-      interviewService.quota(ownerId),
-      interviewService.history(ownerId),
-      app.coreTechnicalWorkspaceAnalyticsService
-        .rounds(ownerId)
-        .catch(() => ({ history: [], reports: [] })),
-      app.personalizedInterviewPlanningService.activePlan(ownerId).catch(() => null),
-      app.frontendRoadmapService.home(ownerId).catch(() => null)
-    ]);
-    const combinedSessions = [...sessions, ...coreRounds.history]
+    const [quota, sessions, coreRounds, appliedRounds, personalizedPlan, roadmap] =
+      await Promise.all([
+        interviewService.quota(ownerId),
+        interviewService.history(ownerId),
+        app.coreTechnicalWorkspaceAnalyticsService
+          .rounds(ownerId)
+          .catch(() => ({ history: [], reports: [] })),
+        app.appliedEngineeringWorkspaceAnalyticsService
+          .rounds(ownerId)
+          .catch(() => ({ history: [], reports: [] })),
+        app.personalizedInterviewPlanningService.activePlan(ownerId).catch(() => null),
+        app.frontendRoadmapService.home(ownerId).catch(() => null)
+      ]);
+    const combinedSessions = [...sessions, ...coreRounds.history, ...appliedRounds.history]
       .sort((left, right) => right.updatedAt - left.updatedAt)
       .slice(0, 50);
     return (

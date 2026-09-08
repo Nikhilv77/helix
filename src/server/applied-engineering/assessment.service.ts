@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import {
   AppliedEngineeringAssessmentStatus,
   AppliedEngineeringBlockStatus,
@@ -20,6 +19,14 @@ import { ConflictErrorException } from "@/server/common/exceptions/conflict-erro
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 import { ServiceUnavailableErrorException } from "@/server/common/exceptions/service-unavailable-error.exception";
 import type { PrismaService } from "@/server/database/prisma.service";
+import {
+  assertStoryPracticeAssessmentResponses,
+  storyPracticeAssessmentStartDisposition
+} from "@/server/story-practice/assessment-orchestrator";
+import {
+  STORY_PRACTICE_TRANSACTION_OPTIONS as transactionOptions,
+  storyPracticeFingerprint as fingerprint
+} from "@/server/story-practice/practice-orchestrator";
 import { buildAppliedEngineeringAssessmentSnapshot } from "./assessment-blueprint";
 import type { AppliedEngineeringAssessmentEvaluator } from "./assessment-evaluator";
 
@@ -90,28 +97,23 @@ export class AppliedEngineeringAssessmentService {
         }
       });
       if (!assessment) throw assessmentNotFound();
-      if (!assessment.block.isCurrent) {
-        throw new ConflictErrorException(
-          "APPLIED_ENGINEERING_ASSESSMENT_HISTORICAL",
-          "Historical Applied Engineering assessments are read-only."
-        );
-      }
-      const earlyStart =
-        assessment.status === AppliedEngineeringAssessmentStatus.LOCKED &&
-        options.allowLocked === true;
-      if (assessment.status === AppliedEngineeringAssessmentStatus.LOCKED && !earlyStart) {
-        throw new ConflictErrorException(
-          "APPLIED_ENGINEERING_ASSESSMENT_LOCKED",
-          "Complete or Learn every incident question before starting the assessment."
-        );
-      }
-      if (
-        assessment.status === AppliedEngineeringAssessmentStatus.IN_PROGRESS ||
-        assessment.status === AppliedEngineeringAssessmentStatus.FINALIZING ||
-        assessment.status === AppliedEngineeringAssessmentStatus.COMPLETED
-      ) {
-        return;
-      }
+      const disposition = storyPracticeAssessmentStartDisposition({
+        status: assessment.status,
+        isCurrent: assessment.block.isCurrent,
+        allowLocked: options.allowLocked === true,
+        historical: () =>
+          new ConflictErrorException(
+            "APPLIED_ENGINEERING_ASSESSMENT_HISTORICAL",
+            "Historical Applied Engineering assessments are read-only."
+          ),
+        locked: () =>
+          new ConflictErrorException(
+            "APPLIED_ENGINEERING_ASSESSMENT_LOCKED",
+            "Complete or Learn every incident question before starting the assessment."
+          )
+      });
+      if (disposition === "replay") return;
+      const earlyStart = disposition === "start-early";
 
       const startedAt = this.now();
       if (earlyStart) {
@@ -412,14 +414,15 @@ function assertResponses(
   snapshot: ReturnType<typeof appliedEngineeringAssessmentSnapshotSchema.parse>,
   responses: Array<{ promptId: string }>
 ) {
-  const expected = snapshot.prompts.map((prompt) => prompt.id).sort();
-  const actual = responses.map((response) => response.promptId).sort();
-  if (new Set(actual).size !== 5 || expected.some((id, index) => id !== actual[index])) {
-    throw new ConflictErrorException(
-      "APPLIED_ENGINEERING_ASSESSMENT_RESPONSE_MISMATCH",
-      "Submit exactly one answer for each frozen assessment prompt."
-    );
-  }
+  assertStoryPracticeAssessmentResponses(
+    snapshot.prompts.map(({ id }) => id),
+    responses,
+    () =>
+      new ConflictErrorException(
+        "APPLIED_ENGINEERING_ASSESSMENT_RESPONSE_MISMATCH",
+        "Submit exactly one answer for each frozen assessment prompt."
+      )
+  );
 }
 
 function assessmentNotFound() {
@@ -429,21 +432,6 @@ function assessmentNotFound() {
   );
 }
 
-function fingerprint(value: unknown): string {
-  return `sha256:${createHash("sha256").update(stableStringify(value)).digest("hex")}`;
-}
-
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
-  if (typeof value === "object" && value !== null) {
-    return `{${Object.entries(value)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, child]) => `${JSON.stringify(key)}:${stableStringify(child)}`)
-      .join(",")}}`;
-  }
-  return JSON.stringify(value);
-}
-
 function toJson(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
@@ -451,5 +439,3 @@ function toJson(value: unknown): Prisma.InputJsonValue {
 async function lockAssessment(tx: Prisma.TransactionClient, assessmentId: string) {
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`applied-engineering-assessment:${assessmentId}`}))`;
 }
-
-const transactionOptions = { maxWait: 20_000, timeout: 120_000 } as const;

@@ -14,6 +14,14 @@ import { ConflictErrorException } from "@/server/common/exceptions/conflict-erro
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 import { ServiceUnavailableErrorException } from "@/server/common/exceptions/service-unavailable-error.exception";
 import type { PrismaService } from "@/server/database/prisma.service";
+import {
+  assertStoryPracticeContinuationReady,
+  resolveStoryPracticeContinuationReplay
+} from "@/server/story-practice/continuation-orchestrator";
+import {
+  boundedStoryPracticeDiagnostic,
+  storyPracticeFailureCode
+} from "@/server/story-practice/preparation-orchestrator";
 import type { AppliedEngineeringPersistenceService } from "./persistence.service";
 import type { AppliedEngineeringPracticeService } from "./practice.service";
 
@@ -37,20 +45,24 @@ export class AppliedEngineeringContinuationService {
 
   async continue(ownerId: string, rawInput: unknown) {
     const input = appliedEngineeringContinueInputSchema.parse(rawInput);
-    const existing =
-      await this.dependencies.prisma.appliedEngineeringPreparationAttempt.findUnique({
+    const existing = await this.dependencies.prisma.appliedEngineeringPreparationAttempt.findUnique(
+      {
         where: { ownerId_requestId: { ownerId, requestId: input.requestId } },
         select: { status: true, blockId: true }
-      });
-    if (existing?.status === AppliedEngineeringPreparationStatus.SUCCEEDED && existing.blockId) {
-      return { replayed: true, block: await this.dependencies.practice.current(ownerId) };
-    }
-    if (existing?.status === AppliedEngineeringPreparationStatus.IN_PROGRESS) {
-      throw new ConflictErrorException(
-        "APPLIED_ENGINEERING_CONTINUATION_IN_PROGRESS",
-        "The next Applied Engineering incident is already being prepared."
-      );
-    }
+      }
+    );
+    const replay = await resolveStoryPracticeContinuationReplay({
+      existing,
+      succeededStatus: AppliedEngineeringPreparationStatus.SUCCEEDED,
+      inProgressStatus: AppliedEngineeringPreparationStatus.IN_PROGRESS,
+      current: () => this.dependencies.practice.current(ownerId),
+      inProgress: () =>
+        new ConflictErrorException(
+          "APPLIED_ENGINEERING_CONTINUATION_IN_PROGRESS",
+          "The next Applied Engineering incident is already being prepared."
+        )
+    });
+    if (replay) return replay;
 
     const previous = await this.dependencies.prisma.appliedEngineeringBlock.findFirst({
       where: { id: input.blockId, ownerId, isCurrent: true },
@@ -70,16 +82,14 @@ export class AppliedEngineeringContinuationService {
         "The Applied Engineering incident selected for continuation was not found."
       );
     }
-    if (
-      previous.status !== "ASSESSED" ||
-      previous.assessment?.status !== "COMPLETED" ||
-      !previous.assessment.report
-    ) {
-      throw new ConflictErrorException(
-        "APPLIED_ENGINEERING_CONTINUATION_NOT_READY",
-        "Complete the current incident assessment before continuing."
-      );
-    }
+    assertStoryPracticeContinuationReady(
+      previous,
+      () =>
+        new ConflictErrorException(
+          "APPLIED_ENGINEERING_CONTINUATION_NOT_READY",
+          "Complete the current incident assessment before continuing."
+        )
+    );
     const focus = appliedEngineeringConfirmedFocusSchema.parse(
       previous.focusRevision.focusSnapshot
     );
@@ -89,16 +99,15 @@ export class AppliedEngineeringContinuationService {
     const selection = report.nextIncident;
     let stage: "validation" | "publishing" = "validation";
     try {
-      const reviewed =
-        await this.dependencies.prisma.appliedEngineeringIncidentVersion.findUnique({
-          where: {
-            incidentKey_version: {
-              incidentKey: selection.selectedIncident.incidentKey,
-              version: selection.selectedIncident.incidentVersion
-            }
-          },
-          select: { publicationStatus: true, incidentSnapshot: true }
-        });
+      const reviewed = await this.dependencies.prisma.appliedEngineeringIncidentVersion.findUnique({
+        where: {
+          incidentKey_version: {
+            incidentKey: selection.selectedIncident.incidentKey,
+            version: selection.selectedIncident.incidentVersion
+          }
+        },
+        select: { publicationStatus: true, incidentSnapshot: true }
+      });
       if (
         !reviewed ||
         reviewed.publicationStatus !== AppliedEngineeringIncidentPublicationStatus.PUBLISHED
@@ -142,11 +151,8 @@ export class AppliedEngineeringContinuationService {
           selection,
           diagnostic: {
             stage,
-            code: `APPLIED_ENGINEERING_CONTINUATION_${stage.toUpperCase()}_FAILED`,
-            message: (error instanceof Error
-              ? error.message
-              : "Unknown continuation failure"
-            ).slice(0, 700),
+            code: storyPracticeFailureCode("APPLIED_ENGINEERING_CONTINUATION", stage),
+            message: boundedStoryPracticeDiagnostic(error, "Unknown continuation failure"),
             retryable: true
           }
         })

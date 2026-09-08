@@ -13,6 +13,12 @@ import { ConflictErrorException } from "@/server/common/exceptions/conflict-erro
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 import { ServiceUnavailableErrorException } from "@/server/common/exceptions/service-unavailable-error.exception";
 import type { PrismaService } from "@/server/database/prisma.service";
+import {
+  boundedStoryPracticeDiagnostic,
+  confirmStoryPracticeFocus,
+  resolveStoryPracticePreparationReplay,
+  storyPracticeFailureCode
+} from "@/server/story-practice/preparation-orchestrator";
 import type { CoreTechnicalFocusConfirmation, CoreTechnicalFocusService } from "./focus.service";
 import type { CoreTechnicalGenerationPipeline } from "./generation-pipeline";
 import type { CoreTechnicalPersistenceService } from "./persistence.service";
@@ -40,16 +46,18 @@ export class CoreTechnicalPreparationService {
   constructor(private readonly dependencies: Dependencies) {}
 
   async confirm(ownerId: string, input: CoreTechnicalFocusConfirmation) {
-    const focus = await this.dependencies.focus.confirm(ownerId, input);
-    const saved = await this.dependencies.persistence.saveConfirmedFocus(ownerId, focus);
-    return {
-      id: saved.id,
-      revision: saved.revision,
-      schemaVersion: saved.schemaVersion,
-      focusFingerprint: saved.focusFingerprint,
-      confirmedAt: saved.confirmedAt.toISOString(),
-      focus: publicCoreTechnicalConfirmedFocus(focus)
-    };
+    return confirmStoryPracticeFocus({
+      confirm: () => this.dependencies.focus.confirm(ownerId, input),
+      save: (focus) => this.dependencies.persistence.saveConfirmedFocus(ownerId, focus),
+      present: (focus, saved) => ({
+        id: saved.id,
+        revision: saved.revision,
+        schemaVersion: saved.schemaVersion,
+        focusFingerprint: saved.focusFingerprint,
+        confirmedAt: saved.confirmedAt.toISOString(),
+        focus: publicCoreTechnicalConfirmedFocus(focus)
+      })
+    });
   }
 
   async prepare(ownerId: string, rawInput: unknown) {
@@ -58,24 +66,24 @@ export class CoreTechnicalPreparationService {
       where: { ownerId_requestId: { ownerId, requestId: input.requestId } },
       select: { status: true, focusRevisionId: true, blockId: true }
     });
-    if (
-      existing?.focusRevisionId !== undefined &&
-      existing.focusRevisionId !== input.focusRevisionId
-    ) {
-      throw new ConflictErrorException(
-        "CORE_TECHNICAL_PREPARATION_REQUEST_CONFLICT",
-        "This preparation request ID belongs to a different focus revision."
-      );
-    }
-    if (existing?.status === CoreTechnicalPreparationStatus.SUCCEEDED && existing.blockId) {
-      return { replayed: true, block: await this.dependencies.practice.current(ownerId) };
-    }
-    if (existing?.status === CoreTechnicalPreparationStatus.IN_PROGRESS) {
-      throw new ConflictErrorException(
-        "CORE_TECHNICAL_PREPARATION_IN_PROGRESS",
-        "This Core Technical block is already being prepared."
-      );
-    }
+    const replay = await resolveStoryPracticePreparationReplay({
+      existing,
+      focusRevisionId: input.focusRevisionId,
+      succeededStatus: CoreTechnicalPreparationStatus.SUCCEEDED,
+      inProgressStatus: CoreTechnicalPreparationStatus.IN_PROGRESS,
+      current: () => this.dependencies.practice.current(ownerId),
+      requestConflict: () =>
+        new ConflictErrorException(
+          "CORE_TECHNICAL_PREPARATION_REQUEST_CONFLICT",
+          "This preparation request ID belongs to a different focus revision."
+        ),
+      inProgress: () =>
+        new ConflictErrorException(
+          "CORE_TECHNICAL_PREPARATION_IN_PROGRESS",
+          "This Core Technical block is already being prepared."
+        )
+    });
+    if (replay) return replay;
 
     const revision = await this.dependencies.prisma.coreTechnicalFocusRevision.findUnique({
       where: { id_ownerId: { id: input.focusRevisionId, ownerId } },
@@ -156,8 +164,8 @@ export class CoreTechnicalPreparationService {
           selection,
           diagnostic: {
             stage,
-            code: preparationFailureCode(stage),
-            message: boundedPrivateMessage(error),
+            code: storyPracticeFailureCode("CORE_TECHNICAL", stage),
+            message: boundedStoryPracticeDiagnostic(error, "Unknown preparation failure"),
             retryable: true
           }
         })
@@ -171,13 +179,4 @@ export class CoreTechnicalPreparationService {
       );
     }
   }
-}
-
-function preparationFailureCode(stage: string): string {
-  return `CORE_TECHNICAL_${stage.replaceAll("-", "_").toUpperCase()}_FAILED`;
-}
-
-function boundedPrivateMessage(error: unknown): string {
-  const message = error instanceof Error ? error.message : "Unknown preparation failure";
-  return message.slice(0, 700);
 }

@@ -1113,11 +1113,11 @@ function recordEvidence(
   ) {
     ledger.blueprint = {
       planId: setup.personalizedPlanId,
-      blueprintId: setup.personalizedBlueprint.id,
+      blueprintId: question.sourceBlueprintId ?? setup.personalizedBlueprint.id,
       stage: question.blueprintStage,
-      topicKey: question.topicKey,
+      topicKey: question.sourceTopicKey ?? question.topicKey,
       skillKeys: [...(question.skillKeys ?? [])],
-      rubricKeys: [...(question.rubricKeys ?? [])],
+      rubricKeys: [...(question.sourceRubricKeys ?? question.rubricKeys ?? [])],
       answerExcerpts: []
     };
   }

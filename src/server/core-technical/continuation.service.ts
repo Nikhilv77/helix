@@ -13,6 +13,14 @@ import { ConflictErrorException } from "@/server/common/exceptions/conflict-erro
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 import { ServiceUnavailableErrorException } from "@/server/common/exceptions/service-unavailable-error.exception";
 import type { PrismaService } from "@/server/database/prisma.service";
+import {
+  assertStoryPracticeContinuationReady,
+  resolveStoryPracticeContinuationReplay
+} from "@/server/story-practice/continuation-orchestrator";
+import {
+  boundedStoryPracticeDiagnostic,
+  storyPracticeFailureCode
+} from "@/server/story-practice/preparation-orchestrator";
 import type { CoreTechnicalGenerationPipeline } from "./generation-pipeline";
 import type { CoreTechnicalPersistenceService } from "./persistence.service";
 import {
@@ -41,15 +49,18 @@ export class CoreTechnicalContinuationService {
       where: { ownerId_requestId: { ownerId, requestId: input.requestId } },
       select: { status: true, blockId: true }
     });
-    if (existing?.status === CoreTechnicalPreparationStatus.SUCCEEDED && existing.blockId) {
-      return { replayed: true, block: await this.dependencies.practice.current(ownerId) };
-    }
-    if (existing?.status === CoreTechnicalPreparationStatus.IN_PROGRESS) {
-      throw new ConflictErrorException(
-        "CORE_TECHNICAL_CONTINUATION_IN_PROGRESS",
-        "The next Core Technical story is already being prepared."
-      );
-    }
+    const replay = await resolveStoryPracticeContinuationReplay({
+      existing,
+      succeededStatus: CoreTechnicalPreparationStatus.SUCCEEDED,
+      inProgressStatus: CoreTechnicalPreparationStatus.IN_PROGRESS,
+      current: () => this.dependencies.practice.current(ownerId),
+      inProgress: () =>
+        new ConflictErrorException(
+          "CORE_TECHNICAL_CONTINUATION_IN_PROGRESS",
+          "The next Core Technical story is already being prepared."
+        )
+    });
+    if (replay) return replay;
 
     const previous = await this.dependencies.prisma.coreTechnicalBlock.findFirst({
       where: { id: input.blockId, ownerId, isCurrent: true },
@@ -72,16 +83,14 @@ export class CoreTechnicalContinuationService {
         "The Core Technical story selected for continuation was not found."
       );
     }
-    if (
-      previous.status !== "ASSESSED" ||
-      previous.assessment?.status !== "COMPLETED" ||
-      !previous.assessment.report
-    ) {
-      throw new ConflictErrorException(
-        "CORE_TECHNICAL_CONTINUATION_NOT_READY",
-        "Complete the current story assessment before continuing."
-      );
-    }
+    assertStoryPracticeContinuationReady(
+      previous,
+      () =>
+        new ConflictErrorException(
+          "CORE_TECHNICAL_CONTINUATION_NOT_READY",
+          "Complete the current story assessment before continuing."
+        )
+    );
     const focus = coreTechnicalConfirmedFocusSchema.parse(previous.focusRevision.focusSnapshot);
     const report = coreTechnicalAssessmentReportSchema.parse(
       previous.assessment.report.reportSnapshot
@@ -153,11 +162,8 @@ export class CoreTechnicalContinuationService {
           selection,
           diagnostic: {
             stage,
-            code: `CORE_TECHNICAL_CONTINUATION_${stage.replaceAll("-", "_").toUpperCase()}_FAILED`,
-            message: (error instanceof Error
-              ? error.message
-              : "Unknown continuation failure"
-            ).slice(0, 700),
+            code: storyPracticeFailureCode("CORE_TECHNICAL_CONTINUATION", stage),
+            message: boundedStoryPracticeDiagnostic(error, "Unknown continuation failure"),
             retryable: true
           }
         })

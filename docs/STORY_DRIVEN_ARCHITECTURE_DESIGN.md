@@ -1,6 +1,6 @@
 # Story-Driven Architecture & Design: Implementation and AI Handoff
 
-**Status:** Architecture & Design Practice is not implemented. This document is the source of truth for the first implementation.
+**Status:** Steps 1–9 are complete; Step 10's authenticated browser release pass remains.
 **Position:** Practice session 4, after DSA, Core Technical, and Applied Engineering.
 **Canonical key and route:** `architecture-design` and `/practice/architecture-design`.
 **Product label:** **Architecture & Design**.
@@ -14,9 +14,9 @@ Engineering:
 
 1. an order-4 Practice card;
 2. a first-entry setup modal;
-3. one coherent eight-question scenario;
+3. one coherent four-question scenario;
 4. progressive hints, draft persistence, evaluated attempts, and explicit **Learn**;
-5. an assessment unlocked after all eight questions are terminal;
+5. an assessment unlocked after all four questions are terminal;
 6. an immutable report and an explicit continuation into the next adaptive scenario;
 7. current-block and completed-block history.
 
@@ -38,7 +38,7 @@ The smallest safe launch scope is:
 - backend and full-stack profiles;
 - role-aligned, language-independent system design;
 - two human-reviewed and published scenarios;
-- eight questions per scenario and five assessment prompts;
+- four compound questions per scenario and five assessment prompts;
 - existing text, choice, scenario, metrics, trace, and config presentation only;
 - no executable code questions and no Node.js runner dependency;
 - no diagram canvas in version 1. Candidates express diagrams in a structured text template:
@@ -52,11 +52,11 @@ role. Onboarding already captures Architecture evidence for every current role.
 
 The repository currently has three related names:
 
-| Identity | Existing use | Required action |
-| --- | --- | --- |
-| `architecture-design` | Preparation-area and skill-signal ID | Use as the new Practice key and URL slug |
+| Identity                     | Existing use                                             | Required action                                          |
+| ---------------------------- | -------------------------------------------------------- | -------------------------------------------------------- |
+| `architecture-design`        | Preparation-area and skill-signal ID                     | Use as the new Practice key and URL slug                 |
 | `architecture-system-design` | Personalized interview session kind and older roadmap ID | Keep unchanged; map it into Practice context when useful |
-| Architecture & Design | User-facing preparation label | Use as the new Practice label |
+| Architecture & Design        | User-facing preparation label                            | Use as the new Practice label                            |
 
 Do not rename the existing interview session kind as part of this feature. That would expand the
 change into persisted personalized plans and interview history. The Practice feature may read the
@@ -256,10 +256,10 @@ confirm: server freezes role-aligned Architecture focus
 prepare: rank one compatible published scenario
                          |
                          v
-audit approved 8-question artifact and publish atomically
+audit approved 4-question artifact and publish atomically
                          |
                          v
-shared overview -> shared question workspace -> 8 terminal questions
+shared overview -> shared question workspace -> 4 terminal questions
                          |
                          v
 shared five-prompt assessment -> immutable report
@@ -271,7 +271,9 @@ explicit Continue -> next adapted scenario; old block remains history
 The browser should send only a small explicit confirmation. The recommended version-1 payload is:
 
 ```ts
-{ path: "role-aligned" }
+{
+  path: "role-aligned";
+}
 ```
 
 Do not reuse `{ language: "javascript" }`; Architecture is language-independent. Make the shared
@@ -289,18 +291,16 @@ difficulty, or scenario selection.
 
 ## 6. Architecture scenario and question contract
 
-One block is one coherent system-design interview, not eight unrelated trivia questions.
+One block is one coherent system-design interview, not four unrelated trivia questions. The reduced
+MVP combines the original eight-stage interview arc into four compound questions while retaining
+explicit rubric coverage of all sixteen Architecture dimensions.
 
-| Order | Stage | Candidate work | Reused format |
-| ---: | --- | --- | --- |
-| 1 | Requirements | Clarify users, functional scope, non-goals, and constraints | `written` or `mcq` |
-| 2 | Scale | Estimate traffic, storage, bandwidth, latency, and availability targets | `written` |
-| 3 | Contracts | Define API/event boundaries and correctness semantics | `production-decision` |
-| 4 | Data | Choose models, access patterns, partition keys, indexes, and consistency | `artifact-diagnosis` or `written` |
-| 5 | High-level design | Describe components and end-to-end request/data flow | `written` |
-| 6 | Failure and scale | Find bottlenecks, backpressure, retries, hot keys, and failure isolation | `artifact-diagnosis` |
-| 7 | Quality attributes | Address reliability, observability, security, privacy, and cost | `production-decision` |
-| 8 | Defense and evolution | Compare alternatives, rollout, migration, and next-scale changes | `written` |
+| Order | Stage                    | Candidate work                                                                                    | Reused format                                             |
+| ----: | ------------------------ | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+|     1 | Requirements and scale   | Clarify scope and constraints, then estimate traffic, storage, latency, and availability targets  | `written` or `mcq`                                        |
+|     2 | Contracts and data       | Define API/event correctness plus models, access patterns, indexes, and consistency boundaries    | `production-decision`, `artifact-diagnosis`, or `written` |
+|     3 | Architecture and failure | Describe components and flow, then address caching, backpressure, hotspots, and failure isolation | `written` or `artifact-diagnosis`                         |
+|     4 | Quality and evolution    | Defend observability, security, privacy, cost, trade-offs, rollout, and migration                 | `production-decision` or `written`                        |
 
 Version 1 should reuse the existing question formats:
 
@@ -368,7 +368,7 @@ Each scenario needs:
 - role and seniority compatibility;
 - difficulty support (`guided`, `standard`, `stretch`);
 - stable dimension/topic keys;
-- eight ordered stages and questions;
+- four ordered compound stages and questions covering all sixteen dimensions;
 - three progressive hints per question;
 - a private 10-point rubric, reference answer, common mistakes, follow-ups, and transfer connection;
 - content fingerprint, schema version, review record, and publication status;
@@ -379,7 +379,7 @@ separate authoring/review pipeline, not in a candidate's start request.
 
 ## 7. Assessment and scoring
 
-After all eight questions are `COMPLETED` or `LEARNED`, unlock the existing five-prompt assessment
+After all four questions are `COMPLETED` or `LEARNED`, unlock the existing five-prompt assessment
 shell. Freeze the prompts at assessment start. Recommended measures are:
 
 1. Requirements & scope;
@@ -414,19 +414,19 @@ requirements, traffic, or system facts not present in the scenario.
 
 ### 8.1 Reuse matrix
 
-| Concern | Reuse unchanged | Configure through a neutral contract | Architecture-owned |
-| --- | --- | --- | --- |
-| Practice card visuals | Yes | label/order/copy/href | availability and progress projection |
-| Preparation modal | Yes | options, payload builder, copy, API base | Architecture focus confirmation schema |
-| Overview/history UI | Yes | noun, label, routes, normalized view | Architecture block/history adapter |
-| Question workspace | Yes | routes, labels, capabilities | questions, rubric, evaluation |
-| Draft/hint/attempt/Learn | Shared lifecycle | endpoint namespace and error prefix | Architecture repository/evaluator |
-| Code runner | No | capability must be false | none in v1 |
-| Assessment/report UI | Yes | score rows/measures/next-item labels | Architecture blueprint/evaluator |
-| Auth, error envelope, rate limits, leases | Yes | namespace and policy | strict Architecture schemas |
-| Ranking algorithm shape | Yes | generic candidate/evidence port | dimensions, compatibility, catalogue |
-| Persistence orchestration | Shared interfaces | Architecture Prisma repository adapter | Architecture rows/snapshots |
-| Content | No | common publication protocol | scenarios, questions, reviews |
+| Concern                                   | Reuse unchanged   | Configure through a neutral contract     | Architecture-owned                     |
+| ----------------------------------------- | ----------------- | ---------------------------------------- | -------------------------------------- |
+| Practice card visuals                     | Yes               | label/order/copy/href                    | availability and progress projection   |
+| Preparation modal                         | Yes               | options, payload builder, copy, API base | Architecture focus confirmation schema |
+| Overview/history UI                       | Yes               | noun, label, routes, normalized view     | Architecture block/history adapter     |
+| Question workspace                        | Yes               | routes, labels, capabilities             | questions, rubric, evaluation          |
+| Draft/hint/attempt/Learn                  | Shared lifecycle  | endpoint namespace and error prefix      | Architecture repository/evaluator      |
+| Code runner                               | No                | capability must be false                 | none in v1                             |
+| Assessment/report UI                      | Yes               | score rows/measures/next-item labels     | Architecture blueprint/evaluator       |
+| Auth, error envelope, rate limits, leases | Yes               | namespace and policy                     | strict Architecture schemas            |
+| Ranking algorithm shape                   | Yes               | generic candidate/evidence port          | dimensions, compatibility, catalogue   |
+| Persistence orchestration                 | Shared interfaces | Architecture Prisma repository adapter   | Architecture rows/snapshots            |
+| Content                                   | No                | common publication protocol              | scenarios, questions, reviews          |
 
 ### 8.2 Frontend extraction target
 
@@ -552,7 +552,7 @@ Enforce:
 - separate public/private snapshots;
 - one assessment per block;
 - history that remains readable after a catalogue item is retired;
-- all-eight-or-nothing block publication.
+- all-four-or-nothing block publication.
 
 ## 9. Pages, API routes, and application wiring
 
@@ -580,18 +580,18 @@ Follow the existing App Router boundary:
 
 Architecture mirrors the lifecycle but omits the runner route:
 
-| Method | Route | Responsibility |
-| --- | --- | --- |
-| GET | `/api/practice/architecture-design` | Read current public block |
-| POST | `/api/practice/architecture-design/confirm` | Freeze Architecture focus |
-| POST | `/api/practice/architecture-design/prepare` | Idempotently publish first block |
-| POST | `/api/practice/architecture-design/draft` | Save a draft |
-| POST | `/api/practice/architecture-design/hint` | Reveal the next hint |
-| POST | `/api/practice/architecture-design/attempt` | Evaluate and persist an attempt |
-| POST | `/api/practice/architecture-design/learn` | Confirm zero-mastery learned state |
-| POST | `/api/practice/architecture-design/assessment/start` | Start/resume frozen assessment |
-| POST | `/api/practice/architecture-design/assessment/finalize` | Persist immutable report |
-| POST | `/api/practice/architecture-design/continue` | Publish one adapted next block |
+| Method | Route                                                   | Responsibility                     |
+| ------ | ------------------------------------------------------- | ---------------------------------- |
+| GET    | `/api/practice/architecture-design`                     | Read current public block          |
+| POST   | `/api/practice/architecture-design/confirm`             | Freeze Architecture focus          |
+| POST   | `/api/practice/architecture-design/prepare`             | Idempotently publish first block   |
+| POST   | `/api/practice/architecture-design/draft`               | Save a draft                       |
+| POST   | `/api/practice/architecture-design/hint`                | Reveal the next hint               |
+| POST   | `/api/practice/architecture-design/attempt`             | Evaluate and persist an attempt    |
+| POST   | `/api/practice/architecture-design/learn`               | Confirm zero-mastery learned state |
+| POST   | `/api/practice/architecture-design/assessment/start`    | Start/resume frozen assessment     |
+| POST   | `/api/practice/architecture-design/assessment/finalize` | Persist immutable report           |
+| POST   | `/api/practice/architecture-design/continue`            | Publish one adapted next block     |
 
 Use a shared route kit so each `route.ts` is ideally an export plus Architecture schemas/config,
 not another copy of leases and try/catch blocks. Keep explicit Architecture error codes and lease
@@ -629,13 +629,13 @@ hide incomplete wiring.
 The goal is few new integration lines, not fewer correctness checks. Excluding reviewed content,
 tests, Prisma schema/migration, and domain-specific rubrics, target:
 
-| Area | New production-line target |
-| --- | ---: |
-| Architecture component experience/adapters/wrappers | 200 or fewer |
-| Server pages and route wrappers | 250 or fewer |
-| Architecture-specific orchestration adapters | 400 or fewer |
-| Practice card/container/analytics wiring | 100 or fewer |
-| **Total track-specific glue** | **950 or fewer** |
+| Area                                                | New production-line target |
+| --------------------------------------------------- | -------------------------: |
+| Architecture component experience/adapters/wrappers |               200 or fewer |
+| Server pages and route wrappers                     |               250 or fewer |
+| Architecture-specific orchestration adapters        |               400 or fewer |
+| Practice card/container/analytics wiring            |               100 or fewer |
+| **Total track-specific glue**                       |           **950 or fewer** |
 
 If track-specific glue exceeds this, stop and identify which stable lifecycle or presentation
 concept is being copied. Extract that concept into `story-practice` and keep per-track types at the
@@ -666,25 +666,25 @@ production lines inside its feature directories before counting its Prisma migra
 integration edits. Architecture should be smaller because it reuses the presentation and lifecycle
 and has no executable-question runner.
 
-| Area | Estimated LOC |
-| --- | ---: |
-| Shared extraction/refactoring | 0–300 net-new |
-| Architecture contracts and onboarding evidence | 450–650 |
-| Two complete reviewed scenarios | 1,200–1,800 |
-| Ranking and evaluation | 600–900 |
-| Persistence and migration | 400–600 |
-| Backend adapters and Architecture services | 500–800 |
-| Components, pages, APIs, Practice wiring | 600–950 |
-| **Production total** | **4,000–5,500** |
-| Tests | 2,000–3,000 |
-| **Complete feature total** | **6,000–8,500** |
+| Area                                           |   Estimated LOC |
+| ---------------------------------------------- | --------------: |
+| Shared extraction/refactoring                  |   0–300 net-new |
+| Architecture contracts and onboarding evidence |         450–650 |
+| Two complete reviewed scenarios                |     1,200–1,800 |
+| Ranking and evaluation                         |         600–900 |
+| Persistence and migration                      |         400–600 |
+| Backend adapters and Architecture services     |         500–800 |
+| Components, pages, APIs, Practice wiring       |         600–950 |
+| **Production total**                           | **4,000–5,500** |
+| Tests                                          |     2,000–3,000 |
+| **Complete feature total**                     | **6,000–8,500** |
 
 Use approximately **4,500 production lines and 7,000 total lines** as the working budget. These are
 planning estimates, not targets to reach. Fewer lines are welcome when they come from real reuse.
 If production exceeds roughly 5,500 lines, stop and audit the change for copied presentation,
 Route Handler, lifecycle, persistence-orchestration, or assessment behavior.
 
-Most Architecture-owned lines should be substantive domain material: sixteen reviewed questions,
+Most Architecture-owned lines should be substantive domain material: eight reviewed MVP questions,
 private grading rubrics, scenario metadata, evidence mappings, and tests. A small line count must
 not be achieved by weakening owner scoping, snapshot privacy, validation, idempotency, or content
 review.
@@ -735,27 +735,201 @@ orchestrators after they exist.
 The complete feature has **10 formal implementation and release steps**. Implement and verify one
 vertical step at a time.
 
-| Step | Deliverable | Status |
-| ---: | --- | --- |
-| 1 | Freeze naming, scope, dimensions, formats, and neutral view contracts | Not started |
-| 2 | Extract neutral frontend shells with Core/Applied regression coverage | Not started |
-| 3 | Extract shared server lifecycle/route ports without data migration | Not started |
-| 4 | Architecture contracts, private/public snapshots, and baseline evidence | Not started |
-| 5 | Two reviewed scenarios, ranking catalogue, release audit, and publisher | Not started |
-| 6 | Architecture Prisma models, migration, and repository adapter | Not started |
-| 7 | Focus, eligibility, preparation, attempt evaluation, and lifecycle wiring | Not started |
-| 8 | Assessment, report, continuation, history, and analytics | Not started |
-| 9 | Thin pages, Route Handlers, Practice card, and container registration | Not started |
-| 10 | Unit, integration, regression, and authenticated browser release gate | Not started |
+| Step | Deliverable                                                               | Status      |
+| ---: | ------------------------------------------------------------------------- | ----------- |
+|    1 | Freeze naming, scope, dimensions, formats, and neutral view contracts     | Complete    |
+|    2 | Extract neutral frontend shells with Core/Applied regression coverage     | Complete    |
+|    3 | Extract shared server lifecycle/route ports without data migration        | Complete    |
+|    4 | Architecture contracts, private/public snapshots, and baseline evidence   | Complete    |
+|    5 | Two reviewed scenarios, ranking catalogue, release audit, and publisher   | Complete    |
+|    6 | Architecture Prisma models, migration, and repository adapter             | Complete    |
+|    7 | Focus, eligibility, preparation, attempt evaluation, and lifecycle wiring | Complete    |
+|    8 | Assessment, report, continuation, history, and analytics                  | Complete    |
+|    9 | Thin pages, Route Handlers, Practice card, and container registration     | Complete    |
+|   10 | Unit, integration, regression, and authenticated browser release gate     | Not started |
 
-Before Step 2, complete or stabilize the current Applied Engineering frontend work and capture its
-passing regression baseline. Do not perform a shared extraction on top of unexplained failing tests.
+Step 1 completion evidence:
+
+- `src/lib/practice/architecture-design/contracts.ts` freezes the canonical identity, version-1
+  scope, sixteen design dimensions, non-executable formats/artifacts, and four-stage MVP interview arc.
+- `src/components/workspace/story-practice/contracts.ts` defines the neutral, typed presentation
+  experience that Step 2 will adopt without combining domain persistence types.
+- `src/lib/practice/architecture-design/contracts.spec.ts` passes 6 focused contract tests.
+- `pnpm exec tsc --noEmit` and focused ESLint checks pass.
+
+Step 2 completion evidence:
+
+- `src/components/workspace/story-practice/view-contracts.ts` owns the normalized block, question,
+  work, feedback, run, assessment, history, and library presentation models. The contracts contain
+  no Core Technical, Applied Engineering, or Architecture persistence types.
+- The six direct `story-practice` facade modules provide the stable preparation, intro, overview,
+  workspace, assessment, and artifact imports while compatibility exports preserve existing Core
+  call sites.
+- Preparation, overview, question, and assessment shells now take typed experience configuration
+  for route/API namespaces, copy, options, payloads, environment labels, coach steps, scoring rows,
+  response guidance, and the executable-run capability.
+- Applied Engineering imports the neutral facades and maps its public domain data directly into the
+  neutral view contracts; it no longer casts Applied records into Core Technical presentation or
+  server types.
+- Architecture proves the seam with a thin preparation wrapper and configuration that sends only
+  `{ path: "role-aligned" }`, uses the design icon/copy, and targets its own API and route namespace.
+- TypeScript, focused ESLint/format checks, and 38 focused Core/Applied/Architecture regression tests
+  pass. Browser-DOM tests emit only the existing jsdom `HTMLMediaElement.load()` warning.
+
+Do not begin Step 3 on top of an unexplained Core or Applied regression. The passing Step 2 suite is
+the baseline for extracting server lifecycle ports without a data migration.
+
+Step 3 completion evidence:
+
+- `src/server/story-practice/contracts.ts` defines neutral preparation, question, optional runner,
+  assessment, continuation, and history ports plus the shared lifecycle status vocabulary.
+- The preparation, practice, assessment, and continuation orchestrator modules own the identical
+  replay checks, deterministic fingerprints, work/hint/run validation, assessment start/response
+  rules, bounded diagnostics, and continuation readiness rules.
+- `src/server/story-practice/route-kit.ts` centralizes authentication, completed-onboarding access,
+  rate limiting, strict JSON parsing, eligibility error mapping, API envelopes, and optional
+  distributed-lease cleanup. Core and Applied `_shared.ts` route gates now configure this kit.
+- Core Technical and Applied Engineering services call the neutral invariants while retaining their
+  existing domain schemas, error codes/messages, Prisma transactions, tables, and persistence
+  services. No data model or migration changed.
+- The focused shared/Core/Applied lifecycle and route suite passes alongside TypeScript, ESLint,
+  formatting, and diff checks. This is the regression baseline for Architecture domain work.
+
+Step 4 adds Architecture-owned contracts and baseline evidence against these ports without
+introducing Architecture Prisma models or application routes before their later documented steps.
+
+Step 4 completion evidence:
+
+- Architecture-owned scenario, question, focus/ranking, and assessment schemas enforce the fixed
+  four-stage MVP arc, all sixteen dimensions, non-executable formats, three hints, 10-point private
+  rubrics, five assessment measures, and immutable fingerprint/version fields.
+- Explicit public question, focus, and assessment projections omit reference answers, answer
+  indexes, hints, rubrics, expected answers, private source identities, and evaluator material.
+- The versioned baseline registry maps all 50 backend/full-stack Architecture onboarding questions
+  to valid Architecture dimensions using canonical fingerprints that ignore shuffled option IDs,
+  option order, and the private answer key.
+- `ArchitectureDesignBaselineEvidenceService` reads only owner-scoped frozen `architecture`
+  assignments and saved answers. It treats the private snapshot as authoritative, uses the public
+  `architecture-design` signal only as a consistency check, returns deeply frozen answer-free
+  evidence, maps correct to `STANDARD`, incorrect to `GUIDED`, and every missing/corrupt/stale case
+  to `UNKNOWN`; `STRETCH` is not representable by the baseline state schema.
+- Twenty focused Architecture contract/evidence tests and 180 affected onboarding,
+  story-practice, Core, and Applied regression tests pass with TypeScript, ESLint, formatting, and
+  diff checks. No Prisma model, migration, application route, or container registration changed.
+
+Step 5 completion evidence:
+
+- Two approved four-question artifacts cover multi-tenant webhook delivery and a
+  high-volume notification platform. Every question has three progressive hints, a private
+  reference answer, a 10-point dimension-linked rubric, common mistakes, follow-ups, and a transfer
+  connection; the two scenarios cover all sixteen dimensions without executable capabilities.
+- The ranking catalogue is derived deterministically from reviewed artifact compatibility and
+  exposes both approved artifacts as version-1 published candidates.
+- The content audit checks schema identity, scenario/question coherence, distinct artifacts,
+  complete dimension coverage, unique hints, and private/public snapshot safety.
+- The project owner approved both artifacts on 2026-09-08. The idempotent repository publisher
+  persists stable fingerprints and separate private/public question snapshots while continuing to
+  reject candidate or unapproved content.
+- Both immutable version-1 scenarios are published in the configured database and live eligibility
+  reports `AVAILABLE` with `publishedScenarioCount: 2` for a supported backend/full-stack profile.
+
+Step 6 completion evidence:
+
+- Architecture-owned Prisma models cover immutable focus revisions, reviewed scenario versions,
+  owner progress, four-question blocks and state, attempts, assessments and reports, and replayable
+  preparation attempts. There is deliberately no `ArchitectureCodeRun`.
+- The isolated migration enforces owner ordinals and request IDs, owner-scoped composite foreign
+  keys, one current block per owner through a partial unique index, one assessment per block,
+  four-question order bounds, snapshot retention, and restrictive scenario-version history.
+- `ArchitectureDesignRepositoryAdapter` implements the neutral story-practice repository port. Its
+  transaction saves content-addressed focus, refuses content without human approval, preserves
+  separate public/private reviewed snapshots, verifies the exact published content fingerprint,
+  and creates all four questions plus the locked assessment atomically.
+- Persistence tests independently retain a synthetic unapproved fixture to prove the approval gate;
+  the two approved source artifacts are published through the same idempotent persistence service.
+  The full suite passes alongside Prisma validation, TypeScript, ESLint, formatting, and diff checks.
+
+Step 7 completion evidence:
+
+- Strict practice contracts accept only choice and written work; Architecture has no code work,
+  run input, runner service, or executable lifecycle branch.
+- `ArchitectureDesignFocusService` freezes server-derived, owner-scoped profile, resume, latest
+  ready Architecture blueprint, and baseline evidence. The browser can confirm only
+  `{ path: "role-aligned" }` and cannot choose a scenario or difficulty.
+- Eligibility fails closed unless the role and level are supported and at least two compatible
+  catalogue entries also exist as published database versions. It has no runner dependency.
+- Deterministic first-scenario ranking enforces publication, role, seniority, prerequisite,
+  exclusion, and recency gates before scoring baseline gaps, target fit, resume relevance,
+  dimension coverage, plan coverage, and novelty.
+- Preparation uses the shared replay/failure protocol and reads exact private scenario/question
+  snapshots from the published database version. The Step 6 transaction remains the only block
+  publication path, so retry or failure cannot save a partial four-question block.
+- Choice evaluation is deterministic; written evaluation is bound to the frozen scenario,
+  artifact, reference answer, and rubric. Attempts retain evaluator version and fingerprint, while
+  a no-model fallback is explicitly unverified and model failures do not persist partial attempts.
+- Owner-scoped draft, progressive hint, attempt, and Learn transitions are durable. Drafts and
+  hints remain non-terminal, Learn has no scored attempt, and the fourth terminal question unlocks
+  exactly the existing block assessment; Step 8 now owns its assessment/report behavior.
+- Active public question reads omit reference answers, answer indexes, hidden hints, rubrics, and
+  evaluator source material. The full suite passes 1,245 tests across 200 files (with the existing
+  8 skipped tests), alongside TypeScript and ESLint checks.
+
+Step 8 completion evidence:
+
+- The assessment blueprint freezes five prompts from the four terminal design questions and keeps
+  expected answers, source identities, and private rubrics out of the public assessment snapshot.
+- Assessment start/resume and finalization preserve the shared replay-safe lifecycle. Submitted
+  answers are checkpointed before bounded semantic evaluation, evaluation failures remain
+  retryable, and the report plus safe transcript are persisted once as immutable snapshots.
+- Reports include all five measure scores, all sixteen dimension results, evaluator/model/scoring
+  identities and fingerprints, strengths, gaps, next steps, solved-versus-Learned evidence, and a
+  deterministic next-scenario selection. Learned questions contribute zero adaptive Practice
+  mastery.
+- Continue reads the exact recommended published scenario version and publishes one successor
+  atomically while the assessed block remains current until success. Successful request replays do
+  not publish another block, and failures preserve the completed report.
+- History and workspace analytics are owner-scoped projections of frozen block, question,
+  assessment, report, and transcript snapshots; historical reads do not depend on the live
+  catalogue and Architecture projects no executable exercise.
+- Twelve focused Architecture suites pass 67 tests. The full repository suite passes 1,255 tests
+  across 202 files, with the existing 8 tests skipped, alongside TypeScript, ESLint, Prisma
+  validation, focused formatting, and diff checks.
+
+Step 9 completion evidence:
+
+- Thin async Server Component pages now serve the current or owner-scoped historical Architecture
+  scenario and question workspace. They read services directly, pass only public serializable
+  snapshots into the shared client presentation, and provide loading, error, and owner-safe
+  not-found boundaries.
+- The Architecture presentation adapter maps its scenario, written/choice questions, design
+  feedback, five assessment measures, immutable report, history, and library records into the
+  neutral story-practice views. Its workspace explicitly disables executable runs, and shared
+  question-count labels now derive from each block so existing eight-question Core/Applied blocks
+  and four-question Architecture blocks render correctly.
+- The complete Route Handler surface now includes the current-block read plus confirm, prepare,
+  draft, hint, attempt, Learn, assessment start/finalize, and continuation mutations. Every route
+  uses the shared completed-onboarding/owner guard, strict Architecture schemas, rate limits, and
+  the required distributed leases. There is deliberately no Architecture `/run` route.
+- `/practice` reads Architecture eligibility, current progress, and analytics independently and in
+  parallel. An Architecture failure cannot break DSA, Core, or Applied cards. The order-4 card stays
+  discoverable with the exact unavailable reason while publication or profile gates are closed;
+  eligible or resumable work links to the Architecture workspace. Historical totals and activity
+  contribute to the existing workspace summaries.
+- `getAppContainer()` registers the complete Architecture service graph as one explicit grouped
+  capability, including baseline, focus, ranking, repository, practice, preparation, assessment,
+  continuation, history, eligibility, and analytics services, without a runner dependency.
+- The focused Step 9 boundary suite passes 23 tests across 7 files, and the affected shared, Core,
+  Applied, Architecture, page, and API regression suite passes 231 tests across 49 files. The full
+  repository suite passes 1,269 tests across 207 files, with the existing 8 tests skipped. TypeScript,
+  ESLint, Prisma validation, formatting, diff checks, and the optimized Next.js production build
+  pass; the build route manifest contains the Architecture pages and required handlers and no
+  Architecture run endpoint.
 
 ## 13. Test and release requirements
 
 ### Contract and content tests
 
-- exactly eight ordered questions per scenario;
+- exactly four ordered questions per scenario;
 - allowed non-executable formats only;
 - three hints and a 10-point private rubric per question;
 - unique keys and stable fingerprints;
@@ -784,7 +958,7 @@ passing regression baseline. Do not perform a shared extraction on top of unexpl
 - drafts/hints do not complete questions;
 - evaluated attempt and Learn transitions are correct;
 - Learn contributes zero mastery;
-- all eight terminal questions unlock one assessment;
+- all four terminal questions unlock one assessment;
 - assessment start/finalize/continue are idempotent;
 - continuation creates exactly one new current block;
 - historical public snapshots survive catalogue retirement;
@@ -812,11 +986,12 @@ complete from unit tests alone.
 
 Architecture & Design is complete only when:
 
-- an eligible backend/full-stack user sees the order-4 card;
+- every user sees the order-4 card, while only an eligible backend/full-stack user or an owner with
+  resumable work can open it;
 - a first entry freezes server-derived onboarding/resume context;
 - the browser cannot select difficulty or scenario;
 - two reviewed, database-published scenarios satisfy eligibility;
-- preparation atomically creates one frozen eight-question block;
+- preparation atomically creates one frozen four-question block;
 - all question states, assessment states, history, and continuation survive refresh/retry;
 - public APIs never expose answer keys or private rubrics;
 - Architecture has no runner dependency or dead `/run` UI;
@@ -910,7 +1085,7 @@ kind remains `architecture-system-design`; do not rename persisted interview ide
 
 Version 1 supports reviewed backend/full-stack system-design scenarios, contains no executable
 questions, does not depend on Node.js, and has no /run route. Keep confirm -> idempotent prepare,
-eight terminal questions -> frozen five-prompt assessment -> report -> explicit continue. Preserve
+four terminal questions -> frozen five-prompt assessment -> report -> explicit continue. Preserve
 owner scoping, private/public snapshots, atomic publication, history, rate limits, leases, strict
 validation, and human review.
 

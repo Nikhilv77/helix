@@ -7,22 +7,26 @@ describe("Applied Engineering presentation adapter", () => {
     const view = appliedEngineeringBlockView({
       incident: { productionSignalKeys: ["evidence-selection"] },
       selection: { emphasizedSignalKeys: ["evidence-selection"] },
-      questions: [{
-        question: { incidentKey: "incident", productionSignalKeys: ["evidence-selection"] },
-        latestAttempt: { feedback: {
-          schemaVersion: 1,
-          score: 8,
-          result: "Good diagnosis",
-          evidenceUse: "Used the latency evidence.",
-          rootCauseReasoning: "Connected retries to saturation.",
-          repairQuality: "Bounded retry count.",
-          verificationQuality: "Added a load test.",
-          productionConsequence: "Prevents overload.",
-          saferDelivery: "Canary with rollback.",
-          interviewerFollowUp: "How would you tune it?",
-          missedEdgeCases: []
-        } }
-      }],
+      questions: [
+        {
+          question: { incidentKey: "incident", productionSignalKeys: ["evidence-selection"] },
+          latestAttempt: {
+            feedback: {
+              schemaVersion: 1,
+              score: 8,
+              result: "Good diagnosis",
+              evidenceUse: "Used the latency evidence.",
+              rootCauseReasoning: "Connected retries to saturation.",
+              repairQuality: "Bounded retry count.",
+              verificationQuality: "Added a load test.",
+              productionConsequence: "Prevents overload.",
+              saferDelivery: "Canary with rollback.",
+              interviewerFollowUp: "How would you tune it?",
+              missedEdgeCases: []
+            }
+          }
+        }
+      ],
       assessment: {
         assessment: null,
         transcript: null,
@@ -57,6 +61,8 @@ describe("Applied Engineering presentation adapter", () => {
       debuggingImplementation: 64,
       communicationProduction: 55
     });
-    expect(view.assessment?.report?.nextStory.selectedStory.storyKey).toBe("next-incident");
+    expect(view.assessment?.report?.nextStory.selectedStory.emphasizedConceptKeys).toEqual([
+      "rollout-safety"
+    ]);
   });
 });

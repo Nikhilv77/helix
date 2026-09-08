@@ -17,6 +17,8 @@ const OWNER_ID = "user:test";
 const PROFILE_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const PLAN_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const BLUEPRINT_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const CORE_BLUEPRINT_ID = "1ddddddd-dddd-4ddd-8ddd-dddddddddddd";
+const APPLIED_BLUEPRINT_ID = "2ddddddd-dddd-4ddd-8ddd-dddddddddddd";
 
 function candidateProfile(): CandidateInterviewProfile {
   return {
@@ -289,6 +291,38 @@ describe("PersonalizedInterviewPlanningService", () => {
     ).rejects.toMatchObject({ code: "PERSONALIZED_PLAN_CHANGED" });
   });
 
+  it("selects the exact Core and Applied sources for a Technical Deep Dive", async () => {
+    const { service } = dependencies({ storedPlan: activePlan() });
+
+    await expect(
+      service.technicalDeepDiveBlueprints(
+        OWNER_ID,
+        CORE_BLUEPRINT_ID,
+        APPLIED_BLUEPRINT_ID,
+        PLAN_ID,
+        NOW
+      )
+    ).resolves.toMatchObject({
+      plan: { id: PLAN_ID },
+      coreBlueprint: { id: CORE_BLUEPRINT_ID, kind: "core-technical" },
+      appliedBlueprint: { id: APPLIED_BLUEPRINT_ID, kind: "applied-engineering" }
+    });
+  });
+
+  it("rejects swapped or stale Technical Deep Dive source identities", async () => {
+    const { service } = dependencies({ storedPlan: activePlan() });
+
+    await expect(
+      service.technicalDeepDiveBlueprints(
+        OWNER_ID,
+        APPLIED_BLUEPRINT_ID,
+        CORE_BLUEPRINT_ID,
+        PLAN_ID,
+        NOW
+      )
+    ).rejects.toMatchObject({ code: "TECHNICAL_DEEP_DIVE_BLUEPRINTS_NOT_FOUND" });
+  });
+
   it("regenerates a stale plan with the latest demonstrated skill profile", async () => {
     const performance = performanceProfile();
     const generated = activePlan({
@@ -349,8 +383,18 @@ describe("PersonalizedInterviewPlanningService", () => {
                 evidence: "baseline",
                 topics: [{ label: "Target-stack decisions", familiarity: "familiar" }]
               },
-              { areaId: "applied-engineering", score: null, confidence: 0, evidence: "not-enough-evidence" },
-              { areaId: "architecture-design", score: null, confidence: 0, evidence: "not-enough-evidence" }
+              {
+                areaId: "applied-engineering",
+                score: null,
+                confidence: 0,
+                evidence: "not-enough-evidence"
+              },
+              {
+                areaId: "architecture-design",
+                score: null,
+                confidence: 0,
+                evidence: "not-enough-evidence"
+              }
             ]
           }
         }

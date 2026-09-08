@@ -1,0 +1,12 @@
+import type { ProgressDay, ProgressNextUp } from "@/lib/roadmap/progress";
+
+export interface ArchitectureDesignPracticeAnalytics {
+  totalQuestions: number;
+  completedQuestions: number;
+  totalAttempts: number;
+  solvedThisWeek: number;
+  currentStreakDays: number;
+  lastActiveAt: number | null;
+  activity: ProgressDay[];
+  nextUp: ProgressNextUp | null;
+}

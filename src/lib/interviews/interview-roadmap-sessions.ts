@@ -3,9 +3,16 @@ import type {
   PersonalizedInterviewPlan,
   SessionBlueprint
 } from "@/lib/interviews/personalized-plan";
-import { PREP_SESSIONS } from "@/lib/roadmap/frontend-plan";
-import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
+import { PREP_SESSIONS, type PrepSession } from "@/lib/roadmap/frontend-plan";
+import type { FrontendRoadmapHome, FrontendRoadmapSession } from "@/lib/roadmap/roadmap";
 import type { InterviewHistoryItem } from "@/lib/shared/types";
+import {
+  TECHNICAL_DEEP_DIVE_DURATION_MINUTES,
+  TECHNICAL_DEEP_DIVE_ID,
+  TECHNICAL_DEEP_DIVE_PREP_SESSION,
+  TECHNICAL_DEEP_DIVE_QUESTION_COUNT,
+  type TechnicalDeepDiveBlueprintIds
+} from "@/lib/interviews/technical-deep-dive";
 
 export interface InterviewRoadmapSession {
   id: string;
@@ -25,6 +32,8 @@ export interface InterviewRoadmapSession {
   updatedPracticeAvailable: boolean;
   durationMinutes: number | null;
   difficulty: string | null;
+  /** Present only for the candidate-facing Core + Applied combined round. */
+  technicalDeepDive?: TechnicalDeepDiveBlueprintIds;
 }
 
 /**
@@ -51,11 +60,22 @@ export function interviewRoadmapSessions({
 }
 
 export function roadmapSessionHref(session: InterviewRoadmapSession): string {
-  if (session.kind === "core-technical" && session.resumeSessionId?.startsWith("core-technical:")) {
+  if (session.resumeSessionId?.startsWith("core-technical:")) {
     return "/practice/core-technical";
+  }
+  if (session.resumeSessionId?.startsWith("applied-engineering:")) {
+    return "/practice/applied-engineering";
   }
   if (session.resumeSessionId) {
     return `/interview/voice?session=${encodeURIComponent(session.resumeSessionId)}`;
+  }
+  if (session.planId && session.technicalDeepDive) {
+    const params = new URLSearchParams({
+      plan: session.planId,
+      coreBlueprint: session.technicalDeepDive.coreBlueprintId,
+      appliedBlueprint: session.technicalDeepDive.appliedBlueprintId
+    });
+    return `/interview?${params.toString()}`;
   }
   if (session.planId) {
     const params = new URLSearchParams({ plan: session.planId, blueprint: session.id });
@@ -69,7 +89,7 @@ export function roadmapSessionHref(session: InterviewRoadmapSession): string {
 }
 
 function fallbackRoadmapSessions(): InterviewRoadmapSession[] {
-  return PREP_SESSIONS.map((session) => ({
+  return candidateFacingPrepSessions().map((session) => ({
     id: session.id,
     planId: null,
     kind: null,
@@ -89,7 +109,31 @@ function fallbackRoadmapSessions(): InterviewRoadmapSession[] {
 }
 
 function legacyRoadmapSessions(roadmap: FrontendRoadmapHome): InterviewRoadmapSession[] {
-  return roadmap.sessions.map((session) => ({
+  const core = roadmap.sessions.find((session) => session.id === "core-technical");
+  const applied = roadmap.sessions.find((session) => session.id === "applied-engineering");
+  const technicalTotal = (core?.totalQuestions ?? 0) + (applied?.totalQuestions ?? 0);
+  const technicalCompleted = (core?.completedQuestions ?? 0) + (applied?.completedQuestions ?? 0);
+  const sessions = roadmap.sessions.flatMap<FrontendRoadmapSession>((session) => {
+    if (session.id === "applied-engineering") return [];
+    if (session.id !== "core-technical") return [{ ...session, order: visibleOrder(session.id) }];
+    return [
+      {
+        ...session,
+        id: TECHNICAL_DEEP_DIVE_ID,
+        order: TECHNICAL_DEEP_DIVE_PREP_SESSION.order,
+        title: TECHNICAL_DEEP_DIVE_PREP_SESSION.title,
+        purpose: TECHNICAL_DEEP_DIVE_PREP_SESSION.purpose,
+        covers: TECHNICAL_DEEP_DIVE_PREP_SESSION.covers,
+        totalQuestions: technicalTotal,
+        completedQuestions: technicalCompleted,
+        progressPercent: technicalTotal
+          ? Math.round((technicalCompleted / technicalTotal) * 100)
+          : 0
+      }
+    ];
+  });
+
+  return sessions.map((session) => ({
     ...session,
     planId: null,
     kind: null,
@@ -111,6 +155,8 @@ function personalizedRoadmapSessions(
   history: InterviewHistoryItem[]
 ): InterviewRoadmapSession[] {
   const visibleSessions: InterviewRoadmapSession[] = [];
+  const core = plan.sessions.find((session) => session.kind === "core-technical");
+  const applied = plan.sessions.find((session) => session.kind === "applied-engineering");
 
   for (const blueprint of plan.sessions) {
     if (blueprint.kind === "problem-solving") {
@@ -118,9 +164,21 @@ function personalizedRoadmapSessions(
       continue;
     }
 
+    if (blueprint.kind === "core-technical" && core && applied) {
+      visibleSessions.push(technicalDeepDiveRoadmapSession(plan.id, core, applied, history));
+      continue;
+    }
+
+    if (blueprint.kind === "applied-engineering" && core && applied) continue;
+
+    if (blueprint.kind === "architecture-system-design") {
+      visibleSessions.push(personalizedBlueprintSession(plan.id, blueprint, history, 3));
+      continue;
+    }
+
     if (blueprint.kind === "final-mock") {
       visibleSessions.push(resumeRoadmapSession(history));
-      visibleSessions.push(personalizedBlueprintSession(plan.id, blueprint, history, 6));
+      visibleSessions.push(personalizedBlueprintSession(plan.id, blueprint, history, 5));
       continue;
     }
 
@@ -128,6 +186,68 @@ function personalizedRoadmapSessions(
   }
 
   return visibleSessions;
+}
+
+function technicalDeepDiveRoadmapSession(
+  planId: string,
+  core: SessionBlueprint,
+  applied: SessionBlueprint,
+  history: InterviewHistoryItem[]
+): InterviewRoadmapSession {
+  const isCurrentCombined = (session: InterviewHistoryItem) =>
+    session.setup.templateId === TECHNICAL_DEEP_DIVE_ID &&
+    session.setup.technicalDeepDive?.coreBlueprintId === core.id &&
+    session.setup.technicalDeepDive?.appliedBlueprintId === applied.id;
+  const isAnyCombined = (session: InterviewHistoryItem) =>
+    session.setup.templateId === TECHNICAL_DEEP_DIVE_ID;
+  const isSourceSlot = (session: InterviewHistoryItem) =>
+    session.setup.templateId === core.id ||
+    session.setup.templateId === applied.id ||
+    session.setup.templateId === "core-technical" ||
+    session.setup.templateId === "applied-engineering" ||
+    session.setup.personalizedBlueprint?.kind === "core-technical" ||
+    session.setup.personalizedBlueprint?.kind === "applied-engineering";
+  const latestActive = findLatestSession(
+    history,
+    (session) =>
+      (isAnyCombined(session) || isSourceSlot(session)) && session.status === "in_progress"
+  );
+  const completedCurrent = findLatestSession(
+    history,
+    (session) => isCurrentCombined(session) && session.status === "completed"
+  );
+  const latestCombined = findLatestSession(history, isAnyCombined);
+  const previousTechnicalCompletion = findLatestSession(
+    history,
+    (session) => isSourceSlot(session) && session.status === "completed"
+  );
+  const progressSession = latestActive ?? completedCurrent ?? latestCombined;
+  const totalQuestions =
+    progressSession?.status === "in_progress"
+      ? progressSession.questionCount
+      : TECHNICAL_DEEP_DIVE_QUESTION_COUNT;
+  const progress = sessionProgress(progressSession, totalQuestions);
+
+  return {
+    id: TECHNICAL_DEEP_DIVE_ID,
+    planId,
+    kind: null,
+    order: 2,
+    title: TECHNICAL_DEEP_DIVE_PREP_SESSION.title,
+    purpose: TECHNICAL_DEEP_DIVE_PREP_SESSION.purpose,
+    covers: [
+      ...core.topics.slice(0, 2).map((topic) => `Core · ${topic.label}`),
+      ...applied.topics.slice(0, 2).map((topic) => `Applied · ${topic.label}`)
+    ],
+    ...progress,
+    updatedPracticeAvailable: Boolean(previousTechnicalCompletion && !completedCurrent),
+    durationMinutes: TECHNICAL_DEEP_DIVE_DURATION_MINUTES,
+    difficulty: harderDifficulty(core.difficulty, applied.difficulty),
+    technicalDeepDive: {
+      coreBlueprintId: core.id,
+      appliedBlueprintId: applied.id
+    }
+  };
 }
 
 function dsaRoadmapSession(
@@ -172,7 +292,7 @@ function resumeRoadmapSession(history: InterviewHistoryItem[]): InterviewRoadmap
     id: "resume-behavioral-defense",
     planId: null,
     kind: null,
-    order: 5,
+    order: 4,
     title: "Resume & Behavioral Defense",
     purpose:
       "Defend the experience, projects, decisions, and impact already on your resume with specific evidence.",
@@ -275,4 +395,29 @@ function findLatestSession(
       (latest, session) => (!latest || session.updatedAt > latest.updatedAt ? session : latest),
       undefined
     );
+}
+
+function candidateFacingPrepSessions(): PrepSession[] {
+  return PREP_SESSIONS.flatMap((session) => {
+    if (session.id === "applied-engineering") return [];
+    if (session.id === "core-technical") return [TECHNICAL_DEEP_DIVE_PREP_SESSION];
+    return [{ ...session, order: visibleOrder(session.id) }];
+  });
+}
+
+function visibleOrder(id: string): number {
+  if (id === "architecture-system-design") return 3;
+  if (id === "resume-behavioral-defense") return 4;
+  if (id === "final-mock") return 5;
+  return id === "dsa" ? 1 : 2;
+}
+
+function harderDifficulty(left: string, right: string): string {
+  const rank: Record<string, number> = {
+    foundational: 0,
+    intermediate: 1,
+    advanced: 2,
+    adaptive: 3
+  };
+  return (rank[left] ?? 0) >= (rank[right] ?? 0) ? left : right;
 }

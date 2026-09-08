@@ -10,6 +10,8 @@ import { mergePracticeActivity } from "@/lib/practice/core-technical/workspace-a
 import type { CoreTechnicalEligibility } from "@/server/core-technical/eligibility.service";
 import { appliedEngineeringPracticeEntry } from "@/lib/practice/applied-engineering/ui-state";
 import type { AppliedEngineeringEligibility } from "@/server/applied-engineering/eligibility.service";
+import { architectureDesignPracticeEntry } from "@/lib/practice/architecture-design/ui-state";
+import type { ArchitectureDesignEligibility } from "@/server/architecture-design/eligibility.service";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
@@ -34,7 +36,10 @@ export default async function PracticePage() {
     coreTechnicalAnalytics,
     appliedEngineeringEligibility,
     appliedEngineeringBlock,
-    appliedEngineeringAnalytics
+    appliedEngineeringAnalytics,
+    architectureDesignEligibility,
+    architectureDesignBlock,
+    architectureDesignAnalytics
   ] = await Promise.all([
     container.practiceRoadmapService.home(ownerId).catch((error) => {
       generationFailed = true;
@@ -57,14 +62,15 @@ export default async function PracticePage() {
     container.coreTechnicalPracticeService.current(ownerId).catch(() => null),
     container.coreTechnicalWorkspaceAnalyticsService.practice(ownerId, 7).catch(() => null),
     container.appliedEngineeringEligibilityService
-      ?.forProfile(profile)
-      .catch((): AppliedEngineeringEligibility => unavailableAppliedEngineering()) ??
-      Promise.resolve(unavailableAppliedEngineering()),
-    container.appliedEngineeringPracticeService?.current(ownerId).catch(() => null) ??
-      Promise.resolve(null),
-    container.appliedEngineeringWorkspaceAnalyticsService
-      ?.practice(ownerId, 7)
-      .catch(() => null) ?? Promise.resolve(null)
+      .forProfile(profile)
+      .catch((): AppliedEngineeringEligibility => unavailableAppliedEngineering()),
+    container.appliedEngineeringPracticeService.current(ownerId).catch(() => null),
+    container.appliedEngineeringWorkspaceAnalyticsService.practice(ownerId, 7).catch(() => null),
+    container.architectureDesign.eligibility
+      .forProfile(profile)
+      .catch((): ArchitectureDesignEligibility => unavailableArchitectureDesign()),
+    container.architectureDesign.practice.current(ownerId).catch(() => null),
+    container.architectureDesign.workspaceAnalytics.practice(ownerId, 7).catch(() => null)
   ]);
   const dsaRecommendation = dsaPlan
     ? await buildStableDsaRecommendation({
@@ -86,8 +92,11 @@ export default async function PracticePage() {
     <PracticeSessionsView
       practiceRoadmap={practiceRoadmap}
       activity={mergePracticeActivity(
-        mergePracticeActivity(activity, coreTechnicalAnalytics?.activity ?? []),
-        appliedEngineeringAnalytics?.activity ?? []
+        mergePracticeActivity(
+          mergePracticeActivity(activity, coreTechnicalAnalytics?.activity ?? []),
+          appliedEngineeringAnalytics?.activity ?? []
+        ),
+        architectureDesignAnalytics?.activity ?? []
       )}
       dsaRecommendation={dsaRecommendation}
       dsaBlockCompletedQuestions={dsaBlockCompletedQuestions}
@@ -112,9 +121,33 @@ export default async function PracticePage() {
             }
           : null
       }
+      architectureDesignEntry={
+        practiceRoadmap
+          ? architectureDesignPracticeEntry(architectureDesignEligibility, architectureDesignBlock)
+          : null
+      }
+      architectureDesignTotals={
+        architectureDesignAnalytics
+          ? {
+              totalQuestions: architectureDesignAnalytics.totalQuestions,
+              completedQuestions: architectureDesignAnalytics.completedQuestions
+            }
+          : null
+      }
       generationFailed={generationFailed}
     />
   );
+}
+
+function unavailableArchitectureDesign(): ArchitectureDesignEligibility {
+  return {
+    available: false,
+    reason: "CONTENT_UNAVAILABLE",
+    message: "The reviewed Architecture & Design scenario path is not available yet.",
+    requiredScenarioCount: 2,
+    publishedScenarioCount: 0,
+    scenarios: []
+  };
 }
 
 function unavailableAppliedEngineering(): AppliedEngineeringEligibility {

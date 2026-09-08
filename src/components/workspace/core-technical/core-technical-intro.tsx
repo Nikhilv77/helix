@@ -4,17 +4,10 @@ import Link from "next/link";
 import { ArrowRight, AudioLines, Loader2, Play, Volume2 } from "lucide-react";
 import { useCallback, useEffect, useMemo } from "react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
+import type { StoryPracticeIntroExperience } from "@/components/workspace/story-practice/contracts";
+import type { StoryPracticeBlockView } from "@/components/workspace/story-practice/view-contracts";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { useMayaVoice, voiceUrl } from "@/lib/voice/use-maya-voice";
-import type { CoreTechnicalPublicBlock } from "@/server/core-technical/practice.service";
-
-export type StoryPracticeIntroExperience = {
-  label: string;
-  routeBase: string;
-  subjectNoun: string;
-  description: string;
-  script: (title: string) => string;
-};
 
 export const CORE_TECHNICAL_INTRO_EXPERIENCE: StoryPracticeIntroExperience = {
   label: "Core Technical",
@@ -30,7 +23,7 @@ export function CoreTechnicalIntro({
   terminalCount,
   experience = CORE_TECHNICAL_INTRO_EXPERIENCE
 }: {
-  block: CoreTechnicalPublicBlock;
+  block: StoryPracticeBlockView;
   terminalCount: number;
   experience?: StoryPracticeIntroExperience;
 }) {

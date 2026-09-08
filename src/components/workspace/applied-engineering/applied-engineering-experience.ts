@@ -1,8 +1,8 @@
-import type { StoryPracticeAssessmentExperience } from "@/components/workspace/core-technical/core-technical-assessment";
-import type { StoryPracticeIntroExperience } from "@/components/workspace/core-technical/core-technical-intro";
-import type { StoryPracticeOverviewExperience } from "@/components/workspace/core-technical/core-technical-overview";
-import type { StoryPracticePreparationExperience } from "@/components/workspace/core-technical/core-technical-preparation";
-import type { StoryPracticeWorkspaceExperience } from "@/components/workspace/core-technical/core-technical-question-workspace";
+import type { StoryPracticeAssessmentExperience } from "@/components/workspace/story-practice/story-practice-assessment";
+import type { StoryPracticeIntroExperience } from "@/components/workspace/story-practice/story-practice-intro";
+import type { StoryPracticeOverviewExperience } from "@/components/workspace/story-practice/story-practice-overview";
+import type { StoryPracticePreparationExperience } from "@/components/workspace/story-practice/story-practice-preparation";
+import type { StoryPracticeWorkspaceExperience } from "@/components/workspace/story-practice/story-practice-question-workspace";
 import type { AppliedEngineeringPublicQuestion } from "@/server/applied-engineering/practice.service";
 import {
   appliedEngineeringAssessmentView,
@@ -13,8 +13,15 @@ export const APPLIED_ENGINEERING_PREPARATION_EXPERIENCE: StoryPracticePreparatio
   slug: "applied-engineering",
   apiBase: "/api/practice/applied-engineering",
   routeBase: "/practice/applied-engineering",
-  optionDetail: "Node.js production incidents",
-  subjectNoun: "incident"
+  subjectNoun: "incident",
+  heading: "What language do you want to practise in?",
+  optionLabel: "Practice language",
+  optionIcon: "code",
+  options: [
+    { value: "javascript", label: "JavaScript", detail: "Node.js production incidents" }
+  ],
+  defaultOption: "javascript",
+  buildConfirmation: (language) => ({ language })
 };
 
 export const APPLIED_ENGINEERING_INTRO_EXPERIENCE: StoryPracticeIntroExperience = {
@@ -39,6 +46,12 @@ export const APPLIED_ENGINEERING_ASSESSMENT_EXPERIENCE: StoryPracticeAssessmentE
     "Production judgment",
     "Ownership & safe delivery"
   ],
+  defenceDescription:
+    "Defend your diagnosis, repair, verification, and safe-delivery decisions in five focused prompts.",
+  answerPlaceholder:
+    "Explain the evidence, root cause, repair, verification, and production consequence.",
+  evidenceSummary: (report) =>
+    `${report.solvedVsLearned.completedCount} solved · ${report.solvedVsLearned.learnedCount} learned · ${report.deterministicEvidence.acceptedCodeQuestionCount}/${report.deterministicEvidence.totalCodeQuestionCount} code questions accepted`,
   scoreRows: (report) =>
     report
       ? [
@@ -60,6 +73,9 @@ export const APPLIED_ENGINEERING_OVERVIEW_EXPERIENCE: StoryPracticeOverviewExper
   label: "Applied Engineering",
   routeBase: "/practice/applied-engineering",
   subjectNoun: "incident",
+  environmentLabel: "Node.js 22",
+  libraryDescription: "Browse the reviewed production incidents in your Node.js path.",
+  coachSteps: ["Read the production signal", "Isolate cause and blast radius", "Ship safely"],
   intro: APPLIED_ENGINEERING_INTRO_EXPERIENCE,
   assessment: APPLIED_ENGINEERING_ASSESSMENT_EXPERIENCE
 };
@@ -70,6 +86,13 @@ export const APPLIED_ENGINEERING_WORKSPACE_EXPERIENCE: StoryPracticeWorkspaceExp
   apiBase: "/api/practice/applied-engineering",
   routeBase: "/practice/applied-engineering",
   subjectNoun: "incident",
+  environmentLabel: "JavaScript · Node.js 22",
+  capabilities: { runCode: true },
+  textAnswerPlaceholder:
+    "Cite the evidence, isolate the root cause, and explain the safest production action…",
+  feedbackReasoningLabel: "Root-cause reasoning",
+  responseLabel: () => null,
+  responseGuidance: () => null,
   adaptQuestion: (question) =>
     appliedEngineeringQuestionView(question as AppliedEngineeringPublicQuestion)
 };

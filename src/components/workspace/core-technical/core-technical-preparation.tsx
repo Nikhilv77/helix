@@ -1,38 +1,26 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, ChevronDown, Code2, Loader2 } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Code2, Loader2, Network } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import type { StoryPracticePreparationExperience } from "@/components/workspace/story-practice/contracts";
 
-type Language = "javascript";
-
-const LANGUAGE_OPTIONS: ReadonlyArray<{
-  value: Language;
-  label: string;
-  detail: string;
-}> = [{ value: "javascript", label: "JavaScript", detail: "Node.js interview stories" }];
-
-const HEADING_WORDS = ["What", "language", "do", "you", "want", "to", "practise", "in?"];
-
-export type StoryPracticePreparationExperience = {
-  slug: string;
-  apiBase: string;
-  routeBase: string;
-  optionDetail: string;
-  subjectNoun: string;
-};
-
-const CORE_TECHNICAL_EXPERIENCE: StoryPracticePreparationExperience = {
+export const CORE_TECHNICAL_PREPARATION_EXPERIENCE: StoryPracticePreparationExperience = {
   slug: "core-technical",
   apiBase: "/api/practice/core-technical",
   routeBase: "/practice/core-technical",
-  optionDetail: "Node.js interview stories",
-  subjectNoun: "story"
+  subjectNoun: "story",
+  heading: "What language do you want to practise in?",
+  optionLabel: "Practice language",
+  optionIcon: "code",
+  options: [{ value: "javascript", label: "JavaScript", detail: "Node.js interview stories" }],
+  defaultOption: "javascript",
+  buildConfirmation: (language) => ({ language })
 };
 
-/** First-entry gate. The browser confirms only language; every other focus signal is server-derived. */
+/** First-entry gate. The browser confirms one choice; every focus signal is server-derived. */
 export function CoreTechnicalPreparation({
-  experience = CORE_TECHNICAL_EXPERIENCE
+  experience = CORE_TECHNICAL_PREPARATION_EXPERIENCE
 }: {
   experience?: StoryPracticePreparationExperience;
 } = {}) {
@@ -43,7 +31,7 @@ export function CoreTechnicalPreparation({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [visible, setVisible] = useState(false);
   const [open, setOpen] = useState(false);
-  const [language, setLanguage] = useState<Language>("javascript");
+  const [optionValue, setOptionValue] = useState(experience.defaultOption);
   const [phase, setPhase] = useState<"idle" | "confirming" | "preparing">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -101,7 +89,11 @@ export function CoreTechnicalPreparation({
     setOpen(false);
     setPhase("confirming");
     try {
-      const confirm = await post(`${experience.apiBase}/confirm`, { language });
+      const confirm = await post(
+        `${experience.apiBase}/confirm`,
+        experience.buildConfirmation(optionValue),
+        experience.subjectNoun
+      );
       const focusId = readFocusId(confirm);
       if (!focusId) throw new Error("The confirmed practice focus was not returned.");
 
@@ -109,7 +101,11 @@ export function CoreTechnicalPreparation({
       const storageKey = `${experience.slug}-prepare:${focusId}`;
       const requestId = sessionStorage.getItem(storageKey) ?? crypto.randomUUID();
       sessionStorage.setItem(storageKey, requestId);
-      await post(`${experience.apiBase}/prepare`, { requestId, focusRevisionId: focusId });
+      await post(
+        `${experience.apiBase}/prepare`,
+        { requestId, focusRevisionId: focusId },
+        experience.subjectNoun
+      );
       sessionStorage.removeItem(storageKey);
       router.replace(experience.routeBase);
       router.refresh();
@@ -124,10 +120,10 @@ export function CoreTechnicalPreparation({
     }
   };
 
-  const selected = {
-    ...LANGUAGE_OPTIONS.find((option) => option.value === language)!,
-    detail: experience.optionDetail
-  };
+  const selected =
+    experience.options.find((option) => option.value === optionValue) ?? experience.options[0];
+  if (!selected) throw new Error("Story Practice requires at least one preparation option.");
+  const headingWords = experience.heading.split(/\s+/);
 
   return (
     <div
@@ -142,10 +138,10 @@ export function CoreTechnicalPreparation({
       >
         <h1
           id={`${experience.slug}-confirm-heading`}
-          aria-label="What language do you want to practise in?"
+          aria-label={experience.heading}
           className="mx-auto mt-4 flex max-w-[31rem] flex-wrap justify-center gap-x-2.5 gap-y-0.5 text-center font-display text-[2.25rem] font-semibold leading-[1.03] tracking-[-0.045em] text-cream sm:text-[2.75rem]"
         >
-          {HEADING_WORDS.map((word, index) => (
+          {headingWords.map((word, index) => (
             <span
               key={`${word}-${index}`}
               aria-hidden="true"
@@ -162,13 +158,13 @@ export function CoreTechnicalPreparation({
           className={`onboarding-card-reveal relative z-20 mt-8 ${error ? "mb-4" : "mb-7"} ${open ? "is-open" : ""}`}
           style={{ "--card-delay": "680ms" } as CSSProperties}
         >
-          <label id={`${experience.slug}-language-label`} className="sr-only">
-            Practice language
+          <label id={`${experience.slug}-option-label`} className="sr-only">
+            {experience.optionLabel}
           </label>
           <button
             ref={triggerRef}
             type="button"
-            aria-labelledby={`${experience.slug}-language-label ${experience.slug}-language-value`}
+            aria-labelledby={`${experience.slug}-option-label ${experience.slug}-option-value`}
             aria-haspopup="listbox"
             aria-expanded={open}
             onClick={() => setOpen((current) => !current)}
@@ -186,11 +182,15 @@ export function CoreTechnicalPreparation({
               className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[var(--workspace-accent)]/45 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
             />
             <span className="shrink-0 text-[var(--workspace-accent)] transition-transform duration-300 group-hover:scale-110">
-              <Code2 size={23} strokeWidth={1.8} aria-hidden="true" />
+              {experience.optionIcon === "design" ? (
+                <Network size={23} strokeWidth={1.8} aria-hidden="true" />
+              ) : (
+                <Code2 size={23} strokeWidth={1.8} aria-hidden="true" />
+              )}
             </span>
             <span className="min-w-0 flex-1">
               <span
-                id={`${experience.slug}-language-value`}
+                id={`${experience.slug}-option-value`}
                 className="block text-[1.35rem] font-semibold tracking-[-0.025em] text-cream"
               >
                 {selected.label}
@@ -210,31 +210,31 @@ export function CoreTechnicalPreparation({
             <div className="min-h-0 overflow-hidden rounded-[1.15rem] bg-[#101214] shadow-[0_18px_44px_rgba(0,0,0,0.45)]">
               <ul
                 role="listbox"
-                aria-labelledby={`${experience.slug}-language-label`}
+                aria-labelledby={`${experience.slug}-option-label`}
                 className="overflow-hidden"
               >
-                {LANGUAGE_OPTIONS.map((option) => (
+                {experience.options.map((option) => (
                   <li
                     key={option.value}
                     role="option"
-                    aria-selected={option.value === language}
+                    aria-selected={option.value === optionValue}
                     tabIndex={open ? 0 : -1}
                     onClick={() => {
-                      setLanguage(option.value);
+                      setOptionValue(option.value);
                       setOpen(false);
                       triggerRef.current?.focus();
                     }}
                     onKeyDown={(event) => {
                       if (event.key !== "Enter" && event.key !== " ") return;
                       event.preventDefault();
-                      setLanguage(option.value);
+                      setOptionValue(option.value);
                       setOpen(false);
                       triggerRef.current?.focus();
                     }}
                     className="flex min-h-16 w-full cursor-pointer items-center justify-between px-5 text-[13px] font-semibold text-cream/78 outline-none transition-colors duration-200 hover:bg-[#202226] focus-visible:bg-[#202226]"
                   >
                     <span>{option.label}</span>
-                    {option.value === language ? (
+                    {option.value === optionValue ? (
                       <Check
                         size={15}
                         className="text-[var(--workspace-accent)]"
@@ -285,14 +285,14 @@ export function CoreTechnicalPreparation({
   );
 }
 
-async function post(url: string, body: unknown): Promise<unknown> {
+async function post(url: string, body: unknown, subjectNoun: string): Promise<unknown> {
   const response = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body)
   });
   const payload: unknown = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(readError(payload));
+  if (!response.ok) throw new Error(readError(payload, subjectNoun));
   return payload;
 }
 
@@ -301,9 +301,9 @@ function readFocusId(payload: unknown): string | null {
   return typeof payload.data.focus.id === "string" ? payload.data.focus.id : null;
 }
 
-function readError(payload: unknown): string {
+function readError(payload: unknown, subjectNoun: string): string {
   if (!isRecord(payload) || !isRecord(payload.error) || typeof payload.error.message !== "string") {
-    return "The complete story could not be prepared. Your saved progress is safe; try again.";
+    return `The complete ${subjectNoun} could not be prepared. Your saved progress is safe; try again.`;
   }
   return payload.error.message;
 }

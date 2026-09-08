@@ -1,11 +1,12 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { ArrowRight, Atom, Clock3, CodeXml, Wrench } from "lucide-react";
+import { ArrowRight, Atom, Clock3, CodeXml, Network, Wrench } from "lucide-react";
 import { DocumentTitle } from "@/components/document-title";
 import { PracticeWeeklyActivityChart } from "@/components/workspace/shared/practice-weekly-activity-chart";
 import type { DsaRecommendation } from "@/lib/practice/dsa-recommendation";
 import type {
   AppliedEngineeringPracticeEntry,
+  ArchitectureDesignPracticeEntry,
   CoreTechnicalPracticeEntry,
   PracticeDisplaySession,
   PracticeRoadmapHome
@@ -20,6 +21,8 @@ export function PracticeSessionsView({
   coreTechnicalTotals = null,
   appliedEngineeringEntry = null,
   appliedEngineeringTotals = null,
+  architectureDesignEntry = null,
+  architectureDesignTotals = null,
   generationFailed = false
 }: {
   practiceRoadmap: PracticeRoadmapHome | null;
@@ -30,22 +33,27 @@ export function PracticeSessionsView({
   coreTechnicalTotals?: { totalQuestions: number; completedQuestions: number } | null;
   appliedEngineeringEntry?: AppliedEngineeringPracticeEntry | null;
   appliedEngineeringTotals?: { totalQuestions: number; completedQuestions: number } | null;
+  architectureDesignEntry?: ArchitectureDesignPracticeEntry | null;
+  architectureDesignTotals?: { totalQuestions: number; completedQuestions: number } | null;
   generationFailed?: boolean;
 }) {
   const sessions = practiceRoadmap?.sessions ?? [];
   const displaySessions: PracticeDisplaySession[] = [
     ...sessions,
     ...(coreTechnicalEntry ? [coreTechnicalEntry] : []),
-    ...(appliedEngineeringEntry ? [appliedEngineeringEntry] : [])
+    ...(appliedEngineeringEntry ? [appliedEngineeringEntry] : []),
+    ...(architectureDesignEntry ? [architectureDesignEntry] : [])
   ].sort((left, right) => left.order - right.order);
   const totalQuestions =
     sessions.reduce((total, session) => total + session.totalQuestions, 0) +
     (coreTechnicalTotals?.totalQuestions ?? 0) +
-    (appliedEngineeringTotals?.totalQuestions ?? 0);
+    (appliedEngineeringTotals?.totalQuestions ?? 0) +
+    (architectureDesignTotals?.totalQuestions ?? 0);
   const completedQuestions =
     sessions.reduce((total, session) => total + session.completedQuestions, 0) +
     (coreTechnicalTotals?.completedQuestions ?? 0) +
-    (appliedEngineeringTotals?.completedQuestions ?? 0);
+    (appliedEngineeringTotals?.completedQuestions ?? 0) +
+    (architectureDesignTotals?.completedQuestions ?? 0);
   return (
     <main className="relative isolate mx-auto flex w-full max-w-[92rem] flex-col overflow-x-clip px-4 pb-20 pt-10 sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
       <DocumentTitle title="Practice" />
@@ -194,9 +202,12 @@ function PracticeSessionCard({
       ? Atom
       : session.key === "applied-engineering"
         ? Wrench
-        : CodeXml;
+        : session.key === "architecture-design"
+          ? Network
+          : CodeXml;
   const href = session.href;
   const available = session.availability === "available" && Boolean(href);
+  const availabilityLabel = "availabilityLabel" in session ? session.availabilityLabel : null;
   const statusLabel = available
     ? dsaRecommendation
       ? `${session.completedQuestions} solved overall · ${dsaBlockCompletedQuestions}/${dsaRecommendation.questions.length} current block`
@@ -205,12 +216,14 @@ function PracticeSessionCard({
         : `${session.totalQuestions} questions`
     : session.availability === "available"
       ? `${session.totalQuestions} questions · workspace coming next`
-      : "Question bank coming next";
+      : (availabilityLabel ?? "Question bank coming next");
   const actionLabel = available
     ? session.completedQuestions > 0
       ? "Continue session"
       : "Start session"
-    : "Coming soon";
+    : availabilityLabel
+      ? "Unavailable"
+      : "Coming soon";
 
   const unavailable = !available || !href;
   const content = (
@@ -282,7 +295,12 @@ function PracticeSessionCard({
 
   if (unavailable || !href) {
     return (
-      <article aria-disabled="true" className={className} style={style}>
+      <article
+        aria-disabled="true"
+        aria-label={`${session.title}. ${statusLabel}. ${actionLabel}`}
+        className={className}
+        style={style}
+      >
         {content}
       </article>
     );

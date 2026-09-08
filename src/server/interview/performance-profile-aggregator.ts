@@ -184,8 +184,8 @@ function observationsForSession(
 
     return skillKeys.map((skillKey) => ({
       skillKey,
-      topicKey: question.topicKey!,
-      rubricKeys: unique(question.rubricKeys ?? []),
+      topicKey: question.sourceTopicKey ?? question.topicKey!,
+      rubricKeys: unique(question.sourceRubricKeys ?? question.rubricKeys ?? []),
       score,
       observedAt,
       sessionId: state.id
@@ -347,10 +347,7 @@ function isTrustedPersonalizedSession(state: InterviewState): boolean {
 }
 
 function isDsaSession(state: InterviewState): boolean {
-  return (
-    state.setup.templateId === "dsa" ||
-    state.setup.templateTitle === "DSA practice interview"
-  );
+  return state.setup.templateId === "dsa" || state.setup.templateTitle === "DSA practice interview";
 }
 
 function isResumeBehavioralSession(state: InterviewState): boolean {

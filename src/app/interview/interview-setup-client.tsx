@@ -11,6 +11,12 @@ import {
 } from "@/lib/api/api-client";
 import type { Curriculum, CurriculumSession } from "@/lib/curriculum/curriculum";
 import type { SessionBlueprint } from "@/lib/interviews/personalized-plan";
+import {
+  TECHNICAL_DEEP_DIVE_ID,
+  TECHNICAL_DEEP_DIVE_PREP_SESSION,
+  technicalDeepDiveAgenda,
+  type TechnicalDeepDiveBlueprintIds
+} from "@/lib/interviews/technical-deep-dive";
 import { PREP_SESSIONS, type PrepSession } from "@/lib/roadmap/frontend-plan";
 import { findTemplate, type InterviewTemplate } from "@/lib/interviews/interview-templates";
 import { pageTitle } from "@/lib/shared/seo";
@@ -54,6 +60,7 @@ const RESUME_SESSION_ID = "resume-behavioral-defense";
 type PlannedSessionSelection = Pick<CurriculumSession, "id" | "title"> & {
   planId?: string;
   blueprintId?: string;
+  technicalDeepDive?: TechnicalDeepDiveBlueprintIds;
 };
 
 export default function InterviewSetupClient({
@@ -104,6 +111,9 @@ export default function InterviewSetupClient({
       requestedRoadmapSession ?? (resumeLaunch ? findRoadmapSession(RESUME_SESSION_ID) : null);
     const sessionId = params.get("session");
     const blueprintId = params.get("blueprint");
+    const coreBlueprintId = params.get("coreBlueprint");
+    const appliedBlueprintId = params.get("appliedBlueprint");
+    const technicalDeepDiveRequested = Boolean(coreBlueprintId || appliedBlueprintId);
     const expectedPlanId = params.get("plan");
     const overall = params.get("scope") === "overall";
     const chosenTemplate = findTemplate(params.get("template"));
@@ -112,6 +122,7 @@ export default function InterviewSetupClient({
       resumeLaunch ||
       Boolean(roadmapSession) ||
       Boolean(blueprintId) ||
+      technicalDeepDiveRequested ||
       Boolean(sessionId) ||
       overall ||
       Boolean(params.get("focus")) ||
@@ -131,7 +142,13 @@ export default function InterviewSetupClient({
     setAutoStart(shouldAutoStart);
     if (queryRole) setRole(queryRole);
     if (queryLevel) setLevel(queryLevel);
-    if (params.get("session") || params.get("scope") === "overall" || roadmapSession || blueprintId)
+    if (
+      params.get("session") ||
+      params.get("scope") === "overall" ||
+      roadmapSession ||
+      blueprintId ||
+      technicalDeepDiveRequested
+    )
       setStep(4);
 
     // A template picked on the interviews page fixes the round and its agenda.
@@ -140,7 +157,13 @@ export default function InterviewSetupClient({
       setTemplate(chosen);
       setRoundType(chosen.roundType);
       setIntensity(chosen.intensity);
-    } else if (!roadmapSession && !blueprintId && !sessionId && !overall) {
+    } else if (
+      !roadmapSession &&
+      !blueprintId &&
+      !technicalDeepDiveRequested &&
+      !sessionId &&
+      !overall
+    ) {
       setRoundType("behavioral");
       setIntensity("realistic");
     }
@@ -186,9 +209,57 @@ export default function InterviewSetupClient({
         });
     }
 
+    if (technicalDeepDiveRequested && !roadmapSession && !blueprintId) {
+      setScope("session");
+      setIntensity("realistic");
+      setRoundType("technical");
+      setLaunchPlanReady(false);
+
+      if (!coreBlueprintId || !appliedBlueprintId) {
+        setAutoStart(false);
+        setScope(null);
+        setError("This Technical Deep Dive link is incomplete. Choose it again from Interviews.");
+        setLaunchPlanReady(true);
+      } else {
+        void getPersonalizedInterviewPlan()
+          .then((plan) => {
+            if (cancelled) return;
+            if (expectedPlanId && plan.id !== expectedPlanId) {
+              throw new Error("The personalized plan changed");
+            }
+            const core = plan.sessions.find(
+              (session) => session.id === coreBlueprintId && session.kind === "core-technical"
+            );
+            const applied = plan.sessions.find(
+              (session) =>
+                session.id === appliedBlueprintId && session.kind === "applied-engineering"
+            );
+            if (!core || !applied)
+              throw new Error("The Technical Deep Dive sources were not found");
+
+            setPlannedSession({
+              id: TECHNICAL_DEEP_DIVE_ID,
+              title: TECHNICAL_DEEP_DIVE_PREP_SESSION.title,
+              planId: plan.id,
+              technicalDeepDive: { coreBlueprintId: core.id, appliedBlueprintId: applied.id }
+            });
+            setPlanAgenda(technicalDeepDiveAgenda(core, applied));
+          })
+          .catch(() => {
+            if (cancelled) return;
+            setAutoStart(false);
+            setScope(null);
+            setError("This Technical Deep Dive changed. Return to Interviews and choose it again.");
+          })
+          .finally(() => {
+            if (!cancelled) setLaunchPlanReady(true);
+          });
+      }
+    }
+
     // Rounds launched from the plan already know their subject. Onboarding
     // captured the role and level, so nothing is asked again here.
-    if ((sessionId || overall) && !roadmapSession && !blueprintId) {
+    if ((sessionId || overall) && !roadmapSession && !blueprintId && !technicalDeepDiveRequested) {
       setScope(overall ? "overall" : "session");
       setIntensity("realistic");
       setLaunchPlanReady(false);
@@ -349,7 +420,15 @@ export default function InterviewSetupClient({
                         planId: plannedSession.planId,
                         blueprintId: plannedSession.blueprintId
                       }
-                    : {})
+                    : plannedSession.technicalDeepDive
+                      ? {
+                          planId: plannedSession.planId,
+                          technicalDeepDive: {
+                            kind: TECHNICAL_DEEP_DIVE_ID,
+                            ...plannedSession.technicalDeepDive
+                          }
+                        }
+                      : {})
                 }
               : { templateTitle: plannedSessionTitle ?? "Full interview across your sessions" })
           }
@@ -713,6 +792,7 @@ function findPreparedQuestion(
 
 function findRoadmapSession(id: string | null): PrepSession | null {
   if (!id) return null;
+  if (id === TECHNICAL_DEEP_DIVE_ID) return TECHNICAL_DEEP_DIVE_PREP_SESSION;
   return PREP_SESSIONS.find((session) => session.id === id) ?? null;
 }
 

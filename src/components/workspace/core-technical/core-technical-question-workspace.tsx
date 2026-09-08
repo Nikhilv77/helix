@@ -21,38 +21,31 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DsaCodeEditor } from "@/components/interview/dsa/dsa-code-editor";
-import { StoryPracticeArtifact, type StoryPracticeArtifactData } from "@/components/workspace/shared/story-practice-artifact";
+import { StoryPracticeArtifact } from "@/components/workspace/shared/story-practice-artifact";
+import type { StoryPracticeWorkspaceExperience as StoryPracticeWorkspaceExperienceContract } from "@/components/workspace/story-practice/contracts";
+import type {
+  StoryPracticeAttemptWork,
+  StoryPracticeBlockView,
+  StoryPracticeDraftWork,
+  StoryPracticeQuestionView
+} from "@/components/workspace/story-practice/view-contracts";
 import {
   coreTechnicalQuestionMinutes,
   coreTechnicalQuestionWorkKind,
   humanizeCoreTechnicalKey
 } from "@/lib/practice/core-technical/ui-state";
-import type {
-  CoreTechnicalDraftWork,
-  CoreTechnicalAttemptWork
-} from "@/lib/practice/core-technical/practice-contracts";
-import type {
-  CoreTechnicalPublicBlock,
-  CoreTechnicalPublicQuestion
-} from "@/server/core-technical/practice.service";
 
 type PendingAction = "hint" | "run" | "attempt" | "learn" | null;
 type QuestionPanelTab = "description" | "hints" | "review";
 type LocalRun = {
   id: string;
   code: string;
-  result: NonNullable<CoreTechnicalPublicQuestion["latestRun"]>["result"];
+  result: NonNullable<StoryPracticeQuestionView["latestRun"]>["result"];
   createdAt: string;
 };
 
-export type StoryPracticeWorkspaceExperience = {
-  slug: string;
-  label: string;
-  apiBase: string;
-  routeBase: string;
-  subjectNoun: string;
-  adaptQuestion: (question: unknown) => CoreTechnicalPublicQuestion;
-};
+export type StoryPracticeWorkspaceExperience =
+  StoryPracticeWorkspaceExperienceContract<StoryPracticeQuestionView>;
 
 const CORE_TECHNICAL_EXPERIENCE: StoryPracticeWorkspaceExperience = {
   slug: "core-technical",
@@ -60,7 +53,14 @@ const CORE_TECHNICAL_EXPERIENCE: StoryPracticeWorkspaceExperience = {
   apiBase: "/api/practice/core-technical",
   routeBase: "/practice/core-technical",
   subjectNoun: "story",
-  adaptQuestion: (question) => question as CoreTechnicalPublicQuestion
+  environmentLabel: "JavaScript · Node.js 22",
+  capabilities: { runCode: true },
+  textAnswerPlaceholder:
+    "Trace the mechanism, cite the artifact, and explain the production consequence…",
+  feedbackReasoningLabel: "Mechanism",
+  responseLabel: () => null,
+  responseGuidance: () => null,
+  adaptQuestion: (question) => question as StoryPracticeQuestionView
 };
 
 export function CoreTechnicalQuestionWorkspace({
@@ -69,8 +69,8 @@ export function CoreTechnicalQuestionWorkspace({
   stageTitle,
   experience = CORE_TECHNICAL_EXPERIENCE
 }: {
-  block: CoreTechnicalPublicBlock;
-  initialQuestion: CoreTechnicalPublicQuestion;
+  block: StoryPracticeBlockView;
+  initialQuestion: StoryPracticeQuestionView;
   stageTitle: string;
   experience?: StoryPracticeWorkspaceExperience;
 }) {
@@ -112,10 +112,10 @@ export function CoreTechnicalQuestionWorkspace({
     const sequence = ++draftSequence.current;
     const timer = window.setTimeout(() => {
       setDraftState("saving");
-      void post<{ question: CoreTechnicalPublicQuestion }>(`${experience.apiBase}/draft`, {
+      void post<{ question: StoryPracticeQuestionView }>(`${experience.apiBase}/draft`, {
         questionId: question.id,
         draft
-      })
+      }, experience.label)
         .then(() => {
           if (draftSequence.current !== sequence) return;
           initialDraft.current = draftSignature;
@@ -128,7 +128,7 @@ export function CoreTechnicalQuestionWorkspace({
         });
     }, 600);
     return () => window.clearTimeout(timer);
-  }, [draft, draftSignature, mutable, question.id]);
+  }, [draft, draftSignature, experience.apiBase, experience.label, mutable, question.id]);
 
   async function revealHint() {
     const hintNumber = question.revealedHints.length + 1;
@@ -136,9 +136,10 @@ export function CoreTechnicalQuestionWorkspace({
     setPending("hint");
     setError(null);
     try {
-      const data = await post<{ question: CoreTechnicalPublicQuestion }>(
+      const data = await post<{ question: StoryPracticeQuestionView }>(
         `${experience.apiBase}/hint`,
-        { questionId: question.id, hintNumber }
+        { questionId: question.id, hintNumber },
+        experience.label
       );
       setQuestion(experience.adaptQuestion(data.question));
       setPanelTab("hints");
@@ -150,18 +151,25 @@ export function CoreTechnicalQuestionWorkspace({
   }
 
   async function runCode() {
-    if (!mutable || workKind !== "code" || !code.trim() || pending) return;
+    if (
+      !experience.capabilities.runCode ||
+      !mutable ||
+      workKind !== "code" ||
+      !code.trim() ||
+      pending
+    )
+      return;
     setPending("run");
     setError(null);
     setRun(null);
     setTestCasesOpen(true);
     const requestId = replaySafeRequestId(`${experience.slug}-run:${question.id}`, code);
     try {
-      const data = await post<{ run: Omit<LocalRun, "code"> }>(`${experience.apiBase}/run`, {
-        questionId: question.id,
-        requestId,
-        code
-      });
+      const data = await post<{ run: Omit<LocalRun, "code"> }>(
+        `${experience.apiBase}/run`,
+        { questionId: question.id, requestId, code },
+        experience.label
+      );
       setRun({ ...data.run, code });
       setTestCasesOpen(true);
       clearReplayRequest(`${experience.slug}-run:${question.id}`);
@@ -187,13 +195,13 @@ export function CoreTechnicalQuestionWorkspace({
     const requestId = replaySafeRequestId(key, signature);
     try {
       const data = await post<{
-        attempt: NonNullable<CoreTechnicalPublicQuestion["latestAttempt"]>;
-        question: CoreTechnicalPublicQuestion;
-      }>(`${experience.apiBase}/attempt`, {
-        questionId: question.id,
-        requestId,
-        work
-      });
+        attempt: NonNullable<StoryPracticeQuestionView["latestAttempt"]>;
+        question: StoryPracticeQuestionView;
+      }>(
+        `${experience.apiBase}/attempt`,
+        { questionId: question.id, requestId, work },
+        experience.label
+      );
       clearReplayRequest(key);
       setQuestion(experience.adaptQuestion(data.question));
       setConfirmLearn(false);
@@ -211,9 +219,10 @@ export function CoreTechnicalQuestionWorkspace({
     setPending("learn");
     setError(null);
     try {
-      const data = await post<{ question: CoreTechnicalPublicQuestion }>(
+      const data = await post<{ question: StoryPracticeQuestionView }>(
         `${experience.apiBase}/learn`,
-        { questionId: question.id, confirmed: true }
+        { questionId: question.id, confirmed: true },
+        experience.label
       );
       setQuestion(experience.adaptQuestion(data.question));
       setPanelTab("review");
@@ -397,7 +406,7 @@ export function CoreTechnicalQuestionWorkspace({
 
             {panelTab === "review" ? (
               <div className="space-y-4">
-                {attempt ? <Feedback question={question} /> : null}
+                {attempt ? <Feedback question={question} experience={experience} /> : null}
                 {answer ? <AuthorizedAnswer question={question} /> : null}
                 {!attempt && !answer ? (
                   <div className="rounded-xl border border-white/[0.07] bg-black/20 px-4 py-5">
@@ -443,10 +452,10 @@ export function CoreTechnicalQuestionWorkspace({
                 {workKind === "code" ? responseLabel(question.question.format) : "Answer workspace"}
               </h2>
             </div>
-            {workKind === "code" ? (
+            {workKind === "code" && experience.capabilities.runCode ? (
               <div className="flex items-center gap-2">
                 <span className="hidden text-[11px] font-medium text-cream/36 sm:inline">
-                  JavaScript · Node.js 22
+                  {experience.environmentLabel}
                 </span>
                 <button
                   type="button"
@@ -481,7 +490,7 @@ export function CoreTechnicalQuestionWorkspace({
           <div className="thin-scroll min-h-0 flex-1 overflow-y-auto">
             {workKind === "choice" ? (
               <div className="p-4 sm:p-5">
-                <ResponseIntro format={question.question.format} />
+                <ResponseIntro format={question.question.format} experience={experience} />
                 <ChoiceInput
                   choices={question.question.choices ?? []}
                   selected={choice}
@@ -506,11 +515,12 @@ export function CoreTechnicalQuestionWorkspace({
               />
             ) : (
               <div className="p-4 sm:p-5">
-                <ResponseIntro format={question.question.format} />
+                <ResponseIntro format={question.question.format} experience={experience} />
                 <TextInput
                   value={text}
                   spoken={question.question.format === "spoken"}
                   disabled={!mutable || pending !== null}
+                  placeholder={experience.textAnswerPlaceholder}
                   onChange={setText}
                 />
               </div>
@@ -632,8 +642,8 @@ export function CoreTechnicalQuestionWorkspace({
   );
 }
 
-function Artifact({ question }: { question: CoreTechnicalPublicQuestion }) {
-  return <StoryPracticeArtifact artifact={question.question.artifact as StoryPracticeArtifactData} />;
+function Artifact({ question }: { question: StoryPracticeQuestionView }) {
+  return <StoryPracticeArtifact artifact={question.question.artifact} />;
 }
 
 function ChoiceInput({
@@ -688,11 +698,13 @@ function TextInput({
   value,
   spoken,
   disabled,
+  placeholder,
   onChange
 }: {
   value: string;
   spoken: boolean;
   disabled: boolean;
+  placeholder: string;
   onChange: (value: string) => void;
 }) {
   return (
@@ -710,7 +722,7 @@ function TextInput({
         maxLength={12_000}
         rows={14}
         className="min-h-[24rem] w-full resize-none rounded-xl border border-white/[0.075] bg-[linear-gradient(145deg,#111315,#0e1012)] px-4 py-4 text-[14px] leading-7 text-cream outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] placeholder:text-cream/24 transition focus:border-[var(--workspace-accent-border)] focus:ring-4 focus:ring-[var(--workspace-accent-soft)] disabled:opacity-65 xl:min-h-[calc(100svh-28rem)]"
-        placeholder="Trace the mechanism, cite the artifact, and explain the production consequence…"
+        placeholder={placeholder}
       />
       <p className="mt-1.5 text-right font-mono text-[10px] tabular-nums text-cream/28">
         {value.length}/12000
@@ -719,17 +731,24 @@ function TextInput({
   );
 }
 
-function ResponseIntro({ format }: { format: CoreTechnicalPublicQuestion["question"]["format"] }) {
+function ResponseIntro({
+  format,
+  experience
+}: {
+  format: StoryPracticeQuestionView["question"]["format"];
+  experience: StoryPracticeWorkspaceExperience;
+}) {
+  const guidance = experience.responseGuidance(format) ?? responseGuidance(format);
   return (
     <div className="mb-5 border-b border-white/[0.06] pb-5">
       <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--workspace-accent)]">
         Your response
       </p>
       <h3 className="mt-2 font-display text-[1.45rem] font-semibold leading-tight tracking-[-0.03em] text-cream sm:text-[1.65rem]">
-        {responseLabel(format)}
+        {experience.responseLabel(format) ?? responseLabel(format)}
       </h3>
       <p className="mt-2 max-w-[42rem] text-[12.5px] leading-5 text-cream/42">
-        {responseGuidance(format)}
+        {guidance}
       </p>
     </div>
   );
@@ -824,7 +843,13 @@ function RunResult({ run }: { run: LocalRun }) {
   );
 }
 
-function Feedback({ question }: { question: CoreTechnicalPublicQuestion }) {
+function Feedback({
+  question,
+  experience
+}: {
+  question: StoryPracticeQuestionView;
+  experience: StoryPracticeWorkspaceExperience;
+}) {
   const attempt = question.latestAttempt!;
   return (
     <section
@@ -843,7 +868,10 @@ function Feedback({ question }: { question: CoreTechnicalPublicQuestion }) {
       <dl className="mt-4 grid gap-4 sm:grid-cols-2">
         <FeedbackItem label="What worked" value={attempt.feedback.didWell} />
         <FeedbackItem label="What to improve" value={attempt.feedback.missingOrIncorrect} />
-        <FeedbackItem label="Mechanism" value={attempt.feedback.mechanism} />
+        <FeedbackItem
+          label={experience.feedbackReasoningLabel}
+          value={attempt.feedback.mechanism}
+        />
         <FeedbackItem
           label="Production consequence"
           value={attempt.feedback.productionConsequence}
@@ -872,7 +900,7 @@ function FeedbackItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-function AuthorizedAnswer({ question }: { question: CoreTechnicalPublicQuestion }) {
+function AuthorizedAnswer({ question }: { question: StoryPracticeQuestionView }) {
   const answer = question.authorizedAnswer!;
   return (
     <details className="rounded-xl border border-white/[0.075] bg-[#111214] px-4 py-4">
@@ -914,7 +942,7 @@ function QuestionLink({
   routeBase
 }: {
   blockId: string;
-  question: CoreTechnicalPublicQuestion | null;
+  question: StoryPracticeQuestionView | null;
   direction: "previous" | "next";
   routeBase: string;
 }) {
@@ -935,23 +963,23 @@ function QuestionLink({
   );
 }
 
-function initialChoice(question: CoreTechnicalPublicQuestion): number | null {
+function initialChoice(question: StoryPracticeQuestionView): number | null {
   const work = question.draft ?? question.latestAttempt?.work;
   return work?.kind === "choice" ? work.selectedChoiceIndex : null;
 }
 
-function initialText(question: CoreTechnicalPublicQuestion): string {
+function initialText(question: StoryPracticeQuestionView): string {
   const work = question.draft ?? question.latestAttempt?.work;
   return work?.kind === "text" ? work.text : "";
 }
 
-function initialCode(question: CoreTechnicalPublicQuestion): string {
+function initialCode(question: StoryPracticeQuestionView): string {
   const work = question.draft ?? question.latestAttempt?.work;
   if (work?.kind === "code") return work.code;
   return question.latestRun?.code ?? question.question.starterCode ?? "";
 }
 
-function initialRun(question: CoreTechnicalPublicQuestion): LocalRun | null {
+function initialRun(question: StoryPracticeQuestionView): LocalRun | null {
   const run = question.latestRun;
   return run ? { id: run.id, code: run.code, result: run.result, createdAt: run.createdAt } : null;
 }
@@ -961,7 +989,7 @@ function draftFor(
   choice: number | null,
   text: string,
   code: string
-): CoreTechnicalDraftWork | null {
+): StoryPracticeDraftWork | null {
   if (kind === "choice")
     return choice === null ? null : { kind: "choice", selectedChoiceIndex: choice };
   if (kind === "code") return code.trim() ? { kind: "code", code } : null;
@@ -974,7 +1002,7 @@ function attemptFor(
   text: string,
   code: string,
   run: LocalRun | null
-): CoreTechnicalAttemptWork | null {
+): StoryPracticeAttemptWork | null {
   if (kind === "choice")
     return choice === null ? null : { kind: "choice", selectedChoiceIndex: choice };
   if (kind === "code") return run ? { kind: "code", code, runId: run.id } : null;
@@ -983,7 +1011,7 @@ function attemptFor(
 
 function validateAttempt(
   kind: ReturnType<typeof coreTechnicalQuestionWorkKind>,
-  work: CoreTechnicalAttemptWork | null,
+  work: StoryPracticeAttemptWork | null,
   code: string,
   run: LocalRun | null
 ): string | null {
@@ -998,7 +1026,7 @@ function validateAttempt(
   return null;
 }
 
-function responseLabel(format: CoreTechnicalPublicQuestion["question"]["format"]): string {
+function responseLabel(format: StoryPracticeQuestionView["question"]["format"]): string {
   switch (format) {
     case "mcq":
       return "Choose the strongest explanation";
@@ -1021,7 +1049,7 @@ function responseLabel(format: CoreTechnicalPublicQuestion["question"]["format"]
   }
 }
 
-function responseGuidance(format: CoreTechnicalPublicQuestion["question"]["format"]): string {
+function responseGuidance(format: StoryPracticeQuestionView["question"]["format"]): string {
   switch (format) {
     case "mcq":
       return "Choose the explanation that best accounts for the evidence, not merely the observed symptom.";
@@ -1047,7 +1075,7 @@ function codeViewerHeight(value: string, maximum: number): number {
   return Math.min(maximum, Math.max(220, value.split("\n").length * 23 + 64));
 }
 
-async function post<T>(url: string, body: unknown): Promise<T> {
+async function post<T>(url: string, body: unknown, experienceLabel: string): Promise<T> {
   const response = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -1060,7 +1088,7 @@ async function post<T>(url: string, body: unknown): Promise<T> {
   } | null;
   if (!response.ok || !payload?.success || payload.data === undefined) {
     throw new Error(
-      payload?.error?.message ?? "This Core Technical action could not be completed."
+      payload?.error?.message ?? `This ${experienceLabel} action could not be completed.`
     );
   }
   return payload.data;

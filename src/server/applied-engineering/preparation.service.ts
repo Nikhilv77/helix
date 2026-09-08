@@ -7,6 +7,12 @@ import { ConflictErrorException } from "@/server/common/exceptions/conflict-erro
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 import { ServiceUnavailableErrorException } from "@/server/common/exceptions/service-unavailable-error.exception";
 import type { PrismaService } from "@/server/database/prisma.service";
+import {
+  boundedStoryPracticeDiagnostic,
+  confirmStoryPracticeFocus,
+  resolveStoryPracticePreparationReplay,
+  storyPracticeFailureCode
+} from "@/server/story-practice/preparation-orchestrator";
 import type { AppliedEngineeringFocusService } from "./focus.service";
 import type { AppliedEngineeringIncidentRankingService } from "./incident-ranking.service";
 import type { AppliedEngineeringPersistenceService } from "./persistence.service";
@@ -27,16 +33,18 @@ export class AppliedEngineeringPreparationService {
   ) {}
 
   async confirm(ownerId: string, input: Parameters<AppliedEngineeringFocusService["confirm"]>[1]) {
-    const focus = await this.dependencies.focus.confirm(ownerId, input);
-    const saved = await this.dependencies.persistence.saveConfirmedFocus(ownerId, focus);
-    return {
-      id: saved.id,
-      revision: saved.revision,
-      schemaVersion: saved.schemaVersion,
-      focusFingerprint: saved.focusFingerprint,
-      confirmedAt: saved.confirmedAt.toISOString(),
-      focus: publicAppliedEngineeringConfirmedFocus(focus)
-    };
+    return confirmStoryPracticeFocus({
+      confirm: () => this.dependencies.focus.confirm(ownerId, input),
+      save: (focus) => this.dependencies.persistence.saveConfirmedFocus(ownerId, focus),
+      present: (focus, saved) => ({
+        id: saved.id,
+        revision: saved.revision,
+        schemaVersion: saved.schemaVersion,
+        focusFingerprint: saved.focusFingerprint,
+        confirmedAt: saved.confirmedAt.toISOString(),
+        focus: publicAppliedEngineeringConfirmedFocus(focus)
+      })
+    });
   }
 
   async prepare(ownerId: string, rawInput: unknown) {
@@ -47,18 +55,24 @@ export class AppliedEngineeringPreparationService {
         select: { status: true, focusRevisionId: true, blockId: true }
       }
     );
-    if (existing && existing.focusRevisionId !== input.focusRevisionId)
-      throw new ConflictErrorException(
-        "APPLIED_ENGINEERING_PREPARATION_REQUEST_CONFLICT",
-        "This preparation request ID belongs to a different focus revision."
-      );
-    if (existing?.status === AppliedEngineeringPreparationStatus.SUCCEEDED && existing.blockId)
-      return { replayed: true, block: await this.dependencies.practice.current(ownerId) };
-    if (existing?.status === AppliedEngineeringPreparationStatus.IN_PROGRESS)
-      throw new ConflictErrorException(
-        "APPLIED_ENGINEERING_PREPARATION_IN_PROGRESS",
-        "This Applied Engineering block is already being prepared."
-      );
+    const replay = await resolveStoryPracticePreparationReplay({
+      existing,
+      focusRevisionId: input.focusRevisionId,
+      succeededStatus: AppliedEngineeringPreparationStatus.SUCCEEDED,
+      inProgressStatus: AppliedEngineeringPreparationStatus.IN_PROGRESS,
+      current: () => this.dependencies.practice.current(ownerId),
+      requestConflict: () =>
+        new ConflictErrorException(
+          "APPLIED_ENGINEERING_PREPARATION_REQUEST_CONFLICT",
+          "This preparation request ID belongs to a different focus revision."
+        ),
+      inProgress: () =>
+        new ConflictErrorException(
+          "APPLIED_ENGINEERING_PREPARATION_IN_PROGRESS",
+          "This Applied Engineering block is already being prepared."
+        )
+    });
+    if (replay) return replay;
     const revision = await this.dependencies.prisma.appliedEngineeringFocusRevision.findUnique({
       where: { id_ownerId: { id: input.focusRevisionId, ownerId } },
       select: { focusSnapshot: true }
@@ -100,9 +114,8 @@ export class AppliedEngineeringPreparationService {
           selection,
           diagnostic: {
             stage,
-            code: `APPLIED_ENGINEERING_${stage.toUpperCase()}_FAILED`,
-            message:
-              error instanceof Error ? error.message.slice(0, 700) : "Unknown preparation failure",
+            code: storyPracticeFailureCode("APPLIED_ENGINEERING", stage),
+            message: boundedStoryPracticeDiagnostic(error, "Unknown preparation failure"),
             retryable: true
           }
         })

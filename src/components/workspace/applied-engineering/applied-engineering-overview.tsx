@@ -1,6 +1,6 @@
 "use client";
 
-import { CoreTechnicalOverview } from "@/components/workspace/core-technical/core-technical-overview";
+import { StoryPracticeOverview } from "@/components/workspace/story-practice/story-practice-overview";
 import type { AppliedEngineeringPublicBlock } from "@/server/applied-engineering/practice.service";
 import type { AppliedEngineeringHistoryList } from "@/server/applied-engineering/history.service";
 import type { AppliedEngineeringIncidentLibraryEntry } from "@/server/applied-engineering/eligibility.service";
@@ -26,7 +26,7 @@ export function AppliedEngineeringOverview({
   allowEarlyAssessmentStart?: boolean;
 }) {
   return (
-    <CoreTechnicalOverview
+    <StoryPracticeOverview
       block={appliedEngineeringBlockView(block)}
       history={history ? {
         ...history,

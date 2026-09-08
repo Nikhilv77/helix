@@ -2,39 +2,37 @@
 
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Clock3 } from "lucide-react";
-import type { CoreTechnicalHistoryNavigation } from "@/lib/practice/core-technical/ui-state";
 import {
   coreTechnicalQuestionMinutes,
   humanizeCoreTechnicalKey
 } from "@/lib/practice/core-technical/ui-state";
-import type { CoreTechnicalPublicBlock } from "@/server/core-technical/practice.service";
-import type { CoreTechnicalStoryLibraryEntry } from "@/server/core-technical/eligibility.service";
-import type { CoreTechnicalHistoryList } from "@/server/core-technical/history.service";
 import {
   CORE_TECHNICAL_ASSESSMENT_EXPERIENCE,
   CoreTechnicalAssessment,
-  type StoryPracticeAssessmentExperience
+  type PublicAssessment
 } from "./core-technical-assessment";
-import {
-  CORE_TECHNICAL_INTRO_EXPERIENCE,
-  CoreTechnicalIntro,
-  type StoryPracticeIntroExperience
-} from "./core-technical-intro";
+import { CORE_TECHNICAL_INTRO_EXPERIENCE, CoreTechnicalIntro } from "./core-technical-intro";
+import type { StoryPracticeOverviewExperience as StoryPracticeOverviewExperienceContract } from "@/components/workspace/story-practice/contracts";
+import type {
+  StoryPracticeBlockView,
+  StoryPracticeHistoryListView,
+  StoryPracticeHistoryNavigationView,
+  StoryPracticeLibraryEntryView
+} from "@/components/workspace/story-practice/view-contracts";
 
-export type StoryPracticeOverviewExperience = {
-  slug: string;
-  label: string;
-  routeBase: string;
-  subjectNoun: string;
-  intro: StoryPracticeIntroExperience;
-  assessment: StoryPracticeAssessmentExperience;
-};
+export type StoryPracticeOverviewExperience = StoryPracticeOverviewExperienceContract<
+  PublicAssessment,
+  NonNullable<PublicAssessment["report"]>
+>;
 
 const CORE_TECHNICAL_OVERVIEW_EXPERIENCE: StoryPracticeOverviewExperience = {
   slug: "core-technical",
   label: "Core Technical",
   routeBase: "/practice/core-technical",
   subjectNoun: "story",
+  environmentLabel: "Node.js 22",
+  libraryDescription: "Browse the reviewed production stories in your Node.js path.",
+  coachSteps: ["Name the mechanism", "Trace cause and consequence", "Prove the repair"],
   intro: CORE_TECHNICAL_INTRO_EXPERIENCE,
   assessment: CORE_TECHNICAL_ASSESSMENT_EXPERIENCE
 };
@@ -47,10 +45,10 @@ export function CoreTechnicalOverview({
   allowEarlyAssessmentStart = false,
   experience
 }: {
-  block: CoreTechnicalPublicBlock;
-  history: CoreTechnicalHistoryNavigation | null;
-  storyLibrary?: CoreTechnicalStoryLibraryEntry[];
-  storyHistory?: CoreTechnicalHistoryList;
+  block: StoryPracticeBlockView;
+  history: StoryPracticeHistoryNavigationView | null;
+  storyLibrary?: StoryPracticeLibraryEntryView[];
+  storyHistory?: StoryPracticeHistoryListView;
   allowEarlyAssessmentStart?: boolean;
   experience?: StoryPracticeOverviewExperience;
 }) {
@@ -64,7 +62,11 @@ export function CoreTechnicalOverview({
     <section className="relative scroll-mt-20 lg:scroll-mt-8">
       <div className="grid min-w-0 gap-7 xl:grid-cols-[minmax(0,1fr)_17rem] xl:items-start xl:gap-x-14 xl:gap-y-7">
         <div className="min-w-0 xl:col-start-1 xl:row-start-1">
-          <CoreTechnicalIntro block={block} terminalCount={terminalCount} experience={resolvedExperience.intro} />
+          <CoreTechnicalIntro
+            block={block}
+            terminalCount={terminalCount}
+            experience={resolvedExperience.intro}
+          />
         </div>
 
         <aside className="rounded-[1.45rem] border border-white/[0.085] bg-[#141619] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:px-6 xl:sticky xl:top-24 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:mt-[9.3rem]">
@@ -72,9 +74,9 @@ export function CoreTechnicalOverview({
             Follow the evidence.
           </h2>
           <ol className="mt-4 space-y-3.5">
-            <CoachStep number="01" title="Name the mechanism" />
-            <CoachStep number="02" title="Trace cause and consequence" />
-            <CoachStep number="03" title="Prove the repair" />
+            {resolvedExperience.coachSteps.map((title, index) => (
+              <CoachStep key={title} number={`0${index + 1}`} title={title} />
+            ))}
           </ol>
         </aside>
 
@@ -83,14 +85,16 @@ export function CoreTechnicalOverview({
           aria-labelledby={`${resolvedExperience.slug}-path-heading`}
         >
           <div className="flex flex-col gap-4 rounded-[1.4rem] bg-[#17181b] px-5 py-5 sm:px-6 sm:py-6">
-            {history ? <HistoryNavigation history={history} experience={resolvedExperience} /> : null}
+            {history ? (
+              <HistoryNavigation history={history} experience={resolvedExperience} />
+            ) : null}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h2
                   id={`${resolvedExperience.slug}-path-heading`}
                   className="font-display text-[1.45rem] font-semibold tracking-[-0.025em] text-cream"
                 >
-                  Your 8-question {resolvedExperience.subjectNoun}
+                  Your {block.questions.length}-question {resolvedExperience.subjectNoun}
                 </h2>
                 <p className="mt-2 text-[13px] leading-5 text-cream/54">
                   {block.story.candidateRole}
@@ -103,11 +107,19 @@ export function CoreTechnicalOverview({
                 <p className="font-semibold text-cream/78">
                   {block.questions.length} questions · {block.story.expectedMinutes} min
                 </p>
-                <p className="mt-0.5 capitalize">{block.selection.difficulty} · Node.js 22</p>
+                <p className="mt-0.5 capitalize">
+                  {block.selection.difficulty}
+                  {resolvedExperience.environmentLabel
+                    ? ` · ${resolvedExperience.environmentLabel}`
+                    : ""}
+                </p>
               </div>
             </div>
 
-            <nav className="flex gap-1.5" aria-label={`Jump to an ${resolvedExperience.label} question`}>
+            <nav
+              className="flex gap-1.5"
+              aria-label={`Jump to an ${resolvedExperience.label} question`}
+            >
               {block.questions.map((question) => {
                 const current = question.status === "ACTIVE";
                 const terminal = question.status === "COMPLETED" || question.status === "LEARNED";
@@ -126,7 +138,8 @@ export function CoreTechnicalOverview({
                     />
                     <span className="pointer-events-none absolute bottom-[calc(100%+0.55rem)] left-1/2 z-30 hidden w-max max-w-56 -translate-x-1/2 rounded-lg bg-[#0e0f11] px-2.5 py-2 text-center text-[11px] leading-4 text-cream/72 opacity-0 shadow-[0_12px_30px_rgba(0,0,0,0.42)] transition group-hover/step:opacity-100 group-focus-visible/step:opacity-100 sm:block">
                       <strong className="block font-medium text-cream/92">
-                        {question.order} · {stage?.title ?? `${capitalize(resolvedExperience.subjectNoun)} stage`}
+                        {question.order} ·{" "}
+                        {stage?.title ?? `${capitalize(resolvedExperience.subjectNoun)} stage`}
                       </strong>
                       <span className="capitalize text-cream/45">
                         {current ? "Current progress" : question.status.toLowerCase()}
@@ -166,7 +179,12 @@ export function CoreTechnicalOverview({
             />
           </div>
 
-          <StoryLibrary entries={storyLibrary} history={storyHistory} selectedBlockId={block.id} experience={resolvedExperience} />
+          <StoryLibrary
+            entries={storyLibrary}
+            history={storyHistory}
+            selectedBlockId={block.id}
+            experience={resolvedExperience}
+          />
         </section>
       </div>
     </section>
@@ -179,8 +197,8 @@ function StoryLibrary({
   selectedBlockId,
   experience
 }: {
-  entries: CoreTechnicalStoryLibraryEntry[];
-  history: CoreTechnicalHistoryList;
+  entries: StoryPracticeLibraryEntryView[];
+  history: StoryPracticeHistoryListView;
   selectedBlockId: string;
   experience: StoryPracticeOverviewExperience;
 }) {
@@ -196,8 +214,7 @@ function StoryLibrary({
         Explore all {experience.label}
       </h2>
       <p className="mt-2 max-w-[42rem] text-[14px] leading-6 text-cream/52">
-        Browse the reviewed production {experience.subjectNoun}s in your Node.js path. Questions stay inside the
-        active {experience.subjectNoun}.
+        {experience.libraryDescription} Questions stay inside the active {experience.subjectNoun}.
       </p>
 
       <div className="mt-4 space-y-3">
@@ -220,14 +237,14 @@ type StoryLibraryCardView = {
   title: string;
   topicKeys: string[];
   difficulties: string[];
-  history: CoreTechnicalHistoryList[number] | null;
+  history: StoryPracticeHistoryListView[number] | null;
 };
 
 function storyLibraryCards(
-  entries: CoreTechnicalStoryLibraryEntry[],
-  history: CoreTechnicalHistoryList
+  entries: StoryPracticeLibraryEntryView[],
+  history: StoryPracticeHistoryListView
 ): StoryLibraryCardView[] {
-  const latestByKey = new Map<string, CoreTechnicalHistoryList[number]>();
+  const latestByKey = new Map<string, StoryPracticeHistoryListView[number]>();
   for (const item of [...history].sort((left, right) => right.ordinal - left.ordinal)) {
     if (!latestByKey.has(item.story.key)) latestByKey.set(item.story.key, item);
   }
@@ -295,7 +312,9 @@ function StoryLibraryCard({
           </span>
         </span>
         <span className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-cream/42">
-          <span>{totalQuestions}-question {experience.subjectNoun}</span>
+          <span>
+            {totalQuestions}-question {experience.subjectNoun}
+          </span>
           <span className="text-cream/20">•</span>
           <span className="capitalize">{card.difficulties.join(" · ")}</span>
           {card.topicKeys.slice(0, 2).map((topic) => (
@@ -335,7 +354,13 @@ function StoryLibraryCard({
   );
 }
 
-function HistoryNavigation({ history, experience }: { history: CoreTechnicalHistoryNavigation; experience: StoryPracticeOverviewExperience }) {
+function HistoryNavigation({
+  history,
+  experience
+}: {
+  history: StoryPracticeHistoryNavigationView;
+  experience: StoryPracticeOverviewExperience;
+}) {
   return (
     <nav
       className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] pb-4"
@@ -351,8 +376,16 @@ function HistoryNavigation({ history, experience }: { history: CoreTechnicalHist
         </p>
       </div>
       <div className="flex items-center gap-2">
-        <HistoryLink blockId={history.previousBlockId} direction="previous" routeBase={experience.routeBase} />
-        <HistoryLink blockId={history.nextBlockId} direction="next" routeBase={experience.routeBase} />
+        <HistoryLink
+          blockId={history.previousBlockId}
+          direction="previous"
+          routeBase={experience.routeBase}
+        />
+        <HistoryLink
+          blockId={history.nextBlockId}
+          direction="next"
+          routeBase={experience.routeBase}
+        />
       </div>
     </nav>
   );
@@ -397,10 +430,10 @@ function QuestionRow({
   routeBase
 }: {
   blockId: string;
-  question: CoreTechnicalPublicBlock["questions"][number];
+  question: StoryPracticeBlockView["questions"][number];
   title: string;
   next: boolean;
-  difficulty: CoreTechnicalPublicBlock["selection"]["difficulty"];
+  difficulty: StoryPracticeBlockView["selection"]["difficulty"];
   minutes: number;
   routeBase: string;
 }) {

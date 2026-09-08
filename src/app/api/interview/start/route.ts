@@ -13,7 +13,12 @@ import {
   type Role
 } from "@/server/interview/types";
 import type { RoleFamily, SessionBlueprint } from "@/lib/interviews/personalized-plan";
+import { TECHNICAL_DEEP_DIVE_ID } from "@/lib/interviews/technical-deep-dive";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
+import {
+  buildTechnicalDeepDiveBlueprint,
+  technicalDeepDiveQuestionSources
+} from "@/server/interview/technical-deep-dive";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -29,6 +34,14 @@ const setupSchema = z.object({
   templateTitle: z.string().trim().max(80).optional(),
   planId: z.string().uuid().optional(),
   blueprintId: z.string().uuid().optional(),
+  technicalDeepDive: z
+    .object({
+      kind: z.literal(TECHNICAL_DEEP_DIVE_ID),
+      coreBlueprintId: z.string().uuid(),
+      appliedBlueprintId: z.string().uuid()
+    })
+    .strict()
+    .optional(),
   questionCount: z.union([z.literal(3), z.literal(4), z.literal(5)]).optional()
 });
 
@@ -59,15 +72,22 @@ export async function POST(request: NextRequest) {
     );
 
     try {
-      const { blueprintId, planId, ...requestedSetup } = parsed.data;
-      if (blueprintId && !ownerId.startsWith("user:")) {
+      const { blueprintId, planId, technicalDeepDive, ...requestedSetup } = parsed.data;
+      if ((blueprintId || technicalDeepDive) && !ownerId.startsWith("user:")) {
         throw new ApiRouteError(
           401,
           "AUTH_REQUIRED",
           "Sign in to launch a personalized interview session."
         );
       }
-      if (planId && !blueprintId) {
+      if (blueprintId && technicalDeepDive) {
+        throw new ApiRouteError(
+          400,
+          "BLUEPRINT_SELECTION_CONFLICT",
+          "Choose either one interview blueprint or the Technical Deep Dive."
+        );
+      }
+      if (planId && !blueprintId && !technicalDeepDive) {
         throw new ApiRouteError(
           400,
           "BLUEPRINT_REQUIRED",
@@ -87,6 +107,34 @@ export async function POST(request: NextRequest) {
           selection.plan.id,
           selection.blueprint,
           selection.plan.sourceSnapshot.targetRole.family
+        );
+      }
+      if (technicalDeepDive) {
+        const selection =
+          await app.personalizedInterviewPlanningService.technicalDeepDiveBlueprints(
+            ownerId,
+            technicalDeepDive.coreBlueprintId,
+            technicalDeepDive.appliedBlueprintId,
+            planId
+          );
+        const combinedBlueprint = buildTechnicalDeepDiveBlueprint(
+          selection.coreBlueprint,
+          selection.appliedBlueprint
+        );
+        setup = blueprintSetup(
+          requestedSetup,
+          selection.plan.id,
+          combinedBlueprint,
+          selection.plan.sourceSnapshot.targetRole.family,
+          {
+            kind: TECHNICAL_DEEP_DIVE_ID,
+            coreBlueprintId: selection.coreBlueprint.id,
+            appliedBlueprintId: selection.appliedBlueprint.id,
+            questionSources: technicalDeepDiveQuestionSources(
+              selection.coreBlueprint,
+              selection.appliedBlueprint
+            )
+          }
         );
       }
       const { state, utterance } = await app.interviewService.start(setup, ownerId);
@@ -115,18 +163,20 @@ function blueprintSetup(
   requested: InterviewSetup,
   planId: string,
   blueprint: SessionBlueprint,
-  roleFamily: RoleFamily
+  roleFamily: RoleFamily,
+  technicalDeepDive?: InterviewSetup["technicalDeepDive"]
 ): InterviewSetup {
   return {
     ...requested,
     role: interviewRole(roleFamily),
     roundType: roleFamily === "product" ? "hiring-manager" : "technical",
     agenda: blueprintAgenda(blueprint),
-    templateId: blueprint.id,
+    templateId: technicalDeepDive ? TECHNICAL_DEEP_DIVE_ID : blueprint.id,
     templateTitle: blueprint.title,
     durationMinutes: blueprint.durationMinutes,
     personalizedPlanId: planId,
     personalizedBlueprint: blueprint,
+    ...(technicalDeepDive ? { technicalDeepDive } : {}),
     questionCount: blueprintQuestionCount(blueprint)
   };
 }

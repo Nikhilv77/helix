@@ -1,15 +1,21 @@
-import type { CoreTechnicalPublicBlock, CoreTechnicalPublicQuestion } from "@/server/core-technical/practice.service";
-import type { CoreTechnicalHistoryList } from "@/server/core-technical/history.service";
-import type { CoreTechnicalStoryLibraryEntry } from "@/server/core-technical/eligibility.service";
-import type { AppliedEngineeringPublicBlock, AppliedEngineeringPublicQuestion } from "@/server/applied-engineering/practice.service";
-import type { AppliedEngineeringHistoryList } from "@/server/applied-engineering/history.service";
+import type {
+  StoryPracticeAssessmentView,
+  StoryPracticeBlockView,
+  StoryPracticeHistoryListView,
+  StoryPracticeLibraryEntryView,
+  StoryPracticeQuestionView
+} from "@/components/workspace/story-practice/view-contracts";
 import type { AppliedEngineeringIncidentLibraryEntry } from "@/server/applied-engineering/eligibility.service";
-import type { PublicAssessment } from "@/components/workspace/core-technical/core-technical-assessment";
+import type { AppliedEngineeringHistoryList } from "@/server/applied-engineering/history.service";
+import type {
+  AppliedEngineeringPublicBlock,
+  AppliedEngineeringPublicQuestion
+} from "@/server/applied-engineering/practice.service";
 
 /** Domain adapter only: Applied Engineering data stays separate while presentation is shared. */
 export function appliedEngineeringQuestionView(
   question: AppliedEngineeringPublicQuestion
-): CoreTechnicalPublicQuestion {
+): StoryPracticeQuestionView {
   const latestAttempt = question.latestAttempt
     ? {
         ...question.latestAttempt,
@@ -29,25 +35,27 @@ export function appliedEngineeringQuestionView(
     : null;
   return {
     ...question,
-    question: {
-      ...question.question,
-      storyKey: question.question.incidentKey,
-      mechanismKeys: question.question.productionSignalKeys
-    },
-    latestAttempt
-  } as unknown as CoreTechnicalPublicQuestion;
+    question: { ...question.question },
+    latestAttempt,
+    latestRun: question.latestRun
+      ? {
+          id: question.latestRun.id,
+          code: question.latestRun.code,
+          result: question.latestRun.result,
+          createdAt: question.latestRun.createdAt
+        }
+      : null
+  };
 }
 
 export function appliedEngineeringAssessmentView(
   assessment: NonNullable<AppliedEngineeringPublicBlock["assessment"]>
-): PublicAssessment {
+): StoryPracticeAssessmentView {
   const report = assessment.report;
   return {
     ...assessment,
-    assessment: assessment.assessment as PublicAssessment["assessment"],
-    transcript: assessment.transcript as PublicAssessment["transcript"],
     report: report
-      ? ({
+      ? {
           ...report,
           scores: {
             technicalAccuracy: report.scores.diagnosisEvidence,
@@ -60,20 +68,17 @@ export function appliedEngineeringAssessmentView(
             ...report.nextIncident,
             selectedStory: {
               ...report.nextIncident.selectedIncident,
-              storyKey: report.nextIncident.selectedIncident.incidentKey,
-              storyVersion: report.nextIncident.selectedIncident.incidentVersion,
-              emphasizedConceptKeys:
-                report.nextIncident.selectedIncident.emphasizedSignalKeys
+              emphasizedConceptKeys: report.nextIncident.selectedIncident.emphasizedSignalKeys
             }
           }
-        } as unknown as PublicAssessment["report"])
+        }
       : null
-  } as PublicAssessment;
+  };
 }
 
 export function appliedEngineeringBlockView(
   block: AppliedEngineeringPublicBlock
-): CoreTechnicalPublicBlock {
+): StoryPracticeBlockView {
   return {
     ...block,
     story: {
@@ -81,31 +86,30 @@ export function appliedEngineeringBlockView(
       mechanismKeys: block.incident.productionSignalKeys
     },
     selection: {
-      ...block.selection,
-      emphasizedConceptKeys: block.selection.emphasizedSignalKeys
+      ...block.selection
     },
     questions: block.questions.map(appliedEngineeringQuestionView),
     assessment: block.assessment ? appliedEngineeringAssessmentView(block.assessment) : null
-  } as unknown as CoreTechnicalPublicBlock;
+  };
 }
 
 export function appliedEngineeringHistoryView(
   history: AppliedEngineeringHistoryList
-): CoreTechnicalHistoryList {
+): StoryPracticeHistoryListView {
   return history.map((item) => ({
     ...item,
     story: {
       ...item.incident,
       mechanismKeys: item.incident.productionSignalKeys
     }
-  })) as unknown as CoreTechnicalHistoryList;
+  }));
 }
 
 export function appliedEngineeringLibraryView(
   entries: AppliedEngineeringIncidentLibraryEntry[]
-): CoreTechnicalStoryLibraryEntry[] {
+): StoryPracticeLibraryEntryView[] {
   return entries.map((entry) => ({
     ...entry,
     mechanismKeys: entry.productionSignalKeys
-  })) as unknown as CoreTechnicalStoryLibraryEntry[];
+  }));
 }
