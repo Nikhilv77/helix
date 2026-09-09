@@ -5,6 +5,7 @@ import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { reconcileHelpForOwnerBestEffort } from "@/features/peer-help/server/help-maintenance";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -16,7 +17,9 @@ export async function GET(request: NextRequest) {
     if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
 
     const ownerId = authenticatedOwnerId(userId);
-    return apiSuccess(await getAppContainer().helpHistoryService.pollingStatus(ownerId));
+    const app = getAppContainer();
+    await reconcileHelpForOwnerBestEffort(app, ownerId);
+    return apiSuccess(await app.helpHistoryService.pollingStatus(ownerId));
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   }

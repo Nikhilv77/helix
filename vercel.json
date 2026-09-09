@@ -1,5 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "src/app/api/queues/notification-email-retry/route.ts": {
+      "experimentalTriggers": [
+        {
+          "type": "queue/v2beta",
+          "topic": "notification-email-retry"
+        }
+      ]
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/teacher-notifications",
@@ -7,7 +17,7 @@
     },
     {
       "path": "/api/cron/notification-maintenance",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 5 * * *"
     }
   ]
 }

@@ -1,8 +1,7 @@
 import type { NextRequest } from "next/server";
 
-import { findQuestion } from "@/features/practice/dsa/domain/dsa";
 import { getAppContainer } from "@/server/app-container";
-import { NotificationKind } from "@/features/notifications/server/notification.service";
+import { dispatchHelpLifecycleNotifications } from "@/features/peer-help/server/help-maintenance";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -20,32 +19,11 @@ export async function GET(request: NextRequest) {
     app.helpRequestService.expireStaleAndReport(),
     app.helpSessionService.reconcileStale()
   ]);
-  const lifecycleNotifications = await Promise.allSettled([
-    ...expired.map((entry) =>
-      app.notificationDispatcher.dispatch({
-        ownerId: entry.learnerId,
-        kind: NotificationKind.HELP_REQUEST_EXPIRED,
-        title: `No one picked up your ${
-          findQuestion(entry.questionSlug)?.question.title ?? entry.questionSlug
-        } request`,
-        body: "Nobody was available this time. Your teacher can still walk you through it.",
-        href: `/dsa-questions/${entry.questionSlug}`,
-        subjectId: entry.id
-      })
-    ),
-    ...reconciled.map((entry) =>
-      app.notificationDispatcher.dispatch({
-        ownerId: entry.learnerId,
-        kind: NotificationKind.HELP_REQUEST_RESOLVED,
-        title: `Your ${
-          findQuestion(entry.questionSlug)?.question.title ?? entry.questionSlug
-        } conversation ended`,
-        body: "The Trailmate room reached its time limit.",
-        href: `/dsa-questions/${entry.questionSlug}`,
-        subjectId: entry.id
-      })
-    )
-  ]);
+  const lifecycleNotifications = await dispatchHelpLifecycleNotifications(
+    app.notificationDispatcher,
+    expired,
+    reconciled
+  );
   const [purgedInvitations, emailRetry] = await Promise.all([
     app.notificationService.purgeAllExpiredHelpRequestNotifications(),
     app.notificationDispatcher.retryPending()

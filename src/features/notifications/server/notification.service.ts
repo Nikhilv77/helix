@@ -36,6 +36,11 @@ const EMAIL_ERROR_LIMIT = 1_000;
 const READ_BATCH_LIMIT = 50;
 const EMAIL_BACKOFF_MS = [60_000, 5 * 60_000, 30 * 60_000] as const;
 
+/** Delay after the attempt that just failed; null means attempts are exhausted. */
+export function emailRetryDelayMs(completedAttempts: number): number | null {
+  return EMAIL_BACKOFF_MS[completedAttempts - 1] ?? null;
+}
+
 export interface DeliverInput {
   ownerId: string;
   kind: NotificationKind;
@@ -162,6 +167,7 @@ export class NotificationService {
 
   /** One indexed aggregate for the background change detector. */
   async pollingStatus(ownerId: string): Promise<{ version: string; unread: number }> {
+    const invitationCutoff = new Date(Date.now() - DEFAULT_TTL_MS);
     const rows = await this.prisma.$queryRaw<NotificationPollingStatusRow[]>(Prisma.sql`
       SELECT
         COUNT(*)::int AS "total",
@@ -169,6 +175,10 @@ export class NotificationService {
         MAX(notification."createdAt") AS "latestCreatedAt"
       FROM "Notification" notification
       WHERE notification."ownerId" = ${ownerId}
+        AND (
+          notification."kind" <> 'HELP_REQUEST_OPENED'::"NotificationKind"
+          OR notification."createdAt" > ${invitationCutoff}
+        )
     `);
     const row = rows[0] ?? { total: 0, unread: 0, latestCreatedAt: null };
 
@@ -351,7 +361,7 @@ export class NotificationService {
     now = new Date()
   ): Promise<boolean> {
     const terminal = claim.notification.emailAttempts >= MAX_EMAIL_ATTEMPTS;
-    const retryDelay = EMAIL_BACKOFF_MS[claim.notification.emailAttempts - 1] ?? null;
+    const retryDelay = emailRetryDelayMs(claim.notification.emailAttempts);
     const { count } = await this.prisma.notification.updateMany({
       where: { id: claim.notification.id, emailLeaseToken: claim.token },
       data: sent
@@ -402,15 +412,38 @@ export class NotificationService {
    * old unread rows permanently hidden behind the same newest read rows.
    */
   async list(ownerId: string, limit = INBOX_PAGE_SIZE) {
+    const invitationCutoff = new Date(Date.now() - DEFAULT_TTL_MS);
     return this.prisma.notification.findMany({
-      where: { ownerId },
+      where: {
+        ownerId,
+        OR: [
+          { kind: { not: NotificationKind.HELP_REQUEST_OPENED } },
+          {
+            kind: NotificationKind.HELP_REQUEST_OPENED,
+            createdAt: { gt: invitationCutoff }
+          }
+        ]
+      },
       orderBy: [{ readAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }],
       take: Math.min(limit, INBOX_PAGE_SIZE)
     });
   }
 
   async unreadCount(ownerId: string): Promise<number> {
-    return this.prisma.notification.count({ where: { ownerId, readAt: null } });
+    const invitationCutoff = new Date(Date.now() - DEFAULT_TTL_MS);
+    return this.prisma.notification.count({
+      where: {
+        ownerId,
+        readAt: null,
+        OR: [
+          { kind: { not: NotificationKind.HELP_REQUEST_OPENED } },
+          {
+            kind: NotificationKind.HELP_REQUEST_OPENED,
+            createdAt: { gt: invitationCutoff }
+          }
+        ]
+      }
+    });
   }
 
   /** Remove helper alerts once the ten-minute request window has passed. */

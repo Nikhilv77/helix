@@ -6,6 +6,7 @@ import {
   type NotificationService
 } from "./notification.service";
 import type { EmailChannel } from "./email-channel";
+import type { EmailRetryScheduler } from "./email-retry-queue";
 
 const onboarding = {
   ownerId: "candidate-1",
@@ -76,6 +77,7 @@ function harness(
   const recipientAllowsKind = vi.fn().mockResolvedValue(options.allowed ?? true);
   const dueEmailDeliveryIds = vi.fn().mockResolvedValue([notification.id]);
   const send = vi.fn().mockResolvedValue(options.emailed ?? true);
+  const schedule = vi.fn().mockResolvedValue(undefined);
 
   const dispatcher = new NotificationDispatcher(
     {
@@ -87,7 +89,8 @@ function harness(
       dueEmailDeliveryIds
     } as unknown as NotificationService,
     { configured: true, send } as unknown as EmailChannel,
-    "https://app.trailgrad.com"
+    "https://app.trailgrad.com",
+    { schedule } as EmailRetryScheduler
   );
 
   return {
@@ -98,7 +101,8 @@ function harness(
     cancelEmailDelivery,
     recipientAllowsKind,
     dueEmailDeliveryIds,
-    send
+    send,
+    schedule
   };
 }
 
@@ -125,7 +129,7 @@ describe("dispatch", () => {
   });
 
   it("keeps the record when email fails", async () => {
-    const { dispatcher, completeEmailDelivery } = harness({ emailed: false });
+    const { dispatcher, completeEmailDelivery, schedule } = harness({ emailed: false });
 
     // The durable record must not depend on a third party being up.
     await expect(dispatcher.dispatch(onboarding)).resolves.toEqual({
@@ -136,6 +140,17 @@ describe("dispatch", () => {
       expect.objectContaining({ token: "lease-1" }),
       false
     );
+    expect(schedule).toHaveBeenCalledWith("n-1", 2, 60_000);
+  });
+
+  it("keeps the pending row when queue publication fails", async () => {
+    const { dispatcher, schedule } = harness({ emailed: false });
+    schedule.mockRejectedValueOnce(new Error("queue unavailable"));
+
+    await expect(dispatcher.dispatch(onboarding)).resolves.toEqual({
+      recorded: true,
+      emailed: false
+    });
   });
 
   it.each(IN_APP_ONLY_KINDS)("keeps %s in-app only", async (kind) => {

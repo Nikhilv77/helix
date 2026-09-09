@@ -6,6 +6,7 @@ import { presentHelpInboxRequest } from "@/features/peer-help/server/help-inbox-
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { reconcileHelpForOwnerBestEffort } from "@/features/peer-help/server/help-maintenance";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest) {
     const helperId = authenticatedOwnerId(userId);
 
     const app = getAppContainer();
+    await reconcileHelpForOwnerBestEffort(app, helperId);
 
     // Fetched first: the listing has to exclude blocked pairs, not just the
     // claim path, or a blocked learner's request still shows up to be clicked.

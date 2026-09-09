@@ -11,6 +11,7 @@ import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
+import { reconcileHelpForOwnerBestEffort } from "@/features/peer-help/server/help-maintenance";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -85,6 +86,7 @@ export async function POST(request: NextRequest) {
     const question = detail.question;
 
     const app = getAppContainer();
+    await reconcileHelpForOwnerBestEffort(app, ownerId);
     await getSharedGuard(app.config).enforce(RATE_LIMIT_POLICIES.helpRequest, ownerId);
 
     const helpers = await app.helperMatchingService.findHelpers(
@@ -201,6 +203,7 @@ export async function GET(request: NextRequest) {
     }
 
     const app = getAppContainer();
+    await reconcileHelpForOwnerBestEffort(app, ownerId);
     const [live, helperCount, pendingRating] = await Promise.all([
       app.helpRequestService.liveForLearner(ownerId, slug),
       app.helperMatchingService.countHelpers(slug, ownerId, language),

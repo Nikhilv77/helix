@@ -404,6 +404,16 @@ describe("reconciling a call", () => {
     expect(queryRaw).toHaveBeenCalledTimes(1);
   });
 
+  it("scopes request-driven reconciliation to the active owner", async () => {
+    const queryRaw = vi.fn().mockResolvedValue([]);
+    const service = new HelpSessionService({ $queryRaw: queryRaw } as unknown as PrismaService);
+
+    await service.reconcileStaleForOwner("helper-1", new Date("2026-08-28T03:00:00.000Z"));
+
+    const query = queryRaw.mock.calls[0]![0] as { values: unknown[] };
+    expect(query.values.filter((value) => value === "helper-1")).toHaveLength(4);
+  });
+
   it("returns authoritative remaining time to either participant", async () => {
     const { prisma, sessions } = fakePrisma([claimed]);
     const service = new HelpSessionService(prisma);

@@ -1,7 +1,9 @@
 import { Logger } from "@/server/common/logger";
 import type { EmailChannel } from "./email-channel";
+import type { EmailRetryScheduler } from "./email-retry-queue";
 import {
   NotificationKind,
+  emailRetryDelayMs,
   isOptional,
   type DeliverInput,
   type NotificationService
@@ -31,7 +33,8 @@ export class NotificationDispatcher {
     private readonly notifications: NotificationService,
     private readonly email: EmailChannel,
     /** Absolute origin, so links in email are not relative to nothing. */
-    private readonly appOrigin?: string
+    private readonly appOrigin?: string,
+    private readonly emailRetryScheduler?: EmailRetryScheduler
   ) {}
 
   async dispatch(input: DeliverInput): Promise<DispatchResult> {
@@ -72,6 +75,11 @@ export class NotificationDispatcher {
     };
   }
 
+  /** Queue-consumer entry point; the database lease remains the authority. */
+  async retryOne(notificationId: string): Promise<boolean | null> {
+    return this.attemptEmail(notificationId);
+  }
+
   private async attemptEmail(notificationId: string): Promise<boolean | null> {
     const claim = await this.notifications.claimEmailDelivery(notificationId);
     if (!claim) return null;
@@ -108,7 +116,27 @@ export class NotificationDispatcher {
       )
     });
 
-    await this.notifications.completeEmailDelivery(claim, emailed);
+    const completed = await this.notifications.completeEmailDelivery(claim, emailed);
+    const retryDelay = emailRetryDelayMs(notification.emailAttempts);
+    if (!emailed && completed && retryDelay !== null && this.emailRetryScheduler) {
+      try {
+        await this.emailRetryScheduler.schedule(
+          notification.id,
+          notification.emailAttempts + 1,
+          retryDelay
+        );
+      } catch (error) {
+        // The row remains pending and the daily reconciliation sweep can pick
+        // it up even if queue publication has a transient platform failure.
+        this.logger.error(
+          JSON.stringify({
+            event: "notification.email.retry.enqueue.failed",
+            notificationId: notification.id,
+            reason: error instanceof Error ? error.message : String(error)
+          })
+        );
+      }
+    }
     return emailed;
   }
 

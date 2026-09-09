@@ -109,13 +109,30 @@ possible. Stable per-day subject ids prevent duplicate rows if cron is retried.
 Current schedule:
 
 - `vercel.json` calls `/api/cron/teacher-notifications` at `0 4 * * *`
+- `vercel.json` calls `/api/cron/notification-maintenance` at `0 5 * * *`
 - The route requires `Authorization: Bearer <CRON_SECRET>`
 - The implementation processes a bounded batch of 250 candidates
 - A malformed profile/roadmap does not stop later candidates in the batch
 
+The maintenance route is deliberately daily so it is valid on Vercel Hobby. It
+is a safety sweep, not the authority for time-sensitive Trailmate behaviour.
+Authenticated help status, inbox, overview, create, and claim requests reconcile
+stale state for the active owner. Expired help invitations are excluded from
+notification list, unread-count, and polling reads before the daily physical
+purge runs.
+
+Failed onboarding email attempts are published to the private
+`notification-email-retry` Vercel Queue consumer with the existing one-, five-,
+and thirty-minute backoff. The notification row and lease remain authoritative,
+and the daily maintenance sweep retries any row left pending if queue publication
+or delivery was unavailable. Vercel supplies Queue credentials in deployed
+environments; local development continues without background email retry.
+
 Primary implementation:
 
 - `src/app/api/cron/teacher-notifications/route.ts`
+- `src/app/api/cron/notification-maintenance/route.ts`
+- `src/app/api/queues/notification-email-retry/route.ts`
 - `src/server/notifications/teacher-notification.service.ts`
 - `vercel.json`
 
@@ -235,8 +252,7 @@ These items are not required for the current notification feature to work:
 
 - Candidate-timezone delivery rather than one global UTC time
 - Cursor-based cron batching beyond the current 250-profile limit
-- A dedicated scheduled retry job for email instead of opportunistic retries
-  when the inbox API is read
+- Queue retry/DLQ monitoring
 - Delivery/bounce webhooks and an internal delivery-status screen
 - Per-category quiet hours
 - Push notifications

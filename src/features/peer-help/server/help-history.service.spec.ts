@@ -17,6 +17,10 @@ describe("help history", () => {
       version: "3:1788393600000:2:1788393660000"
     });
     expect(queryRaw).toHaveBeenCalledTimes(1);
+    const query = queryRaw.mock.calls[0]![0] as { strings: string[]; values: unknown[] };
+    expect(query.strings.join(" ")).toContain('notification."createdAt" >');
+    expect(query.values).toContain("owner-1");
+    expect(query.values.some((value) => value instanceof Date)).toBe(true);
   });
 
   it("presents a learner's waiting request as their current engagement", async () => {

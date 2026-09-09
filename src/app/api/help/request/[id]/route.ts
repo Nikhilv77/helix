@@ -11,6 +11,7 @@ import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { NotificationKind } from "@/features/notifications/server/notification.service";
+import { reconcileHelpForOwnerBestEffort } from "@/features/peer-help/server/help-maintenance";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -67,6 +68,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
     const app = getAppContainer();
     const service = app.helpRequestService;
+
+    if (parsed.data.action === "claim") {
+      await reconcileHelpForOwnerBestEffort(app, helperId);
+    }
 
     const updated =
       parsed.data.action === "claim"

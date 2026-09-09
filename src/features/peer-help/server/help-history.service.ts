@@ -14,7 +14,7 @@ import type {
 } from "@/features/peer-help/contracts/help-history";
 import type { PrismaService } from "@/server/database/prisma.service";
 import { presentHelpParticipant } from "./help-participant";
-import { HelpRequestStatus } from "./help-request.types";
+import { DEFAULT_TTL_MS, HelpRequestStatus } from "./help-request.types";
 
 export const HELP_HISTORY_DEFAULT_LIMIT = 10;
 export const HELP_HISTORY_MAX_LIMIT = 25;
@@ -64,6 +64,7 @@ export class HelpHistoryService {
    * active-session reconciliation when nothing changed.
    */
   async pollingStatus(ownerId: string): Promise<{ version: string }> {
+    const invitationCutoff = new Date(Date.now() - DEFAULT_TTL_MS);
     const rows = await this.prisma.$queryRaw<HelpPollingStatusRow[]>(Prisma.sql`
       WITH invitations AS (
         SELECT
@@ -72,6 +73,7 @@ export class HelpHistoryService {
         FROM "Notification" notification
         WHERE notification."ownerId" = ${ownerId}
           AND notification."kind" = 'HELP_REQUEST_OPENED'::"NotificationKind"
+          AND notification."createdAt" > ${invitationCutoff}
       ),
       engagements AS (
         SELECT

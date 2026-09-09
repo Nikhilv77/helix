@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "@/server/database/prisma.service";
 import { HelpRequestError, HelpRequestStatus } from "./help-request.types";
@@ -79,10 +79,28 @@ export class HelpSessionService {
    * "busy" and silently suppress future notifications.
    */
   async reconcileStale(now = new Date()): Promise<ReconciledHelpConversation[]> {
+    return this.reconcileStaleWhere(now);
+  }
+
+  /** Reconcile only rows involving an active user between daily global sweeps. */
+  async reconcileStaleForOwner(
+    ownerId: string,
+    now = new Date()
+  ): Promise<ReconciledHelpConversation[]> {
+    return this.reconcileStaleWhere(now, ownerId);
+  }
+
+  private async reconcileStaleWhere(
+    now: Date,
+    ownerId?: string
+  ): Promise<ReconciledHelpConversation[]> {
     const sessionCutoff = new Date(now.getTime() - SESSION_CAP_MS);
     const claimCutoff = new Date(now.getTime() - CLAIM_JOIN_GRACE_MS);
+    const ownerFilter = ownerId
+      ? Prisma.sql`AND (request."learnerId" = ${ownerId} OR request."helperId" = ${ownerId})`
+      : Prisma.sql``;
 
-    return this.prisma.$queryRaw<ReconciledHelpConversation[]>`
+    return this.prisma.$queryRaw<ReconciledHelpConversation[]>(Prisma.sql`
       WITH released AS (
         UPDATE "HelpRequest" AS request
         SET "status" = 'OPEN'::"HelpRequestStatus",
@@ -92,6 +110,7 @@ export class HelpSessionService {
         WHERE request."status" = 'CLAIMED'::"HelpRequestStatus"
           AND request."claimedAt" <= ${claimCutoff}
           AND request."expiresAt" > ${now}
+          ${ownerFilter}
           AND NOT EXISTS (
             SELECT 1 FROM "HelpSession" AS session
             WHERE session."requestId" = request."id"
@@ -104,6 +123,7 @@ export class HelpSessionService {
             "resolvedAt" = ${now},
             "updatedAt" = ${now}
         WHERE request."status" = 'CLAIMED'::"HelpRequestStatus"
+          ${ownerFilter}
           AND EXISTS (
             SELECT 1 FROM "HelpSession" AS session
             WHERE session."requestId" = request."id"
@@ -132,7 +152,7 @@ export class HelpSessionService {
       SELECT resolved."id", resolved."learnerId", resolved."questionSlug"
       FROM resolved
       WHERE EXISTS (SELECT 1 FROM ended WHERE ended."requestId" = resolved."id")
-    `;
+    `);
   }
 
   /**

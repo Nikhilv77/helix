@@ -553,6 +553,20 @@ export class HelpRequestService {
     `;
   }
 
+  /** User-driven expiry keeps an active learner correct between daily sweeps. */
+  async expireStaleForLearner(learnerId: string, now = new Date()) {
+    return this.prisma.$queryRaw<Array<{ id: string; learnerId: string; questionSlug: string }>>`
+      UPDATE "HelpRequest"
+      SET "status" = 'EXPIRED'::"HelpRequestStatus",
+          "closedAt" = ${now},
+          "updatedAt" = ${now}
+      WHERE "status" = 'OPEN'::"HelpRequestStatus"
+        AND "expiresAt" <= ${now}
+        AND "learnerId" = ${learnerId}
+      RETURNING "id", "learnerId", "questionSlug"
+    `;
+  }
+
   /** The learner's own live request for a question, if any. */
   async liveForLearner(learnerId: string, questionSlug: string) {
     const request = await this.prisma.helpRequest.findFirst({

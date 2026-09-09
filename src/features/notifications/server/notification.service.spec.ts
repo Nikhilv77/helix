@@ -54,11 +54,18 @@ function fakePrisma(profiles: Record<string, ProfilePreference> = {}) {
       const value = row[field as keyof Row];
       if (condition === null) return value === null;
       if (condition && typeof condition === "object" && !(condition instanceof Date)) {
-        const clause = condition as { in?: unknown[]; not?: unknown; lt?: number; lte?: Date };
+        const clause = condition as {
+          in?: unknown[];
+          not?: unknown;
+          lt?: number;
+          lte?: Date;
+          gt?: Date;
+        };
         if (clause.in) return clause.in.includes(value);
         if ("not" in clause) return value !== clause.not;
         if (clause.lt !== undefined) return typeof value === "number" && value < clause.lt;
         if (clause.lte) return value instanceof Date && value <= clause.lte;
+        if (clause.gt) return value instanceof Date && value > clause.gt;
       }
       return value === condition;
     });
@@ -457,6 +464,26 @@ describe("inbox", () => {
 
     await expect(service.purgeAllExpiredHelpRequestNotifications(now)).resolves.toBe(2);
     expect(rows).toHaveLength(0);
+  });
+
+  it("hides expired invitations before the daily purge runs", async () => {
+    const { prisma, rows } = fakePrisma({ "helper-1": true });
+    const service = new NotificationService(prisma);
+    await service.deliver(opened);
+    await service.deliver({
+      ...opened,
+      kind: NotificationKind.TEACHER_WELCOME,
+      subjectId: "welcome"
+    });
+    rows.find((row) => row.kind === NotificationKind.HELP_REQUEST_OPENED)!.createdAt = new Date(
+      Date.now() - DEFAULT_TTL_MS - 1
+    );
+
+    await expect(service.list("helper-1")).resolves.toMatchObject([
+      { kind: NotificationKind.TEACHER_WELCOME }
+    ]);
+    await expect(service.unreadCount("helper-1")).resolves.toBe(1);
+    expect(rows).toHaveLength(2);
   });
 
   it("counts only unread and clears them together", async () => {
