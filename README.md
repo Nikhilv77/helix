@@ -102,8 +102,9 @@ pnpm deploy:production
 ```
 
 This builds locally, verifies that the generated output stays within Vercel Hobby's 12-function
-limit, and deploys the exact prebuilt artifact. Also run database migrations when a release includes
-schema changes:
+limit, and deploys the exact prebuilt artifact. Automatic Git deployments are disabled because
+Vercel's Git `patchBuild` step incorrectly rejects this project after a successful build. Also run
+database migrations when a release includes schema changes:
 
 ```bash
 pnpm prisma migrate deploy
