@@ -25,9 +25,9 @@ vi.mock("@/server/rate-limit/shared-guard", async (importOriginal) => {
   };
 });
 
-import { POST as startAssessment } from "./assessment/start/route";
-import { POST as confirm } from "./confirm/route";
-import { POST as prepare } from "./prepare/route";
+import { POST as startAssessment } from "./assessment/start/handler";
+import { POST as confirm } from "./confirm/handler";
+import { POST as prepare } from "./prepare/handler";
 
 const FOCUS_ID = "11111111-1111-4111-8111-111111111111";
 const ASSESSMENT_ID = "22222222-2222-4222-8222-222222222222";
@@ -120,7 +120,7 @@ describe("Architecture & Design representative API routes", () => {
 
   it("does not expose an executable run route", () => {
     expect(
-      existsSync(resolve(process.cwd(), "src/app/api/practice/architecture-design/run/route.ts"))
+      existsSync(resolve(process.cwd(), "src/app/api/practice/architecture-design/run/handler.ts"))
     ).toBe(false);
   });
 });
