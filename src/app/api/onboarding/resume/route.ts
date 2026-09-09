@@ -24,16 +24,16 @@ import {
   MIN_RESUME_TEXT_CHARACTERS,
   ResumeDocumentError,
   withVisualResumeText
-} from "@/server/onboarding/resume/document";
+} from "@/features/onboarding/server/resume/document";
 import {
   groundResumeEvidence,
   hasGroundedEvidence,
   verifyResumeDocument
-} from "@/server/onboarding/resume/verification";
+} from "@/features/onboarding/server/resume/verification";
 import {
   detectExplicitResumeTechnologies,
   mergeResumeTechnologies
-} from "@/server/onboarding/resume/technology-detector";
+} from "@/features/onboarding/server/resume/technology-detector";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import { signResumePreview } from "@/server/profile/resume-preview-token";
 import { initialPreparationOnboardingState } from "@/server/preparation/preparation-onboarding-state";
@@ -184,9 +184,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (
-      !verifyResumeDocument(analysis, { level, evidence: documentEvidence })
-    ) {
+    if (!verifyResumeDocument(analysis, { level, evidence: documentEvidence })) {
       logger.log(
         JSON.stringify({
           event: "resume.rejected",

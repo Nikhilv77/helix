@@ -532,8 +532,8 @@ function TopicFamiliarityLine({ label, familiarity }: { label: string; familiari
   const presentation = TOPIC_STATUS_PRESENTATION[familiarity];
   const StatusIcon = presentation.icon;
   return (
-    <div className="flex min-h-5 min-w-0 items-center justify-between gap-3 text-[13px] leading-4">
-      <span className="min-w-0 text-cream/76 sm:whitespace-nowrap">{label}</span>
+    <div className="grid min-h-5 min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 text-[13px] leading-5">
+      <span className="min-w-0 break-words text-cream/76">{label}</span>
       <span className={["inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap font-medium", presentation.className].join(" ")}>
         <StatusIcon className="size-3.5" strokeWidth={2.25} aria-hidden="true" />
         {presentation.label}

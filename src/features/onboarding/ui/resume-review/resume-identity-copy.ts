@@ -10,5 +10,8 @@ export function formatResumeIdentitySummary(context: string) {
   const words = normalized.split(" ");
   if (words.length <= MAX_IDENTITY_HEADING_WORDS) return normalized;
 
-  return `${words.slice(0, MAX_IDENTITY_HEADING_WORDS).join(" ").replace(/[.,;:!?]+$/, "")}…`;
+  return `${words
+    .slice(0, MAX_IDENTITY_HEADING_WORDS)
+    .join(" ")
+    .replace(/[.,;:!?]+$/, "")}…`;
 }

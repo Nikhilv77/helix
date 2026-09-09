@@ -15,7 +15,12 @@ export const AUTO_SCROLL_IDLE_MS = 2000;
 export const FINAL_AUTO_SCROLL_DELAY_MS = 180;
 export const IDENTITY_DETAIL_WAVE = [34, 58, 82, 48, 92, 56, 78, 44, 64];
 
-export function useWordReveal(text: string, active: boolean, delay = 0, stagger = TRAIL_WORD_STAGGER_MS) {
+export function useWordReveal(
+  text: string,
+  active: boolean,
+  delay = 0,
+  stagger = TRAIL_WORD_STAGGER_MS
+) {
   const words = text.split(" ");
   const [visibleCount, setVisibleCount] = useState(0);
 
@@ -71,5 +76,3 @@ export function WordRevealLine({
     </span>
   );
 }
-
-

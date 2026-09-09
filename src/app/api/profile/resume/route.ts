@@ -1,7 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { resumeExtractionSchema, resumeFileSchema } from "@/app/api/onboarding/complete/route";
+import {
+  resumeExtractionSchema,
+  resumeFileSchema
+} from "@/features/onboarding/contracts/resume-extraction";
 import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";

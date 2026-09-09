@@ -11,17 +11,6 @@ import {
 } from "lucide-react";
 import type { Level } from "@/lib/shared/types";
 
-/**
- * Onboarding shares the product's graphite canvas and restrained orange accent.
- */
-export const ACCENT = "#F26E01";
-export const INK = "#f3f1ec";
-
-/** Neutral enterprise surface used for onboarding panels. */
-export const CARD = "rounded-lg border border-white/[0.1] bg-[#191a1e]";
-/** A quiet graphite inset surface for rows and tiles. */
-export const CARD_INNER = "rounded-lg border border-white/[0.07] bg-[#121316]";
-
 /** Marketing's primary: compact cream action with a soft blueprint glow. */
 export const PRIMARY_BUTTON =
   "group inline-flex min-h-12 items-center justify-center gap-2.5 rounded-lg border border-white/15 bg-[#f3f1ec] px-6 text-base font-bold tracking-wide text-[#17181b] shadow-[0_18px_48px_-36px_rgba(0,0,0,0.9)] transition duration-300 hover:-translate-y-0.5 hover:border-white/30 hover:bg-white";

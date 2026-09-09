@@ -94,7 +94,7 @@ There are two onboarding layers. Both must be complete before any Practice route
 The flow is implemented by:
 
 - `src/app/onboarding/page.tsx`
-- `src/components/onboarding/flow/onboarding-flow.tsx`
+- `src/features/onboarding/ui/flow/onboarding-flow.tsx`
 - `src/app/api/onboarding/resume/route.ts`
 - `src/app/api/onboarding/complete/route.ts`
 - `src/server/profile/profile.service.ts`
@@ -1012,7 +1012,7 @@ status and ask it to read in the following order.
 4. `docs/STORY_DRIVEN_APPLIED_ENGINEERING.md` — nearest reuse implementation and current status.
 5. Profile onboarding:
    - `src/app/onboarding/page.tsx`
-   - `src/components/onboarding/flow/onboarding-flow.tsx`
+   - `src/features/onboarding/ui/flow/onboarding-flow.tsx`
    - `src/app/api/onboarding/resume/route.ts`
    - `src/app/api/onboarding/complete/route.ts`
    - `src/server/profile/profile.service.ts`

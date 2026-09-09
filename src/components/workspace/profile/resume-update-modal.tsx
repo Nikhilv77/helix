@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Loader2, X } from "lucide-react";
-import { ResumeStep } from "@/components/onboarding/steps/resume-upload-step";
 import {
   analysisStages,
   MAX_FILE_BYTES,
   MIN_FILE_BYTES,
   UPLOAD_TIMEOUT_MS
-} from "@/components/onboarding/flow/onboarding-data";
+} from "@/features/onboarding/ui/flow/onboarding-data";
+import { ResumeStep } from "@/features/onboarding/ui/steps/resume-upload-step";
 import { ApiClientError, confirmResumeUpdate, uploadResume } from "@/lib/api/api-client";
 import type { CandidateProfile } from "@/lib/shared/types";
 

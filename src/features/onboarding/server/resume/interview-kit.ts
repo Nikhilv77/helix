@@ -1,13 +1,8 @@
 import { z } from "zod";
-import type {
-  CandidateResume,
-  Level,
-  ResumeInterviewKit,
-  Role
-} from "@/lib/shared/types";
-import type { AiService } from "../../ai/ai.service";
-import { Logger } from "../../common/logger";
-import type { ProfileService } from "../../profile/profile.service";
+import type { CandidateResume, Level, ResumeInterviewKit, Role } from "@/lib/shared/types";
+import type { AiService } from "@/server/ai/ai.service";
+import { Logger } from "@/server/common/logger";
+import type { ProfileService } from "@/server/profile/profile.service";
 
 const SKILL_QUESTION_COUNT = 4;
 const EXPERIENCE_QUESTION_COUNT = 3;
@@ -265,7 +260,7 @@ function isUsable(kit: ResumeInterviewKit | null): kit is ResumeInterviewKit {
  * Used when generation fails. Every question still comes from this candidate's
  * own resume, so a failed call costs phrasing rather than the round.
  */
-export function fallbackKit(resume: CandidateResume): ResumeInterviewKit {
+function fallbackKit(resume: CandidateResume): ResumeInterviewKit {
   const skills = resume.skills.slice(0, SKILL_QUESTION_COUNT);
   const anchors = [
     ...resume.experience.map((entry) => ({

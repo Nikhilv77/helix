@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AiService } from "../../ai/ai.service";
+import type { AiService } from "@/server/ai/ai.service";
 import type { Level, Role } from "@/lib/shared/types";
 import type { ResumeDocumentEvidence } from "./document";
 

@@ -1,8 +1,4 @@
-import {
-  groundResumeEvidence,
-  hasGroundedEvidence,
-  verifyResumeDocument
-} from "./verification";
+import { groundResumeEvidence, hasGroundedEvidence, verifyResumeDocument } from "./verification";
 import type { ResumeAnalysis } from "./service";
 
 const sourceText = `Nikhil Verma

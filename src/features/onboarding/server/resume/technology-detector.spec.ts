@@ -1,7 +1,4 @@
-import {
-  detectExplicitResumeTechnologies,
-  mergeResumeTechnologies
-} from "./technology-detector";
+import { detectExplicitResumeTechnologies, mergeResumeTechnologies } from "./technology-detector";
 
 describe("resume technology detector", () => {
   it("recovers explicit technologies independently of the model extraction", () => {
@@ -30,7 +27,15 @@ Go-to-market strategy, R&D collaboration, C-level communication
 `);
 
     expect(detected).not.toEqual(
-      expect.arrayContaining(["Go", "R", "C", "Spring Boot", "Express", "Docker", "Oracle Database"])
+      expect.arrayContaining([
+        "Go",
+        "R",
+        "C",
+        "Spring Boot",
+        "Express",
+        "Docker",
+        "Oracle Database"
+      ])
     );
   });
 
@@ -48,10 +53,7 @@ Wrote systems code in C/C++.
 
   it("merges detector results without duplicating extracted aliases", () => {
     expect(
-      mergeResumeTechnologies(
-        ["React.js", "TypeScript"],
-        ["React", "PostgreSQL", "Apache Kafka"]
-      )
+      mergeResumeTechnologies(["React.js", "TypeScript"], ["React", "PostgreSQL", "Apache Kafka"])
     ).toEqual(["React.js", "TypeScript", "PostgreSQL", "Apache Kafka"]);
   });
 });

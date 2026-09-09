@@ -26,7 +26,50 @@ This is a structural cleanup, not a product redesign. URLs, API contracts, datab
 analytics identities, authentication gates, and user-visible behavior remain stable unless a
 separate change explicitly approves a migration.
 
-## 2. What “unused” means
+## 2. Completed work
+
+The status below describes changes implemented in the current repository/worktree. Merge and
+deployment status are tracked separately from this document.
+
+### Marketing
+
+Completed:
+
+- moved Marketing UI from `src/components/marketing` to `src/features/marketing/ui`;
+- moved blog and legal content from `src/content/marketing` to
+  `src/features/marketing/content`;
+- kept `/`, `/blog`, `/blog/[slug]`, `/privacy`, `/terms`, metadata, and sitemap entry points in
+  `src/app`;
+- moved reveal/motion utilities to `src/shared/ui/motion` because Marketing and Trailguide both use
+  them;
+- removed the unused `Counter` and `TypeOut` animation exports; and
+- removed the unnecessary client boundary from the `MarketingHome` composition component.
+
+Verified with ESLint, the full 1,278-test suite, the production Next.js build, formatting, and a
+stale-import audit.
+
+### `/onboarding`
+
+Completed:
+
+- moved the flow, steps, resume review UI, and colocated tests from `src/components/onboarding` to
+  `src/features/onboarding/ui`;
+- moved resume document parsing, verification, technology detection, AI extraction, and interview
+  kit generation from `src/server/onboarding` to `src/features/onboarding/server/resume`;
+- extracted resume preview/confirmation schemas to `src/features/onboarding/contracts`, removing
+  Profile's dependency on `/api/onboarding/complete` as a source module;
+- kept `/onboarding`, `/api/onboarding/resume`, and `/api/onboarding/complete` in `src/app` as the
+  framework entry points;
+- retained preparation onboarding as a separate capability because it runs after profile/resume
+  onboarding; and
+- removed the unused `TeacherCompanion`, old header/metric/panel components, orphaned style
+  constants, and an unnecessary public `fallbackKit` export.
+
+Verified with ESLint, 55 focused onboarding/profile tests, the full 1,278-test suite, the production
+Next.js build, formatting, and a stale-import audit. No URL, API response, persistence, or visible
+flow change was intended in either completed slice.
+
+## 3. What “unused” means
 
 A file is not safe to remove merely because no static import points to it. In this repository,
 Next.js routes, cron handlers, Prisma migrations, dynamic imports, CLI scripts, webhook-style entry
@@ -45,7 +88,7 @@ Classify every cleanup candidate before changing it:
 | Dead          | No supported runtime, data, test, script, or documentation dependency | Delete with evidence in the same PR                                         |
 | Unknown       | Ownership or reachability has not been proved                         | Do not delete; add it to the investigation ledger                           |
 
-## 3. Current repository observations
+## 4. Current repository observations
 
 The application is already partly organized by capability, but each capability is split across
 several top-level trees:
@@ -71,7 +114,7 @@ Some similar names are intentional and must not be merged based on naming alone:
   persisted interview-plan identity.
 - DSA Practice and DSA Interview share editor capabilities but have different lifecycles.
 
-### 3.1 Initial cleanup ledger
+### 4.1 Initial cleanup ledger
 
 This is a starting inventory, not authorization to delete every item.
 
@@ -90,7 +133,7 @@ Do not delete anything under `prisma/migrations` as part of ordinary dead-code c
 migrations are historical database artifacts even when the current schema no longer exposes the
 original feature.
 
-## 4. Target structure
+## 5. Target structure
 
 Use a feature-first layout. Keep the Next.js App Router in `src/app`, but make its files adapters
 that authenticate, parse route input, call a feature entry point, and return a response or view.
@@ -170,7 +213,7 @@ src/
 Not every feature needs every subdirectory. Create a folder only when it has content. A small
 feature can start with `domain.ts`, `service.ts`, and `ui.tsx` and split later.
 
-### 4.1 Dependency direction
+### 5.1 Dependency direction
 
 The intended dependency flow is:
 
@@ -198,7 +241,7 @@ Additional rules:
 7. If code has one consumer, keep it inside that feature. Promote it to `shared` only after a
    second independent consumer exists and the abstraction is stable.
 
-## 5. Canonical ownership map
+## 6. Canonical ownership map
 
 Use this map while relocating code. It prevents a cleanup PR from inventing a second shared area.
 
@@ -217,7 +260,7 @@ Use this map while relocating code. It prevents a cleanup PR from inventing a se
 Do not perform this as a single repository-wide move. The target structure is reached through
 vertical, feature-sized changes.
 
-## 6. Cleanup sequence
+## 7. Cleanup sequence
 
 ### Phase 0 — Freeze a trustworthy baseline
 
@@ -328,7 +371,7 @@ Suggested default URL rule: retain old redirects until they have had zero legiti
 at least 30 days and no public page, email, documentation, or client release still emits the old
 URL. Bots and synthetic probes should be filtered from this decision.
 
-## 7. Proving a deletion is safe
+## 8. Proving a deletion is safe
 
 Every deletion PR should include a short evidence block in its description:
 
@@ -365,7 +408,7 @@ An unused-export tool can supplement this review, but it must be configured with
 pages/route handlers, cron endpoints, build scripts, Prisma configuration, Vitest setup, and the
 Python worker as entry points. Treat its output as candidates, not an automatic delete list.
 
-## 8. Pull request rules
+## 9. Pull request rules
 
 Keep cleanup changes reversible and easy to review:
 
@@ -393,22 +436,24 @@ Also smoke-test the affected authenticated route and at least one adjacent flow.
 Python agent, run its tests or compilation separately. For changes to migrations or persisted
 compatibility, test against a database containing representative old and current records.
 
-## 9. Cleanup tracker
+## 10. Cleanup tracker
 
 Maintain this table as work proceeds. A candidate is not “Done” until both code and operational
 exit conditions are satisfied.
 
-| Area           | Candidate                               | Class         | Evidence owner | Status      | Exit condition                                                        |
-| -------------- | --------------------------------------- | ------------- | -------------- | ----------- | --------------------------------------------------------------------- |
-| Repository     | Tracked `*.tsbuildinfo`                 | Generated     | Engineering    | Ready       | Removed from Git; wildcard ignore added; build passes                 |
-| Marketing      | UI/content split across top-level trees | Active move   | Engineering    | Implemented | Old Marketing import paths absent; lint, tests, and build pass        |
-| Story Practice | Artifact renderer re-export/path split  | Duplicate     | Practice       | Investigate | One canonical implementation and no imports from retired path         |
-| Routes         | `/mentors` redirect                     | Compatibility | Trailguide     | Measure     | Traffic/link retention rule satisfied                                 |
-| Routes         | `/interview/text` redirect              | Compatibility | Interviews     | Measure     | Traffic/link retention rule satisfied                                 |
-| Routes         | `/interview/dsa/[slug]` redirect        | Compatibility | Interviews     | Measure     | Traffic/link retention rule satisfied                                 |
-| DSA            | Legacy practice block/snapshot adapters | Compatibility | Practice       | Data audit  | Old records backfilled or outside supported retention window          |
-| Onboarding     | Legacy stage conversion                 | Compatibility | Onboarding     | Data audit  | No stored legacy stages remain                                        |
-| Reports        | Sample PDF in `output/`                 | Unknown       | Reports        | Decide      | Classified as maintained fixture or moved to ignored generated output |
+| Area           | Candidate                                    | Class         | Evidence owner | Status      | Exit condition                                                        |
+| -------------- | -------------------------------------------- | ------------- | -------------- | ----------- | --------------------------------------------------------------------- |
+| Repository     | Tracked `*.tsbuildinfo`                      | Generated     | Engineering    | Ready       | Removed from Git; wildcard ignore added; build passes                 |
+| Marketing      | UI/content split across top-level trees      | Active move   | Engineering    | Implemented | Old Marketing import paths absent; lint, tests, and build pass        |
+| Onboarding     | UI/resume logic split across top-level trees | Active move   | Engineering    | Implemented | Old Onboarding import paths absent; focused tests and build pass      |
+| Dashboard      | Root routing, overview, and Maya flow mixed  | Active move   | Engineering    | Planned     | Parts 1–8 below complete; authenticated smoke matrix passes           |
+| Story Practice | Artifact renderer re-export/path split       | Duplicate     | Practice       | Investigate | One canonical implementation and no imports from retired path         |
+| Routes         | `/mentors` redirect                          | Compatibility | Trailguide     | Measure     | Traffic/link retention rule satisfied                                 |
+| Routes         | `/interview/text` redirect                   | Compatibility | Interviews     | Measure     | Traffic/link retention rule satisfied                                 |
+| Routes         | `/interview/dsa/[slug]` redirect             | Compatibility | Interviews     | Measure     | Traffic/link retention rule satisfied                                 |
+| DSA            | Legacy practice block/snapshot adapters      | Compatibility | Practice       | Data audit  | Old records backfilled or outside supported retention window          |
+| Onboarding     | Legacy stage conversion                      | Compatibility | Onboarding     | Data audit  | No stored legacy stages remain                                        |
+| Reports        | Sample PDF in `output/`                      | Unknown       | Reports        | Decide      | Classified as maintained fixture or moved to ignored generated output |
 
 ### Marketing pilot record
 
@@ -425,7 +470,274 @@ The first feature-first migration established these ownership decisions:
   future Dashboard migration and should not be pulled into Marketing merely because the two
   surfaces currently share a route.
 
-## 10. Definition of done
+### Onboarding migration record
+
+The `/onboarding` migration established these ownership decisions:
+
+- Onboarding flow, steps, resume review UI, and colocated tests live in
+  `src/features/onboarding/ui`.
+- Resume parsing, deterministic evidence checks, technology detection, AI extraction, and
+  interview-kit generation live in `src/features/onboarding/server/resume`.
+- Resume preview/confirmation schemas live in `src/features/onboarding/contracts`, so Profile's
+  resume replacement no longer imports from an API route.
+- The `/onboarding`, `/api/onboarding/resume`, and `/api/onboarding/complete` framework entry points
+  remain in `src/app`.
+- The unused teacher companion, old shared metric/panel/header components, and their orphaned style
+  constants were removed rather than moved.
+- Preparation onboarding remains in its existing preparation-owned modules. It is the later Maya
+  target/baseline flow and is not part of the `/onboarding` feature boundary.
+
+## 11. Dashboard cleanup in parts
+
+### 11.1 Current boundary and risks
+
+The dashboard currently occupies more than a dashboard folder:
+
+```text
+src/app/(marketing)/page.tsx                         public/authenticated root selector + data load
+src/components/workspace/dashboard/dashboard.tsx    welcome/overview switch
+src/components/workspace/dashboard/maya-welcome.tsx preparation onboarding UI (1,352 lines)
+src/components/workspace/dashboard/dashboard-*.tsx  overview rows and loading UI
+src/lib/dashboard/dashboard-overview.ts              overview contracts and projection (1,411 lines)
+```
+
+The root page serves three distinct states:
+
+```text
+signed out or Clerk disabled -> Marketing
+signed in, preparation incomplete or ?welcome -> Maya preparation onboarding
+signed in, preparation complete -> Dashboard overview
+```
+
+Preserve that server-side choice so the wrong surface never flashes in the browser. Do not turn it
+into a client-side authentication check.
+
+The normal overview reads four independently degradable sources in parallel:
+
+- interview reports, enriched with Core Technical report history;
+- progress/Practice overview;
+- Core Technical practice analytics, merged into the Practice view; and
+- Trailmate/help overview.
+
+Cleanup must preserve the current `Promise.all` parallelism and each source's fallback behavior.
+Do not add an internal HTTP round trip from the Server Component to an API route. Also do not add
+Applied Engineering or Architecture data during the move; that is a separate product change.
+
+### 11.2 Target ownership
+
+```text
+src/app/(home)/page.tsx
+  # Neutral route group for the multiplexed `/` entry point; URL remains `/`.
+
+src/features/dashboard/
+  contracts/
+    dashboard-overview.ts
+  application/
+    build-dashboard-overview.ts
+    coaching-and-readiness.ts
+    continuation.ts
+    direction.ts
+    explore.ts
+    evidence-cycle.ts
+  server/
+    load-dashboard-overview.ts
+  ui/
+    overview/
+      dashboard-overview.tsx
+      coaching-readiness-section.tsx
+      weekly-direction-section.tsx
+      continuation-section.tsx
+      summaries-section.tsx
+      dashboard-score-ring.tsx
+      dashboard-skeleton.tsx
+
+src/features/preparation-onboarding/
+  domain/ or contracts/
+  application/
+  server/
+  ui/
+    preparation-welcome.tsx
+    target-setup.tsx
+    baseline-assessment.tsx
+    skill-profile-summary.tsx
+    welcome-voice.ts
+    welcome-performance.ts
+    welcome-loading.tsx
+```
+
+Dashboard may consume public contracts from Reports, Progress, Practice, and Trailmate, but it does
+not own their persistence or business rules. `MayaStage`, voice playback, and the weekly activity
+chart should remain shared while multiple independent features use them.
+
+### 11.3 Part 1 — Freeze behavior and remove dead Dashboard contracts
+
+This first PR is deliberately small:
+
+1. Add a route-state matrix covering signed-out, missing-profile, incomplete profile, incomplete
+   preparation onboarding, `?welcome`, and normal overview states.
+2. Record the current overview source/fallback matrix in tests.
+3. Confirm that the optional `frontendRoadmap`, `frontendPlan`, and `practiceSessions` props on
+   `Dashboard` have no live caller.
+4. Confirm that `MayaWelcome` does not consume `practiceHref` or those optional props.
+5. Remove the unused props, their type imports, and `buildPracticeHref()` only after those checks.
+
+Exit gate: the root route and existing Dashboard tests pass with no snapshot or visible change.
+
+### 11.4 Part 2 — Extract preparation onboarding from Dashboard
+
+`maya-welcome.tsx` is not dashboard presentation. It owns target selection, baseline questions,
+skill-profile explanation, voice preloading, scrolling, and completion navigation.
+
+Move it into `src/features/preparation-onboarding` and split it by responsibility:
+
+- flow controller/state transitions;
+- target role, level, timeline, area, and company selection;
+- baseline intro/question/completion views;
+- initial skill-profile summary;
+- voice preload/playback hook;
+- word-reveal/presentation helpers; and
+- device performance policy and loading state.
+
+Move `src/lib/preparation/preparation-onboarding*` and `src/server/preparation/*` only when their
+ownership is clear; do not mix this part with changes to baseline scoring or persisted stage names.
+
+Exit gate: preparation onboarding can be rendered without importing anything from
+`features/dashboard`, and its focused state/interaction tests pass.
+
+### 11.5 Part 3 — Extract the authenticated Dashboard loader
+
+Move the `DashboardOverviewHome` data assembly from the root page into
+`src/features/dashboard/server/load-dashboard-overview.ts`.
+
+The loader should:
+
+- accept `ownerId`, the serializable candidate profile, and a fixed `now` value;
+- start independent service reads together;
+- retain the dependency between Core Technical reports and the combined reports overview;
+- retain per-source failure isolation;
+- perform the existing Core Technical Practice merge; and
+- return either the final serializable Dashboard view model or explicit source snapshots consumed
+  by the pure builder.
+
+The root page should remain responsible for Clerk authentication, redirects, query parsing, and
+choosing Marketing, preparation onboarding, or the overview.
+
+Exit gate: the root page no longer knows individual Dashboard data services, while loader tests
+prove success, partial failure, and total failure behavior.
+
+### 11.6 Part 4 — Split the 1,411-line overview projection
+
+Move `src/lib/dashboard/dashboard-overview.ts` into the Dashboard feature and split it around its
+existing output fields, not arbitrary line counts:
+
+| Module                            | Owns                                                           |
+| --------------------------------- | -------------------------------------------------------------- |
+| `contracts/dashboard-overview.ts` | Serializable view-model types only                             |
+| `build-dashboard-overview.ts`     | Small top-level composition function                           |
+| `coaching-and-readiness.ts`       | Teacher copy, readiness state, score/delta presentation        |
+| `continuation.ts`                 | Practice and interview continuation cards                      |
+| `direction.ts`                    | Seven-day rhythm and next-focus recommendation                 |
+| `explore.ts`                      | Progress, reports, and Trailmate summaries                     |
+| `evidence-cycle.ts`               | Shared current-cycle, baseline cutoff, and freshness decisions |
+
+Keep these builders pure. Pass `now` into time-sensitive logic, and preserve the existing null/error
+states. Do not import Prisma, service classes, React, or Next.js from this application layer.
+
+Consider replacing `randomPracticeAdvice()` with a stable selection only in a separately reviewed
+behavior change. Moving the file must not silently change which advice users receive.
+
+Exit gate: the existing 584-line projection test suite moves with the feature and passes unchanged;
+new module tests cover any helper promoted to a public boundary.
+
+### 11.7 Part 5 — Move and rename overview UI semantically
+
+Move the normal Dashboard UI and colocated tests into `src/features/dashboard/ui/overview`.
+Replace positional names with product responsibilities:
+
+| Current file               | Target responsibility                         |
+| -------------------------- | --------------------------------------------- |
+| `dashboard-first-row.tsx`  | `coaching-readiness-section.tsx`              |
+| `dashboard-fourth-row.tsx` | `weekly-direction-section.tsx`                |
+| `dashboard-second-row.tsx` | `continuation-section.tsx`                    |
+| `dashboard-third-row.tsx`  | `summaries-section.tsx`                       |
+| `dashboard-score-ring.tsx` | Keep as a local overview primitive            |
+| `dashboard-skeleton.tsx`   | Keep with the overview route/loading boundary |
+
+The present render order is first, fourth, second, third; semantic names remove that accidental
+ordering contract. Keep server-renderable sections as Server Components. Only the coaching card
+needs a client boundary for Maya voice controls; isolate that boundary instead of marking the whole
+Dashboard client-side.
+
+Exit gate: row tests move with their components, accessibility labels remain stable, and no old
+Dashboard UI import path remains.
+
+### 11.8 Part 6 — Simplify the root composition
+
+After Parts 2–5, reduce the `/` route to an explicit server-side decision:
+
+```text
+resolve authentication/profile
+  -> MarketingHome
+  -> redirect /onboarding
+  -> PreparationWelcome
+  -> DashboardOverview
+```
+
+Move the page from the misleading `(marketing)` route group to a neutral `(home)` group only after
+verifying there is no segment-specific layout, error, loading, or metadata behavior to preserve.
+This route-group move must not change the public `/` URL.
+
+Keep SoftwareApplication JSON-LD with the Marketing branch. Keep authenticated Dashboard data out
+of the Marketing feature.
+
+Exit gate: `src/app/(home)/page.tsx` contains framework orchestration only and the production build
+still emits exactly one `/` route.
+
+### 11.9 Part 7 — Dead-code and boundary audit
+
+After all consumers use the new paths:
+
+- remove empty `src/components/workspace/dashboard` and `src/lib/dashboard` trees;
+- search for stale positional component names and old import paths;
+- inspect exports with one or zero consumers instead of carrying compatibility barrels forward;
+- keep cross-feature shared components in place unless ownership and multiple consumers are
+  proved;
+- verify that Dashboard contracts contain no service, Prisma, or browser-only values; and
+- update documents that cite the old `maya-welcome.tsx` or `dashboard-overview.ts` paths.
+
+Do not remove baseline legacy-stage conversion during this part. That adapter protects persisted
+records and remains governed by the production data-audit exit condition.
+
+### 11.10 Part 8 — Dashboard verification matrix
+
+Run the full repository gates plus these focused checks:
+
+| State                                       | Expected result                                          |
+| ------------------------------------------- | -------------------------------------------------------- |
+| Clerk disabled                              | Public Marketing page and JSON-LD render                 |
+| Signed out                                  | Public Marketing page renders                            |
+| Signed in, profile missing/incomplete       | Redirect to `/onboarding`                                |
+| Preparation onboarding incomplete           | Blocking Maya preparation flow renders                   |
+| `?welcome=<valid persona>` after completion | Non-blocking welcome flow renders                        |
+| Fully onboarded, all sources available      | Complete overview renders                                |
+| Reports unavailable                         | Reports/interview areas degrade; other areas render      |
+| Practice unavailable                        | Practice/progress areas degrade; other areas render      |
+| Trailmate unavailable                       | Trailmate card degrades; other areas render              |
+| Mobile and desktop                          | No clipping, overflow, focus, or modal-scroll regression |
+| Reduced motion and voice unavailable        | Content remains readable and operable                    |
+
+Required commands:
+
+```bash
+pnpm lint
+pnpm test
+pnpm build
+```
+
+Dashboard cleanup is complete only when all eight parts are merged, the old trees are empty, the
+root route remains server-controlled, and the authenticated browser matrix passes.
+
+## 12. Definition of done
 
 The application cleanup is complete when:
 

@@ -10,9 +10,9 @@ describe("shouldAutoRetryResumeAnalysis", () => {
   it("retries transient text and visual analysis failures", () => {
     expect(shouldAutoRetryResumeAnalysis(apiError("RESUME_ANALYSIS_UNAVAILABLE", 503))).toBe(true);
     expect(shouldAutoRetryResumeAnalysis(apiError("RESUME_ANALYSIS_TIMEOUT", 504))).toBe(true);
-    expect(shouldAutoRetryResumeAnalysis(apiError("RESUME_VISUAL_EXTRACTION_UNAVAILABLE", 503))).toBe(
-      true
-    );
+    expect(
+      shouldAutoRetryResumeAnalysis(apiError("RESUME_VISUAL_EXTRACTION_UNAVAILABLE", 503))
+    ).toBe(true);
   });
 
   it("never retries a resume upload rate limit", () => {

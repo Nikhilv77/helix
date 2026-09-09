@@ -3,7 +3,7 @@ import {
   normalizeSkill,
   type NormalizedSkill,
   type SkillDefinition
-} from "../../interview/candidate-profile-compiler";
+} from "@/server/interview/candidate-profile-compiler";
 
 const TECHNOLOGY_SECTION =
   /^(?:technical\s+)?(?:skills?|technologies|tech(?:nology)?\s+stack|programming\s+languages?|frameworks?|databases?|tools?)(?:\s*:.*)?$/i;
@@ -136,10 +136,9 @@ function cContext(line: string): boolean {
 function exactCaseAppears(line: string, alias: string): boolean {
   if (alias.length <= 2) {
     const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp(
-      `(^|[^\\p{L}\\p{N}+#.&-])${escaped}(?=$|[^\\p{L}\\p{N}+#.&-])`,
-      "u"
-    ).test(line);
+    return new RegExp(`(^|[^\\p{L}\\p{N}+#.&-])${escaped}(?=$|[^\\p{L}\\p{N}+#.&-])`, "u").test(
+      line
+    );
   }
   return aliasPattern(alias, "u").test(line);
 }

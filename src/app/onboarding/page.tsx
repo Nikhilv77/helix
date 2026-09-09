@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { OnboardingFlow } from "@/components/onboarding/flow/onboarding-flow";
+import { OnboardingFlow } from "@/features/onboarding/ui/flow/onboarding-flow";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import type { CandidateProfile } from "@/lib/shared/types";
 import { getAppContainer } from "@/server/app-container";

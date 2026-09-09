@@ -276,4 +276,3 @@ labels without concrete entries or contribution statements. Technology names alo
     );
   });
 });
-

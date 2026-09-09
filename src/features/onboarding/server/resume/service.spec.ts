@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { AiService } from "../../ai/ai.service";
-import type { GenerateStructuredRequest } from "../../ai/interfaces/system-designer-ai-provider.interface";
+import type { AiService } from "@/server/ai/ai.service";
+import type { GenerateStructuredRequest } from "@/server/ai/interfaces/system-designer-ai-provider.interface";
 import { ResumeService } from "./service";
 import type { ResumeDocumentEvidence } from "./document";
 
