@@ -61,7 +61,7 @@ vi.mock("@/server/app-container", () => ({
   })
 }));
 
-import { DELETE, GET, POST } from "./route";
+import { DELETE, GET, POST } from "./handler";
 
 describe("/api/resume-roast", () => {
   beforeEach(() => {

@@ -27,7 +27,7 @@ vi.mock("@/server/app-container", () => ({
   })
 }));
 
-import { GET } from "./route";
+import { GET } from "./handler";
 
 describe("GET /api/cron/teacher-notifications", () => {
   beforeEach(() => {

@@ -18,7 +18,7 @@ vi.mock("../request/handler", () => ({
 vi.mock("../request/[id]/handler", () => ({ POST: mocks.requestIdPost }));
 vi.mock("../room/[id]/handler", () => ({ GET: mocks.roomGet, PUT: mocks.roomPut }));
 
-import { DELETE, GET, POST, PUT } from "./route";
+import { DELETE, GET, POST, PUT } from "./handler";
 
 describe("consolidated help route", () => {
   it.each([

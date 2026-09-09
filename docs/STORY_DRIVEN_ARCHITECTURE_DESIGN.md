@@ -95,8 +95,8 @@ The flow is implemented by:
 
 - `src/app/onboarding/page.tsx`
 - `src/features/onboarding/ui/flow/onboarding-flow.tsx`
-- `src/app/api/onboarding/resume/route.ts`
-- `src/app/api/onboarding/complete/route.ts`
+- `src/app/api/onboarding/resume/handler.ts`
+- `src/app/api/onboarding/complete/handler.ts`
 - `src/features/profile/server/profile.service.ts`
 
 The candidate selects a teacher and experience level, uploads a PDF or DOCX resume, verifies the
@@ -120,7 +120,7 @@ After profile onboarding, the signed-in home page blocks access until Maya's pre
 is complete. The entry decision is in `src/app/(marketing)/page.tsx`; the UI is in
 `src/features/preparation-onboarding/ui/preparation-welcome.tsx`; persistence is handled by:
 
-- `src/app/api/preparation-onboarding/route.ts`
+- `src/app/api/preparation-onboarding/handler.ts`
 - `src/features/preparation-onboarding/server/preparation-onboarding.service.ts`
 - `src/features/preparation-onboarding/server/preparation-onboarding-state.ts`
 - `src/features/preparation-onboarding/domain/preparation-onboarding.ts`
@@ -1013,13 +1013,13 @@ status and ask it to read in the following order.
 5. Profile onboarding:
    - `src/app/onboarding/page.tsx`
    - `src/features/onboarding/ui/flow/onboarding-flow.tsx`
-   - `src/app/api/onboarding/resume/route.ts`
-   - `src/app/api/onboarding/complete/route.ts`
+   - `src/app/api/onboarding/resume/handler.ts`
+   - `src/app/api/onboarding/complete/handler.ts`
    - `src/features/profile/server/profile.service.ts`
 6. Preparation onboarding and Architecture evidence source:
    - `src/app/(marketing)/page.tsx`
    - `src/features/preparation-onboarding/ui/preparation-welcome.tsx`
-   - `src/app/api/preparation-onboarding/route.ts`
+   - `src/app/api/preparation-onboarding/handler.ts`
    - `src/features/preparation-onboarding/domain/preparation-onboarding.ts`
    - `src/features/preparation-onboarding/domain/preparation-areas.ts`
    - `src/features/preparation-onboarding/domain/architecture-question-bank.ts`
