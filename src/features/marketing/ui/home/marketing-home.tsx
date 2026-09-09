@@ -1,5 +1,3 @@
-"use client";
-
 import { SiteFooter, SiteNav } from "../chrome/site-chrome";
 import { Begin } from "./begin-section";
 import { Practice } from "./practice-section";

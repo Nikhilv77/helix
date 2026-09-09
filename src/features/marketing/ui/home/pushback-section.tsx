@@ -3,7 +3,7 @@
 import { Fragment, useRef } from "react";
 import type { CSSProperties } from "react";
 import { AudioLines } from "lucide-react";
-import { Reveal, useRotator, useViewportPresence } from "./visuals/reveal";
+import { Reveal, useRotator, useViewportPresence } from "@/shared/ui/motion/reveal";
 
 const rounds = [
   [

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Reveal } from "./visuals/reveal";
+import { Reveal } from "@/shared/ui/motion/reveal";
 
 const helpSteps = [
   {

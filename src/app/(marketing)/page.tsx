@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { MarketingHome } from "@/components/marketing/home/marketing-home";
+import { MarketingHome } from "@/features/marketing/ui/home/marketing-home";
 import { Dashboard } from "@/components/workspace/dashboard/dashboard";
 import { DashboardSkeleton } from "@/components/workspace/dashboard/dashboard-skeleton";
 import { MayaWelcomeLoading } from "@/components/workspace/dashboard/maya-welcome-loading";

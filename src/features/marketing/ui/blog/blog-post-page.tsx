@@ -2,9 +2,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import { SiteFooter, SiteNav } from "@/components/marketing/chrome/site-chrome";
-import { PrimaryAction } from "@/components/marketing/home/primary-action";
-import { blogPosts, getBlogPost } from "@/content/marketing/blog";
+import { blogPosts, getBlogPost } from "@/features/marketing/content/blog";
+import { SiteFooter, SiteNav } from "@/features/marketing/ui/chrome/site-chrome";
+import { PrimaryAction } from "@/features/marketing/ui/home/primary-action";
 
 export function generateStaticParams() {
   return blogPosts.map((post) => ({ slug: post.slug }));

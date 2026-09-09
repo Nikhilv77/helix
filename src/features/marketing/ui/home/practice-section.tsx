@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import type { CSSProperties } from "react";
-import { Reveal, useRotator, useViewportPresence } from "./visuals/reveal";
+import { Reveal, useRotator, useViewportPresence } from "@/shared/ui/motion/reveal";
 
 interface PracticePair {
   question: string;

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
-import { SiteFooter, SiteNav } from "@/components/marketing/chrome/site-chrome";
-import { PrimaryAction } from "@/components/marketing/home/primary-action";
-import { blogPosts } from "@/content/marketing/blog";
+import { blogPosts } from "@/features/marketing/content/blog";
+import { SiteFooter, SiteNav } from "@/features/marketing/ui/chrome/site-chrome";
+import { PrimaryAction } from "@/features/marketing/ui/home/primary-action";
 
 export const metadata: Metadata = {
   title: "Blog",
@@ -93,9 +93,7 @@ export function BlogIndexPage() {
                     <span className="text-sm text-cream/30">{post.readTime}</span>
                   </div>
                   <h3 className="marketing-list-title mt-3 text-cream">{post.title}</h3>
-                  <p className="mt-2 max-w-2xl text-base leading-[1.7] text-cream/50">
-                    {post.dek}
-                  </p>
+                  <p className="mt-2 max-w-2xl text-base leading-[1.7] text-cream/50">{post.dek}</p>
                 </div>
 
                 <ArrowRight

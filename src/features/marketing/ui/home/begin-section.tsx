@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { ArrowRight } from "lucide-react";
-import { Reveal, useViewportPresence } from "./visuals/reveal";
+import { Reveal, useViewportPresence } from "@/shared/ui/motion/reveal";
 import { PrimaryAction } from "./primary-action";
 
 /**

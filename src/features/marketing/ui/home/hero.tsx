@@ -3,7 +3,12 @@
 import { Fragment, useRef } from "react";
 import type { CSSProperties } from "react";
 import { ArrowRight } from "lucide-react";
-import { Reveal, useRotator, useScrollProgress, useViewportPresence } from "./visuals/reveal";
+import {
+  Reveal,
+  useRotator,
+  useScrollProgress,
+  useViewportPresence
+} from "@/shared/ui/motion/reveal";
 import { PrimaryAction } from "./primary-action";
 
 /**

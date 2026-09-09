@@ -1,2 +1,1 @@
-export { metadata, BlogIndexPage as default } from "@/components/marketing/blog/blog-index-page";
-
+export { metadata, BlogIndexPage as default } from "@/features/marketing/ui/blog/blog-index-page";

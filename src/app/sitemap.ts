@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { blogPosts } from "@/content/marketing/blog";
+import { blogPosts } from "@/features/marketing/content/blog";
 import { appUrl } from "@/lib/shared/seo";
 
 const lastModified = new Date("2026-08-09T00:00:00.000Z");

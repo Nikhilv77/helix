@@ -1,6 +1,6 @@
-import { SiteFooter, SiteNav } from "@/components/marketing/chrome/site-chrome";
-import { PrimaryAction } from "@/components/marketing/home/primary-action";
-import type { LegalDocument } from "@/content/marketing/legal";
+import type { LegalDocument } from "@/features/marketing/content/legal";
+import { SiteFooter, SiteNav } from "@/features/marketing/ui/chrome/site-chrome";
+import { PrimaryAction } from "@/features/marketing/ui/home/primary-action";
 
 /**
  * Reads like a blog post: one column of type, left-aligned, sections divided

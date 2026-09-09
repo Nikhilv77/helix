@@ -13,7 +13,7 @@ import {
   Users
 } from "lucide-react";
 
-import { Reveal } from "@/components/marketing/home/visuals/reveal";
+import { Reveal } from "@/shared/ui/motion/reveal";
 import { TrailguideFaq } from "@/components/workspace/mentors/trailguide-faq";
 import anikaPortrait from "../../../../public/images/trailguide/anika-rao.webp";
 import aarohiFeaturePortrait from "../../../../public/images/trailguide/aarohi-sharma-v3.webp";
