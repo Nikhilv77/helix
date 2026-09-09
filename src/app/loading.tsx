@@ -1,7 +1,5 @@
 import { headers } from "next/headers";
-import { auth } from "@clerk/nextjs/server";
 import { ManageSkeleton } from "@/features/account/ui/manage-skeleton";
-import { DashboardSkeleton } from "@/features/dashboard/ui/overview/dashboard-skeleton";
 import { PreparationWelcomeLoading } from "@/features/preparation-onboarding/ui/preparation-welcome-loading";
 import { HelpHubSkeleton } from "@/features/peer-help/ui/help-hub-skeleton";
 import { InterviewsSkeleton } from "@/features/interviews/ui/history/interviews-skeleton";
@@ -14,13 +12,17 @@ import { RouteProgress, Waveform } from "@/components/workspace/shared/loading/p
 import { isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
 import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
 
-const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
-
 /** Root fallback shared by the public home and signed-in workspace routes. */
 export default async function RootLoading() {
   const requestHeaders = await headers();
   const pathname = requestHeaders.get("x-trailgrad-pathname") ?? "";
   const search = requestHeaders.get("x-trailgrad-search") ?? "";
+
+  // Next's internal navigation request can reach this boundary without the
+  // proxy pathname header. Showing the generic loader in that case causes a
+  // wrong full-page flash before the route-specific fallback mounts.
+  if (!pathname) return null;
+
   const interviewRoute = pathname === "/interview" || pathname.startsWith("/interview/");
   const progressRoute = pathname === "/progress";
   const manageRoute = pathname === "/manage";
@@ -29,12 +31,12 @@ export default async function RootLoading() {
   const welcomeHome =
     pathname === "/" &&
     welcomePersonaFromQuery(new URLSearchParams(search).get("welcome")) !== null;
-  const workspaceHome =
-    pathname === "/" && !welcomeHome && clerkEnabled && Boolean((await auth()).userId);
-
   if (welcomeHome) return <PreparationWelcomeLoading />;
 
-  if (workspaceHome) return <DashboardSkeleton />;
+  // `/` resolves to either the public home, onboarding, or the signed-in
+  // overview. Its page owns the correct fallback once that surface is known;
+  // rendering another root fallback first causes a full-graphite flash.
+  if (pathname === "/") return null;
 
   if (interviewRoute || progressRoute) return null;
 
