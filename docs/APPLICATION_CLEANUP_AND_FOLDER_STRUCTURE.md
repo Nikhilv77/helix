@@ -91,9 +91,9 @@ Completed in the current cleanup slice:
 - separated the preparation screen from `DashboardOverview`, so neither feature imports the
   other's UI.
 
-The remaining Dashboard work is to split the large pure overview builder and the preparation flow
-controller into their smaller responsibility modules, then complete the final stale-export and
-documentation audit.
+The remaining Dashboard work is to split the preparation flow controller into its smaller
+responsibility modules, then complete the final stale-export, documentation, and authenticated
+browser audit.
 
 Verified with ESLint, TypeScript, 59 focused Dashboard/preparation tests, the full 1,288-passing
 test suite (8 skipped), a stale-import audit, and the production Next.js build. The build emits one
@@ -476,7 +476,7 @@ exit conditions are satisfied.
 | Repository     | Tracked `*.tsbuildinfo`                      | Generated     | Engineering    | Ready       | Removed from Git; wildcard ignore added; build passes                 |
 | Marketing      | UI/content split across top-level trees      | Active move   | Engineering    | Implemented | Old Marketing import paths absent; lint, tests, and build pass        |
 | Onboarding     | UI/resume logic split across top-level trees | Active move   | Engineering    | Implemented | Old Onboarding import paths absent; focused tests and build pass      |
-| Dashboard      | Root routing, overview, and Maya flow mixed  | Active move   | Engineering    | Planned     | Parts 1–8 below complete; authenticated smoke matrix passes           |
+| Dashboard      | Root routing, overview, and Maya flow mixed  | Active move   | Engineering    | In progress | Parts 1–8 below complete; authenticated smoke matrix passes           |
 | Story Practice | Artifact renderer re-export/path split       | Duplicate     | Practice       | Investigate | One canonical implementation and no imports from retired path         |
 | Routes         | `/mentors` redirect                          | Compatibility | Trailguide     | Measure     | Traffic/link retention rule satisfied                                 |
 | Routes         | `/interview/text` redirect                   | Compatibility | Interviews     | Measure     | Traffic/link retention rule satisfied                                 |
@@ -635,7 +635,7 @@ Exit gate: preparation onboarding can be rendered without importing anything fro
 `features/dashboard`, and its focused state/interaction tests pass.
 
 Current status: the feature boundary, imports, persistence service, domain files, and colocated
-tests have moved. The 1,340-line preparation controller still needs to be split into the listed
+tests have moved. The 1,352-line preparation controller still needs to be split into the listed
 target, baseline, skill-profile, voice, and presentation modules.
 
 ### 11.5 Part 3 — Extract the authenticated Dashboard loader — Complete
@@ -659,7 +659,7 @@ choosing Marketing, preparation onboarding, or the overview.
 Exit gate: the root page no longer knows individual Dashboard data services, while loader tests
 prove success, partial failure, and total failure behavior.
 
-### 11.6 Part 4 — Split the 1,411-line overview projection — In progress
+### 11.6 Part 4 — Split the 1,411-line overview projection — Complete
 
 Move `src/lib/dashboard/dashboard-overview.ts` into the Dashboard feature and split it around its
 existing output fields, not arbitrary line counts:
@@ -683,9 +683,10 @@ behavior change. Moving the file must not silently change which advice users rec
 Exit gate: the existing 584-line projection test suite moves with the feature and passes unchanged;
 new module tests cover any helper promoted to a public boundary.
 
-Current status: the projection and its unchanged test suite have moved into the feature, and the
-serializable types now live in `contracts/dashboard-overview.ts`. The pure field builders still
-need to be extracted from `application/build-dashboard-overview.ts`.
+Current status: the serializable types live in `contracts/dashboard-overview.ts`; the pure field
+builders now live in `coaching-and-readiness.ts`, `continuation.ts`, `direction.ts`, `explore.ts`,
+and `evidence-cycle.ts`; and `build-dashboard-overview.ts` is a small top-level composer. The
+unchanged projection suite and Dashboard loader tests pass against the split modules.
 
 ### 11.7 Part 5 — Move and rename overview UI semantically — Complete
 
