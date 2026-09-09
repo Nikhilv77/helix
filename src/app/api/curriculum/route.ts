@@ -7,7 +7,6 @@ import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { requireCompletedPreparationOnboarding } from "@/server/auth/preparation-onboarding-api-guard";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
 
 /**
  * Maya's session plan. Built on first request after onboarding and reused

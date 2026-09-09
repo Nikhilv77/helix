@@ -21,7 +21,6 @@ import {
 } from "@/features/interviews/server/technical-deep-dive";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
 
 const setupSchema = z.object({
   role: z.enum(ROLES),

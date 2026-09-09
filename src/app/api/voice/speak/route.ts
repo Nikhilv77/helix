@@ -12,9 +12,6 @@ import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-// Keep Vercel's function configuration aligned with the app's shared
-// 60-second bundle class. Deepgram is still capped at 15 seconds below.
-export const maxDuration = 60;
 
 const DEEPGRAM_SPEAK_ENDPOINT = "https://api.deepgram.com/v1/speak";
 const SPEECH_TIMEOUT_MS = 15_000;

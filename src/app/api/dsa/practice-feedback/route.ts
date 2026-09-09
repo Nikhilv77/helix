@@ -10,7 +10,6 @@ import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
 
 const requestSchema = z.object({
   slug: z.string().trim().min(1).max(140),

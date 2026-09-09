@@ -7,7 +7,6 @@ import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
 
 const submissionSchema = z.object({
   slug: z.string().trim().min(1).max(140),

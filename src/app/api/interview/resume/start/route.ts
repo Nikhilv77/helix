@@ -7,7 +7,6 @@ import { buildResumePlan, resumeRoundContext } from "@/features/interviews/serve
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
 
 /**
  * Starts the staged resume round.

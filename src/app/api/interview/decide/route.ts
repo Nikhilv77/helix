@@ -8,7 +8,6 @@ import { authorizeInterviewSession } from "@/features/interviews/server/session-
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
 
 /**
  * The single home of the interview decision logic.

@@ -9,7 +9,6 @@ import { attachInterviewOwnerCookie, resolveInterviewOwner } from "@/features/in
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
 
 const startSchema = z.object({ blockId: z.string().uuid() });
 

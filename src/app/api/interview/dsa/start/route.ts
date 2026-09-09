@@ -9,7 +9,6 @@ import { selectDsaInterviewQuestions } from "@/features/interviews/server/dsa-se
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
 
 const MIN_SOLVED = 10;
 const QUESTION_COUNT = 3 as const;

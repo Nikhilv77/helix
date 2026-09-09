@@ -40,15 +40,14 @@ import { initialPreparationOnboardingState } from "@/features/preparation-onboar
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-export const maxDuration = 60;
 
 const MIN_FILE_SIZE = 1_000;
 const MAX_FILE_SIZE = 6 * 1024 * 1024;
 
 /**
- * The platform kills the request at maxDuration. Each AI call gets an explicit
- * slice of that budget so a slow provider surfaces as a clear error instead of
- * a truncated response with no body for the client to read.
+ * Each AI call gets an explicit slice of the route budget so a slow provider
+ * surfaces as a clear error instead of a truncated response with no body for
+ * the client to read.
  */
 const ROUTE_BUDGET_MS = 52_000;
 const VISUAL_EXTRACT_BUDGET_MS = 20_000;
