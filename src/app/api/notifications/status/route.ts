@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { after } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { getAppContainer } from "@/server/app-container";
@@ -16,7 +17,10 @@ export async function GET(request: NextRequest) {
     if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
 
     const ownerId = authenticatedOwnerId(userId);
-    return apiSuccess(await getAppContainer().notificationService.pollingStatus(ownerId));
+    const app = getAppContainer();
+    const status = await app.notificationService.pollingStatus(ownerId);
+    after(() => app.notificationDispatcher.retryPendingBestEffort());
+    return apiSuccess(status);
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   }

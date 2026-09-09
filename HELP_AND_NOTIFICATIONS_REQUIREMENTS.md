@@ -123,17 +123,17 @@ stale state for the active owner. Expired help invitations are excluded from
 notification list, unread-count, and polling reads before the daily physical
 purge runs.
 
-Failed onboarding email attempts are published to the private
-`notification-email-retry` Vercel Queue consumer with the existing one-, five-,
-and thirty-minute backoff. The notification row and lease remain authoritative,
-and the daily maintenance sweep retries any row left pending if queue publication
-or delivery was unavailable. Vercel supplies Queue credentials in deployed
-environments; local development continues without background email retry.
+Failed onboarding email attempts remain in the database with the existing one-,
+five-, and thirty-minute backoff. The existing notification-status request wakes
+a bounded best-effort retry sweep at most once per warm instance per minute, so
+active users need no additional Vercel Function. The daily maintenance sweep is
+the fallback for pending rows when nobody has the app open.
 
 Primary implementation:
 
 - `src/app/api/cron/teacher-notifications/route.ts`
-- `src/app/api/queues/notification-email-retry/route.ts`
+- `src/app/api/notifications/status/route.ts`
+- `src/features/notifications/server/notification-dispatcher.ts`
 - `src/server/notifications/teacher-notification.service.ts`
 - `vercel.json`
 

@@ -1,9 +1,7 @@
 import { Logger } from "@/server/common/logger";
 import type { EmailChannel } from "./email-channel";
-import type { EmailRetryScheduler } from "./email-retry-queue";
 import {
   NotificationKind,
-  emailRetryDelayMs,
   isOptional,
   type DeliverInput,
   type NotificationService
@@ -28,13 +26,14 @@ const EMAIL_KINDS: ReadonlySet<NotificationKind> = new Set([NotificationKind.TEA
  */
 export class NotificationDispatcher {
   private readonly logger = new Logger("NotificationDispatcher");
+  private retrySweep: Promise<void> | null = null;
+  private nextRetrySweepAt = 0;
 
   constructor(
     private readonly notifications: NotificationService,
     private readonly email: EmailChannel,
     /** Absolute origin, so links in email are not relative to nothing. */
-    private readonly appOrigin?: string,
-    private readonly emailRetryScheduler?: EmailRetryScheduler
+    private readonly appOrigin?: string
   ) {}
 
   async dispatch(input: DeliverInput): Promise<DispatchResult> {
@@ -75,9 +74,32 @@ export class NotificationDispatcher {
     };
   }
 
-  /** Queue-consumer entry point; the database lease remains the authority. */
-  async retryOne(notificationId: string): Promise<boolean | null> {
-    return this.attemptEmail(notificationId);
+  /**
+   * Existing notification polling wakes due email retries without adding a
+   * dedicated Vercel Function. One sweep per warm instance per minute keeps
+   * normal requests cheap; the daily cron remains the inactive-user fallback.
+   */
+  retryPendingBestEffort(limit = 1): Promise<void> {
+    const now = Date.now();
+    if (this.retrySweep) return this.retrySweep;
+    if (now < this.nextRetrySweepAt) return Promise.resolve();
+
+    this.nextRetrySweepAt = now + 60_000;
+    const sweep = this.retryPending(limit)
+      .then(() => undefined)
+      .catch((error) => {
+        this.logger.error(
+          JSON.stringify({
+            event: "notification.email.retry.sweep.failed",
+            reason: error instanceof Error ? error.message : String(error)
+          })
+        );
+      })
+      .finally(() => {
+        if (this.retrySweep === sweep) this.retrySweep = null;
+      });
+    this.retrySweep = sweep;
+    return sweep;
   }
 
   private async attemptEmail(notificationId: string): Promise<boolean | null> {
@@ -116,27 +138,7 @@ export class NotificationDispatcher {
       )
     });
 
-    const completed = await this.notifications.completeEmailDelivery(claim, emailed);
-    const retryDelay = emailRetryDelayMs(notification.emailAttempts);
-    if (!emailed && completed && retryDelay !== null && this.emailRetryScheduler) {
-      try {
-        await this.emailRetryScheduler.schedule(
-          notification.id,
-          notification.emailAttempts + 1,
-          retryDelay
-        );
-      } catch (error) {
-        // The row remains pending and the daily reconciliation sweep can pick
-        // it up even if queue publication has a transient platform failure.
-        this.logger.error(
-          JSON.stringify({
-            event: "notification.email.retry.enqueue.failed",
-            notificationId: notification.id,
-            reason: error instanceof Error ? error.message : String(error)
-          })
-        );
-      }
-    }
+    await this.notifications.completeEmailDelivery(claim, emailed);
     return emailed;
   }
 

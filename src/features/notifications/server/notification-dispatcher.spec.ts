@@ -6,7 +6,6 @@ import {
   type NotificationService
 } from "./notification.service";
 import type { EmailChannel } from "./email-channel";
-import type { EmailRetryScheduler } from "./email-retry-queue";
 
 const onboarding = {
   ownerId: "candidate-1",
@@ -77,7 +76,6 @@ function harness(
   const recipientAllowsKind = vi.fn().mockResolvedValue(options.allowed ?? true);
   const dueEmailDeliveryIds = vi.fn().mockResolvedValue([notification.id]);
   const send = vi.fn().mockResolvedValue(options.emailed ?? true);
-  const schedule = vi.fn().mockResolvedValue(undefined);
 
   const dispatcher = new NotificationDispatcher(
     {
@@ -89,8 +87,7 @@ function harness(
       dueEmailDeliveryIds
     } as unknown as NotificationService,
     { configured: true, send } as unknown as EmailChannel,
-    "https://app.trailgrad.com",
-    { schedule } as EmailRetryScheduler
+    "https://app.trailgrad.com"
   );
 
   return {
@@ -101,8 +98,7 @@ function harness(
     cancelEmailDelivery,
     recipientAllowsKind,
     dueEmailDeliveryIds,
-    send,
-    schedule
+    send
   };
 }
 
@@ -129,7 +125,7 @@ describe("dispatch", () => {
   });
 
   it("keeps the record when email fails", async () => {
-    const { dispatcher, completeEmailDelivery, schedule } = harness({ emailed: false });
+    const { dispatcher, completeEmailDelivery } = harness({ emailed: false });
 
     // The durable record must not depend on a third party being up.
     await expect(dispatcher.dispatch(onboarding)).resolves.toEqual({
@@ -140,17 +136,6 @@ describe("dispatch", () => {
       expect.objectContaining({ token: "lease-1" }),
       false
     );
-    expect(schedule).toHaveBeenCalledWith("n-1", 2, 60_000);
-  });
-
-  it("keeps the pending row when queue publication fails", async () => {
-    const { dispatcher, schedule } = harness({ emailed: false });
-    schedule.mockRejectedValueOnce(new Error("queue unavailable"));
-
-    await expect(dispatcher.dispatch(onboarding)).resolves.toEqual({
-      recorded: true,
-      emailed: false
-    });
   });
 
   it.each(IN_APP_ONLY_KINDS)("keeps %s in-app only", async (kind) => {
@@ -167,6 +152,20 @@ describe("dispatch", () => {
     const { dispatcher, dueEmailDeliveryIds, send } = harness();
 
     await expect(dispatcher.retryPending()).resolves.toEqual({ attempted: 1, emailed: 1 });
+    expect(dueEmailDeliveryIds).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("throttles best-effort polling retries to one sweep per minute", async () => {
+    const { dispatcher, dueEmailDeliveryIds, send } = harness();
+
+    await Promise.all([
+      dispatcher.retryPendingBestEffort(),
+      dispatcher.retryPendingBestEffort(),
+      dispatcher.retryPendingBestEffort()
+    ]);
+    await dispatcher.retryPendingBestEffort();
+
     expect(dueEmailDeliveryIds).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledTimes(1);
   });

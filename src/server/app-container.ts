@@ -32,7 +32,6 @@ import { NotificationService } from "@/features/notifications/server/notificatio
 import { NotificationDispatcher } from "@/features/notifications/server/notification-dispatcher";
 import { EmailChannel } from "@/features/notifications/server/email-channel";
 import { clerkAddressBook } from "@/features/notifications/server/clerk-address-book";
-import { VercelEmailRetryScheduler } from "@/features/notifications/server/email-retry-queue";
 import { DsaInterviewEvaluator } from "@/features/practice/dsa/server/interview-evaluator";
 import { DsaPracticeFeedbackService } from "@/features/practice/dsa/server/practice-feedback.service";
 import { ProfileService } from "@/features/profile/server/profile.service";
@@ -291,8 +290,7 @@ export function getAppContainer(): AppContainer {
       config.notificationEmailEnabled ? config.notificationFromEmail : undefined,
       clerkAddressBook
     ),
-    config.appOrigin,
-    process.env.VERCEL ? new VercelEmailRetryScheduler() : undefined
+    config.appOrigin
   );
   const resumeRoastStore = new ResumeRoastStore(prisma);
   const resumeRoastService = new ResumeRoastService(

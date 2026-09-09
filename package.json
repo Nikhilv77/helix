@@ -39,7 +39,6 @@
     "@prisma/client": "^6.0.0",
     "@upstash/redis": "^1.38.2",
     "@vercel/analytics": "^2.0.1",
-    "@vercel/queue": "^0.5.1",
     "@vercel/sandbox": "3.2.1",
     "dotenv": "^16.4.7",
     "livekit-client": "^2.21.0",
