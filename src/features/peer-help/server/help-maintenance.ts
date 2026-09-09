@@ -1,6 +1,7 @@
 import { findQuestion } from "@/features/practice/dsa/domain/dsa";
 import { NotificationKind } from "@/features/notifications/server/notification.service";
 import type { NotificationDispatcher } from "@/features/notifications/server/notification-dispatcher";
+import type { NotificationService } from "@/features/notifications/server/notification.service";
 import type { HelpRequestService } from "./help-request.service";
 import type { HelpSessionService, ReconciledHelpConversation } from "./help-session.service";
 import { Logger } from "@/server/common/logger";
@@ -17,6 +18,22 @@ export interface HelpOwnerMaintenanceSummary {
   expiredRequests: number;
   reconciledSessions: number;
   failedNotifications: number;
+}
+
+export interface GlobalHelpMaintenanceDependencies {
+  helpRequestService: Pick<HelpRequestService, "expireStaleAndReport">;
+  helpSessionService: Pick<HelpSessionService, "reconcileStale">;
+  notificationService: Pick<NotificationService, "purgeAllExpiredHelpRequestNotifications">;
+  notificationDispatcher: Pick<NotificationDispatcher, "dispatch" | "retryPending">;
+}
+
+export interface GlobalHelpMaintenanceSummary {
+  expiredRequests: number;
+  reconciledSessions: number;
+  lifecycleNotifications: number;
+  failedLifecycleNotifications: number;
+  purgedInvitations: number;
+  emailRetry: { attempted: number; emailed: number };
 }
 
 /**
@@ -61,6 +78,38 @@ export async function reconcileHelpForOwnerBestEffort(
     );
     return null;
   }
+}
+
+/** Daily global backstop, shared with the existing teacher-notification cron. */
+export async function runGlobalHelpMaintenance(
+  app: GlobalHelpMaintenanceDependencies
+): Promise<GlobalHelpMaintenanceSummary> {
+  const [expired, reconciled] = await Promise.all([
+    app.helpRequestService.expireStaleAndReport(),
+    app.helpSessionService.reconcileStale()
+  ]);
+  const lifecycleNotifications = await dispatchHelpLifecycleNotifications(
+    app.notificationDispatcher,
+    expired,
+    reconciled
+  );
+  const [purgedInvitations, emailRetry] = await Promise.all([
+    app.notificationService.purgeAllExpiredHelpRequestNotifications(),
+    app.notificationDispatcher.retryPending()
+  ]);
+
+  return {
+    expiredRequests: expired.length,
+    reconciledSessions: reconciled.length,
+    lifecycleNotifications: lifecycleNotifications.filter(
+      (result) => result.status === "fulfilled"
+    ).length,
+    failedLifecycleNotifications: lifecycleNotifications.filter(
+      (result) => result.status === "rejected"
+    ).length,
+    purgedInvitations,
+    emailRetry
+  };
 }
 
 export function dispatchHelpLifecycleNotifications(

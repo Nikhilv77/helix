@@ -14,10 +14,6 @@
     {
       "path": "/api/cron/teacher-notifications",
       "schedule": "0 4 * * *"
-    },
-    {
-      "path": "/api/cron/notification-maintenance",
-      "schedule": "0 5 * * *"
     }
   ]
 }

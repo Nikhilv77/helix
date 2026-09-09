@@ -109,13 +109,15 @@ possible. Stable per-day subject ids prevent duplicate rows if cron is retried.
 Current schedule:
 
 - `vercel.json` calls `/api/cron/teacher-notifications` at `0 4 * * *`
-- `vercel.json` calls `/api/cron/notification-maintenance` at `0 5 * * *`
+- That one Hobby-compatible function runs both teacher notifications and the
+  global notification/Trailmate maintenance safety sweep
 - The route requires `Authorization: Bearer <CRON_SECRET>`
 - The implementation processes a bounded batch of 250 candidates
 - A malformed profile/roadmap does not stop later candidates in the batch
 
-The maintenance route is deliberately daily so it is valid on Vercel Hobby. It
-is a safety sweep, not the authority for time-sensitive Trailmate behaviour.
+The combined teacher-notification and maintenance cron is deliberately daily so
+it is valid on Vercel Hobby. It is a safety sweep, not the authority for
+time-sensitive Trailmate behaviour.
 Authenticated help status, inbox, overview, create, and claim requests reconcile
 stale state for the active owner. Expired help invitations are excluded from
 notification list, unread-count, and polling reads before the daily physical
@@ -131,7 +133,6 @@ environments; local development continues without background email retry.
 Primary implementation:
 
 - `src/app/api/cron/teacher-notifications/route.ts`
-- `src/app/api/cron/notification-maintenance/route.ts`
 - `src/app/api/queues/notification-email-retry/route.ts`
 - `src/server/notifications/teacher-notification.service.ts`
 - `vercel.json`
