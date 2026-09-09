@@ -19,7 +19,9 @@ import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-export const maxDuration = 20;
+// Keep Vercel's function configuration aligned with the app's shared
+// 60-second bundle class. Judge0 is still capped at 15 seconds below.
+export const maxDuration = 60;
 
 const runSchema = z
   .object({
