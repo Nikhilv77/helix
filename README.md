@@ -54,17 +54,15 @@ GEMINI_EMBEDDING_MODEL
 LIVEKIT_URL
 LIVEKIT_API_KEY
 LIVEKIT_API_SECRET
-INTERVIEW_AUTH_SECRET
-UPSTASH_REDIS_REST_URL
-UPSTASH_REDIS_REST_TOKEN
 ```
 
 `GROQ_API_KEY` is optional but recommended for quicker spoken follow-ups. See
 [.env.example](./.env.example) for defaults and optional settings.
-`INTERVIEW_AUTH_SECRET` should be at least 32 random bytes and is used only for
-signed anonymous interview ownership and short-lived voice-worker access.
-The Upstash REST credentials provide shared rate limits and distributed interview locks. They are
-required in production; local development and tests use a process-local fallback when omitted.
+Production also requires `INTERVIEW_AUTH_SECRET` (at least 32 random bytes),
+`UPSTASH_REDIS_REST_URL`, and `UPSTASH_REDIS_REST_TOKEN`. The secret signs anonymous interview
+ownership and short-lived voice-worker access. Upstash provides shared rate limits and distributed
+interview locks. Local development and tests use process-local fallbacks when these three values are
+omitted.
 
 The agent's `agent/.env.local` needs:
 

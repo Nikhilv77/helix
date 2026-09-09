@@ -200,16 +200,16 @@ Some similar names are intentional and must not be merged based on naming alone:
 
 This is a starting inventory, not authorization to delete every item.
 
-| Candidate                                                                 | Current evidence                                                                                         | Classification | Next decision                                                                                  |
-| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------- | ---------------------------------------------------------------------------------------------- |
-| `tsconfig.seed.tsbuildinfo`, `tsconfig.verify.tsbuildinfo`                | Removed from Git; TypeScript can recreate them and `*.tsbuildinfo` is ignored                            | Generated      | Complete                                                                                       |
-| `src/features/practice/shared/ui/story-practice-artifact.tsx`             | Owns the canonical renderer and neutral artifact contract; the former `workspace/shared` path is removed | Canonical      | Complete                                                                                       |
-| `src/app/mentors/page.tsx`                                                | Explicit redirect from an older URL to `/trailguide`                                                     | Compatibility  | Keep until old-route traffic is below the agreed threshold and saved-link support expires      |
-| `src/app/interview/text/page.tsx`                                         | Explicit redirect to the voice room or interview setup                                                   | Compatibility  | Measure traffic before assigning a removal date                                                |
-| `src/app/interview/dsa/[slug]/page.tsx`                                   | Explicit redirect for old per-question interview links                                                   | Compatibility  | Keep until traffic and external-link checks prove it is safe to remove                         |
-| DSA legacy snapshot readers and onboarding legacy-stage conversion        | Tests and comments show that they adapt old persisted records                                            | Compatibility  | Remove only after a production data audit/backfill and a full retention window                 |
-| `output/pdf/trailgrad-report-sample.pdf`                                  | Tracked binary with no source-code reference found in the initial scan                                   | Unknown        | Decide whether it is a maintained product fixture, documentation artifact, or generated output |
-| Empty local directories under `src/app`, `src/components`, and `src/data` | Empty directories are not represented in Git                                                             | Local hygiene  | Remove locally when convenient; they have no repository effect                                 |
+| Candidate                                                                 | Current evidence                                                                                                                           | Classification | Next decision                                                                             |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------- | ----------------------------------------------------------------------------------------- |
+| `tsconfig.seed.tsbuildinfo`, `tsconfig.verify.tsbuildinfo`                | Removed from Git; TypeScript can recreate them and `*.tsbuildinfo` is ignored                                                              | Generated      | Complete                                                                                  |
+| `src/features/practice/shared/ui/story-practice-artifact.tsx`             | Owns the canonical renderer and neutral artifact contract; the former `workspace/shared` path is removed                                   | Canonical      | Complete                                                                                  |
+| `src/app/mentors/page.tsx`                                                | Explicit redirect from an older URL to `/trailguide`                                                                                       | Compatibility  | Keep until old-route traffic is below the agreed threshold and saved-link support expires |
+| `src/app/interview/text/page.tsx`                                         | Explicit redirect to the voice room or interview setup                                                                                     | Compatibility  | Measure traffic before assigning a removal date                                           |
+| `src/app/interview/dsa/[slug]/page.tsx`                                   | Explicit redirect for old per-question interview links                                                                                     | Compatibility  | Keep until traffic and external-link checks prove it is safe to remove                    |
+| DSA legacy snapshot readers and onboarding legacy-stage conversion        | Tests and comments show that they adapt old persisted records                                                                              | Compatibility  | Remove only after a production data audit/backfill and a full retention window            |
+| `output/pdf/trailgrad-report-sample.pdf`                                  | Generated sample from the retired report-brand-mark experiment; no source, test, script, documentation, or persisted-data consumer remains | Generated      | Removed from Git; `output/` is ignored                                                    |
+| Empty local directories under `src/app`, `src/components`, and `src/data` | Empty directories are not represented in Git                                                                                               | Local hygiene  | Remove locally when convenient; they have no repository effect                            |
 
 Do not delete anything under `prisma/migrations` as part of ordinary dead-code cleanup. Applied
 migrations are historical database artifacts even when the current schema no longer exposes the
@@ -523,30 +523,33 @@ compatibility, test against a database containing representative old and current
 Maintain this table as work proceeds. A candidate is not “Done” until both code and operational
 exit conditions are satisfied.
 
-| Area             | Candidate                                    | Class         | Evidence owner | Status      | Exit condition                                                        |
-| ---------------- | -------------------------------------------- | ------------- | -------------- | ----------- | --------------------------------------------------------------------- |
-| Repository       | Tracked `*.tsbuildinfo`                      | Generated     | Engineering    | Implemented | Removed from Git; wildcard ignore added; build passes                 |
-| Marketing        | UI/content split across top-level trees      | Active move   | Engineering    | Implemented | Old Marketing import paths absent; lint, tests, and build pass        |
-| Onboarding       | UI/resume logic split across top-level trees | Active move   | Engineering    | Implemented | Old Onboarding import paths absent; focused tests and build pass      |
-| Search           | Contract, service, and UI split across trees | Active move   | Engineering    | Implemented | Feature paths used; route/UI tests, lint, TypeScript, and build pass  |
-| Resume Roast     | Contract, stream, server, and UI split       | Active move   | Engineering    | Implemented | Feature paths used; focused and full verification pass                |
-| Profile/Account  | Profile and account code split across trees  | Active move   | Engineering    | Implemented | Feature paths used; focused and full verification pass                |
-| Reports/Progress | Reporting and roadmap progress split         | Active move   | Engineering    | Implemented | Feature paths used; focused and full verification pass                |
-| Notifications    | Delivery services and inbox UI split         | Active move   | Engineering    | Implemented | Feature paths used; focused and full verification pass                |
-| Trailguide       | Mentor UI stored in workspace tree           | Active move   | Engineering    | Implemented | Feature path used; compatibility redirect retained                    |
-| Trailmate        | Peer-help domain, services, and UI split     | Active move   | Engineering    | Implemented | Feature paths used; 241 focused/adjacent tests pass                   |
-| Interviews       | Planning, sessions, and voice UI split       | Active move   | Engineering    | Implemented | Feature paths used; 206 focused tests and production build pass       |
-| DSA Practice     | Content, domain, services, and UI split      | Active move   | Engineering    | Implemented | Feature paths used; focused and full verification pass                |
-| Story Practice   | Shared lifecycle spread across trees         | Active move   | Practice       | Implemented | Shared domain/server/UI paths used by all story-driven tracks         |
-| Practice tracks  | Three track implementations split by layer   | Active move   | Practice       | Implemented | Separate feature boundaries; 271 focused tests and full build pass    |
-| Dashboard        | Root routing, overview, and Maya flow mixed  | Active move   | Engineering    | In progress | Parts 1–8 below complete; authenticated smoke matrix passes           |
-| Story artifact   | Artifact renderer re-export/path split       | Duplicate     | Practice       | Implemented | One canonical implementation and no imports from retired path         |
-| Routes           | `/mentors` redirect                          | Compatibility | Trailguide     | Measure     | Traffic/link retention rule satisfied                                 |
-| Routes           | `/interview/text` redirect                   | Compatibility | Interviews     | Measure     | Traffic/link retention rule satisfied                                 |
-| Routes           | `/interview/dsa/[slug]` redirect             | Compatibility | Interviews     | Measure     | Traffic/link retention rule satisfied                                 |
-| DSA              | Legacy practice block/snapshot adapters      | Compatibility | Practice       | Data audit  | Old records backfilled or outside supported retention window          |
-| Onboarding       | Legacy stage conversion                      | Compatibility | Onboarding     | Data audit  | No stored legacy stages remain                                        |
-| Reports          | Sample PDF in `output/`                      | Unknown       | Reports        | Decide      | Classified as maintained fixture or moved to ignored generated output |
+| Area             | Candidate                                    | Class         | Evidence owner | Status      | Exit condition                                                       |
+| ---------------- | -------------------------------------------- | ------------- | -------------- | ----------- | -------------------------------------------------------------------- |
+| Repository       | Tracked `*.tsbuildinfo`                      | Generated     | Engineering    | Implemented | Removed from Git; wildcard ignore added; build passes                |
+| Repository       | Generated sample PDF and local output        | Generated     | Engineering    | Implemented | PDF removed from Git; `output/` ignored                              |
+| Repository       | Unused packages and obsolete Jest setup      | Dead          | Engineering    | Implemented | Imports absent; TypeScript, ESLint, Vitest, and build pass           |
+| Public assets    | Retired dashboard/session/domain images      | Dead          | Engineering    | Implemented | Source/docs/scripts and persisted text contain no references         |
+| Marketing        | UI/content split across top-level trees      | Active move   | Engineering    | Implemented | Old Marketing import paths absent; lint, tests, and build pass       |
+| Onboarding       | UI/resume logic split across top-level trees | Active move   | Engineering    | Implemented | Old Onboarding import paths absent; focused tests and build pass     |
+| Search           | Contract, service, and UI split across trees | Active move   | Engineering    | Implemented | Feature paths used; route/UI tests, lint, TypeScript, and build pass |
+| Resume Roast     | Contract, stream, server, and UI split       | Active move   | Engineering    | Implemented | Feature paths used; focused and full verification pass               |
+| Profile/Account  | Profile and account code split across trees  | Active move   | Engineering    | Implemented | Feature paths used; focused and full verification pass               |
+| Reports/Progress | Reporting and roadmap progress split         | Active move   | Engineering    | Implemented | Feature paths used; focused and full verification pass               |
+| Notifications    | Delivery services and inbox UI split         | Active move   | Engineering    | Implemented | Feature paths used; focused and full verification pass               |
+| Trailguide       | Mentor UI stored in workspace tree           | Active move   | Engineering    | Implemented | Feature path used; compatibility redirect retained                   |
+| Trailmate        | Peer-help domain, services, and UI split     | Active move   | Engineering    | Implemented | Feature paths used; 241 focused/adjacent tests pass                  |
+| Interviews       | Planning, sessions, and voice UI split       | Active move   | Engineering    | Implemented | Feature paths used; 206 focused tests and production build pass      |
+| DSA Practice     | Content, domain, services, and UI split      | Active move   | Engineering    | Implemented | Feature paths used; focused and full verification pass               |
+| Story Practice   | Shared lifecycle spread across trees         | Active move   | Practice       | Implemented | Shared domain/server/UI paths used by all story-driven tracks        |
+| Practice tracks  | Three track implementations split by layer   | Active move   | Practice       | Implemented | Separate feature boundaries; 271 focused tests and full build pass   |
+| Dashboard        | Root routing, overview, and Maya flow mixed  | Active move   | Engineering    | In progress | Parts 1–8 below complete; authenticated smoke matrix passes          |
+| Story artifact   | Artifact renderer re-export/path split       | Duplicate     | Practice       | Implemented | One canonical implementation and no imports from retired path        |
+| Routes           | `/mentors` redirect                          | Compatibility | Trailguide     | Measure     | Traffic/link retention rule satisfied                                |
+| Routes           | `/interview/text` redirect                   | Compatibility | Interviews     | Measure     | Traffic/link retention rule satisfied                                |
+| Routes           | `/interview/dsa/[slug]` redirect             | Compatibility | Interviews     | Measure     | Traffic/link retention rule satisfied                                |
+| DSA              | Legacy practice block/snapshot adapters      | Compatibility | Practice       | Data audit  | Old records backfilled or outside supported retention window         |
+| Onboarding       | Legacy stage conversion                      | Compatibility | Onboarding     | Data audit  | No stored legacy stages remain                                       |
+| Reports          | Sample PDF in `output/`                      | Generated     | Reports        | Implemented | Removed from Git; future generated output remains ignored            |
 
 ### Marketing pilot record
 
@@ -867,7 +870,96 @@ browser cases remain pending; they must not be marked complete from unit coverag
 Dashboard cleanup is complete only when all eight parts are merged, the old trees are empty, the
 root route remains server-controlled, and the authenticated browser matrix passes.
 
-## 12. Definition of done
+## 12. Repository hygiene and operational audit record
+
+### 12.1 Local repository hygiene — Complete
+
+The 2026-09-09 audit classified the report sample as generated output. It was created with the
+retired report-brand-mark experiment, has no source, test, script, documentation, or persisted-data
+consumer, and is not a maintained fixture. `output/pdf/trailgrad-report-sample.pdf` and the retired
+generator were removed, and `output/` is now ignored.
+
+The same audit completed these local actions:
+
+- removed ten packages with no import or tool consumer: `ai`, `class-transformer`,
+  `class-validator`, `mermaid`, `react-icons`, `reflect-metadata`, `@types/jest`, `jest`, `ts-jest`,
+  and `tsconfig-paths`;
+- removed the obsolete Jest config/setup and the decorator compiler flags that existed only for
+  the removed Nest-style helpers;
+- removed 27 import-free source files, three abandoned scripts, and the 32-file `prep-predict`
+  authoring tree whose generated banks were retired with the fixed-track flow, after
+  static-reference, TypeScript, lint, test, and build checks;
+- removed 18 retired dashboard, session-card, domain, and Trailguide image files after searches of
+  source, tests, scripts, documentation, Git history, and all text/JSON database columns found no
+  current consumer;
+- retained the Google verification file, avatar licences/readme, and legacy brand assets because
+  they can be externally addressed even without a source import;
+- ignored and removed local `.DS_Store` files;
+- added explicit package commands for the maintained verification, preflight, optimization,
+  reset, and compatibility-audit scripts; and
+- reconciled the root and Python-worker environment examples with the variables and defaults their
+  current configuration loaders actually read. Test-only flags and Vercel-provided variables remain
+  intentionally outside the deploy-time example.
+
+The debug-log scan found only CLI output, the application logger, bounded error reporting, and
+generated DSA runner output. The commented-code scan found explanatory comments rather than a
+disabled implementation, so no log or comment was removed merely to reduce line count. Knip found
+no additional unused package dependency; its remaining unused-export report stays a candidate list,
+not deletion authority, because it includes public schemas, types, fixtures, and framework entry
+points.
+
+### 12.2 Persisted compatibility data — Audited, no write required
+
+`pnpm compatibility:audit` is a reusable read-only aggregate audit. It never emits owner IDs,
+profile fields, answers, or snapshot bodies. Against the configured database on 2026-09-09 it found:
+
+| Cohort                                                                                           |             Count | Decision                                                                                                                            |
+| ------------------------------------------------------------------------------------------------ | ----------------: | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Stored legacy preparation stages (`baseline_coding`, `baseline_technical`, `baseline_reasoning`) |                 0 | No onboarding backfill is required; retain conversion through the agreed retention window                                           |
+| Profiles with null preparation state                                                             |                 5 | Current supported pre-onboarding state, not legacy corruption                                                                       |
+| Profile at current `baseline_technical_3` stage                                                  |                 1 | Active current state; no action                                                                                                     |
+| Completed preparation profiles                                                                   |                 8 | Current state; no action                                                                                                            |
+| DSA recommendation snapshot v0                                                                   |                 2 | Already imported to durable blocks; retain the v0 reader because missing historical ranking detail cannot be reconstructed honestly |
+| DSA recommendation snapshot v1                                                                   |                 6 | Current format                                                                                                                      |
+| DSA assessment snapshot v1                                                                       |                 0 | No assessment backfill is required                                                                                                  |
+| DSA assessment snapshot v2                                                                       |                 3 | Current format                                                                                                                      |
+| DSA assessments not yet prepared                                                                 |                 5 | Null by lifecycle design, not a legacy snapshot                                                                                     |
+| Legacy DSA metadata rows                                                                         | 4 rows / 2 owners | Every owner already has a durable DSA block; no lazy-import backfill remains                                                        |
+
+No production data was changed. Converting the two recommendation v0 rows to v1 would require
+inventing recommendation fields that were never persisted, so that would be a lossy rewrite rather
+than a safe backfill.
+
+### 12.3 Route traffic, authenticated smoke tests, and telemetry — Blocked externally
+
+The compatibility routes remain in source and focused tests now prove these mappings:
+
+```text
+/mentors                    -> /trailguide
+/interview/text             -> /interview
+/interview/text?session=... -> /interview/voice?session=...
+/interview/dsa/[slug]       -> /interview/dsa
+```
+
+Historical request counts and deployment logs could not be read on 2026-09-09 because both the
+connected Vercel integration and the locally cached Vercel CLI credential require reauthentication.
+The routes therefore remain at `Measure`; no traffic-based removal claim has been made. After
+reauthentication, query each exact path for at least the agreed 30-day window, separate legitimate
+requests from bots/synthetic probes, and record referrers or known emitters before scheduling a
+removal.
+
+Anonymous Chromium checks against the current local source confirmed that each saved URL remains
+operable and reaches the public root when its authenticated destination rejects a signed-out user.
+A public production HTTP probe reached the Marketing surface at the canonical domain, but cannot
+substitute for deployment logs or authenticated product checks.
+
+The configured database contains eight completed profiles, but none of their owner IDs exists in
+the configured Clerk development instance. Creating or rewriting a candidate merely to satisfy a
+smoke test would alter operational data, so the authenticated browser matrix remains pending until
+the matching Clerk environment or a designated E2E account is supplied. Production telemetry
+regression checks remain pending for the same Vercel reauthentication dependency.
+
+## 13. Definition of done
 
 The application cleanup is complete when:
 

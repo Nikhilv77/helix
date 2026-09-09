@@ -1,6 +1,0 @@
-print(0 or "fallback")
-print("" or [])
-print(1 and 2)
-print([] and 1)
-print(bool([0]))
-print(bool(""))
