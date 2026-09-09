@@ -9,7 +9,6 @@ import {
   requireArchitectureDesignEligibility
 } from "../_shared";
 
-export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {

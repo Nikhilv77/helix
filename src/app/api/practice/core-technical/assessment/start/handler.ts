@@ -8,7 +8,6 @@ import {
 } from "@/server/rate-limit/shared-guard";
 import { coreTechnicalMutationOwner, parseCoreTechnicalJson } from "../../_shared";
 
-export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   let lease: SharedLease | undefined;

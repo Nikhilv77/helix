@@ -7,8 +7,6 @@ import {
   type SharedLease
 } from "@/server/rate-limit/shared-guard";
 import { apiError, appliedEngineeringOwner, parseAppliedEngineeringJson } from "../_shared";
-export const dynamic = "force-dynamic";
-export const maxDuration = 300;
 export async function POST(r: NextRequest) {
   let lease: SharedLease | undefined;
   try {

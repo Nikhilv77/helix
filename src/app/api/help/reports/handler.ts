@@ -9,8 +9,6 @@ import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 const reviewSchema = z.object({ id: z.string().uuid() });
 

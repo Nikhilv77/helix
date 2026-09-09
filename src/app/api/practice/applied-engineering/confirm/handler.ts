@@ -8,7 +8,6 @@ import {
   parseAppliedEngineeringJson,
   requireAppliedEngineeringEligibility
 } from "../_shared";
-export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   try {
     const { ownerId, app, profile } = await appliedEngineeringOwner(

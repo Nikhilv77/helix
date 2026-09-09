@@ -11,8 +11,6 @@ import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 const querySchema = z.object({
   side: z.enum(["received", "given"]).default("received"),

@@ -4,7 +4,6 @@ import { apiSuccess } from "@/server/http/api-response";
 import { RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import { apiError, architectureDesignOwner, parseArchitectureDesignJson } from "../_shared";
 
-export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {

@@ -4,8 +4,6 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { getSharedGuard, RATE_LIMIT_POLICIES, type SharedLease } from "@/server/rate-limit/shared-guard";
 import { coreTechnicalMutationOwner, parseCoreTechnicalJson } from "../_shared";
 
-export const dynamic = "force-dynamic";
-export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   let lease: SharedLease | undefined;

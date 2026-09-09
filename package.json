@@ -7,10 +7,12 @@
   "scripts": {
     "dev": "prisma generate && next dev --port 3001",
     "build": "prisma generate && next build",
+    "deploy:production": "npx --yes vercel@59.14.0 build --prod && pnpm vercel:verify && npx --yes vercel@59.14.0 deploy --prebuilt --prod",
     "start": "next start --port 3001",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "vercel:verify": "node scripts/verify-vercel-function-count.mjs",
     "core-technical:generate": "tsx scripts/core-technical-generate.ts",
     "core-technical:publish": "tsx scripts/core-technical-publish.ts",
     "applied-engineering:publish": "tsx scripts/applied-engineering-publish.ts",

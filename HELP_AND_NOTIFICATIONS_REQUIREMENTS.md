@@ -75,7 +75,7 @@ remains the actual sender address.
 
 Primary implementation:
 
-- `src/app/api/onboarding/complete/handler.ts`
+- `src/app/api/onboarding/complete/route.ts`
 - `src/server/notifications/teacher-notification.service.ts`
 - `src/server/notifications/email-template.ts`
 
@@ -131,8 +131,8 @@ the fallback for pending rows when nobody has the app open.
 
 Primary implementation:
 
-- `src/app/api/cron/teacher-notifications/handler.ts`
-- `src/app/api/notifications/status/handler.ts`
+- `src/app/api/cron/teacher-notifications/route.ts`
+- `src/app/api/notifications/status/route.ts`
 - `src/features/notifications/server/notification-dispatcher.ts`
 - `src/server/notifications/teacher-notification.service.ts`
 - `vercel.json`
@@ -152,8 +152,8 @@ The workspace notification control supports:
 Primary implementation:
 
 - `src/components/workspace/chrome/notification-inbox.tsx`
-- `src/app/api/notifications/handler.ts`
-- `src/app/api/notifications/preferences/handler.ts`
+- `src/app/api/notifications/route.ts`
+- `src/app/api/notifications/preferences/route.ts`
 - `src/server/notifications/notification.service.ts`
 
 ## Notification kinds — shipped
@@ -385,6 +385,7 @@ workspace toast instead of requiring the helper to monitor this page:
 
 - `src/app/help/page.tsx`
 - `src/components/workspace/help/help-hub.tsx`
+- `src/app/api/help/[...path]/route.ts`
 - `src/app/api/help/history/handler.ts`
 - `src/app/api/help/overview/handler.ts`
 - `src/server/help/help-history.service.ts`

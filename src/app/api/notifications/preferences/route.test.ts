@@ -18,7 +18,7 @@ vi.mock("@/server/app-container", () => ({
   })
 }));
 
-import { PUT } from "./handler";
+import { PUT } from "./route";
 
 describe("PUT /api/notifications/preferences", () => {
   beforeEach(() => {

@@ -7,8 +7,6 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { reconcileHelpForOwnerBestEffort } from "@/features/peer-help/server/help-maintenance";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   try {

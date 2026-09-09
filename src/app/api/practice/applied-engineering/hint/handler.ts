@@ -3,7 +3,6 @@ import { appliedEngineeringRevealHintInputSchema } from "@/features/practice/app
 import { apiSuccess } from "@/server/http/api-response";
 import { RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import { apiError, appliedEngineeringOwner, parseAppliedEngineeringJson } from "../_shared";
-export const dynamic = "force-dynamic";
 export async function POST(r: NextRequest) {
   try {
     const { ownerId, app } = await appliedEngineeringOwner(RATE_LIMIT_POLICIES.practiceState);

@@ -7,8 +7,6 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { reconcileHelpForOwnerBestEffort } from "@/features/peer-help/server/help-maintenance";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 /** Tiny change detector; full Trailmate data is fetched only when this moves. */
 export async function GET(request: NextRequest) {

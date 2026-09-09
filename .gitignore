@@ -4,6 +4,7 @@ coverage
 /output/
 .next
 .next.stale*
+.vercel
 frontend/.next
 frontend/.next.stale*
 .tmp

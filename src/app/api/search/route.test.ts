@@ -20,7 +20,7 @@ vi.mock("@/server/app-container", () => ({
   })
 }));
 
-import { GET } from "./handler";
+import { GET } from "./route";
 
 describe("GET /api/search", () => {
   beforeEach(() => {

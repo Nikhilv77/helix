@@ -13,7 +13,7 @@ vi.mock("../../architecture-design/assessment/start/handler", () => ({
   POST: mocks.architectureStart
 }));
 
-import { POST } from "./handler";
+import { POST } from "./route";
 
 describe("consolidated practice action route", () => {
   it.each([

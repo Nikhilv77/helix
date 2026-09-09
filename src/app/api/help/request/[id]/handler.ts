@@ -13,8 +13,6 @@ import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { NotificationKind } from "@/features/notifications/server/notification.service";
 import { reconcileHelpForOwnerBestEffort } from "@/features/peer-help/server/help-maintenance";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 const logger = new Logger("HelpRequestAction");
 

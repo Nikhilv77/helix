@@ -13,8 +13,6 @@ import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import { reconcileHelpForOwnerBestEffort } from "@/features/peer-help/server/help-maintenance";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 const logger = new Logger("HelpRequest");
 
