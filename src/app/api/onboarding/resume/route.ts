@@ -39,7 +39,6 @@ import { signResumePreview } from "@/features/profile/server/resume-preview-toke
 import { initialPreparationOnboardingState } from "@/features/preparation-onboarding/server/preparation-onboarding-state";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 const MIN_FILE_SIZE = 1_000;
 const MAX_FILE_SIZE = 6 * 1024 * 1024;

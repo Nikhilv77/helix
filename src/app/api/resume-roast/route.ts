@@ -19,7 +19,6 @@ import {
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 const createSchema = z.object({ target: ResumeRoastTargetSchema }).strict();
 const deleteSchema = z.object({ roastId: z.string().uuid() }).strict();

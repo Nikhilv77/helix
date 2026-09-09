@@ -12,7 +12,7 @@ vi.mock("@/server/app-container", () => ({
   getAppContainer: () => ({ helpHistoryService: { history: mocks.history } })
 }));
 
-import { GET } from "./route";
+import { GET } from "./handler";
 
 describe("GET /api/help/history", () => {
   beforeEach(() => {

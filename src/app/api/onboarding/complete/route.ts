@@ -15,7 +15,6 @@ import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { LEVELS, ROLES } from "@/features/interviews/server/types";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 const logger = new Logger("OnboardingComplete");
 

@@ -11,7 +11,6 @@ import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 const DEEPGRAM_SPEAK_ENDPOINT = "https://api.deepgram.com/v1/speak";
 const SPEECH_TIMEOUT_MS = 15_000;

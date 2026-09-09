@@ -18,7 +18,6 @@ import {
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 const runSchema = z
   .object({

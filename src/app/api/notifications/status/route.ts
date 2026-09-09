@@ -8,7 +8,6 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 /** Lightweight badge/version read used between full inbox refreshes. */
 export async function GET(request: NextRequest) {

@@ -8,7 +8,6 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 const readSchema = z.union([
   z.object({ ids: z.array(z.string().uuid()).min(1).max(50) }).strict(),

@@ -4,7 +4,6 @@ import { getAppContainer } from "@/server/app-container";
 import { runGlobalHelpMaintenance } from "@/features/peer-help/server/help-maintenance";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 /** One Hobby-compatible daily function for teacher notifications and maintenance. */
 export async function GET(request: NextRequest) {

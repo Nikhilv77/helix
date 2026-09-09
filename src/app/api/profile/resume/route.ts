@@ -12,7 +12,6 @@ import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { verifyResumePreview } from "@/features/profile/server/resume-preview-token";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 const confirmationSchema = z
   .object({

@@ -33,7 +33,6 @@ import { POST as architectureLearn } from "../../architecture-design/learn/handl
 import { POST as architecturePrepare } from "../../architecture-design/prepare/handler";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 type PracticeHandler = (request: NextRequest) => Promise<Response>;
 

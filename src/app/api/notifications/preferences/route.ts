@@ -8,7 +8,6 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 const preferenceSchema = z
   .object({
