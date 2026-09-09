@@ -12,11 +12,11 @@ import {
   Volume2
 } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
-import type { DashboardOverviewData } from "@/lib/dashboard/dashboard-overview";
+import type { DashboardOverviewData } from "@/features/dashboard/contracts/dashboard-overview";
 import { useMayaVoice } from "@/lib/voice/use-maya-voice";
 import { DashboardScoreRing } from "./dashboard-score-ring";
 
-export function DashboardFirstRow({
+export function CoachingReadinessSection({
   data
 }: {
   data: Pick<DashboardOverviewData, "coaching" | "readiness">;

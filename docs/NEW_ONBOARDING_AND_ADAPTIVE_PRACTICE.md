@@ -144,10 +144,10 @@ Core transfer coding problems remain authored. Candidate-specific code-review qu
 
 ## Main code
 
-- `src/lib/preparation/preparation-onboarding.ts` — onboarding contracts and skill signals
-- `src/server/preparation/preparation-onboarding-state.ts` — baseline transitions and interpretation
-- `src/server/preparation/preparation-onboarding.service.ts` — durable onboarding and question snapshots
-- `src/lib/dashboard/dashboard-overview.ts` — dashboard state and personalized coaching copy
+- `src/features/preparation-onboarding/domain/preparation-onboarding.ts` — onboarding contracts and skill signals
+- `src/features/preparation-onboarding/server/preparation-onboarding-state.ts` — baseline transitions and interpretation
+- `src/features/preparation-onboarding/server/preparation-onboarding.service.ts` — durable onboarding and question snapshots
+- `src/features/dashboard/application/build-dashboard-overview.ts` — dashboard state and personalized coaching copy
 - `src/lib/practice/dsa-recommendation.ts` — deterministic DSA ranking, tier, and difficulty mix
 - `src/server/dsa/stable-dsa-recommendation.ts` — saved block lifecycle
 - `src/components/workspace/dsa/dsa-topics.tsx` — recommended block and full library

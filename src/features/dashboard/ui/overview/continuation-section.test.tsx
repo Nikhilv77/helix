@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { DashboardContinuation } from "@/lib/dashboard/dashboard-overview";
-import { DashboardSecondRow } from "./dashboard-second-row";
+import type { DashboardContinuation } from "@/features/dashboard/contracts/dashboard-overview";
+import { ContinuationSection } from "./continuation-section";
 
 const data: DashboardContinuation = {
   practice: {
@@ -29,11 +29,11 @@ const data: DashboardContinuation = {
   }
 };
 
-describe("DashboardSecondRow", () => {
+describe("ContinuationSection", () => {
   afterEach(cleanup);
 
   it("renders live practice and interview continuation actions", () => {
-    render(<DashboardSecondRow data={data} />);
+    render(<ContinuationSection data={data} />);
 
     expect(screen.getByRole("article", { name: "Practice continuation" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Valid Anagram" })).toBeTruthy();
@@ -56,7 +56,7 @@ describe("DashboardSecondRow", () => {
 
   it("keeps true empty states direct and free of fabricated metrics", () => {
     render(
-      <DashboardSecondRow
+      <ContinuationSection
         data={{
           practice: {
             ...data.practice,

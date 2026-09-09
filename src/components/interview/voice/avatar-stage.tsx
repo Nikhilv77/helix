@@ -236,6 +236,10 @@ export function AvatarStage({
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
+    // Development Strict Mode and Fast Refresh can reuse this DOM node after
+    // replaying an earlier effect cleanup. Always restore its visible state
+    // before attaching the new renderer.
+    mount.style.visibility = "visible";
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const profile = mobileProfile(performanceProfile);
@@ -261,6 +265,12 @@ export function AvatarStage({
     }
 
     renderer.setPixelRatio(profile.pixelRatio);
+    // Keep the backing surface transparent from the moment the browser first
+    // composites it. Relying on the WebGL default can expose an opaque canvas
+    // for one frame while a client-only avatar mounts over a dark page.
+    renderer.setClearColor(0x000000, 0);
+    renderer.domElement.style.backgroundColor = "transparent";
+    renderer.domElement.style.display = "block";
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     // Filmic tone mapping plus image-based lighting: PBR skin and hair look
     // flat and plastic under direct lights alone.
@@ -728,15 +738,23 @@ export function AvatarStage({
       scene.environment = null;
       environmentTarget?.dispose();
       pmrem?.dispose();
-      // Detach the last rendered frame before invalidating its WebGL context.
-      // Some browsers briefly composite the context-loss clear colour; when
-      // leaving an assessment that showed up as a white flash over the face.
-      // Once detached, GPU cleanup can happen without another canvas frame
-      // becoming visible.
+      // Hide and detach the last rendered frame before invalidating its WebGL
+      // context. A masked canvas can remain in the compositor for the rest of
+      // the current frame even after removeChild; forcing context loss in that
+      // same frame briefly exposes the browser's opaque clear surface.
       renderer.domElement.style.visibility = "hidden";
+      renderer.domElement.style.opacity = "0";
       if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
       renderer.dispose();
-      renderer.forceContextLoss();
+
+      const releaseContext = () => renderer.forceContextLoss();
+      if (document.visibilityState === "visible") {
+        // Let two paint boundaries pass so the detached canvas has also left
+        // the compositor before the GPU context emits its final clear frame.
+        requestAnimationFrame(() => requestAnimationFrame(releaseContext));
+      } else {
+        releaseContext();
+      }
     };
   }, [framing, performanceProfile]);
 

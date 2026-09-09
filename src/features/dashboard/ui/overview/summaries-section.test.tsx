@@ -1,7 +1,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { DashboardExplore } from "@/lib/dashboard/dashboard-overview";
-import { DashboardThirdRow } from "./dashboard-third-row";
+import type { DashboardExplore } from "@/features/dashboard/contracts/dashboard-overview";
+import { SummariesSection } from "./summaries-section";
 
 const data: DashboardExplore = {
   progress: {
@@ -34,11 +34,11 @@ const data: DashboardExplore = {
   }
 };
 
-describe("DashboardThirdRow", () => {
+describe("SummariesSection", () => {
   afterEach(cleanup);
 
   it("renders live progress, report, and Trailmate summaries", () => {
-    render(<DashboardThirdRow data={data} />);
+    render(<SummariesSection data={data} />);
 
     expect(screen.getByRole("article", { name: "Progress summary" })).toBeTruthy();
     expect(screen.getByRole("img", { name: "Activity over the last seven days" })).toBeTruthy();
@@ -67,7 +67,7 @@ describe("DashboardThirdRow", () => {
 
   it("keeps first-use states useful without fake scores or activity", () => {
     render(
-      <DashboardThirdRow
+      <SummariesSection
         data={{
           progress: {
             ...data.progress,

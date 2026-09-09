@@ -1,6 +1,6 @@
 # Application Cleanup and Folder Structure Plan
 
-**Status:** Proposed  
+**Status:** In progress
 **Last reviewed:** 2026-09-09  
 **Scope:** Trailgrad Next.js application, supporting TypeScript code, assets, scripts, and the Python
 voice worker  
@@ -68,6 +68,36 @@ Completed:
 Verified with ESLint, 55 focused onboarding/profile tests, the full 1,278-test suite, the production
 Next.js build, formatting, and a stale-import audit. No URL, API response, persistence, or visible
 flow change was intended in either completed slice.
+
+### Dashboard and preparation onboarding
+
+Completed in the current cleanup slice:
+
+- added an explicit seven-case `/` route-state matrix for Clerk-disabled, signed-out,
+  missing/incomplete profile, incomplete preparation, requested welcome, and overview states;
+- removed the unused `frontendRoadmap`, `frontendPlan`, `practiceSessions`, and `practiceHref`
+  compatibility props plus the orphaned `buildPracticeHref()` helper;
+- moved the multiplexed `/` entry point from `(marketing)` to the neutral `(home)` route group
+  without changing its URL;
+- extracted the parallel, independently degradable overview reads into
+  `src/features/dashboard/server/load-dashboard-overview.ts`, with success, partial-failure, and
+  total-failure tests;
+- moved Dashboard contracts and projection logic into `src/features/dashboard/contracts` and
+  `src/features/dashboard/application`;
+- moved and renamed Dashboard overview UI by responsibility under
+  `src/features/dashboard/ui/overview`;
+- moved preparation-onboarding UI, domain rules, question banks, server state, service, and tests
+  into `src/features/preparation-onboarding`; and
+- separated the preparation screen from `DashboardOverview`, so neither feature imports the
+  other's UI.
+
+The remaining Dashboard work is to split the large pure overview builder and the preparation flow
+controller into their smaller responsibility modules, then complete the final stale-export and
+documentation audit.
+
+Verified with ESLint, TypeScript, 59 focused Dashboard/preparation tests, the full 1,288-passing
+test suite (8 skipped), a stale-import audit, and the production Next.js build. The build emits one
+server-rendered `/` route after the route-group move.
 
 ## 3. What “unused” means
 
@@ -489,9 +519,9 @@ The `/onboarding` migration established these ownership decisions:
 
 ## 11. Dashboard cleanup in parts
 
-### 11.1 Current boundary and risks
+### 11.1 Starting boundary and risks
 
-The dashboard currently occupies more than a dashboard folder:
+Before this cleanup slice, the dashboard occupied more than a dashboard folder:
 
 ```text
 src/app/(marketing)/page.tsx                         public/authenticated root selector + data load
@@ -569,7 +599,7 @@ Dashboard may consume public contracts from Reports, Progress, Practice, and Tra
 not own their persistence or business rules. `MayaStage`, voice playback, and the weekly activity
 chart should remain shared while multiple independent features use them.
 
-### 11.3 Part 1 — Freeze behavior and remove dead Dashboard contracts
+### 11.3 Part 1 — Freeze behavior and remove dead Dashboard contracts — Complete
 
 This first PR is deliberately small:
 
@@ -583,7 +613,7 @@ This first PR is deliberately small:
 
 Exit gate: the root route and existing Dashboard tests pass with no snapshot or visible change.
 
-### 11.4 Part 2 — Extract preparation onboarding from Dashboard
+### 11.4 Part 2 — Extract preparation onboarding from Dashboard — In progress
 
 `maya-welcome.tsx` is not dashboard presentation. It owns target selection, baseline questions,
 skill-profile explanation, voice preloading, scrolling, and completion navigation.
@@ -604,7 +634,11 @@ ownership is clear; do not mix this part with changes to baseline scoring or per
 Exit gate: preparation onboarding can be rendered without importing anything from
 `features/dashboard`, and its focused state/interaction tests pass.
 
-### 11.5 Part 3 — Extract the authenticated Dashboard loader
+Current status: the feature boundary, imports, persistence service, domain files, and colocated
+tests have moved. The 1,340-line preparation controller still needs to be split into the listed
+target, baseline, skill-profile, voice, and presentation modules.
+
+### 11.5 Part 3 — Extract the authenticated Dashboard loader — Complete
 
 Move the `DashboardOverviewHome` data assembly from the root page into
 `src/features/dashboard/server/load-dashboard-overview.ts`.
@@ -625,7 +659,7 @@ choosing Marketing, preparation onboarding, or the overview.
 Exit gate: the root page no longer knows individual Dashboard data services, while loader tests
 prove success, partial failure, and total failure behavior.
 
-### 11.6 Part 4 — Split the 1,411-line overview projection
+### 11.6 Part 4 — Split the 1,411-line overview projection — In progress
 
 Move `src/lib/dashboard/dashboard-overview.ts` into the Dashboard feature and split it around its
 existing output fields, not arbitrary line counts:
@@ -649,7 +683,11 @@ behavior change. Moving the file must not silently change which advice users rec
 Exit gate: the existing 584-line projection test suite moves with the feature and passes unchanged;
 new module tests cover any helper promoted to a public boundary.
 
-### 11.7 Part 5 — Move and rename overview UI semantically
+Current status: the projection and its unchanged test suite have moved into the feature, and the
+serializable types now live in `contracts/dashboard-overview.ts`. The pure field builders still
+need to be extracted from `application/build-dashboard-overview.ts`.
+
+### 11.7 Part 5 — Move and rename overview UI semantically — Complete
 
 Move the normal Dashboard UI and colocated tests into `src/features/dashboard/ui/overview`.
 Replace positional names with product responsibilities:
@@ -671,7 +709,7 @@ Dashboard client-side.
 Exit gate: row tests move with their components, accessibility labels remain stable, and no old
 Dashboard UI import path remains.
 
-### 11.8 Part 6 — Simplify the root composition
+### 11.8 Part 6 — Simplify the root composition — Complete
 
 After Parts 2–5, reduce the `/` route to an explicit server-side decision:
 
@@ -693,7 +731,7 @@ of the Marketing feature.
 Exit gate: `src/app/(home)/page.tsx` contains framework orchestration only and the production build
 still emits exactly one `/` route.
 
-### 11.9 Part 7 — Dead-code and boundary audit
+### 11.9 Part 7 — Dead-code and boundary audit — Complete for this slice
 
 After all consumers use the new paths:
 
@@ -704,6 +742,10 @@ After all consumers use the new paths:
   proved;
 - verify that Dashboard contracts contain no service, Prisma, or browser-only values; and
 - update documents that cite the old `maya-welcome.tsx` or `dashboard-overview.ts` paths.
+
+Current status: no source import uses an old Dashboard or preparation path, the old source trees
+contain no files, and repository documents that described the implementations have been updated.
+Compatibility routes and persisted baseline-stage conversion remain intentionally intact.
 
 Do not remove baseline legacy-stage conversion during this part. That adapter protects persisted
 records and remains governed by the production data-audit exit condition.

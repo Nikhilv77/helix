@@ -1797,21 +1797,6 @@ html {
   animation: report-maya-glow-drift-low 10s ease-in-out infinite;
 }
 
-.report-maya-bottom-soften {
-  pointer-events: none;
-  position: absolute;
-  z-index: 20;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 28%;
-  background: rgba(21, 22, 25, 0.01);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 100%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 100%);
-}
-
 .report-signal-ring {
   background:
     conic-gradient(from 90deg, transparent 0 54%, rgba(241, 234, 216, 0.86) 60%, transparent 70%),
@@ -1903,10 +1888,6 @@ html {
   }
 
   .report-maya-speech-card .report-glass-tail {
-    display: none;
-  }
-
-  .report-maya-bottom-soften {
     display: none;
   }
 

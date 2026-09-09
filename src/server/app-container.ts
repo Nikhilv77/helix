@@ -49,7 +49,7 @@ import { TeacherNotificationService } from "./notifications/teacher-notification
 import { ResumeRoastGenerator } from "./resume-roast/resume-roast.generator";
 import { ResumeRoastService } from "./resume-roast/resume-roast.service";
 import { ResumeRoastStore } from "./resume-roast/resume-roast.store";
-import { PreparationOnboardingService } from "./preparation/preparation-onboarding.service";
+import { PreparationOnboardingService } from "@/features/preparation-onboarding/server/preparation-onboarding.service";
 import { CoreTechnicalStoryGenerator } from "./core-technical/story-generator";
 import { CoreTechnicalQuestionGenerator } from "./core-technical/question-generator";
 import { CoreTechnicalGenerationCritic } from "./core-technical/generation-critic";

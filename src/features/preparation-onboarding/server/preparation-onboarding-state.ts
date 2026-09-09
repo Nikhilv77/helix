@@ -15,7 +15,7 @@ import {
   type PreparationOnboardingStage,
   type PreparationOnboardingState,
   type TopicFamiliarity
-} from "@/lib/preparation/preparation-onboarding";
+} from "@/features/preparation-onboarding/domain/preparation-onboarding";
 
 const STAGES = new Set<PreparationOnboardingStage>([
   "target_role", "target_level", "target_timeline", "preparation_areas", "target_company", "baseline_intro",

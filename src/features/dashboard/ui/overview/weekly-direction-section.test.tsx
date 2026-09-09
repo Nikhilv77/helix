@@ -1,7 +1,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { DashboardDirection } from "@/lib/dashboard/dashboard-overview";
-import { DashboardFourthRow } from "./dashboard-fourth-row";
+import type { DashboardDirection } from "@/features/dashboard/contracts/dashboard-overview";
+import { WeeklyDirectionSection } from "./weekly-direction-section";
 
 const data: DashboardDirection = {
   rhythm: {
@@ -34,11 +34,11 @@ const data: DashboardDirection = {
   }
 };
 
-describe("DashboardFourthRow", () => {
+describe("WeeklyDirectionSection", () => {
   afterEach(cleanup);
 
   it("renders a directly labelled weekly rhythm and evidence-backed next focus", () => {
-    render(<DashboardFourthRow data={data} />);
+    render(<WeeklyDirectionSection data={data} />);
 
     const rhythm = screen.getByRole("article", { name: "Weekly practice rhythm" });
     expect(within(rhythm).getByText("3 questions solved")).toBeTruthy();
@@ -62,7 +62,7 @@ describe("DashboardFourthRow", () => {
 
   it("keeps first-use states honest and actionable", () => {
     render(
-      <DashboardFourthRow
+      <WeeklyDirectionSection
         data={{
           rhythm: {
             ...data.rhythm,
@@ -99,7 +99,7 @@ describe("DashboardFourthRow", () => {
 
   it("gives the next practice question its own hierarchy", () => {
     render(
-      <DashboardFourthRow
+      <WeeklyDirectionSection
         data={{
           ...data,
           focus: {

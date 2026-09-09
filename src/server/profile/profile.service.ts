@@ -30,7 +30,7 @@ import { DEFAULT_WORKSPACE_ACCENT, isWorkspaceAccent } from "@/lib/workspace/acc
 import {
   initialPreparationOnboardingState,
   publicPreparationOnboardingState
-} from "@/server/preparation/preparation-onboarding-state";
+} from "@/features/preparation-onboarding/server/preparation-onboarding-state";
 import { compileCandidateInterviewProfile } from "../interview/candidate-profile-compiler";
 import type { PrismaService } from "../database/prisma.service";
 

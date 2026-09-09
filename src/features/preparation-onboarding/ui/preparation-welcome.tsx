@@ -18,6 +18,7 @@ import {
   Target,
   Volume2,
   VolumeX,
+  X,
   type LucideIcon
 } from "lucide-react";
 import {
@@ -31,25 +32,22 @@ import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import {
   PREPARATION_AREAS,
   type PreparationAreaId
-} from "@/lib/preparation/preparation-areas";
+} from "@/features/preparation-onboarding/domain/preparation-areas";
 import {
   type BaselineSection,
   type BaselineQuestion,
   type CandidateSkillSignal,
   type PreparationOnboardingStage,
   type PreparationOnboardingState
-} from "@/lib/preparation/preparation-onboarding";
+} from "@/features/preparation-onboarding/domain/preparation-onboarding";
 import {
   BASELINE_DURATION_LABEL,
   baselineQuestionTeacherCue,
   firstBaselineSection,
   includesDsaPulse,
   nextBaselineSection
-} from "@/lib/preparation/preparation-onboarding-flow";
-import { suggestedPreparationRole } from "@/lib/preparation/preparation-target";
-import type { FrontendDsaPlan } from "@/lib/roadmap/frontend-plan";
-import type { PracticeRoadmapSession } from "@/lib/practice/practice-roadmap";
-import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
+} from "@/features/preparation-onboarding/domain/preparation-onboarding-flow";
+import { suggestedPreparationRole } from "@/features/preparation-onboarding/domain/preparation-target";
 import type { CandidateProfile, Level, Role } from "@/lib/shared/types";
 import {
   welcomePerformanceProfile,
@@ -576,25 +574,16 @@ function baselineAreaSummary(signal: CandidateSkillSignal | undefined): string {
   return "Not assessed yet";
 }
 
-interface MayaWelcomeProps {
+interface PreparationWelcomeProps {
   profile: CandidateProfile;
   /** Mandatory onboarding has no dismiss affordance or escape hatch. */
   blocking?: boolean;
-  practiceHref: string;
-  frontendRoadmap?: FrontendRoadmapHome | null;
-  frontendPlan?: FrontendDsaPlan | null;
-  /**
-   * The candidate's generated Practice sessions. Falls back to PREP_SESSIONS
-   * only when the roadmap could not be built — otherwise this screen promised
-   * everyone the same static titles while Practice showed personalised ones.
-   */
-  practiceSessions?: PracticeRoadmapSession[] | null;
 }
 
-export function MayaWelcome({
+export function PreparationWelcome({
   profile,
   blocking = true
-}: MayaWelcomeProps) {
+}: PreparationWelcomeProps) {
   const teacher = useWorkspaceTeacher();
   // Maya introduces herself out loud by default; muting her turns this off for
   // the rest of the walkthrough.
@@ -653,6 +642,7 @@ export function MayaWelcome({
     }
   }, [teacher.id]);
   const resume = profile.resume;
+  const alreadyOnboarded = profile.preparationOnboarding.completedAt !== null;
   const firstName = resume?.fullName.trim().split(/\s+/)[0] || "there";
   const topEvidence = resume?.experience[0]
     ? `${resume.experience[0].role || "your work"} at ${resume.experience[0].organization}`
@@ -700,6 +690,14 @@ export function MayaWelcome({
       };
     }
     if (baselineStage === "completed") {
+      if (alreadyOnboarded) {
+        return {
+          eyebrow: "Welcome back",
+          title: "You’re already onboarded.",
+          body: "Your learning path is ready and waiting for you. Enjoy learning, keep building momentum, and take the next step whenever you’re ready.",
+          icon: Check
+        };
+      }
       return {
         eyebrow: "First Skill Profile",
         title: "We have your first evidence.",
@@ -717,7 +715,7 @@ export function MayaWelcome({
       };
     }
     return null;
-  }, [activeBaselineQuestion, baselineStage, onboarding.questionIds, targetRole]);
+  }, [activeBaselineQuestion, alreadyOnboarded, baselineStage, onboarding.questionIds, targetRole]);
   const current = baselineSlide ?? slides[step] ?? slides[0] ?? FALLBACK_WELCOME_SLIDE;
   const titleReveal = useWordReveal(current.title, visible, 160);
   const bodyReveal = useWordReveal(
@@ -983,10 +981,10 @@ export function MayaWelcome({
           <button
             type="button"
             onClick={() => dismiss()}
-            aria-label={`Close ${teacher.name} introduction`}
-            className="absolute right-3 top-3 z-20 flex h-11 w-11 items-center justify-center text-cream/55 transition hover:text-cream sm:right-5 sm:top-5"
+            aria-label={`Close ${teacher.name} welcome`}
+            className="absolute right-3 top-3 z-20 flex h-12 w-12 items-center justify-center rounded-full text-cream/65 transition hover:bg-white/[0.07] hover:text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)] sm:right-5 sm:top-5"
           >
-            ×
+            <X size={25} strokeWidth={1.8} aria-hidden="true" />
           </button>
         ) : null}
 
@@ -1155,7 +1153,9 @@ export function MayaWelcome({
                   onChoice={setBaselineChoice}
                 />
               ) : null}
-              {baselineStage === "completed" ? <InitialSkillProfile state={onboarding} role={targetRole} /> : null}
+              {baselineStage === "completed" && !alreadyOnboarded ? (
+                <InitialSkillProfile state={onboarding} role={targetRole} />
+              ) : null}
               {baselineStage !== null && targetError ? (
                 <p role="alert" className="mt-4 text-sm font-medium text-[#ffb8c3]">
                   {targetError}
@@ -1213,7 +1213,7 @@ export function MayaWelcome({
                 ) : activeBaselineQuestion ? (
                   <>Save and continue <ArrowRight size={15} /></>
                 ) : baselineStage === "completed" ? (
-                  <>Build my preparation <ArrowRight size={15} /></>
+                  <>{alreadyOnboarded ? "Continue learning" : "Build my preparation"} <ArrowRight size={15} /></>
                 ) : targetStage === TARGET_SETUP_COPY.length - 1 ? (
                   <>Continue to baseline <ArrowRight size={15} /></>
                 ) : (

@@ -1,5 +1,5 @@
 import type { CandidatePracticeEvidence } from "@/lib/practice/practice-evidence";
-import type { CandidateSkillSignal } from "@/lib/preparation/preparation-onboarding";
+import type { CandidateSkillSignal } from "@/features/preparation-onboarding/domain/preparation-onboarding";
 import type { DsaChapter, FrontendDsaPlan, PlanQuestion } from "@/lib/roadmap/frontend-plan";
 import type { CandidateProfile, Level, Role } from "@/lib/shared/types";
 import type { DsaBlockAssessmentReport } from "@/lib/dsa/block-assessment-report";

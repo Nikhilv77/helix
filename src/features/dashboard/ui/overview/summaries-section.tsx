@@ -6,9 +6,9 @@ import type {
   DashboardProgressSummary,
   DashboardReportsSummary,
   DashboardTrailmateSummary
-} from "@/lib/dashboard/dashboard-overview";
+} from "@/features/dashboard/contracts/dashboard-overview";
 
-export function DashboardThirdRow({ data }: { data: DashboardExplore }) {
+export function SummariesSection({ data }: { data: DashboardExplore }) {
   return (
     <section
       aria-label="Progress and community"

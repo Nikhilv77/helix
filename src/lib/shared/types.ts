@@ -1,5 +1,5 @@
 import type { SessionBlueprint } from "@/lib/interviews/personalized-plan";
-import type { PreparationOnboardingState } from "@/lib/preparation/preparation-onboarding";
+import type { PreparationOnboardingState } from "@/features/preparation-onboarding/domain/preparation-onboarding";
 
 export type Role = "backend" | "frontend" | "fullstack" | "data" | "ai-ml" | "pm";
 export type Level = "fresher" | "0-2" | "3-5" | "5-plus";

@@ -5,10 +5,10 @@ import type {
   DashboardContinuation,
   DashboardInterviewContinuation,
   DashboardPracticeContinuation
-} from "@/lib/dashboard/dashboard-overview";
+} from "@/features/dashboard/contracts/dashboard-overview";
 import { DashboardScoreRing } from "./dashboard-score-ring";
 
-export function DashboardSecondRow({ data }: { data: DashboardContinuation }) {
+export function ContinuationSection({ data }: { data: DashboardContinuation }) {
   return (
     <section
       aria-label="Continue preparing"

@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import { auth } from "@clerk/nextjs/server";
 import { ManageSkeleton } from "@/components/workspace/account/manage-skeleton";
-import { DashboardSkeleton } from "@/components/workspace/dashboard/dashboard-skeleton";
-import { MayaWelcomeLoading } from "@/components/workspace/dashboard/maya-welcome-loading";
+import { DashboardSkeleton } from "@/features/dashboard/ui/overview/dashboard-skeleton";
+import { PreparationWelcomeLoading } from "@/features/preparation-onboarding/ui/preparation-welcome-loading";
 import { HelpHubSkeleton } from "@/components/workspace/help/help-hub-skeleton";
 import { InterviewsSkeleton } from "@/components/workspace/interviews/interviews-skeleton";
 import {
@@ -32,7 +32,7 @@ export default async function RootLoading() {
   const workspaceHome =
     pathname === "/" && !welcomeHome && clerkEnabled && Boolean((await auth()).userId);
 
-  if (welcomeHome) return <MayaWelcomeLoading />;
+  if (welcomeHome) return <PreparationWelcomeLoading />;
 
   if (workspaceHome) return <DashboardSkeleton />;
 

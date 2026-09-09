@@ -5,8 +5,8 @@ import {
   ARCHITECTURE_QUESTION_BANK,
   architectureQuestion,
   type ArchitectureQuestion
-} from "@/lib/preparation/architecture-question-bank";
-import type { BaselineQuestion } from "@/lib/preparation/preparation-onboarding";
+} from "@/features/preparation-onboarding/domain/architecture-question-bank";
+import type { BaselineQuestion } from "@/features/preparation-onboarding/domain/preparation-onboarding";
 
 export type ArchitectureDesignBaselineRegistryEntry = Readonly<{
   registryVersion: typeof ARCHITECTURE_DESIGN_BASELINE_REGISTRY_VERSION;

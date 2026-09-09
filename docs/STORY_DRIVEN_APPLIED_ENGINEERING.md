@@ -476,7 +476,7 @@ packet.
 7. Read the existing Applied Engineering inputs:
    - `src/lib/roadmap/frontend-plan.ts`
    - `src/server/interview/personalized-plan-generator.ts`
-   - `src/server/preparation/preparation-onboarding-state.ts`
+   - `src/features/preparation-onboarding/server/preparation-onboarding-state.ts`
 8. Read the nearest Core Technical tests for the build step being implemented before changing code.
 
 After reading, the AI should summarize the current request path, the exact Core Technical files it

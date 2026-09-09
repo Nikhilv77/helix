@@ -58,7 +58,6 @@ export function ReportMayaAvatar({
           personaId={personaId}
         />
       </div>
-      {transparent ? <div aria-hidden className="report-maya-bottom-soften" /> : null}
       {!transparent ? (
         <>
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-24 bg-gradient-to-t from-[#151619] via-[#151619]/84 to-transparent" />

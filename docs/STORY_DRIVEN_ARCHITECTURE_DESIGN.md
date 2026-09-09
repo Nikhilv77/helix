@@ -118,12 +118,12 @@ facts. Practice focus is always rebuilt on the server from the owner-scoped prof
 
 After profile onboarding, the signed-in home page blocks access until Maya's preparation onboarding
 is complete. The entry decision is in `src/app/(marketing)/page.tsx`; the UI is in
-`src/components/workspace/dashboard/maya-welcome.tsx`; persistence is handled by:
+`src/features/preparation-onboarding/ui/preparation-welcome.tsx`; persistence is handled by:
 
 - `src/app/api/preparation-onboarding/route.ts`
-- `src/server/preparation/preparation-onboarding.service.ts`
-- `src/server/preparation/preparation-onboarding-state.ts`
-- `src/lib/preparation/preparation-onboarding.ts`
+- `src/features/preparation-onboarding/server/preparation-onboarding.service.ts`
+- `src/features/preparation-onboarding/server/preparation-onboarding-state.ts`
+- `src/features/preparation-onboarding/domain/preparation-onboarding.ts`
 
 The target stages are:
 
@@ -139,8 +139,8 @@ Architecture sections.
 
 The final section is `architecture`, selected from:
 
-- `src/lib/preparation/architecture-question-bank.ts`; or
-- `src/lib/preparation/ai-ml-architecture-question-bank.ts` for AI/ML.
+- `src/features/preparation-onboarding/domain/architecture-question-bank.ts`; or
+- `src/features/preparation-onboarding/domain/ai-ml-architecture-question-bank.ts` for AI/ML.
 
 Assignment IDs and immutable private question snapshots are persisted in
 `PreparationBaselineQuestion`. A resume refresh does not change a resumed assignment. Options are
@@ -1018,14 +1018,14 @@ status and ask it to read in the following order.
    - `src/server/profile/profile.service.ts`
 6. Preparation onboarding and Architecture evidence source:
    - `src/app/(marketing)/page.tsx`
-   - `src/components/workspace/dashboard/maya-welcome.tsx`
+   - `src/features/preparation-onboarding/ui/preparation-welcome.tsx`
    - `src/app/api/preparation-onboarding/route.ts`
-   - `src/lib/preparation/preparation-onboarding.ts`
-   - `src/lib/preparation/preparation-areas.ts`
-   - `src/lib/preparation/architecture-question-bank.ts`
-   - `src/lib/preparation/ai-ml-architecture-question-bank.ts`
-   - `src/server/preparation/preparation-onboarding-state.ts`
-   - `src/server/preparation/preparation-onboarding.service.ts`
+   - `src/features/preparation-onboarding/domain/preparation-onboarding.ts`
+   - `src/features/preparation-onboarding/domain/preparation-areas.ts`
+   - `src/features/preparation-onboarding/domain/architecture-question-bank.ts`
+   - `src/features/preparation-onboarding/domain/ai-ml-architecture-question-bank.ts`
+   - `src/features/preparation-onboarding/server/preparation-onboarding-state.ts`
+   - `src/features/preparation-onboarding/server/preparation-onboarding.service.ts`
 7. Practice entry:
    - `src/app/practice/page.tsx`
    - `src/lib/practice/practice-roadmap.ts`

@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { DashboardOverviewData } from "@/lib/dashboard/dashboard-overview";
+import type { DashboardOverviewData } from "@/features/dashboard/contracts/dashboard-overview";
 
 const voiceMocks = vi.hoisted(() => ({
   speak: vi.fn().mockResolvedValue("started"),
@@ -32,7 +32,7 @@ vi.mock("@/lib/voice/use-maya-voice", () => ({
   })
 }));
 
-import { DashboardFirstRow } from "./dashboard-first-row";
+import { CoachingReadinessSection } from "./coaching-readiness-section";
 
 const data: Pick<DashboardOverviewData, "coaching" | "readiness"> = {
   coaching: {
@@ -56,14 +56,14 @@ const data: Pick<DashboardOverviewData, "coaching" | "readiness"> = {
   }
 };
 
-describe("DashboardFirstRow", () => {
+describe("CoachingReadinessSection", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
   });
 
   it("merges the teacher and coaching into one feature beside readiness", () => {
-    render(<DashboardFirstRow data={data} />);
+    render(<CoachingReadinessSection data={data} />);
 
     expect(screen.getAllByRole("article")).toHaveLength(2);
     expect(screen.getByRole("article", { name: "Teacher coaching" })).toBeTruthy();
@@ -86,7 +86,7 @@ describe("DashboardFirstRow", () => {
 
   it("renders a forming state without displaying a fabricated zero", () => {
     render(
-      <DashboardFirstRow
+      <CoachingReadinessSection
         data={{
           ...data,
           readiness: {
@@ -112,7 +112,7 @@ describe("DashboardFirstRow", () => {
   });
 
   it("waits for the candidate to request the teacher voice", () => {
-    render(<DashboardFirstRow data={data} />);
+    render(<CoachingReadinessSection data={data} />);
 
     expect(voiceMocks.speak).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Play teacher summary" }));

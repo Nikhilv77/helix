@@ -6,7 +6,7 @@ import {
 import {
   baselineQuestion,
   type BaselineQuestion
-} from "@/lib/preparation/preparation-onboarding";
+} from "@/features/preparation-onboarding/domain/preparation-onboarding";
 
 type BaselineSection = (typeof CORE_TECHNICAL_BASELINE_SECTIONS)[number];
 

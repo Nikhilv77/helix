@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { BaselineQuestion } from "@/lib/preparation/preparation-onboarding";
+import type { BaselineQuestion } from "@/features/preparation-onboarding/domain/preparation-onboarding";
 import { initialPreparationOnboardingState, startBaseline } from "./preparation-onboarding-state";
 import { PreparationOnboardingService } from "./preparation-onboarding.service";
 

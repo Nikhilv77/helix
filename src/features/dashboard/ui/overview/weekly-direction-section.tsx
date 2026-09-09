@@ -6,9 +6,9 @@ import type {
   DashboardDirection,
   DashboardNextFocus,
   DashboardWeeklyRhythm
-} from "@/lib/dashboard/dashboard-overview";
+} from "@/features/dashboard/contracts/dashboard-overview";
 
-export function DashboardFourthRow({ data }: { data: DashboardDirection }) {
+export function WeeklyDirectionSection({ data }: { data: DashboardDirection }) {
   return (
     <section
       aria-label="Weekly direction"

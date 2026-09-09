@@ -36,7 +36,7 @@ import {
 } from "@/features/onboarding/server/resume/technology-detector";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import { signResumePreview } from "@/server/profile/resume-preview-token";
-import { initialPreparationOnboardingState } from "@/server/preparation/preparation-onboarding-state";
+import { initialPreparationOnboardingState } from "@/features/preparation-onboarding/server/preparation-onboarding-state";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

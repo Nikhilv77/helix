@@ -3,17 +3,17 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { MarketingHome } from "@/features/marketing/ui/home/marketing-home";
-import { Dashboard } from "@/components/workspace/dashboard/dashboard";
-import { DashboardSkeleton } from "@/components/workspace/dashboard/dashboard-skeleton";
-import { MayaWelcomeLoading } from "@/components/workspace/dashboard/maya-welcome-loading";
+import { DashboardOverview } from "@/features/dashboard/ui/overview/dashboard-overview";
+import { DashboardSkeleton } from "@/features/dashboard/ui/overview/dashboard-skeleton";
+import { PreparationWelcomeLoading } from "@/features/preparation-onboarding/ui/preparation-welcome-loading";
+import { PreparationWelcomeScreen } from "@/features/preparation-onboarding/ui/preparation-welcome-screen";
 import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
-import { buildDashboardOverview } from "@/lib/dashboard/dashboard-overview";
-import { mergeDashboardPractice } from "@/lib/practice/core-technical/workspace-analytics";
+import { loadDashboardOverview } from "@/features/dashboard/server/load-dashboard-overview";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared/seo";
 import type { CandidateProfile } from "@/lib/shared/types";
-import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/server/interview/owner";
 import { getProfileForRequest } from "@/server/profile/profile-query";
+import { resolveHomeSurface } from "./home-route-state";
 
 const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
@@ -69,16 +69,27 @@ export default async function HomePage({
     redirect("/onboarding");
   }
 
-  if (!profile.onboardingCompletedAt) redirect("/onboarding");
+  const onboardingSurface = resolveHomeSurface({
+    clerkEnabled,
+    userId,
+    profile,
+    welcomeRequested: false
+  });
+  if (onboardingSurface === "onboarding") redirect("/onboarding");
 
   const query = await searchParams;
   const welcomePersona = welcomePersonaFromQuery(
     typeof query.welcome === "string" ? query.welcome : null
   );
   const preparationRequired = profile.preparationOnboarding.completedAt === null;
-  const showMayaWelcome = preparationRequired || welcomePersona !== null;
+  const surface = resolveHomeSurface({
+    clerkEnabled,
+    userId,
+    profile,
+    welcomeRequested: welcomePersona !== null
+  });
 
-  if (!showMayaWelcome) {
+  if (surface === "overview") {
     return (
       <Suspense fallback={<DashboardSkeleton />}>
         <DashboardOverviewHome userId={userId} profile={profile} />
@@ -87,8 +98,8 @@ export default async function HomePage({
   }
 
   return (
-    <Suspense fallback={<MayaWelcomeLoading />}>
-      <MayaWelcomeHome profile={profile} blocking={preparationRequired} />
+    <Suspense fallback={<PreparationWelcomeLoading />}>
+      <PreparationWelcomeScreen profile={profile} blocking={preparationRequired} />
     </Suspense>
   );
 }
@@ -101,31 +112,10 @@ async function DashboardOverviewHome({
   profile: CandidateProfile;
 }) {
   const ownerId = authenticatedOwnerId(userId);
-  const container = getAppContainer();
   const now = Date.now();
-  const coreRoundsPromise = container.coreTechnicalWorkspaceAnalyticsService
-    .rounds(ownerId)
-    .catch(() => ({ history: [], reports: [] }));
-  const [reports, practice, corePractice, trailmate] = await Promise.all([
-    coreRoundsPromise.then((core) =>
-      container.interviewService.reportsOverview(ownerId, 50, now, core.reports).catch(() => null)
-    ),
-    container.progressService.dashboard(ownerId).catch(() => null),
-    container.coreTechnicalWorkspaceAnalyticsService.practice(ownerId, 126).catch(() => null),
-    container.helpHistoryService.dashboardOverview(ownerId).catch(() => null)
-  ]);
-  const combinedPractice = corePractice ? mergeDashboardPractice(practice, corePractice) : practice;
+  const overviewData = await loadDashboardOverview({ ownerId, profile, now });
 
-  return (
-    <Dashboard
-      profile={profile}
-      overviewData={buildDashboardOverview(profile, reports, combinedPractice, now, trailmate)}
-    />
-  );
-}
-
-function MayaWelcomeHome({ profile, blocking }: { profile: CandidateProfile; blocking: boolean }) {
-  return <Dashboard profile={profile} showMayaWelcome welcomeBlocking={blocking} />;
+  return <DashboardOverview overviewData={overviewData} />;
 }
 
 function SoftwareJsonLd() {

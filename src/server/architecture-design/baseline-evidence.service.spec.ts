@@ -6,8 +6,8 @@ import {
 import {
   architectureQuestion,
   type ArchitectureQuestion
-} from "@/lib/preparation/architecture-question-bank";
-import type { BaselineQuestion } from "@/lib/preparation/preparation-onboarding";
+} from "@/features/preparation-onboarding/domain/architecture-question-bank";
+import type { BaselineQuestion } from "@/features/preparation-onboarding/domain/preparation-onboarding";
 import {
   ARCHITECTURE_DESIGN_BASELINE_EVIDENCE_REGISTRY,
   fingerprintArchitectureDesignBaselineQuestion

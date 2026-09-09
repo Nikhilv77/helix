@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { DSA_QUESTION_BANK, dsaQuestionMeta } from "@/lib/preparation/dsa-question-bank";
-import { APPLIED_ENGINEERING_QUESTION_BANK } from "@/lib/preparation/applied-engineering-question-bank";
-import { ARCHITECTURE_QUESTION_BANK } from "@/lib/preparation/architecture-question-bank";
-import { AI_ML_APPLIED_ENGINEERING_QUESTION_BANK } from "@/lib/preparation/ai-ml-applied-engineering-question-bank";
-import { AI_ML_ARCHITECTURE_QUESTION_BANK } from "@/lib/preparation/ai-ml-architecture-question-bank";
+import { DSA_QUESTION_BANK, dsaQuestionMeta } from "@/features/preparation-onboarding/domain/dsa-question-bank";
+import { APPLIED_ENGINEERING_QUESTION_BANK } from "@/features/preparation-onboarding/domain/applied-engineering-question-bank";
+import { ARCHITECTURE_QUESTION_BANK } from "@/features/preparation-onboarding/domain/architecture-question-bank";
+import { AI_ML_APPLIED_ENGINEERING_QUESTION_BANK } from "@/features/preparation-onboarding/domain/ai-ml-applied-engineering-question-bank";
+import { AI_ML_ARCHITECTURE_QUESTION_BANK } from "@/features/preparation-onboarding/domain/ai-ml-architecture-question-bank";
 import {
   baselineQuestion,
   CORE_TECHNICAL_QUESTION_COUNTS,
   selectBaselineQuestionIds
-} from "@/lib/preparation/preparation-onboarding";
+} from "@/features/preparation-onboarding/domain/preparation-onboarding";
 import {
   initialPreparationOnboardingState,
   publicPreparationOnboardingState,

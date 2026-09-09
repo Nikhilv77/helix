@@ -8,7 +8,7 @@ import {
 import {
   baselineQuestion,
   type BaselineQuestion
-} from "@/lib/preparation/preparation-onboarding";
+} from "@/features/preparation-onboarding/domain/preparation-onboarding";
 import {
   CORE_TECHNICAL_BASELINE_EVIDENCE_REGISTRY,
   fingerprintCoreTechnicalBaselineQuestion

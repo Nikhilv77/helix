@@ -1,10 +1,10 @@
 import { Prisma } from "@prisma/client";
-import { BASELINE_STAGE_BY_SECTION, baselineQuestion } from "@/lib/preparation/preparation-onboarding";
+import { BASELINE_STAGE_BY_SECTION, baselineQuestion } from "@/features/preparation-onboarding/domain/preparation-onboarding";
 import type {
   BaselineSection,
   PreparationOnboardingStage,
   PreparationOnboardingState
-} from "@/lib/preparation/preparation-onboarding";
+} from "@/features/preparation-onboarding/domain/preparation-onboarding";
 import type { Level, Role } from "@/lib/shared/types";
 import { ConflictErrorException } from "@/server/common/exceptions/conflict-error.exception";
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";

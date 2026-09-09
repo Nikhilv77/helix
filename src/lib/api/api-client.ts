@@ -16,7 +16,7 @@ import type {
   BaselineSection,
   PreparationOnboardingStage,
   PreparationOnboardingState
-} from "../preparation/preparation-onboarding";
+} from "@/features/preparation-onboarding/domain/preparation-onboarding";
 import type { PersonalizedInterviewPlan } from "../interviews/personalized-plan";
 import type { WorkspaceSearchResponse } from "../search/workspace-search";
 

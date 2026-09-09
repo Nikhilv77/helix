@@ -3,7 +3,7 @@ import type { ReportsOverview } from "@/lib/reports/reports";
 import type { ProgressOverview } from "@/lib/roadmap/progress";
 import type { HelpDashboardOverview } from "@/lib/help/help-history";
 import type { CandidateProfile } from "@/lib/shared/types";
-import { buildDashboardOverview } from "./dashboard-overview";
+import { buildDashboardOverview } from "./build-dashboard-overview";
 
 const NOW = Date.UTC(2026, 7, 28, 12);
 
