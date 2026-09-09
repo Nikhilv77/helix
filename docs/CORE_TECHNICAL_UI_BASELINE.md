@@ -6,17 +6,17 @@ from inventing a second visual system or client-owned lifecycle.
 
 ## DSA source of truth
 
-| Surface              | Source                                                         | Required treatment                                                                                                 |
-| -------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Practice card        | `src/components/workspace/practice/practice-sessions-view.tsx` | `max-w-[92rem]` page, `rounded-[2rem]` session card, shared icon tile, pills, action alignment, focus ring         |
-| Practice page        | `src/app/practice/dsa/page.tsx`                                | `max-w-[86rem]`, `px-4/sm:px-7/lg:px-8`, back control, dynamic server read                                         |
-| Story/path shell     | `src/components/workspace/dsa/dsa-topics.tsx`                  | main + `17rem` sticky coach grid, `gap-7`, `xl:gap-x-14`, `#141619` hero, `#17181b` path, `#111214` rows           |
-| Progress and history | `src/components/workspace/dsa/dsa-topics.tsx`                  | thin accent progress, URL-selected block, previous/next controls, explicit current/completed label                 |
-| Question page        | `src/app/dsa-questions/[slug]/page.tsx`                        | responsive question/workspace composition, back navigation, server-owned question selection                        |
-| Question workspace   | `src/components/workspace/dsa/dsa-question-workspace.tsx`      | `#101214` bordered workspace, `#141619` toolbars, 9–11px radii, 36–44px controls, pending/error/test-result states |
-| Code editor          | `src/components/interview/dsa/dsa-code-editor.tsx`             | shared Monaco theme, keyboard Run action, visible selection/cursor, responsive automatic layout, read-only mode    |
-| Assessment preview   | `src/components/workspace/dsa/block-assessment-preview.tsx`    | `rounded-[1.15rem]`, subtle white border and inset highlight, locked/ready/completed semantics                     |
-| Loading              | `src/components/workspace/practice/practice-skeleton.tsx`      | page-shaped DSA skeleton at both breakpoints                                                                       |
+| Surface              | Source                                                       | Required treatment                                                                                                 |
+| -------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Practice card        | `src/features/practice/shared/ui/practice-sessions-view.tsx` | `max-w-[92rem]` page, `rounded-[2rem]` session card, shared icon tile, pills, action alignment, focus ring         |
+| Practice page        | `src/app/practice/dsa/page.tsx`                              | `max-w-[86rem]`, `px-4/sm:px-7/lg:px-8`, back control, dynamic server read                                         |
+| Story/path shell     | `src/features/practice/dsa/ui/dsa-topics.tsx`                | main + `17rem` sticky coach grid, `gap-7`, `xl:gap-x-14`, `#141619` hero, `#17181b` path, `#111214` rows           |
+| Progress and history | `src/features/practice/dsa/ui/dsa-topics.tsx`                | thin accent progress, URL-selected block, previous/next controls, explicit current/completed label                 |
+| Question page        | `src/app/dsa-questions/[slug]/page.tsx`                      | responsive question/workspace composition, back navigation, server-owned question selection                        |
+| Question workspace   | `src/features/practice/dsa/ui/dsa-question-workspace.tsx`    | `#101214` bordered workspace, `#141619` toolbars, 9–11px radii, 36–44px controls, pending/error/test-result states |
+| Code editor          | `src/features/interviews/ui/dsa/dsa-code-editor.tsx`         | shared Monaco theme, keyboard Run action, visible selection/cursor, responsive automatic layout, read-only mode    |
+| Assessment preview   | `src/features/practice/dsa/ui/block-assessment-preview.tsx`  | `rounded-[1.15rem]`, subtle white border and inset highlight, locked/ready/completed semantics                     |
+| Loading              | `src/features/practice/shared/ui/practice-skeleton.tsx`      | page-shaped DSA skeleton at both breakpoints                                                                       |
 
 Core Technical reuses these existing values and states directly. New Tailwind values or shared
 primitive extraction require a DSA regression check. DSA files must not be changed merely to make
@@ -43,7 +43,7 @@ Core Technical easier to style.
 | Continue failure                                     | Current report with Retry                      | Replay continuation request                    |
 | Historical block                                     | Snapshot-only story/report                     | Navigate history; no mutations                 |
 
-The exhaustive mapping lives in `src/lib/practice/core-technical/ui-state.ts`. Components do not
+The exhaustive mapping lives in `src/features/practice/core-technical/domain/ui-state.ts`. Components do not
 calculate scores, unlock assessments, complete code questions, select stories, or infer publication
 eligibility.
 

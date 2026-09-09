@@ -3,7 +3,7 @@ import {
   normalizeSkill,
   type NormalizedSkill,
   type SkillDefinition
-} from "@/server/interview/candidate-profile-compiler";
+} from "@/features/interviews/server/candidate-profile-compiler";
 
 const TECHNOLOGY_SECTION =
   /^(?:technical\s+)?(?:skills?|technologies|tech(?:nology)?\s+stack|programming\s+languages?|frameworks?|databases?|tools?)(?:\s*:.*)?$/i;

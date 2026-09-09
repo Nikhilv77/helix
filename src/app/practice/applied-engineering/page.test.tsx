@@ -14,10 +14,10 @@ vi.mock("@/server/app-container", () => ({
     appliedEngineeringHistoryService: { list: mocks.historyList, read: mocks.historyRead }
   })
 }));
-vi.mock("@/components/workspace/applied-engineering/applied-engineering-overview", () => ({
+vi.mock("@/features/practice/applied-engineering/ui/applied-engineering-overview", () => ({
   AppliedEngineeringOverview: ({ block, history }: { block: { id: string }; history: { totalBlocks: number } }) => <div data-testid="incident" data-block={block.id} data-total={history.totalBlocks} />
 }));
-vi.mock("@/components/workspace/applied-engineering/applied-engineering-preparation", () => ({
+vi.mock("@/features/practice/applied-engineering/ui/applied-engineering-preparation", () => ({
   AppliedEngineeringPreparation: () => <div data-testid="preparation" />
 }));
 

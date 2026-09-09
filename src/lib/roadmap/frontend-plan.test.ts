@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dsaPhases } from "@/lib/dsa/dsa";
+import { dsaPhases } from "@/features/practice/dsa/domain/dsa";
 import { buildFrontendDsaPlan, buildFullDsaPlan, type PlanQuestion } from "./frontend-plan";
 
 function bank(): PlanQuestion[] {

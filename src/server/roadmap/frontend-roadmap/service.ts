@@ -8,7 +8,7 @@ import {
   PracticeSessionAvailability,
   UserRoadmapStatus
 } from "@prisma/client";
-import { PRACTICE_KEY_BY_TEMPLATE_SLUG } from "@/lib/practice/practice-roadmap";
+import { PRACTICE_KEY_BY_TEMPLATE_SLUG } from "@/features/practice/shared/domain/practice-roadmap";
 import type {
   FrontendRoadmapChapter,
   FrontendRoadmapChapterDetail,
@@ -16,7 +16,7 @@ import type {
   FrontendRoadmapSession
 } from "@/lib/roadmap/roadmap";
 import type { PrismaService } from "../../database/prisma.service";
-import type { CodeRunnerLanguage } from "../../dsa/code-test-harness";
+import type { CodeRunnerLanguage } from "@/features/practice/dsa/server/code-test-harness";
 import { dsaChapterIdForPattern } from "@/lib/roadmap/frontend-plan";
 import { attemptStatus, normalizedScore, questionStatusAfterAction } from "./question-actions";
 import { buildPersonalization } from "./personalization";

@@ -46,17 +46,17 @@ or source was present.
 
 Automated coverage complements the screenshots:
 
-- `src/server/core-technical/ui-integration.spec.ts` covers fail-closed eligibility, direct mutation
+- `src/features/practice/core-technical/server/ui-integration.spec.ts` covers fail-closed eligibility, direct mutation
   refusal, exhaustive lifecycle mapping, resumable entry, and ordinal history navigation.
-- `src/components/workspace/core-technical/core-technical-preparation.test.tsx` covers duplicate
+- `src/features/practice/core-technical/ui/core-technical-preparation.test.tsx` covers duplicate
   clicks and stable preparation request IDs across failure/retry.
-- `src/components/workspace/core-technical/core-technical-overview.test.tsx` covers public focus,
+- `src/features/practice/core-technical/ui/core-technical-overview.test.tsx` covers public focus,
   story selection, terminal distinctions, progress, current continuation, and historical read-only
   navigation.
-- `src/components/workspace/core-technical/core-technical-question-workspace.test.tsx` renders and
+- `src/features/practice/core-technical/ui/core-technical-question-workspace.test.tsx` renders and
   completes all eight formats through the Step 12 paths, then covers draft/hint/attempt/Learn,
   accepted exact-code binding, feedback, evaluator failure, and stable retry identity.
-- `src/components/workspace/core-technical/core-technical-assessment.test.tsx` covers lock/readiness,
+- `src/features/practice/core-technical/ui/core-technical-assessment.test.tsx` covers lock/readiness,
   all five prompt kinds, accessible validation/focus, start/finalize replay behavior, restored
   `FINALIZING`, every report section, safe transcript, historical read-only mode, and one stable
   Continue failure/success handoff.

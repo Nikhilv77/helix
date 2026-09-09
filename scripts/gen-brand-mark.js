@@ -10,7 +10,7 @@ const fs = require("fs");
 const zlib = require("zlib");
 
 const SRC = "public/brand/logo-transparent.png";
-const OUT = "src/lib/reports/report-brand-mark.ts";
+const OUT = "src/features/reports/application/report-brand-mark.ts";
 const TARGET = 96;
 const BG = [54, 87, 180]; // #3657b4
 
@@ -56,12 +56,23 @@ function unfilter(raw, width, height, channels, bitDepth) {
       const upLeft = prior && x >= bpp ? prior[x - bpp] : 0;
       let value;
       switch (filter) {
-        case 0: value = rawByte; break;
-        case 1: value = rawByte + left; break;
-        case 2: value = rawByte + up; break;
-        case 3: value = rawByte + ((left + up) >> 1); break;
-        case 4: value = rawByte + paeth(left, up, upLeft); break;
-        default: throw new Error(`unsupported filter ${filter}`);
+        case 0:
+          value = rawByte;
+          break;
+        case 1:
+          value = rawByte + left;
+          break;
+        case 2:
+          value = rawByte + up;
+          break;
+        case 3:
+          value = rawByte + ((left + up) >> 1);
+          break;
+        case 4:
+          value = rawByte + paeth(left, up, upLeft);
+          break;
+        default:
+          throw new Error(`unsupported filter ${filter}`);
       }
       target[x] = value & 0xff;
     }
@@ -88,7 +99,9 @@ const palette = chunks.find((chunk) => chunk.type === "PLTE")?.data ?? null;
 const transparency = chunks.find((chunk) => chunk.type === "tRNS")?.data ?? null;
 if (colorType === 3 && !palette) throw new Error("palette png without PLTE");
 
-const idat = Buffer.concat(chunks.filter((chunk) => chunk.type === "IDAT").map((chunk) => chunk.data));
+const idat = Buffer.concat(
+  chunks.filter((chunk) => chunk.type === "IDAT").map((chunk) => chunk.data)
+);
 const pixels = unfilter(zlib.inflateSync(idat), width, height, channels, bitDepth);
 const stride = Math.ceil((width * channels * bitDepth) / 8);
 
@@ -107,7 +120,8 @@ function sample(x, y) {
     ];
   }
   const index = y * stride + x * channels;
-  if (colorType === 6) return [pixels[index], pixels[index + 1], pixels[index + 2], pixels[index + 3]];
+  if (colorType === 6)
+    return [pixels[index], pixels[index + 1], pixels[index + 2], pixels[index + 3]];
   if (colorType === 2) return [pixels[index], pixels[index + 1], pixels[index + 2], 255];
   if (colorType === 4) return [pixels[index], pixels[index], pixels[index], pixels[index + 1]];
   return [pixels[index], pixels[index], pixels[index], 255];
@@ -167,4 +181,6 @@ ${wrapped}
 `
 );
 
-console.log(`png ${width}x${height} colorType=${colorType} -> ${TARGET}px, hex ${hex.length} chars`);
+console.log(
+  `png ${width}x${height} colorType=${colorType} -> ${TARGET}px, hex ${hex.length} chars`
+);

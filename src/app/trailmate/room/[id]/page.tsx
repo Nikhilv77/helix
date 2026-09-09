@@ -1,7 +1,7 @@
 import { privatePageMetadata } from "@/lib/shared/seo";
-import { HelpRoom } from "@/components/workspace/help/help-room";
+import { HelpRoom } from "@/features/peer-help/ui/help-room";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
-import { safePeerHelpReturnTo } from "@/lib/help/help-room-navigation";
+import { safePeerHelpReturnTo } from "@/features/peer-help/domain/help-room-navigation";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(

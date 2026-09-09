@@ -1,15 +1,15 @@
 import "dotenv/config";
 
-import followOperationArtifact from "../src/lib/practice/core-technical/generated/follow-operation-guided-benchmark.json";
-import operationFailsHalfwayArtifact from "../src/lib/practice/core-technical/generated/operation-fails-halfway-standard-benchmark.json";
-import { NODEJS_CORE_TECHNICAL_GOLD_CASES } from "../src/lib/practice/core-technical/gold-cases";
-import { auditCoreTechnicalGoldCases } from "../src/lib/practice/core-technical/gold-case-audit";
-import { NODEJS_CORE_TECHNICAL_DOMAIN_MAP } from "../src/lib/practice/core-technical/domain-map";
-import { NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS } from "../src/lib/practice/core-technical/interview-patterns";
-import { coreTechnicalStoryReviewArtifactSchema } from "../src/lib/practice/core-technical/review-artifact-contracts";
-import { NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE } from "../src/lib/practice/core-technical/story-ranking-catalogue";
+import followOperationArtifact from "../src/features/practice/core-technical/domain/generated/follow-operation-guided-benchmark.json";
+import operationFailsHalfwayArtifact from "../src/features/practice/core-technical/domain/generated/operation-fails-halfway-standard-benchmark.json";
+import { NODEJS_CORE_TECHNICAL_GOLD_CASES } from "../src/features/practice/core-technical/domain/gold-cases";
+import { auditCoreTechnicalGoldCases } from "../src/features/practice/core-technical/domain/gold-case-audit";
+import { NODEJS_CORE_TECHNICAL_DOMAIN_MAP } from "../src/features/practice/core-technical/domain/domain-map";
+import { NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS } from "../src/features/practice/core-technical/domain/interview-patterns";
+import { coreTechnicalStoryReviewArtifactSchema } from "../src/features/practice/core-technical/domain/review-artifact-contracts";
+import { NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE } from "../src/features/practice/core-technical/domain/story-ranking-catalogue";
 import { PrismaService } from "../src/server/database/prisma.service";
-import { CoreTechnicalPersistenceService } from "../src/server/core-technical/persistence.service";
+import { CoreTechnicalPersistenceService } from "../src/features/practice/core-technical/server/persistence.service";
 
 const artifacts = [followOperationArtifact, operationFailsHalfwayArtifact].map((artifact) =>
   coreTechnicalStoryReviewArtifactSchema.parse(artifact)

@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import type { DashboardOverviewData } from "@/features/dashboard/contracts/dashboard-overview";
-import { useMayaVoice } from "@/lib/voice/use-maya-voice";
+import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
 import { DashboardScoreRing } from "./dashboard-score-ring";
 
 export function CoachingReadinessSection({

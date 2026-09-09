@@ -6,10 +6,10 @@ import { getAppContainer } from "@/server/app-container";
 import {
   HELP_HISTORY_DEFAULT_LIMIT,
   InvalidHelpHistoryCursorError
-} from "@/server/help/help-history.service";
+} from "@/features/peer-help/server/help-history.service";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

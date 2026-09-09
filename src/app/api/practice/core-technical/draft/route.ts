@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { coreTechnicalSaveDraftInputSchema } from "@/lib/practice/core-technical/practice-contracts";
+import { coreTechnicalSaveDraftInputSchema } from "@/features/practice/core-technical/domain/practice-contracts";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import { coreTechnicalMutationOwner, parseCoreTechnicalJson } from "../_shared";

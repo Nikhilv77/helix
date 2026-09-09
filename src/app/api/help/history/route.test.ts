@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: mocks.auth }));
-vi.mock("@/server/interview/owner", () => ({ authenticatedOwnerId: () => "owner-1" }));
+vi.mock("@/features/interviews/server/owner", () => ({ authenticatedOwnerId: () => "owner-1" }));
 vi.mock("@/server/app-container", () => ({
   getAppContainer: () => ({ helpHistoryService: { history: mocks.history } })
 }));

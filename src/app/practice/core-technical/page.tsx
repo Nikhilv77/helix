@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
-import { CoreTechnicalOverview } from "@/components/workspace/core-technical/core-technical-overview";
-import { CoreTechnicalPreparation } from "@/components/workspace/core-technical/core-technical-preparation";
-import { coreTechnicalHistoryNavigation } from "@/lib/practice/core-technical/ui-state";
+import { CoreTechnicalOverview } from "@/features/practice/core-technical/ui/core-technical-overview";
+import { CoreTechnicalPreparation } from "@/features/practice/core-technical/ui/core-technical-preparation";
+import { coreTechnicalHistoryNavigation } from "@/features/practice/core-technical/domain/ui-state";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";

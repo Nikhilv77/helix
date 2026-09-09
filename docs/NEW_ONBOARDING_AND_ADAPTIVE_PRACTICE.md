@@ -149,9 +149,9 @@ Core transfer coding problems remain authored. Candidate-specific code-review qu
 - `src/features/preparation-onboarding/server/preparation-onboarding.service.ts` — durable onboarding and question snapshots
 - `src/features/dashboard/application/build-dashboard-overview.ts` — dashboard state and personalized coaching copy
 - `src/lib/practice/dsa-recommendation.ts` — deterministic DSA ranking, tier, and difficulty mix
-- `src/server/dsa/stable-dsa-recommendation.ts` — saved block lifecycle
-- `src/components/workspace/dsa/dsa-topics.tsx` — recommended block and full library
-- `src/components/workspace/dsa/block-assessment-preview.tsx` — assessment preview, criteria, nudge, and notification
+- `src/features/practice/dsa/server/stable-dsa-recommendation.ts` — saved block lifecycle
+- `src/features/practice/dsa/ui/dsa-topics.tsx` — recommended block and full library
+- `src/features/practice/dsa/ui/block-assessment-preview.tsx` — assessment preview, criteria, nudge, and notification
 - `public/images/teacher-portraits/assessment-headsets/` — teacher-specific assessment portraits
 
 ## Current status

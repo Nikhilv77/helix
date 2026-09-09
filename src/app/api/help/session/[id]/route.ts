@@ -3,15 +3,15 @@ import { after } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 
-import { findQuestion } from "@/lib/dsa/dsa";
+import { findQuestion } from "@/features/practice/dsa/domain/dsa";
 import { getAppContainer, type AppContainer } from "@/server/app-container";
 import { Logger } from "@/server/common/logger";
-import { HelpRequestError } from "@/server/help/help-request.types";
-import { createHelpRoomToken } from "@/server/help/help-room-token";
+import { HelpRequestError } from "@/features/peer-help/server/help-request.types";
+import { createHelpRoomToken } from "@/features/peer-help/server/help-room-token";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
-import { authenticatedOwnerId } from "@/server/interview/owner";
-import { NotificationKind } from "@/server/notifications/notification.service";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { NotificationKind } from "@/features/notifications/server/notification.service";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";

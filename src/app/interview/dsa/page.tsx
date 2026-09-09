@@ -1,5 +1,5 @@
-import { DsaInterviewEntry } from "@/components/interview/dsa/dsa-interview-entry";
-import { OPERATION_DSA_SLUGS } from "@/lib/dsa/dsa-code-templates";
+import { DsaInterviewEntry } from "@/features/interviews/ui/dsa/dsa-interview-entry";
+import { OPERATION_DSA_SLUGS } from "@/features/practice/dsa/domain/dsa-code-templates";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";

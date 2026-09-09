@@ -1,6 +1,6 @@
 import { buildDashboardOverview } from "@/features/dashboard/application/build-dashboard-overview";
 import type { DashboardOverviewData } from "@/features/dashboard/contracts/dashboard-overview";
-import { mergeDashboardPractice } from "@/lib/practice/core-technical/workspace-analytics";
+import { mergeDashboardPractice } from "@/features/practice/core-technical/domain/workspace-analytics";
 import type { CandidateProfile } from "@/lib/shared/types";
 import { getAppContainer } from "@/server/app-container";
 

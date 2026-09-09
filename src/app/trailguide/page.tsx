@@ -1,4 +1,4 @@
-import { MentorsView } from "@/components/workspace/mentors/mentors-view";
+import { MentorsView } from "@/features/trailguide/ui/mentors-view";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 

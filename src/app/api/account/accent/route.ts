@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { WORKSPACE_ACCENTS } from "@/lib/workspace/accent";
 
 export const dynamic = "force-dynamic";

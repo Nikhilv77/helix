@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { AppliedEngineeringQuestionWorkspace } from "@/components/workspace/applied-engineering/applied-engineering-question-workspace";
+import { AppliedEngineeringQuestionWorkspace } from "@/features/practice/applied-engineering/ui/applied-engineering-question-workspace";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";

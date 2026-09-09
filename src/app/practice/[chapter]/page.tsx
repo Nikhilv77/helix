@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { ChapterSession } from "@/components/workspace/practice/chapter-session";
+import { ChapterSession } from "@/features/practice/shared/ui/chapter-session";
 import { briefBeats, buildChapterBrief } from "@/lib/roadmap/chapter-brief";
-import { findQuestion } from "@/lib/dsa/dsa";
+import { findQuestion } from "@/features/practice/dsa/domain/dsa";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";

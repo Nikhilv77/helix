@@ -11,8 +11,8 @@ import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
 import { loadDashboardOverview } from "@/features/dashboard/server/load-dashboard-overview";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared/seo";
 import type { CandidateProfile } from "@/lib/shared/types";
-import { authenticatedOwnerId } from "@/server/interview/owner";
-import { getProfileForRequest } from "@/server/profile/profile-query";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { getProfileForRequest } from "@/features/profile/server/profile-query";
 import { resolveHomeSurface } from "./home-route-state";
 
 const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);

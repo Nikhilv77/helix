@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useSyncExternalStore } from "react";
 
-import type { AvatarPerformanceProfile } from "@/components/interview/voice/avatar-stage";
+import type { AvatarPerformanceProfile } from "@/features/interviews/ui/voice/avatar-stage";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { personaById } from "@/lib/avatars/personas";
 
@@ -12,7 +12,7 @@ import { personaById } from "@/lib/avatars/personas";
  * heavy, so it loads after the shell paints and leaves a matching placeholder.
  */
 const AvatarStage = dynamic(
-  () => import("@/components/interview/voice/avatar-stage").then((module) => module.AvatarStage),
+  () => import("@/features/interviews/ui/voice/avatar-stage").then((module) => module.AvatarStage),
   {
     ssr: false,
     loading: () => <AvatarPlaceholder />
@@ -20,7 +20,7 @@ const AvatarStage = dynamic(
 );
 
 const TransparentAvatarStage = dynamic(
-  () => import("@/components/interview/voice/avatar-stage").then((module) => module.AvatarStage),
+  () => import("@/features/interviews/ui/voice/avatar-stage").then((module) => module.AvatarStage),
   {
     ssr: false,
     loading: () => null

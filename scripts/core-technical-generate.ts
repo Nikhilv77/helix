@@ -4,16 +4,16 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { ZodError } from "zod";
 
-import { NODEJS_CORE_TECHNICAL_GOLD_CASES } from "../src/lib/practice/core-technical/gold-cases";
+import { NODEJS_CORE_TECHNICAL_GOLD_CASES } from "../src/features/practice/core-technical/domain/gold-cases";
 import {
   coreTechnicalStoryReviewArtifactSchema,
   type CoreTechnicalStoryReviewArtifact
-} from "../src/lib/practice/core-technical/review-artifact-contracts";
+} from "../src/features/practice/core-technical/domain/review-artifact-contracts";
 import { getAppContainer } from "../src/server/app-container";
 
 const REVIEW_ARTIFACT_DIRECTORY = path.resolve(
   process.cwd(),
-  "src/lib/practice/core-technical/generated"
+  "src/features/practice/core-technical/domain/generated"
 );
 
 async function main(): Promise<void> {

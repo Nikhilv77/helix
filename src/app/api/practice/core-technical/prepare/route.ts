@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { coreTechnicalPrepareInputSchema } from "@/lib/practice/core-technical/practice-contracts";
+import { coreTechnicalPrepareInputSchema } from "@/features/practice/core-technical/domain/practice-contracts";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import {
   getSharedGuard,

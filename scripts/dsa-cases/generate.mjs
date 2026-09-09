@@ -31,8 +31,8 @@ import {
   buildTestCases,
   equivalent,
   materialiseArguments
-} from "../../src/server/dsa/code-test-harness";
-import { findQuestion } from "../../src/lib/dsa/dsa";
+} from "../../src/features/practice/dsa/server/code-test-harness";
+import { findQuestion } from "../../src/features/practice/dsa/domain/dsa";
 import { phase1, phase1Rest } from "./references/phase-1-arrays.mjs";
 import { phase2 } from "./references/phase-2-strings.mjs";
 import { phase3 } from "./references/phase-3-sliding-window.mjs";
@@ -45,7 +45,20 @@ import { phase9 } from "./references/phase-9-graphs.mjs";
 import { phase10 } from "./references/phase-10-dynamic-programming.mjs";
 import { phase11 } from "./references/phase-11-tries-backtracking.mjs";
 
-const REFERENCES = { ...phase1, ...phase1Rest, ...phase2, ...phase3, ...phase4, ...phase5, ...phase6, ...phase7, ...phase8, ...phase9, ...phase10, ...phase11 };
+const REFERENCES = {
+  ...phase1,
+  ...phase1Rest,
+  ...phase2,
+  ...phase3,
+  ...phase4,
+  ...phase5,
+  ...phase6,
+  ...phase7,
+  ...phase8,
+  ...phase9,
+  ...phase10,
+  ...phase11
+};
 
 const emit = process.argv.includes("--emit");
 const write = process.argv.includes("--write");
@@ -237,18 +250,19 @@ function writeCases(slug, existing, generated) {
       return `    { ${parts.join(", ")} }`;
     };
 
-    const visible = existing.map((testCase) => serialise({
-      arguments: testCase.arguments,
-      expectedValue: testCase.expectedValue,
-      mode: testCase.mode,
-      comparison: testCase.comparison,
-      build: testCase.build
-    }));
+    const visible = existing.map((testCase) =>
+      serialise({
+        arguments: testCase.arguments,
+        expectedValue: testCase.expectedValue,
+        mode: testCase.mode,
+        comparison: testCase.comparison,
+        build: testCase.build
+      })
+    );
     const hidden = generated.map(serialise);
     const comment = "    // Hidden from here on — generated from the verified reference.";
     const body =
-      visible.join(",\n") +
-      (hidden.length ? `,\n${comment}\n${hidden.join(",\n")}` : "");
+      visible.join(",\n") + (hidden.length ? `,\n${comment}\n${hidden.join(",\n")}` : "");
 
     const next = `${source.slice(0, start)}${key}\n${body}\n  ]${source.slice(i)}`;
     writeFileSync(path, next);
@@ -296,7 +310,9 @@ if (write) {
   console.log("Writing to the bank");
   for (const row of results.verified) {
     const file = writeCases(row.slug, row.existingCases, row.generated);
-    console.log(`  ${file ? "ok  " : "MISS"}  ${row.slug.padEnd(36)} ${file ?? "slug not found in any batch"}`);
+    console.log(
+      `  ${file ? "ok  " : "MISS"}  ${row.slug.padEnd(36)} ${file ?? "slug not found in any batch"}`
+    );
   }
   console.log("\nRe-run without --write to verify the new totals.\n");
 }

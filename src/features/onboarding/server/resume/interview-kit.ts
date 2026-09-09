@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { CandidateResume, Level, ResumeInterviewKit, Role } from "@/lib/shared/types";
 import type { AiService } from "@/server/ai/ai.service";
 import { Logger } from "@/server/common/logger";
-import type { ProfileService } from "@/server/profile/profile.service";
+import type { ProfileService } from "@/features/profile/server/profile.service";
 
 const SKILL_QUESTION_COUNT = 4;
 const EXPERIENCE_QUESTION_COUNT = 3;

@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { requireCompletedPreparationOnboarding } from "@/server/auth/preparation-onboarding-api-guard";
 
 export const dynamic = "force-dynamic";

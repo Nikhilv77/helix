@@ -91,13 +91,65 @@ Completed in the current cleanup slice:
 - separated the preparation screen from `DashboardOverview`, so neither feature imports the
   other's UI.
 
-The remaining Dashboard work is to split the preparation flow controller into its smaller
-responsibility modules, then complete the final stale-export, documentation, and authenticated
-browser audit.
+The stale-export and documentation audit is complete. The remaining Dashboard exit gate is the
+rest of the authenticated browser matrix. Local browser checks now cover the signed-out public
+surface, a fully onboarded desktop overview, the completed-user `?welcome=sophia` flow, and the
+adjacent Practice route.
 
 Verified with ESLint, TypeScript, 59 focused Dashboard/preparation tests, the full 1,288-passing
 test suite (8 skipped), a stale-import audit, and the production Next.js build. The build emits one
 server-rendered `/` route after the route-group move.
+
+### Search
+
+Completed:
+
+- moved the serializable Search contract from `src/lib/search` to
+  `src/features/search/contracts`;
+- moved the owner-scoped PostgreSQL search and static-destination ranking service from
+  `src/server/search` to `src/features/search/server`;
+- extracted the debounced search combobox from the workspace shell into
+  `src/features/search/ui`, including its feature-owned browser API client;
+- kept `/api/search` in `src/app` as the authentication, validation, rate-limit, and HTTP response
+  adapter; and
+- kept the shared API transport generic, so it no longer imports a Search feature contract.
+
+Verified with ESLint, TypeScript, 10 focused Search route/service/UI tests, the full test suite, the
+production Next.js build, formatting, and a stale-import audit. Search ranking, response shapes,
+keyboard behavior, URLs, and visible copy are unchanged.
+
+### Remaining product feature migrations
+
+Completed in the current cleanup slice:
+
+- consolidated Resume Roast contracts, stream orchestration, persistence/generation services, UI,
+  and tests under `src/features/resume-roast`;
+- moved Profile domain and server code to `src/features/profile`, Account UI to
+  `src/features/account`, Reports to `src/features/reports`, and Progress to
+  `src/features/progress`;
+- grouped notification delivery, preferences, maintenance, inbox UI, polling, and tests under
+  `src/features/notifications`;
+- moved Trailguide presentation to `src/features/trailguide` and Trailmate's contracts, domain
+  helpers, peer-help services, rooms, safety controls, and UI to `src/features/peer-help`;
+- consolidated interview planning, sessions, reports, setup/history/voice UI, and their tests under
+  `src/features/interviews`, while placing reusable browser voice plumbing in
+  `src/infrastructure/realtime`;
+- moved DSA catalogues, domain helpers, services, UI, and tests to
+  `src/features/practice/dsa`;
+- consolidated the neutral Story Practice contracts, lifecycle orchestration, route access,
+  evidence/roadmap projection, and UI under `src/features/practice/shared`; and
+- moved Core Technical, Applied Engineering, and Architecture Design into separate
+  `src/features/practice/<track>` domain, server, and UI boundaries.
+
+Next.js pages and route handlers remain in `src/app`. Existing URLs, response envelopes,
+authentication gates, persisted identifiers, redirects, and analytics identities were preserved.
+The widely consumed `CandidateProfile` and interview transport types remain in
+`src/lib/shared/types.ts`; splitting that public contract is a separate cross-repository migration,
+not a safe side effect of these feature moves.
+
+Verified with focused checks throughout the migration, ESLint, TypeScript, the full
+1,291-passing test suite (8 skipped), a production Next.js build, and stale source/script/document
+path audits.
 
 ## 3. What “unused” means
 
@@ -118,10 +170,10 @@ Classify every cleanup candidate before changing it:
 | Dead          | No supported runtime, data, test, script, or documentation dependency | Delete with evidence in the same PR                                         |
 | Unknown       | Ownership or reachability has not been proved                         | Do not delete; add it to the investigation ledger                           |
 
-## 4. Current repository observations
+## 4. Repository observations
 
-The application is already partly organized by capability, but each capability is split across
-several top-level trees:
+Before these migrations, the application was partly organized by capability while each capability
+was split across several top-level trees:
 
 ```text
 src/app/**                         route entry points
@@ -131,9 +183,9 @@ src/server/**                      services and persistence
 src/data/**                        static question/content data
 ```
 
-That split makes one feature difficult to understand or remove as a unit. Practice is the clearest
-example: Core Technical, Applied Engineering, and Architecture & Design each span `app`,
-`components`, `lib`, and `server`, while also depending on the shared Story Practice lifecycle.
+The implemented feature moves remove that split for the product areas tracked in Section 2. The
+remaining top-level `lib`, `server`, and `components` folders now contain shared or not-yet-migrated
+infrastructure rather than parallel copies of those feature implementations.
 
 Some similar names are intentional and must not be merged based on naming alone:
 
@@ -148,16 +200,16 @@ Some similar names are intentional and must not be merged based on naming alone:
 
 This is a starting inventory, not authorization to delete every item.
 
-| Candidate                                                                 | Current evidence                                                                                            | Classification                    | Next decision                                                                                         |
-| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `tsconfig.seed.tsbuildinfo`, `tsconfig.verify.tsbuildinfo`                | Tracked compiler caches; TypeScript can recreate them                                                       | Generated                         | Remove from Git and ignore `*.tsbuildinfo`                                                            |
-| `src/components/workspace/story-practice/story-practice-artifact.tsx`     | Re-exports the implementation from `workspace/shared`; no repository import currently targets the re-export | Duplicate/compatibility candidate | Make `story-practice` the canonical home, update the current direct imports, then remove the old path |
-| `src/app/mentors/page.tsx`                                                | Explicit redirect from an older URL to `/trailguide`                                                        | Compatibility                     | Keep until old-route traffic is below the agreed threshold and saved-link support expires             |
-| `src/app/interview/text/page.tsx`                                         | Explicit redirect to the voice room or interview setup                                                      | Compatibility                     | Measure traffic before assigning a removal date                                                       |
-| `src/app/interview/dsa/[slug]/page.tsx`                                   | Explicit redirect for old per-question interview links                                                      | Compatibility                     | Keep until traffic and external-link checks prove it is safe to remove                                |
-| DSA legacy snapshot readers and onboarding legacy-stage conversion        | Tests and comments show that they adapt old persisted records                                               | Compatibility                     | Remove only after a production data audit/backfill and a full retention window                        |
-| `output/pdf/trailgrad-report-sample.pdf`                                  | Tracked binary with no source-code reference found in the initial scan                                      | Unknown                           | Decide whether it is a maintained product fixture, documentation artifact, or generated output        |
-| Empty local directories under `src/app`, `src/components`, and `src/data` | Empty directories are not represented in Git                                                                | Local hygiene                     | Remove locally when convenient; they have no repository effect                                        |
+| Candidate                                                                 | Current evidence                                                                                         | Classification | Next decision                                                                                  |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------- | ---------------------------------------------------------------------------------------------- |
+| `tsconfig.seed.tsbuildinfo`, `tsconfig.verify.tsbuildinfo`                | Removed from Git; TypeScript can recreate them and `*.tsbuildinfo` is ignored                            | Generated      | Complete                                                                                       |
+| `src/features/practice/shared/ui/story-practice-artifact.tsx`             | Owns the canonical renderer and neutral artifact contract; the former `workspace/shared` path is removed | Canonical      | Complete                                                                                       |
+| `src/app/mentors/page.tsx`                                                | Explicit redirect from an older URL to `/trailguide`                                                     | Compatibility  | Keep until old-route traffic is below the agreed threshold and saved-link support expires      |
+| `src/app/interview/text/page.tsx`                                         | Explicit redirect to the voice room or interview setup                                                   | Compatibility  | Measure traffic before assigning a removal date                                                |
+| `src/app/interview/dsa/[slug]/page.tsx`                                   | Explicit redirect for old per-question interview links                                                   | Compatibility  | Keep until traffic and external-link checks prove it is safe to remove                         |
+| DSA legacy snapshot readers and onboarding legacy-stage conversion        | Tests and comments show that they adapt old persisted records                                            | Compatibility  | Remove only after a production data audit/backfill and a full retention window                 |
+| `output/pdf/trailgrad-report-sample.pdf`                                  | Tracked binary with no source-code reference found in the initial scan                                   | Unknown        | Decide whether it is a maintained product fixture, documentation artifact, or generated output |
+| Empty local directories under `src/app`, `src/components`, and `src/data` | Empty directories are not represented in Git                                                             | Local hygiene  | Remove locally when convenient; they have no repository effect                                 |
 
 Do not delete anything under `prisma/migrations` as part of ordinary dead-code cleanup. Applied
 migrations are historical database artifacts even when the current schema no longer exposes the
@@ -275,17 +327,17 @@ Additional rules:
 
 Use this map while relocating code. It prevents a cleanup PR from inventing a second shared area.
 
-| Existing area                                                              | Target owner                                             |
-| -------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `src/components/ui`                                                        | `src/shared/ui`                                          |
-| `src/components/workspace/<feature>`                                       | `src/features/<feature>/ui`                              |
-| `src/lib/<feature>`                                                        | `src/features/<feature>/domain` or `application`         |
-| `src/server/<feature>`                                                     | `src/features/<feature>/application` or `infrastructure` |
-| `src/server/common`, `auth`, `http`, `rate-limit`                          | `src/shared/server`                                      |
-| `src/server/ai`, `database`, `config`                                      | `src/infrastructure`                                     |
-| `src/data/dsa` and reviewed Practice catalogues                            | Owning feature's `content` folder                        |
-| `src/components/workspace/story-practice` and Story Practice orchestration | `src/features/practice/shared`                           |
-| `src/app/**`                                                               | Remains in place as thin framework adapters              |
+| Existing area                                     | Target owner                                             |
+| ------------------------------------------------- | -------------------------------------------------------- |
+| `src/components/ui`                               | `src/shared/ui`                                          |
+| `src/components/workspace/<feature>`              | `src/features/<feature>/ui`                              |
+| `src/lib/<feature>`                               | `src/features/<feature>/domain` or `application`         |
+| `src/server/<feature>`                            | `src/features/<feature>/application` or `infrastructure` |
+| `src/server/common`, `auth`, `http`, `rate-limit` | `src/shared/server`                                      |
+| `src/server/ai`, `database`, `config`             | `src/infrastructure`                                     |
+| `src/data/dsa` and reviewed Practice catalogues   | Owning feature's `content` folder                        |
+| Story Practice UI and orchestration               | `src/features/practice/shared`                           |
+| `src/app/**`                                      | Remains in place as thin framework adapters              |
 
 Do not perform this as a single repository-wide move. The target structure is reached through
 vertical, feature-sized changes.
@@ -471,19 +523,30 @@ compatibility, test against a database containing representative old and current
 Maintain this table as work proceeds. A candidate is not “Done” until both code and operational
 exit conditions are satisfied.
 
-| Area           | Candidate                                    | Class         | Evidence owner | Status      | Exit condition                                                        |
-| -------------- | -------------------------------------------- | ------------- | -------------- | ----------- | --------------------------------------------------------------------- |
-| Repository     | Tracked `*.tsbuildinfo`                      | Generated     | Engineering    | Ready       | Removed from Git; wildcard ignore added; build passes                 |
-| Marketing      | UI/content split across top-level trees      | Active move   | Engineering    | Implemented | Old Marketing import paths absent; lint, tests, and build pass        |
-| Onboarding     | UI/resume logic split across top-level trees | Active move   | Engineering    | Implemented | Old Onboarding import paths absent; focused tests and build pass      |
-| Dashboard      | Root routing, overview, and Maya flow mixed  | Active move   | Engineering    | In progress | Parts 1–8 below complete; authenticated smoke matrix passes           |
-| Story Practice | Artifact renderer re-export/path split       | Duplicate     | Practice       | Investigate | One canonical implementation and no imports from retired path         |
-| Routes         | `/mentors` redirect                          | Compatibility | Trailguide     | Measure     | Traffic/link retention rule satisfied                                 |
-| Routes         | `/interview/text` redirect                   | Compatibility | Interviews     | Measure     | Traffic/link retention rule satisfied                                 |
-| Routes         | `/interview/dsa/[slug]` redirect             | Compatibility | Interviews     | Measure     | Traffic/link retention rule satisfied                                 |
-| DSA            | Legacy practice block/snapshot adapters      | Compatibility | Practice       | Data audit  | Old records backfilled or outside supported retention window          |
-| Onboarding     | Legacy stage conversion                      | Compatibility | Onboarding     | Data audit  | No stored legacy stages remain                                        |
-| Reports        | Sample PDF in `output/`                      | Unknown       | Reports        | Decide      | Classified as maintained fixture or moved to ignored generated output |
+| Area             | Candidate                                    | Class         | Evidence owner | Status      | Exit condition                                                        |
+| ---------------- | -------------------------------------------- | ------------- | -------------- | ----------- | --------------------------------------------------------------------- |
+| Repository       | Tracked `*.tsbuildinfo`                      | Generated     | Engineering    | Implemented | Removed from Git; wildcard ignore added; build passes                 |
+| Marketing        | UI/content split across top-level trees      | Active move   | Engineering    | Implemented | Old Marketing import paths absent; lint, tests, and build pass        |
+| Onboarding       | UI/resume logic split across top-level trees | Active move   | Engineering    | Implemented | Old Onboarding import paths absent; focused tests and build pass      |
+| Search           | Contract, service, and UI split across trees | Active move   | Engineering    | Implemented | Feature paths used; route/UI tests, lint, TypeScript, and build pass  |
+| Resume Roast     | Contract, stream, server, and UI split       | Active move   | Engineering    | Implemented | Feature paths used; focused and full verification pass                |
+| Profile/Account  | Profile and account code split across trees  | Active move   | Engineering    | Implemented | Feature paths used; focused and full verification pass                |
+| Reports/Progress | Reporting and roadmap progress split         | Active move   | Engineering    | Implemented | Feature paths used; focused and full verification pass                |
+| Notifications    | Delivery services and inbox UI split         | Active move   | Engineering    | Implemented | Feature paths used; focused and full verification pass                |
+| Trailguide       | Mentor UI stored in workspace tree           | Active move   | Engineering    | Implemented | Feature path used; compatibility redirect retained                    |
+| Trailmate        | Peer-help domain, services, and UI split     | Active move   | Engineering    | Implemented | Feature paths used; 241 focused/adjacent tests pass                   |
+| Interviews       | Planning, sessions, and voice UI split       | Active move   | Engineering    | Implemented | Feature paths used; 206 focused tests and production build pass       |
+| DSA Practice     | Content, domain, services, and UI split      | Active move   | Engineering    | Implemented | Feature paths used; focused and full verification pass                |
+| Story Practice   | Shared lifecycle spread across trees         | Active move   | Practice       | Implemented | Shared domain/server/UI paths used by all story-driven tracks         |
+| Practice tracks  | Three track implementations split by layer   | Active move   | Practice       | Implemented | Separate feature boundaries; 271 focused tests and full build pass    |
+| Dashboard        | Root routing, overview, and Maya flow mixed  | Active move   | Engineering    | In progress | Parts 1–8 below complete; authenticated smoke matrix passes           |
+| Story artifact   | Artifact renderer re-export/path split       | Duplicate     | Practice       | Implemented | One canonical implementation and no imports from retired path         |
+| Routes           | `/mentors` redirect                          | Compatibility | Trailguide     | Measure     | Traffic/link retention rule satisfied                                 |
+| Routes           | `/interview/text` redirect                   | Compatibility | Interviews     | Measure     | Traffic/link retention rule satisfied                                 |
+| Routes           | `/interview/dsa/[slug]` redirect             | Compatibility | Interviews     | Measure     | Traffic/link retention rule satisfied                                 |
+| DSA              | Legacy practice block/snapshot adapters      | Compatibility | Practice       | Data audit  | Old records backfilled or outside supported retention window          |
+| Onboarding       | Legacy stage conversion                      | Compatibility | Onboarding     | Data audit  | No stored legacy stages remain                                        |
+| Reports          | Sample PDF in `output/`                      | Unknown       | Reports        | Decide      | Classified as maintained fixture or moved to ignored generated output |
 
 ### Marketing pilot record
 
@@ -516,6 +579,19 @@ The `/onboarding` migration established these ownership decisions:
   constants were removed rather than moved.
 - Preparation onboarding remains in its existing preparation-owned modules. It is the later Maya
   target/baseline flow and is not part of the `/onboarding` feature boundary.
+
+### Search migration record
+
+The Search migration established these ownership decisions:
+
+- Search result contracts live in `src/features/search/contracts`.
+- The Prisma-backed search service and its ranking tests live in `src/features/search/server`.
+- The workspace search combobox and its browser client live in `src/features/search/ui`; the
+  workspace shell only composes the feature UI.
+- The generic API request transport remains in `src/lib/api` while that shared browser
+  infrastructure awaits its own migration.
+- `/api/search` remains the thin Next.js route adapter, preserving authentication, query bounds,
+  rate limiting, and the existing response envelope.
 
 ## 11. Dashboard cleanup in parts
 
@@ -613,7 +689,7 @@ This first PR is deliberately small:
 
 Exit gate: the root route and existing Dashboard tests pass with no snapshot or visible change.
 
-### 11.4 Part 2 — Extract preparation onboarding from Dashboard — In progress
+### 11.4 Part 2 — Extract preparation onboarding from Dashboard — Complete
 
 `maya-welcome.tsx` is not dashboard presentation. It owns target selection, baseline questions,
 skill-profile explanation, voice preloading, scrolling, and completion navigation.
@@ -635,8 +711,10 @@ Exit gate: preparation onboarding can be rendered without importing anything fro
 `features/dashboard`, and its focused state/interaction tests pass.
 
 Current status: the feature boundary, imports, persistence service, domain files, and colocated
-tests have moved. The 1,352-line preparation controller still needs to be split into the listed
-target, baseline, skill-profile, voice, and presentation modules.
+tests have moved. Target setup, baseline assessment, skill-profile summary, voice lifecycle, and
+presentation timing now live in focused UI modules; the remaining preparation controller owns
+flow state, persistence calls, and modal composition. Focused preparation and root-route tests
+pass against the split modules.
 
 ### 11.5 Part 3 — Extract the authenticated Dashboard loader — Complete
 
@@ -746,7 +824,9 @@ After all consumers use the new paths:
 
 Current status: no source import uses an old Dashboard or preparation path, the old source trees
 contain no files, and repository documents that described the implementations have been updated.
-Compatibility routes and persisted baseline-stage conversion remain intentionally intact.
+Every exported Dashboard symbol has a live source or test consumer; two nested contract details
+with no external consumer are now private to the contract module. Compatibility routes and
+persisted baseline-stage conversion remain intentionally intact.
 
 Do not remove baseline legacy-stage conversion during this part. That adapter protects persisted
 records and remains governed by the production data-audit exit condition.
@@ -776,6 +856,13 @@ pnpm lint
 pnpm test
 pnpm build
 ```
+
+Current verification: the seven route decisions are covered by focused tests; successful,
+partially unavailable, and fully unavailable overview sources are covered by loader tests; and the
+Clerk-enabled signed-out Marketing surface, fully onboarded desktop overview, completed-user
+welcome flow, and adjacent Practice route render locally. The incomplete profile and preparation
+states, unavailable-source visual states, mobile layout, and reduced-motion/voice-unavailable
+browser cases remain pending; they must not be marked complete from unit coverage alone.
 
 Dashboard cleanup is complete only when all eight parts are merged, the old trees are empty, the
 root route remains server-controlled, and the authenticated browser matrix passes.

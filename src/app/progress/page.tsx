@@ -1,7 +1,7 @@
 import {
   ProgressView,
   type ProgressStarterQuestion
-} from "@/components/workspace/progress/progress-view";
+} from "@/features/progress/ui/progress-view";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";

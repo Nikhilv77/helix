@@ -1,12 +1,12 @@
 import Link from "next/link";
-import type { DsaDifficulty, DsaQuestion } from "@/lib/dsa/dsa";
+import type { DsaDifficulty, DsaQuestion } from "@/features/practice/dsa/domain/dsa";
 import {
   countByDifficulty,
   dsaPhases,
   dsaQuestionCount,
   groupByPattern,
   phaseSlug
-} from "@/lib/dsa/dsa";
+} from "@/features/practice/dsa/domain/dsa";
 import { privatePageMetadata } from "@/lib/shared/seo";
 
 /**

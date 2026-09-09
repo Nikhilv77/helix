@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { architectureDesignFocusConfirmationSchema } from "@/lib/practice/architecture-design/focus-ranking-contracts";
+import { architectureDesignFocusConfirmationSchema } from "@/features/practice/architecture-design/domain/focus-ranking-contracts";
 import { apiSuccess } from "@/server/http/api-response";
 import { RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import {

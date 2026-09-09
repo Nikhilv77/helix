@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { coreTechnicalFocusConfirmationSchema } from "@/server/core-technical/focus.service";
+import { coreTechnicalFocusConfirmationSchema } from "@/features/practice/core-technical/server/focus.service";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import {

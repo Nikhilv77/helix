@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import type { DsaQuestion } from "@/lib/dsa/dsa";
-import { auditBank, dsaQuestionCount, subPatternIndex } from "@/lib/dsa/dsa";
+import type { DsaQuestion } from "@/features/practice/dsa/domain/dsa";
+import { auditBank, dsaQuestionCount, subPatternIndex } from "@/features/practice/dsa/domain/dsa";
 import { privatePageMetadata } from "@/lib/shared/seo";
 
 /**

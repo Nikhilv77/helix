@@ -1,5 +1,5 @@
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
-import InterviewSetupClient from "./interview-setup-client";
+import InterviewSetupClient from "@/features/interviews/ui/interview-setup-client";
 
 export const dynamic = "force-dynamic";
 

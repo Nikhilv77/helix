@@ -89,16 +89,16 @@ practice -> assessment -> report -> next adaptive incident
 
 Each block is one coherent production incident, not eight unrelated questions.
 
-| Order | Stage | Candidate work | Existing UI mode |
-| --- | --- | --- | --- |
-| 1 | Symptom triage | Choose the first useful signal and reject a distraction | `choice` |
-| 2 | Evidence | Read logs, metrics, traces, a waterfall, or a query plan | `choice` or `text` |
-| 3 | Root cause | Explain the failing path and blast radius | `text` |
-| 4 | Defect | Locate the unsafe code or assumption | `choice` or `text` |
-| 5 | Repair | Implement the smallest correct Node.js change | `code` |
-| 6 | Verification | Add or repair tests for the failure mode | `code` |
-| 7 | Hardening | Add bounds, idempotency, resilience, security, or instrumentation | `text` or `code` |
-| 8 | Delivery | Define rollout, monitoring, success, and rollback | `text` |
+| Order | Stage          | Candidate work                                                    | Existing UI mode   |
+| ----- | -------------- | ----------------------------------------------------------------- | ------------------ |
+| 1     | Symptom triage | Choose the first useful signal and reject a distraction           | `choice`           |
+| 2     | Evidence       | Read logs, metrics, traces, a waterfall, or a query plan          | `choice` or `text` |
+| 3     | Root cause     | Explain the failing path and blast radius                         | `text`             |
+| 4     | Defect         | Locate the unsafe code or assumption                              | `choice` or `text` |
+| 5     | Repair         | Implement the smallest correct Node.js change                     | `code`             |
+| 6     | Verification   | Add or repair tests for the failure mode                          | `code`             |
+| 7     | Hardening      | Add bounds, idempotency, resilience, security, or instrumentation | `text` or `code`   |
+| 8     | Delivery       | Define rollout, monitoring, success, and rollback                 | `text`             |
 
 The exact order may vary when an incident requires it, but diagnosis, repair, verification, and
 safe delivery are mandatory.
@@ -231,19 +231,19 @@ question snapshots, and history that survives catalogue retirement. Add matching
 
 Mirror the current Core Technical routes:
 
-| Method | Route | Responsibility |
-| --- | --- | --- |
-| GET | `/api/practice/applied-engineering` | Read current public block |
-| POST | `/api/practice/applied-engineering/confirm` | Save focus revision |
-| POST | `/api/practice/applied-engineering/prepare` | Publish first block idempotently |
-| POST | `/api/practice/applied-engineering/draft` | Save draft |
-| POST | `/api/practice/applied-engineering/hint` | Reveal next public hint |
-| POST | `/api/practice/applied-engineering/run` | Run Node.js work |
-| POST | `/api/practice/applied-engineering/attempt` | Evaluate/persist attempt |
-| POST | `/api/practice/applied-engineering/learn` | Confirm learned state |
-| POST | `/api/practice/applied-engineering/assessment/start` | Start/resume assessment |
-| POST | `/api/practice/applied-engineering/assessment/finalize` | Persist report |
-| POST | `/api/practice/applied-engineering/continue` | Prepare next incident |
+| Method | Route                                                   | Responsibility                   |
+| ------ | ------------------------------------------------------- | -------------------------------- |
+| GET    | `/api/practice/applied-engineering`                     | Read current public block        |
+| POST   | `/api/practice/applied-engineering/confirm`             | Save focus revision              |
+| POST   | `/api/practice/applied-engineering/prepare`             | Publish first block idempotently |
+| POST   | `/api/practice/applied-engineering/draft`               | Save draft                       |
+| POST   | `/api/practice/applied-engineering/hint`                | Reveal next public hint          |
+| POST   | `/api/practice/applied-engineering/run`                 | Run Node.js work                 |
+| POST   | `/api/practice/applied-engineering/attempt`             | Evaluate/persist attempt         |
+| POST   | `/api/practice/applied-engineering/learn`               | Confirm learned state            |
+| POST   | `/api/practice/applied-engineering/assessment/start`    | Start/resume assessment          |
+| POST   | `/api/practice/applied-engineering/assessment/finalize` | Persist report                   |
+| POST   | `/api/practice/applied-engineering/continue`            | Prepare next incident            |
 
 Every mutation uses the onboarded owner, eligibility check, existing rate-limit policy, strict
 schema parsing, owner-scoped IDs, and shared API error envelope. `prepare` keeps the Core Technical
@@ -251,25 +251,25 @@ schema parsing, owner-scoped IDs, and shared API error envelope. `prepare` keeps
 
 ## 9. Code reuse map
 
-| Existing source | Required use |
-| --- | --- |
-| `src/app/practice/core-technical/**` | Add parallel server routes using shared UI shells |
-| `src/app/api/practice/core-technical/**` | Copy route shape; rename schemas, services, errors, and lease namespace |
-| `src/components/workspace/core-technical/**` | Extract stable presentation; retain separate typed wrappers |
-| `src/lib/practice/core-technical/ui-state.ts` | Copy projection first; generalize only if behavior stays identical |
-| Core Technical focus/ranking/content contracts | Reuse structure with incident and production-evidence vocabulary |
-| Core Technical preparation/practice/history/analytics | Copy orchestration against Applied Engineering persistence |
-| Core Technical Node runner/sandbox | Reuse directly |
-| Core Technical assessment/continuation | Copy lifecycle; replace blueprint, evaluator, and measures |
-| Core Technical Prisma models | Mirror into separate Applied Engineering tables |
-| `docs/CORE_TECHNICAL_UI_BASELINE.md` | Use as the visual acceptance baseline |
+| Existing source                                           | Required use                                                            |
+| --------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `src/app/practice/core-technical/**`                      | Add parallel server routes using shared UI shells                       |
+| `src/app/api/practice/core-technical/**`                  | Copy route shape; rename schemas, services, errors, and lease namespace |
+| `src/features/practice/core-technical/ui/**`              | Extract stable presentation; retain separate typed wrappers             |
+| `src/features/practice/core-technical/domain/ui-state.ts` | Copy projection first; generalize only if behavior stays identical      |
+| Core Technical focus/ranking/content contracts            | Reuse structure with incident and production-evidence vocabulary        |
+| Core Technical preparation/practice/history/analytics     | Copy orchestration against Applied Engineering persistence              |
+| Core Technical Node runner/sandbox                        | Reuse directly                                                          |
+| Core Technical assessment/continuation                    | Copy lifecycle; replace blueprint, evaluator, and measures              |
+| Core Technical Prisma models                              | Mirror into separate Applied Engineering tables                         |
+| `docs/CORE_TECHNICAL_UI_BASELINE.md`                      | Use as the visual acceptance baseline                                   |
 
 New domain code belongs under:
 
 ```text
-src/lib/practice/applied-engineering/
-src/server/applied-engineering/
-src/components/workspace/applied-engineering/
+src/features/practice/applied-engineering/domain/
+src/features/practice/applied-engineering/server/
+src/features/practice/applied-engineering/ui/
 src/app/practice/applied-engineering/
 src/app/api/practice/applied-engineering/
 ```
@@ -280,54 +280,54 @@ metrics, content catalogue, and the shared-lease namespace explicitly named
 
 ## 10. Build order
 
-| Step | Deliverable | Status |
-| --- | --- | --- |
-| 1 | Incident, question, artifact, focus, and assessment contracts | Complete |
-| 2 | Two reviewed incident artifacts plus content/privacy/executable audits | Complete — owner approval recorded 2026-09-08 |
-| 3 | Onboarding baseline, focus derivation, deterministic ranking, and eligibility | Complete — first-story recent-history exclusion added |
-| 4 | Prisma migration and owner/idempotency/atomicity tests | Complete — schema, migration, persistence service, and focused tests |
-| 5 | Runner integration, written evaluation, practice lifecycle, and history | Complete — runner adapter, evaluator, lifecycle, history, and focused tests |
-| 6 | Frozen assessment, report, adaptive continuation, and analytics | Complete — semantic evaluation, deterministic evidence caps, retry-safe continuation, and workspace analytics |
-| 7 | API routes and app-container registration | Complete — eleven authenticated routes, strict guards, distributed leases, and full service wiring |
-| 8 | Shared UI extraction, Applied Engineering wrappers, card, and server pages | Complete — shared presentation shell, typed artifacts, order-3 card, owner-safe pages, and boundaries |
-| 9 | Unit/integration/browser verification and release gate | Not started |
+| Step | Deliverable                                                                   | Status                                                                                                        |
+| ---- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| 1    | Incident, question, artifact, focus, and assessment contracts                 | Complete                                                                                                      |
+| 2    | Two reviewed incident artifacts plus content/privacy/executable audits        | Complete — owner approval recorded 2026-09-08                                                                 |
+| 3    | Onboarding baseline, focus derivation, deterministic ranking, and eligibility | Complete — first-story recent-history exclusion added                                                         |
+| 4    | Prisma migration and owner/idempotency/atomicity tests                        | Complete — schema, migration, persistence service, and focused tests                                          |
+| 5    | Runner integration, written evaluation, practice lifecycle, and history       | Complete — runner adapter, evaluator, lifecycle, history, and focused tests                                   |
+| 6    | Frozen assessment, report, adaptive continuation, and analytics               | Complete — semantic evaluation, deterministic evidence caps, retry-safe continuation, and workspace analytics |
+| 7    | API routes and app-container registration                                     | Complete — eleven authenticated routes, strict guards, distributed leases, and full service wiring            |
+| 8    | Shared UI extraction, Applied Engineering wrappers, card, and server pages    | Complete — shared presentation shell, typed artifacts, order-3 card, owner-safe pages, and boundaries         |
+| 9    | Unit/integration/browser verification and release gate                        | Not started                                                                                                   |
 
 ### Remaining-step sizing
 
-| Step | Size | Estimated new LOC | Main work |
-| --- | --- | ---: | --- |
-| 8. Frontend integration | Large | 900–1,400 | Shared UI extraction, wrappers, pages, Practice card, and artifacts |
-| 9. Verification | Medium; test-heavy | 1,500–2,500 test LOC | Integration, regression, browser, mobile, and failure testing |
+| Step                    | Size               |    Estimated new LOC | Main work                                                           |
+| ----------------------- | ------------------ | -------------------: | ------------------------------------------------------------------- |
+| 8. Frontend integration | Large              |            900–1,400 | Shared UI extraction, wrappers, pages, Practice card, and artifacts |
+| 9. Verification         | Medium; test-heavy | 1,500–2,500 test LOC | Integration, regression, browser, mobile, and failure testing       |
 
 Step 8 was the largest production step. Step 9 adds substantial test code but little production
 code.
 
 Step 4 completion evidence: `prisma/schema.prisma`,
 `prisma/migrations/20260908100000_story_driven_applied_engineering_persistence/migration.sql`,
-`src/server/applied-engineering/persistence.service.ts`, and
-`src/server/applied-engineering/persistence.service.spec.ts`. The Applied Engineering focused
+`src/features/practice/applied-engineering/server/persistence.service.ts`, and
+`src/features/practice/applied-engineering/server/persistence.service.spec.ts`. The Applied Engineering focused
 suite passes with 30 tests; `pnpm exec tsc --noEmit` and `pnpm lint` also pass.
 
 Step 2 approval evidence: project owner `nikhilverma` approved both launch incidents on 2026-09-08.
 The approval identity, date, and review note are frozen in
-`src/lib/practice/applied-engineering/reviewed-incidents.ts`; both catalogue entries are now
+`src/features/practice/applied-engineering/domain/reviewed-incidents.ts`; both catalogue entries are now
 release-eligible and published candidates for the database publication path. The idempotent
 `pnpm applied-engineering:publish` command re-runs the release audit and publishes the matching
 immutable versions before launch eligibility is enabled.
 
-Step 5 completion evidence: `src/server/applied-engineering/runner.service.ts`,
-`src/server/applied-engineering/attempt-evaluator.ts`,
-`src/server/applied-engineering/practice.service.ts`,
-`src/server/applied-engineering/history.service.ts`, and their focused specs. The Applied
+Step 5 completion evidence: `src/features/practice/applied-engineering/server/runner.service.ts`,
+`src/features/practice/applied-engineering/server/attempt-evaluator.ts`,
+`src/features/practice/applied-engineering/server/practice.service.ts`,
+`src/features/practice/applied-engineering/server/history.service.ts`, and their focused specs. The Applied
 Engineering focused suite passes with 36 tests; the shared Core Technical runner remains unchanged.
 
-Step 6 completion evidence: `src/lib/practice/applied-engineering/assessment-contracts.ts`,
-`src/lib/practice/applied-engineering/workspace-analytics.ts`,
-`src/server/applied-engineering/assessment-blueprint.ts`,
-`src/server/applied-engineering/assessment-evaluator.ts`,
-`src/server/applied-engineering/assessment.service.ts`,
-`src/server/applied-engineering/continuation.service.ts`, and
-`src/server/applied-engineering/workspace-analytics.service.ts`. The assessment freezes five safe
+Step 6 completion evidence: `src/features/practice/applied-engineering/domain/assessment-contracts.ts`,
+`src/features/practice/applied-engineering/domain/workspace-analytics.ts`,
+`src/features/practice/applied-engineering/server/assessment-blueprint.ts`,
+`src/features/practice/applied-engineering/server/assessment-evaluator.ts`,
+`src/features/practice/applied-engineering/server/assessment.service.ts`,
+`src/features/practice/applied-engineering/server/continuation.service.ts`, and
+`src/features/practice/applied-engineering/server/workspace-analytics.service.ts`. The assessment freezes five safe
 public prompts at readiness, checkpoints submissions before semantic evaluation, caps unsupported
 implementation claims using owned accepted runs, preserves Learn as zero mastery, ranks one novel
 published incident from verified evidence, keeps the completed report current through retryable
@@ -353,7 +353,7 @@ tests (2 files / 8 tests skipped); TypeScript, lint, Prisma validation, and `git
 Step 8 completion evidence: the shipped Core Technical preparation, intro, overview, question
 workspace, assessment, report, and history presentations now accept a bounded experience
 configuration while keeping their Core Technical defaults. Thin adapters in
-`src/components/workspace/applied-engineering/` translate only public Applied Engineering domain
+`src/features/practice/applied-engineering/ui/` translate only public Applied Engineering domain
 data and endpoint targets into those shared presentations. A shared typed artifact renderer covers
 scenario, code, logs, trace, metrics, waterfall, query-plan, and config evidence. `/practice`
 appends the server-derived Applied Engineering card at order 3 and independently merges its
@@ -376,15 +376,15 @@ Node runner, sandbox, request guards, and working architecture already exist.
 
 ### Expected new lines
 
-| Area | Expected new lines |
-| --- | ---: |
-| Backend lifecycle, persistence, and assessment | 3,500–4,500 |
-| Incident contracts, evidence, ranking, and eligibility | 1,500–2,000 |
-| Frontend wrappers and artifact renderer | 700–1,100 |
-| API routes, Prisma migration, and app wiring | 600–900 |
-| **Production code target** | **6,500–8,500** |
-| Consolidated tests | 2,000–3,000 |
-| Two reviewed story artifacts | 2,000–3,000 |
+| Area                                                   | Expected new lines |
+| ------------------------------------------------------ | -----------------: |
+| Backend lifecycle, persistence, and assessment         |        3,500–4,500 |
+| Incident contracts, evidence, ranking, and eligibility |        1,500–2,000 |
+| Frontend wrappers and artifact renderer                |          700–1,100 |
+| API routes, Prisma migration, and app wiring           |            600–900 |
+| **Production code target**                             |    **6,500–8,500** |
+| Consolidated tests                                     |        2,000–3,000 |
+| Two reviewed story artifacts                           |        2,000–3,000 |
 
 The expected total repository addition is roughly 10,500–14,500 lines, including tests and story
 data. The target for hand-written production code is approximately 7,500 lines.
@@ -403,17 +403,17 @@ is already exercised by a contract or integration test.
 
 Use this lean test suite:
 
-| Suggested test | What it covers |
-| --- | --- |
-| `contracts.spec.ts` | Schemas, fingerprints, artifact parsing, and public/private serialization |
-| `content-release.spec.ts` | Two-story coverage, approval, privacy, and executable release gates |
-| `focus-ranking.spec.ts` | Onboarding evidence, eligibility, deterministic ranking, and no-repeat behavior |
-| `preparation.spec.ts` | Confirm/prepare, request conflicts, replay, lease, failure, and atomic publication |
-| `persistence.spec.ts` | Owner isolation, uniqueness, transactions, and immutable history |
-| `practice-lifecycle.spec.ts` | Draft, hint, run, attempt, learn, question completion, and assessment unlock |
-| `assessment-lifecycle.spec.ts` | Frozen problems, start/resume, finalization, report, and continuation |
-| `ui-integration.spec.tsx` | Shared Core/Applied shells, state rendering, errors, and route targets |
-| One browser flow | First entry through report and next incident on desktop and mobile |
+| Suggested test                 | What it covers                                                                     |
+| ------------------------------ | ---------------------------------------------------------------------------------- |
+| `contracts.spec.ts`            | Schemas, fingerprints, artifact parsing, and public/private serialization          |
+| `content-release.spec.ts`      | Two-story coverage, approval, privacy, and executable release gates                |
+| `focus-ranking.spec.ts`        | Onboarding evidence, eligibility, deterministic ranking, and no-repeat behavior    |
+| `preparation.spec.ts`          | Confirm/prepare, request conflicts, replay, lease, failure, and atomic publication |
+| `persistence.spec.ts`          | Owner isolation, uniqueness, transactions, and immutable history                   |
+| `practice-lifecycle.spec.ts`   | Draft, hint, run, attempt, learn, question completion, and assessment unlock       |
+| `assessment-lifecycle.spec.ts` | Frozen problems, start/resume, finalization, report, and continuation              |
+| `ui-integration.spec.tsx`      | Shared Core/Applied shells, state rendering, errors, and route targets             |
+| One browser flow               | First entry through report and next incident on desktop and mobile                 |
 
 Representative API-route tests are needed for authentication, input parsing, rate limiting, and
 error mapping, but identical thin routes can be covered through their shared helper plus a small
@@ -462,20 +462,20 @@ packet.
 4. Trace the current Practice entry through:
    - `src/app/practice/page.tsx`
    - `src/lib/practice/practice-roadmap.ts`
-   - `src/components/workspace/practice/practice-sessions-view.tsx`
+   - `src/features/practice/shared/ui/practice-sessions-view.tsx`
 5. Trace the Core Technical frontend through:
    - `src/app/practice/core-technical/page.tsx`
    - `src/app/practice/core-technical/questions/[questionId]/page.tsx`
-   - `src/components/workspace/core-technical/`
+   - `src/features/practice/core-technical/ui/`
 6. Trace the Core Technical backend through:
    - `src/app/api/practice/core-technical/`
-   - `src/lib/practice/core-technical/`
-   - `src/server/core-technical/`
+   - `src/features/practice/core-technical/domain/`
+   - `src/features/practice/core-technical/server/`
    - the `CoreTechnical*` models in `prisma/schema.prisma`
    - Core Technical registration in `src/server/app-container.ts`
 7. Read the existing Applied Engineering inputs:
    - `src/lib/roadmap/frontend-plan.ts`
-   - `src/server/interview/personalized-plan-generator.ts`
+   - `src/features/interviews/server/personalized-plan-generator.ts`
    - `src/features/preparation-onboarding/server/preparation-onboarding-state.ts`
 8. Read the nearest Core Technical tests for the build step being implemented before changing code.
 

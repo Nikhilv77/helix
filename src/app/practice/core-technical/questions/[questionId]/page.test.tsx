@@ -24,7 +24,7 @@ vi.mock("next/navigation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/navigation")>()),
   notFound: mocks.notFound
 }));
-vi.mock("@/components/workspace/core-technical/core-technical-question-workspace", () => ({
+vi.mock("@/features/practice/core-technical/ui/core-technical-question-workspace", () => ({
   CoreTechnicalQuestionWorkspace: (props: {
     block: { id: string };
     initialQuestion: { id: string };

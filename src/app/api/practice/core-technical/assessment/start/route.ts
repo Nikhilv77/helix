@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { coreTechnicalAssessmentStartInputSchema } from "@/lib/practice/core-technical/assessment-contracts";
+import { coreTechnicalAssessmentStartInputSchema } from "@/features/practice/core-technical/domain/assessment-contracts";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import {
   getSharedGuard,

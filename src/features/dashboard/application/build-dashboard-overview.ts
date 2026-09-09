@@ -1,7 +1,7 @@
 import type { DashboardOverviewData } from "@/features/dashboard/contracts/dashboard-overview";
-import type { HelpDashboardOverview } from "@/lib/help/help-history";
-import type { ReportsOverview } from "@/lib/reports/reports";
-import type { ProgressDashboardOverview } from "@/lib/roadmap/progress";
+import type { HelpDashboardOverview } from "@/features/peer-help/contracts/help-history";
+import type { ReportsOverview } from "@/features/reports/contracts/reports";
+import type { ProgressDashboardOverview } from "@/features/progress/contracts/progress";
 import type { CandidateProfile } from "@/lib/shared/types";
 import { buildCoaching, buildReadiness } from "./coaching-and-readiness";
 import { buildContinuation } from "./continuation";

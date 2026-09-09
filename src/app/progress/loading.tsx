@@ -1,4 +1,4 @@
-import { ProgressSkeleton } from "@/components/workspace/progress/progress-skeleton";
+import { ProgressSkeleton } from "@/features/progress/ui/progress-skeleton";
 
 export default function Loading() {
   return <ProgressSkeleton />;

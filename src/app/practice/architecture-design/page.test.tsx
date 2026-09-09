@@ -30,7 +30,7 @@ vi.mock("next/navigation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/navigation")>()),
   notFound: mocks.notFound
 }));
-vi.mock("@/components/workspace/architecture-design/architecture-design-overview", () => ({
+vi.mock("@/features/practice/architecture-design/ui/architecture-design-overview", () => ({
   ArchitectureDesignOverview: ({
     block,
     history
@@ -39,7 +39,7 @@ vi.mock("@/components/workspace/architecture-design/architecture-design-overview
     history: { totalBlocks: number };
   }) => <div data-testid="scenario" data-block={block.id} data-total={history.totalBlocks} />
 }));
-vi.mock("@/components/workspace/architecture-design/architecture-design-preparation", () => ({
+vi.mock("@/features/practice/architecture-design/ui/architecture-design-preparation", () => ({
   ArchitectureDesignPreparation: () => <div data-testid="preparation" />
 }));
 

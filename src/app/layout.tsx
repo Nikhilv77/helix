@@ -15,8 +15,8 @@ import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
 import { isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
-import { authenticatedOwnerId } from "@/server/interview/owner";
-import { getProfileForRequest } from "@/server/profile/profile-query";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { getProfileForRequest } from "@/features/profile/server/profile-query";
 import "./globals.css";
 
 const googleSiteVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;

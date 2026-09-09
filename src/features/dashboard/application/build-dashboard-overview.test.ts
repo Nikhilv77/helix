@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { ReportsOverview } from "@/lib/reports/reports";
-import type { ProgressOverview } from "@/lib/roadmap/progress";
-import type { HelpDashboardOverview } from "@/lib/help/help-history";
+import type { ReportsOverview } from "@/features/reports/contracts/reports";
+import type { ProgressOverview } from "@/features/progress/contracts/progress";
+import type { HelpDashboardOverview } from "@/features/peer-help/contracts/help-history";
 import type { CandidateProfile } from "@/lib/shared/types";
 import { buildDashboardOverview } from "./build-dashboard-overview";
 

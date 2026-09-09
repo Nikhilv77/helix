@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { AiService } from "../ai/ai.service";
 import { Logger } from "../common/logger";
-import { ROUND_TYPES } from "../interview/types";
+import { ROUND_TYPES } from "@/features/interviews/server/types";
 import type { CandidateProfile } from "@/lib/shared/types";
 import type { Curriculum, CurriculumSession } from "@/lib/curriculum/curriculum";
 

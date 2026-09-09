@@ -3,8 +3,8 @@ import type {
   DashboardNextFocus,
   DashboardWeeklyRhythm
 } from "@/features/dashboard/contracts/dashboard-overview";
-import type { ReportsOverview } from "@/lib/reports/reports";
-import type { ProgressDashboardOverview } from "@/lib/roadmap/progress";
+import type { ReportsOverview } from "@/features/reports/contracts/reports";
+import type { ProgressDashboardOverview } from "@/features/progress/contracts/progress";
 import type { CandidateProfile } from "@/lib/shared/types";
 import {
   baselineAction,

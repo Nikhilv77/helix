@@ -97,7 +97,7 @@ The flow is implemented by:
 - `src/features/onboarding/ui/flow/onboarding-flow.tsx`
 - `src/app/api/onboarding/resume/route.ts`
 - `src/app/api/onboarding/complete/route.ts`
-- `src/server/profile/profile.service.ts`
+- `src/features/profile/server/profile.service.ts`
 
 The candidate selects a teacher and experience level, uploads a PDF or DOCX resume, verifies the
 parsed identity/evidence/readiness views, and completes onboarding. `ProfileService.completeOnboarding()`
@@ -437,7 +437,7 @@ proved the visual reuse, but it should not become the permanent third-track API.
 Move or re-export the stable presentation contracts under a neutral directory:
 
 ```text
-src/components/workspace/story-practice/
+src/features/practice/shared/ui/
   story-practice-preparation.tsx
   story-practice-intro.tsx
   story-practice-overview.tsx
@@ -492,11 +492,11 @@ Most wrappers should only adapt props and render the neutral shell.
 
 ### 8.3 Backend extraction target
 
-Do not copy all of `src/server/core-technical/` or `src/server/applied-engineering/`. Extract stable
+Do not copy all of `src/features/practice/core-technical/server/` or `src/features/practice/applied-engineering/server/`. Extract stable
 orchestration behind typed ports:
 
 ```text
-src/server/story-practice/
+src/features/practice/shared/server/
   contracts.ts                 # generic IDs, lifecycle states, public result shapes
   preparation-orchestrator.ts  # replay-safe confirm/prepare transaction protocol
   practice-orchestrator.ts     # draft/hint/attempt/learn state transitions
@@ -694,7 +694,7 @@ review.
 Architecture-owned code:
 
 ```text
-src/lib/practice/architecture-design/
+src/features/practice/architecture-design/domain/
   contracts.ts
   baseline-evidence-contracts.ts
   focus-ranking-contracts.ts
@@ -706,7 +706,7 @@ src/lib/practice/architecture-design/
   ui-state.ts
   workspace-analytics.ts
 
-src/server/architecture-design/
+src/features/practice/architecture-design/server/
   baseline-evidence.service.ts
   focus.service.ts
   eligibility.service.ts
@@ -718,7 +718,7 @@ src/server/architecture-design/
   repository-adapter.ts
   workspace-analytics.service.ts
 
-src/components/workspace/architecture-design/
+src/features/practice/architecture-design/ui/
   architecture-design-experience.ts
   architecture-design-adapter.ts
   architecture-design-preparation.tsx
@@ -726,8 +726,8 @@ src/components/workspace/architecture-design/
   architecture-design-question-workspace.tsx
 ```
 
-Shared extractions belong in `src/components/workspace/story-practice/` and
-`src/server/story-practice/`, as described above. Do not create Architecture copies of shared
+Shared extractions belong in `src/features/practice/shared/ui/` and
+`src/features/practice/shared/server/`, as described above. Do not create Architecture copies of shared
 orchestrators after they exist.
 
 ## 12. Build order
@@ -750,21 +750,21 @@ vertical step at a time.
 
 Step 1 completion evidence:
 
-- `src/lib/practice/architecture-design/contracts.ts` freezes the canonical identity, version-1
+- `src/features/practice/architecture-design/domain/contracts.ts` freezes the canonical identity, version-1
   scope, sixteen design dimensions, non-executable formats/artifacts, and four-stage MVP interview arc.
-- `src/components/workspace/story-practice/contracts.ts` defines the neutral, typed presentation
+- `src/features/practice/shared/ui/contracts.ts` defines the neutral, typed presentation
   experience that Step 2 will adopt without combining domain persistence types.
-- `src/lib/practice/architecture-design/contracts.spec.ts` passes 6 focused contract tests.
+- `src/features/practice/architecture-design/domain/contracts.spec.ts` passes 6 focused contract tests.
 - `pnpm exec tsc --noEmit` and focused ESLint checks pass.
 
 Step 2 completion evidence:
 
-- `src/components/workspace/story-practice/view-contracts.ts` owns the normalized block, question,
+- `src/features/practice/shared/ui/view-contracts.ts` owns the normalized block, question,
   work, feedback, run, assessment, history, and library presentation models. The contracts contain
   no Core Technical, Applied Engineering, or Architecture persistence types.
-- The six direct `story-practice` facade modules provide the stable preparation, intro, overview,
-  workspace, assessment, and artifact imports while compatibility exports preserve existing Core
-  call sites.
+- The preparation, intro, overview, workspace, and assessment facades provide stable neutral
+  imports while `story-practice-artifact.tsx` owns the canonical artifact renderer and contract.
+  Compatibility exports preserve the remaining Core call sites.
 - Preparation, overview, question, and assessment shells now take typed experience configuration
   for route/API namespaces, copy, options, payloads, environment labels, coach steps, scoring rows,
   response guidance, and the executable-run capability.
@@ -781,12 +781,12 @@ the baseline for extracting server lifecycle ports without a data migration.
 
 Step 3 completion evidence:
 
-- `src/server/story-practice/contracts.ts` defines neutral preparation, question, optional runner,
+- `src/features/practice/shared/server/contracts.ts` defines neutral preparation, question, optional runner,
   assessment, continuation, and history ports plus the shared lifecycle status vocabulary.
 - The preparation, practice, assessment, and continuation orchestrator modules own the identical
   replay checks, deterministic fingerprints, work/hint/run validation, assessment start/response
   rules, bounded diagnostics, and continuation readiness rules.
-- `src/server/story-practice/route-kit.ts` centralizes authentication, completed-onboarding access,
+- `src/features/practice/shared/server/route-kit.ts` centralizes authentication, completed-onboarding access,
   rate limiting, strict JSON parsing, eligibility error mapping, API envelopes, and optional
   distributed-lease cleanup. Core and Applied `_shared.ts` route gates now configure this kit.
 - Core Technical and Applied Engineering services call the neutral invariants while retaining their
@@ -1015,7 +1015,7 @@ status and ask it to read in the following order.
    - `src/features/onboarding/ui/flow/onboarding-flow.tsx`
    - `src/app/api/onboarding/resume/route.ts`
    - `src/app/api/onboarding/complete/route.ts`
-   - `src/server/profile/profile.service.ts`
+   - `src/features/profile/server/profile.service.ts`
 6. Preparation onboarding and Architecture evidence source:
    - `src/app/(marketing)/page.tsx`
    - `src/features/preparation-onboarding/ui/preparation-welcome.tsx`
@@ -1029,24 +1029,24 @@ status and ask it to read in the following order.
 7. Practice entry:
    - `src/app/practice/page.tsx`
    - `src/lib/practice/practice-roadmap.ts`
-   - `src/components/workspace/practice/practice-sessions-view.tsx`
+   - `src/features/practice/shared/ui/practice-sessions-view.tsx`
 8. Existing reusable presentation:
-   - `src/components/workspace/core-technical/`
-   - `src/components/workspace/applied-engineering/applied-engineering-experience.ts`
-   - `src/components/workspace/applied-engineering/applied-engineering-adapter.ts`
-   - `src/components/workspace/shared/story-practice-artifact.tsx`
+   - `src/features/practice/core-technical/ui/`
+   - `src/features/practice/applied-engineering/ui/applied-engineering-experience.ts`
+   - `src/features/practice/applied-engineering/ui/applied-engineering-adapter.ts`
+   - `src/features/practice/shared/ui/story-practice-artifact.tsx`
 9. Existing backend pattern:
    - `src/app/api/practice/core-technical/`
-   - `src/server/core-technical/`
+   - `src/features/practice/core-technical/server/`
    - `src/app/api/practice/applied-engineering/`
-   - `src/server/applied-engineering/`
+   - `src/features/practice/applied-engineering/server/`
    - the Core/Applied models in `prisma/schema.prisma`
    - their registration in `src/server/app-container.ts`
 10. Existing personalized Architecture context:
-    - `src/lib/interviews/personalized-plan.ts`
-    - `src/server/interview/personalized-plan-generator.ts`
-    - `src/server/interview/candidate-profile-compiler.ts`
-    - `src/server/interview/personalized-interview-planning.service.ts`
+    - `src/features/interviews/domain/personalized-plan.ts`
+    - `src/features/interviews/server/personalized-plan-generator.ts`
+    - `src/features/interviews/server/candidate-profile-compiler.ts`
+    - `src/features/interviews/server/personalized-interview-planning.service.ts`
 
 Do not use `docs/CORE_TECHNICAL_ADAPTIVE_PRACTICE.md`; it is superseded by the story-driven Core
 document. Treat `docs/NEW_ONBOARDING_AND_ADAPTIVE_PRACTICE.md` as historical context where it

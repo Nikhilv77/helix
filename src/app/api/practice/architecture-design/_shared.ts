@@ -5,7 +5,7 @@ import { getAppContainer } from "@/server/app-container";
 import { requireCompletedPreparationOnboarding } from "@/server/auth/preparation-onboarding-api-guard";
 import { apiError } from "@/server/http/api-response";
 import type { RateLimitPolicy } from "@/server/rate-limit/shared-guard";
-import { createStoryPracticeRouteAccess } from "@/server/story-practice/route-kit";
+import { createStoryPracticeRouteAccess } from "@/features/practice/shared/server/route-kit";
 
 const routeAccess = createStoryPracticeRouteAccess({
   errorPrefix: "ARCHITECTURE_DESIGN",

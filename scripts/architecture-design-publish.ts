@@ -4,9 +4,9 @@ import {
   ARCHITECTURE_DESIGN_REVIEW_CANDIDATES,
   ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE,
   auditArchitectureDesignContent
-} from "../src/lib/practice/architecture-design";
-import { buildArchitectureDesignPublicationPayloads } from "../src/server/architecture-design/content-publisher";
-import { ArchitectureDesignPersistenceService } from "../src/server/architecture-design/persistence.service";
+} from "../src/features/practice/architecture-design/domain";
+import { buildArchitectureDesignPublicationPayloads } from "../src/features/practice/architecture-design/server/content-publisher";
+import { ArchitectureDesignPersistenceService } from "../src/features/practice/architecture-design/server/persistence.service";
 import { PrismaService } from "../src/server/database/prisma.service";
 
 async function main(): Promise<void> {

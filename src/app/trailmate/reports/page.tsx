@@ -1,11 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound } from "next/navigation";
 
-import { ReportQueue } from "@/components/workspace/help/report-queue";
+import { ReportQueue } from "@/features/peer-help/ui/report-queue";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
-import { isOperator } from "@/server/help/operator";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { isOperator } from "@/features/peer-help/server/operator";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 
 export const dynamic = "force-dynamic";
 

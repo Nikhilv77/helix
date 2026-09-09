@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
-import { authorizeInterviewSession } from "@/server/interview/session-access";
+import { authorizeInterviewSession } from "@/features/interviews/server/session-access";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";

@@ -15,9 +15,9 @@ import { getAppContainer } from "@/server/app-container";
 import { Logger } from "@/server/common/logger";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
-import { authenticatedOwnerId } from "@/server/interview/owner";
-import { compileCandidateInterviewProfile } from "@/server/interview/candidate-profile-compiler";
-import { LEVELS } from "@/server/interview/types";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { compileCandidateInterviewProfile } from "@/features/interviews/server/candidate-profile-compiler";
+import { LEVELS } from "@/features/interviews/server/types";
 import {
   extractResumeDocument,
   inspectResumeDocument,
@@ -35,7 +35,7 @@ import {
   mergeResumeTechnologies
 } from "@/features/onboarding/server/resume/technology-detector";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
-import { signResumePreview } from "@/server/profile/resume-preview-token";
+import { signResumePreview } from "@/features/profile/server/resume-preview-token";
 import { initialPreparationOnboardingState } from "@/features/preparation-onboarding/server/preparation-onboarding-state";
 
 export const dynamic = "force-dynamic";

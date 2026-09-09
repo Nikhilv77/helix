@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
-import { attachInterviewOwnerCookie, resolveInterviewOwner } from "@/server/interview/owner";
+import { attachInterviewOwnerCookie, resolveInterviewOwner } from "@/features/interviews/server/owner";
 
 export const dynamic = "force-dynamic";
 

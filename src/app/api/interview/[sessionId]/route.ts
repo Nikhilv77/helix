@@ -3,10 +3,10 @@ import { after } from "next/server";
 import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
-import { currentQuestion } from "@/server/interview/state-machine";
-import { roundCaps, type InterviewState } from "@/server/interview/types";
+import { currentQuestion } from "@/features/interviews/server/state-machine";
+import { roundCaps, type InterviewState } from "@/features/interviews/server/types";
 import { findFundamentalsQuestion } from "@/lib/fundamentals/fundamentals";
-import { authorizeInterviewSession } from "@/server/interview/session-access";
+import { authorizeInterviewSession } from "@/features/interviews/server/session-access";
 
 export const dynamic = "force-dynamic";
 

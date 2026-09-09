@@ -1,4 +1,4 @@
-import { HelpHub } from "@/components/workspace/help/help-hub";
+import { HelpHub } from "@/features/peer-help/ui/help-hub";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";

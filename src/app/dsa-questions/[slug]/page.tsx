@@ -3,14 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { ArrowLeft, ChevronRight, Clock, ExternalLink } from "lucide-react";
-import { DsaProblemPanel } from "@/components/workspace/dsa/dsa-problem-panel";
-import { DsaQuestionActions } from "@/components/workspace/dsa/dsa-question-actions";
-import { DsaQuestionWorkspace } from "@/components/workspace/dsa/dsa-question-workspace";
-import type { DsaQuestion } from "@/lib/dsa/dsa";
-import { dsaPhases, findQuestion } from "@/lib/dsa/dsa";
+import { DsaProblemPanel } from "@/features/practice/dsa/ui/dsa-problem-panel";
+import { DsaQuestionActions } from "@/features/practice/dsa/ui/dsa-question-actions";
+import { DsaQuestionWorkspace } from "@/features/practice/dsa/ui/dsa-question-workspace";
+import type { DsaQuestion } from "@/features/practice/dsa/domain/dsa";
+import { dsaPhases, findQuestion } from "@/features/practice/dsa/domain/dsa";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 
 export const dynamic = "force-dynamic";
 

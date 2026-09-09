@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { coreTechnicalAssessmentFinalizeInputSchema } from "@/lib/practice/core-technical/assessment-contracts";
+import { coreTechnicalAssessmentFinalizeInputSchema } from "@/features/practice/core-technical/domain/assessment-contracts";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { getSharedGuard, RATE_LIMIT_POLICIES, type SharedLease } from "@/server/rate-limit/shared-guard";
 import { coreTechnicalMutationOwner, parseCoreTechnicalJson } from "../../_shared";

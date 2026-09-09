@@ -3,9 +3,9 @@ import { z } from "zod";
 import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
-import { DsaBlockAssessmentPreparationError } from "@/server/dsa/dsa-block-assessment-preparation.service";
-import { DsaBlockAssessmentRuntimeError } from "@/server/dsa/dsa-block-assessment-runtime.service";
-import { attachInterviewOwnerCookie, resolveInterviewOwner } from "@/server/interview/owner";
+import { DsaBlockAssessmentPreparationError } from "@/features/practice/dsa/server/dsa-block-assessment-preparation.service";
+import { DsaBlockAssessmentRuntimeError } from "@/features/practice/dsa/server/dsa-block-assessment-runtime.service";
+import { attachInterviewOwnerCookie, resolveInterviewOwner } from "@/features/interviews/server/owner";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";

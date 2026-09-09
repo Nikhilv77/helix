@@ -2,19 +2,19 @@ import { auth } from "@clerk/nextjs/server";
 import { after } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { findQuestion } from "@/lib/dsa/dsa";
-import { dsaFunctionName } from "@/lib/dsa/dsa-code-templates";
+import { findQuestion } from "@/features/practice/dsa/domain/dsa";
+import { dsaFunctionName } from "@/features/practice/dsa/domain/dsa-code-templates";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { getAppContainer } from "@/server/app-container";
-import { authenticatedOwnerId } from "@/server/interview/owner";
-import { codeFingerprint } from "@/server/interview/code-fingerprint";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { codeFingerprint } from "@/features/interviews/server/code-fingerprint";
 import {
   buildTestCases,
   buildTestHarness,
   parseTestResults,
   resultMarker
-} from "@/server/dsa/code-test-harness";
+} from "@/features/practice/dsa/server/code-test-harness";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";

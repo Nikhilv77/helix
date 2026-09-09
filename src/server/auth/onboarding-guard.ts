@@ -1,8 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import type { CandidateProfile } from "@/lib/shared/types";
-import { authenticatedOwnerId } from "@/server/interview/owner";
-import { getProfileForRequest } from "@/server/profile/profile-query";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { getProfileForRequest } from "@/features/profile/server/profile-query";
 
 export async function requireOnboardedProfile(): Promise<{
   userId: string;

@@ -1,17 +1,17 @@
 import type { RoadmapProgressStatus } from "@prisma/client";
-import { PracticeSessionsView } from "@/components/workspace/practice/practice-sessions-view";
+import { PracticeSessionsView } from "@/features/practice/shared/ui/practice-sessions-view";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 import { Logger } from "@/server/common/logger";
-import { buildStableDsaRecommendation } from "@/server/dsa/stable-dsa-recommendation";
-import { coreTechnicalPracticeEntry } from "@/lib/practice/core-technical/ui-state";
-import { mergePracticeActivity } from "@/lib/practice/core-technical/workspace-analytics";
-import type { CoreTechnicalEligibility } from "@/server/core-technical/eligibility.service";
-import { appliedEngineeringPracticeEntry } from "@/lib/practice/applied-engineering/ui-state";
-import type { AppliedEngineeringEligibility } from "@/server/applied-engineering/eligibility.service";
-import { architectureDesignPracticeEntry } from "@/lib/practice/architecture-design/ui-state";
-import type { ArchitectureDesignEligibility } from "@/server/architecture-design/eligibility.service";
+import { buildStableDsaRecommendation } from "@/features/practice/dsa/server/stable-dsa-recommendation";
+import { coreTechnicalPracticeEntry } from "@/features/practice/core-technical/domain/ui-state";
+import { mergePracticeActivity } from "@/features/practice/core-technical/domain/workspace-analytics";
+import type { CoreTechnicalEligibility } from "@/features/practice/core-technical/server/eligibility.service";
+import { appliedEngineeringPracticeEntry } from "@/features/practice/applied-engineering/domain/ui-state";
+import type { AppliedEngineeringEligibility } from "@/features/practice/applied-engineering/server/eligibility.service";
+import { architectureDesignPracticeEntry } from "@/features/practice/architecture-design/domain/ui-state";
+import type { ArchitectureDesignEligibility } from "@/features/practice/architecture-design/server/eligibility.service";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(

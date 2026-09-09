@@ -2,11 +2,11 @@ import type { NextRequest } from "next/server";
 import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
-import { attachInterviewOwnerCookie, resolveInterviewOwner } from "@/server/interview/owner";
+import { attachInterviewOwnerCookie, resolveInterviewOwner } from "@/features/interviews/server/owner";
 import {
   buildFundamentalsPlan,
   fundamentalsRoundContext
-} from "@/server/interview/fundamentals-round";
+} from "@/features/interviews/server/fundamentals-round";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";

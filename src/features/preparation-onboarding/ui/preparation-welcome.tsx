@@ -10,16 +10,13 @@ import {
   Building2,
   Braces,
   Check,
-  CircleAlert,
-  CircleDashed,
   Code2,
   Cpu,
   Loader2,
   Target,
   Volume2,
   VolumeX,
-  X,
-  type LucideIcon
+  X
 } from "lucide-react";
 import {
   advancePreparationTarget,
@@ -27,48 +24,50 @@ import {
   startPreparationBaseline,
   submitPreparationBaseline
 } from "@/lib/api/api-client";
-import { useMayaVoice, voiceUrl, type VoiceState } from "@/lib/voice/use-maya-voice";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import {
-  PREPARATION_AREAS,
-  type PreparationAreaId
-} from "@/features/preparation-onboarding/domain/preparation-areas";
-import {
-  type BaselineSection,
-  type BaselineQuestion,
-  type CandidateSkillSignal,
-  type PreparationOnboardingStage,
-  type PreparationOnboardingState
-} from "@/features/preparation-onboarding/domain/preparation-onboarding";
-import {
   BASELINE_DURATION_LABEL,
-  baselineQuestionTeacherCue,
-  firstBaselineSection,
-  includesDsaPulse,
-  nextBaselineSection
+  baselineQuestionTeacherCue
 } from "@/features/preparation-onboarding/domain/preparation-onboarding-flow";
 import { suggestedPreparationRole } from "@/features/preparation-onboarding/domain/preparation-target";
-import type { CandidateProfile, Level, Role } from "@/lib/shared/types";
+import type { CandidateProfile, Role } from "@/lib/shared/types";
 import {
-  welcomePerformanceProfile,
-  type WelcomePerformanceProfile
-} from "./welcome-performance";
+  BaselineIntro,
+  BaselineQuestionCard,
+  baselineStageFor,
+  welcomeProgressIndex
+} from "./baseline-assessment";
+import { InitialSkillProfile } from "./skill-profile-summary";
+import {
+  PreparationAreaGrid,
+  TARGET_LEVEL_OPTIONS,
+  TARGET_ROLE_OPTIONS,
+  TARGET_SETUP_COPY,
+  TARGET_TIMELINE_OPTIONS,
+  TargetChoiceGrid,
+  dateForTimeline,
+  levelTarget,
+  nextTargetStage,
+  storedLevel,
+  targetRoleLabel,
+  targetStageFor,
+  timelineTarget,
+  type TargetLevel,
+  type TargetTimeline
+} from "./target-setup";
+import {
+  readWelcomePerformanceProfile,
+  useWordReveal,
+  WordRevealLine,
+  WELCOME_BODY_STAGGER_MS
+} from "./welcome-presentation";
+import { useWelcomeVoice, voiceLabel } from "./welcome-voice";
 
 const AvatarStage = dynamic(
-  () => import("@/components/interview/voice/avatar-stage").then((module) => module.AvatarStage),
+  () => import("@/features/interviews/ui/voice/avatar-stage").then((module) => module.AvatarStage),
   { ssr: false }
 );
 
-const PracticeCodeViewer = dynamic(
-  () => import("@/components/workspace/practice/practice-code-viewer").then((module) => module.PracticeCodeViewer),
-  {
-    ssr: false,
-    loading: () => <div className="h-36 animate-pulse rounded-xl border border-white/[0.08] bg-black/25" />
-  }
-);
-
-const WELCOME_TITLE_STAGGER_MS = 92;
-const WELCOME_BODY_STAGGER_MS = 26;
 const FALLBACK_WELCOME_SLIDE = {
   eyebrow: "Roadmap ready",
   title: "Your roadmap is ready.",
@@ -76,534 +75,37 @@ const FALLBACK_WELCOME_SLIDE = {
   icon: Check
 };
 
-const TARGET_ROLE_OPTIONS: Array<{ value: Role; label: string; detail: string }> = [
-  { value: "frontend", label: "Frontend Engineer", detail: "Interfaces, web performance, and product UI." },
-  { value: "backend", label: "Backend Engineer", detail: "APIs, data, and production systems." },
-  { value: "fullstack", label: "Full Stack Engineer", detail: "Product work across the stack." },
-  { value: "data", label: "Data Engineer", detail: "Pipelines, analytics, and data platforms." },
-  { value: "ai-ml", label: "AI / ML Engineer", detail: "Models, applied AI, and evaluation." }
-];
-
-type TargetLevel = "entry" | "mid" | "senior";
-
-const TARGET_LEVEL_OPTIONS: Array<{ value: TargetLevel; label: string; detail: string }> = [
-  { value: "entry", label: "Entry / SDE-1", detail: "Strong fundamentals and clear problem solving." },
-  { value: "mid", label: "Mid-level / SDE-2", detail: "Ownership, depth, and dependable delivery." },
-  { value: "senior", label: "Senior / SDE-3+", detail: "Technical leadership and system judgment." }
-];
-
-type TargetTimeline = "two-weeks" | "two-to-four-weeks" | "one-to-three-months" | "three-to-six-months" | "none";
-type BaselineFlowStage = "intro" | BaselineSection | "completed" | null;
-
-const TARGET_TIMELINE_OPTIONS: Array<{ value: TargetTimeline; label: string; detail: string }> = [
-  { value: "two-weeks", label: "Less than 2 weeks", detail: "A focused sprint." },
-  { value: "two-to-four-weeks", label: "2–4 weeks", detail: "A short, structured push." },
-  { value: "one-to-three-months", label: "1–3 months", detail: "Time to build real momentum." },
-  { value: "three-to-six-months", label: "3–6 months", detail: "A steady, lower-pressure runway." },
-  { value: "none", label: "No deadline yet", detail: "We’ll work from evidence, not a countdown." }
-];
-
-const PREPARATION_AREA_ICONS: Record<PreparationAreaId, LucideIcon> = {
-  dsa: Braces,
-  "core-technical": Code2,
-  "applied-engineering": Cpu,
-  "architecture-design": Blocks
-};
-
-const TARGET_SETUP_COPY = [
-  {
-    eyebrow: "Target setup · 1 of 4",
-    title: "What role are you aiming for?",
-    body: "We used your resume to suggest a coding track. You have the final say."
-  },
-  {
-    eyebrow: "Target setup · 2 of 4",
-    title: "What level should we prepare for?",
-    body: "This sets the bar for future feedback. It does not change what you have already done."
-  },
-  {
-    eyebrow: "Target setup · 3 of 4",
-    title: "When do you want to be interview-ready?",
-    body: "A lightweight window is enough. You can replace it with a real interview date later."
-  },
-  {
-    eyebrow: "Your preparation areas",
-    title: "Let’s find your starting point.",
-    body: "Your resume tells me what you’ve worked with. It doesn’t tell me where you’re interview-ready yet."
-  },
-  {
-    eyebrow: "Target setup · 4 of 4",
-    title: "Is there a company in mind?",
-    body: "Optional. Trailgrad works just as well when you are preparing more broadly."
-  }
-] as const;
-function useWordReveal(
-  text: string,
-  active: boolean,
-  delay = 0,
-  stagger = WELCOME_TITLE_STAGGER_MS
-) {
-  const words = text.split(" ");
-  const [visibleCount, setVisibleCount] = useState(0);
-
-  useEffect(() => {
-    setVisibleCount(0);
-    if (!active) return;
-
-    let interval = 0;
-    const timer = window.setTimeout(() => {
-      if (stagger <= 0) {
-        setVisibleCount(words.length);
-        return;
-      }
-      let index = 0;
-      interval = window.setInterval(() => {
-        index += 1;
-        setVisibleCount(Math.min(index, words.length));
-        if (index >= words.length) window.clearInterval(interval);
-      }, stagger);
-    }, delay);
-
-    return () => {
-      window.clearTimeout(timer);
-      if (interval) window.clearInterval(interval);
-    };
-  }, [active, delay, stagger, text, words.length]);
-
-  return { words, visibleCount };
-}
-
-function readWelcomePerformanceProfile(): WelcomePerformanceProfile {
-  const device = navigator as Navigator & {
-    deviceMemory?: number;
-    connection?: { saveData?: boolean };
-  };
-
-  return welcomePerformanceProfile({
-    coarsePointer: window.matchMedia("(pointer: coarse)").matches,
-    deviceMemory: device.deviceMemory,
-    hardwareConcurrency: navigator.hardwareConcurrency,
-    saveData: device.connection?.saveData
-  });
-}
-
-function WordRevealLine({
-  words,
-  visibleCount,
-  className,
-  wordClassName = ""
-}: {
-  words: string[];
-  visibleCount: number;
-  className?: string;
-  wordClassName?: string;
-}) {
-  return (
-    <span className={className}>
-      {words.map((word, index) => (
-        <span
-          key={`${word}-${index}`}
-          className={[
-            "trail-word mr-[0.24em] last:mr-0",
-            index < visibleCount ? "trail-word-visible" : "",
-            wordClassName
-          ].join(" ")}
-        >
-          {word}
-        </span>
-      ))}
-    </span>
-  );
-}
-
-function TechInterviewMotifs({ side }: { side: "maya" | "copy" }) {
-  return (
-    <>
-      {side === "maya" ? (
-        <>
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -left-24 top-16 z-0 h-72 w-72 rounded-full border border-cream/[0.09]"
-          />
-          <span
-            aria-hidden
-            className="pointer-events-none absolute left-8 top-14 z-0 h-24 w-56 rounded-full bg-cream/[0.025] blur-3xl"
-          />
-          <span
-            aria-hidden
-            className="pointer-events-none absolute left-6 top-14 z-0 h-16 w-40 rounded-xl border border-cream/[0.13] bg-cream/[0.018]"
-          >
-            <span className="absolute left-4 top-4 h-2.5 w-2.5 rounded-full bg-cream/[0.16]" />
-            <span className="absolute left-9 top-4 h-px w-20 bg-cream/[0.14]" />
-            <span className="absolute left-9 top-8 h-px w-24 bg-cream/[0.1]" />
-          </span>
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -right-5 top-24 z-0 h-20 w-36 rounded-xl border border-cream/[0.1] bg-cream/[0.014]"
-          >
-            <span className="absolute left-4 top-5 h-px w-24 bg-cream/[0.12]" />
-            <span className="absolute left-4 top-9 h-px w-16 bg-cream/[0.09]" />
-            <span className="absolute bottom-4 left-4 h-2 w-2 rounded-full bg-cream/[0.13]" />
-          </span>
-          <span
-            aria-hidden
-            className="pointer-events-none absolute left-10 top-[45%] z-0 h-px w-48 bg-[linear-gradient(90deg,rgba(241,234,216,0.08)_0_35%,transparent_35%_52%,rgba(241,234,216,0.08)_52%_72%,transparent_72%_100%)]"
-          />
-          <span
-            aria-hidden
-            className="pointer-events-none absolute bottom-24 left-7 z-0 flex h-14 items-end gap-1.5 text-cream/[0.16]"
-          >
-            {[28, 54, 38, 72, 46, 60, 34].map((height, index) => (
-              <span
-                key={`${height}-${index}`}
-                className="w-1 rounded-full bg-current"
-                style={{ height: `${height}%` }}
-              />
-            ))}
-          </span>
-          <span
-            aria-hidden
-            className="pointer-events-none absolute bottom-20 right-10 z-0 grid grid-cols-[auto_1.75rem_auto_1.75rem_auto] items-center text-cream/[0.11]"
-          >
-            <span className="h-2.5 w-2.5 rounded-full bg-current" />
-            <span className="h-px bg-current" />
-            <span className="h-2.5 w-2.5 rounded-full bg-current" />
-            <span className="h-px bg-current" />
-            <span className="h-2.5 w-2.5 rounded-full bg-current" />
-          </span>
-          <span aria-hidden className="pointer-events-none absolute bottom-44 left-9 z-0 h-20 w-28">
-            <span className="absolute left-0 top-0 h-6 w-6 border-l border-t border-cream/[0.1]" />
-            <span className="absolute right-0 top-0 h-6 w-6 border-r border-t border-cream/[0.08]" />
-            <span className="absolute bottom-0 left-0 h-6 w-6 border-b border-l border-cream/[0.08]" />
-            <span className="absolute bottom-0 right-0 h-6 w-6 border-b border-r border-cream/[0.1]" />
-          </span>
-        </>
-      ) : (
-        <>
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -right-28 bottom-12 z-0 h-72 w-72 rounded-full border border-cream/[0.08]"
-          />
-          <span
-            aria-hidden
-            className="pointer-events-none absolute left-8 top-20 z-0 h-20 w-40 rounded-xl border border-cream/[0.1] bg-cream/[0.012]"
-          >
-            <span className="absolute left-4 top-4 h-2.5 w-2.5 rounded-full bg-cream/[0.13]" />
-            <span className="absolute left-9 top-4 h-px w-20 bg-cream/[0.11]" />
-            <span className="absolute left-4 top-9 h-px w-28 bg-cream/[0.08]" />
-            <span className="absolute left-4 top-13 h-px w-16 bg-cream/[0.07]" />
-          </span>
-          <span
-            aria-hidden
-            className="pointer-events-none absolute right-8 top-[30%] z-0 h-28 w-28 rounded-full border border-cream/[0.12]"
-          >
-            <span className="absolute inset-5 flex items-center justify-center gap-1 text-cream/[0.14]">
-              {[38, 64, 50, 82, 45, 72, 56].map((height, index) => (
-                <span
-                  key={`${height}-${index}`}
-                  className="w-1 rounded-full bg-current"
-                  style={{ height: `${height}%` }}
-                />
-              ))}
-            </span>
-          </span>
-          <span
-            aria-hidden
-            className="pointer-events-none absolute bottom-28 right-12 z-0 h-px w-56 bg-gradient-to-r from-transparent via-cream/[0.12] to-transparent"
-          />
-          <span
-            aria-hidden
-            className="pointer-events-none absolute bottom-36 left-8 z-0 flex gap-4 text-cream/[0.12]"
-          >
-            <span className="h-12 w-24 rounded-lg border border-current bg-cream/[0.01]" />
-            <span className="h-12 w-16 rounded-lg border border-current bg-cream/[0.01]" />
-            <span className="h-12 w-20 rounded-lg border border-current bg-cream/[0.01]" />
-          </span>
-          <span
-            aria-hidden
-            className="pointer-events-none absolute bottom-20 left-[44%] z-0 grid grid-cols-[auto_2rem_auto_2rem_auto] items-center text-cream/[0.1]"
-          >
-            <span className="h-2 w-2 rounded-full bg-current" />
-            <span className="h-px bg-current" />
-            <span className="h-2 w-2 rounded-full bg-current" />
-            <span className="h-px bg-current" />
-            <span className="h-2 w-2 rounded-full bg-current" />
-          </span>
-          <span aria-hidden className="pointer-events-none absolute right-28 top-20 z-0 h-16 w-36">
-            <span className="absolute left-0 top-0 h-5 w-5 border-l border-t border-cream/[0.09]" />
-            <span className="absolute right-0 top-0 h-5 w-5 border-r border-t border-cream/[0.09]" />
-            <span className="absolute bottom-0 left-0 h-5 w-5 border-b border-l border-cream/[0.07]" />
-            <span className="absolute bottom-0 right-0 h-5 w-5 border-b border-r border-cream/[0.07]" />
-          </span>
-        </>
-      )}
-    </>
-  );
-}
-
-function TargetChoiceGrid<T extends string>({
-  options,
-  value,
-  onChange,
-  columns = "two"
-}: {
-  options: Array<{ value: T; label: string; detail: string }>;
-  value: T;
-  onChange: (value: T) => void;
-  columns?: "two" | "three";
-}) {
-  return (
-    <div className={columns === "three" ? "grid gap-2.5 sm:grid-cols-3" : "grid gap-2.5 sm:grid-cols-2"}>
-      {options.map((option) => {
-        const selected = option.value === value;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            aria-pressed={selected}
-            onClick={() => onChange(option.value)}
-            className={[
-              "group relative min-h-24 rounded-xl border p-4 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)]",
-              selected
-                ? "border-[var(--workspace-accent)] bg-[var(--workspace-accent-soft)]/30 shadow-[0_16px_32px_-24px_var(--workspace-accent)]"
-                : "border-cream/[0.13] bg-black/15 hover:border-cream/30 hover:bg-white/[0.035]"
-            ].join(" ")}
-          >
-            {selected ? (
-              <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--workspace-accent)] text-white">
-                <Check size={13} strokeWidth={2.6} aria-hidden="true" />
-              </span>
-            ) : null}
-            <span className="block pr-6 text-[15px] font-semibold text-cream sm:text-base">{option.label}</span>
-            <span className="mt-1.5 block text-[13px] leading-5 text-cream/55">{option.detail}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function preparationAreasForRole(role: Role) {
-  return includesDsaPulse(role) ? PREPARATION_AREAS : PREPARATION_AREAS.filter((area) => area.id !== "dsa");
-}
-
-function PreparationAreaGrid({ role }: { role: Role }) {
-  return (
-    <div className="mt-7 max-w-2xl">
-      <div className="grid gap-2.5 sm:grid-cols-2">
-        {preparationAreasForRole(role).map((area) => {
-          const Icon = PREPARATION_AREA_ICONS[area.id];
-          return (
-            <div
-              key={area.id}
-              className="min-h-28 rounded-xl border border-cream/[0.13] bg-black/15 p-4 sm:p-[1.125rem]"
-            >
-              <Icon size={21} strokeWidth={1.6} className="text-[var(--workspace-accent)]" aria-hidden="true" />
-              <p className="mt-3 text-[17px] font-semibold text-cream sm:text-lg">{area.title}</p>
-              <p className="mt-1.5 text-sm leading-6 text-cream/55">{area.description}</p>
-            </div>
-          );
-        })}
-      </div>
-      <p className="mt-4 text-sm leading-6 text-cream/60">
-        These are not fixed sessions or a mandatory course sequence. They are dimensions Trailgrad may evaluate and train.
-      </p>
-    </div>
-  );
-}
-
-function BaselineIntro({ role }: { role: Role }) {
-  const includesDsa = includesDsaPulse(role);
-  const checks = [
-    ...(includesDsa ? [{ icon: Braces, title: "DSA pulse", detail: "Six lightweight checks across patterns and code reading." }] : []),
-    { icon: Code2, title: "Technical pulse", detail: "Three quick decisions shaped by your target role." },
-    { icon: Blocks, title: "Engineering pulse", detail: "One production scenario and the trade-offs you notice." },
-    { icon: Blocks, title: "Architecture pulse", detail: "One system-design decision about the boundary that matters." }
-  ];
-
-  return (
-    <div className="mt-7 max-w-3xl">
-      <p className="text-base font-semibold text-cream">{BASELINE_DURATION_LABEL}</p>
-      <div className="mt-5 grid gap-x-8 gap-y-6 sm:grid-cols-2">
-        {checks.map(({ icon: Icon, title, detail }) => (
-          <div
-            key={title}
-            className="min-w-0 rounded-xl border border-cream/[0.13] bg-white/[0.02] p-4 sm:p-5"
-          >
-            <Icon className="size-6 text-[var(--workspace-accent)]" aria-hidden="true" />
-            <p className="mt-3 text-[17px] font-semibold leading-6 text-cream">{title}</p>
-            <p className="mt-1.5 text-[15px] leading-6 text-cream/60">{detail}</p>
-          </div>
-        ))}
-      </div>
-      <p className="mt-7 text-[15px] leading-6 text-cream/60">
-        This is a first read, not a final verdict. Trailgrad will keep uncertainty visible until you give it more evidence.
-      </p>
-    </div>
-  );
-}
-
-function BaselineQuestionCard({
-  question,
-  choiceId,
-  onChoice
-}: {
-  question: BaselineQuestion;
-  choiceId: string;
-  onChoice: (choiceId: string) => void;
-}) {
-  const promptReveal = useWordReveal(question.prompt, true, 180, WELCOME_BODY_STAGGER_MS);
-  return (
-    <div className="mt-7 max-w-2xl">
-      <p className="text-[17px] font-semibold leading-7 text-cream sm:text-lg">
-        <WordRevealLine
-          words={promptReveal.words}
-          visibleCount={promptReveal.visibleCount}
-          wordClassName="maya-welcome-copy-word"
-        />
-      </p>
-      {question.code ? (
-        <div className="mt-5">
-          <PracticeCodeViewer code={question.code.value} language={question.code.language} maxLines={10} />
-        </div>
-      ) : null}
-      <div className="mt-5 grid gap-2.5">
-        {question.options.map((option) => {
-          const selected = option.id === choiceId;
-          return (
-            <button
-              key={option.id}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => onChoice(option.id)}
-              className={[
-                "rounded-xl border px-4 py-4 text-left text-[16px] font-medium leading-6 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)]",
-                selected
-                  ? "border-[var(--workspace-accent)] bg-[var(--workspace-accent-soft)]/30 text-cream"
-                  : "border-cream/[0.13] bg-white/[0.02] text-cream/78 hover:border-cream/30 hover:text-cream"
-              ].join(" ")}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function InitialSkillProfile({ state, role }: { state: PreparationOnboardingState; role: Role }) {
-  const signals = state.skillProfile?.signals ?? [];
-  return (
-    <div className="mt-7 grid max-w-3xl gap-3 sm:grid-cols-2">
-      {preparationAreasForRole(role).map((area) => {
-        const signal = signals.find((item) => item.areaId === area.id);
-        const dsaState = signal?.startingState;
-        const evidence = signal?.evidence === "baseline";
-        const Icon = PREPARATION_AREA_ICONS[area.id];
-        return (
-          <div key={area.id} className="rounded-xl border border-cream/[0.13] bg-black/15 p-4">
-            <div className="flex items-center gap-3">
-              <Icon className="size-5 shrink-0 text-[var(--workspace-accent)]" aria-hidden="true" />
-              <p className="text-[18px] font-semibold leading-6 text-cream">{area.title}</p>
-            </div>
-            <p className="mt-3 text-[16px] font-medium leading-5 text-cream/88">
-              {area.id === "dsa" && dsaState ? dsaStartingStateLabel(dsaState) : baselineAreaSummary(signal)}
-            </p>
-            {signal?.topics?.length ? (
-              <div className="mt-2.5 space-y-1.5">
-                {signal.topics.map((topic) => <TopicFamiliarityLine key={topic.label} {...topic} />)}
-              </div>
-            ) : (
-              <p className="mt-3 text-[15px] leading-6 text-cream/52">
-                {evidence ? "Directional only—not a readiness score." : "Trailgrad will wait for real practice evidence before scoring this."}
-              </p>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function TopicFamiliarityLine({ label, familiarity }: { label: string; familiarity: "familiar" | "needs-refresh" | "unknown" }) {
-  const presentation = TOPIC_STATUS_PRESENTATION[familiarity];
-  const StatusIcon = presentation.icon;
-  return (
-    <div className="grid min-h-5 min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 text-[13px] leading-5">
-      <span className="min-w-0 break-words text-cream/76">{label}</span>
-      <span className={["inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap font-medium", presentation.className].join(" ")}>
-        <StatusIcon className="size-3.5" strokeWidth={2.25} aria-hidden="true" />
-        {presentation.label}
-      </span>
-    </div>
-  );
-}
-
-const TOPIC_STATUS_PRESENTATION: Record<"familiar" | "needs-refresh" | "unknown", { label: string; icon: LucideIcon; className: string }> = {
-  familiar: {
-    label: "Answered correctly",
-    icon: Check,
-    className: "text-emerald-300"
-  },
-  "needs-refresh": {
-    label: "Needs practice",
-    icon: CircleAlert,
-    className: "text-orange-300"
-  },
-  unknown: {
-    label: "Not assessed",
-    icon: CircleDashed,
-    className: "text-cream/42"
-  }
-};
-
-function baselineAreaSummary(signal: CandidateSkillSignal | undefined): string {
-  if (signal?.evidence !== "baseline") return "Not enough evidence yet";
-
-  const topics = signal.topics ?? [];
-  if (!topics.length) return "Early baseline captured";
-
-  const familiarCount = topics.filter((topic) => topic.familiarity === "familiar").length;
-  const needsPracticeCount = topics.filter((topic) => topic.familiarity === "needs-refresh").length;
-
-  if (needsPracticeCount === topics.length) return "Needs practice based on this baseline";
-  if (familiarCount === topics.length) return "Positive early signal";
-  if (needsPracticeCount > 0 && familiarCount > 0) return "Mixed early signals";
-  if (needsPracticeCount > 0) return "Needs practice based on this baseline";
-  return "Not assessed yet";
-}
-
 interface PreparationWelcomeProps {
   profile: CandidateProfile;
   /** Mandatory onboarding has no dismiss affordance or escape hatch. */
   blocking?: boolean;
 }
 
-export function PreparationWelcome({
-  profile,
-  blocking = true
-}: PreparationWelcomeProps) {
+export function PreparationWelcome({ profile, blocking = true }: PreparationWelcomeProps) {
   const teacher = useWorkspaceTeacher();
-  // Maya introduces herself out loud by default; muting her turns this off for
-  // the rest of the walkthrough.
-  const voiceEnabled = useRef(true);
-  const voicePreloads = useRef(new Map<string, HTMLAudioElement>());
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const userControlledScroll = useRef(false);
   const [step, setStep] = useState(0);
   const [onboarding, setOnboarding] = useState(profile.preparationOnboarding);
-  const [targetStage, setTargetStage] = useState(() => targetStageFor(profile.preparationOnboarding.stage));
-  const [resumeSuggestedRole] = useState<Role>(() => suggestedPreparationRole({
-    stage: profile.preparationOnboarding.stage,
-    savedRole: profile.targetRole,
-    resume: profile.resume
-  }));
+  const [targetStage, setTargetStage] = useState(() =>
+    targetStageFor(profile.preparationOnboarding.stage)
+  );
+  const [resumeSuggestedRole] = useState<Role>(() =>
+    suggestedPreparationRole({
+      stage: profile.preparationOnboarding.stage,
+      savedRole: profile.targetRole,
+      resume: profile.resume
+    })
+  );
   const [targetRole, setTargetRole] = useState<Role>(resumeSuggestedRole);
   const [targetLevel, setTargetLevel] = useState<TargetLevel>(() => levelTarget(profile.level));
-  const [targetTimeline, setTargetTimeline] = useState<TargetTimeline>(() => timelineTarget(profile.targetDate));
+  const [targetTimeline, setTargetTimeline] = useState<TargetTimeline>(() =>
+    timelineTarget(profile.targetDate)
+  );
   const [targetCompany, setTargetCompany] = useState(profile.targetCompany);
-  const [baselineStage, setBaselineStage] = useState(() => baselineStageFor(profile.preparationOnboarding.stage));
+  const [baselineStage, setBaselineStage] = useState(() =>
+    baselineStageFor(profile.preparationOnboarding.stage)
+  );
   const [baselineChoice, setBaselineChoice] = useState("");
   const [saving, setSaving] = useState(false);
   const [targetError, setTargetError] = useState<string | null>(null);
@@ -611,36 +113,6 @@ export function PreparationWelcome({
   const [touchPresentation, setTouchPresentation] = useState(false);
   const [lightweightAvatar, setLightweightAvatar] = useState(false);
   const visible = mounted;
-  const {
-    state: voiceState,
-    speak: speakLine,
-    stop: stopVoice,
-    awaitingGesture,
-    setAwaitingGesture
-  } = useMayaVoice();
-  const speaking = voiceState === "speaking";
-  const warmVoice = useCallback((line: string) => {
-    if (!line.trim()) return;
-    const url = voiceUrl(line, teacher.id);
-    if (voicePreloads.current.has(url)) return;
-
-    const warm = new Audio(url);
-    warm.preload = "auto";
-    voicePreloads.current.set(url, warm);
-    warm.load();
-
-    // Keep the immediate upcoming lines alive long enough to finish loading,
-    // without retaining every audio element from a long onboarding session.
-    if (voicePreloads.current.size > 3) {
-      const oldestUrl = voicePreloads.current.keys().next().value;
-      if (oldestUrl) {
-        const oldest = voicePreloads.current.get(oldestUrl);
-        oldest?.pause();
-        oldest?.removeAttribute("src");
-        voicePreloads.current.delete(oldestUrl);
-      }
-    }
-  }, [teacher.id]);
   const resume = profile.resume;
   const alreadyOnboarded = profile.preparationOnboarding.completedAt !== null;
   const firstName = resume?.fullName.trim().split(/\s+/)[0] || "there";
@@ -650,14 +122,16 @@ export function PreparationWelcome({
 
   const slides = useMemo(() => {
     const baseTargetCopy = TARGET_SETUP_COPY[targetStage] ?? TARGET_SETUP_COPY[0];
-    const targetCopy = targetStage === 0
-      ? {
-          ...baseTargetCopy,
-          body: profile.preparationOnboarding.stage === "target_role"
-            ? `${targetRoleLabel(resumeSuggestedRole)} is our best guess from your resume. You can change it before the assessment.`
-            : `${targetRoleLabel(targetRole)} is your saved preparation track. You can change it before the assessment.`
-        }
-      : baseTargetCopy;
+    const targetCopy =
+      targetStage === 0
+        ? {
+            ...baseTargetCopy,
+            body:
+              profile.preparationOnboarding.stage === "target_role"
+                ? `${targetRoleLabel(resumeSuggestedRole)} is our best guess from your resume. You can change it before the assessment.`
+                : `${targetRoleLabel(targetRole)} is your saved preparation track. You can change it before the assessment.`
+          }
+        : baseTargetCopy;
     return [
       {
         eyebrow: "Background understood",
@@ -667,15 +141,23 @@ export function PreparationWelcome({
       },
       { ...targetCopy, icon: Target }
     ];
-  }, [firstName, profile.preparationOnboarding.stage, resume?.skills.length, resumeSuggestedRole, targetRole, targetStage, teacher.name, topEvidence]);
+  }, [
+    firstName,
+    profile.preparationOnboarding.stage,
+    resume?.skills.length,
+    resumeSuggestedRole,
+    targetRole,
+    targetStage,
+    teacher.name,
+    topEvidence
+  ]);
 
-  const activeBaselineSection = baselineStage && baselineStage !== "intro" && baselineStage !== "completed"
-    ? baselineStage
-    : null;
+  const activeBaselineSection =
+    baselineStage && baselineStage !== "intro" && baselineStage !== "completed"
+      ? baselineStage
+      : null;
   const activeBaselineQuestion = useMemo(
-    () => activeBaselineSection
-      ? onboarding.questions[activeBaselineSection] ?? null
-      : null,
+    () => (activeBaselineSection ? (onboarding.questions[activeBaselineSection] ?? null) : null),
     [activeBaselineSection, onboarding.questions]
   );
   const baselineSlide = useMemo(() => {
@@ -683,9 +165,10 @@ export function PreparationWelcome({
       return {
         eyebrow: `Short baseline · ${BASELINE_DURATION_LABEL}`,
         title: "Let’s find your starting point.",
-        body: targetRole === "ai-ml"
-          ? "This is not about measuring everything today. A stack-aware technical pulse, an engineering scenario, and one architecture decision are enough for a useful starting picture."
-          : "This is not about measuring everything today. A short DSA pulse, a stack-aware technical pulse, an engineering scenario, and one architecture decision are enough for a useful starting picture.",
+        body:
+          targetRole === "ai-ml"
+            ? "This is not about measuring everything today. A stack-aware technical pulse, an engineering scenario, and one architecture decision are enough for a useful starting picture."
+            : "This is not about measuring everything today. A short DSA pulse, a stack-aware technical pulse, an engineering scenario, and one architecture decision are enough for a useful starting picture.",
         icon: Target
       };
     }
@@ -711,7 +194,13 @@ export function PreparationWelcome({
         title: activeBaselineQuestion.title,
         body: "",
         voiceText: `${baselineQuestionTeacherCue(activeBaselineQuestion.section, onboarding.questionIds[activeBaselineQuestion.section])} ${activeBaselineQuestion.prompt}`,
-        icon: activeBaselineQuestion.section.startsWith("dsa-") ? Braces : activeBaselineQuestion.section.startsWith("technical-") ? Code2 : activeBaselineQuestion.section === "architecture" ? Blocks : Cpu
+        icon: activeBaselineQuestion.section.startsWith("dsa-")
+          ? Braces
+          : activeBaselineQuestion.section.startsWith("technical-")
+            ? Code2
+            : activeBaselineQuestion.section === "architecture"
+              ? Blocks
+              : Cpu
       };
     }
     return null;
@@ -724,14 +213,19 @@ export function PreparationWelcome({
     640,
     touchPresentation ? 0 : WELCOME_BODY_STAGGER_MS
   );
-
-  useEffect(() => () => {
-    for (const element of voicePreloads.current.values()) {
-      element.pause();
-      element.removeAttribute("src");
-    }
-    voicePreloads.current.clear();
-  }, []);
+  const { voiceState, speaking, awaitingGesture, stopVoice, toggleVoice } = useWelcomeVoice({
+    teacherId: teacher.id,
+    current,
+    slides,
+    visible,
+    touchPresentation,
+    step,
+    targetStage,
+    baselineStage,
+    activeBaselineSection,
+    onboarding,
+    targetRole
+  });
 
   const dismiss = useCallback(
     (destination = "/") => {
@@ -775,72 +269,6 @@ export function PreparationWelcome({
     };
   }, [dismiss, stopVoice]);
 
-  // Narrates the opening slide on arrival, then every slide the candidate
-  // advances to, until they mute her.
-  useEffect(() => {
-    if (!visible || !voiceEnabled.current || awaitingGesture || !current) return;
-
-    // Unlocking and advancing arrive as two separate events (pointerdown then
-    // click), so settle for a beat and speak only the slide that survives.
-    const start = window.setTimeout(() => {
-      void speakLine(slideVoiceText(current));
-    }, 60);
-    return () => window.clearTimeout(start);
-  }, [awaitingGesture, current, speakLine, visible]);
-
-  // Warm the next slide's audio while this one plays: by the time Continue is
-  // pressed the file is already in the browser cache.
-  useEffect(() => {
-    if (!visible || touchPresentation) return;
-    const next = slides[step + 1];
-    if (!next) return;
-    warmVoice(slideVoiceText(next));
-  }, [slides, step, touchPresentation, visible, warmVoice]);
-
-  // Target setup changes the copy within the same slide, so the generic
-  // slide preloader above cannot see its next prompt. Start fetching the next
-  // prompt as soon as the current choice screen opens; the candidate normally
-  // spends a few seconds deciding, which hides the voice generation time.
-  useEffect(() => {
-    if (!visible || touchPresentation || step !== 1) return;
-    const nextTarget = TARGET_SETUP_COPY[targetStage + 1];
-    if (!nextTarget) return;
-
-    warmVoice(`${nextTarget.title} ${nextTarget.body}`);
-  }, [step, targetStage, touchPresentation, visible, warmVoice]);
-
-  // Baseline questions are selected before the assessment begins, so their
-  // exact scripts are known. Preload the first one on the intro and each next
-  // one while the candidate reads the current question.
-  useEffect(() => {
-    if (!visible || touchPresentation) return;
-    const nextSection = baselineStage === "intro"
-      ? firstBaselineSection(targetRole)
-      : activeBaselineSection
-        ? nextBaselineSection(activeBaselineSection)
-        : null;
-    if (!nextSection) return;
-
-    const nextQuestion = onboarding.questions[nextSection];
-    if (!nextQuestion) return;
-    warmVoice(`${baselineQuestionTeacherCue(nextSection, onboarding.questionIds[nextSection])} ${nextQuestion.prompt}`);
-  }, [activeBaselineSection, baselineStage, onboarding.questionIds, onboarding.questions, targetRole, touchPresentation, visible, warmVoice]);
-
-  // Releasing the lock is all this does: the effect above then speaks whichever
-  // slide is current, so a gesture that also advances the slide narrates the
-  // new one rather than both.
-  useEffect(() => {
-    if (!awaitingGesture) return;
-
-    const unlock = () => setAwaitingGesture(false);
-    window.addEventListener("pointerdown", unlock, { once: true });
-    window.addEventListener("keydown", unlock, { once: true });
-    return () => {
-      window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("keydown", unlock);
-    };
-  }, [awaitingGesture]);
-
   useEffect(() => {
     const node = contentScrollRef.current;
     if (!node) return;
@@ -862,18 +290,6 @@ export function PreparationWelcome({
 
     return () => window.clearTimeout(timer);
   }, [baselineStage, step, targetStage, visible]);
-
-  function toggleVoice() {
-    if (!current) return;
-    if (voiceState === "speaking" || voiceState === "loading") {
-      voiceEnabled.current = false;
-      setAwaitingGesture(false);
-      stopVoice();
-      return;
-    }
-    voiceEnabled.current = true;
-    void speakLine(slideVoiceText(current));
-  }
 
   async function advanceTargetSetup() {
     const nextStage = nextTargetStage(targetStage);
@@ -989,9 +405,6 @@ export function PreparationWelcome({
         ) : null}
 
         <div className="relative z-10 min-h-0 overflow-hidden bg-white/[0.012]">
-          <div className="hidden">
-            <TechInterviewMotifs side="maya" />
-          </div>
           {lightweightAvatar ? (
             <Image
               src={teacher.portrait}
@@ -1035,9 +448,6 @@ export function PreparationWelcome({
         </div>
 
         <div className="relative z-10 flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden bg-transparent px-5 pb-5 pt-5 sm:px-10 sm:pb-8 sm:pt-8 lg:px-14 lg:pb-9 lg:pt-10">
-          <div className="hidden">
-            <TechInterviewMotifs side="copy" />
-          </div>
           <div className="relative z-10 flex shrink-0 items-center gap-2.5 pr-12">
             {Array.from({ length: 10 }, (_, index) => (
               <span
@@ -1116,13 +526,18 @@ export function PreparationWelcome({
                       onChange={setTargetTimeline}
                     />
                   ) : null}
-                  {targetStage === 3 ? (
-                    <PreparationAreaGrid role={targetRole} />
-                  ) : null}
+                  {targetStage === 3 ? <PreparationAreaGrid role={targetRole} /> : null}
                   {targetStage === 4 ? (
                     <div>
-                      <label htmlFor="target-company" className="flex items-center gap-2 text-base font-semibold text-cream">
-                        <Building2 size={17} className="text-[var(--workspace-accent)]" aria-hidden="true" />
+                      <label
+                        htmlFor="target-company"
+                        className="flex items-center gap-2 text-base font-semibold text-cream"
+                      >
+                        <Building2
+                          size={17}
+                          className="text-[var(--workspace-accent)]"
+                          aria-hidden="true"
+                        />
                         Company name <span className="font-normal text-cream/45">Optional</span>
                       </label>
                       <input
@@ -1134,7 +549,8 @@ export function PreparationWelcome({
                         className="mt-4 h-12 w-full rounded-lg border border-cream/15 bg-black/25 px-3.5 text-base text-cream outline-none transition placeholder:text-cream/35 focus:border-[var(--workspace-accent)] focus:ring-2 focus:ring-[var(--workspace-accent-soft)]"
                       />
                       <p className="mt-3 text-sm leading-6 text-cream/55">
-                        No company in mind is completely fine. Your preparation will still be tailored to your role and level.
+                        No company in mind is completely fine. Your preparation will still be
+                        tailored to your role and level.
                       </p>
                     </div>
                   ) : null}
@@ -1205,19 +621,34 @@ export function PreparationWelcome({
                 className="browse-nudge inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-[#f5f3ef] px-5 text-sm font-semibold text-[#17181b] shadow-[0_18px_44px_-26px_rgba(245,243,239,0.22)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70 sm:flex-none"
               >
                 {saving ? (
-                  <><Loader2 size={15} className="animate-spin" /> Saving your progress</>
+                  <>
+                    <Loader2 size={15} className="animate-spin" /> Saving your progress
+                  </>
                 ) : step === 0 ? (
-                  <>Set my target <ArrowRight size={15} /></>
+                  <>
+                    Set my target <ArrowRight size={15} />
+                  </>
                 ) : baselineStage === "intro" ? (
-                  <>Start baseline <ArrowRight size={15} /></>
+                  <>
+                    Start baseline <ArrowRight size={15} />
+                  </>
                 ) : activeBaselineQuestion ? (
-                  <>Save and continue <ArrowRight size={15} /></>
+                  <>
+                    Save and continue <ArrowRight size={15} />
+                  </>
                 ) : baselineStage === "completed" ? (
-                  <>{alreadyOnboarded ? "Continue learning" : "Build my preparation"} <ArrowRight size={15} /></>
+                  <>
+                    {alreadyOnboarded ? "Continue learning" : "Build my preparation"}{" "}
+                    <ArrowRight size={15} />
+                  </>
                 ) : targetStage === TARGET_SETUP_COPY.length - 1 ? (
-                  <>Continue to baseline <ArrowRight size={15} /></>
+                  <>
+                    Continue to baseline <ArrowRight size={15} />
+                  </>
                 ) : (
-                  <>Continue <ArrowRight size={15} /></>
+                  <>
+                    Continue <ArrowRight size={15} />
+                  </>
                 )}
               </button>
             </div>
@@ -1227,126 +658,4 @@ export function PreparationWelcome({
     </div>,
     document.body
   );
-}
-
-function voiceLabel(state: VoiceState, teacherName: string): string {
-  return {
-    idle: `Hear ${teacherName}`,
-    loading: "Loading voice",
-    speaking: "Stop voice",
-    // A failed line is usually a blip, so the control stays live to retry.
-    unavailable: "Retry voice"
-  }[state];
-}
-
-function slideVoiceText(slide: { title: string; body: string; voiceText?: string }): string {
-  return slide.voiceText ?? `${slide.title} ${slide.body}`;
-}
-
-function targetStageFor(stage: PreparationOnboardingStage): number {
-  if (stage === "target_level") return 1;
-  if (stage === "target_timeline") return 2;
-  if (stage === "preparation_areas") return 3;
-  if (stage === "target_company") return 4;
-  return 0;
-}
-
-function nextTargetStage(stage: number): PreparationOnboardingStage | null {
-  const next = [
-    "target_level",
-    "target_timeline",
-    "preparation_areas",
-    "target_company",
-    "baseline_intro"
-  ] as const;
-  return next[stage] ?? null;
-}
-
-function baselineStageFor(stage: PreparationOnboardingStage): BaselineFlowStage {
-  if (stage === "baseline_intro") return "intro";
-  const sections: Record<Exclude<BaselineFlowStage, "intro" | "completed" | null>, PreparationOnboardingStage> = {
-    "dsa-familiarity": "baseline_dsa_familiarity",
-    "dsa-lookup": "baseline_dsa_lookup",
-    "dsa-binary-search": "baseline_dsa_binary_search",
-    "dsa-tree-bfs": "baseline_dsa_tree_bfs",
-    "dsa-adaptive": "baseline_dsa_adaptive",
-    "dsa-code-lookup": "baseline_dsa_code_lookup",
-    "dsa-code-binary-search": "baseline_dsa_code_binary_search",
-    "technical-1": "baseline_technical_1",
-    "technical-2": "baseline_technical_2",
-    "technical-3": "baseline_technical_3",
-    engineering: "baseline_engineering",
-    architecture: "baseline_architecture"
-  };
-  const matchingSection = (Object.entries(sections) as Array<[BaselineSection, PreparationOnboardingStage]>).find(([, value]) => value === stage)?.[0];
-  if (matchingSection) return matchingSection;
-  if (stage === "completed") return "completed";
-  return null;
-}
-
-function welcomeProgressIndex(step: number, targetStage: number, baselineStage: BaselineFlowStage): number {
-  if (baselineStage === "intro") return 6;
-  if (baselineStage?.startsWith("dsa-")) return 7;
-  if (baselineStage?.startsWith("technical-")) return 8;
-  if (baselineStage === "engineering" || baselineStage === "architecture" || baselineStage === "completed") return 9;
-  return step === 0 ? 0 : targetStage + 1;
-}
-
-function dsaStartingStateLabel(state: NonNullable<PreparationOnboardingState["skillProfile"]>["signals"][number]["startingState"]): string {
-  return {
-    "experienced-active": "Experienced / Active",
-    "experienced-rusty": "Experienced / Rusty",
-    "some-familiarity": "Some familiarity",
-    "needs-foundations": "Needs foundations",
-    unknown: "Still getting a read"
-  }[state ?? "unknown"];
-}
-
-function targetRoleLabel(role: Role): string {
-  return {
-    frontend: "Frontend",
-    backend: "Backend",
-    fullstack: "Full Stack",
-    data: "Data Engineering",
-    "ai-ml": "AI / ML Engineering",
-    pm: "Full Stack"
-  }[role];
-}
-
-function levelTarget(level: Level | null): TargetLevel {
-  if (level === "3-5") return "mid";
-  if (level === "5-plus") return "senior";
-  return "entry";
-}
-
-function storedLevel(value: TargetLevel, prior: Level | null): Level {
-  if (value === "entry") return prior === "fresher" ? "fresher" : "0-2";
-  return value === "mid" ? "3-5" : "5-plus";
-}
-
-function timelineTarget(dateValue: string | null): TargetTimeline {
-  if (!dateValue) return "none";
-
-  const date = new Date(`${dateValue}T12:00:00`);
-  const days = Math.max(0, Math.round((date.getTime() - Date.now()) / 86_400_000));
-  if (days < 14) return "two-weeks";
-  if (days <= 28) return "two-to-four-weeks";
-  if (days <= 92) return "one-to-three-months";
-  return "three-to-six-months";
-}
-
-function dateForTimeline(value: TargetTimeline): string | null {
-  const days = {
-    "two-weeks": 14,
-    "two-to-four-weeks": 28,
-    "one-to-three-months": 90,
-    "three-to-six-months": 180,
-    none: 0
-  }[value];
-  if (!days) return null;
-
-  const date = new Date();
-  date.setHours(12, 0, 0, 0);
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
 }

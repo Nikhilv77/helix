@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   skip: vi.fn()
 }));
 
-vi.mock("@/server/interview/session-access", () => ({
+vi.mock("@/features/interviews/server/session-access", () => ({
   authorizeInterviewSession: mocks.authorize
 }));
 vi.mock("@/server/rate-limit/shared-guard", () => ({

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { CoreTechnicalQuestionWorkspace } from "@/components/workspace/core-technical/core-technical-question-workspace";
+import { CoreTechnicalQuestionWorkspace } from "@/features/practice/core-technical/ui/core-technical-question-workspace";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";

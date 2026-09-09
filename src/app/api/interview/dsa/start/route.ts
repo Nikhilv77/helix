@@ -1,11 +1,11 @@
 import type { NextRequest } from "next/server";
-import { findQuestion } from "@/lib/dsa/dsa";
-import { OPERATION_DSA_SLUGS } from "@/lib/dsa/dsa-code-templates";
+import { findQuestion } from "@/features/practice/dsa/domain/dsa";
+import { OPERATION_DSA_SLUGS } from "@/features/practice/dsa/domain/dsa-code-templates";
 import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
-import { attachInterviewOwnerCookie, resolveInterviewOwner } from "@/server/interview/owner";
-import { selectDsaInterviewQuestions } from "@/server/interview/dsa-session-selection";
+import { attachInterviewOwnerCookie, resolveInterviewOwner } from "@/features/interviews/server/owner";
+import { selectDsaInterviewQuestions } from "@/features/interviews/server/dsa-session-selection";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";

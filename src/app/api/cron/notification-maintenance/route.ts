@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
 
-import { findQuestion } from "@/lib/dsa/dsa";
+import { findQuestion } from "@/features/practice/dsa/domain/dsa";
 import { getAppContainer } from "@/server/app-container";
-import { NotificationKind } from "@/server/notifications/notification.service";
+import { NotificationKind } from "@/features/notifications/server/notification.service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

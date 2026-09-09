@@ -1,0 +1,97 @@
+"use client";
+
+import Image from "next/image";
+import { ArrowRight, Mic2, UsersRound } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
+import { peerHelpRoomHref } from "@/features/peer-help/domain/help-room-navigation";
+import {
+  isPeerHelpPromptVisible,
+  PEER_HELP_ENDED_EVENT,
+  PEER_HELP_PROMPT_VISIBILITY_EVENT
+} from "@/features/peer-help/ui/help-ui-events";
+import { ProfileAvatar } from "@/features/profile/ui/profile-avatar";
+import { useWorkspaceHelpPolling } from "./workspace-help-polling";
+
+/** Persistent, non-blocking way back to a live peer-help room for either seat. */
+export function ActivePeerHelpToast() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { activeEngagement, clearActiveEngagement, refresh } = useWorkspaceHelpPolling();
+  const [promptVisible, setPromptVisible] = useState(isPeerHelpPromptVisible);
+  // Waiting requests have their own inline status. This nudge is only a way
+  // back to a room that both people can actually join.
+  const active = activeEngagement?.status === "CLAIMED" ? activeEngagement : null;
+
+  useEffect(() => {
+    const onPromptVisibility = (event: Event) => {
+      setPromptVisible((event as CustomEvent<{ visible: boolean }>).detail.visible);
+    };
+    const onEnded = (event: Event) => {
+      const requestId = (event as CustomEvent<{ requestId: string }>).detail.requestId;
+      clearActiveEngagement(requestId);
+      void refresh();
+    };
+    window.addEventListener(PEER_HELP_PROMPT_VISIBILITY_EVENT, onPromptVisibility);
+    window.addEventListener(PEER_HELP_ENDED_EVENT, onEnded);
+    setPromptVisible(isPeerHelpPromptVisible());
+    return () => {
+      window.removeEventListener(PEER_HELP_PROMPT_VISIBILITY_EVENT, onPromptVisibility);
+      window.removeEventListener(PEER_HELP_ENDED_EVENT, onEnded);
+    };
+  }, [clearActiveEngagement, refresh]);
+
+  if (!active?.peer || promptVisible || pathname?.startsWith("/trailmate/room/")) return null;
+
+  const resume = () => {
+    const returnTo = `${pathname ?? "/trailmate"}${window.location.search}`;
+    router.push(peerHelpRoomHref(active.requestId, returnTo));
+  };
+
+  return (
+    <aside
+      aria-label={`Active Trailmate session with ${active.peer.label}`}
+      className="fixed bottom-4 left-3 right-3 z-[80] ml-auto max-w-[25rem] overflow-hidden rounded-2xl bg-[#18191c]/[0.98] shadow-[0_24px_80px_-28px_rgba(0,0,0,0.95)] backdrop-blur-xl sm:bottom-5 sm:left-auto sm:right-5"
+    >
+      <div className="h-0.5 bg-[var(--workspace-accent)]" />
+      <div className="flex items-center gap-3 p-3.5">
+        {active.peer.profileImage ? (
+          <Image
+            src={active.peer.profileImage}
+            alt=""
+            width={40}
+            height={40}
+            className="h-10 w-10 shrink-0 rounded-xl object-cover"
+          />
+        ) : (
+          <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]">
+            <ProfileAvatar
+              name={active.peer.label}
+              className="absolute inset-0 h-full w-full object-cover opacity-30"
+            />
+            <UsersRound size={16} className="relative" aria-hidden="true" />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+            {active.started ? "Trailmate in progress" : "Trailmate room ready"}
+          </p>
+          <p className="mt-0.5 truncate text-[13px] font-semibold text-cream">
+            Trailmate with {active.peer.label}
+          </p>
+          <p className="mt-0.5 truncate text-[11.5px] text-cream/42">{active.title}</p>
+        </div>
+        <button
+          type="button"
+          onClick={resume}
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-cream px-3 text-[12px] font-semibold text-[#17181a] transition hover:bg-white"
+        >
+          <Mic2 size={12} aria-hidden="true" />
+          Join
+          <ArrowRight size={12} aria-hidden="true" />
+        </button>
+      </div>
+    </aside>
+  );
+}

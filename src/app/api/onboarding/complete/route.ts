@@ -11,8 +11,8 @@ import { getAppContainer } from "@/server/app-container";
 import { Logger } from "@/server/common/logger";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
-import { authenticatedOwnerId } from "@/server/interview/owner";
-import { LEVELS, ROLES } from "@/server/interview/types";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { LEVELS, ROLES } from "@/features/interviews/server/types";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

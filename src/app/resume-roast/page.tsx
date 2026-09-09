@@ -1,4 +1,4 @@
-import { ResumeRoastWorkspace } from "@/components/resume-roast/resume-roast-workspace";
+import { ResumeRoastWorkspace } from "@/features/resume-roast/ui/resume-roast-workspace";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 

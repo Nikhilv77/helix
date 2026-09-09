@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { architectureDesignAssessmentStartInputSchema } from "@/lib/practice/architecture-design/assessment-contracts";
+import { architectureDesignAssessmentStartInputSchema } from "@/features/practice/architecture-design/domain/assessment-contracts";
 import { apiSuccess } from "@/server/http/api-response";
 import {
   RATE_LIMIT_POLICIES,

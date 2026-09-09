@@ -1,15 +1,15 @@
 import { headers } from "next/headers";
 import { auth } from "@clerk/nextjs/server";
-import { ManageSkeleton } from "@/components/workspace/account/manage-skeleton";
+import { ManageSkeleton } from "@/features/account/ui/manage-skeleton";
 import { DashboardSkeleton } from "@/features/dashboard/ui/overview/dashboard-skeleton";
 import { PreparationWelcomeLoading } from "@/features/preparation-onboarding/ui/preparation-welcome-loading";
-import { HelpHubSkeleton } from "@/components/workspace/help/help-hub-skeleton";
-import { InterviewsSkeleton } from "@/components/workspace/interviews/interviews-skeleton";
+import { HelpHubSkeleton } from "@/features/peer-help/ui/help-hub-skeleton";
+import { InterviewsSkeleton } from "@/features/interviews/ui/history/interviews-skeleton";
 import {
   DsaPracticeSkeleton,
   PracticeSkeleton
-} from "@/components/workspace/practice/practice-skeleton";
-import { ProfileSkeleton } from "@/components/workspace/profile/profile-skeleton";
+} from "@/features/practice/shared/ui/practice-skeleton";
+import { ProfileSkeleton } from "@/features/profile/ui/profile-skeleton";
 import { RouteProgress, Waveform } from "@/components/workspace/shared/loading/primitives";
 import { isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
 import { welcomePersonaFromQuery } from "@/lib/avatars/personas";

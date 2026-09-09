@@ -1,4 +1,4 @@
-export type DashboardCoachingState =
+type DashboardCoachingState =
   | "interview-in-progress"
   | "interview-with-practice"
   | "interview-needs-practice"
@@ -97,7 +97,7 @@ export interface DashboardExplore {
   trailmate: DashboardTrailmateSummary;
 }
 
-export interface DashboardRhythmDay {
+interface DashboardRhythmDay {
   date: string;
   label: string;
   solved: number;

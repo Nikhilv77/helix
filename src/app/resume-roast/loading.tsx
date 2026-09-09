@@ -1,4 +1,4 @@
-import { ResumeRoastLoading } from "@/components/resume-roast/resume-roast-workspace";
+import { ResumeRoastLoading } from "@/features/resume-roast/ui/resume-roast-workspace";
 
 export default function Loading() {
   return <ResumeRoastLoading />;

@@ -2,12 +2,12 @@ import { auth } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 
-import { findQuestion } from "@/lib/dsa/dsa";
+import { findQuestion } from "@/features/practice/dsa/domain/dsa";
 import { getAppContainer } from "@/server/app-container";
-import { isOperator } from "@/server/help/operator";
+import { isOperator } from "@/features/peer-help/server/operator";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

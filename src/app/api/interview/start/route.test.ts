@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { SessionBlueprint } from "@/lib/interviews/personalized-plan";
+import type { SessionBlueprint } from "@/features/interviews/domain/personalized-plan";
 
 const mocks = vi.hoisted(() => ({
   resolveOwner: vi.fn(),
@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   start: vi.fn()
 }));
 
-vi.mock("@/server/interview/owner", () => ({
+vi.mock("@/features/interviews/server/owner", () => ({
   resolveInterviewOwner: mocks.resolveOwner,
   attachInterviewOwnerCookie: (response: Response) => response
 }));

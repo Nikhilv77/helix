@@ -4,13 +4,13 @@ import type { NextRequest } from "next/server";
 import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
-import { roundCaps } from "@/server/interview/types";
+import { roundCaps } from "@/features/interviews/server/types";
 import { MAYA, personaById } from "@/lib/avatars/personas";
 import {
   createInterviewAgentCapability,
   requireInterviewAuthSecret
-} from "@/server/interview/interview-auth";
-import { existingInterviewOwnerId } from "@/server/interview/owner";
+} from "@/features/interviews/server/interview-auth";
+import { existingInterviewOwnerId } from "@/features/interviews/server/owner";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";

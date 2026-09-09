@@ -1,4 +1,4 @@
-import { CandidateProfileEditor } from "@/components/workspace/profile/candidate-profile-editor";
+import { CandidateProfileEditor } from "@/features/profile/ui/candidate-profile-editor";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 

@@ -7,7 +7,7 @@ import {
   anonymousOwnerIdFromRequest,
   authenticatedOwnerId,
   clearInterviewOwnerCookie
-} from "@/server/interview/owner";
+} from "@/features/interviews/server/owner";
 
 export const dynamic = "force-dynamic";
 

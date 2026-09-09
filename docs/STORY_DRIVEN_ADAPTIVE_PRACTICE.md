@@ -142,14 +142,14 @@ Consider the story **Peak Traffic**:
 
 The story is reusable. The questions are not technology-neutral:
 
-| Candidate | The story focuses on |
-| --- | --- |
-| Java backend | JVM/Spring request execution, executors, database pools, timeouts, rejection, and observability |
-| Go backend | Goroutines, channels, HTTP handlers, context cancellation, connection pools, and goroutine growth |
-| Python backend | Python runtime constraints, async execution, worker configuration, database pools, and timeouts |
-| Frontend | Request waterfalls, browser main-thread work, rendering, duplicate fetching, caching, and real-user metrics |
-| Full stack | The confirmed frontend/backend boundary, request lifecycle, duplicated work, API pressure, and end-to-end evidence |
-| AI/ML | Inference queues, batching, CPU/GPU pressure, model lifecycle, fallback behaviour, and prediction latency |
+| Candidate      | The story focuses on                                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Java backend   | JVM/Spring request execution, executors, database pools, timeouts, rejection, and observability                    |
+| Go backend     | Goroutines, channels, HTTP handlers, context cancellation, connection pools, and goroutine growth                  |
+| Python backend | Python runtime constraints, async execution, worker configuration, database pools, and timeouts                    |
+| Frontend       | Request waterfalls, browser main-thread work, rendering, duplicate fetching, caching, and real-user metrics        |
+| Full stack     | The confirmed frontend/backend boundary, request lifecycle, duplicated work, API pressure, and end-to-end evidence |
+| AI/ML          | Inference queues, batching, CPU/GPU pressure, model lifecycle, fallback behaviour, and prediction latency          |
 
 There is no universal question fallback. The story is the universal narrative envelope; every
 delivered question must be compatible with the confirmed candidate context.
@@ -222,13 +222,13 @@ Freeze this focus into every block. Later profile changes affect future blocks o
 AI/ML may remain in the product without requiring hundreds of initial questions. Its confirmed
 specialization determines the story interpretation:
 
-| Specialization | Typical evidence areas |
-| --- | --- |
-| Data scientist | Statistics, experimentation, leakage, metrics, model selection, and communication |
-| ML engineer | Data pipelines, training, evaluation, inference, deployment, monitoring, and reliability |
-| Applied AI/LLM engineer | Retrieval, grounding, evaluation, inference, safety, latency, and cost |
-| Research engineer | Model behaviour, optimization, experiment correctness, distributed training, and reproducibility |
-| ML platform engineer | Pipelines, orchestration, model serving, resource control, observability, and rollout |
+| Specialization          | Typical evidence areas                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------ |
+| Data scientist          | Statistics, experimentation, leakage, metrics, model selection, and communication                |
+| ML engineer             | Data pipelines, training, evaluation, inference, deployment, monitoring, and reliability         |
+| Applied AI/LLM engineer | Retrieval, grounding, evaluation, inference, safety, latency, and cost                           |
+| Research engineer       | Model behaviour, optimization, experiment correctness, distributed training, and reproducibility |
+| ML platform engineer    | Pipelines, orchestration, model serving, resource control, observability, and rollout            |
 
 The confirmation screen should recommend one specialization and allow the candidate to change
 it. Do not silently treat every AI/ML candidate as a Python backend engineer.
@@ -381,16 +381,16 @@ assessment evidence.
 
 Every story block contains exactly eight questions and covers all required Practice formats.
 
-| Slot | Candidate-facing label | Required format | Evidence goal | Typical difficulty | Target time |
-| ---: | --- | --- | --- | --- | ---: |
-| 1 | Spot the signal | MCQ | Recognize the first important mechanism or diagnostic direction | Easy | 2–3 min |
-| 2 | Predict what happens | Predict and explain | Trace execution, state, data, or system behaviour | Easy–medium | 4–5 min |
-| 3 | Explain the mechanism | Written explanation | Explain why the behaviour occurs and name the relevant boundary | Medium | 4–5 min |
-| 4 | Defend your reasoning | Spoken explanation, with typed accessibility alternative | Communicate and defend the mechanism like a real interview | Medium | 4–5 min |
-| 5 | Read the evidence | Artifact diagnosis | Interpret logs, metrics, traces, outputs, request timelines, or data samples | Medium | 5–6 min |
-| 6 | Repair the defect | Debug and repair | Locate and correct a realistic bug while preserving the contract | Medium–hard | 7–9 min |
-| 7 | Build the critical piece | Micro-implementation | Implement one small production-relevant mechanism | Hard | 9–12 min |
-| 8 | Prove it in production | Written/spoken production decision | Test, monitor, roll out, and discuss alternatives and consequences | Hard | 5–7 min |
+| Slot | Candidate-facing label   | Required format                                          | Evidence goal                                                                | Typical difficulty | Target time |
+| ---: | ------------------------ | -------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------ | ----------: |
+|    1 | Spot the signal          | MCQ                                                      | Recognize the first important mechanism or diagnostic direction              | Easy               |     2–3 min |
+|    2 | Predict what happens     | Predict and explain                                      | Trace execution, state, data, or system behaviour                            | Easy–medium        |     4–5 min |
+|    3 | Explain the mechanism    | Written explanation                                      | Explain why the behaviour occurs and name the relevant boundary              | Medium             |     4–5 min |
+|    4 | Defend your reasoning    | Spoken explanation, with typed accessibility alternative | Communicate and defend the mechanism like a real interview                   | Medium             |     4–5 min |
+|    5 | Read the evidence        | Artifact diagnosis                                       | Interpret logs, metrics, traces, outputs, request timelines, or data samples | Medium             |     5–6 min |
+|    6 | Repair the defect        | Debug and repair                                         | Locate and correct a realistic bug while preserving the contract             | Medium–hard        |     7–9 min |
+|    7 | Build the critical piece | Micro-implementation                                     | Implement one small production-relevant mechanism                            | Hard               |    9–12 min |
+|    8 | Prove it in production   | Written/spoken production decision                       | Test, monitor, roll out, and discuss alternatives and consequences           | Hard               |     5–7 min |
 
 An honest eight-question block is approximately 40–50 minutes. Do not advertise 20–30 minutes
 when the block includes diagnosis, debugging, and implementation.
@@ -488,14 +488,14 @@ Reject a candidate question unless all of these are true:
 
 Use an explicit, versioned ranking policy. A reasonable starting point is:
 
-| Signal | Weight |
-| --- | ---: |
-| Interview evidence and importance | 30% |
-| Target-role and job-description relevance | 25% |
-| Story objective and planned coverage | 15% |
-| Strength of practical evidence produced | 15% |
-| Candidate's demonstrated weakness | 10% |
-| Novelty and repeat avoidance | 5% |
+| Signal                                    | Weight |
+| ----------------------------------------- | -----: |
+| Interview evidence and importance         |    30% |
+| Target-role and job-description relevance |    25% |
+| Story objective and planned coverage      |    15% |
+| Strength of practical evidence produced   |    15% |
+| Candidate's demonstrated weakness         |    10% |
+| Novelty and repeat avoidance              |     5% |
 
 Compatibility, correctness, privacy, and difficulty are hard gates, not weighted preferences.
 
@@ -822,11 +822,11 @@ focus.
 The same high-level story may support different Practice lenses without duplicating the product
 spine:
 
-| Practice session | Question asked about Peak Traffic |
-| --- | --- |
-| Core Technical | Why does the confirmed language/runtime behave this way under pressure? |
-| Applied Engineering | Can the candidate repair, test, instrument, and safely deliver the feature/service? |
-| Architecture | Can the candidate design capacity, scaling, load shedding, caching, and failure boundaries? |
+| Practice session    | Question asked about Peak Traffic                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| Core Technical      | Why does the confirmed language/runtime behave this way under pressure?                     |
+| Applied Engineering | Can the candidate repair, test, instrument, and safely deliver the feature/service?         |
+| Architecture        | Can the candidate design capacity, scaling, load shedding, caching, and failure boundaries? |
 
 ### Core Technical boundary
 
@@ -951,9 +951,9 @@ Every mutation performs:
 The implementation must study and visually match the existing DSA page, especially:
 
 - `src/app/practice/dsa/page.tsx`
-- `src/components/workspace/dsa/dsa-topics.tsx`
-- `src/components/workspace/practice/practice-intro.tsx`
-- `src/components/workspace/dsa/block-assessment-preview.tsx`
+- `src/features/practice/dsa/ui/dsa-topics.tsx`
+- `src/features/practice/shared/ui/practice-intro.tsx`
+- `src/features/practice/dsa/ui/block-assessment-preview.tsx`
 - the existing DSA question workspace/editor
 
 Do not create a separate bright design system, card language, spacing scale, or navigation model

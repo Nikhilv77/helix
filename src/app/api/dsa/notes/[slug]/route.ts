@@ -1,18 +1,18 @@
 import { auth } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { findQuestion } from "@/lib/dsa/dsa";
+import { findQuestion } from "@/features/practice/dsa/domain/dsa";
 import {
   DSA_NOTE_DRAWING_VERSION,
   MAX_DSA_NOTE_PAGES,
   MAX_DSA_NOTE_POINTS,
   MAX_DSA_NOTE_POINTS_PER_STROKE,
   MAX_DSA_NOTE_STROKES
-} from "@/lib/dsa/dsa-note-drawing";
+} from "@/features/practice/dsa/domain/dsa-note-drawing";
 import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 
 export const dynamic = "force-dynamic";
 

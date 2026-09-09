@@ -8,8 +8,8 @@ import {
 import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
-import { authenticatedOwnerId } from "@/server/interview/owner";
-import { verifyResumePreview } from "@/server/profile/resume-preview-token";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { verifyResumePreview } from "@/features/profile/server/resume-preview-token";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

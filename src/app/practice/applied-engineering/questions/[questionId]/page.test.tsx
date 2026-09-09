@@ -9,7 +9,7 @@ vi.mock("@/server/app-container", () => ({ getAppContainer: () => ({
   appliedEngineeringHistoryService: { read: mocks.historyRead }
 }) }));
 vi.mock("next/navigation", async (importOriginal) => ({ ...(await importOriginal<typeof import("next/navigation")>()), notFound: mocks.notFound }));
-vi.mock("@/components/workspace/applied-engineering/applied-engineering-question-workspace", () => ({
+vi.mock("@/features/practice/applied-engineering/ui/applied-engineering-question-workspace", () => ({
   AppliedEngineeringQuestionWorkspace: ({ block, initialQuestion, stageTitle }: { block: { id: string }; initialQuestion: { id: string }; stageTitle: string }) => <div data-testid="workspace" data-block={block.id} data-question={initialQuestion.id} data-stage={stageTitle} />
 }));
 

@@ -7,7 +7,7 @@ import { getAppContainer } from "@/server/app-container";
 import { Logger } from "@/server/common/logger";
 import { apiError } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";

@@ -20,7 +20,7 @@ vi.mock("@/server/app-container", () => ({
     coreTechnicalHistoryService: { list: mocks.historyList, read: mocks.historyRead }
   })
 }));
-vi.mock("@/components/workspace/core-technical/core-technical-overview", () => ({
+vi.mock("@/features/practice/core-technical/ui/core-technical-overview", () => ({
   CoreTechnicalOverview: (props: {
     block: { id: string };
     history: { totalBlocks: number };
@@ -36,7 +36,7 @@ vi.mock("@/components/workspace/core-technical/core-technical-overview", () => (
     />
   )
 }));
-vi.mock("@/components/workspace/core-technical/core-technical-preparation", () => ({
+vi.mock("@/features/practice/core-technical/ui/core-technical-preparation", () => ({
   CoreTechnicalPreparation: () => <div data-testid="preparation" />
 }));
 

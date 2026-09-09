@@ -4,7 +4,7 @@ import { OnboardingFlow } from "@/features/onboarding/ui/flow/onboarding-flow";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import type { CandidateProfile } from "@/lib/shared/types";
 import { getAppContainer } from "@/server/app-container";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(

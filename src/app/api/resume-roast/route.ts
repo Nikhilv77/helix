@@ -5,17 +5,17 @@ import {
   encodeResumeRoastStreamEvent,
   resumeRoastResultEvents,
   validateResumeRoastStreamEvent
-} from "@/lib/resume-roast/stream";
-import { ResumeRoastTargetSchema } from "@/lib/resume-roast/contracts";
+} from "@/features/resume-roast/application/stream";
+import { ResumeRoastTargetSchema } from "@/features/resume-roast/contracts/resume-roast";
 import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import {
   ResumeRoastCancelledError,
   ResumeRoastInvalidResponseError,
   ResumeRoastTimeoutError
-} from "@/server/resume-roast/resume-roast.service";
+} from "@/features/resume-roast/server/resume-roast.service";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";

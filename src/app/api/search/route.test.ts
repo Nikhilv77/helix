@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: mocks.auth }));
-vi.mock("@/server/interview/owner", () => ({ authenticatedOwnerId: () => "owner-1" }));
+vi.mock("@/features/interviews/server/owner", () => ({ authenticatedOwnerId: () => "owner-1" }));
 vi.mock("@/server/rate-limit/shared-guard", () => ({
   RATE_LIMIT_POLICIES: { workspaceSearch: { namespace: "test" } },
   getSharedGuard: () => ({ enforce: mocks.enforce })

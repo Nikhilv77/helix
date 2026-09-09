@@ -2,11 +2,11 @@ import { auth } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { getAppContainer } from "@/server/app-container";
-import { authenticatedOwnerId } from "@/server/interview/owner";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
 import { BASELINE_SECTIONS, PREPARATION_ONBOARDING_STAGES } from "@/features/preparation-onboarding/domain/preparation-onboarding";
-import { LEVELS, ROLES } from "@/server/interview/types";
+import { LEVELS, ROLES } from "@/features/interviews/server/types";
 import { publicPreparationOnboardingState } from "@/features/preparation-onboarding/server/preparation-onboarding-state";
 
 export const dynamic = "force-dynamic";

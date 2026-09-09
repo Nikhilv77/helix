@@ -1,6 +1,6 @@
-import { ReportsView } from "@/components/workspace/reports/reports-view";
+import { ReportsView } from "@/features/reports/ui/reports-view";
 import { disciplineLabel } from "@/lib/shared/labels";
-import type { ReportsOverview } from "@/lib/reports/reports";
+import type { ReportsOverview } from "@/features/reports/contracts/reports";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
@@ -63,7 +63,6 @@ export default async function ReportsPage() {
     <ReportsView
       overview={overview ?? emptyOverview(now)}
       quota={quota}
-      firstName={fullName.split(/\s+/)[0] ?? ""}
       candidate={{
         name: fullName,
         discipline: profile.targetRole ? disciplineLabel(profile.targetRole) : ""

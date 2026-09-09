@@ -1,7 +1,10 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ResumeRoastResult, ResumeRoastTarget } from "@/lib/resume-roast/contracts";
-import { ResumeRoastTimeoutError } from "@/server/resume-roast/resume-roast.service";
+import type {
+  ResumeRoastResult,
+  ResumeRoastTarget
+} from "@/features/resume-roast/contracts/resume-roast";
+import { ResumeRoastTimeoutError } from "@/features/resume-roast/server/resume-roast.service";
 
 const target: ResumeRoastTarget = {
   role: "backend-engineer",
@@ -41,7 +44,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: mocks.auth }));
-vi.mock("@/server/interview/owner", () => ({ authenticatedOwnerId: (id: string) => `user:${id}` }));
+vi.mock("@/features/interviews/server/owner", () => ({ authenticatedOwnerId: (id: string) => `user:${id}` }));
 vi.mock("@/server/rate-limit/shared-guard", () => ({
   RATE_LIMIT_POLICIES: { resumeRoastGeneration: { namespace: "resume-roast-generate" } },
   getSharedGuard: () => ({ enforce: mocks.enforce })

@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { appliedEngineeringAttemptInputSchema } from "@/lib/practice/applied-engineering/practice-contracts";
+import { appliedEngineeringAttemptInputSchema } from "@/features/practice/applied-engineering/domain/practice-contracts";
 import { apiSuccess } from "@/server/http/api-response";
 import {
   RATE_LIMIT_POLICIES,

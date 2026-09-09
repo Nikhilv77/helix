@@ -17,8 +17,7 @@ import type {
   PreparationOnboardingStage,
   PreparationOnboardingState
 } from "@/features/preparation-onboarding/domain/preparation-onboarding";
-import type { PersonalizedInterviewPlan } from "../interviews/personalized-plan";
-import type { WorkspaceSearchResponse } from "../search/workspace-search";
+import type { PersonalizedInterviewPlan } from "@/features/interviews/domain/personalized-plan";
 
 export class ApiClientError extends Error {
   readonly code: string;
@@ -81,6 +80,9 @@ async function request<TData>(
 
   return payload.data as TData;
 }
+
+/** Browser-safe transport for feature-owned API clients. */
+export const apiRequest = request;
 
 function isSuccess(value: unknown): value is ApiSuccessResponse<unknown> {
   return isRecord(value) && value.success === true && "data" in value;
@@ -235,14 +237,6 @@ export function saveNotificationPreferences(
   });
 }
 
-export function searchWorkspace(
-  query: string,
-  signal?: AbortSignal
-): Promise<WorkspaceSearchResponse> {
-  const params = new URLSearchParams({ q: query });
-  return request<WorkspaceSearchResponse>(`/api/search?${params.toString()}`, { signal });
-}
-
 export async function uploadResume(input: {
   file: File;
   targetRole?: Role;
@@ -307,7 +301,8 @@ export function completeOnboarding(
   if (!result.profile.targetRole || !result.profile.level) {
     throw new ApiClientError({
       code: "ONBOARDING_SELECTION_MISSING",
-      message: "Trailgrad could not infer a role or confirm your experience level from this preview.",
+      message:
+        "Trailgrad could not infer a role or confirm your experience level from this preview.",
       status: 400
     });
   }

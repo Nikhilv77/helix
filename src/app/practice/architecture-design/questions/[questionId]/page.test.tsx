@@ -26,7 +26,7 @@ vi.mock("next/navigation", async (importOriginal) => ({
   notFound: mocks.notFound
 }));
 vi.mock(
-  "@/components/workspace/architecture-design/architecture-design-question-workspace",
+  "@/features/practice/architecture-design/ui/architecture-design-question-workspace",
   () => ({
     ArchitectureDesignQuestionWorkspace: ({
       block,

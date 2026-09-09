@@ -3,8 +3,8 @@ import type {
   DashboardInterviewContinuation,
   DashboardPracticeContinuation
 } from "@/features/dashboard/contracts/dashboard-overview";
-import type { ReportsOverview } from "@/lib/reports/reports";
-import type { ProgressDashboardOverview } from "@/lib/roadmap/progress";
+import type { ReportsOverview } from "@/features/reports/contracts/reports";
+import type { ProgressDashboardOverview } from "@/features/progress/contracts/progress";
 import { roundShortLabel } from "@/lib/shared/labels";
 import type { CandidateProfile } from "@/lib/shared/types";
 import {

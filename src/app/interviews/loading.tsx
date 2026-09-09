@@ -1,4 +1,4 @@
-import { InterviewsSkeleton } from "@/components/workspace/interviews/interviews-skeleton";
+import { InterviewsSkeleton } from "@/features/interviews/ui/history/interviews-skeleton";
 
 export default function Loading() {
   return <InterviewsSkeleton />;

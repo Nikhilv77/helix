@@ -1,12 +1,12 @@
 import { auth } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { isProfileAvatarSource } from "@/lib/profile/profile-images";
+import { isProfileAvatarSource } from "@/features/profile/domain/profile-images";
 import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
-import { authenticatedOwnerId } from "@/server/interview/owner";
-import { LEVELS, ROLES } from "@/server/interview/types";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { LEVELS, ROLES } from "@/features/interviews/server/types";
 
 export const dynamic = "force-dynamic";
 

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
-import { ArchitectureDesignOverview } from "@/components/workspace/architecture-design/architecture-design-overview";
-import { ArchitectureDesignPreparation } from "@/components/workspace/architecture-design/architecture-design-preparation";
-import { architectureDesignHistoryNavigation } from "@/lib/practice/architecture-design/ui-state";
+import { ArchitectureDesignOverview } from "@/features/practice/architecture-design/ui/architecture-design-overview";
+import { ArchitectureDesignPreparation } from "@/features/practice/architecture-design/ui/architecture-design-preparation";
+import { architectureDesignHistoryNavigation } from "@/features/practice/architecture-design/domain/ui-state";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";

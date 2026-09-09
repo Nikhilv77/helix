@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/server/auth/onboarding-guard", () => ({
   requireOnboardedProfile: mocks.requireOnboardedProfile
 }));
-vi.mock("@/server/dsa/stable-dsa-recommendation", () => ({
+vi.mock("@/features/practice/dsa/server/stable-dsa-recommendation", () => ({
   buildStableDsaRecommendation: mocks.stable
 }));
 vi.mock("@/server/app-container", () => ({
@@ -30,7 +30,7 @@ vi.mock("@/server/app-container", () => ({
     dsaBlockHistoryService: { read: mocks.historyRead }
   })
 }));
-vi.mock("@/components/workspace/dsa/dsa-topics", () => ({
+vi.mock("@/features/practice/dsa/ui/dsa-topics", () => ({
   DsaTopics: (props: { blockHistory: { selected: { id: string } } | null; panel: string }) => (
     <div
       data-testid="topics"

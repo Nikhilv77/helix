@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { ArchitectureDesignQuestionWorkspace } from "@/components/workspace/architecture-design/architecture-design-question-workspace";
+import { ArchitectureDesignQuestionWorkspace } from "@/features/practice/architecture-design/ui/architecture-design-question-workspace";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";

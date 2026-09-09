@@ -5,11 +5,11 @@ import { ChevronLeft, ChevronRight, Loader2, Volume2, VolumeX } from "lucide-rea
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 
 import { ALL_PERSONAS, type InterviewerPersona } from "@/lib/avatars/personas";
-import { useMayaVoice } from "@/lib/voice/use-maya-voice";
+import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
 import { PRIMARY_BUTTON } from "../flow/onboarding-data";
 
 const AvatarStage = dynamic(
-  () => import("@/components/interview/voice/avatar-stage").then((module) => module.AvatarStage),
+  () => import("@/features/interviews/ui/voice/avatar-stage").then((module) => module.AvatarStage),
   {
     ssr: false,
     loading: () => (

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
-import { AppliedEngineeringOverview } from "@/components/workspace/applied-engineering/applied-engineering-overview";
-import { AppliedEngineeringPreparation } from "@/components/workspace/applied-engineering/applied-engineering-preparation";
-import { appliedEngineeringHistoryNavigation } from "@/lib/practice/applied-engineering/ui-state";
+import { AppliedEngineeringOverview } from "@/features/practice/applied-engineering/ui/applied-engineering-overview";
+import { AppliedEngineeringPreparation } from "@/features/practice/applied-engineering/ui/applied-engineering-preparation";
+import { appliedEngineeringHistoryNavigation } from "@/features/practice/applied-engineering/domain/ui-state";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";

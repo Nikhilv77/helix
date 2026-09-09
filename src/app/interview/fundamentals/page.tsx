@@ -1,4 +1,4 @@
-import { FundamentalsInterviewEntry } from "@/components/interview/fundamentals/fundamentals-interview-entry";
+import { FundamentalsInterviewEntry } from "@/features/interviews/ui/fundamentals/fundamentals-interview-entry";
 import { FUNDAMENTALS_AREAS } from "@/lib/fundamentals/areas";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";

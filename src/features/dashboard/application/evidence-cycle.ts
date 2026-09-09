@@ -1,7 +1,7 @@
 import type { CandidateSkillSignal } from "@/features/preparation-onboarding/domain/preparation-onboarding";
 import type { PreparationAreaId } from "@/features/preparation-onboarding/domain/preparation-areas";
-import type { ReportsOverview } from "@/lib/reports/reports";
-import type { ProgressDashboardOverview } from "@/lib/roadmap/progress";
+import type { ReportsOverview } from "@/features/reports/contracts/reports";
+import type { ProgressDashboardOverview } from "@/features/progress/contracts/progress";
 import type { CandidateProfile, Role } from "@/lib/shared/types";
 
 export type BaselinePriorityMode = "strengthen" | "measure" | "verify";

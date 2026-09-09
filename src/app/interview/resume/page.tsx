@@ -1,4 +1,4 @@
-import { ResumeInterviewEntry } from "@/components/interview/resume/resume-interview-entry";
+import { ResumeInterviewEntry } from "@/features/interviews/ui/resume/resume-interview-entry";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";

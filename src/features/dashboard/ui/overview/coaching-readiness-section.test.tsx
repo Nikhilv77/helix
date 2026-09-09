@@ -23,7 +23,7 @@ vi.mock("@/components/workspace/shared/maya/maya-stage", () => ({
   )
 }));
 
-vi.mock("@/lib/voice/use-maya-voice", () => ({
+vi.mock("@/infrastructure/realtime/use-maya-voice", () => ({
   useMayaVoice: () => ({
     state: "idle",
     speak: voiceMocks.speak,

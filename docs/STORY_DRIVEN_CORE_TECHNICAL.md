@@ -33,7 +33,7 @@ on model output or automated tests.
 
 |   # | Step                                                   | Status          | Completed  | Completion evidence                                                                                               |
 | --: | ------------------------------------------------------ | --------------- | ---------- | ----------------------------------------------------------------------------------------------------------------- |
-|   1 | Versioned domain coverage map                          | **DONE**        | 2026-09-06 | `src/lib/practice/core-technical/domain-map.ts`; coverage audit tests                                             |
+|   1 | Versioned domain coverage map                          | **DONE**        | 2026-09-06 | `src/features/practice/core-technical/domain/domain-map.ts`; coverage audit tests                                 |
 |   2 | Source-backed interview-pattern catalogue              | **DONE**        | 2026-09-06 | `interview-patterns.ts`; independent-source and orphan checks                                                     |
 |   3 | Story generator foundation                             | **DONE**        | 2026-09-06 | `story-generator.ts`; multi-candidate validation and local scoring tests                                          |
 |   4 | Question generator foundation                          | **DONE**        | 2026-09-06 | `question-generator.ts`; candidate generation, private bundle, and serializer tests                               |
@@ -58,13 +58,13 @@ status becomes **IN PROGRESS** when any part starts and **DONE** only when every
 Project owner `nikhilverma` approved both cases on 2026-09-07 after reviewing each case's
 eight-pattern order, primary mechanisms, difficulty, coverage rationale, and 40–50 minute scope.
 The approval identity, date, and notes are recorded in
-`src/lib/practice/core-technical/gold-cases.ts`; the structural audit is release-ready and the
+`src/features/practice/core-technical/domain/gold-cases.ts`; the structural audit is release-ready and the
 evaluator reports `releaseEligible: true`.
 
 ### Step 7 human-review completion
 
 The two complete private review artifacts are frozen in
-`src/lib/practice/core-technical/generated/`. Both contain eight questions, passed every automated
+`src/features/practice/core-technical/domain/generated/`. Both contain eight questions, passed every automated
 critic, scored 100/100 in the gold evaluator, and pass the executable-contract audit. Project owner
 `nikhilverma` approved every prompt, artifact, hint, answer, rubric, test, interviewer follow-up,
 and production claim on 2026-09-07. The two immutable version-1 stories were published through
@@ -227,7 +227,7 @@ Purpose: establish the exact UI states and reuse boundary before building featur
   confirmation, preparing, preparation failure, active block, each question state, assessment
   locked/ready/in progress/finalizing/completed, report, continuation failure, and history.
 - Define the page and component boundary under `src/app/practice/core-technical/` and
-  `src/components/workspace/core-technical/`. Server pages call services directly; client
+  `src/features/practice/core-technical/ui/`. Server pages call services directly; client
   components call mutation APIs only.
 - Reuse or carefully extract DSA primitives when both experiences can share them. Do not introduce
   a Core-Technical-only visual token or silently change DSA.
@@ -395,19 +395,19 @@ require release-equivalent infrastructure, including the production Firecracker 
 
 The automatable portion of the release gate is complete:
 
-- `pnpm exec vitest run src/server/core-technical src/components/workspace/core-technical
+- `pnpm exec vitest run src/features/practice/core-technical/server src/features/practice/core-technical/ui
 src/app/practice/core-technical src/app/practice/page.test.tsx
-src/components/workspace/practice/practice-sessions-view.test.tsx` passed **23 files / 121
+src/features/practice/shared/ui/practice-sessions-view.test.tsx` passed **23 files / 121
   tests**. This includes the real local pinned Node.js `22.23.2` OS-sandbox audit.
 - `pnpm test` passed **172 files / 1,111 tests**, with the existing **2 files / 8 tests skipped**.
 - `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm exec prisma validate`, `pnpm build`, and
   `git diff --check` passed. The production route manifest contains the Core Technical page,
   question page, and all eleven read/mutation APIs; no development fixture route is present.
-- `pnpm exec vitest run src/server/core-technical/runner.service.spec.ts
-src/server/core-technical/gold-evaluator.spec.ts
-src/server/core-technical/gold-evaluation-runner.spec.ts` passed **3 files / 13 tests**. The gold
+- `pnpm exec vitest run src/features/practice/core-technical/server/runner.service.spec.ts
+src/features/practice/core-technical/server/gold-evaluator.spec.ts
+src/features/practice/core-technical/server/gold-evaluation-runner.spec.ts` passed **3 files / 13 tests**. The gold
   evaluator remains correctly fail-closed without human attestation.
-- `src/server/core-technical/release-gates.spec.ts` directly proves unauthenticated,
+- `src/features/practice/core-technical/server/release-gates.spec.ts` directly proves unauthenticated,
   profile-onboarding, preparation-baseline, and successful authenticated request contexts. The
   consolidated lifecycle specs now also explicitly prove replay safety for attempt, code run,
   assessment start, completed report, block publication, and successful continuation; generation
@@ -642,23 +642,23 @@ Required database rules:
 
 Add:
 
-- src/lib/practice/core-technical/ — contracts, domain map, interview patterns, baseline registry,
+- src/features/practice/core-technical/domain/ — contracts, domain map, interview patterns, baseline registry,
   ranking, and public serializers;
-- src/server/core-technical/ — story generator, question generator, critics, validation, focus,
+- src/features/practice/core-technical/server/ — story generator, question generator, critics, validation, focus,
   baseline evidence, catalogue, preparation, practice, runner, assessment, and history services;
 - src/app/practice/core-technical/page.tsx;
 - src/app/practice/core-technical/questions/[questionId]/page.tsx;
 - src/app/api/practice/core-technical/ — confirm, prepare, draft, hint, run, attempt, learn,
   assessment start/finalize, and continue handlers;
-- src/components/workspace/core-technical/.
+- src/features/practice/core-technical/ui/.
 
 Update:
 
 - prisma/schema.prisma plus one migration;
 - src/lib/practice/practice-roadmap.ts;
-- src/server/practice/practice-roadmap.service.ts;
+- src/features/practice/shared/server/practice-roadmap.service.ts;
 - src/app/practice/page.tsx;
-- src/components/workspace/practice/practice-sessions-view.tsx;
+- src/features/practice/shared/ui/practice-sessions-view.tsx;
 - the application container.
 
 Server pages call services directly. Every mutation authenticates, checks owner and lifecycle,
@@ -673,9 +673,9 @@ limits.
 DSA is the design source of truth. Inspect and reuse:
 
 - src/app/practice/dsa/page.tsx;
-- src/components/workspace/dsa/dsa-topics.tsx;
-- src/components/workspace/practice/practice-intro.tsx;
-- src/components/workspace/dsa/block-assessment-preview.tsx;
+- src/features/practice/dsa/ui/dsa-topics.tsx;
+- src/features/practice/shared/ui/practice-intro.tsx;
+- src/features/practice/dsa/ui/block-assessment-preview.tsx;
 - the existing DSA question workspace and editor.
 
 Match its page width, grid, spacing, typography, colours, borders, border opacity, radii, shadows,

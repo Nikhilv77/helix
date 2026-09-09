@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { DsaTopics } from "@/components/workspace/dsa/dsa-topics";
+import { DsaTopics } from "@/features/practice/dsa/ui/dsa-topics";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
-import { buildStableDsaRecommendation } from "@/server/dsa/stable-dsa-recommendation";
-import { DsaBlockHistoryError } from "@/server/dsa/dsa-block-history.service";
+import { buildStableDsaRecommendation } from "@/features/practice/dsa/server/stable-dsa-recommendation";
+import { DsaBlockHistoryError } from "@/features/practice/dsa/server/dsa-block-history.service";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(

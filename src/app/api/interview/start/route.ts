@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
-import { attachInterviewOwnerCookie, resolveInterviewOwner } from "@/server/interview/owner";
+import { attachInterviewOwnerCookie, resolveInterviewOwner } from "@/features/interviews/server/owner";
 import {
   INTENSITIES,
   LEVELS,
@@ -11,14 +11,14 @@ import {
   ROUND_TYPES,
   type InterviewSetup,
   type Role
-} from "@/server/interview/types";
-import type { RoleFamily, SessionBlueprint } from "@/lib/interviews/personalized-plan";
-import { TECHNICAL_DEEP_DIVE_ID } from "@/lib/interviews/technical-deep-dive";
+} from "@/features/interviews/server/types";
+import type { RoleFamily, SessionBlueprint } from "@/features/interviews/domain/personalized-plan";
+import { TECHNICAL_DEEP_DIVE_ID } from "@/features/interviews/domain/technical-deep-dive";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import {
   buildTechnicalDeepDiveBlueprint,
   technicalDeepDiveQuestionSources
-} from "@/server/interview/technical-deep-dive";
+} from "@/features/interviews/server/technical-deep-dive";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;

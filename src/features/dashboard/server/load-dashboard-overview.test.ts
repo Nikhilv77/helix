@@ -23,7 +23,7 @@ vi.mock("@/server/app-container", () => ({
   })
 }));
 
-vi.mock("@/lib/practice/core-technical/workspace-analytics", () => ({
+vi.mock("@/features/practice/core-technical/domain/workspace-analytics", () => ({
   mergeDashboardPractice: mocks.mergeDashboardPractice
 }));
 

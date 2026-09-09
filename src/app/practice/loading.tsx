@@ -1,4 +1,4 @@
-import { PracticeSkeleton } from "@/components/workspace/practice/practice-skeleton";
+import { PracticeSkeleton } from "@/features/practice/shared/ui/practice-skeleton";
 
 export default function Loading() {
   return <PracticeSkeleton />;

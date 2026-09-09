@@ -7,7 +7,7 @@ vi.mock("@/server/auth/onboarding-guard", () => ({
   requireOnboardedProfile: mocks.requireOnboardedProfile
 }));
 
-vi.mock("@/components/resume-roast/resume-roast-workspace", () => ({
+vi.mock("@/features/resume-roast/ui/resume-roast-workspace", () => ({
   ResumeRoastWorkspace: () => <div>Resume Roast workspace</div>
 }));
 

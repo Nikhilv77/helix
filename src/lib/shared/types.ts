@@ -1,4 +1,4 @@
-import type { SessionBlueprint } from "@/lib/interviews/personalized-plan";
+import type { SessionBlueprint } from "@/features/interviews/domain/personalized-plan";
 import type { PreparationOnboardingState } from "@/features/preparation-onboarding/domain/preparation-onboarding";
 
 export type Role = "backend" | "frontend" | "fullstack" | "data" | "ai-ml" | "pm";
