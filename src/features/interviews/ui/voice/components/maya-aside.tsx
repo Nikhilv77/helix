@@ -61,7 +61,7 @@ export function MayaAside({
         className={`relative h-40 shrink-0 overflow-hidden border-b ${INTERVIEW_PANEL_RULE} bg-black/20`}
       >
         <div className="absolute inset-x-[-24%] bottom-[-12%] top-0">{agentSlot}</div>
-        <div className="absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full border border-white/[0.07] bg-black/45 px-2.5 py-1.5 text-[11px] font-medium text-cream/72 backdrop-blur-xl">
+        <div className="interview-live-chip absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full border border-white/[0.07] bg-black/45 px-2.5 py-1.5 text-[11px] font-medium text-cream/72 backdrop-blur-xl">
           <span className="h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)]" />
           {teacher.name}
         </div>

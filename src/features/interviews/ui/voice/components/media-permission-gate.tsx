@@ -70,12 +70,17 @@ export function MediaPermissionGate({
     setError(null);
     setCameraState("requesting");
     try {
+      const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: {
           facingMode: "user",
-          width: { ideal: 960 },
-          height: { ideal: 540 }
+          // The self-view is a small local panel. A phone gains nothing from
+          // capturing a larger frame than it can display, but still pays the
+          // camera and compositor cost for every pixel.
+          width: { ideal: coarsePointer ? 640 : 960 },
+          height: { ideal: coarsePointer ? 360 : 540 },
+          frameRate: { ideal: coarsePointer ? 24 : 30, max: 30 }
         }
       });
       releaseCamera();
@@ -172,13 +177,13 @@ export function MediaPermissionGate({
 
   return (
     <div className="relative flex min-h-0 w-full flex-1 items-start justify-center overflow-x-hidden overflow-y-auto overscroll-contain px-0 py-3 [scrollbar-gutter:stable] sm:px-5 sm:py-8 md:items-center">
-      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[32rem] w-[42rem] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--workspace-accent)] opacity-[0.075] blur-[130px]" />
+      <div className="interview-ambient-glow pointer-events-none absolute left-1/2 top-1/2 h-[32rem] w-[42rem] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--workspace-accent)] opacity-[0.075] blur-[130px]" />
 
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="media-setup-title"
-        className="relative mx-auto grid w-full min-w-0 max-w-[calc(100vw-2rem)] shrink-0 overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[rgba(18,19,22,0.78)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_32px_100px_rgba(0,0,0,0.46)] backdrop-blur-2xl sm:max-w-5xl sm:rounded-[1.75rem] lg:grid-cols-[minmax(17rem,0.78fr)_minmax(0,1.22fr)]"
+        className="interview-mobile-glass relative mx-auto grid w-full min-w-0 max-w-[calc(100vw-2rem)] shrink-0 overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[rgba(18,19,22,0.78)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_32px_100px_rgba(0,0,0,0.46)] backdrop-blur-2xl sm:max-w-5xl sm:rounded-[1.75rem] lg:grid-cols-[minmax(17rem,0.78fr)_minmax(0,1.22fr)]"
       >
         <div className="relative aspect-[16/9] min-h-0 overflow-hidden bg-black/25 sm:min-h-64 lg:aspect-auto lg:min-h-[32rem]">
           {cameraStream ? (
@@ -219,7 +224,7 @@ export function MediaPermissionGate({
             </div>
           )}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/15" />
-          <div className="absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-full bg-black/55 px-3 py-1.5 text-sm text-cream/72 backdrop-blur-xl sm:bottom-4 sm:left-4">
+          <div className="interview-live-chip absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-full bg-black/55 px-3 py-1.5 text-sm text-cream/72 backdrop-blur-xl sm:bottom-4 sm:left-4">
             <ShieldCheck size={14} aria-hidden="true" />
             Not recorded
           </div>

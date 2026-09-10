@@ -89,7 +89,10 @@ export function DsaTeacherFeedback({
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6"
       role="presentation"
     >
-      <div aria-hidden="true" className="absolute inset-0 bg-black/70 backdrop-blur-[3px]" />
+      <div
+        aria-hidden="true"
+        className="practice-mobile-overlay absolute inset-0 bg-black/70 backdrop-blur-[3px]"
+      />
       <aside
         role="dialog"
         aria-modal="true"
@@ -178,7 +181,7 @@ function TeacherStage({
     <div className="relative min-h-0 overflow-hidden border-b border-white/[0.07] bg-[#0c0e0f]">
       <div className="practice-accent-glow absolute inset-x-[8%] bottom-[-28%] z-0 h-[65%] opacity-85" />
       <div className="absolute inset-x-0 bottom-0 top-5 z-0">
-        <MayaStage speaking={speaking} />
+        <MayaStage speaking={speaking} performanceProfile="practice" />
       </div>
       <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between bg-gradient-to-b from-black/55 to-transparent p-4 sm:p-5">
         <div>

@@ -140,11 +140,11 @@ export function InterviewLaunchStage({
     >
       <span
         aria-hidden
-        className="pointer-events-none absolute -left-28 bottom-[-8rem] h-[30rem] w-[30rem] rounded-full bg-[var(--workspace-accent-soft)] opacity-45 blur-[120px]"
+        className="interview-ambient-glow pointer-events-none absolute -left-28 bottom-[-8rem] h-[30rem] w-[30rem] rounded-full bg-[var(--workspace-accent-soft)] opacity-45 blur-[120px]"
       />
       <span
         aria-hidden
-        className="pointer-events-none absolute right-[4%] top-[18%] h-[24rem] w-[24rem] rounded-full bg-[var(--workspace-accent-soft)] opacity-20 blur-[140px]"
+        className="interview-ambient-glow pointer-events-none absolute right-[4%] top-[18%] h-[24rem] w-[24rem] rounded-full bg-[var(--workspace-accent-soft)] opacity-20 blur-[140px]"
       />
 
       <section className="relative z-10 mx-auto grid min-h-[calc(100vh-5rem)] w-full max-w-6xl items-center gap-8 lg:grid-cols-[minmax(20rem,0.8fr)_minmax(0,1.2fr)] lg:gap-16">
@@ -158,7 +158,7 @@ export function InterviewLaunchStage({
             className="report-maya-glow-b pointer-events-none absolute bottom-4 left-1/2 z-0 h-28 w-64 -translate-x-1/2 rounded-full bg-[var(--workspace-accent)] opacity-20 blur-[70px]"
           />
           <div className="absolute inset-x-[-8%] bottom-0 top-0 z-10">
-            <MayaStage speaking={state === "speaking"} />
+            <MayaStage speaking={state === "speaking"} performanceProfile="interview" />
           </div>
         </div>
 

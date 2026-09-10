@@ -98,7 +98,7 @@ export function RoadmapSessionCard({
   );
 
   const className = [
-    "interview-session-card group relative flex min-h-[28rem] flex-col rounded-[2rem] p-7 text-left transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/35 lg:p-8",
+    "interview-session-card workspace-deferred-card group relative flex min-h-[28rem] flex-col rounded-[2rem] p-7 text-left transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/35 lg:p-8",
     unavailable ? "cursor-not-allowed opacity-45" : ""
   ].join(" ");
   const style = { "--interview-delay": `${delay}ms` } as CSSProperties;

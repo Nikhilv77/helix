@@ -3,9 +3,13 @@ import { DsaPracticeBlockStatus } from "@prisma/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DsaBlockHistoryItem } from "@/features/practice/dsa/server/dsa-block-history.service";
 
-const mocks = vi.hoisted(() => ({ push: vi.fn() }));
+const mocks = vi.hoisted(() => ({ openInterviewRoom: vi.fn() }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
+vi.mock("@/features/interviews/ui/shared/interview-room-navigation", () => ({
+  interviewRoomHref: (sessionId: string) =>
+    `/interview/voice?session=${encodeURIComponent(sessionId)}`,
+  openInterviewRoom: mocks.openInterviewRoom
+}));
 vi.mock("@/lib/avatars/teacher-context", () => ({
   useWorkspaceTeacher: () => ({
     id: "sophia",
@@ -184,9 +188,7 @@ describe("BlockAssessmentPreview", () => {
         status: 200
       })
     );
-    await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith(`/interview/voice?session=${SESSION_ID}`)
-    );
+    await waitFor(() => expect(mocks.openInterviewRoom).toHaveBeenCalledWith(SESSION_ID));
   });
 
   it("announces a start API failure and allows a retry", async () => {

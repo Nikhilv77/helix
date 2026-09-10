@@ -146,7 +146,7 @@ export function CoreTechnicalIntro({
               "linear-gradient(180deg,#000 0%,#000 76%,rgba(0,0,0,.9) 87%,transparent 100%)"
           }}
         >
-          <MayaStage speaking={speaking} transparent />
+          <MayaStage speaking={speaking} transparent performanceProfile="practice" />
         </div>
 
         <div className="absolute right-5 top-5 z-20 hidden w-[clamp(14.5rem,22vw,17rem)] max-w-[40%] rounded-xl border border-white/[0.07] bg-[#1a1c20]/95 px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.28)] lg:block">

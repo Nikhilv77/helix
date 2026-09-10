@@ -576,11 +576,11 @@ export default function InterviewSetupClient({
       style={workspaceAccentCssVariables(workspaceAccent) as CSSProperties}
       className="workspace-black relative flex min-h-screen flex-col overflow-hidden bg-black text-cream"
     >
-      <div className="pointer-events-none absolute left-1/2 top-[-12rem] h-[32rem] w-[44rem] max-w-[92vw] -translate-x-1/2 rounded-full bg-[var(--workspace-accent)] opacity-[0.055] blur-[160px]" />
+      <div className="interview-ambient-glow pointer-events-none absolute left-1/2 top-[-12rem] h-[32rem] w-[44rem] max-w-[92vw] -translate-x-1/2 rounded-full bg-[var(--workspace-accent)] opacity-[0.055] blur-[160px]" />
 
       {!isPreparing ? (
         <header className="relative z-10 mx-auto flex w-full max-w-3xl justify-center px-6 pt-7">
-          <div className="inline-flex items-center rounded-2xl border border-white/[0.08] bg-[rgba(25,26,29,0.58)] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_40px_rgba(0,0,0,0.2)] backdrop-blur-xl">
+          <div className="interview-mobile-glass inline-flex items-center rounded-2xl border border-white/[0.08] bg-[rgba(25,26,29,0.58)] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_40px_rgba(0,0,0,0.2)] backdrop-blur-xl">
             {activeSteps.map((value, index) => (
               <div key={value} className="flex items-center">
                 {index > 0 ? (

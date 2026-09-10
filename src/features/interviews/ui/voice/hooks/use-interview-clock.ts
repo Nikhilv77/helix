@@ -20,7 +20,9 @@ export function useInterviewClock({
 
     const updateElapsed = () => setElapsed(Math.min(hardCapMs, Date.now() - startedAt));
     updateElapsed();
-    const timer = window.setInterval(updateElapsed, 500);
+    // The UI only displays whole seconds. Updating twice per second needlessly
+    // rerendered the complete live workspace, including transcript and editor.
+    const timer = window.setInterval(updateElapsed, 1_000);
     return () => window.clearInterval(timer);
   }, [disabled, hardCapMs, startedAt]);
 

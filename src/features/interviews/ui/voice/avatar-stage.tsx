@@ -14,7 +14,15 @@ const FADE =
   "linear-gradient(to bottom, #000 0%, #000 72%, rgba(0,0,0,0.55) 88%, transparent 100%)";
 
 export type AvatarPerformanceProfile =
-  "default" | "marketing" | "preview" | "onboarding" | "welcome" | "dashboard" | "report";
+  | "default"
+  | "marketing"
+  | "preview"
+  | "onboarding"
+  | "welcome"
+  | "dashboard"
+  | "report"
+  | "practice"
+  | "interview";
 
 interface StagePerformanceSettings {
   antialias: boolean;
@@ -108,7 +116,11 @@ function mobileProfile(performanceProfile: AvatarPerformanceProfile): StagePerfo
   const welcome = performanceProfile === "welcome";
   const dashboard = performanceProfile === "dashboard";
   const report = performanceProfile === "report";
-  const adaptiveTouch = (onboarding && constrained) || ((welcome || dashboard || report) && coarse);
+  const practice = performanceProfile === "practice";
+  const interview = performanceProfile === "interview";
+  const adaptiveTouch =
+    (onboarding && constrained) ||
+    ((welcome || dashboard || report || practice || interview) && coarse);
 
   const device = navigator as Navigator & {
     deviceMemory?: number;
@@ -138,13 +150,15 @@ function mobileProfile(performanceProfile: AvatarPerformanceProfile): StagePerfo
     };
   }
 
-  if (welcome || dashboard || report) {
+  if (welcome || dashboard || report || practice || interview) {
     return {
       antialias: true,
       // These prominent reading surfaces remain mounted for a long time. Keep
       // the portrait sharp without running the default profile's 2.5 DPR,
-      // unrestricted loop on touch hardware.
-      pixelRatio: Math.min(dpr, coarse ? 1.5 : DESKTOP_PIXEL_RATIO_CAP),
+      // unrestricted loop on touch hardware. Practice and interview screens
+      // also run editors, audio analysis, video, or long text alongside the
+      // portrait, so low-end devices use a smaller backing buffer.
+      pixelRatio: Math.min(dpr, lowEndAdaptive ? 1.25 : coarse ? 1.5 : DESKTOP_PIXEL_RATIO_CAP),
       activeFrameInterval: 1000 / (lowEndAdaptive ? 24 : coarse ? 30 : 45),
       idleFrameInterval: 1000 / (lowEndAdaptive ? 10 : coarse ? 15 : 24),
       // Freeze the final sharp frame after the initial idle beat and wake

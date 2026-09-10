@@ -127,7 +127,7 @@ export function CoreTechnicalPreparation({
 
   return (
     <div
-      className={`fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-[#050607]/72 px-4 py-8 backdrop-blur-[7px] transition-opacity duration-500 motion-reduce:transition-none ${visible ? "opacity-100" : "opacity-0"}`}
+      className={`practice-mobile-overlay fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-[#050607]/72 px-4 py-8 backdrop-blur-[7px] transition-opacity duration-500 motion-reduce:transition-none ${visible ? "opacity-100" : "opacity-0"}`}
     >
       <section
         ref={dialogRef}

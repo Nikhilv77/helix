@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+
+const BAR_COUNT = 14;
+const BAR_HEIGHTS = Array.from(
+  { length: BAR_COUNT },
+  (_, index) => `${30 + (index / BAR_COUNT) * 70}%`
+);
 
 /**
  * Live level from the candidate's own microphone.
@@ -18,12 +24,24 @@ export function MicMeter({
   muted: boolean;
   onSignalChange?: (hearing: boolean) => void;
 }) {
-  const [level, setLevel] = useState(0);
   const raf = useRef(0);
+  const barsRef = useRef<Array<HTMLSpanElement | null>>([]);
+  const statusRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
+    const paint = (active: number, label: string) => {
+      for (let index = 0; index < barsRef.current.length; index += 1) {
+        const bar = barsRef.current[index];
+        if (!bar) continue;
+        const on = index < active;
+        bar.classList.toggle("bg-cream", on);
+        bar.classList.toggle("bg-cream/15", !on);
+      }
+      if (statusRef.current) statusRef.current.textContent = label;
+    };
+
     if (!track || muted) {
-      setLevel(0);
+      paint(0, muted ? "Muted" : "Say something");
       onSignalChange?.(false);
       return;
     }
@@ -36,7 +54,8 @@ export function MicMeter({
     const context = new AudioContextCtor();
     const source = context.createMediaStreamSource(new MediaStream([track]));
     const analyser = context.createAnalyser();
-    analyser.fftSize = 512;
+    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+    analyser.fftSize = coarsePointer ? 256 : 512;
     analyser.smoothingTimeConstant = 0.55;
     source.connect(analyser);
     void context.resume().catch(() => null);
@@ -44,9 +63,14 @@ export function MicMeter({
     const buffer = new Uint8Array(analyser.fftSize);
     let smoothed = 0;
     let lastHearing = false;
+    let lastActive = -1;
+    let lastSampleAt = 0;
+    const sampleInterval = coarsePointer ? 50 : 1000 / 30;
 
-    function tick() {
+    function tick(now: number) {
       raf.current = requestAnimationFrame(tick);
+      if (now - lastSampleAt < sampleInterval) return;
+      lastSampleAt = now;
       analyser.getByteTimeDomainData(buffer as Uint8Array<ArrayBuffer>);
 
       let sum = 0;
@@ -57,7 +81,11 @@ export function MicMeter({
 
       const raw = Math.min(1, Math.sqrt(sum / buffer.length) * 5);
       smoothed += (raw - smoothed) * 0.3;
-      setLevel(smoothed);
+      const active = Math.round(smoothed * BAR_COUNT);
+      if (active !== lastActive) {
+        lastActive = active;
+        paint(active, active > 1 ? "Hearing you" : "Say something");
+      }
 
       const hearing = smoothed > 0.025;
       if (hearing !== lastHearing) {
@@ -77,29 +105,26 @@ export function MicMeter({
     };
   }, [muted, onSignalChange, track]);
 
-  const bars = 14;
-  const active = Math.round(level * bars);
-
   return (
     <div className="flex items-center gap-3">
       <div className="flex h-6 items-end gap-[3px]" aria-hidden="true">
-        {Array.from({ length: bars }, (_, index) => {
-          const on = index < active;
-          const height = 30 + (index / bars) * 70;
-          return (
-            <span
-              key={index}
-              className={`w-[3px] rounded-full transition-colors duration-75 ${
-                on ? "bg-cream" : "bg-cream/15"
-              }`}
-              style={{ height: `${height}%` }}
-            />
-          );
-        })}
+        {BAR_HEIGHTS.map((height, index) => (
+          <span
+            key={index}
+            ref={(element) => {
+              barsRef.current[index] = element;
+            }}
+            className="w-[3px] rounded-full bg-cream/15 transition-colors duration-75"
+            style={{ height }}
+          />
+        ))}
       </div>
 
-      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-cream/40">
-        {muted ? "Muted" : active > 1 ? "Hearing you" : "Say something"}
+      <span
+        ref={statusRef}
+        className="font-mono text-[10px] uppercase tracking-[0.16em] text-cream/40"
+      >
+        {muted ? "Muted" : "Say something"}
       </span>
     </div>
   );

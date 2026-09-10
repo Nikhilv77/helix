@@ -521,7 +521,7 @@ function AssessmentPreviewFrame({
             alt={`${teacherName}, your teacher`}
             fill
             sizes="(min-width: 1024px) 184px, (min-width: 640px) 152px, 100vw"
-            priority
+            quality={85}
             placeholder="blur"
             blurDataURL={DARK_PORTRAIT_PLACEHOLDER}
             className="bg-[#08090a] object-cover object-[center_25%] opacity-95 sm:origin-top sm:scale-[1.65] sm:object-top"

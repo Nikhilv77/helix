@@ -89,4 +89,23 @@ describe("MemorySessionStore", () => {
     });
     await expect(store.getActiveOwned(created.id, "user-2")).resolves.toBeNull();
   });
+
+  it("reactivates an owned durable session without changing its version", async () => {
+    vi.useFakeTimers().setSystemTime(new Date("2026-08-03T00:00:00Z"));
+    const store = new MemorySessionStore();
+    const created = state("66666666-6666-4666-8666-666666666666", Date.now());
+    await store.create(created, "user-1");
+
+    vi.setSystemTime(Date.now() + HOUR_MS + 1);
+    await expect(store.getActiveOwned(created.id, "user-1")).resolves.toBeNull();
+
+    await expect(store.reactivateOwned(created.id, "user-1")).resolves.toMatchObject({
+      version: 0,
+      state: { id: created.id }
+    });
+    await expect(store.getActiveOwned(created.id, "user-1")).resolves.toMatchObject({
+      id: created.id
+    });
+    await expect(store.reactivateOwned(created.id, "user-2")).resolves.toBeNull();
+  });
 });

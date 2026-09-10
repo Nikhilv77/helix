@@ -288,7 +288,7 @@ function PracticeSessionCard({
     </>
   );
   const className = [
-    "interview-session-card group relative grid min-h-[13rem] gap-6 rounded-[2rem] p-7 text-left transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/35 md:grid-cols-[5rem_minmax(0,1fr)_auto] md:gap-7 lg:grid-cols-[6rem_minmax(0,1fr)_auto] lg:p-8",
+    "interview-session-card workspace-deferred-card workspace-deferred-card-compact group relative grid min-h-[13rem] gap-6 rounded-[2rem] p-7 text-left transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/35 md:grid-cols-[5rem_minmax(0,1fr)_auto] md:gap-7 lg:grid-cols-[6rem_minmax(0,1fr)_auto] lg:p-8",
     unavailable ? "cursor-not-allowed opacity-45" : ""
   ].join(" ");
   const style = { "--interview-delay": `${delay}ms` } as CSSProperties;

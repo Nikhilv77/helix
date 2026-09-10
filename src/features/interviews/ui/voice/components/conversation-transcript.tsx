@@ -210,11 +210,23 @@ function TypewriterText({
       return;
     }
 
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const device = navigator as Navigator & { connection?: { saveData?: boolean } };
+    if (reducedMotion || device.connection?.saveData) {
+      setVisibleText(text);
+      return;
+    }
+
     setVisibleText("");
     let nextLength = 0;
-    const stepMs = 42;
+    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+    // Keep the same reading duration on touch hardware while halving React
+    // commits. Revealing two characters every 84ms looks the same at phone
+    // sizes as one character every 42ms, especially alongside spoken audio.
+    const charactersPerStep = coarsePointer ? 2 : 1;
+    const stepMs = coarsePointer ? 84 : 42;
     const timer = window.setInterval(() => {
-      nextLength += 1;
+      nextLength += charactersPerStep;
       setVisibleText(text.slice(0, nextLength));
 
       if (nextLength >= text.length) {

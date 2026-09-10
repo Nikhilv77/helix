@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Room, RoomEvent, Track } from "livekit-client";
 import type {
@@ -33,7 +34,6 @@ import { MicMeter } from "@/features/interviews/ui/voice/mic-meter";
 import { InterviewerPresence } from "@/features/interviews/ui/voice/interviewer-presence";
 import { personaById, personaForSession } from "@/lib/avatars/personas";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
-import { AvatarStage } from "@/features/interviews/ui/voice/avatar-stage";
 import type { PresenceState } from "@/features/interviews/ui/voice/interviewer-presence";
 import {
   ApiClientError,
@@ -91,6 +91,20 @@ const MIC_SILENCE_WARNING_MS = 6_000;
 const MIC_DEVICE_STORAGE_KEY = "trailgrad.preferredMicrophone";
 const TYPED_ANSWER_TOPIC = "trailgrad.typed-answer";
 
+// The permission screen does not render the interviewer. Keep Three.js, the
+// GLTF loader, and the model runtime out of that first interaction entirely.
+const AvatarStage = dynamic(
+  () => import("@/features/interviews/ui/voice/avatar-stage").then((module) => module.AvatarStage),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full w-full items-center justify-center">
+        <span className="h-10 w-10 animate-pulse rounded-full bg-cream/[0.08] shadow-[0_0_36px_rgba(239,232,214,0.12)]" />
+      </div>
+    )
+  }
+);
+
 interface DsaWorkspaceQuestion {
   title: string;
   primaryPattern: string;
@@ -111,10 +125,13 @@ function stopMediaStream(stream: MediaStream | null) {
 }
 
 export function VoiceInterviewClient({
+  sessionId,
   workspaceAccent,
   resume,
   teacherId
 }: {
+  /** Server-resolved durable session identity for this room. */
+  sessionId: string;
   workspaceAccent: WorkspaceAccent;
   /** Backs the resume round's document preview. Null for other rounds. */
   resume?: CandidateResume | null;
@@ -122,8 +139,6 @@ export function VoiceInterviewClient({
   teacherId?: string | null;
 }) {
   const router = useRouter();
-  const params = useSearchParams();
-  const sessionId = params?.get("session") ?? null;
   const persona = useMemo(
     () => personaById(teacherId) ?? personaForSession(sessionId),
     [sessionId, teacherId]
@@ -266,11 +281,6 @@ export function VoiceInterviewClient({
   // Join the room. The token carries the agent dispatch, so connecting is what
   // summons the interviewer.
   useEffect(() => {
-    if (!sessionId) {
-      router.replace("/interview");
-      return;
-    }
-
     // Do not open a media room until the durable interview state has been
     // verified. This prevents an expired session from flashing a live call
     // underneath its recovery message.
@@ -545,7 +555,6 @@ export function VoiceInterviewClient({
   }, [
     connectionAttempt,
     mediaSetupComplete,
-    router,
     sessionChecked,
     sessionId,
     sessionUnavailable,
@@ -1065,6 +1074,7 @@ export function VoiceInterviewClient({
         state={presence}
         url={AVATAR_OVERRIDE || persona.model}
         rig={persona.rig}
+        performanceProfile="interview"
       />
     );
   const micAvailable = status === "waiting" || status === "live" || status === "reconnecting";
@@ -1151,7 +1161,7 @@ export function VoiceInterviewClient({
     <VoiceShell workspaceAccent={workspaceAccent} wide>
       <audio ref={audioRef} autoPlay />
 
-      <header className="mb-3 flex shrink-0 flex-col gap-2 rounded-2xl border border-white/[0.08] bg-[rgba(25,26,29,0.58)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:min-h-14 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
+      <header className="interview-live-glass mb-3 flex shrink-0 flex-col gap-2 rounded-2xl border border-white/[0.08] bg-[rgba(25,26,29,0.58)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:min-h-14 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
         <div className="thin-scroll w-full min-w-0 overflow-x-auto py-1 sm:flex-1">
           <PathRail
             phase={phase}
@@ -1521,13 +1531,13 @@ export function VoiceInterviewClient({
             </div>
           </section>
 
-          <aside className="workspace-accent-card-glow order-1 flex min-h-[20rem] flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_26%,transparent)] bg-[color-mix(in_srgb,var(--workspace-accent)_4%,rgba(17,18,21,0.68))] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_24px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl xl:order-2 xl:min-h-0">
+          <aside className="interview-live-glass workspace-accent-card-glow order-1 flex min-h-[20rem] flex-col overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--workspace-accent)_26%,transparent)] bg-[color-mix(in_srgb,var(--workspace-accent)_4%,rgba(17,18,21,0.68))] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_24px_70px_rgba(0,0,0,0.24)] backdrop-blur-2xl xl:order-2 xl:min-h-0">
             <div className="relative min-h-64 flex-1 overflow-hidden">
               <div className="pointer-events-none absolute inset-3 flex items-center justify-center">
                 <div className="h-full max-h-[29rem] w-full max-w-[21rem]">{interviewerSlot()}</div>
               </div>
 
-              <div className="absolute bottom-4 left-4 flex items-center gap-2 rounded-full border border-white/[0.08] bg-black/55 px-3 py-1.5 backdrop-blur-lg">
+              <div className="interview-live-chip absolute bottom-4 left-4 flex items-center gap-2 rounded-full border border-white/[0.08] bg-black/55 px-3 py-1.5 backdrop-blur-lg">
                 <span
                   className={`h-2 w-2 rounded-full ${
                     status === "live"
@@ -1688,7 +1698,7 @@ function DsaLiveWorkspace({
           {question ? (
             <div className="px-5 pb-7 sm:px-7 sm:pb-8">
               <div
-                className={`sticky top-0 z-10 -mx-5 flex items-center justify-between gap-3 border-b ${INTERVIEW_PANEL_RULE} bg-[rgba(17,18,21,0.92)] px-5 py-4 text-sm backdrop-blur-2xl sm:-mx-7 sm:px-7`}
+                className={`interview-live-sticky sticky top-0 z-10 -mx-5 flex items-center justify-between gap-3 border-b ${INTERVIEW_PANEL_RULE} bg-[rgba(17,18,21,0.92)] px-5 py-4 text-sm backdrop-blur-2xl sm:-mx-7 sm:px-7`}
               >
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]" />

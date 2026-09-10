@@ -279,7 +279,7 @@ function MayaColumn({
           WebkitMaskImage: "linear-gradient(180deg,#000 0%,#000 92%,transparent 100%)"
         }}
       >
-        <MayaStage speaking={speaking} />
+        <MayaStage speaking={speaking} performanceProfile="practice" />
       </div>
 
       <div className="relative z-20 flex items-center justify-between gap-3 px-5 pt-5">

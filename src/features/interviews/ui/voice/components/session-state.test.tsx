@@ -5,7 +5,22 @@ vi.mock("@/lib/avatars/teacher-context", () => ({
   useWorkspaceTeacher: () => ({ id: "sophia", name: "Sophia" })
 }));
 
-import { SessionStateScreen } from "./session-state";
+import { SessionLoadingScreen, SessionStateScreen } from "./session-state";
+
+describe("SessionLoadingScreen", () => {
+  afterEach(cleanup);
+
+  it("keeps the preparing state minimal", () => {
+    render(<SessionLoadingScreen error={null} onRetry={vi.fn()} workspaceAccent="ember" />);
+
+    expect(screen.getByRole("heading", { name: "Preparing your interview" })).toBeVisible();
+    expect(screen.getByText("Sophia will join shortly.")).toBeVisible();
+    expect(screen.queryByText("Trailgrad")).toBeNull();
+    expect(screen.queryByText("Interview studio")).toBeNull();
+    expect(screen.queryByText("Secure interview room")).toBeNull();
+    expect(screen.queryByText(/checking your session/i)).toBeNull();
+  });
+});
 
 describe("SessionStateScreen block assessment completion", () => {
   afterEach(cleanup);

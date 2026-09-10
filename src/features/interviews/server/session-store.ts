@@ -40,6 +40,8 @@ export interface SessionStore {
   getActiveOwnedVersioned(id: string, ownerId: string): Promise<VersionedInterviewSession | null>;
   /** Durable owner-scoped read used by history and reports; does not enforce room TTL. */
   getOwned(id: string, ownerId: string): Promise<StoredInterviewSession | null>;
+  /** Restores a deliberately resumable durable session to the live-room window. */
+  reactivateOwned(id: string, ownerId: string): Promise<VersionedInterviewSession | null>;
   listByOwner(ownerId: string, limit: number): Promise<StoredInterviewSession[]>;
   /** Transcript-free read model used by the cross-session reports index. */
   listReportsByOwner(ownerId: string, limit: number, now?: number): Promise<InterviewReport[]>;
@@ -147,6 +149,19 @@ export class MemorySessionStore implements SessionStore {
     const stored = this.durableSessions.get(id);
     if (!stored || stored.ownerId !== ownerId) return null;
     return storedView(stored);
+  }
+
+  async reactivateOwned(
+    id: string,
+    ownerId: string
+  ): Promise<VersionedInterviewSession | null> {
+    const stored = this.durableSessions.get(id);
+    if (!stored || stored.ownerId !== ownerId) return null;
+
+    const reactivated = { ...stored, touchedAt: Date.now() };
+    this.durableSessions.set(id, reactivated);
+    this.sessions.set(id, reactivated);
+    return storedView(reactivated);
   }
 
   async listByOwner(ownerId: string, limit: number): Promise<StoredInterviewSession[]> {
@@ -364,6 +379,21 @@ export class PrismaSessionStore implements SessionStore {
       state: stored.state as unknown as InterviewState,
       touchedAt: stored.touchedAt.getTime()
     };
+  }
+
+  async reactivateOwned(
+    id: string,
+    ownerId: string
+  ): Promise<VersionedInterviewSession | null> {
+    const reactivatedAt = new Date();
+    const result = await this.prisma.interviewSession.updateMany({
+      where: { id, ownerId },
+      data: { touchedAt: reactivatedAt }
+    });
+    if (result.count !== 1) return null;
+
+    const stored = await this.prisma.interviewSession.findFirst({ where: { id, ownerId } });
+    return stored ? prismaStoredView(stored) : null;
   }
 
   async listByOwner(ownerId: string, limit: number): Promise<StoredInterviewSession[]> {

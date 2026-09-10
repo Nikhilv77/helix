@@ -115,11 +115,14 @@ export class InterviewService {
     if (sessionId) {
       const existing = await this.store.getOwned(sessionId, ownerId);
       if (existing) {
+        const session = isIncompleteBlockAssessment(existing.state)
+          ? ((await this.store.reactivateOwned(sessionId, ownerId)) ?? existing)
+          : existing;
         return {
-          state: existing.state,
+          state: session.state,
           utterance:
-            existing.state.turns.find((turn) => turn.speaker === "agent" && turn.action === "intro")
-              ?.text ?? introUtterance(existing.state),
+            session.state.turns.find((turn) => turn.speaker === "agent" && turn.action === "intro")
+              ?.text ?? introUtterance(session.state),
           created: false
         };
       }
@@ -232,9 +235,15 @@ export class InterviewService {
     sessionId: string,
     ownerId?: string
   ): Promise<VersionedInterviewSession> {
-    const session = ownerId
+    let session = ownerId
       ? await this.store.getActiveOwnedVersioned(sessionId, ownerId)
       : await this.store.getVersioned(sessionId);
+    if (!session && ownerId) {
+      const durable = await this.store.getOwned(sessionId, ownerId);
+      if (durable && isIncompleteBlockAssessment(durable.state)) {
+        session = await this.store.reactivateOwned(sessionId, ownerId);
+      }
+    }
     if (!session) {
       throw new NotFoundErrorException("SESSION_NOT_FOUND", "Interview session not found", {
         sessionId
@@ -254,12 +263,7 @@ export class InterviewService {
     questionIndex: number,
     execution: CodeExecutionEvidence
   ): Promise<InterviewState> {
-    const session = await this.store.getActiveOwnedVersioned(sessionId, ownerId);
-    if (!session) {
-      throw new NotFoundErrorException("SESSION_NOT_FOUND", "Interview session not found", {
-        sessionId
-      });
-    }
+    const session = await this.versionedSession(sessionId, ownerId);
     const question = session.state.plan[questionIndex];
     if (!question || question.kind !== "code" || session.state.questionIndex !== questionIndex) {
       throw new BadRequestErrorException(
@@ -1276,6 +1280,12 @@ function concurrentTurnError(sessionId: string): ConflictErrorException {
 
 function sessionMutationError(error: unknown, sessionId: string): unknown {
   return error instanceof SessionVersionConflictError ? concurrentTurnError(sessionId) : error;
+}
+
+function isIncompleteBlockAssessment(state: InterviewState): boolean {
+  return (
+    state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment" && state.phase !== "done"
+  );
 }
 
 function delay(milliseconds: number): Promise<void> {

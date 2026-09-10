@@ -3,7 +3,7 @@ import { buildFundamentalsPlan } from "./fundamentals-round";
 import { InterviewPlanner } from "./planner";
 import { executionForEvaluation, InterviewService, rubricFor } from "./interview.service";
 import { codeFingerprint } from "./code-fingerprint";
-import { MemorySessionStore } from "./session-store";
+import { MemorySessionStore, SESSION_TTL_MS } from "./session-store";
 import type { TechnicalAnswerEvaluator } from "./technical-answer-evaluator";
 import type { InterviewSetup, PlannedQuestion, QuestionEvaluation } from "./types";
 
@@ -111,6 +111,49 @@ describe("InterviewService resume round", () => {
     expect(resumed.created).toBe(false);
     expect(resumed.state.id).toBe(reserved);
     expect(await store.countStartedSince("user-1", 0)).toBe(1);
+  });
+
+  it("reactivates an incomplete DSA block assessment after the ordinary room TTL", async () => {
+    const now = Date.parse("2026-09-07T19:19:21Z");
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const { service, store } = harness();
+    const reserved = "77777777-7777-4777-8777-777777777777";
+    const assessmentSetup: InterviewSetup = {
+      ...setup,
+      dsaBlockAssessment: {
+        kind: "dsa-block-assessment",
+        blockId: "11111111-1111-4111-8111-111111111111",
+        assessmentId: "22222222-2222-4222-8222-222222222222",
+        snapshotVersion: 1,
+        rubricVersion: 1
+      }
+    };
+    const started = await service.start(assessmentSetup, "user-1", now, questions, reserved);
+
+    vi.mocked(Date.now).mockReturnValue(now + SESSION_TTL_MS + 1);
+    await expect(store.getActiveOwned(reserved, "user-1")).resolves.toBeNull();
+    await expect(service.getOwnedActive("user-1", reserved)).resolves.toMatchObject({
+      id: started.state.id,
+      setup: { dsaBlockAssessment: { kind: "dsa-block-assessment" } },
+      phase: "questioning"
+    });
+    await expect(store.getActiveOwned(reserved, "user-1")).resolves.toMatchObject({ id: reserved });
+
+    vi.restoreAllMocks();
+  });
+
+  it("does not revive an expired ordinary interview", async () => {
+    const now = Date.parse("2026-09-07T19:19:21Z");
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const { service } = harness();
+    const started = await service.start(setup, "user-1", now, questions);
+
+    vi.mocked(Date.now).mockReturnValue(now + SESSION_TTL_MS + 1);
+    await expect(service.getOwnedActive("user-1", started.state.id)).rejects.toMatchObject({
+      code: "SESSION_NOT_FOUND"
+    });
+
+    vi.restoreAllMocks();
   });
 
   it("keeps an incomplete block assessment resumable instead of submitting it", async () => {

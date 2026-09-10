@@ -10,7 +10,6 @@ import {
   RefreshCw,
   WifiOff
 } from "lucide-react";
-import { TrailgradMark } from "@/components/trailgrad-mark";
 import { workspaceAccentCssVariables, type WorkspaceAccent } from "@/lib/workspace/accent";
 import { formatClock } from "../utils/voice-interview";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
@@ -32,11 +31,11 @@ export function VoiceShell({
     >
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-[46%] h-[30rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--workspace-accent-soft)] opacity-45 blur-[140px]"
+        className="interview-room-ambient pointer-events-none absolute left-1/2 top-[46%] h-[30rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--workspace-accent-soft)] opacity-45 blur-[140px]"
       />
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -bottom-52 -right-40 h-[34rem] w-[34rem] rounded-full bg-[var(--workspace-accent-soft)] opacity-20 blur-[150px]"
+        className="interview-room-ambient pointer-events-none absolute -bottom-52 -right-40 h-[34rem] w-[34rem] rounded-full bg-[var(--workspace-accent-soft)] opacity-20 blur-[150px]"
       />
       <div
         className={`relative z-10 mx-auto flex h-full w-full flex-col pt-4 sm:pt-5 ${
@@ -61,43 +60,50 @@ export function SessionLoadingScreen({
   const teacher = useWorkspaceTeacher();
   return (
     <VoiceShell workspaceAccent={workspaceAccent}>
-      <StateHeader />
-      <section className="flex flex-1 items-center justify-center py-12">
-        <div className="relative w-full max-w-lg text-center">
+      <section
+        className="flex flex-1 items-center justify-center py-12"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="relative w-full max-w-md text-center">
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--workspace-accent-soft)] opacity-55 blur-[90px]"
+            className="interview-room-ambient pointer-events-none absolute left-1/2 top-[42%] h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--workspace-accent-soft)] opacity-45 blur-[90px]"
           />
-          <span className="relative mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.09] bg-white/[0.035] text-[var(--workspace-accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl">
-            {error ? (
-              <WifiOff size={18} aria-hidden="true" />
-            ) : (
-              <Loader2 size={18} className="animate-spin" aria-hidden="true" />
-            )}
-          </span>
-          <p className="relative mt-6 font-mono text-[10px] uppercase tracking-[0.2em] text-cream/52">
-            Secure interview room
-          </p>
-          <h1 className="relative mt-3 font-display text-2xl font-semibold tracking-tight text-cream sm:text-3xl">
+          {error ? (
+            <WifiOff
+              size={23}
+              strokeWidth={1.5}
+              className="relative mx-auto text-[var(--workspace-accent)]"
+              aria-hidden="true"
+            />
+          ) : (
+            <Loader2
+              size={24}
+              strokeWidth={1.5}
+              className="relative mx-auto animate-spin text-[var(--workspace-accent)] drop-shadow-[0_0_12px_var(--workspace-accent)]"
+              aria-hidden="true"
+            />
+          )}
+          <h1 className="relative mt-5 font-display text-2xl font-semibold tracking-tight text-cream sm:text-3xl">
             {error ? "The room could not be loaded" : "Preparing your interview"}
           </h1>
-          <p className="relative mx-auto mt-3 max-w-md text-sm leading-6 text-cream/64">
-            {error ??
-              `Checking your session and getting ${teacher.name} ready. This usually takes a moment.`}
-          </p>
           {error ? (
-            <button
-              type="button"
-              onClick={onRetry}
-              className="relative mt-7 inline-flex min-h-11 items-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white"
-            >
-              <RefreshCw size={15} aria-hidden="true" />
-              Try again
-            </button>
+            <>
+              <p className="relative mx-auto mt-3 max-w-sm text-sm leading-6 text-cream/58">
+                {error}
+              </p>
+              <button
+                type="button"
+                onClick={onRetry}
+                className="relative mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white"
+              >
+                <RefreshCw size={15} aria-hidden="true" />
+                Try again
+              </button>
+            </>
           ) : (
-            <div className="relative mx-auto mt-8 h-1 w-32 overflow-hidden rounded-full bg-white/[0.07]">
-              <span className="interview-loading-bar block h-full w-1/2 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_12px_var(--workspace-accent)]" />
-            </div>
+            <p className="relative mt-2.5 text-sm text-cream/42">{teacher.name} will join shortly.</p>
           )}
         </div>
       </section>
@@ -146,7 +152,7 @@ export function SessionStateScreen({
               </p>
             </div>
 
-            <div className="mt-8 rounded-3xl  bg-[rgba(28,29,33,0.52)] px-6 py-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_24px_70px_rgba(0,0,0,0.2)] backdrop-blur-2xl sm:px-8 sm:py-7">
+            <div className="interview-mobile-glass mt-8 rounded-3xl bg-[rgba(28,29,33,0.52)] px-6 py-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_24px_70px_rgba(0,0,0,0.2)] backdrop-blur-2xl sm:px-8 sm:py-7">
               <div className="space-y-5">
                 <CompletionMetric
                   icon={<Clock3 size={17} aria-hidden="true" />}
@@ -274,19 +280,5 @@ function CompletionMetric({
         <p className="mt-1 text-xl font-semibold tabular-nums text-cream">{value}</p>
       </div>
     </div>
-  );
-}
-
-function StateHeader() {
-  return (
-    <header className="flex items-center pb-5">
-      <Link href="/" className="flex items-center gap-2.5 text-cream">
-        <TrailgradMark className="h-7 w-7" />
-        <span className="text-base font-semibold tracking-tight">Trailgrad</span>
-      </Link>
-      <span className="ml-auto font-mono text-[9px] uppercase tracking-[0.18em] text-cream/42">
-        Interview studio
-      </span>
-    </header>
   );
 }

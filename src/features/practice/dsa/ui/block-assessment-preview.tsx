@@ -2,12 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ArrowRight, Check, ChevronDown, Loader2, Play, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { DARK_PORTRAIT_PLACEHOLDER } from "@/lib/avatars/portrait-placeholder";
+import {
+  interviewRoomHref,
+  openInterviewRoom
+} from "@/features/interviews/ui/shared/interview-room-navigation";
 import type { DsaBlockHistoryItem } from "@/features/practice/dsa/server/dsa-block-history.service";
 
 const METRICS = [
@@ -28,7 +31,6 @@ export function BlockAssessmentPreview({
   allowEarlyStart?: boolean;
 }) {
   const teacher = useWorkspaceTeacher();
-  const router = useRouter();
   const assessmentPortrait = `/images/teacher-portraits/assessment-headsets/${teacher.id}.jpg`;
   const remainingQuestions = Math.max(block.totalQuestions - block.completedQuestions, 0);
   const [noticeVisible, setNoticeVisible] = useState(false);
@@ -69,7 +71,7 @@ export function BlockAssessmentPreview({
       const payload: unknown = await response.json().catch(() => null);
       const sessionId = readSessionId(payload);
       if (!response.ok || !sessionId) throw new Error(readStartError(payload, response.status));
-      router.push(`/interview/voice?session=${encodeURIComponent(sessionId)}`);
+      openInterviewRoom(sessionId);
     } catch (error) {
       setStartError(
         error instanceof Error ? error.message : "The assessment could not be started. Try again."
@@ -109,8 +111,7 @@ export function BlockAssessmentPreview({
                 alt={`${teacher.name}, your teacher`}
                 fill
                 sizes="(min-width: 1024px) 184px, (min-width: 640px) 152px, 100vw"
-                quality={95}
-                priority
+                quality={85}
                 placeholder="blur"
                 blurDataURL={DARK_PORTRAIT_PLACEHOLDER}
                 className="bg-[#08090a] object-cover object-[center_25%] opacity-95 sm:origin-top sm:scale-[1.65] sm:object-top"
@@ -321,12 +322,12 @@ function InProgressAssessment({ sessionId }: { sessionId: string | null }) {
         Your frozen questions and existing interview session are ready to resume.
       </p>
       {sessionId ? (
-        <Link
-          href={`/interview/voice?session=${encodeURIComponent(sessionId)}`}
+        <a
+          href={interviewRoomHref(sessionId)}
           className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:-translate-y-0.5 hover:bg-white"
         >
           Resume assessment <ArrowRight size={15} aria-hidden="true" />
-        </Link>
+        </a>
       ) : (
         <p role="alert" className="mt-4 text-sm text-[#efb38f]">
           This session is temporarily unavailable. Refresh to recover it.
@@ -369,7 +370,7 @@ function CompletedAssessment({
               alt={`${teacherName}, your assessment teacher`}
               fill
               sizes="56px"
-              quality={90}
+              quality={82}
               placeholder="blur"
               blurDataURL={DARK_PORTRAIT_PLACEHOLDER}
               className="scale-125 bg-[#08090a] object-cover object-[center_22%]"
@@ -542,7 +543,7 @@ function AssessmentNotice({
       role="status"
       aria-live="polite"
       aria-label="Assessment notification"
-      className="fixed bottom-8 left-1/2 z-[100] w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-[1.4rem] bg-[#18191c]/[0.99] shadow-[0_28px_90px_-26px_rgba(0,0,0,0.98)] backdrop-blur-xl"
+      className="practice-mobile-glass fixed bottom-8 left-1/2 z-[100] w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-[1.4rem] bg-[#18191c]/[0.99] shadow-[0_28px_90px_-26px_rgba(0,0,0,0.98)] backdrop-blur-xl"
     >
       <div className="h-0.5 w-full bg-[var(--workspace-accent)]" />
       <div className="flex items-start gap-4 p-5 sm:p-6">

@@ -814,6 +814,17 @@ select {
   animation: interviews-glow-drift 11s ease-in-out infinite alternate;
 }
 
+/* Long roadmap lists keep their measured size while the browser skips paint
+   and layout work for cards that are still far below the viewport. */
+.workspace-deferred-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 28rem;
+}
+
+.workspace-deferred-card-compact {
+  contain-intrinsic-size: auto 13rem;
+}
+
 @keyframes interviews-glow-drift {
   from {
     transform: translate3d(-50%, 0, 0) scale(0.96);
@@ -1843,6 +1854,54 @@ html {
 }
 
 @media (hover: none), (pointer: coarse) {
+  /* Practice and interviews combine live media with large accent layers. On
+     touch GPUs, static radial washes preserve the same depth without a large
+     blur pass being recomposited while text, video, or WebGL updates. */
+  .interviews-accent-glow,
+  .interview-ambient-glow,
+  .interview-room-ambient,
+  .practice-accent-glow {
+    animation: none;
+    filter: none !important;
+    background: radial-gradient(
+      circle at center,
+      var(--workspace-accent-soft) 0%,
+      color-mix(in srgb, var(--workspace-accent) 7%, transparent) 44%,
+      transparent 72%
+    );
+  }
+
+  .interview-mobile-glass,
+  .interview-live-glass,
+  .interview-live-sticky,
+  .interview-live-chip,
+  .practice-mobile-glass,
+  .practice-mobile-overlay {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .interview-mobile-glass,
+  .interview-live-glass {
+    background: #191a1d;
+  }
+
+  .interview-live-sticky {
+    background: #111215;
+  }
+
+  .interview-live-chip {
+    background: rgba(0, 0, 0, 0.78);
+  }
+
+  .practice-mobile-glass {
+    background: #18191c;
+  }
+
+  .practice-mobile-overlay {
+    background: rgba(5, 6, 7, 0.86);
+  }
+
   /* Reports combines WebGL with several large decorative layers. Keep its
      depth on touch hardware without continuously repainting blurred glows or
      compositing translucent speech cards over the live canvas. */
