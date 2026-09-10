@@ -141,6 +141,26 @@ describe("CoreTechnicalPersistenceService", () => {
     expect(tx.coreTechnicalStoryProgress.upsert).toHaveBeenCalled();
   });
 
+  it("stores a candidate-specific path title while preserving the reviewed pattern contract", async () => {
+    const tx = blockTransaction();
+    const input = publishInput();
+    input.draft.story.title = "Trace and fix an async Node.js failure";
+
+    await expect(
+      new CoreTechnicalPersistenceService(prisma(tx)).publishPreparedBlock("owner-1", input)
+    ).resolves.toMatchObject({ id: BLOCK_ID });
+
+    expect(tx.coreTechnicalBlock.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          storySnapshot: expect.objectContaining({
+            title: "Trace and fix an async Node.js failure"
+          })
+        })
+      })
+    );
+  });
+
   it("replays the same request and converges a different concurrent request on the existing current block", async () => {
     const current = blockRecord();
     const replayTx = blockTransaction({

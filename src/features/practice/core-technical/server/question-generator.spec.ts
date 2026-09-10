@@ -95,7 +95,7 @@ function question(
       order +
       " and provide the exact reasoning needed to resolve this incident stage using variant " +
       variant +
-      ".",
+      ". Explain the evidence aloud, identify the underlying mechanism, and propose the smallest safe correction.",
     artifact: {
       kind: executable ? "code" : "scenario",
       title: "Evidence for incident stage " + order,
@@ -121,6 +121,18 @@ function question(
         "The correct answer follows the referenced mechanism and preserves the operation's explicit lifecycle.",
       explanation:
         "A complete answer traces the mechanism from the supplied artifact, explains the observed result, and applies a bounded repair with cleanup.",
+      learningGuide: {
+        markdown:
+          "## What is happening\nThe artifact exposes the runtime mechanism.\n\n## How to reason through it\nTrace ownership and execution in order.\n\n## A strong interview answer\nName the cause, evidence, and smallest safe repair.\n\n## What to avoid\n- Do not describe only the symptom.",
+        diagram: {
+          title: "Evidence to repair",
+          steps: [
+            { label: "Observe", detail: "Read the concrete runtime evidence." },
+            { label: "Explain", detail: "Trace the mechanism in execution order." },
+            { label: "Repair", detail: "Apply the smallest safe correction." }
+          ]
+        }
+      },
       ...(mcq ? { correctChoiceIndex: 1 } : {})
     },
     rubric: [

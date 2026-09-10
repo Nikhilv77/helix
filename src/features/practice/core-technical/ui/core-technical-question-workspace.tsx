@@ -34,6 +34,7 @@ import {
   coreTechnicalQuestionWorkKind,
   humanizeCoreTechnicalKey
 } from "@/features/practice/core-technical/domain/ui-state";
+import { CoreTechnicalLearningGuide } from "./core-technical-learning-guide";
 
 type PendingAction = "hint" | "run" | "attempt" | "learn" | null;
 type QuestionPanelTab = "description" | "hints" | "review";
@@ -52,11 +53,10 @@ const CORE_TECHNICAL_EXPERIENCE: StoryPracticeWorkspaceExperience = {
   label: "Core Technical",
   apiBase: "/api/practice/core-technical",
   routeBase: "/practice/core-technical",
-  subjectNoun: "story",
+  subjectNoun: "practice path",
   environmentLabel: "JavaScript · Node.js 22",
   capabilities: { runCode: true },
-  textAnswerPlaceholder:
-    "Trace the mechanism, cite the artifact, and explain the production consequence…",
+  textAnswerPlaceholder: "Explain what is happening, how you know, and what you would change…",
   feedbackReasoningLabel: "Mechanism",
   responseLabel: () => null,
   responseGuidance: () => null,
@@ -921,6 +921,7 @@ function AuthorizedAnswer({ question }: { question: StoryPracticeQuestionView })
       </summary>
       <p className="mt-4 text-[13px] leading-6 text-cream/64">{answer.concise}</p>
       <p className="mt-3 text-[12.5px] leading-6 text-cream/48">{answer.explanation}</p>
+      {answer.learningGuide ? <CoreTechnicalLearningGuide guide={answer.learningGuide} /> : null}
       {answer.referenceSolution ? (
         <div className="mt-4 overflow-hidden rounded-xl border border-white/[0.075] bg-[#0b0d10]">
           <div className="flex h-10 items-center justify-between border-b border-white/[0.065] bg-[#15181d] px-3.5">

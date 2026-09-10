@@ -25,9 +25,9 @@ import type { CoreTechnicalPersistenceService } from "./persistence.service";
 import type { CoreTechnicalPracticeService } from "./practice.service";
 import type { CoreTechnicalStoryRankingService } from "./story-ranking.service";
 
-export const CORE_TECHNICAL_PREPARATION_GENERATOR_VERSION = "core-technical-generation-pipeline-v2";
+export const CORE_TECHNICAL_PREPARATION_GENERATOR_VERSION = "core-technical-generation-pipeline-v4";
 export const CORE_TECHNICAL_PREPARATION_VALIDATOR_VERSION =
-  "core-technical-publication-validator-v1";
+  "core-technical-personalized-validator-v2";
 
 type Dependencies = {
   prisma: PrismaService;
@@ -126,13 +126,16 @@ export class CoreTechnicalPreparationService {
           language: focus.stack.language,
           runtime: focus.stack.runtime,
           framework: focus.stack.framework ?? undefined,
+          technology: focus.stack.technology,
           targetJob: focus.targetJob,
           targetCompany: focus.targetCompany ?? undefined,
           baselineState: focus.baselineEvidence.state,
           weakMechanismKeys: focus.baselineEvidence.weakMechanismKeys,
           unassessedMechanismKeys: focus.baselineEvidence.unassessedMechanismKeys,
           excludedTopicKeys: focus.excludedTopicKeys,
+          personalizePresentation: input.personalized,
           reviewedContract: {
+            storyKey: reviewedStory.key,
             storyTitle: reviewedStory.title,
             stagePatternKeys: reviewedStory.stages.map((item) => item.patternKey),
             requiredStoryTopicKeys: [
@@ -141,7 +144,10 @@ export class CoreTechnicalPreparationService {
             ]
           }
         },
-        { preferApprovedArtifact: true }
+        {
+          preferApprovedArtifact: !input.personalized,
+          fallbackToApprovedArtifactOnProviderFailure: input.personalized
+        }
       );
       stage = "publishing";
       await this.dependencies.persistence.publishPreparedBlock(ownerId, {

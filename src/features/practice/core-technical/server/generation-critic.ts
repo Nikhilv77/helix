@@ -121,9 +121,7 @@ export class CoreTechnicalGenerationCritic {
           verdict.dimension !== input.dimensions[index]
       )
     ) {
-      throw new Error(
-        "Core Technical critic returned a verdict for the wrong target or dimension"
-      );
+      throw new Error("Core Technical critic returned a verdict for the wrong target or dimension");
     }
 
     return coreTechnicalCriticReportSchema.parse({
@@ -158,7 +156,7 @@ export class CoreTechnicalGenerationCritic {
       "You are an independent Core Technical generation critic.",
       "Review every requested dimension independently inside one response; do not let a pass in one dimension hide a failure in another.",
       "Use the supplied pattern catalogue and source metadata as the authority boundary.",
-      "Fail on any factual error, answer leak, invented mechanism, broken story dependency, unsupported stack detail, trivialized interview pattern, misleading rubric, or material difficulty mismatch relevant to a requested dimension.",
+      "Fail on any factual error, answer leak, invented mechanism, unsupported stack detail, trivialized interview pattern, misleading rubric, vague fictional framing, or material difficulty mismatch relevant to a requested dimension.",
       "Every conclusion must cite concrete evidence from the supplied asset or catalogue in evidenceChecks.",
       "A pass requires zero blocking issues, every evidence check passing, and the minimum score supplied in the prompt.",
       "Return exactly one verdict for every requested dimension and no others. Set target and dimension exactly as requested. Return only data matching the supplied schema."
@@ -172,7 +170,7 @@ const DIMENSION_INSTRUCTIONS: Record<CoreTechnicalCriticDimension, string> = {
   "interview-relevance":
     "Verify every stage preserves a documented interview pattern's reasoning, importance, expected signals, and follow-up depth without copying source wording.",
   "story-continuity":
-    "Verify the incident evolves coherently, every stage needs its named evidence or prior artifact, and removing the narrative would materially change the questions.",
+    "Verify this is a coherent learning path: each question is concrete and understandable on its own, prior evidence is used only where it improves the reasoning, and no vague fictional narrative obscures the interview task.",
   "answer-quality":
     "Verify answers are complete and concise, hints are genuinely progressive, rubrics discriminate understanding, distractors reflect real misconceptions, and tests match the reference behavior.",
   difficulty:

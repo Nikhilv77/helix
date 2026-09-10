@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { coreTechnicalBaselineEvidenceSchema } from "./baseline-evidence-contracts";
 import { coreTechnicalDifficultySchema } from "./story-contracts";
+import { coreTechnicalTechnologySchema } from "./technology-focus";
 
 export const CORE_TECHNICAL_FOCUS_SCHEMA_VERSION = 1 as const;
 export const CORE_TECHNICAL_FIRST_STORY_RANKING_POLICY_VERSION = 1 as const;
@@ -28,7 +29,9 @@ export const coreTechnicalConfirmedFocusSchema = z
         language: z.literal("javascript"),
         runtime: z.literal("nodejs"),
         runtimeVersion: z.literal("22 LTS"),
-        framework: identifierSchema.nullable()
+        framework: identifierSchema.nullable(),
+        /** Optional for snapshots created before personalized technology selection. */
+        technology: coreTechnicalTechnologySchema.optional()
       })
       .strict(),
     excludedTopicKeys: z.array(identifierSchema),

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { coreTechnicalLearningGuideSchema } from "./question-contracts";
 
 const fingerprintSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
 const boundedTextSchema = z.string().trim().min(1).max(12_000);
@@ -49,7 +50,9 @@ export const coreTechnicalLearnInputSchema = z.object({
 
 export const coreTechnicalPrepareInputSchema = z.object({
   requestId: z.string().uuid(),
-  focusRevisionId: z.string().uuid()
+  focusRevisionId: z.string().uuid(),
+  /** Generate and freeze a candidate-specific block instead of copying a release artifact. */
+  personalized: z.boolean().optional().default(false)
 }).strict();
 
 export const coreTechnicalAttemptFeedbackSchema = z.object({
@@ -68,6 +71,7 @@ export const coreTechnicalAttemptFeedbackSchema = z.object({
 export const coreTechnicalAuthorizedAnswerSchema = z.object({
   concise: z.string().min(1).max(4_000),
   explanation: z.string().min(1).max(4_000),
+  learningGuide: coreTechnicalLearningGuideSchema,
   referenceSolution: z.string().min(1).max(12_000).optional()
 }).strict();
 

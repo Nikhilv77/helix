@@ -184,7 +184,19 @@ describe("CoreTechnicalQuestionWorkspace", () => {
       latestAttempt: makeAttempt({ kind: "choice", selectedChoiceIndex: 1 }),
       authorizedAnswer: {
         concise: "The promise callback runs before the timer callback.",
-        explanation: "The microtask checkpoint is drained before the timers phase continues."
+        explanation: "The microtask checkpoint is drained before the timers phase continues.",
+        learningGuide: {
+          markdown:
+            "## What is happening\nThe promise callback is queued as a microtask.\n\n## How to reason through it\nTrace the current stack, then drain microtasks before timers.\n\n## A strong interview answer\nName both queues and state their order.\n\n## What to avoid\n- Do not say every asynchronous callback runs in arrival order.",
+          diagram: {
+            title: "From synchronous work to the timer",
+            steps: [
+              { label: "Stack", detail: "Finish the current synchronous JavaScript task." },
+              { label: "Microtasks", detail: "Drain the queued promise callback next." },
+              { label: "Timers", detail: "Run the ready timer after microtasks finish." }
+            ]
+          }
+        }
       },
       question: {
         ...question.question,
@@ -228,6 +240,8 @@ describe("CoreTechnicalQuestionWorkspace", () => {
     expect(
       await screen.findByRole("heading", { name: /10\/10 · Strong answer/i })
     ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Detailed walkthrough" })).toBeInTheDocument();
+    expect(screen.getByText("From synchronous work to the timer")).toBeInTheDocument();
     expect(screen.getByText(/Interviewers use this/)).toBeInTheDocument();
     expect(mocks.refresh).toHaveBeenCalled();
   });

@@ -81,6 +81,13 @@ export type StoryPracticeQuestionView = {
   authorizedAnswer: {
     concise: string;
     explanation: string;
+    learningGuide?: {
+      markdown: string;
+      diagram: {
+        title: string;
+        steps: Array<{ label: string; detail: string }>;
+      };
+    };
     referenceSolution?: string;
   } | null;
   latestAttempt: {

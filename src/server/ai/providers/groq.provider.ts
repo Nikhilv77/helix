@@ -100,6 +100,7 @@ export class GroqProvider implements SystemDesignerAIProvider {
             durationMs: Date.now() - startedAt,
             code: mapped.code,
             retryable: mapped.retryable,
+            reason: mapped.message,
             retryAfterMs: mapped.retryAfterMs
           })
         );

@@ -16,12 +16,19 @@ import type {
 } from "@/features/practice/core-technical/domain/contracts";
 import type { AiService } from "@/server/ai/ai.service";
 
+const identifierSchema = z
+  .string()
+  .min(2)
+  .max(140)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+
 const storyGeneratorInputSchema = z.object({
   role: z.string().min(2),
   seniority: z.enum(["junior", "mid", "senior", "staff"]),
   language: z.string().min(2),
   runtime: z.string().min(2),
   framework: z.string().min(2).optional(),
+  technology: z.string().min(2).max(80).optional(),
   targetJob: z.string().min(2).max(160),
   targetCompany: z.string().min(2).max(160).optional(),
   baselineState: z.enum(["UNKNOWN", "GUIDED", "STANDARD", "STRETCH"]),
@@ -29,8 +36,10 @@ const storyGeneratorInputSchema = z.object({
   unassessedMechanismKeys: z.array(z.string()).default([]),
   recentTopicKeys: z.array(z.string()).default([]),
   excludedTopicKeys: z.array(z.string()).default([]),
+  personalizePresentation: z.boolean().optional().default(false),
   reviewedContract: z
     .object({
+      storyKey: identifierSchema.optional(),
       storyTitle: z.string().min(5).max(100),
       stagePatternKeys: z.array(z.string()).length(8),
       requiredStoryTopicKeys: z.array(z.string()).min(2).max(4)
@@ -189,7 +198,7 @@ export class CoreTechnicalStoryGenerator {
     }
     if (input.reviewedContract) {
       const generatedPatternKeys = candidate.stages.map((stage) => stage.patternKey);
-      if (candidate.title !== input.reviewedContract.storyTitle) {
+      if (!input.personalizePresentation && candidate.title !== input.reviewedContract.storyTitle) {
         errors.push("candidate title differs from the reviewed contract");
       }
       if (
@@ -261,7 +270,8 @@ export class CoreTechnicalStoryGenerator {
     const requiredTopics = input.reviewedContract.requiredStoryTopicKeys;
     return generatedStoryCandidateSchema.parse({
       ...candidate,
-      title: input.reviewedContract.storyTitle,
+      key: input.reviewedContract.storyKey ?? candidate.key,
+      title: input.personalizePresentation ? candidate.title : input.reviewedContract.storyTitle,
       primaryTopicKey: requiredTopics[0],
       secondaryTopicKeys: requiredTopics.slice(1),
       mechanismKeys: input.reviewedContract.stagePatternKeys.map(
@@ -335,10 +345,11 @@ export class CoreTechnicalStoryGenerator {
 
   private systemInstruction(): string {
     return [
-      "You design demanding, realistic Core Technical interview practice stories.",
+      "You design practical Core Technical interview learning paths built from situations candidates actually recognize.",
       "Use only the supplied, source-reviewed interview patterns.",
-      "Preserve the pattern's actual reasoning and difficulty; do not turn it into trivia.",
-      "Each stage must depend on the evolving incident and its named artifact.",
+      "Preserve the pattern's actual reasoning and difficulty, but prefer common interview fundamentals over obscure trivia.",
+      "Give the path a direct, task-led title such as 'Fix a slow database request' or 'Trace an async JavaScript bug'. Never use a vague cinematic incident title.",
+      "Each stage must be a relatable question that can be explained aloud, while still using the prior evidence when continuity helps learning.",
       "Never copy source wording or invent claims about a real employer's interview.",
       "Return only data matching the supplied schema."
     ].join(" ");
@@ -383,7 +394,10 @@ export class CoreTechnicalStoryGenerator {
         "candidateRole must be one complete sentence of at least 20 characters.",
         "mechanismKeys must contain 4 to 12 items; include each stage pattern's first mechanism key and omit redundant secondary mechanisms when necessary.",
         "Provide 3 to 6 distinct realismAnchors, each a complete sentence of at least 20 characters.",
-        "Make the incident plausible for the target job and confirmed stack.",
+        "Make the situation immediately recognizable for the target job and selected technology.",
+        "Write a short action-led title that tells the learner what they will fix, trace, design, or explain.",
+        "Prefer small API, database, async, testing, memory, or request examples over an elaborate fictional company incident.",
+        "Every stage title and objective must be plain enough for a candidate to restate naturally in an interview.",
         "Make each storyDependency name the prior fact or artifact required by that stage.",
         "Keep the whole block within 40 to 50 minutes.",
         "Put every excluded topic in forbiddenTopicKeys."
@@ -394,6 +408,7 @@ export class CoreTechnicalStoryGenerator {
         language: input.language,
         runtime: input.runtime,
         framework: input.framework,
+        technology: input.technology ?? input.framework ?? input.runtime,
         targetJob: input.targetJob,
         targetCompany: input.targetCompany,
         difficulty,
@@ -403,6 +418,7 @@ export class CoreTechnicalStoryGenerator {
         excludedTopicKeys: input.excludedTopicKeys
       },
       reviewedContract: input.reviewedContract,
+      personalizePresentation: input.personalizePresentation,
       domainTopics: this.dependencies.domainMap.topics,
       eligibleInterviewPatterns: catalogue
     });

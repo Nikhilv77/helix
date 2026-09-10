@@ -12,10 +12,10 @@ import { useMayaVoice, voiceUrl } from "@/infrastructure/realtime/use-maya-voice
 export const CORE_TECHNICAL_INTRO_EXPERIENCE: StoryPracticeIntroExperience = {
   label: "Core Technical",
   routeBase: "/practice/core-technical",
-  subjectNoun: "story",
-  description: "Build production depth through one connected technical story.",
+  subjectNoun: "practice path",
+  description: "Learn the practical questions that come up repeatedly in technical interviews.",
   script: (title) =>
-    `Your next focus is “${title}.” Trace the mechanism, follow the evidence, then prove the repair.`
+    `I’ve prepared “${title}” around practical interview questions. Start with the concrete problem, explain what is happening, then show how you would fix it.`
 };
 
 export function CoreTechnicalIntro({
@@ -75,9 +75,7 @@ export function CoreTechnicalIntro({
           <h1 className="font-display text-[2rem] font-semibold leading-none tracking-[-0.035em] text-cream sm:text-[2.15rem]">
             {experience.label} Practice
           </h1>
-          <p className="mt-3 text-[14px] leading-6 text-cream/54">
-            {experience.description}
-          </p>
+          <p className="mt-3 text-[14px] leading-6 text-cream/54">{experience.description}</p>
         </div>
 
         <div className="w-full rounded-xl border border-white/[0.08] bg-[#141619] px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:max-w-[19rem]">
@@ -88,7 +86,8 @@ export function CoreTechnicalIntro({
             </strong>{" "}
             questions complete
             <span className="block text-cream/42">
-              {capitalize(experience.subjectNoun)} {block.ordinal} · {block.isCurrent ? "Current path" : `Completed ${experience.subjectNoun}`}
+              {capitalize(experience.subjectNoun)} {block.ordinal} ·{" "}
+              {block.isCurrent ? "Current" : "Completed"}
             </span>
           </p>
           <div

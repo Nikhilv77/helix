@@ -202,4 +202,35 @@ describe("CoreTechnicalStoryGenerator", () => {
       aiRequest.schema.safeParse({ candidates: [reviewedCandidate, reviewedCandidate] }).success
     ).toBe(false);
   });
+
+  it("keeps reviewed patterns but allows a direct candidate-specific path title", async () => {
+    const goldCase = NODEJS_CORE_TECHNICAL_GOLD_CASES[0]!;
+    const reviewedCandidate = candidate("generated-personalized-key", {
+      primaryTopicKey: goldCase.expected.requiredStoryTopicKeys[0],
+      secondaryTopicKeys: goldCase.expected.requiredStoryTopicKeys.slice(1)
+    });
+    reviewedCandidate.title = "Trace and fix an async Node.js failure";
+    reviewedCandidate.difficulty = "guided";
+    reviewedCandidate.stages = reviewedCandidate.stages.map((stage, index) => ({
+      ...stage,
+      patternKey: goldCase.expected.stagePatternKeys[index]!
+    }));
+    const { generator } = createGenerator({ candidates: [reviewedCandidate] });
+
+    await expect(
+      generator.generate({
+        ...goldCase.candidateContext,
+        personalizePresentation: true,
+        reviewedContract: {
+          storyKey: "reviewed-personalized-path",
+          storyTitle: goldCase.expected.storyTitle,
+          stagePatternKeys: goldCase.expected.stagePatternKeys,
+          requiredStoryTopicKeys: goldCase.expected.requiredStoryTopicKeys
+        }
+      })
+    ).resolves.toMatchObject({
+      key: "reviewed-personalized-path",
+      title: "Trace and fix an async Node.js failure"
+    });
+  });
 });

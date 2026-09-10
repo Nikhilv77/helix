@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { CoreTechnicalOverview } from "@/features/practice/core-technical/ui/core-technical-overview";
-import { CoreTechnicalPreparation } from "@/features/practice/core-technical/ui/core-technical-preparation";
+import { CoreTechnicalTechnologyWelcome } from "@/features/practice/core-technical/ui/core-technical-technology-welcome";
+import { coreTechnicalTechnologyOptions } from "@/features/practice/core-technical/domain/technology-focus";
 import { coreTechnicalHistoryNavigation } from "@/features/practice/core-technical/domain/ui-state";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
@@ -12,7 +13,7 @@ import { NotFoundErrorException } from "@/server/common/exceptions/not-found-err
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
   "Core Technical Practice",
-  "Story-driven JavaScript and Node.js technical interview practice."
+  "Practical JavaScript and Node.js questions commonly discussed in technical interviews."
 );
 
 export default async function CoreTechnicalPracticePage({
@@ -53,9 +54,9 @@ export default async function CoreTechnicalPracticePage({
 
   if (needsFirstStory) {
     return (
-      <main className="min-h-[70vh]" aria-label="Core Technical setup">
-        <CoreTechnicalPreparation />
-      </main>
+      <CoreTechnicalTechnologyWelcome
+        technologies={coreTechnicalTechnologyOptions(profile.resume?.skills ?? [])}
+      />
     );
   }
 

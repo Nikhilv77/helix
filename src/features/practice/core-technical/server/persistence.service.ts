@@ -614,7 +614,6 @@ function assertCompleteDraft(input: ReturnType<typeof parsePublishInput>): void 
   if (
     input.selection.focusFingerprint.length === 0 ||
     selected.storyKey !== story.key ||
-    selected.title !== story.title ||
     selected.difficulty !== story.difficulty ||
     questionBlock.storyKey !== story.key
   ) throw new Error("The ranked selection, story, and question block do not match");
@@ -642,11 +641,10 @@ function assertReviewedContractMatches(rawReviewedStory: Prisma.JsonValue, story
   const reviewed = selectedStorySchema.parse(rawReviewedStory);
   if (
     reviewed.key !== story.key ||
-    reviewed.title !== story.title ||
     reviewed.stages.some((stage, index) => stage.patternKey !== story.stages[index]?.patternKey)
   ) throw new ConflictErrorException(
     "CORE_TECHNICAL_REVIEWED_CONTRACT_MISMATCH",
-    "The generated block differs from its published reviewed story contract."
+    "The generated block differs from its published reviewed pattern contract."
   );
 }
 

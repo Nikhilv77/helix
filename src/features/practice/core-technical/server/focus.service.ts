@@ -6,16 +6,20 @@ import {
   type CoreTechnicalConfirmedFocus
 } from "@/features/practice/core-technical/domain/focus-ranking-contracts";
 import { NODEJS_CORE_TECHNICAL_DOMAIN_MAP } from "@/features/practice/core-technical/domain/domain-map";
+import {
+  coreTechnicalFrameworkFor,
+  coreTechnicalTechnologySchema
+} from "@/features/practice/core-technical/domain/technology-focus";
 import { BadRequestErrorException } from "@/server/common/exceptions/bad-request-error.exception";
 import { ConflictErrorException } from "@/server/common/exceptions/conflict-error.exception";
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 import type { CoreTechnicalBaselineEvidenceService } from "./baseline-evidence.service";
 
-export const coreTechnicalFocusConfirmationSchema = z
-  .object({
-    language: z.literal("javascript")
-  })
-  .strict();
+export const coreTechnicalFocusConfirmationSchema = z.union([
+  z.object({ technology: coreTechnicalTechnologySchema }).strict(),
+  // Compatibility for the original single-language preparation screen.
+  z.object({ language: z.literal("javascript") }).strict()
+]);
 
 type FocusDatabase = {
   candidateProfile: {
@@ -88,6 +92,8 @@ export class CoreTechnicalFocusService {
     }
 
     const resumeEvidence = deriveResumeEvidence(profile.resumeAnalysis);
+    const explicitTechnology = "technology" in confirmation;
+    const technology = explicitTechnology ? confirmation.technology : "nodejs";
     const targetCompany = profile.targetCompany?.trim() || null;
     const targetDate = profile.targetDate?.toISOString().slice(0, 10) ?? null;
     const targetJob = profile.headline?.trim() || defaultTargetJob(profile.targetRole, seniority);
@@ -99,10 +105,13 @@ export class CoreTechnicalFocusService {
       targetCompany,
       targetDate,
       stack: {
-        language: confirmation.language,
+        language: "javascript",
         runtime: "nodejs",
         runtimeVersion: "22 LTS",
-        framework: deriveFramework(profile.resumeAnalysis)
+        framework: explicitTechnology
+          ? coreTechnicalFrameworkFor(technology)
+          : deriveFramework(profile.resumeAnalysis),
+        technology
       },
       excludedTopicKeys: [],
       resumeEvidence,

@@ -7,6 +7,7 @@ import {
 import { NODEJS_CORE_TECHNICAL_GOLD_CASES } from "@/features/practice/core-technical/domain/gold-cases";
 import type { FrozenQuestionBlock } from "@/features/practice/core-technical/domain/question-contracts";
 import type { SelectedCoreTechnicalStory } from "@/features/practice/core-technical/domain/story-contracts";
+import { AiProviderException } from "@/server/ai/ai-provider.exception";
 
 import { CoreTechnicalGenerationPipeline } from "./generation-pipeline";
 
@@ -133,6 +134,44 @@ describe("CoreTechnicalGenerationPipeline", () => {
     expect(setupResult.critic.reviewStory).not.toHaveBeenCalled();
     expect(setupResult.critic.reviewQuestionBlock).not.toHaveBeenCalled();
     expect(setupResult.runner.auditQuestion).toHaveBeenCalledTimes(2);
+  });
+
+  it("falls back to the reviewed artifact when personalized generation providers fail", async () => {
+    const setupResult = setup();
+    const providerError = new AiProviderException({
+      code: "AI_PROVIDER_ERROR",
+      message: "AI provider request failed",
+      provider: "groq",
+      operation: "core-technical-story-candidates-fallback",
+      retryable: true
+    });
+    setupResult.storyGenerator.generate.mockRejectedValue(providerError);
+    const reviewedDraft = {
+      story,
+      storyReview: report("story", true),
+      questionBlock,
+      questionBlockReview: report("question-block", true)
+    };
+    const approvedDraftResolver = vi.fn().mockReturnValue(reviewedDraft);
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const pipeline = new CoreTechnicalGenerationPipeline({
+      storyGenerator: setupResult.storyGenerator,
+      questionGenerator: setupResult.questionGenerator,
+      critic: setupResult.critic,
+      runner: setupResult.runner,
+      approvedDraftResolver
+    });
+
+    await expect(
+      pipeline.prepareReviewedDraft({} as never, {
+        fallbackToApprovedArtifactOnProviderFailure: true
+      })
+    ).resolves.toEqual(reviewedDraft);
+    expect(approvedDraftResolver).toHaveBeenCalledOnce();
+    expect(setupResult.questionGenerator.generateDraftBlock).not.toHaveBeenCalled();
+    expect(warning).toHaveBeenCalledWith(
+      expect.stringContaining("core-technical.generation.reviewed-fallback")
+    );
   });
 
   it("does not reuse an approved artifact at a different difficulty", async () => {

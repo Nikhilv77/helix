@@ -29,9 +29,9 @@ const CORE_TECHNICAL_OVERVIEW_EXPERIENCE: StoryPracticeOverviewExperience = {
   slug: "core-technical",
   label: "Core Technical",
   routeBase: "/practice/core-technical",
-  subjectNoun: "story",
+  subjectNoun: "practice path",
   environmentLabel: "Node.js 22",
-  libraryDescription: "Browse the reviewed production stories in your Node.js path.",
+  libraryDescription: "Browse practical, reviewed interview question paths for Node.js.",
   coachSteps: ["Name the mechanism", "Trace cause and consequence", "Prove the repair"],
   intro: CORE_TECHNICAL_INTRO_EXPERIENCE,
   assessment: CORE_TECHNICAL_ASSESSMENT_EXPERIENCE

@@ -130,6 +130,7 @@ export class CoreTechnicalContinuationService {
           recentTopicKeys: selection.evidence.priorTopicKeys,
           excludedTopicKeys: focus.excludedTopicKeys,
           reviewedContract: {
+            storyKey: reviewedStory.key,
             storyTitle: reviewedStory.title,
             stagePatternKeys: reviewedStory.stages.map((item) => item.patternKey),
             requiredStoryTopicKeys: [

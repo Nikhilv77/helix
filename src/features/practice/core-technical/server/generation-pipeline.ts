@@ -10,6 +10,8 @@ import type { CoreTechnicalQuestionGenerator } from "./question-generator";
 import type { CoreTechnicalStoryGenerator, StoryGeneratorInput } from "./story-generator";
 import type { CoreTechnicalRunnerService } from "./runner.service";
 import { approvedCoreTechnicalDraft } from "./approved-draft-catalogue";
+import { AiProviderException } from "@/server/ai/ai-provider.exception";
+import { Logger } from "@/server/common/logger";
 
 type GenerationPipelineDependencies = {
   storyGenerator: Pick<CoreTechnicalStoryGenerator, "generate">;
@@ -27,40 +29,72 @@ export type ReviewedCoreTechnicalDraft = {
 };
 
 export class CoreTechnicalGenerationPipeline {
+  private readonly logger = new Logger(CoreTechnicalGenerationPipeline.name);
+
   constructor(private readonly dependencies: GenerationPipelineDependencies) {}
 
   async prepareReviewedDraft(
     input: StoryGeneratorInput,
-    options: { preferApprovedArtifact?: boolean } = {}
+    options: {
+      preferApprovedArtifact?: boolean;
+      fallbackToApprovedArtifactOnProviderFailure?: boolean;
+    } = {}
   ): Promise<ReviewedCoreTechnicalDraft> {
     if (options.preferApprovedArtifact) {
-      const approvedDraft = (this.dependencies.approvedDraftResolver ?? approvedCoreTechnicalDraft)(
-        input
-      );
-      if (approvedDraft) {
-        assertCoreTechnicalCriticApproval(approvedDraft.storyReview);
-        assertCoreTechnicalCriticApproval(approvedDraft.questionBlockReview);
-        await this.auditExecutableQuestions(approvedDraft.questionBlock);
-        return approvedDraft;
-      }
+      const approvedDraft = await this.reviewedArtifact(input);
+      if (approvedDraft) return approvedDraft;
     }
 
-    const story = await this.dependencies.storyGenerator.generate(input);
-    const storyReview = await this.dependencies.critic.reviewStory(story);
-    assertCoreTechnicalCriticApproval(storyReview);
+    try {
+      const story = await this.dependencies.storyGenerator.generate(input);
+      const storyReview = await this.dependencies.critic.reviewStory(story);
+      assertCoreTechnicalCriticApproval(storyReview);
 
-    const questionBlock = await this.dependencies.questionGenerator.generateDraftBlock(story, {
-      normalizeReviewedMetadata: input.reviewedContract !== undefined
-    });
-    const questionBlockReview = await this.dependencies.critic.reviewQuestionBlock(
-      story,
-      questionBlock
+      const questionBlock = await this.dependencies.questionGenerator.generateDraftBlock(story, {
+        normalizeReviewedMetadata: input.reviewedContract !== undefined
+      });
+      const questionBlockReview = await this.dependencies.critic.reviewQuestionBlock(
+        story,
+        questionBlock
+      );
+      assertCoreTechnicalCriticApproval(questionBlockReview);
+
+      await this.auditExecutableQuestions(questionBlock);
+
+      return { story, storyReview, questionBlock, questionBlockReview };
+    } catch (error) {
+      if (
+        options.fallbackToApprovedArtifactOnProviderFailure &&
+        error instanceof AiProviderException
+      ) {
+        const approvedDraft = await this.reviewedArtifact(input);
+        if (approvedDraft) {
+          this.logger.warn(
+            JSON.stringify({
+              event: "core-technical.generation.reviewed-fallback",
+              failedOperation: error.operation,
+              provider: error.provider,
+              code: error.code
+            })
+          );
+          return approvedDraft;
+        }
+      }
+      throw error;
+    }
+  }
+
+  private async reviewedArtifact(
+    input: StoryGeneratorInput
+  ): Promise<ReviewedCoreTechnicalDraft | null> {
+    const approvedDraft = (this.dependencies.approvedDraftResolver ?? approvedCoreTechnicalDraft)(
+      input
     );
-    assertCoreTechnicalCriticApproval(questionBlockReview);
-
-    await this.auditExecutableQuestions(questionBlock);
-
-    return { story, storyReview, questionBlock, questionBlockReview };
+    if (!approvedDraft) return null;
+    assertCoreTechnicalCriticApproval(approvedDraft.storyReview);
+    assertCoreTechnicalCriticApproval(approvedDraft.questionBlockReview);
+    await this.auditExecutableQuestions(approvedDraft.questionBlock);
+    return approvedDraft;
   }
 
   private async auditExecutableQuestions(questionBlock: FrozenQuestionBlock): Promise<void> {

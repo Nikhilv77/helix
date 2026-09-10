@@ -25,6 +25,7 @@ import {
   publicCoreTechnicalAssessmentSnapshot
 } from "@/features/practice/core-technical/domain/assessment-contracts";
 import {
+  coreTechnicalLearningGuideFor,
   generatedQuestionCandidateSchema,
   publicCoreTechnicalQuestionSchema,
   revealCoreTechnicalHint
@@ -507,6 +508,7 @@ function publicQuestion(question: QuestionRead) {
       ? coreTechnicalAuthorizedAnswerSchema.parse({
           concise: frozen.answer.concise,
           explanation: frozen.answer.explanation,
+          learningGuide: coreTechnicalLearningGuideFor(frozen),
           referenceSolution: frozen.referenceSolution
         })
       : null,

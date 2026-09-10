@@ -71,6 +71,19 @@ describe("CoreTechnicalFocusService", () => {
     expect(second.confirmedAt).not.toBe(first.confirmedAt);
   });
 
+  it("uses the learner's explicit technology instead of silently inferring another framework", async () => {
+    const service = new CoreTechnicalFocusService({
+      prisma: { candidateProfile: { findUnique: vi.fn().mockResolvedValue(profile()) } },
+      baselineEvidence: { derive: vi.fn().mockResolvedValue(evidence("STANDARD")) }
+    });
+
+    const nodeFocus = await service.confirm("owner-1", { technology: "nodejs" });
+    const expressFocus = await service.confirm("owner-1", { technology: "express" });
+
+    expect(nodeFocus.stack).toMatchObject({ technology: "nodejs", framework: null });
+    expect(expressFocus.stack).toMatchObject({ technology: "express", framework: "express" });
+  });
+
   it("fails closed for an unsupported profile role or missing level", async () => {
     const create = (profileValue: ReturnType<typeof profile>) =>
       new CoreTechnicalFocusService({

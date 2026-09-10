@@ -139,6 +139,27 @@ export class CoreTechnicalQuestionGenerator {
     if (new Set(candidate.hints).size !== 3) {
       errors.push("hints are not progressive and distinct");
     }
+    const promptWordCount = candidate.prompt.trim().split(/\s+/).length;
+    if (promptWordCount < 24 || promptWordCount > 90) {
+      errors.push("prompt is not a focused 24 to 90 word interview question");
+    }
+    if (!candidate.answer.learningGuide) {
+      errors.push("question omitted its detailed learning guide");
+    } else {
+      const requiredHeadings = [
+        "## What is happening",
+        "## How to reason through it",
+        "## A strong interview answer",
+        "## What to avoid"
+      ];
+      if (
+        requiredHeadings.some(
+          (heading) => !candidate.answer.learningGuide?.markdown.includes(heading)
+        )
+      ) {
+        errors.push("learning guide omitted a required teaching section");
+      }
+    }
     return errors;
   }
 
@@ -156,22 +177,24 @@ export class CoreTechnicalQuestionGenerator {
   }
 
   private scoreCandidate(candidate: GeneratedQuestionCandidate): number {
-    const depth =
-      candidate.answer.explanation.length +
-      candidate.rubric.reduce((sum, criterion) => sum + criterion.criterion.length, 0);
-    const interviewValue =
-      candidate.commonMistakes.length * 15 + candidate.interviewerFollowUps.length * 15;
+    const promptWords = candidate.prompt.trim().split(/\s+/).length;
+    const clarity = promptWords >= 24 && promptWords <= 90 ? 220 : Math.max(0, 160 - promptWords);
+    const depth = Math.min(260, candidate.answer.explanation.length / 4);
+    const interviewValue = Math.min(180, candidate.interviewerFollowUps.length * 45);
     const executableEvidence =
       (candidate.publicTests?.length ?? 0) * 10 + (candidate.hiddenTests?.length ?? 0) * 10;
-    return Math.min(1_000, depth + interviewValue + executableEvidence);
+    const learningValue = candidate.answer.learningGuide ? 220 : 0;
+    return Math.min(1_000, clarity + depth + interviewValue + executableEvidence + learningValue);
   }
 
   private systemInstruction(): string {
     return [
-      "You create rigorous Core Technical interview-practice questions inside one continuing production incident.",
+      "You create clear, practical Core Technical questions that sound like a thoughtful human interviewer.",
       "Preserve the supplied interview pattern's mechanism and expected reasoning.",
-      "The story is a delivery vehicle, not decoration: the prompt must require its incident evidence or artifact.",
+      "Use the learning path only for continuity. Every question must stand on a concrete, relatable task such as fixing a slow database request, tracing a bug, or explaining a familiar code result.",
+      "Prefer frequently asked fundamentals and plain language. Do not invent a vague company narrative or bury the task in incident prose.",
       "Write a complete correct private answer, a discriminating 10-point rubric, realistic mistakes, and interviewer follow-ups.",
+      "Write a detailed Markdown learning guide and a small ordered mechanism diagram that teaches the answer after the candidate attempts it.",
       "Hints must progress from orientation to mechanism to near-solution without revealing the answer immediately.",
       "For executable questions, use deterministic Node.js 22 code with no network, filesystem, clock, randomness, or external packages.",
       "Never put the answer, hidden tests, rubric, or correct choice into the public prompt or artifact.",
@@ -224,6 +247,10 @@ export class CoreTechnicalQuestionGenerator {
       hardRules: [
         "Copy storyKey, stageKey, order, format, patternKey, topicKeys, and mechanismKeys exactly from the supplied contract.",
         "Every prompt, artifact content, hint, explanation, rubric criterion, mistake, follow-up, and interview connection must contain at least 20 characters; the concise answer must contain at least 8.",
+        "Start the prompt with the concrete task or symptom. Keep it between 24 and 90 words, use direct second-person language, and make it easy to repeat aloud in an interview.",
+        "Prefer the most frequently asked version of the supplied pattern. Avoid obscure package, runtime, or infrastructure trivia unless the candidate seniority or selected technology genuinely calls for it.",
+        "answer.learningGuide is required. Its Markdown must use the headings '## What is happening', '## How to reason through it', '## A strong interview answer', and '## What to avoid'. Explain technical terms in plain language and include a useful example.",
+        "answer.learningGuide.diagram must contain 2 to 6 ordered steps. Each step needs a short label and a self-contained detail; it must still make sense as an accessible numbered list on a phone.",
         "Use exactly three distinct progressive hints and between 1 and 6 rubric criteria totaling exactly 10 points.",
         "MCQ distractors must represent realistic misconceptions, not joke answers.",
         "Debug and implementation formats require starter code, reference solution, public tests, hidden tests, common wrong-solution mutants, and the pinned runner contract.",

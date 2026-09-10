@@ -24,6 +24,32 @@ const conciseContentSchema = z
   .max(4_000)
   .describe("A concise but complete answer containing at least 8 characters");
 
+export const coreTechnicalLearningGuideSchema = z
+  .object({
+    markdown: z
+      .string()
+      .min(120)
+      .max(12_000)
+      .describe("A detailed plain-language Markdown lesson revealed after the attempt"),
+    diagram: z
+      .object({
+        title: z.string().min(4).max(120),
+        steps: z
+          .array(
+            z
+              .object({
+                label: z.string().min(2).max(80),
+                detail: z.string().min(8).max(240)
+              })
+              .strict()
+          )
+          .min(2)
+          .max(6)
+      })
+      .strict()
+  })
+  .strict();
+
 export const coreTechnicalArtifactSchema = z.object({
   kind: z.enum(["code", "logs", "trace", "metrics", "config", "scenario"]),
   title: z.string().min(4).max(120),
@@ -77,7 +103,9 @@ const generatedQuestionCandidateShape = {
   answer: z.object({
     concise: conciseContentSchema,
     explanation: contentSchema,
-    correctChoiceIndex: z.number().int().min(0).max(4).optional()
+    correctChoiceIndex: z.number().int().min(0).max(4).optional(),
+    /** Optional only so already-frozen version-one blocks remain readable. */
+    learningGuide: coreTechnicalLearningGuideSchema.optional()
   }),
   rubric: z
     .array(
@@ -127,7 +155,8 @@ const generatedQuestionCandidateWireSchema = generatedQuestionCandidateBaseSchem
   answer: z.object({
     concise: providerTextSchema,
     explanation: providerTextSchema,
-    correctChoiceIndex: z.number().int().optional()
+    correctChoiceIndex: z.number().int().optional(),
+    learningGuide: coreTechnicalLearningGuideSchema.optional()
   }),
   rubric: z
     .array(
@@ -251,6 +280,54 @@ export const publicCoreTechnicalQuestionSchema = z.object({
 export type GeneratedQuestionCandidate = z.infer<typeof generatedQuestionCandidateSchema>;
 export type FrozenQuestionBlock = z.infer<typeof frozenQuestionBlockSchema>;
 export type PublicCoreTechnicalQuestion = z.infer<typeof publicCoreTechnicalQuestionSchema>;
+export type CoreTechnicalLearningGuide = z.infer<typeof coreTechnicalLearningGuideSchema>;
+
+/** Compatibility lesson for blocks frozen before rich learning guides shipped. */
+export function coreTechnicalLearningGuideFor(
+  question: GeneratedQuestionCandidate
+): CoreTechnicalLearningGuide {
+  if (question.answer.learningGuide) return question.answer.learningGuide;
+  const mechanism = humanize(question.mechanismKeys[0] ?? question.topicKeys[0] ?? "mechanism");
+  return coreTechnicalLearningGuideSchema.parse({
+    markdown: [
+      "## What is happening",
+      boundedText(question.answer.explanation, 3_600),
+      "## A strong interview answer",
+      boundedText(question.answer.concise, 3_000),
+      "## What to avoid",
+      ...question.commonMistakes
+        .slice(0, 3)
+        .map((mistake) => `- ${boundedText(mistake, 700)}`),
+      "## Try this follow-up",
+      boundedText(
+        question.interviewerFollowUps[0] ??
+          "Explain how you would verify the same mechanism in a production system.",
+        1_500
+      )
+    ].join("\n\n"),
+    diagram: {
+      title: boundedText(`How ${mechanism} connects the evidence to the fix`, 120),
+      steps: [
+        { label: "Observe", detail: question.artifact.title },
+        { label: "Explain", detail: `Identify the ${mechanism} behaviour causing the result.` },
+        { label: "Repair", detail: boundedDiagramDetail(question.answer.concise) }
+      ]
+    }
+  });
+}
+
+function humanize(value: string): string {
+  return value.replaceAll("-", " ");
+}
+
+function boundedDiagramDetail(value: string): string {
+  return boundedText(value, 240);
+}
+
+function boundedText(value: string, maximum: number): string {
+  if (value.length <= maximum) return value;
+  return `${value.slice(0, maximum - 1).trimEnd()}…`;
+}
 
 export function toPublicCoreTechnicalQuestion(
   question: GeneratedQuestionCandidate,

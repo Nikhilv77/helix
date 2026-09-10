@@ -36,8 +36,8 @@ vi.mock("@/features/practice/core-technical/ui/core-technical-overview", () => (
     />
   )
 }));
-vi.mock("@/features/practice/core-technical/ui/core-technical-preparation", () => ({
-  CoreTechnicalPreparation: () => <div data-testid="preparation" />
+vi.mock("@/features/practice/core-technical/ui/core-technical-technology-welcome", () => ({
+  CoreTechnicalTechnologyWelcome: () => <div data-testid="preparation" />
 }));
 
 import CoreTechnicalPracticePage from "./page";

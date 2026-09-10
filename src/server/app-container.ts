@@ -309,7 +309,8 @@ export function getAppContainer(): AppContainer {
   const coreTechnicalQuestionGenerator = new CoreTechnicalQuestionGenerator({
     ai: generationAi,
     patterns: NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS,
-    concurrency: 1
+    // Personalized preparation is user-facing; generate independent stages in parallel.
+    concurrency: 4
   });
   const coreTechnicalGenerationCritic = new CoreTechnicalGenerationCritic({
     ai: generationAi,

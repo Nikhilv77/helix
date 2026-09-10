@@ -36,7 +36,7 @@ describe("CoreTechnicalOverview", () => {
   it("keeps history selection in the URL and makes historical stories read-only", () => {
     render(<CoreTechnicalOverview block={block(false)} history={history(false)} />);
 
-    expect(screen.getByText("Story 1 of 3 · Completed")).toBeInTheDocument();
+    expect(screen.getByText("Practice path 1 of 3 · Completed")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Next" })).toHaveAttribute(
       "href",
       "/practice/core-technical?block=block-two"

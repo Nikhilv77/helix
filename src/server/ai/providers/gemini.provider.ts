@@ -80,6 +80,9 @@ export class GeminiProvider implements SystemDesignerAIProvider {
       } catch (error) {
         const mappedError = this.mapError(error, request.operation);
         const shouldRetry = mappedError.retryable && attempt < maxAttempts;
+        const providerStatus = isRecord(mappedError.cause)
+          ? this.readStatusCode(mappedError.cause)
+          : undefined;
 
         this.logger.warn(
           JSON.stringify({
@@ -91,7 +94,9 @@ export class GeminiProvider implements SystemDesignerAIProvider {
             attempt,
             durationMs: Date.now() - startedAt,
             code: mappedError.code,
-            retryable: mappedError.retryable
+            retryable: mappedError.retryable,
+            reason: mappedError.message,
+            status: providerStatus
           })
         );
 
