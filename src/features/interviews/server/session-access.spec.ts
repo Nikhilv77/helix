@@ -1,6 +1,9 @@
 import { NextRequest } from "next/server";
 import type { AppConfigService } from "@/server/config/app-config.service";
-import { createInterviewAgentCapability } from "./interview-auth";
+import {
+  createInterviewAgentCapability,
+  INTERVIEW_AGENT_CAPABILITY_HEADER
+} from "./interview-auth";
 import { authorizeInterviewSession } from "./session-access";
 
 const SECRET = "test-secret-with-at-least-thirty-two-characters";
@@ -10,7 +13,7 @@ const config = { interviewAuthSecret: SECRET } as AppConfigService;
 
 function agentRequest(token: string): NextRequest {
   return new NextRequest("http://localhost/api/interview/decide", {
-    headers: { authorization: `Bearer ${token}` }
+    headers: { [INTERVIEW_AGENT_CAPABILITY_HEADER]: token }
   });
 }
 
@@ -32,5 +35,11 @@ describe("authorizeInterviewSession", () => {
     await expect(
       authorizeInterviewSession(agentRequest(token), config, SESSION_ID, "end")
     ).rejects.toMatchObject({ statusCode: 403, code: "INTERVIEW_CAPABILITY_FORBIDDEN" });
+  });
+
+  it("rejects malformed values sent through the dedicated agent header", async () => {
+    await expect(
+      authorizeInterviewSession(agentRequest("not-a-capability"), config, SESSION_ID, "read")
+    ).rejects.toMatchObject({ statusCode: 401, code: "INTERVIEW_CAPABILITY_INVALID" });
   });
 });

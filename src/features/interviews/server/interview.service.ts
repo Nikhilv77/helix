@@ -49,6 +49,11 @@ import {
   type TechnicalAnswerEvaluator
 } from "./technical-answer-evaluator";
 import { fencedCodeFingerprint } from "./code-fingerprint";
+import {
+  dsaBlockAssessmentMoveOnUtterance,
+  dsaBlockAssessmentOpening,
+  dsaBlockAssessmentReviewFeedback
+} from "./dsa-block-assessment-dialogue";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** A spoken conversation should never wait on the model's full provider timeout. */
@@ -76,7 +81,7 @@ export interface BlockAssessmentMcqGrader {
     setup: InterviewSetup,
     reviewItemId: string,
     answer: string
-  ): Promise<{ correct: boolean; explanation: string } | null>;
+  ): Promise<{ correct: boolean; explanation: string; correctAnswer?: string } | null>;
 }
 
 const ANSWER_REPLAY_WAIT_MS = 5_000;
@@ -450,7 +455,8 @@ export class InterviewService {
         now,
         session.version,
         turnId,
-        assessmentGrade?.explanation
+        assessmentGrade?.explanation,
+        assessmentGrade?.correctAnswer
       );
     }
 
@@ -475,6 +481,7 @@ export class InterviewService {
         followUpPolicy: withAnswer.setup.personalizedBlueprint?.followUpPolicy,
         fallbackProbe: question.probeIfMissing,
         evidenceLedger: withAnswer.evidence?.[String(withAnswer.questionIndex)],
+        dsaInterviewerGuide: question.dsaInterviewerGuide,
         conversationHistory: withAnswer.turns
           .slice(0, -1)
           .slice(-8)
@@ -566,7 +573,8 @@ export class InterviewService {
     now: number,
     expectedVersion: number,
     turnId?: string,
-    serverExplanation?: string
+    serverExplanation?: string,
+    serverCorrectAnswer?: string
   ): Promise<AnswerResult> {
     const evaluatedState: InterviewState = {
       ...state,
@@ -576,16 +584,22 @@ export class InterviewService {
       }
     };
     const result = advance(evaluatedState, "move_on", now);
-    const utterance = this.composeUtterance(
-      result.state,
-      result.action,
-      multipleChoiceReply(
-        serverExplanation === undefined
-          ? question
-          : { ...question, explanation: serverExplanation },
-        correct
-      )
-    );
+    const feedback =
+      state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment"
+        ? dsaBlockAssessmentReviewFeedback({
+            sessionId: state.id,
+            questionIndex: state.questionIndex,
+            correct,
+            explanation: serverExplanation ?? question.explanation,
+            correctAnswer: serverCorrectAnswer
+          })
+        : multipleChoiceReply(
+            serverExplanation === undefined
+              ? question
+              : { ...question, explanation: serverExplanation },
+            correct
+          );
+    const utterance = this.composeUtterance(result.state, result.action, feedback);
     const spokenAt = elapsedMs(result.state, now);
     const finalState = appendTurn(result.state, {
       speaker: "agent",
@@ -841,6 +855,7 @@ export class InterviewService {
     fallbackProbe: string;
     conversationHistory: Array<{ speaker: "agent" | "user"; text: string }>;
     evidenceLedger?: EvidenceLedger;
+    dsaInterviewerGuide?: PlannedQuestion["dsaInterviewerGuide"];
   }) {
     try {
       return await within(this.decider.decide(input), DECIDER_BUDGET_MS, "Interview decider");
@@ -879,6 +894,10 @@ export class InterviewService {
       return acknowledgement.length > 0
         ? acknowledgement
         : "Could you walk me through that once more?";
+    }
+
+    if (state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment") {
+      return dsaBlockAssessmentMoveOnUtterance(state, acknowledgement);
     }
 
     if (state.phase === "done" || state.phase === "wrap") {
@@ -1283,9 +1302,7 @@ function sessionMutationError(error: unknown, sessionId: string): unknown {
 }
 
 function isIncompleteBlockAssessment(state: InterviewState): boolean {
-  return (
-    state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment" && state.phase !== "done"
-  );
+  return state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment" && state.phase !== "done";
 }
 
 function delay(milliseconds: number): Promise<void> {
@@ -1297,7 +1314,7 @@ function introUtterance(state: InterviewState): string {
   const minutes = Math.round(roundCaps(state.setup).hardCapMs / 60000);
   const intro =
     state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment"
-      ? "Hi, I'm Maya. This is your DSA block assessment. We’ll begin with rapid code-review questions grounded in your verified submissions. Then you’ll solve two new transfer problems in the editor. Explain your approach and complexity as you go; take your time."
+      ? dsaBlockAssessmentOpening(state)
       : state.setup.templateTitle === "DSA practice interview"
         ? "Hi, I'm Maya. Welcome to your DSA interview. I picked a few problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful."
         : state.setup.fundamentalsRound
@@ -1306,6 +1323,7 @@ function introUtterance(state: InterviewState): string {
             ? "Hi, I'm Maya. Let's have a relaxed conversation about the work on your resume. I'll pick a few threads and ask about what actually happened, what you did, and what changed. Take your time."
             : `Hi, I'm Maya, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
 
+  if (state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment") return intro;
   return first ? `${intro} ${first.text}` : intro;
 }
 

@@ -272,6 +272,57 @@ describe("InterviewService resume round", () => {
     expect(decide).not.toHaveBeenCalled();
   });
 
+  it("uses human assessment dialogue and the trusted answer between review questions", async () => {
+    const { service, decide } = harness();
+    service.setBlockAssessmentMcqGrader({
+      gradeReviewAnswer: vi.fn().mockResolvedValue({
+        correct: false,
+        explanation: "The saved loop visits each element once.",
+        correctAnswer: "O(n)"
+      })
+    });
+    const assessmentSetup: InterviewSetup = {
+      ...setup,
+      dsaBlockAssessment: {
+        kind: "dsa-block-assessment",
+        blockId: "11111111-1111-4111-8111-111111111111",
+        assessmentId: "22222222-2222-4222-8222-222222222222",
+        snapshotVersion: 2,
+        rubricVersion: 1
+      }
+    };
+    const reviewQuestion: PlannedQuestion = {
+      ...mcqQuestion,
+      stage: "rapid",
+      dsaAssessmentReviewItemId: "review-1",
+      answerIndex: undefined,
+      explanation: undefined
+    };
+    const nextQuestion = { ...reviewQuestion, text: "Which edge case breaks this loop?" };
+    const started = await service.start(
+      assessmentSetup,
+      "user-1",
+      1_000,
+      [reviewQuestion, nextQuestion],
+      "11111111-1111-4111-8111-111111111111"
+    );
+
+    expect(started.utterance).toContain(reviewQuestion.text);
+    expect(started.utterance).not.toContain("I'm Maya");
+
+    const result = await service.answerOwned(
+      "user-1",
+      started.state.id,
+      { text: "O(n²)", startMs: 100, endMs: 200 },
+      1_200
+    );
+
+    expect(decide).not.toHaveBeenCalled();
+    expect(result.decision.utterance).toContain("O(n)");
+    expect(result.decision.utterance).toContain("saved loop visits each element once");
+    expect(result.decision.utterance).toContain(nextQuestion.text);
+  });
+
   it("does not expose a live session to a different owner", async () => {
     const { service } = harness();
     const started = await service.start(setup, "user-1", 1_000);

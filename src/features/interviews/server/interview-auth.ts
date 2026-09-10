@@ -3,6 +3,8 @@ import { ApiRouteError } from "@/server/http/api-error";
 import type { AppConfigService } from "@/server/config/app-config.service";
 
 export const INTERVIEW_OWNER_COOKIE = "trailgrad_interview_owner";
+/** Kept outside Authorization so Clerk never attempts to decode this HMAC capability as a JWT. */
+export const INTERVIEW_AGENT_CAPABILITY_HEADER = "x-trailgrad-interview-capability";
 const OWNER_COOKIE_VERSION = "iow1";
 const AGENT_TOKEN_VERSION = "iat1";
 const AGENT_AUDIENCE = "trailgrad-interview-agent";

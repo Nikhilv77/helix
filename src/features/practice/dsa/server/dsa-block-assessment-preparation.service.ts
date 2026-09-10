@@ -13,7 +13,11 @@ import {
   type DsaBlockAssessmentSnapshot,
   type DsaBlockAssessmentTransferQuestion
 } from "@/features/practice/dsa/domain/block-assessment";
-import { OPERATION_DSA_SLUGS, dsaFunctionName, dsaStarterCode } from "@/features/practice/dsa/domain/dsa-code-templates";
+import {
+  OPERATION_DSA_SLUGS,
+  dsaFunctionName,
+  dsaStarterCode
+} from "@/features/practice/dsa/domain/dsa-code-templates";
 import type { DsaExample } from "@/features/practice/dsa/domain/dsa";
 import { buildTestCases } from "./code-test-harness";
 import type { PrismaService } from "@/server/database/prisma.service";
@@ -465,7 +469,7 @@ function buildGroundedReviewItems(attempt: ReviewAttempt): DsaBlockAssessmentRev
         ...base,
         family: "execution-case",
         idSuffix: String(test.index),
-        prompt: `For the recorded visible input ${test.input}, what did this exact saved code produce?`,
+        prompt: `Run this saved solution mentally for the recorded input ${test.input}. Which result should it produce?`,
         correct: test.outcome,
         distractors: executionCaseDistractors(test.outcome),
         rationale: test.rationale,
@@ -509,7 +513,8 @@ function buildGroundedReviewItems(attempt: ReviewAttempt): DsaBlockAssessmentRev
         ...base,
         codeSnippet: staticCue.codeSnippet,
         family: "static-code-cue",
-        prompt: `What does this exact code excerpt contain?`,
+        prompt:
+          "Looking at this excerpt, which implementation detail matters most to the approach?",
         correct: staticCue.label,
         distractors: staticCue.distractors,
         rationale: `The saved source contains ${staticCue.explanation}.`,
@@ -528,7 +533,7 @@ function buildGroundedReviewItems(attempt: ReviewAttempt): DsaBlockAssessmentRev
     reviewItem({
       ...base,
       family: "pattern-choice",
-      prompt: `Which primary pattern is authored for the problem this saved code solves?`,
+      prompt: "Which core pattern best explains why this saved solution works?",
       correct: question.primaryPattern,
       distractors: alternativePatterns(question.primaryPattern),
       rationale: `The authored metadata for ${question.title} identifies ${question.primaryPattern} as its primary pattern.`,
@@ -548,7 +553,7 @@ function buildGroundedReviewItems(attempt: ReviewAttempt): DsaBlockAssessmentRev
       reviewItem({
         ...base,
         family: "complexity-target",
-        prompt: `For the authored ${question.title} solution, which target time complexity should you be able to justify while reviewing this saved code?`,
+        prompt: `Which time-complexity target should this solution be able to justify for ${question.title}?`,
         correct: timeComplexity,
         distractors: complexityDistractors(timeComplexity),
         rationale: `The authored reference metadata documents ${timeComplexity} time for this problem's intended approach.`,
@@ -570,7 +575,7 @@ function buildGroundedReviewItems(attempt: ReviewAttempt): DsaBlockAssessmentRev
       reviewItem({
         ...base,
         family: "edge-case",
-        prompt: `Which edge case is explicitly documented for ${question.title} and should be checked against this exact saved solution?`,
+        prompt: `Which edge case would you test first against this saved solution for ${question.title}?`,
         correct: edgeCase,
         distractors: ["A successful network retry", "A browser refresh", "A missing CSS class"],
         rationale: `This edge case is preserved in the authored metadata for ${question.title}.`,
@@ -591,7 +596,7 @@ function buildGroundedReviewItems(attempt: ReviewAttempt): DsaBlockAssessmentRev
       reviewItem({
         ...base,
         family: "execution-evidence",
-        prompt: `What did the saved verified run for this exact submission record?`,
+        prompt: "When this exact submission was verified, what did the recorded run show?",
         correct: execution.fact,
         distractors: executionDistractors(execution.fact),
         rationale: execution.rationale,

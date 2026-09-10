@@ -1,7 +1,11 @@
 import type { NextRequest } from "next/server";
 import type { AppConfigService } from "@/server/config/app-config.service";
 import { ApiRouteError } from "@/server/http/api-error";
-import { isInterviewAgentCapability, verifyInterviewAgentCapability } from "./interview-auth";
+import {
+  INTERVIEW_AGENT_CAPABILITY_HEADER,
+  isInterviewAgentCapability,
+  verifyInterviewAgentCapability
+} from "./interview-auth";
 import { existingInterviewOwnerId } from "./owner";
 
 export type InterviewSessionAccess = { kind: "agent" } | { kind: "owner"; ownerId: string };
@@ -18,10 +22,13 @@ export async function authorizeInterviewSession(
   sessionId: string,
   permission: InterviewSessionPermission
 ): Promise<InterviewSessionAccess> {
-  const bearer = bearerToken(request.headers.get("authorization"));
-  if (bearer && isInterviewAgentCapability(bearer)) {
+  const agentCredential = request.headers.get(INTERVIEW_AGENT_CAPABILITY_HEADER)?.trim();
+  if (agentCredential) {
     const secret = config.interviewAuthSecret;
-    const capability = secret ? verifyInterviewAgentCapability(bearer, secret) : null;
+    const capability =
+      secret && isInterviewAgentCapability(agentCredential)
+        ? verifyInterviewAgentCapability(agentCredential, secret)
+        : null;
     if (!capability) {
       throw new ApiRouteError(401, "INTERVIEW_CAPABILITY_INVALID", "Interview access expired.");
     }
@@ -47,10 +54,4 @@ export async function authorizeInterviewSession(
     throw new ApiRouteError(401, "INTERVIEW_ACCESS_REQUIRED", "Interview access is required.");
   }
   return { kind: "owner", ownerId };
-}
-
-function bearerToken(header: string | null): string | null {
-  if (!header) return null;
-  const [scheme, token, extra] = header.trim().split(/\s+/);
-  return scheme?.toLowerCase() === "bearer" && token && !extra ? token : null;
 }

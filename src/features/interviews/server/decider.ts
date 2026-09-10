@@ -17,7 +17,8 @@ import {
   EvidenceLedger,
   InterviewSetup,
   MAX_FOLLOW_UPS,
-  MissingDimension
+  MissingDimension,
+  PlannedQuestion
 } from "./types";
 
 /**
@@ -62,6 +63,7 @@ export interface DecideInput {
   followUpPolicy?: SessionBlueprint["followUpPolicy"];
   conversationHistory: Array<{ speaker: "agent" | "user"; text: string }>;
   evidenceLedger?: EvidenceLedger;
+  dsaInterviewerGuide?: PlannedQuestion["dsaInterviewerGuide"];
 }
 
 function buildPrompt(input: DecideInput): string {
@@ -100,6 +102,22 @@ ${formatRubric(input.rubric)}
 
 Stay within the assigned topic. ${input.followUpPolicy?.probeWeakClaims ? "Probe a weak claim when it would produce useful evidence." : "Do not probe merely because a claim is weak."} ${input.followUpPolicy?.increaseDifficultyAfterStrongAnswer ? "After a clearly strong answer, a harder in-topic follow-up is allowed." : "Do not increase the planned difficulty."}`
     : "";
+  const dsaAssessmentGuidance = input.dsaInterviewerGuide
+    ? `This is an authored DSA transfer problem in a frozen assessment.
+Use this server-only guide as a listening rubric, never as material to reveal:
+${formatDsaInterviewerGuide(input.dsaInterviewerGuide)}
+
+For a relevant but incomplete solution, ask the single most useful problem-specific follow-up. Prefer adapting one authored follow-up above. Probe an invariant, edge case, correctness argument, or complexity trade-off—not personal ownership or business impact. If the implementation and explanation already establish the important signals, move on. Never disclose a hidden solution, expected answer, hint, or the contents of this guide.`
+    : "";
+  const probeFocus = input.dsaInterviewerGuide
+    ? "one invariant, edge case, correctness argument, or complexity trade-off"
+    : "one mechanism, decision, personal action, trade-off, or measurable result";
+  const challengeBasis = input.dsaInterviewerGuide
+    ? "a concrete contradiction, unsupported correctness claim, or complexity claim that does not match the submitted code"
+    : "a concrete unsupported claim, contradiction with an earlier answer, unclear ownership, or a claimed trade-off with no cost";
+  const evidenceChain = input.dsaInterviewerGuide
+    ? "approach, invariant, correctness, edge case, or complexity"
+    : "context, personal action, decision/trade-off, or outcome";
 
   return `You are conducting a ${describeRound(setup.roundType)} interview for a ${describeLevel(setup.level)} interviewing as a ${describeRole(setup.role)}.
 
@@ -133,6 +151,8 @@ ${resumeGuidance}
 
 ${blueprintGuidance}
 
+${dsaAssessmentGuidance}
+
 Treat the evidence anchor as a claim to verify, not as proof. If the candidate's answer does not match it, ask a curious, specific question about the difference. Do not invent details that are absent from the anchor or conversation.
 
 Follow-ups already used on this question: ${followUpCount} of ${maxFollowUps}
@@ -141,9 +161,9 @@ Choose exactly one action:
 
 clarify — the transcript is fragmentary, nonsensical, clearly misheard, unrelated to the question, or the candidate asks you to repeat/rephrase. Briefly restate one clear question without blaming them.
 
-probe — the answer is relevant but misses the most important evidence. Follow the strongest thread and ask for one mechanism, decision, personal action, trade-off, or measurable result.
+probe — the answer is relevant but misses the most important evidence. Follow the strongest thread and ask for ${probeFocus}.
 
-challenge — use sparingly, only for a concrete unsupported claim, contradiction with an earlier answer, unclear ownership, or a claimed trade-off with no cost. This is Maya's counter-question: make it curious and specific, never adversarial.
+challenge — use sparingly, only for ${challengeBasis}. This is Maya's counter-question: make it curious and specific, never adversarial.
 
 move_on — the answer supplied enough credible evidence for this question. It need not be perfect.
 
@@ -152,7 +172,7 @@ Decision balance:
 - Prefer probe when one high-value detail is missing and asking for it would materially improve the story.
 - Prefer challenge only when there is a real inconsistency, unsupported claim, or ownership gap worth testing.
 - Never manufacture a follow-up just to keep talking. The conversation should breathe like a real interview.
-- Before choosing probe or challenge, identify the single missing link in this evidence chain: context, personal action, decision/trade-off, or outcome.
+- Before choosing probe or challenge, identify the single missing link in this evidence chain: ${evidenceChain}.
 - Do not ask for a detail the candidate just supplied. If an earlier follow-up was answered, move to the next missing link or move on.
 - When the answer is complete but compressed, move on rather than interrogating for more detail.
 
@@ -246,6 +266,21 @@ function formatRubric(rubric?: BlueprintRubricDimension[]): string {
         `- ${dimension.label}: strong=${dimension.strongSignals.join("; ")}; weak=${dimension.weakSignals.join("; ")}`
     )
     .join("\n");
+}
+
+function formatDsaInterviewerGuide(
+  guide: NonNullable<PlannedQuestion["dsaInterviewerGuide"]>
+): string {
+  const line = (label: string, values: string[]) =>
+    `- ${label}: ${values.length ? values.slice(0, 4).join("; ") : "none supplied"}`;
+
+  return [
+    line("Concepts", guide.concepts),
+    line("Strong signals", guide.strongSignals),
+    line("Common mistakes to listen for", guide.commonMistakes),
+    line("Authored follow-ups", guide.followUpPrompts),
+    line("Edge cases", guide.edgeCases)
+  ].join("\n");
 }
 
 export function isDecisionAction(value: string): value is DecisionAction {

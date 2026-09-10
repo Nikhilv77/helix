@@ -113,6 +113,15 @@ describe("frozen DSA block assessment runtime plan", () => {
     expect(plan[0]?.codeSnippet).toBe("const seen = new Map();");
     expect(plan[5]?.dsaTransferQuestion?.slug).toBe("transfer-one");
     expect(plan[5]?.dsaTransferQuestion?.starterCode.javascript).toContain("function transfer");
+    expect(plan[5]?.text).toContain("first transfer problem");
+    expect(plan[6]?.text).toContain("second transfer problem");
+    expect(plan[5]?.dsaInterviewerGuide).toEqual({
+      concepts: [],
+      strongSignals: [],
+      commonMistakes: ["none"],
+      followUpPrompts: [],
+      edgeCases: []
+    });
   });
 
   it("marks the session by durable assessment identity, never a display title", () => {
@@ -129,6 +138,29 @@ describe("frozen DSA block assessment runtime plan", () => {
       rubricVersion: 1
     });
     expect(setup.durationMinutes).toBe(40);
+  });
+
+  it("returns the correct review option from the server-only key after grading", async () => {
+    const runtime = new DsaBlockAssessmentRuntimeService(
+      {
+        dsaBlockAssessment: {
+          findFirst: vi.fn().mockResolvedValue({ assessmentSnapshot: snapshot() })
+        }
+      } as unknown as PrismaService,
+      {} as never,
+      {} as never
+    );
+    const setup = buildAssessmentSetup(BLOCK_ID, ASSESSMENT_ID, snapshot(), {
+      targetRole: "frontend",
+      level: "0-2",
+      context: null
+    });
+
+    await expect(runtime.gradeReviewAnswer("user-a", setup, "review-0", "A")).resolves.toEqual({
+      correct: false,
+      explanation: "The saved code creates a Map.",
+      correctAnswer: "B"
+    });
   });
 
   it("resolves a transfer run through the owned active frozen session, not a client slug", async () => {

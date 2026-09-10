@@ -79,4 +79,34 @@ describe("resume interview decider prompt", () => {
     expect(prompt).toContain("Stay within the assigned topic");
     expect(prompt).toContain("0 of 3");
   });
+
+  it("uses authored DSA signals for problem-specific follow-ups without revealing them", () => {
+    const prompt = buildDecidePrompt({
+      ...input,
+      setup: {
+        ...input.setup,
+        roundType: "technical",
+        dsaBlockAssessment: {
+          kind: "dsa-block-assessment",
+          blockId: "11111111-1111-4111-8111-111111111111",
+          assessmentId: "22222222-2222-4222-8222-222222222222",
+          snapshotVersion: 2,
+          rubricVersion: 1
+        }
+      },
+      questionKind: "code",
+      dsaInterviewerGuide: {
+        concepts: ["sliding window invariant"],
+        strongSignals: ["moves the left edge only when the window is invalid"],
+        commonMistakes: ["recomputes the window on every iteration"],
+        followUpPrompts: ["What stays true after you move the left pointer?"],
+        edgeCases: ["an empty input"]
+      }
+    });
+
+    expect(prompt).toContain("sliding window invariant");
+    expect(prompt).toContain("What stays true after you move the left pointer?");
+    expect(prompt).toContain("never as material to reveal");
+    expect(prompt).toContain("not personal ownership or business impact");
+  });
 });

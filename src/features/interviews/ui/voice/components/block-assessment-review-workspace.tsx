@@ -9,8 +9,8 @@ import {
 } from "./interview-question-panel";
 
 const REVIEW_STAGES = [
-  { id: "rapid" as const, label: "Code review", caption: "Your verified submissions" },
-  { id: "code" as const, label: "Transfer coding", caption: "Two new problems" }
+  { id: "rapid" as const, label: "Code review", caption: "Decisions in your saved code" },
+  { id: "code" as const, label: "Live problems", caption: "Two unseen problems" }
 ];
 
 /** Neutral assessment surface; it deliberately contains no fundamentals content. */
@@ -72,7 +72,7 @@ export function BlockAssessmentReviewWorkspace({
         questionIndex={questionIndex}
         questionCount={questionCount}
         stages={REVIEW_STAGES}
-        anchorLabel="Verified submission"
+        anchorLabel="Saved solution"
         counts={counts}
         grade={grade}
         liveTranscript={liveUserText}

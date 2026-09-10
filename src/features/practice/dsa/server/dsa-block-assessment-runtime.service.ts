@@ -7,7 +7,12 @@ import {
   type DsaBlockAssessmentTransferQuestion
 } from "@/features/practice/dsa/domain/block-assessment";
 import type { InterviewService } from "@/features/interviews/server/interview.service";
-import type { InterviewSetup, PlannedQuestion, Role, Level } from "@/features/interviews/server/types";
+import type {
+  InterviewSetup,
+  PlannedQuestion,
+  Role,
+  Level
+} from "@/features/interviews/server/types";
 import type { PrismaService } from "@/server/database/prisma.service";
 import type { CodeTestCase } from "./code-test-harness";
 import {
@@ -209,7 +214,7 @@ export class DsaBlockAssessmentRuntimeService {
     setup: InterviewSetup,
     reviewItemId: string,
     answer: string
-  ): Promise<{ correct: boolean; explanation: string } | null> {
+  ): Promise<{ correct: boolean; explanation: string; correctAnswer: string } | null> {
     const identity = setup.dsaBlockAssessment;
     if (!identity || identity.kind !== "dsa-block-assessment") return null;
     const assessment = await this.prisma.dsaBlockAssessment.findFirst({
@@ -237,7 +242,11 @@ export class DsaBlockAssessmentRuntimeService {
     const selected = item.options.findIndex(
       (option) => option.trim().toLowerCase() === answer.trim().toLowerCase()
     );
-    return { correct: selected === item.correctOption, explanation: item.rationale };
+    return {
+      correct: selected === item.correctOption,
+      explanation: item.rationale,
+      correctAnswer: item.options[item.correctOption]!
+    };
   }
 
   /**
@@ -403,7 +412,7 @@ export function buildAssessmentSetup(
 export function buildAssessmentPlan(snapshot: DsaBlockAssessmentSnapshot): PlannedQuestion[] {
   const review = snapshot.reviewItems.map((item) => ({
     text: item.prompt,
-    evidenceAnchor: `Your verified submission for ${item.sourceQuestionTitle}`,
+    evidenceAnchor: item.sourceQuestionTitle,
     kind: "mcq" as const,
     stage: "rapid" as const,
     codeSnippet: item.codeSnippet,
@@ -415,8 +424,11 @@ export function buildAssessmentPlan(snapshot: DsaBlockAssessmentSnapshot): Plann
     mustHit: ["Select the best grounded answer."],
     probeIfMissing: "Choose the option that best matches the code shown."
   }));
-  const transfer = snapshot.transferQuestions.map((question) => ({
-    text: `Now solve this transfer problem: ${question.title}. Explain your approach and complexity, then send your code when ready.`,
+  const transfer = snapshot.transferQuestions.map((question, index) => ({
+    text:
+      index === 0
+        ? `Your first transfer problem is ${question.title}. Take a moment to read it, then talk me through the approach you want to try.`
+        : `Your second transfer problem is ${question.title}. Start by framing the invariant or data structure you want to rely on, then implement it.`,
     evidenceAnchor: `${question.primaryPattern} transfer problem frozen for this block assessment`,
     kind: "code" as const,
     stage: "code" as const,
@@ -424,6 +436,13 @@ export function buildAssessmentPlan(snapshot: DsaBlockAssessmentSnapshot): Plann
     codeTask: question.problemStatement ?? question.promptSummary,
     codeSnippet: "",
     dsaTransferQuestion: publicTransferQuestion(question),
+    dsaInterviewerGuide: {
+      concepts: question.conceptsTested.slice(0, 4),
+      strongSignals: question.interviewSignals.slice(0, 4),
+      commonMistakes: question.commonMistakes.slice(0, 4),
+      followUpPrompts: question.followUpPrompts.slice(0, 4),
+      edgeCases: question.edgeCases.slice(0, 4)
+    },
     answerFormat: "typed" as const,
     competency: question.primaryPattern,
     rubricKeys: [
@@ -433,9 +452,13 @@ export function buildAssessmentPlan(snapshot: DsaBlockAssessmentSnapshot): Plann
       "code-quality",
       "communication"
     ],
-    intent: "Assess transfer of the block's patterns to an unseen authored problem.",
+    intent: question.conceptsTested.length
+      ? `Assess whether the candidate can apply ${question.conceptsTested.slice(0, 2).join(" and ")} to an unseen problem.`
+      : "Assess transfer of the block's patterns to an unseen authored problem.",
     mustHit: ["working implementation", "approach", "time and space complexity"],
-    probeIfMissing: "Walk me through the data structure and complexity trade-offs in your solution."
+    probeIfMissing:
+      question.followUpPrompts.find((prompt) => prompt.trim().length > 0) ??
+      "Which invariant makes this approach correct, and what complexity does it give you?"
   }));
   return [...review, ...transfer];
 }

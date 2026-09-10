@@ -462,7 +462,13 @@ export function VoiceInterviewClient({
         const response = await fetch("/api/livekit/token", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ sessionId, teacherId: persona.id })
+          body: JSON.stringify({
+            sessionId,
+            teacherId: persona.id,
+            // A manual reconnect must rotate away from a room whose original
+            // agent dispatch failed while the worker was offline.
+            forceNew: connectionAttempt > 0
+          })
         });
         const payload = await response.json();
         if (!payload?.success) {
@@ -1647,6 +1653,11 @@ function DsaLiveWorkspace({
   const [questionPaneWidth, setQuestionPaneWidth] = useState(38);
   const [expandedPane, setExpandedPane] = useState<"question" | "editor" | null>(null);
   const [skipConfirmationVisible, setSkipConfirmationVisible] = useState(false);
+  const isBlockTransfer = setup?.dsaBlockAssessment?.kind === "dsa-block-assessment";
+  const transferQuestionCount = isBlockTransfer ? 2 : questionCount;
+  const transferQuestionIndex = isBlockTransfer
+    ? Math.min(2, Math.max(1, questionIndex - (questionCount - 2) + 1))
+    : questionIndex + 1;
 
   const beginPaneResize = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
     const workspace = splitWorkspaceRef.current;
@@ -1703,7 +1714,8 @@ function DsaLiveWorkspace({
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]" />
                   <span className="whitespace-nowrap font-medium text-cream/72">
-                    Problem {questionIndex + 1} of {questionCount}
+                    {isBlockTransfer ? "Transfer problem" : "Problem"} {transferQuestionIndex} of{" "}
+                    {transferQuestionCount}
                   </span>
                   <span aria-hidden="true" className="h-1 w-1 shrink-0 rounded-full bg-cream/24" />
                   <span className="truncate capitalize text-cream/44">{question.difficulty}</span>

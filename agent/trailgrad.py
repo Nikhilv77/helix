@@ -7,6 +7,7 @@ module only moves text back and forth.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from dataclasses import dataclass
 
@@ -47,7 +48,7 @@ class TrailgradClient:
         self._http = session
         self._base = TRAILGRAD.api_base_url.rstrip("/")
         self._headers = (
-            {"Authorization": f"Bearer {interview_capability}"}
+            {"X-Trailgrad-Interview-Capability": interview_capability}
             if interview_capability
             else None
         )
@@ -116,7 +117,7 @@ class TrailgradClient:
             headers=self._headers,
             timeout=aiohttp.ClientTimeout(total=TRAILGRAD.request_timeout_s),
         ) as response:
-            return self._unwrap(await response.json(), path)
+            return self._unwrap(await self._read_payload(response, path), path)
 
     async def _post(self, path: str, body: dict) -> dict:
         async with self._http.post(
@@ -125,7 +126,31 @@ class TrailgradClient:
             headers=self._headers,
             timeout=aiohttp.ClientTimeout(total=TRAILGRAD.request_timeout_s),
         ) as response:
-            return self._unwrap(await response.json(), path)
+            return self._unwrap(await self._read_payload(response, path), path)
+
+    @staticmethod
+    async def _read_payload(response: aiohttp.ClientResponse, path: str) -> dict:
+        """Turn malformed upstream responses into an actionable agent error."""
+        content_type = response.headers.get("content-type", "unknown").split(";", 1)[0]
+        body = await response.text()
+        try:
+            payload = json.loads(body)
+        except (TypeError, ValueError, json.JSONDecodeError) as error:
+            raise TrailgradApiError(
+                code="INTERVIEW_API_RESPONSE_INVALID",
+                message=(
+                    f"Interview API returned HTTP {response.status} as {content_type}, "
+                    "not a JSON response."
+                ),
+                path=path,
+            ) from error
+        if not isinstance(payload, dict):
+            raise TrailgradApiError(
+                code="INTERVIEW_API_RESPONSE_INVALID",
+                message=f"Interview API returned HTTP {response.status} with a non-object body.",
+                path=path,
+            )
+        return payload
 
     @staticmethod
     def _unwrap(payload: dict, path: str) -> dict:

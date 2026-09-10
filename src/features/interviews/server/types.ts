@@ -110,6 +110,17 @@ export interface PlannedQuestion {
     examples: Array<{ input: string; output: string; explanation?: string }>;
     starterCode: Record<"javascript" | "python" | "cpp" | "java", string>;
   };
+  /**
+   * Server-only listening guide for an authored DSA transfer problem. It is
+   * deliberately omitted by the interview API serializer.
+   */
+  dsaInterviewerGuide?: {
+    concepts: string[];
+    strongSignals: string[];
+    commonMistakes: string[];
+    followUpPrompts: string[];
+    edgeCases: string[];
+  };
   /** Which stage of a resume round this question belongs to. */
   stage?: InterviewStage;
   /** The resume skill a skills-stage question came from. */

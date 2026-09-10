@@ -4,7 +4,6 @@ import type { NextRequest } from "next/server";
 import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
-import { roundCaps } from "@/features/interviews/server/types";
 import { MAYA, personaById } from "@/lib/avatars/personas";
 import {
   createInterviewAgentCapability,
@@ -12,6 +11,7 @@ import {
 } from "@/features/interviews/server/interview-auth";
 import { existingInterviewOwnerId } from "@/features/interviews/server/owner";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
+import { voiceConnectionLifetimeMs } from "@/features/interviews/server/voice-connection-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,9 @@ export function roomNameFor(sessionId: string, connectionId = crypto.randomUUID(
 
 const requestSchema = z.object({
   sessionId: z.string().uuid(),
-  teacherId: z.string().trim().max(60).optional()
+  teacherId: z.string().trim().max(60).optional(),
+  /** Explicit reconnects rotate away from a room whose agent dispatch failed. */
+  forceNew: z.boolean().optional().default(false)
 });
 
 interface CachedVoiceConnection {
@@ -72,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     // The token expires when the interview's own time budget does, so a leaked
     // token cannot outlive the cap it is meant to enforce.
-    const remainingMs = roundCaps(state.setup).hardCapMs - (Date.now() - state.startedAt);
+    const remainingMs = voiceConnectionLifetimeMs(state);
     if (remainingMs <= 0) {
       throw new ApiRouteError(409, "SESSION_EXPIRED", "This interview has run out of time", {});
     }
@@ -80,7 +82,7 @@ export async function POST(request: NextRequest) {
     const guard = getSharedGuard(app.config);
     await guard.enforce(RATE_LIMIT_POLICIES.livekitToken, state.id);
     const cached = await guard.getCached<CachedVoiceConnection>("livekit-connection", state.id);
-    if (cached && cached.expiresAt > Date.now()) {
+    if (!parsed.data.forceNew && cached && cached.expiresAt > Date.now()) {
       return apiSuccess(connectionResponse(cached));
     }
 
@@ -106,7 +108,7 @@ export async function POST(request: NextRequest) {
     try {
       // A request can lose the race between the cache read and lease acquisition.
       const raced = await guard.getCached<CachedVoiceConnection>("livekit-connection", state.id);
-      if (raced && raced.expiresAt > Date.now()) {
+      if (!parsed.data.forceNew && raced && raced.expiresAt > Date.now()) {
         return apiSuccess(connectionResponse(raced));
       }
 
