@@ -4,7 +4,7 @@ import {
   generatedStoryCandidateSchema,
   generatedStoryCandidatesSchema,
   generatedReviewedStoryCandidateWireSchema,
-  REQUIRED_STORY_STAGE_FORMATS,
+  requiredStoryStageFormats,
   selectedStorySchema,
   type CoreTechnicalDifficulty,
   type GeneratedStoryCandidate,
@@ -34,6 +34,8 @@ const storyGeneratorInputSchema = z.object({
   baselineState: z.enum(["UNKNOWN", "GUIDED", "STANDARD", "STRETCH"]),
   weakMechanismKeys: z.array(z.string()).default([]),
   unassessedMechanismKeys: z.array(z.string()).default([]),
+  resumeTopicKeys: z.array(z.string()).default([]),
+  resumeMechanismKeys: z.array(z.string()).default([]),
   recentTopicKeys: z.array(z.string()).default([]),
   excludedTopicKeys: z.array(z.string()).default([]),
   personalizePresentation: z.boolean().optional().default(false),
@@ -41,8 +43,10 @@ const storyGeneratorInputSchema = z.object({
     .object({
       storyKey: identifierSchema.optional(),
       storyTitle: z.string().min(5).max(100),
-      stagePatternKeys: z.array(z.string()).length(8),
-      requiredStoryTopicKeys: z.array(z.string()).min(2).max(4)
+      stagePatternKeys: z
+        .array(z.string())
+        .refine((keys) => keys.length === 6 || keys.length === 8),
+      requiredStoryTopicKeys: z.array(z.string()).min(1).max(4)
     })
     .optional()
 });
@@ -92,9 +96,10 @@ export class CoreTechnicalStoryGenerator {
         !pattern.topicKeys.some((topicKey) => input.excludedTopicKeys.includes(topicKey))
     );
 
-    if (eligiblePatterns.length < 8) {
+    const requiredPatternCount = input.reviewedContract?.stagePatternKeys.length ?? 6;
+    if (eligiblePatterns.length < requiredPatternCount) {
       throw new Error(
-        "Core Technical needs at least eight eligible interview patterns for the confirmed stack"
+        `Core Technical needs at least ${requiredPatternCount} eligible interview patterns for the confirmed stack`
       );
     }
     if (
@@ -193,6 +198,10 @@ export class CoreTechnicalStoryGenerator {
     const eligibleByKey = new Map(eligiblePatterns.map((pattern) => [pattern.key, pattern]));
     const selectedTopicKeys = new Set([candidate.primaryTopicKey, ...candidate.secondaryTopicKeys]);
 
+    if (!isTaskLedTitle(candidate.title)) {
+      errors.push("path title is not a direct, task-led learning goal");
+    }
+
     if (candidate.secondaryTopicKeys.includes(candidate.primaryTopicKey)) {
       errors.push("primary topic repeated as a secondary topic");
     }
@@ -266,15 +275,16 @@ export class CoreTechnicalStoryGenerator {
   ): GeneratedStoryCandidate {
     if (!input.reviewedContract) return generatedStoryCandidateSchema.parse(candidate);
 
+    const reviewedContract = input.reviewedContract;
     const patternByKey = new Map(eligiblePatterns.map((pattern) => [pattern.key, pattern]));
-    const requiredTopics = input.reviewedContract.requiredStoryTopicKeys;
+    const requiredTopics = reviewedContract.requiredStoryTopicKeys;
     return generatedStoryCandidateSchema.parse({
       ...candidate,
-      key: input.reviewedContract.storyKey ?? candidate.key,
-      title: input.personalizePresentation ? candidate.title : input.reviewedContract.storyTitle,
+      key: reviewedContract.storyKey ?? candidate.key,
+      title: input.personalizePresentation ? candidate.title : reviewedContract.storyTitle,
       primaryTopicKey: requiredTopics[0],
       secondaryTopicKeys: requiredTopics.slice(1),
-      mechanismKeys: input.reviewedContract.stagePatternKeys.map(
+      mechanismKeys: reviewedContract.stagePatternKeys.map(
         (patternKey) => patternByKey.get(patternKey)?.mechanismKeys[0]
       ),
       difficulty: this.difficultyFor(input.baselineState),
@@ -283,12 +293,11 @@ export class CoreTechnicalStoryGenerator {
       stages: candidate.stages.map((stage, index) => ({
         ...stage,
         order: index + 1,
-        format: REQUIRED_STORY_STAGE_FORMATS[index]?.find((format) =>
-          patternByKey
-            .get(input.reviewedContract!.stagePatternKeys[index]!)
-            ?.formats.includes(format)
+        format: requiredStoryStageFormats(reviewedContract.stagePatternKeys.length)[index]?.find(
+          (format) =>
+            patternByKey.get(reviewedContract.stagePatternKeys[index]!)?.formats.includes(format)
         ),
-        patternKey: input.reviewedContract!.stagePatternKeys[index]
+        patternKey: reviewedContract.stagePatternKeys[index]
       }))
     });
   }
@@ -375,8 +384,8 @@ export class CoreTechnicalStoryGenerator {
 
     return JSON.stringify({
       task: input.reviewedContract
-        ? "Generate exactly 1 story candidate implementing the reviewed contract with exactly 8 ordered stages."
-        : "Generate 3 to 5 distinct story candidates and exactly 8 ordered stages per candidate.",
+        ? `Generate exactly 1 story candidate implementing the reviewed contract with exactly ${input.reviewedContract.stagePatternKeys.length} ordered stages.`
+        : "Generate 3 to 5 distinct story candidates and exactly 6 ordered stages per candidate.",
       fixedStageFormats: [
         "mcq",
         "predict-explain",
@@ -385,10 +394,10 @@ export class CoreTechnicalStoryGenerator {
         "artifact-diagnosis",
         "debug-repair",
         "micro-implementation",
-        "written or spoken"
+        "production-decision, with written or spoken compatibility for reviewed legacy paths"
       ],
       rules: [
-        "Use eight different eligible pattern keys in each candidate.",
+        "Use six different eligible pattern keys in each new candidate.",
         "Use only topic, mechanism, and pattern keys supplied below.",
         "Every key you create, including story, stage, and artifact keys, must be lowercase kebab-case matching ^[a-z0-9]+(?:-[a-z0-9]+)*$.",
         "candidateRole must be one complete sentence of at least 20 characters.",
@@ -397,6 +406,8 @@ export class CoreTechnicalStoryGenerator {
         "Make the situation immediately recognizable for the target job and selected technology.",
         "Write a short action-led title that tells the learner what they will fix, trace, design, or explain.",
         "Prefer small API, database, async, testing, memory, or request examples over an elaborate fictional company incident.",
+        "Calibrate the explanation and follow-ups to seniority: guide juniors through the mechanism, require mid-level candidates to diagnose and repair it, and require senior candidates to defend production trade-offs and verification.",
+        "Use resume topics only to choose familiar examples and transfer questions. Never assume the candidate already understands a mechanism merely because it appears on the resume.",
         "Every stage title and objective must be plain enough for a candidate to restate naturally in an interview.",
         "Make each storyDependency name the prior fact or artifact required by that stage.",
         "Keep the whole block within 40 to 50 minutes.",
@@ -414,6 +425,8 @@ export class CoreTechnicalStoryGenerator {
         difficulty,
         weakMechanismKeys: input.weakMechanismKeys,
         unassessedMechanismKeys: input.unassessedMechanismKeys,
+        resumeTopicKeys: input.resumeTopicKeys,
+        resumeMechanismKeys: input.resumeMechanismKeys,
         recentTopicKeys: input.recentTopicKeys,
         excludedTopicKeys: input.excludedTopicKeys
       },
@@ -430,4 +443,11 @@ export class CoreTechnicalStoryGenerator {
     if (baselineState === "UNKNOWN") return "guided";
     return baselineState.toLowerCase() as CoreTechnicalDifficulty;
   }
+}
+
+const TASK_LED_TITLE =
+  /^(?:build|choose|debug|design|diagnose|explain|fix|follow|handle|investigate|make|predict|preserve|prevent|propagate|repair|review|trace|understand)\b/i;
+
+function isTaskLedTitle(title: string): boolean {
+  return TASK_LED_TITLE.test(title.trim());
 }

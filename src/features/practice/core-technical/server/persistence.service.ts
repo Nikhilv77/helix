@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import {
+  CoreTechnicalAssessmentStatus,
+  CoreTechnicalBlockStatus,
   CoreTechnicalPreparationStatus,
+  CoreTechnicalQuestionStatus,
   CoreTechnicalStoryProgressStatus,
   CoreTechnicalStoryPublicationStatus,
   Prisma
@@ -8,6 +11,7 @@ import {
 import { z } from "zod";
 import {
   coreTechnicalConfirmedFocusSchema,
+  coreTechnicalGenerationProvenanceSchema,
   coreTechnicalStorySelectionSchema,
   type CoreTechnicalConfirmedFocus,
   type CoreTechnicalStorySelection
@@ -18,12 +22,17 @@ import {
   type FrozenQuestionBlock
 } from "@/features/practice/core-technical/domain/question-contracts";
 import { coreTechnicalStoryReviewArtifactSchema } from "@/features/practice/core-technical/domain/review-artifact-contracts";
-import { selectedStorySchema, type SelectedCoreTechnicalStory } from "@/features/practice/core-technical/domain/story-contracts";
+import { coreTechnicalPracticePathBlueprint } from "@/features/practice/core-technical/domain/practice-path-blueprints";
+import {
+  selectedStorySchema,
+  type SelectedCoreTechnicalStory
+} from "@/features/practice/core-technical/domain/story-contracts";
 import { coreTechnicalCriticReportSchema } from "@/features/practice/core-technical/domain/critic-contracts";
 import { ConflictErrorException } from "@/server/common/exceptions/conflict-error.exception";
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 import type { PrismaService } from "@/server/database/prisma.service";
 import { isCoreTechnicalCriticReportApproved } from "./generation-critic";
+import { buildCoreTechnicalAssessmentSnapshot } from "./assessment-blueprint";
 
 const focusRevisionSelect = {
   id: true,
@@ -97,19 +106,29 @@ const preparationAttemptSelect = {
   updatedAt: true
 } satisfies Prisma.CoreTechnicalPreparationAttemptSelect;
 
-const preparationFailureSchema = z.object({
-  requestId: z.string().uuid(),
-  focusRevisionId: z.string().uuid(),
-  generatorVersion: z.string().min(1).max(160),
-  validatorVersion: z.string().min(1).max(160),
-  selection: coreTechnicalStorySelectionSchema.optional(),
-  diagnostic: z.object({
-    stage: z.enum(["ranking", "story-generation", "question-generation", "validation", "publishing"]),
-    code: z.string().min(2).max(120),
-    message: z.string().min(2).max(700),
-    retryable: z.boolean()
-  }).strict()
-}).strict();
+const preparationFailureSchema = z
+  .object({
+    requestId: z.string().uuid(),
+    focusRevisionId: z.string().uuid(),
+    generatorVersion: z.string().min(1).max(160),
+    validatorVersion: z.string().min(1).max(160),
+    selection: coreTechnicalStorySelectionSchema.optional(),
+    diagnostic: z
+      .object({
+        stage: z.enum([
+          "ranking",
+          "story-generation",
+          "question-generation",
+          "validation",
+          "publishing"
+        ]),
+        code: z.string().min(2).max(120),
+        message: z.string().min(2).max(700),
+        retryable: z.boolean()
+      })
+      .strict()
+  })
+  .strict();
 
 export type SavedCoreTechnicalFocusRevision = Prisma.CoreTechnicalFocusRevisionGetPayload<{
   select: typeof focusRevisionSelect;
@@ -120,20 +139,24 @@ export type PublishedCoreTechnicalStoryVersion = Prisma.CoreTechnicalStoryVersio
 export type PublishedCoreTechnicalBlock = Prisma.CoreTechnicalBlockGetPayload<{
   select: typeof publishedBlockSelect;
 }>;
-export type CoreTechnicalPreparationAttemptRecord = Prisma.CoreTechnicalPreparationAttemptGetPayload<{
-  select: typeof preparationAttemptSelect;
-}>;
+export type CoreTechnicalPreparationAttemptRecord =
+  Prisma.CoreTechnicalPreparationAttemptGetPayload<{
+    select: typeof preparationAttemptSelect;
+  }>;
 
 export type PublishCoreTechnicalBlockInput = {
   requestId: string;
   focusRevisionId: string;
   previousBlockId?: string;
+  /** Library questions are prepared without replacing the assessment-bearing current path. */
+  libraryBlock?: boolean;
   selection: CoreTechnicalStorySelection;
   draft: {
     story: SelectedCoreTechnicalStory;
     storyReview: unknown;
     questionBlock: FrozenQuestionBlock;
     questionBlockReview: unknown;
+    provenance?: z.input<typeof coreTechnicalGenerationProvenanceSchema>;
   };
   generatorVersion: string;
   validatorVersion: string;
@@ -142,7 +165,7 @@ export type PublishCoreTechnicalBlockInput = {
 
 /**
  * Persistence boundary for immutable focus, reviewed story versions, and
- * all-or-nothing eight-question publication. Runtime lifecycle writes begin in Step 12.
+ * all-or-nothing six-question publication with legacy eight-question compatibility.
  */
 export class CoreTechnicalPersistenceService {
   constructor(
@@ -338,24 +361,15 @@ export class CoreTechnicalPersistenceService {
       if (!focus || focus.focusFingerprint !== input.selection.focusFingerprint) {
         throw new ConflictErrorException(
           "CORE_TECHNICAL_FOCUS_MISMATCH",
-          "The selected story does not belong to the confirmed focus revision."
+          "The selected practice path does not belong to the confirmed focus revision."
         );
       }
-      const storyVersion = await tx.coreTechnicalStoryVersion.findUnique({
-        where: {
-          storyKey_version: {
-            storyKey: input.selection.selectedStory.storyKey,
-            version: input.selection.selectedStory.storyVersion
-          }
-        },
-        select: { id: true, publicationStatus: true, storySnapshot: true }
-      });
-      if (!storyVersion || storyVersion.publicationStatus !== CoreTechnicalStoryPublicationStatus.PUBLISHED) {
-        throw new ConflictErrorException(
-          "CORE_TECHNICAL_STORY_NOT_PUBLISHED",
-          "The selected Core Technical story version is not published."
-        );
-      }
+      const storyVersion = await ensureReviewedPracticePathVersion(
+        tx,
+        input.selection.selectedStory.storyKey,
+        input.selection.selectedStory.storyVersion,
+        preparedAt
+      );
       assertReviewedContractMatches(storyVersion.storySnapshot, input.draft.story);
 
       const current = await tx.coreTechnicalBlock.findFirst({
@@ -364,15 +378,14 @@ export class CoreTechnicalPersistenceService {
       });
       if (current) {
         if (input.previousBlockId && current.id === input.previousBlockId) {
-          if (
-            current.status !== "ASSESSED" ||
-            current.assessment?.status !== "COMPLETED"
-          ) {
+          if (current.status !== "ASSESSED" || current.assessment?.status !== "COMPLETED") {
             throw new ConflictErrorException(
               "CORE_TECHNICAL_CONTINUATION_NOT_READY",
-              "Complete the current story assessment before continuing."
+              "Complete the current practice-path assessment before continuing."
             );
           }
+        } else if (input.libraryBlock) {
+          // Loose library practice never changes which path owns the assessment.
         } else {
           if (input.previousBlockId) {
             const previous = await tx.coreTechnicalBlock.findFirst({
@@ -386,7 +399,7 @@ export class CoreTechnicalPersistenceService {
             ) {
               throw new ConflictErrorException(
                 "CORE_TECHNICAL_CONTINUATION_STALE",
-                "A newer Core Technical story has already replaced this continuation."
+                "A newer Core Technical practice path has already replaced this continuation."
               );
             }
           }
@@ -409,7 +422,7 @@ export class CoreTechnicalPersistenceService {
       } else if (input.previousBlockId) {
         throw new ConflictErrorException(
           "CORE_TECHNICAL_CONTINUATION_STALE",
-          "The story selected for continuation is no longer current."
+          "The practice path selected for continuation is no longer current."
         );
       }
 
@@ -454,6 +467,7 @@ export class CoreTechnicalPersistenceService {
       const block = await tx.coreTechnicalBlock.create({
         data: {
           ordinal: (latest?.ordinal ?? 0) + 1,
+          isCurrent: !input.libraryBlock,
           owner: { connect: { ownerId } },
           focusRevision: {
             connect: { id_ownerId: { id: input.focusRevisionId, ownerId } }
@@ -521,6 +535,150 @@ export class CoreTechnicalPersistenceService {
     }, transactionOptions);
   }
 
+  /** Promotes an already materialized library path after the current assessment completes. */
+  async activateLibraryBlock(
+    ownerId: string,
+    rawInput: {
+      requestId: string;
+      focusRevisionId: string;
+      previousBlockId: string;
+      selection: CoreTechnicalStorySelection;
+      generatorVersion: string;
+      validatorVersion: string;
+    }
+  ): Promise<{ id: string } | null> {
+    const input = {
+      requestId: z.string().uuid().parse(rawInput.requestId),
+      focusRevisionId: z.string().uuid().parse(rawInput.focusRevisionId),
+      previousBlockId: z.string().uuid().parse(rawInput.previousBlockId),
+      selection: coreTechnicalStorySelectionSchema.parse(rawInput.selection),
+      generatorVersion: z.string().min(1).max(160).parse(rawInput.generatorVersion),
+      validatorVersion: z.string().min(1).max(160).parse(rawInput.validatorVersion)
+    };
+    const activatedAt = this.now();
+    return this.prisma.$transaction(async (tx) => {
+      await lock(tx, `core-technical-block:${ownerId}`);
+      const current = await tx.coreTechnicalBlock.findFirst({
+        where: { ownerId, isCurrent: true },
+        select: {
+          id: true,
+          status: true,
+          focusRevisionId: true,
+          assessment: { select: { status: true } }
+        }
+      });
+      if (
+        !current ||
+        current.id !== input.previousBlockId ||
+        current.status !== "ASSESSED" ||
+        current.assessment?.status !== "COMPLETED"
+      ) {
+        throw new ConflictErrorException(
+          "CORE_TECHNICAL_CONTINUATION_STALE",
+          "The assessed practice path is no longer the current path."
+        );
+      }
+      const target = await tx.coreTechnicalBlock.findFirst({
+        where: {
+          ownerId,
+          isCurrent: false,
+          storyVersion: { storyKey: input.selection.selectedStory.storyKey }
+        },
+        orderBy: { ordinal: "desc" },
+        select: {
+          id: true,
+          focusRevisionId: true,
+          contentFingerprint: true,
+          storySnapshot: true,
+          storyVersion: { select: { storyKey: true } },
+          questions: {
+            orderBy: { order: "asc" },
+            select: {
+              id: true,
+              order: true,
+              status: true,
+              contentFingerprint: true,
+              privateSnapshot: true,
+              attempts: {
+                orderBy: { createdAt: "desc" },
+                select: { score: true, verificationStatus: true }
+              }
+            }
+          }
+        }
+      });
+      if (!target) return null;
+      if (
+        current.focusRevisionId !== input.focusRevisionId ||
+        target.focusRevisionId !== input.focusRevisionId
+      ) {
+        throw new ConflictErrorException(
+          "CORE_TECHNICAL_FOCUS_MISMATCH",
+          "The prepared library path belongs to a different practice focus."
+        );
+      }
+      await tx.coreTechnicalBlock.update({
+        where: { id_ownerId: { id: current.id, ownerId } },
+        data: { isCurrent: false }
+      });
+      const allQuestionsTerminal = target.questions.every(
+        ({ status }) => status !== CoreTechnicalQuestionStatus.ACTIVE
+      );
+      const assessmentReadyAt = allQuestionsTerminal ? activatedAt : null;
+      await tx.coreTechnicalBlock.update({
+        where: { id_ownerId: { id: target.id, ownerId } },
+        data: {
+          isCurrent: true,
+          ...(allQuestionsTerminal
+            ? {
+                status: CoreTechnicalBlockStatus.ASSESSMENT_READY,
+                assessmentReadyAt
+              }
+            : {})
+        }
+      });
+      if (allQuestionsTerminal) {
+        const assessmentSnapshot = buildCoreTechnicalAssessmentSnapshot({
+          blockContentFingerprint: target.contentFingerprint,
+          storySnapshot: target.storySnapshot,
+          questions: target.questions,
+          preparedAt: activatedAt
+        });
+        await Promise.all([
+          tx.coreTechnicalAssessment.update({
+            where: { blockId_ownerId: { blockId: target.id, ownerId } },
+            data: {
+              status: CoreTechnicalAssessmentStatus.READY,
+              readyAt: assessmentReadyAt,
+              assessmentSnapshot: toJson(assessmentSnapshot)
+            }
+          }),
+          tx.coreTechnicalStoryProgress.update({
+            where: {
+              ownerId_storyKey: { ownerId, storyKey: target.storyVersion.storyKey }
+            },
+            data: { status: CoreTechnicalStoryProgressStatus.ASSESSMENT_READY }
+          })
+        ]);
+      }
+      await tx.coreTechnicalPreparationAttempt.create({
+        data: {
+          ownerId,
+          focusRevisionId: input.focusRevisionId,
+          blockId: target.id,
+          requestId: input.requestId,
+          status: CoreTechnicalPreparationStatus.SUCCEEDED,
+          generatorVersion: input.generatorVersion,
+          validatorVersion: input.validatorVersion,
+          selectionSnapshot: toJson(input.selection),
+          startedAt: activatedAt,
+          completedAt: activatedAt
+        }
+      });
+      return { id: target.id };
+    }, transactionOptions);
+  }
+
   /** Saves bounded server-only failure metadata without ever creating a partial block. */
   async recordPreparationFailure(
     ownerId: string,
@@ -550,8 +708,11 @@ export class CoreTechnicalPersistenceService {
           "This preparation request ID belongs to a different focus revision."
         );
       }
-      if (existing?.status === CoreTechnicalPreparationStatus.SUCCEEDED ||
-          existing?.status === CoreTechnicalPreparationStatus.FAILED) return existing;
+      if (
+        existing?.status === CoreTechnicalPreparationStatus.SUCCEEDED ||
+        existing?.status === CoreTechnicalPreparationStatus.FAILED
+      )
+        return existing;
 
       const data = {
         status: CoreTechnicalPreparationStatus.FAILED,
@@ -585,16 +746,28 @@ export class CoreTechnicalPersistenceService {
 }
 
 function parsePublishInput(input: PublishCoreTechnicalBlockInput) {
+  if (input.previousBlockId && input.libraryBlock) {
+    throw new Error("A path publication cannot be both a continuation and a library block");
+  }
+  const selection = coreTechnicalStorySelectionSchema.parse(input.selection);
+  const generationProvenance = coreTechnicalGenerationProvenanceSchema.parse(
+    input.draft.provenance ?? "reviewed-artifact"
+  );
   return {
     requestId: z.string().uuid().parse(input.requestId),
     focusRevisionId: z.string().uuid().parse(input.focusRevisionId),
     previousBlockId: z.string().uuid().optional().parse(input.previousBlockId),
-    selection: coreTechnicalStorySelectionSchema.parse(input.selection),
+    libraryBlock: z.boolean().optional().default(false).parse(input.libraryBlock),
+    selection: coreTechnicalStorySelectionSchema.parse({
+      ...selection,
+      generationProvenance
+    }),
     draft: {
       story: selectedStorySchema.parse(input.draft.story),
       storyReview: coreTechnicalCriticReportSchema.parse(input.draft.storyReview),
       questionBlock: frozenQuestionBlockSchema.parse(input.draft.questionBlock),
-      questionBlockReview: coreTechnicalCriticReportSchema.parse(input.draft.questionBlockReview)
+      questionBlockReview: coreTechnicalCriticReportSchema.parse(input.draft.questionBlockReview),
+      provenance: generationProvenance
     },
     generatorVersion: z.string().min(1).max(160).parse(input.generatorVersion),
     validatorVersion: z.string().min(1).max(160).parse(input.validatorVersion),
@@ -604,7 +777,10 @@ function parsePublishInput(input: PublishCoreTechnicalBlockInput) {
 
 function assertCompleteDraft(input: ReturnType<typeof parsePublishInput>): void {
   const { story, storyReview, questionBlock, questionBlockReview } = input.draft;
-  if (!isCoreTechnicalCriticReportApproved(storyReview) || !isCoreTechnicalCriticReportApproved(questionBlockReview)) {
+  if (
+    !isCoreTechnicalCriticReportApproved(storyReview) ||
+    !isCoreTechnicalCriticReportApproved(questionBlockReview)
+  ) {
     throw new ConflictErrorException(
       "CORE_TECHNICAL_CRITIC_APPROVAL_REQUIRED",
       "The complete story and question block must pass every critic before publication."
@@ -616,15 +792,22 @@ function assertCompleteDraft(input: ReturnType<typeof parsePublishInput>): void 
     selected.storyKey !== story.key ||
     selected.difficulty !== story.difficulty ||
     questionBlock.storyKey !== story.key
-  ) throw new Error("The ranked selection, story, and question block do not match");
+  )
+    throw new Error("The ranked selection, story, and question block do not match");
 
   const orders = questionBlock.questions.map((question) => question.order);
   const keys = questionBlock.questions.map((question) => question.key);
+  const expectedQuestionCount = story.stages.length;
   if (
-    new Set(orders).size !== 8 ||
+    ![6, 8].includes(expectedQuestionCount) ||
+    orders.length !== expectedQuestionCount ||
+    new Set(orders).size !== expectedQuestionCount ||
     orders.some((order, index) => order !== index + 1) ||
-    new Set(keys).size !== 8
-  ) throw new Error("A published Core Technical block requires eight unique ordered questions");
+    new Set(keys).size !== expectedQuestionCount
+  )
+    throw new Error(
+      "A published Core Technical block requires six new or eight legacy unique ordered questions"
+    );
   questionBlock.questions.forEach((question, index) => {
     const stage = story.stages[index];
     if (
@@ -633,19 +816,76 @@ function assertCompleteDraft(input: ReturnType<typeof parsePublishInput>): void 
       question.stageKey !== stage.key ||
       question.patternKey !== stage.patternKey ||
       question.format !== stage.format
-    ) throw new Error(`Question ${index + 1} does not match its frozen story stage`);
+    )
+      throw new Error(`Question ${index + 1} does not match its frozen story stage`);
   });
 }
 
-function assertReviewedContractMatches(rawReviewedStory: Prisma.JsonValue, story: SelectedCoreTechnicalStory): void {
+function assertReviewedContractMatches(
+  rawReviewedStory: Prisma.JsonValue,
+  story: SelectedCoreTechnicalStory
+): void {
   const reviewed = selectedStorySchema.parse(rawReviewedStory);
   if (
     reviewed.key !== story.key ||
     reviewed.stages.some((stage, index) => stage.patternKey !== story.stages[index]?.patternKey)
-  ) throw new ConflictErrorException(
-    "CORE_TECHNICAL_REVIEWED_CONTRACT_MISMATCH",
-    "The generated block differs from its published reviewed pattern contract."
-  );
+  )
+    throw new ConflictErrorException(
+      "CORE_TECHNICAL_REVIEWED_CONTRACT_MISMATCH",
+      "The generated block differs from its published reviewed pattern contract."
+    );
+}
+
+async function ensureReviewedPracticePathVersion(
+  tx: Prisma.TransactionClient,
+  storyKey: string,
+  version: number,
+  publishedAt: Date
+) {
+  const blueprint = coreTechnicalPracticePathBlueprint(storyKey, version);
+  if (!blueprint) {
+    throw new ConflictErrorException(
+      "CORE_TECHNICAL_STORY_NOT_PUBLISHED",
+      "The selected Core Technical practice-path version is not available."
+    );
+  }
+  const existing = await tx.coreTechnicalStoryVersion.findUnique({
+    where: { storyKey_version: { storyKey, version } },
+    select: { id: true, publicationStatus: true, storySnapshot: true }
+  });
+  if (existing) {
+    if (existing.publicationStatus !== CoreTechnicalStoryPublicationStatus.PUBLISHED) {
+      throw new ConflictErrorException(
+        "CORE_TECHNICAL_STORY_NOT_PUBLISHED",
+        "The selected Core Technical practice-path version has been retired."
+      );
+    }
+    assertReviewedContractMatches(existing.storySnapshot, blueprint);
+    return existing;
+  }
+
+  await tx.coreTechnicalStoryDefinition.upsert({
+    where: { key: storyKey },
+    create: { key: storyKey, title: blueprint.title },
+    update: { title: blueprint.title }
+  });
+  return tx.coreTechnicalStoryVersion.create({
+    data: {
+      storyKey,
+      version,
+      schemaVersion: blueprint.schemaVersion,
+      publicationStatus: CoreTechnicalStoryPublicationStatus.PUBLISHED,
+      contentFingerprint: fingerprint(blueprint),
+      storySnapshot: toJson(blueprint),
+      reviewSnapshot: toJson({
+        source: "source-reviewed-code-blueprint",
+        family: blueprint.primaryTopicKey,
+        reviewedAt: "2026-09-11"
+      }),
+      publishedAt
+    },
+    select: { id: true, publicationStatus: true, storySnapshot: true }
+  });
 }
 
 function fingerprint(value: unknown): string {
@@ -655,9 +895,10 @@ function fingerprint(value: unknown): string {
 function stableStringify(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
   if (typeof value === "object" && value !== null) {
-    return `{${Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(
-      ([key, child]) => `${JSON.stringify(key)}:${stableStringify(child)}`
-    ).join(",")}}`;
+    return `{${Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, child]) => `${JSON.stringify(key)}:${stableStringify(child)}`)
+      .join(",")}}`;
   }
   return JSON.stringify(value);
 }

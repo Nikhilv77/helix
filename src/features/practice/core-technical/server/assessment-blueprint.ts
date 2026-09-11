@@ -6,6 +6,7 @@ import {
 } from "@/features/practice/core-technical/domain/assessment-contracts";
 import { generatedQuestionCandidateSchema } from "@/features/practice/core-technical/domain/question-contracts";
 import { selectedStorySchema } from "@/features/practice/core-technical/domain/story-contracts";
+import { coreTechnicalPracticePathPresentation } from "@/features/practice/core-technical/domain/practice-path-presentation";
 
 type BlueprintQuestion = {
   id: string;
@@ -22,22 +23,29 @@ export function buildCoreTechnicalAssessmentSnapshot(input: {
   questions: BlueprintQuestion[];
   preparedAt: Date;
 }): CoreTechnicalAssessmentSnapshot {
-  const story = selectedStorySchema.parse(input.storySnapshot);
+  const story = coreTechnicalPracticePathPresentation(
+    selectedStorySchema.parse(input.storySnapshot)
+  );
   const questions = input.questions
     .map((row) => ({ row, question: generatedQuestionCandidateSchema.parse(row.privateSnapshot) }))
     .sort((left, right) => left.row.order - right.row.order);
-  if (questions.length !== 8 || questions.some(({ row }) => row.status === "ACTIVE")) {
-    throw new Error("A Core Technical assessment requires eight terminal frozen questions");
+  if (![6, 8].includes(questions.length) || questions.some(({ row }) => row.status === "ACTIVE")) {
+    throw new Error(
+      "A Core Technical assessment requires six new or eight legacy terminal frozen questions"
+    );
   }
-  const weakest = [...questions].sort((left, right) =>
-    weakness(right.row) - weakness(left.row) || left.row.order - right.row.order
+  const weakest = [...questions].sort(
+    (left, right) => weakness(right.row) - weakness(left.row) || left.row.order - right.row.order
   )[0]!;
-  const executable = questions.find(({ question }) =>
-    question.format === "debug-repair" || question.format === "micro-implementation"
+  const executable = questions.find(
+    ({ question }) =>
+      question.format === "debug-repair" || question.format === "micro-implementation"
   )!;
-  const diagnosis = questions.find(({ question }) => question.format === "artifact-diagnosis") ?? questions[4]!;
-  const repair = questions.find(({ question }) => question.format === "micro-implementation") ?? executable;
-  const production = questions[7]!;
+  const diagnosis =
+    questions.find(({ question }) => question.format === "artifact-diagnosis") ?? questions[4]!;
+  const repair =
+    questions.find(({ question }) => question.format === "micro-implementation") ?? executable;
+  const production = questions.at(-1)!;
 
   const prompts: CoreTechnicalAssessmentSnapshot["prompts"] = [
     assessmentPrompt(
@@ -96,7 +104,10 @@ function assessmentPrompt(
   order: number,
   kind: CoreTechnicalAssessmentSnapshot["prompts"][number]["kind"],
   prompt: string,
-  source: { row: BlueprintQuestion; question: ReturnType<typeof generatedQuestionCandidateSchema.parse> },
+  source: {
+    row: BlueprintQuestion;
+    question: ReturnType<typeof generatedQuestionCandidateSchema.parse>;
+  },
   deterministicEvidence: "accepted-run-required" | "practice-evidence" | "none"
 ): CoreTechnicalAssessmentSnapshot["prompts"][number] {
   return {
@@ -104,11 +115,17 @@ function assessmentPrompt(
     order,
     kind,
     prompt,
-    context: bounded(`${source.question.artifact.title}: ${source.question.artifact.content}`, 4_000),
+    context: bounded(
+      `${source.question.artifact.title}: ${source.question.artifact.content}`,
+      4_000
+    ),
     privateEvaluation: {
       sourceQuestionId: source.row.id,
       sourceQuestionFingerprint: source.row.contentFingerprint,
-      expectedAnswer: bounded(`${source.question.answer.concise}\n${source.question.answer.explanation}`, 4_000),
+      expectedAnswer: bounded(
+        `${source.question.answer.concise}\n${source.question.answer.explanation}`,
+        4_000
+      ),
       rubric: source.question.rubric,
       deterministicEvidence
     }

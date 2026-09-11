@@ -16,9 +16,28 @@ export const NODEJS_CORE_TECHNICAL_DOMAIN_MAP = parseCoreTechnicalDomainMap({
       importance: "essential",
       description:
         "Reason about reference identity, shallow copies, nested mutation, and equality without relying on memorized output.",
-      mechanismKeys: ["reference-identity", "shallow-copy", "strict-equality"],
+      mechanismKeys: [
+        "reference-identity",
+        "shallow-copy",
+        "strict-equality",
+        "property-copy",
+        "structured-clone",
+        "shared-mutation",
+        "mutation-boundary",
+        "copy-on-write",
+        "defensive-copy"
+      ],
       prerequisiteTopicKeys: [],
-      interviewPatternKeys: ["javascript-identity-mutation-copy"]
+      interviewPatternKeys: [
+        "javascript-reference-identity",
+        "javascript-shallow-copy-aliasing",
+        "javascript-property-copy-semantics",
+        "javascript-structured-clone-boundary",
+        "javascript-shared-state-mutation",
+        "javascript-mutation-boundary-repair",
+        "javascript-immutable-nested-update",
+        "javascript-copy-strategy-decision"
+      ]
     },
     {
       key: "javascript-scope-and-closures",
@@ -26,9 +45,27 @@ export const NODEJS_CORE_TECHNICAL_DOMAIN_MAP = parseCoreTechnicalDomainMap({
       importance: "essential",
       description:
         "Explain lexical scope, closure lifetime, captured variables, and the production consequences of retaining state.",
-      mechanismKeys: ["lexical-scope", "closure", "garbage-collection-roots"],
+      mechanismKeys: [
+        "lexical-scope",
+        "loop-binding",
+        "closure",
+        "module-state",
+        "garbage-collection-roots",
+        "listener-cleanup",
+        "encapsulated-state",
+        "state-ownership"
+      ],
       prerequisiteTopicKeys: ["javascript-values-and-mutation"],
-      interviewPatternKeys: ["javascript-closure-lifetime"]
+      interviewPatternKeys: [
+        "javascript-lexical-scope-resolution",
+        "javascript-loop-closure-binding",
+        "javascript-closure-state-lifetime",
+        "javascript-module-state-boundary",
+        "javascript-closure-retention-diagnosis",
+        "javascript-listener-closure-cleanup",
+        "javascript-closure-state-implementation",
+        "javascript-state-ownership-decision"
+      ]
     },
     {
       key: "javascript-modules",

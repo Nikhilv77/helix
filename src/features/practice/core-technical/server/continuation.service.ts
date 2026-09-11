@@ -1,14 +1,11 @@
-import {
-  CoreTechnicalPreparationStatus,
-  CoreTechnicalStoryPublicationStatus
-} from "@prisma/client";
+import { CoreTechnicalPreparationStatus } from "@prisma/client";
 import {
   CORE_TECHNICAL_ASSESSMENT_EVALUATOR_VERSION,
   coreTechnicalAssessmentReportSchema
 } from "@/features/practice/core-technical/domain/assessment-contracts";
 import { coreTechnicalConfirmedFocusSchema } from "@/features/practice/core-technical/domain/focus-ranking-contracts";
 import { coreTechnicalContinueInputSchema } from "@/features/practice/core-technical/domain/assessment-contracts";
-import { selectedStorySchema } from "@/features/practice/core-technical/domain/story-contracts";
+import { coreTechnicalPracticePathBlueprint } from "@/features/practice/core-technical/domain/practice-path-blueprints";
 import { ConflictErrorException } from "@/server/common/exceptions/conflict-error.exception";
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 import { ServiceUnavailableErrorException } from "@/server/common/exceptions/service-unavailable-error.exception";
@@ -34,9 +31,9 @@ type Dependencies = {
   generation: Pick<CoreTechnicalGenerationPipeline, "prepareReviewedDraft">;
   persistence: Pick<
     CoreTechnicalPersistenceService,
-    "publishPreparedBlock" | "recordPreparationFailure"
+    "activateLibraryBlock" | "publishPreparedBlock" | "recordPreparationFailure"
   >;
-  practice: Pick<CoreTechnicalPracticeService, "current">;
+  practice: Pick<CoreTechnicalPracticeService, "current" | "historyBlock">;
 };
 
 /** Keeps an assessed report current until an explicit, recoverable Continue succeeds. */
@@ -57,7 +54,7 @@ export class CoreTechnicalContinuationService {
       inProgress: () =>
         new ConflictErrorException(
           "CORE_TECHNICAL_CONTINUATION_IN_PROGRESS",
-          "The next Core Technical story is already being prepared."
+          "The next Core Technical practice path is already being prepared."
         )
     });
     if (replay) return replay;
@@ -80,7 +77,7 @@ export class CoreTechnicalContinuationService {
     if (!previous) {
       throw new NotFoundErrorException(
         "CORE_TECHNICAL_BLOCK_NOT_FOUND",
-        "The Core Technical story selected for continuation was not found."
+        "The Core Technical practice path selected for continuation was not found."
       );
     }
     assertStoryPracticeContinuationReady(
@@ -88,7 +85,7 @@ export class CoreTechnicalContinuationService {
       () =>
         new ConflictErrorException(
           "CORE_TECHNICAL_CONTINUATION_NOT_READY",
-          "Complete the current story assessment before continuing."
+          "Complete the current practice-path assessment before continuing."
         )
     );
     const focus = coreTechnicalConfirmedFocusSchema.parse(previous.focusRevision.focusSnapshot);
@@ -96,25 +93,30 @@ export class CoreTechnicalContinuationService {
       previous.assessment.report.reportSnapshot
     );
     const selection = report.nextStory;
+    const activated = await this.dependencies.persistence.activateLibraryBlock(ownerId, {
+      requestId: input.requestId,
+      focusRevisionId: previous.focusRevisionId,
+      previousBlockId: previous.id,
+      selection,
+      generatorVersion: CORE_TECHNICAL_PREPARATION_GENERATOR_VERSION,
+      validatorVersion: CORE_TECHNICAL_PREPARATION_VALIDATOR_VERSION
+    });
+    if (activated) {
+      return {
+        replayed: false,
+        block: await this.dependencies.practice.historyBlock(ownerId, activated.id)
+      };
+    }
     let stage: "story-generation" | "question-generation" | "validation" | "publishing" =
       "story-generation";
     try {
-      const reviewed = await this.dependencies.prisma.coreTechnicalStoryVersion.findUnique({
-        where: {
-          storyKey_version: {
-            storyKey: selection.selectedStory.storyKey,
-            version: selection.selectedStory.storyVersion
-          }
-        },
-        select: { publicationStatus: true, storySnapshot: true }
-      });
-      if (
-        !reviewed ||
-        reviewed.publicationStatus !== CoreTechnicalStoryPublicationStatus.PUBLISHED
-      ) {
-        throw new Error("The recommended reviewed story version has not been published");
+      const reviewedStory = coreTechnicalPracticePathBlueprint(
+        selection.selectedStory.storyKey,
+        selection.selectedStory.storyVersion
+      );
+      if (!reviewedStory) {
+        throw new Error("The recommended reviewed practice path is unavailable");
       }
-      const reviewedStory = selectedStorySchema.parse(reviewed.storySnapshot);
       const draft = await this.dependencies.generation.prepareReviewedDraft(
         {
           role: focus.role,
@@ -122,13 +124,17 @@ export class CoreTechnicalContinuationService {
           language: focus.stack.language,
           runtime: focus.stack.runtime,
           framework: focus.stack.framework ?? undefined,
+          technology: focus.stack.technology,
           targetJob: focus.targetJob,
           targetCompany: focus.targetCompany ?? undefined,
           baselineState: difficultyState(selection.selectedStory.difficulty),
           weakMechanismKeys: selection.evidence.practice.weakMechanismKeys,
           unassessedMechanismKeys: [],
+          resumeTopicKeys: focus.resumeEvidence.topicKeys,
+          resumeMechanismKeys: focus.resumeEvidence.mechanismKeys,
           recentTopicKeys: selection.evidence.priorTopicKeys,
           excludedTopicKeys: focus.excludedTopicKeys,
+          personalizePresentation: true,
           reviewedContract: {
             storyKey: reviewedStory.key,
             storyTitle: reviewedStory.title,
@@ -139,7 +145,7 @@ export class CoreTechnicalContinuationService {
             ]
           }
         },
-        { preferApprovedArtifact: true }
+        { fallbackToApprovedArtifactOnProviderFailure: true }
       );
       stage = "publishing";
       await this.dependencies.persistence.publishPreparedBlock(ownerId, {
@@ -176,7 +182,7 @@ export class CoreTechnicalContinuationService {
         });
       throw new ServiceUnavailableErrorException(
         "CORE_TECHNICAL_CONTINUATION_FAILED",
-        "We could not prepare the complete next story. Your assessment report is safe; try again.",
+        "We could not prepare the complete next practice path. Your assessment report is safe; try again.",
         { retryable: true, stage }
       );
     }

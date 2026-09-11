@@ -3,6 +3,7 @@ import type {
   CoreTechnicalGoldCase,
   CoreTechnicalGoldEvaluationSuiteReport
 } from "@/features/practice/core-technical/domain/gold-evaluation-contracts";
+import { NODEJS_CORE_TECHNICAL_PRACTICE_PATH_BLUEPRINTS } from "@/features/practice/core-technical/domain/practice-path-blueprints";
 
 import type { CoreTechnicalGenerationPipeline } from "./generation-pipeline";
 import type { CoreTechnicalGoldEvaluator } from "./gold-evaluator";
@@ -23,9 +24,14 @@ export class CoreTechnicalGoldEvaluationRunner {
     // Keep cases sequential: one case already performs multiple bounded model
     // calls, and benchmark reproducibility matters more than burst throughput.
     for (const goldCase of cases) {
+      const blueprint = NODEJS_CORE_TECHNICAL_PRACTICE_PATH_BLUEPRINTS.find(
+        (candidate) => candidate.title === goldCase.expected.storyTitle
+      );
+      if (!blueprint) throw new Error(`No active blueprint matches ${goldCase.key}`);
       const output = await this.dependencies.generationPipeline.prepareReviewedDraft({
         ...goldCase.candidateContext,
         reviewedContract: {
+          storyKey: blueprint.key,
           storyTitle: goldCase.expected.storyTitle,
           stagePatternKeys: goldCase.expected.stagePatternKeys,
           requiredStoryTopicKeys: goldCase.expected.requiredStoryTopicKeys

@@ -25,12 +25,13 @@ export function CoreTechnicalTechnologyWelcome({
   const [error, setError] = useState<string | null>(null);
   const { state: voiceState, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
   const speaking = voiceState === "speaking";
+  const selectedLabel = technologies.find((technology) => technology.value === selected)?.label;
   const script =
     phase === "choosing"
-      ? `Good. This is your complete practice workspace. What technology do you want to learn? I found a few useful starting points from your resume.`
+      ? "Welcome to Core Technical practice. What technology would you like to get better at?"
       : phase === "confirming"
-        ? "Great choice. Let me understand where you are and pull together the right interview questions."
-        : "I’m building your practice now: clear questions, practical examples, and the explanations you’ll need afterward.";
+        ? `Great${selectedLabel ? `—let’s work on ${selectedLabel}` : " choice"}. I’ll pull together a focused interview practice path.`
+        : "I’m preparing a focused set of practical questions and learning guides for your level.";
 
   useEffect(() => {
     if (awaitingGesture) return;
@@ -89,40 +90,14 @@ export function CoreTechnicalTechnologyWelcome({
         className="grid w-full items-center gap-8 lg:grid-cols-[minmax(18rem,0.72fr)_minmax(30rem,1.28fr)] lg:gap-16"
       >
         <div className="relative mx-auto h-[17rem] w-full max-w-[25rem] sm:h-[23rem] lg:h-[31rem]">
-          <svg
-            aria-hidden="true"
-            focusable="false"
-            className="pointer-events-none absolute h-0 w-0"
-          >
-            <defs>
-              <filter
-                id="core-technical-avatar-edge-feather"
-                x="-5%"
-                y="-5%"
-                width="110%"
-                height="110%"
-                colorInterpolationFilters="sRGB"
-              >
-                <feGaussianBlur
-                  in="SourceAlpha"
-                  stdDeviation="1.35"
-                  result="softenedAlpha"
-                />
-                <feComposite in="SourceGraphic" in2="softenedAlpha" operator="in" />
-              </filter>
-            </defs>
-          </svg>
           <div
             data-avatar-feather="alpha-edge"
-            className="relative h-full w-full"
+            className="relative h-full w-full [contain:paint]"
             style={{
               maskImage:
-                "linear-gradient(to bottom, #000 0%, #000 68%, rgba(0,0,0,.92) 76%, rgba(0,0,0,.48) 88%, transparent 100%), linear-gradient(to right, transparent 0%, rgba(0,0,0,.38) 7%, rgba(0,0,0,.9) 16%, #000 23%, #000 77%, rgba(0,0,0,.9) 84%, rgba(0,0,0,.38) 93%, transparent 100%)",
-              maskComposite: "intersect",
+                "radial-gradient(ellipse 72% 90% at 50% 28%, #000 0%, #000 68%, rgba(0,0,0,.92) 76%, rgba(0,0,0,.45) 88%, transparent 100%)",
               WebkitMaskImage:
-                "linear-gradient(to bottom, #000 0%, #000 68%, rgba(0,0,0,.92) 76%, rgba(0,0,0,.48) 88%, transparent 100%), linear-gradient(to right, transparent 0%, rgba(0,0,0,.38) 7%, rgba(0,0,0,.9) 16%, #000 23%, #000 77%, rgba(0,0,0,.9) 84%, rgba(0,0,0,.38) 93%, transparent 100%)",
-              WebkitMaskComposite: "source-in",
-              filter: "url(#core-technical-avatar-edge-feather)"
+                "radial-gradient(ellipse 72% 90% at 50% 28%, #000 0%, #000 68%, rgba(0,0,0,.92) 76%, rgba(0,0,0,.45) 88%, transparent 100%)"
             }}
           >
             <MayaStage speaking={speaking} transparent performanceProfile="practice" />
@@ -136,7 +111,7 @@ export function CoreTechnicalTechnologyWelcome({
           >
             {phase === "choosing"
               ? "What do you want to get better at?"
-              : "I’m building this around you."}
+              : "Preparing your practice path."}
           </h1>
           {phase === "choosing" ? (
             <div className="mt-9">
@@ -170,12 +145,12 @@ export function CoreTechnicalTechnologyWelcome({
             </div>
           ) : (
             <div
-              className="mt-9 flex items-center gap-3 text-[13px] font-medium text-cream/52"
+              className="mt-9 flex items-center gap-3 text-[16px] font-medium text-cream/52"
               role="status"
             >
               <Loader2
-                size={16}
-                className="animate-spin text-[var(--workspace-accent)]"
+                size={19}
+                className="text-[var(--workspace-accent)] motion-safe:animate-spin"
                 aria-hidden="true"
               />
               {phase === "confirming"

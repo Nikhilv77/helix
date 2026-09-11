@@ -162,7 +162,9 @@ export const CORE_TECHNICAL_SOURCES = technicalSourceSchema.array().parse([
 type PatternInput = Omit<
   CoreTechnicalInterviewPattern,
   "schemaVersion" | "roles" | "languages" | "runtimes" | "frameworks" | "status" | "lastReviewedAt"
->;
+> & {
+  status?: CoreTechnicalInterviewPattern["status"];
+};
 
 function pattern(input: PatternInput): CoreTechnicalInterviewPattern {
   return {
@@ -178,8 +180,11 @@ function pattern(input: PatternInput): CoreTechnicalInterviewPattern {
 }
 
 export const NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS = parseCoreTechnicalInterviewPatterns([
+  // Compatibility patterns remain readable for immutable version-one blocks,
+  // but no active path blueprint selects them.
   pattern({
     key: "javascript-identity-mutation-copy",
+    status: "retired",
     title: "Trace identity, copying, and nested mutation",
     normalizedPrompt:
       "Given objects that are assigned, shallow-copied, and mutated through nested references, predict the final state and explain each identity relationship.",
@@ -204,6 +209,7 @@ export const NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS = parseCoreTechnicalInterv
   }),
   pattern({
     key: "javascript-closure-lifetime",
+    status: "retired",
     title: "Explain closure state and retention",
     normalizedPrompt:
       "Diagnose a callback factory whose captured state changes over time and may retain more memory than intended in a long-running service.",
@@ -227,6 +233,347 @@ export const NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS = parseCoreTechnicalInterv
     followUps: [
       "Ask how the answer changes for let versus var inside a loop that creates callbacks."
     ]
+  }),
+  pattern({
+    key: "javascript-reference-identity",
+    title: "Distinguish equal values from shared identity",
+    normalizedPrompt:
+      "Given primitive values and object references used by a request handler, identify which comparisons test value, which test identity, and which assignments create aliases.",
+    mechanismKeys: ["reference-identity", "strict-equality"],
+    topicKeys: ["javascript-values-and-mutation"],
+    seniorities: ["junior", "mid", "senior"],
+    formats: ["mcq"],
+    importance: "essential",
+    evidenceSourceIds: [
+      "tarmac-javascript-interview-questions",
+      "openreplay-javascript-interview-questions"
+    ],
+    technicalSourceIds: ["mdn-equality"],
+    expectedSignals: [
+      "Separates primitive value comparison from object reference identity.",
+      "Traces aliases from each assignment before predicting any mutation."
+    ],
+    commonMistakes: ["Assumes two objects with the same fields are strictly equal."],
+    followUps: ["Ask how Object.is differs from strict equality for NaN and signed zero."]
+  }),
+  pattern({
+    key: "javascript-shallow-copy-aliasing",
+    title: "Predict nested state after a shallow copy",
+    normalizedPrompt:
+      "Predict the exact result after an object is copied with spread syntax and a nested object is mutated, then explain which references remain shared.",
+    mechanismKeys: ["shallow-copy", "reference-identity"],
+    topicKeys: ["javascript-values-and-mutation"],
+    seniorities: ["junior", "mid", "senior"],
+    formats: ["predict-explain"],
+    importance: "essential",
+    evidenceSourceIds: [
+      "tarmac-javascript-interview-questions",
+      "openreplay-javascript-interview-questions"
+    ],
+    technicalSourceIds: ["mdn-equality"],
+    expectedSignals: [
+      "Draws the outer and nested references before tracing the write.",
+      "Explains that spread creates a new outer object while retaining nested references."
+    ],
+    commonMistakes: ["Calls object spread a deep copy and predicts independent nested state."],
+    followUps: ["Ask how the result changes when the nested object is also spread."]
+  }),
+  pattern({
+    key: "javascript-property-copy-semantics",
+    title: "Explain what an object copy preserves",
+    normalizedPrompt:
+      "Explain what object spread copies from a source object and what it does not preserve, using a practical configuration or domain-object example.",
+    mechanismKeys: ["property-copy", "shallow-copy"],
+    topicKeys: ["javascript-values-and-mutation"],
+    seniorities: ["junior", "mid", "senior"],
+    formats: ["written"],
+    importance: "essential",
+    evidenceSourceIds: [
+      "tarmac-javascript-interview-questions",
+      "openreplay-javascript-interview-questions",
+      "reddit-javascript-interview-report"
+    ],
+    technicalSourceIds: ["mdn-equality"],
+    expectedSignals: [
+      "Distinguishes copying own enumerable values from preserving descriptors or prototypes.",
+      "Connects the semantics to a concrete risk instead of listing syntax facts."
+    ],
+    commonMistakes: ["Treats spread, Object.assign, and cloning as equivalent operations."],
+    followUps: ["Ask what happens to getters, symbols, and the object's prototype."]
+  }),
+  pattern({
+    key: "javascript-structured-clone-boundary",
+    title: "Choose a safe deep-copy boundary",
+    normalizedPrompt:
+      "Decide whether structuredClone is appropriate for isolating a request payload, explain unsupported or surprising values, and state when copying is the wrong design.",
+    mechanismKeys: ["structured-clone", "defensive-copy"],
+    topicKeys: ["javascript-values-and-mutation"],
+    seniorities: ["mid", "senior"],
+    formats: ["spoken", "written"],
+    importance: "high",
+    evidenceSourceIds: [
+      "openreplay-javascript-interview-questions",
+      "greatfrontend-senior-nodejs-questions"
+    ],
+    technicalSourceIds: ["mdn-equality"],
+    expectedSignals: [
+      "Checks the actual data types and ownership boundary before choosing a clone strategy.",
+      "Explains correctness and cost trade-offs without presenting deep cloning as a universal fix."
+    ],
+    commonMistakes: ["Uses JSON serialization as a lossless deep-clone solution for every value."],
+    followUps: ["Ask when validation plus reconstruction is safer than cloning an input object."]
+  }),
+  pattern({
+    key: "javascript-shared-state-mutation",
+    title: "Diagnose mutation shared across requests",
+    normalizedPrompt:
+      "Use logs and a small state snapshot to diagnose why one request changes data observed by another request in the same Node.js process.",
+    mechanismKeys: ["shared-mutation", "reference-identity"],
+    topicKeys: ["javascript-values-and-mutation"],
+    seniorities: ["mid", "senior"],
+    formats: ["artifact-diagnosis"],
+    importance: "essential",
+    evidenceSourceIds: ["greatfrontend-senior-nodejs-questions", "reddit-nodejs-interview-report"],
+    technicalSourceIds: ["mdn-equality"],
+    expectedSignals: [
+      "Identifies the shared reference and its owner from evidence before proposing a fix.",
+      "Separates cross-request process state from database or distributed-state concerns."
+    ],
+    commonMistakes: ["Blames asynchronous timing without identifying the shared mutable object."],
+    followUps: ["Ask how the diagnosis changes when several Node.js processes are running."]
+  }),
+  pattern({
+    key: "javascript-mutation-boundary-repair",
+    title: "Repair an accidental mutation boundary",
+    normalizedPrompt:
+      "Repair a function that mutates a caller-owned object, preserve its intended output, and explain the ownership contract the corrected code establishes.",
+    mechanismKeys: ["mutation-boundary", "shallow-copy"],
+    topicKeys: ["javascript-values-and-mutation"],
+    seniorities: ["junior", "mid", "senior"],
+    formats: ["debug-repair"],
+    importance: "essential",
+    evidenceSourceIds: [
+      "tarmac-javascript-interview-questions",
+      "openreplay-javascript-interview-questions"
+    ],
+    technicalSourceIds: ["mdn-equality"],
+    expectedSignals: [
+      "States which object the caller owns and which value the function may create or mutate.",
+      "Repairs nested writes deliberately and verifies both result and input preservation."
+    ],
+    commonMistakes: [
+      "Copies only the outer object while continuing to mutate a shared nested value."
+    ],
+    followUps: ["Ask whether documenting mutation would ever be preferable to copying."]
+  }),
+  pattern({
+    key: "javascript-immutable-nested-update",
+    title: "Implement an immutable nested update",
+    normalizedPrompt:
+      "Implement a small nested update that preserves untouched references, replaces every changed branch, and leaves the original input unchanged.",
+    mechanismKeys: ["copy-on-write", "reference-identity"],
+    topicKeys: ["javascript-values-and-mutation"],
+    seniorities: ["junior", "mid", "senior"],
+    formats: ["micro-implementation"],
+    importance: "essential",
+    evidenceSourceIds: [
+      "tarmac-javascript-interview-questions",
+      "openreplay-javascript-interview-questions"
+    ],
+    technicalSourceIds: ["mdn-equality"],
+    expectedSignals: [
+      "Copies every changed path and preserves identity for unrelated branches.",
+      "Uses tests to prove the result and original object have the intended identities."
+    ],
+    commonMistakes: ["Deep-copies the entire graph or mutates one nested branch in place."],
+    followUps: ["Ask how the approach changes for arrays and repeated updates."]
+  }),
+  pattern({
+    key: "javascript-copy-strategy-decision",
+    title: "Choose a production copying strategy",
+    normalizedPrompt:
+      "Choose between mutation, shallow copying, selective immutable updates, and deep cloning for a concrete service boundary with correctness and performance constraints.",
+    mechanismKeys: ["defensive-copy", "state-ownership"],
+    topicKeys: ["javascript-values-and-mutation"],
+    seniorities: ["mid", "senior", "staff"],
+    formats: ["production-decision", "spoken", "written"],
+    importance: "high",
+    evidenceSourceIds: ["greatfrontend-senior-nodejs-questions", "reddit-nodejs-interview-report"],
+    technicalSourceIds: ["mdn-equality"],
+    expectedSignals: [
+      "Defines ownership and mutation guarantees before selecting an implementation.",
+      "Balances isolation, allocation cost, object size, and change frequency."
+    ],
+    commonMistakes: ["Says immutability is always faster or deep cloning is always safer."],
+    followUps: ["Ask what metrics or tests would validate the chosen boundary in production."]
+  }),
+  pattern({
+    key: "javascript-lexical-scope-resolution",
+    title: "Resolve a name through lexical scope",
+    normalizedPrompt:
+      "Given nested functions and shadowed bindings in ordinary application code, identify which binding each read uses and explain why call location does not change lexical scope.",
+    mechanismKeys: ["lexical-scope"],
+    topicKeys: ["javascript-scope-and-closures"],
+    seniorities: ["junior", "mid", "senior"],
+    formats: ["mcq"],
+    importance: "essential",
+    evidenceSourceIds: [
+      "openreplay-javascript-interview-questions",
+      "reddit-javascript-interview-report"
+    ],
+    technicalSourceIds: ["mdn-closures"],
+    expectedSignals: [
+      "Walks outward through lexical environments from the function definition.",
+      "Distinguishes shadowing from mutation of an outer binding."
+    ],
+    commonMistakes: ["Looks for variables at the function's call site instead of definition site."],
+    followUps: ["Ask how the temporal dead zone affects a shadowed let binding."]
+  }),
+  pattern({
+    key: "javascript-loop-closure-binding",
+    title: "Predict callbacks created inside a loop",
+    normalizedPrompt:
+      "Predict what callbacks created in a loop will read later, compare var with let, and explain the result in terms of bindings rather than memorized output.",
+    mechanismKeys: ["loop-binding", "closure"],
+    topicKeys: ["javascript-scope-and-closures"],
+    seniorities: ["junior", "mid", "senior"],
+    formats: ["predict-explain"],
+    importance: "essential",
+    evidenceSourceIds: [
+      "tarmac-javascript-interview-questions",
+      "openreplay-javascript-interview-questions"
+    ],
+    technicalSourceIds: ["mdn-closures"],
+    expectedSignals: [
+      "Explains one shared var binding versus a per-iteration let binding.",
+      "Traces when the callback executes and what binding it closes over."
+    ],
+    commonMistakes: ["Says asynchronous callbacks copy the current loop value automatically."],
+    followUps: ["Ask for a correct repair when the loop must remain written with var."]
+  }),
+  pattern({
+    key: "javascript-closure-state-lifetime",
+    title: "Explain state held by a closure",
+    normalizedPrompt:
+      "Explain how a returned function continues to access and update a private binding after its outer function returns, including when that state becomes collectible.",
+    mechanismKeys: ["closure", "lexical-scope"],
+    topicKeys: ["javascript-scope-and-closures"],
+    seniorities: ["junior", "mid", "senior"],
+    formats: ["written"],
+    importance: "essential",
+    evidenceSourceIds: [
+      "openreplay-javascript-interview-questions",
+      "reddit-javascript-interview-report"
+    ],
+    technicalSourceIds: ["mdn-closures"],
+    expectedSignals: [
+      "Describes a closure as a function plus access to its lexical environment.",
+      "Explains lifetime through reachability rather than assuming outer locals disappear immediately."
+    ],
+    commonMistakes: ["Claims a closure freezes a copy of every captured value."],
+    followUps: ["Ask whether two counters created by separate factory calls share state."]
+  }),
+  pattern({
+    key: "javascript-module-state-boundary",
+    title: "Explain module-scoped state across requests",
+    normalizedPrompt:
+      "Explain why module-scoped mutable state can be observed by multiple requests in one Node.js process and define a safer ownership boundary.",
+    mechanismKeys: ["module-state", "state-ownership"],
+    topicKeys: ["javascript-scope-and-closures"],
+    seniorities: ["mid", "senior"],
+    formats: ["spoken", "written"],
+    importance: "essential",
+    evidenceSourceIds: ["greatfrontend-senior-nodejs-questions", "reddit-nodejs-interview-report"],
+    technicalSourceIds: ["mdn-closures", "nodejs-commonjs"],
+    expectedSignals: [
+      "Connects module lifetime to process lifetime and request reuse.",
+      "Distinguishes safe immutable configuration from unsafe request-specific mutable state."
+    ],
+    commonMistakes: ["Assumes every incoming request receives a fresh module instance."],
+    followUps: ["Ask how multiple processes or serverless instances change the guarantee."]
+  }),
+  pattern({
+    key: "javascript-closure-retention-diagnosis",
+    title: "Find data retained by a callback",
+    normalizedPrompt:
+      "Inspect a heap or listener snapshot and identify how a long-lived callback keeps a larger object graph reachable than intended.",
+    mechanismKeys: ["garbage-collection-roots", "closure"],
+    topicKeys: ["javascript-scope-and-closures"],
+    seniorities: ["mid", "senior", "staff"],
+    formats: ["artifact-diagnosis"],
+    importance: "essential",
+    evidenceSourceIds: ["greatfrontend-senior-nodejs-questions", "reddit-nodejs-interview-report"],
+    technicalSourceIds: ["mdn-closures", "nodejs-memory-diagnostics"],
+    expectedSignals: [
+      "Follows the retaining path from a live root through the callback environment.",
+      "Uses reachability evidence instead of treating every closure as a memory leak."
+    ],
+    commonMistakes: ["Calls memory growth a closure leak without locating a retaining root."],
+    followUps: ["Ask which heap-snapshot comparison would verify the diagnosis."]
+  }),
+  pattern({
+    key: "javascript-listener-closure-cleanup",
+    title: "Repair a listener that retains request state",
+    normalizedPrompt:
+      "Repair code that registers a closure as a long-lived listener, leaks request data, and may run duplicate handlers after repeated setup.",
+    mechanismKeys: ["listener-cleanup", "garbage-collection-roots"],
+    topicKeys: ["javascript-scope-and-closures"],
+    seniorities: ["mid", "senior"],
+    formats: ["debug-repair"],
+    importance: "essential",
+    evidenceSourceIds: ["greatfrontend-senior-nodejs-questions", "reddit-nodejs-interview-report"],
+    technicalSourceIds: ["mdn-closures", "nodejs-memory-diagnostics"],
+    expectedSignals: [
+      "Keeps a stable handler reference and removes it at the owning lifecycle boundary.",
+      "Avoids capturing an entire request object when only a small immutable value is needed."
+    ],
+    commonMistakes: [
+      "Calls removeListener with a new anonymous function that cannot match the registered handler."
+    ],
+    followUps: ["Ask how the repair behaves when setup fails halfway through."]
+  }),
+  pattern({
+    key: "javascript-closure-state-implementation",
+    title: "Implement bounded private state with a closure",
+    normalizedPrompt:
+      "Implement a small closure-based component with private state, an explicit update API, and a cleanup operation that releases retained resources.",
+    mechanismKeys: ["encapsulated-state", "closure"],
+    topicKeys: ["javascript-scope-and-closures"],
+    seniorities: ["junior", "mid", "senior"],
+    formats: ["micro-implementation"],
+    importance: "high",
+    evidenceSourceIds: [
+      "openreplay-javascript-interview-questions",
+      "reddit-javascript-interview-report"
+    ],
+    technicalSourceIds: ["mdn-closures"],
+    expectedSignals: [
+      "Exposes only the operations required by the caller and keeps state inaccessible directly.",
+      "Makes disposal idempotent and prevents work after cleanup."
+    ],
+    commonMistakes: ["Returns the private mutable object and defeats the ownership boundary."],
+    followUps: ["Ask when a class or explicit state object would be easier to maintain."]
+  }),
+  pattern({
+    key: "javascript-state-ownership-decision",
+    title: "Choose where long-lived state should live",
+    normalizedPrompt:
+      "Choose between closure state, module state, an explicit instance, and an external store for a concrete service requirement, including lifecycle and scaling trade-offs.",
+    mechanismKeys: ["state-ownership", "module-state"],
+    topicKeys: ["javascript-scope-and-closures"],
+    seniorities: ["mid", "senior", "staff"],
+    formats: ["production-decision", "spoken", "written"],
+    importance: "high",
+    evidenceSourceIds: ["greatfrontend-senior-nodejs-questions", "reddit-nodejs-interview-report"],
+    technicalSourceIds: ["mdn-closures", "nodejs-memory-diagnostics"],
+    expectedSignals: [
+      "Starts from ownership, lifetime, concurrency, and process-boundary requirements.",
+      "States cleanup and observability responsibilities for the selected design."
+    ],
+    commonMistakes: [
+      "Chooses global module state without considering process multiplicity or test isolation."
+    ],
+    followUps: ["Ask how the choice changes when state must survive a process restart."]
   }),
   pattern({
     key: "javascript-event-loop-order",

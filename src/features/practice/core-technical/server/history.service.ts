@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { coreTechnicalAssessmentReportSchema } from "@/features/practice/core-technical/domain/assessment-contracts";
 import { selectedStorySchema } from "@/features/practice/core-technical/domain/story-contracts";
+import { coreTechnicalPracticePathPresentation } from "@/features/practice/core-technical/domain/practice-path-presentation";
 import type { PrismaService } from "@/server/database/prisma.service";
 import type { CoreTechnicalPracticeService } from "./practice.service";
 
@@ -12,7 +13,7 @@ const historySelect = {
   storySnapshot: true,
   preparedAt: true,
   assessedAt: true,
-  questions: { select: { status: true } },
+  questions: { orderBy: { order: "asc" as const }, select: { id: true, order: true, status: true } },
   assessment: {
     select: {
       id: true,
@@ -44,9 +45,13 @@ export class CoreTechnicalHistoryService {
         ordinal: block.ordinal,
         isCurrent: block.isCurrent,
         status: block.status,
-        story: selectedStorySchema.parse(block.storySnapshot),
-        completedQuestionCount: block.questions.filter(({ status }) => status === "COMPLETED").length,
+        story: coreTechnicalPracticePathPresentation(
+          selectedStorySchema.parse(block.storySnapshot)
+        ),
+        completedQuestionCount: block.questions.filter(({ status }) => status === "COMPLETED")
+          .length,
         learnedQuestionCount: block.questions.filter(({ status }) => status === "LEARNED").length,
+        questions: block.questions.map(({ id, order, status }) => ({ id, order, status })),
         assessment: block.assessment
           ? {
               id: block.assessment.id,
@@ -65,7 +70,5 @@ export class CoreTechnicalHistoryService {
   }
 }
 
-export type CoreTechnicalHistoryList = Awaited<
-  ReturnType<CoreTechnicalHistoryService["list"]>
->;
+export type CoreTechnicalHistoryList = Awaited<ReturnType<CoreTechnicalHistoryService["list"]>>;
 export type CoreTechnicalHistorySummary = CoreTechnicalHistoryList[number];

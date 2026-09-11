@@ -1,11 +1,11 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { NODEJS_CORE_TECHNICAL_GOLD_CASES } from "./gold-cases";
-import { coreTechnicalStoryReviewArtifactSchema } from "./review-artifact-contracts";
+import { NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS } from "./interview-patterns";
+import { NODEJS_CORE_TECHNICAL_PRACTICE_PATH_BLUEPRINTS } from "./practice-path-blueprints";
+import { CoreTechnicalGoldEvaluator } from "../server/gold-evaluator";
+import { focusedPracticePathFallback } from "../server/focused-practice-path-fallbacks";
 
-const artifactDirectory = path.resolve(process.cwd(), "src/features/practice/core-technical/domain/generated");
 const forbiddenExecutableCode = [
   /node:fs/,
   /node:http/,
@@ -17,26 +17,44 @@ const forbiddenExecutableCode = [
   /\bMath\.random\s*\(/
 ];
 
-const artifacts = NODEJS_CORE_TECHNICAL_GOLD_CASES.map((goldCase) =>
-  coreTechnicalStoryReviewArtifactSchema.parse(
-    JSON.parse(readFileSync(path.join(artifactDirectory, goldCase.key + ".json"), "utf8"))
-  )
-);
+const evaluator = new CoreTechnicalGoldEvaluator({
+  patterns: NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS
+});
+const reviewedPaths = NODEJS_CORE_TECHNICAL_GOLD_CASES.map((goldCase) => {
+  const blueprint = NODEJS_CORE_TECHNICAL_PRACTICE_PATH_BLUEPRINTS.find(
+    (candidate) => candidate.title === goldCase.expected.storyTitle
+  );
+  const draft = blueprint ? focusedPracticePathFallback(blueprint.key) : null;
+  if (!blueprint || !draft) throw new Error(`Missing reviewed fallback for ${goldCase.key}`);
+  return { goldCase, blueprint, draft, evaluation: evaluator.evaluateCase(goldCase, draft) };
+});
 
-describe("generated Core Technical story review artifacts", () => {
-  it("freezes both approved first-story contracts after a perfect evaluation", () => {
-    expect(artifacts.map((artifact) => artifact.caseKey).sort()).toEqual(
+describe("code-backed Core Technical practice paths", () => {
+  it("freezes both approved focused contracts after a perfect evaluation", () => {
+    expect(reviewedPaths.map(({ goldCase }) => goldCase.key).sort()).toEqual(
       NODEJS_CORE_TECHNICAL_GOLD_CASES.map((goldCase) => goldCase.key).sort()
     );
 
-    for (const artifact of artifacts) {
-      expect(artifact.questionBlock.questions).toHaveLength(8);
-      expect(artifact.evaluation.qualityPassed).toBe(true);
-      expect(artifact.evaluation.totalScore).toBe(100);
-      expect(artifact.evaluation.hardFailures).toEqual([]);
-      expect(artifact.evaluation.releaseEligible).toBe(true);
-      expect(artifact.evaluation.humanReviewStatus).toBe("approved");
-      expect(artifact.humanReview).toMatchObject({
+    for (const { goldCase, draft, evaluation } of reviewedPaths) {
+      expect(draft.questionBlock.questions).toHaveLength(6);
+      for (const question of draft.questionBlock.questions) {
+        expect(question.answer.learningGuide?.markdown).toContain("## What is happening");
+        expect(question.answer.learningGuide?.markdown).toContain("## How to reason through it");
+        expect(question.answer.learningGuide?.markdown).toContain("## A strong interview answer");
+        expect(question.answer.learningGuide?.markdown).toContain("## What to avoid");
+        expect(question.answer.learningGuide?.diagram.steps.map(({ label }) => label)).toEqual([
+          "Observe",
+          "Explain",
+          "Repair",
+          "Verify"
+        ]);
+      }
+      expect(evaluation.qualityPassed).toBe(true);
+      expect(evaluation.totalScore).toBe(100);
+      expect(evaluation.hardFailures).toEqual([]);
+      expect(evaluation.releaseEligible).toBe(true);
+      expect(evaluation.humanReviewStatus).toBe("approved");
+      expect(goldCase.review).toMatchObject({
         status: "approved",
         reviewerId: "nikhilverma",
         reviewedAt: "2026-09-07"
@@ -45,8 +63,8 @@ describe("generated Core Technical story review artifacts", () => {
   });
 
   it("keeps executable reference solutions distinct, deterministic, and syntactically valid", () => {
-    for (const artifact of artifacts) {
-      const executableQuestions = artifact.questionBlock.questions.filter(
+    for (const { draft } of reviewedPaths) {
+      const executableQuestions = draft.questionBlock.questions.filter(
         (question) => question.runnerContract !== undefined
       );
       expect(executableQuestions).toHaveLength(2);

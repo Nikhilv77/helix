@@ -5,6 +5,7 @@ import {
 } from "@/features/practice/core-technical/domain/assessment-contracts";
 import { publicCoreTechnicalQuestionSchema } from "@/features/practice/core-technical/domain/question-contracts";
 import { selectedStorySchema } from "@/features/practice/core-technical/domain/story-contracts";
+import { coreTechnicalPracticePathPresentation } from "@/features/practice/core-technical/domain/practice-path-presentation";
 import { coreTechnicalQuestionMinutes } from "@/features/practice/core-technical/domain/ui-state";
 import type { CoreTechnicalPracticeAnalytics } from "@/features/practice/core-technical/domain/workspace-analytics";
 import type {
@@ -196,7 +197,9 @@ function toHistory(
   level: Level,
   now: number
 ): InterviewHistoryItem {
-  const story = selectedStorySchema.parse(assessment.block.storySnapshot);
+  const story = coreTechnicalPracticePathPresentation(
+    selectedStorySchema.parse(assessment.block.storySnapshot)
+  );
   const completed = assessment.status === CoreTechnicalAssessmentStatus.COMPLETED;
   const startedAt = (assessment.startedAt ?? assessment.createdAt).getTime();
   const endedAt = assessment.completedAt?.getTime() ?? now;

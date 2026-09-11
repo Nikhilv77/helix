@@ -257,7 +257,11 @@ export const generatedStageQuestionCandidatesSchema = z.object({
 export const frozenQuestionBlockSchema = z.object({
   schemaVersion: z.literal(CORE_TECHNICAL_CATALOG_SCHEMA_VERSION),
   storyKey: identifierSchema,
-  questions: z.array(generatedQuestionCandidateSchema).length(8)
+  questions: z
+    .array(generatedQuestionCandidateSchema)
+    .refine((questions) => questions.length === 6 || questions.length === 8, {
+      message: "A Core Technical block must contain six new questions or eight legacy questions"
+    })
 });
 
 export const publicCoreTechnicalQuestionSchema = z.object({
@@ -288,16 +292,23 @@ export function coreTechnicalLearningGuideFor(
 ): CoreTechnicalLearningGuide {
   if (question.answer.learningGuide) return question.answer.learningGuide;
   const mechanism = humanize(question.mechanismKeys[0] ?? question.topicKeys[0] ?? "mechanism");
+  const verification = question.publicTests?.[0]
+    ? `Run the saved “${question.publicTests[0].name}” case, then add an edge case that would expose the original mistake.`
+    : `Check the claimed result against the supplied ${humanize(question.artifact.kind)} evidence, then state what observation would disprove your diagnosis.`;
   return coreTechnicalLearningGuideSchema.parse({
     markdown: [
       "## What is happening",
       boundedText(question.answer.explanation, 3_600),
+      "## How to reason through it",
+      `1. Start with **${question.artifact.title}** and state the exact behaviour you can observe.`,
+      `2. Trace ownership and execution until you reach the **${mechanism}** mechanism that explains that behaviour.`,
+      `3. Choose the smallest correction that changes the cause without weakening error handling, cleanup, or ordering guarantees.`,
+      `4. ${verification}`,
       "## A strong interview answer",
       boundedText(question.answer.concise, 3_000),
+      boundedText(question.interviewConnection, 1_500),
       "## What to avoid",
-      ...question.commonMistakes
-        .slice(0, 3)
-        .map((mistake) => `- ${boundedText(mistake, 700)}`),
+      ...question.commonMistakes.slice(0, 3).map((mistake) => `- ${boundedText(mistake, 700)}`),
       "## Try this follow-up",
       boundedText(
         question.interviewerFollowUps[0] ??
@@ -308,9 +319,10 @@ export function coreTechnicalLearningGuideFor(
     diagram: {
       title: boundedText(`How ${mechanism} connects the evidence to the fix`, 120),
       steps: [
-        { label: "Observe", detail: question.artifact.title },
+        { label: "Observe", detail: `Read the concrete behaviour in ${question.artifact.title}.` },
         { label: "Explain", detail: `Identify the ${mechanism} behaviour causing the result.` },
-        { label: "Repair", detail: boundedDiagramDetail(question.answer.concise) }
+        { label: "Repair", detail: boundedDiagramDetail(question.answer.concise) },
+        { label: "Verify", detail: boundedDiagramDetail(verification) }
       ]
     }
   });

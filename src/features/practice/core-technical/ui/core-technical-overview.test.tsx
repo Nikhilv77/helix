@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { CoreTechnicalHistoryNavigation } from "@/features/practice/core-technical/domain/ui-state";
 import type { CoreTechnicalStoryLibraryEntry } from "@/features/practice/core-technical/server/eligibility.service";
@@ -6,7 +6,7 @@ import type { CoreTechnicalHistoryList } from "@/features/practice/core-technica
 import type { CoreTechnicalPublicBlock } from "@/features/practice/core-technical/server/practice.service";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() })
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() })
 }));
 
 import { CoreTechnicalOverview } from "./core-technical-overview";
@@ -44,12 +44,12 @@ describe("CoreTechnicalOverview", () => {
     expect(screen.queryByRole("link", { name: /Continue · Question/i })).toBeNull();
   });
 
-  it("lists every published story downward without nesting question rows", () => {
-    render(
+  it("expands every published path and links saved questions like the DSA library", () => {
+    const view = render(
       <CoreTechnicalOverview
         block={block(true)}
         history={history(true)}
-        storyLibrary={storyLibrary()}
+        storyLibrary={[...storyLibrary()].reverse()}
         storyHistory={storyHistory()}
       />
     );
@@ -60,8 +60,69 @@ describe("CoreTechnicalOverview", () => {
     expect(within(library).getByText("2 progressed")).toBeInTheDocument();
     expect(within(library).getByText("25%")).toBeInTheDocument();
     expect(within(library).getByText("Not started")).toBeInTheDocument();
-    expect(within(library).getAllByRole("link")).toHaveLength(1);
-    expect(within(library).queryByRole("list")).toBeNull();
+    expect(within(library).getAllByRole("group")).toHaveLength(2);
+    expect(within(library).getByText("Stage 1")).toBeInTheDocument();
+    expect(within(library).getByRole("link", { name: /Stage 1/i })).toHaveAttribute(
+      "href",
+      "/practice/core-technical/questions/question-1?block=block-one"
+    );
+    expect(within(library).getAllByRole("list")).toHaveLength(2);
+    const selectedCard = view.container.querySelector("details[open]");
+    const cards = view.container.querySelectorAll("details.dsa-chapter-details");
+    expect(cards[0]).toHaveTextContent("Follow the operation");
+    expect(selectedCard?.querySelector(".dsa-chapter-body")).not.toBeNull();
+    expect(selectedCard?.className).toContain("workspace-accent-border");
+    expect(selectedCard?.className).not.toContain("linear-gradient");
+    const firstQuestion = within(library).getByRole("link", { name: /Stage 1/i });
+    expect(firstQuestion.className).toContain("bg-[#111214]");
+    expect(within(firstQuestion).getByText("Guided")).toBeInTheDocument();
+    expect(within(firstQuestion).getByText("5 min")).toBeInTheDocument();
+    expect(within(firstQuestion).getByText("Solved")).toBeInTheDocument();
+    expect(within(library).getByRole("link", { name: /Stage 2/i })).toHaveTextContent("Learned");
+    expect(within(library).queryByText(/assessment recommendation/i)).toBeNull();
+    expect(within(library).queryByRole("button", { name: /start path/i })).toBeNull();
+    expect(within(library).queryByRole("link", { name: /open saved path/i })).toBeNull();
+  });
+
+  it("opens an unstarted library question directly and materializes its path invisibly", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: {
+            replayed: false,
+            block: {
+              id: "block-two",
+              questions: [{ id: "pipeline-question-1", order: 1 }]
+            }
+          }
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" }
+        }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <CoreTechnicalOverview
+        block={block(true)}
+        history={history(true)}
+        storyLibrary={storyLibrary()}
+        storyHistory={storyHistory()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Pipeline stage 1/i }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/practice/core-technical/start-path",
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining('"storyKey":"the-operation-fails-halfway"')
+      })
+    );
+    vi.unstubAllGlobals();
   });
 });
 
@@ -144,17 +205,29 @@ function storyLibrary(): CoreTechnicalStoryLibraryEntry[] {
       key: "follow-the-operation",
       version: 1,
       title: "Follow the operation",
+      expectedMinutes: 45,
       difficulties: ["guided", "standard", "stretch"],
       topicKeys: ["async-scheduling", "errors-and-cancellation"],
-      mechanismKeys: ["event-loop"]
+      mechanismKeys: ["event-loop"],
+      questions: Array.from({ length: 8 }, (_, index) => ({
+        order: index + 1,
+        title: `Stage ${index + 1}`,
+        format: "written"
+      }))
     },
     {
       key: "the-operation-fails-halfway",
       version: 1,
       title: "The operation fails halfway",
+      expectedMinutes: 45,
       difficulties: ["guided", "standard", "stretch"],
       topicKeys: ["nodejs-streams-and-io", "nodejs-event-loop-health"],
-      mechanismKeys: ["backpressure"]
+      mechanismKeys: ["backpressure"],
+      questions: Array.from({ length: 8 }, (_, index) => ({
+        order: index + 1,
+        title: `Pipeline stage ${index + 1}`,
+        format: "artifact-diagnosis"
+      }))
     }
   ];
 }

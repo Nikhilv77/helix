@@ -1,6 +1,7 @@
-import { CoreTechnicalStoryPublicationStatus } from "@prisma/client";
 import type { CoreTechnicalStoryRankingCandidate } from "@/features/practice/core-technical/domain/focus-ranking-contracts";
 import { NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE } from "@/features/practice/core-technical/domain/story-ranking-catalogue";
+import { coreTechnicalPracticePathTitle } from "@/features/practice/core-technical/domain/practice-path-presentation";
+import { coreTechnicalPracticePathBlueprint } from "@/features/practice/core-technical/domain/practice-path-blueprints";
 import type { CandidateProfile } from "@/lib/shared/types";
 import type { PrismaService } from "@/server/database/prisma.service";
 import type { CoreTechnicalRunnerService } from "./runner.service";
@@ -30,9 +31,15 @@ export type CoreTechnicalStoryLibraryEntry = {
   key: string;
   version: number;
   title: string;
+  expectedMinutes: number;
   difficulties: CoreTechnicalStoryRankingCandidate["difficulties"];
   topicKeys: string[];
   mechanismKeys: string[];
+  questions: Array<{
+    order: number;
+    title: string;
+    format: string;
+  }>;
 };
 
 type EligibilityProfile = Pick<CandidateProfile, "targetRole" | "level">;
@@ -40,7 +47,7 @@ type EligibilityProfile = Pick<CandidateProfile, "targetRole" | "level">;
 /** Fail-closed launch eligibility for the first complete two-story path. */
 export class CoreTechnicalEligibilityService {
   constructor(
-    private readonly prisma: Pick<PrismaService, "coreTechnicalStoryVersion">,
+    _prisma: Pick<PrismaService, "coreTechnicalStoryVersion">,
     private readonly runner: Pick<CoreTechnicalRunnerService, "supportsStack">,
     private readonly catalogue: readonly CoreTechnicalStoryRankingCandidate[] = NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE
   ) {}
@@ -85,40 +92,19 @@ export class CoreTechnicalEligibilityService {
     if (candidates.length < 2) {
       return unavailable(
         "CONTENT_UNAVAILABLE",
-        "The reviewed Node.js story path is not available yet.",
+        "The reviewed Node.js practice path is not available yet.",
         stack
-      );
-    }
-
-    const published = await this.prisma.coreTechnicalStoryVersion.findMany({
-      where: {
-        publicationStatus: CoreTechnicalStoryPublicationStatus.PUBLISHED,
-        OR: candidates.map(({ key, version }) => ({ storyKey: key, version }))
-      },
-      select: { storyKey: true, version: true }
-    });
-    const identities = new Set(published.map((item) => `${item.storyKey}:${item.version}`));
-    const publishedCandidates = candidates.filter((candidate) =>
-      identities.has(`${candidate.key}:${candidate.version}`)
-    );
-    const publishedStoryCount = publishedCandidates.length;
-    if (publishedStoryCount < 2) {
-      return unavailable(
-        "CONTENT_UNAVAILABLE",
-        "The reviewed Node.js story path is not available yet.",
-        stack,
-        publishedCandidates.map(publicStory)
       );
     }
 
     return {
       available: true,
       reason: "AVAILABLE",
-      message: "Your JavaScript and Node.js 22 story path is ready.",
+      message: "Your JavaScript and Node.js 22 practice path is ready.",
       stack,
       requiredStoryCount: 2,
-      publishedStoryCount,
-      stories: publishedCandidates.map(publicStory)
+      publishedStoryCount: candidates.length,
+      stories: candidates.map(publicStory)
     };
   }
 }
@@ -143,12 +129,15 @@ function unavailable(
 function publicStory(
   candidate: CoreTechnicalStoryRankingCandidate
 ): CoreTechnicalStoryLibraryEntry {
+  const blueprint = coreTechnicalPracticePathBlueprint(candidate.key, candidate.version);
   return {
     key: candidate.key,
     version: candidate.version,
-    title: candidate.title,
+    title: coreTechnicalPracticePathTitle(candidate.key, candidate.title),
+    expectedMinutes: blueprint?.expectedMinutes ?? 45,
     difficulties: candidate.difficulties,
     topicKeys: [...candidate.topicKeys],
-    mechanismKeys: [...candidate.mechanismKeys]
+    mechanismKeys: [...candidate.mechanismKeys],
+    questions: blueprint?.stages.map(({ order, title, format }) => ({ order, title, format })) ?? []
   };
 }

@@ -1,22 +1,8 @@
-import followOperationArtifact from "@/features/practice/core-technical/domain/generated/follow-operation-guided-benchmark.json";
-import operationFailsHalfwayArtifact from "@/features/practice/core-technical/domain/generated/operation-fails-halfway-standard-benchmark.json";
-import { coreTechnicalStoryReviewArtifactSchema } from "@/features/practice/core-technical/domain/review-artifact-contracts";
 import type { CoreTechnicalDifficulty } from "@/features/practice/core-technical/domain/story-contracts";
 
 import type { ReviewedCoreTechnicalDraft } from "./generation-pipeline";
 import type { StoryGeneratorInput } from "./story-generator";
-
-const APPROVED_ARTIFACTS = [followOperationArtifact, operationFailsHalfwayArtifact].map((raw) => {
-  const artifact = coreTechnicalStoryReviewArtifactSchema.parse(raw);
-  if (
-    artifact.humanReview.status !== "approved" ||
-    artifact.evaluation.humanReviewStatus !== "approved" ||
-    !artifact.evaluation.releaseEligible
-  ) {
-    throw new Error(`Core Technical approved draft is not release eligible: ${artifact.caseKey}`);
-  }
-  return artifact;
-});
+import { focusedPracticePathFallback } from "./focused-practice-path-fallbacks";
 
 /**
  * Returns only an exact human-approved story+difficulty bundle. A different
@@ -27,26 +13,27 @@ export function approvedCoreTechnicalDraft(
 ): ReviewedCoreTechnicalDraft | null {
   if (!input.reviewedContract) return null;
   const expectedDifficulty = difficultyFor(input.baselineState);
-  const artifact = APPROVED_ARTIFACTS.find(
-    (candidate) =>
-      candidate.story.title === input.reviewedContract?.storyTitle &&
-      candidate.story.difficulty === expectedDifficulty &&
-      sameValues(
-        candidate.story.stages.map((stage) => stage.patternKey),
-        input.reviewedContract.stagePatternKeys
-      ) &&
-      input.reviewedContract.requiredStoryTopicKeys.every((topicKey) =>
-        [candidate.story.primaryTopicKey, ...candidate.story.secondaryTopicKeys].includes(topicKey)
-      )
-  );
-  if (!artifact) return null;
-
-  return structuredClone({
-    story: artifact.story,
-    storyReview: artifact.storyReview,
-    questionBlock: artifact.questionBlock,
-    questionBlockReview: artifact.questionBlockReview
-  });
+  const focused = input.reviewedContract.storyKey
+    ? focusedPracticePathFallback(input.reviewedContract.storyKey)
+    : null;
+  if (
+    focused &&
+    focused.story.title === input.reviewedContract.storyTitle &&
+    sameValues(
+      focused.story.stages.map((stage) => stage.patternKey),
+      input.reviewedContract.stagePatternKeys
+    ) &&
+    sameValues(
+      [focused.story.primaryTopicKey, ...focused.story.secondaryTopicKeys],
+      input.reviewedContract.requiredStoryTopicKeys
+    )
+  ) {
+    return structuredClone({
+      ...focused,
+      story: { ...focused.story, difficulty: expectedDifficulty }
+    });
+  }
+  return null;
 }
 
 function difficultyFor(state: StoryGeneratorInput["baselineState"]): CoreTechnicalDifficulty {

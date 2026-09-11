@@ -40,7 +40,7 @@ export const CORE_TECHNICAL_ASSESSMENT_EXPERIENCE: StoryPracticeAssessmentExperi
   label: "Core Technical",
   apiBase: "/api/practice/core-technical",
   routeBase: "/practice/core-technical",
-  subjectNoun: "story",
+  subjectNoun: "practice path",
   measures: [
     "Technical accuracy",
     "Mechanism reasoning",
@@ -70,11 +70,13 @@ export function CoreTechnicalAssessment({
   block,
   terminalCount,
   allowEarlyStart = false,
+  dedicatedRoom = true,
   experience = CORE_TECHNICAL_ASSESSMENT_EXPERIENCE
 }: {
   block: StoryPracticeBlockView;
   terminalCount: number;
   allowEarlyStart?: boolean;
+  dedicatedRoom?: boolean;
   experience?: StoryPracticeAssessmentExperience;
 }) {
   const router = useRouter();
@@ -193,6 +195,37 @@ export function CoreTechnicalAssessment({
     );
   }
 
+  if (!dedicatedRoom && (status === "IN_PROGRESS" || status === "FINALIZING")) {
+    return (
+      <AssessmentPreviewFrame
+        id="assessment"
+        label={`${experience.label} assessment`}
+        teacherName={teacher.name}
+        teacherPortrait={teacherPortrait}
+        coachLabel={`${experience.subjectNoun} coach`}
+      >
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+          Assessment in progress
+        </p>
+        <h3 className="mt-2 font-display text-[1.5rem] font-semibold text-cream">
+          Continue your 1:1 with {teacher.name}
+        </h3>
+        <p className="mt-2 text-[14px] leading-6 text-cream/58">
+          Your prompts and saved browser draft are waiting in the dedicated assessment room.
+        </p>
+        <button
+          type="button"
+          onClick={() =>
+            router.push(assessmentRoomHref(experience.routeBase, assessment.id, block.id))
+          }
+          className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        >
+          Continue assessment <ArrowRight size={14} aria-hidden="true" />
+        </button>
+      </AssessmentPreviewFrame>
+    );
+  }
+
   if (status === "COMPLETED" && report) {
     return (
       <AssessmentFrame id="report" label={`${experience.label} report`}>
@@ -230,6 +263,12 @@ export function CoreTechnicalAssessment({
                 ? "The submission outcome is unknown, so your five answers and request ID are frozen for one exact retry."
                 : "Answer every prompt. Drafts remain in this browser until the server checkpoints the complete submission."}
           </p>
+          {dedicatedRoom && status === "IN_PROGRESS" && !recoverySubmission ? (
+            <p className="mt-3 max-w-[39rem] text-[13px] leading-6 text-cream/66">
+              {teacher.name}: “Let’s work through these one at a time. Explain what the evidence
+              tells you, then tell me what you would do.”
+            </p>
+          ) : null}
         </div>
         <StateBadge
           label={
@@ -302,7 +341,7 @@ export function CoreTechnicalAssessment({
           className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-cream px-5 py-2.5 text-[14px] font-semibold text-[#17181a] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-wait disabled:opacity-55 sm:w-auto"
         >
           {pending === "finalize" ? (
-            <Loader2 size={15} className="animate-spin" aria-hidden="true" />
+            <Loader2 size={15} className="motion-safe:animate-spin" aria-hidden="true" />
           ) : retryingFinalization ? (
             <RotateCcw size={14} aria-hidden="true" />
           ) : null}
@@ -329,8 +368,12 @@ export function CoreTechnicalAssessment({
         { assessmentId: assessment.id, requestId }
       );
       window.sessionStorage.removeItem(key);
-      setAssessment(experience.adaptAssessment(data.assessment));
-      router.refresh();
+      if (dedicatedRoom) {
+        setAssessment(experience.adaptAssessment(data.assessment));
+        router.refresh();
+      } else {
+        router.push(assessmentRoomHref(experience.routeBase, assessment.id, block.id));
+      }
     } catch (cause) {
       setError(messageFrom(cause, "The assessment could not start. Try again."));
     } finally {
@@ -418,6 +461,10 @@ export function CoreTechnicalAssessment({
   }
 }
 
+function assessmentRoomHref(routeBase: string, assessmentId: string, blockId: string): string {
+  return `${routeBase}/assessment/${encodeURIComponent(assessmentId)}?block=${encodeURIComponent(blockId)}`;
+}
+
 function ReadyAssessment({
   teacherName,
   starting,
@@ -456,7 +503,7 @@ function ReadyAssessment({
         className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:-translate-y-0.5 hover:bg-white disabled:cursor-wait disabled:translate-y-0 disabled:opacity-65"
       >
         {starting ? (
-          <Loader2 size={15} className="animate-spin" aria-hidden="true" />
+          <Loader2 size={15} className="motion-safe:animate-spin" aria-hidden="true" />
         ) : (
           <Play size={15} aria-hidden="true" />
         )}
@@ -600,7 +647,7 @@ function StateBadge({ label, loading }: { label: string; loading: boolean }) {
       className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg border border-white/[0.08] px-3 text-xs font-semibold text-cream/55"
     >
       {loading ? (
-        <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+        <Loader2 size={13} className="motion-safe:animate-spin" aria-hidden="true" />
       ) : (
         <Clock3 size={13} aria-hidden="true" />
       )}
@@ -765,7 +812,7 @@ function Report({
           className="group mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-cream px-5 py-2.5 text-[14px] font-semibold text-[#17181a] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-wait disabled:opacity-55 sm:w-auto"
         >
           {pending ? (
-            <Loader2 size={15} className="animate-spin" aria-hidden="true" />
+            <Loader2 size={15} className="motion-safe:animate-spin" aria-hidden="true" />
           ) : (
             <ArrowRight size={15} aria-hidden="true" />
           )}

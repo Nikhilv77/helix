@@ -206,6 +206,10 @@ async function runBoundedProcess(
     child.stderr.on("data", (chunk: Buffer) => {
       stderr = collect(stderr, chunk);
     });
+    // Syntax checks and rejected programs can exit before consuming stdin.
+    // Their close event still records the real outcome; absorb the resulting
+    // pipe error so it cannot escape as an unhandled process exception.
+    child.stdin.on("error", () => undefined);
     child.once("error", (error) => {
       if (settled) return;
       settled = true;

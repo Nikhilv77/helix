@@ -8,7 +8,7 @@ import { NotFoundErrorException } from "@/server/common/exceptions/not-found-err
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
   "Core Technical Question",
-  "A question in your frozen Core Technical practice story."
+  "A question in your frozen Core Technical practice path."
 );
 
 export default async function CoreTechnicalQuestionPage({

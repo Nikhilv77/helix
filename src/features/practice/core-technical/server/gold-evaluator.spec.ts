@@ -18,7 +18,7 @@ import type {
   GeneratedQuestionCandidate
 } from "@/features/practice/core-technical/domain/question-contracts";
 import {
-  REQUIRED_STORY_STAGE_FORMATS,
+  requiredStoryStageFormats,
   type SelectedCoreTechnicalStory
 } from "@/features/practice/core-technical/domain/story-contracts";
 
@@ -93,7 +93,7 @@ function criticReport(
 }
 
 function formatForStage(pattern: CoreTechnicalInterviewPattern, index: number) {
-  const allowed = REQUIRED_STORY_STAGE_FORMATS[index] ?? [];
+  const allowed = requiredStoryStageFormats(6)[index] ?? [];
   const format = pattern.formats.find((item) => allowed.includes(item as never));
   if (!format) throw new Error("Gold fixture pattern has no valid stage format");
   return format;
@@ -131,7 +131,7 @@ function generatedOutput(goldCase: CoreTechnicalGoldCase) {
     mechanismKeys: goldCase.expected.requiredPrimaryMechanismKeys,
     difficulty: goldCase.expected.difficulty,
     prerequisiteTopicKeys: [],
-    expectedMinutes: 45,
+    expectedMinutes: 36,
     forbiddenTopicKeys: goldCase.candidateContext.excludedTopicKeys,
     realismAnchors: [
       "Correlated request logs show the same operation crossing each asynchronous boundary.",
@@ -141,7 +141,7 @@ function generatedOutput(goldCase: CoreTechnicalGoldCase) {
     targetFitExplanation:
       "The work reflects the runtime reasoning and production ownership required by the target backend role.",
     coverageExplanation:
-      "The sequence covers eight distinct source-backed interview mechanisms through one evolving operation.",
+      "The sequence covers six distinct source-backed interview mechanisms through one evolving operation.",
     stages,
     score: {
       domainImportance: 20,

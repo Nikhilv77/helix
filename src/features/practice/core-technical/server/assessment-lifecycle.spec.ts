@@ -1,6 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import rawFirst from "@/features/practice/core-technical/domain/generated/follow-operation-guided-benchmark.json";
-import rawSecond from "@/features/practice/core-technical/domain/generated/operation-fails-halfway-standard-benchmark.json";
 import {
   coreTechnicalAssessmentReportSchema,
   publicCoreTechnicalAssessmentSnapshot
@@ -10,7 +8,6 @@ import type {
   CoreTechnicalAdaptiveEvidence,
   CoreTechnicalConfirmedFocus
 } from "@/features/practice/core-technical/domain/focus-ranking-contracts";
-import { coreTechnicalStoryReviewArtifactSchema } from "@/features/practice/core-technical/domain/review-artifact-contracts";
 import { NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE } from "@/features/practice/core-technical/domain/story-ranking-catalogue";
 import type { PrismaService } from "@/server/database/prisma.service";
 import { buildCoreTechnicalAssessmentSnapshot } from "./assessment-blueprint";
@@ -18,14 +15,21 @@ import { CoreTechnicalAssessmentEvaluator } from "./assessment-evaluator";
 import { CoreTechnicalAssessmentService } from "./assessment.service";
 import { CoreTechnicalContinuationService } from "./continuation.service";
 import { CoreTechnicalHistoryService } from "./history.service";
+import { focusedPracticePathFallback } from "./focused-practice-path-fallbacks";
 import { CoreTechnicalStoryRankingService } from "./story-ranking.service";
 
-const first = coreTechnicalStoryReviewArtifactSchema.parse(rawFirst);
-const second = coreTechnicalStoryReviewArtifactSchema.parse(rawSecond);
+const first = requiredFallback("javascript-values-copying-mutation");
+const second = requiredFallback("javascript-scope-closures-retained-state");
 const NOW = new Date("2026-09-07T17:00:00.000Z");
 const BLOCK_ID = "11111111-1111-4111-8111-111111111111";
 const ASSESSMENT_ID = "22222222-2222-4222-8222-222222222222";
 const REQUEST_ID = "33333333-3333-4333-8333-333333333333";
+
+function requiredFallback(storyKey: string) {
+  const draft = focusedPracticePathFallback(storyKey);
+  if (!draft) throw new Error(`Missing focused Core Technical fixture: ${storyKey}`);
+  return draft;
+}
 
 describe("Core Technical assessment, adaptation, and history lifecycle", () => {
   it("freezes five prompts and exposes only their public projection", () => {
@@ -63,7 +67,7 @@ describe("Core Technical assessment, adaptation, and history lifecycle", () => {
   it("uses verified assessment and Practice weakness to select a novel next story", () => {
     const selection = ranking().rankNextStory(focus(), adaptiveEvidence());
     expect(selection.policyVersion).toBe(2);
-    expect(selection.selectedStory.storyKey).toBe("the-operation-fails-halfway");
+    expect(selection.selectedStory.storyKey).toBe("javascript-scope-closures-retained-state");
     expect(selection.selectedStory.difficulty).toBe("standard");
     expect(selection.selectedStory.scores).toMatchObject({
       assessmentWeakness: expect.any(Number),
@@ -358,6 +362,7 @@ describe("Core Technical assessment, adaptation, and history lifecycle", () => {
     const selection = ranking().rankNextStory(focus(), adaptiveEvidence());
     const report = reportWith(selection);
     const publishPreparedBlock = vi.fn().mockResolvedValue({ id: "next-block" });
+    const activateLibraryBlock = vi.fn().mockResolvedValue(null);
     const recordPreparationFailure = vi.fn();
     const prepareReviewedDraft = vi.fn().mockResolvedValue({
       story: second.story,
@@ -386,12 +391,24 @@ describe("Core Technical assessment, adaptation, and history lifecycle", () => {
     const service = new CoreTechnicalContinuationService({
       prisma,
       generation: { prepareReviewedDraft },
-      persistence: { publishPreparedBlock, recordPreparationFailure },
-      practice: { current: vi.fn().mockResolvedValue({ id: "next-block" }) }
+      persistence: { activateLibraryBlock, publishPreparedBlock, recordPreparationFailure },
+      practice: {
+        current: vi.fn().mockResolvedValue({ id: "next-block" }),
+        historyBlock: vi.fn()
+      }
     });
 
     const result = await service.continue("owner-1", { blockId: BLOCK_ID, requestId: REQUEST_ID });
     expect(result).toEqual({ replayed: false, block: { id: "next-block" } });
+    expect(prepareReviewedDraft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        seniority: "mid",
+        baselineState: "STANDARD",
+        resumeTopicKeys: [],
+        resumeMechanismKeys: []
+      }),
+      { fallbackToApprovedArtifactOnProviderFailure: true }
+    );
     expect(publishPreparedBlock).toHaveBeenCalledWith(
       "owner-1",
       expect.objectContaining({
@@ -400,11 +417,13 @@ describe("Core Technical assessment, adaptation, and history lifecycle", () => {
       })
     );
     expect(recordPreparationFailure).not.toHaveBeenCalled();
+    expect(activateLibraryBlock).toHaveBeenCalledOnce();
   });
 
   it("replays a successful Continue request without generating or publishing a duplicate block", async () => {
     const prepareReviewedDraft = vi.fn();
     const publishPreparedBlock = vi.fn();
+    const activateLibraryBlock = vi.fn();
     const recordPreparationFailure = vi.fn();
     const current = vi.fn().mockResolvedValue({ id: "next-block", ordinal: 2 });
     const prisma = {
@@ -415,8 +434,8 @@ describe("Core Technical assessment, adaptation, and history lifecycle", () => {
     const service = new CoreTechnicalContinuationService({
       prisma,
       generation: { prepareReviewedDraft },
-      persistence: { publishPreparedBlock, recordPreparationFailure },
-      practice: { current }
+      persistence: { activateLibraryBlock, publishPreparedBlock, recordPreparationFailure },
+      practice: { current, historyBlock: vi.fn() }
     });
 
     const input = { blockId: BLOCK_ID, requestId: REQUEST_ID };

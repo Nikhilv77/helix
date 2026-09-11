@@ -12,6 +12,7 @@ import { POST as coreHint } from "../../core-technical/hint/handler";
 import { POST as coreLearn } from "../../core-technical/learn/handler";
 import { POST as corePrepare } from "../../core-technical/prepare/handler";
 import { POST as coreRun } from "../../core-technical/run/handler";
+import { POST as coreStartPath } from "../../core-technical/start-path/handler";
 import { POST as appliedAssessmentFinalize } from "../../applied-engineering/assessment/finalize/handler";
 import { POST as appliedAssessmentStart } from "../../applied-engineering/assessment/start/handler";
 import { POST as appliedAttempt } from "../../applied-engineering/attempt/handler";
@@ -52,6 +53,7 @@ const handlers: Readonly<Record<string, PracticeHandler>> = {
   "core-technical/learn": coreLearn,
   "core-technical/prepare": corePrepare,
   "core-technical/run": coreRun,
+  "core-technical/start-path": coreStartPath,
   "applied-engineering/assessment/finalize": appliedAssessmentFinalize,
   "applied-engineering/assessment/start": appliedAssessmentStart,
   "applied-engineering/attempt": appliedAttempt,

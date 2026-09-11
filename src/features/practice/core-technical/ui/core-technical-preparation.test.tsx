@@ -28,7 +28,7 @@ describe("CoreTechnicalPreparation", () => {
       .mockResolvedValueOnce(success({ block: { id: "block-one" } }));
 
     renderPreparation();
-    const launch = screen.getByRole("button", { name: /Build my first story/i });
+    const launch = screen.getByRole("button", { name: /Build my first practice path/i });
     fireEvent.click(launch);
     fireEvent.click(launch);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -52,7 +52,7 @@ describe("CoreTechnicalPreparation", () => {
         prepareCount += 1;
         if (prepareCount === 1) {
           return failure(
-            "We could not prepare the complete eight-question story. Nothing partial was saved; try again."
+            "We could not prepare the complete practice path. Nothing partial was saved; try again."
           );
         }
         return success({ block: { id: "block-one" } });
@@ -61,16 +61,16 @@ describe("CoreTechnicalPreparation", () => {
     });
 
     renderPreparation();
-    fireEvent.click(screen.getByRole("button", { name: /Build my first story/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Build my first practice path/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Nothing partial was saved");
 
-    fireEvent.click(screen.getByRole("button", { name: /Build my first story/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Build my first practice path/i }));
     await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/practice/core-technical"));
     expect(prepareBodies).toHaveLength(2);
     expect(prepareBodies[0]?.requestId).toBe(prepareBodies[1]?.requestId);
   });
 
-  it("shows one custom language choice and sends no client-authored stack fields", async () => {
+  it("shows one supported technology choice and sends only that explicit selection", async () => {
     const bodies: unknown[] = [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
       bodies.push(JSON.parse(String(init?.body)));
@@ -80,21 +80,22 @@ describe("CoreTechnicalPreparation", () => {
     });
 
     renderPreparation();
-    const dialog = screen.getByRole("dialog", { name: /what language/i });
+    const dialog = screen.getByRole("dialog", { name: /what technology/i });
     expect(dialog).toBeInTheDocument();
     expect(dialog).not.toHaveAttribute("aria-describedby");
     expect(screen.queryByText(/We’ll use your saved resume/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Your choice is saved/i)).not.toBeInTheDocument();
-    const selector = screen.getByRole("button", { name: /Practice language JavaScript/i });
+    const selector = screen.getByRole("button", { name: /Practice technology JavaScript/i });
     fireEvent.click(selector);
     expect(screen.getByRole("option", { name: "JavaScript" })).toHaveAttribute(
       "aria-selected",
       "true"
     );
-    fireEvent.click(screen.getByRole("button", { name: /Build my first story/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Build my first practice path/i }));
 
     await waitFor(() => expect(bodies).toHaveLength(2));
-    expect(bodies[0]).toEqual({ language: "javascript" });
+    expect(bodies[0]).toEqual({ technology: "javascript" });
+    expect(bodies[1]).toMatchObject({ personalized: true });
   });
 });
 

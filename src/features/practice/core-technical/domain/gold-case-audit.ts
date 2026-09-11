@@ -3,7 +3,7 @@ import {
   coreTechnicalGoldCaseSchema,
   type CoreTechnicalGoldCase
 } from "./gold-evaluation-contracts";
-import { REQUIRED_STORY_STAGE_FORMATS } from "./story-contracts";
+import { requiredStoryStageFormats } from "./story-contracts";
 
 export type CoreTechnicalGoldCaseAudit = {
   structurallyValid: boolean;
@@ -35,6 +35,7 @@ export function auditCoreTechnicalGoldCases(input: {
   const difficultyMismatches: string[] = [];
 
   for (const goldCase of cases) {
+    const requiredFormats = requiredStoryStageFormats(goldCase.expected.stagePatternKeys.length);
     const context = goldCase.candidateContext;
     if (
       context.language !== input.domainMap.language ||
@@ -56,7 +57,7 @@ export function auditCoreTechnicalGoldCases(input: {
         unknownPatternReferences.push(goldCase.key + ":" + patternKey);
         return;
       }
-      const allowedFormats = REQUIRED_STORY_STAGE_FORMATS[index] ?? [];
+      const allowedFormats = requiredFormats[index] ?? [];
       if (!pattern.formats.some((format) => allowedFormats.includes(format as never))) {
         unsupportedStageFormats.push(goldCase.key + ":stage-" + (index + 1) + ":" + patternKey);
       }

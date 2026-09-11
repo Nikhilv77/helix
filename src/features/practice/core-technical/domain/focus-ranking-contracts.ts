@@ -7,6 +7,13 @@ export const CORE_TECHNICAL_FOCUS_SCHEMA_VERSION = 1 as const;
 export const CORE_TECHNICAL_FIRST_STORY_RANKING_POLICY_VERSION = 1 as const;
 export const CORE_TECHNICAL_ADAPTIVE_STORY_RANKING_POLICY_VERSION = 2 as const;
 
+export const coreTechnicalGenerationProvenanceSchema = z.enum([
+  "live-personalized",
+  "live-generated",
+  "reviewed-fallback",
+  "reviewed-artifact"
+]);
+
 const identifierSchema = z
   .string()
   .min(2)
@@ -92,7 +99,8 @@ export const coreTechnicalFirstStorySelectionSchema = z
     focusFingerprint: fingerprintSchema,
     selectedStory: coreTechnicalRankedStorySchema,
     rankings: z.array(coreTechnicalRankedStorySchema).min(1),
-    reason: z.string().min(20).max(320)
+    reason: z.string().min(20).max(320),
+    generationProvenance: coreTechnicalGenerationProvenanceSchema.optional()
   })
   .strict();
 
@@ -154,7 +162,8 @@ export const coreTechnicalAdaptiveStorySelectionSchema = z
     evidence: coreTechnicalAdaptiveEvidenceSchema,
     selectedStory: coreTechnicalAdaptiveRankedStorySchema,
     rankings: z.array(coreTechnicalAdaptiveRankedStorySchema).min(1),
-    reason: z.string().min(20).max(420)
+    reason: z.string().min(20).max(420),
+    generationProvenance: coreTechnicalGenerationProvenanceSchema.optional()
   })
   .strict();
 
@@ -164,6 +173,9 @@ export const coreTechnicalStorySelectionSchema = z.union([
 ]);
 
 export type CoreTechnicalConfirmedFocus = z.infer<typeof coreTechnicalConfirmedFocusSchema>;
+export type CoreTechnicalGenerationProvenance = z.infer<
+  typeof coreTechnicalGenerationProvenanceSchema
+>;
 export type CoreTechnicalStoryRankingCandidate = z.infer<
   typeof coreTechnicalStoryRankingCandidateSchema
 >;

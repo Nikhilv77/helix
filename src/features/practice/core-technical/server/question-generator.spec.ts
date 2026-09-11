@@ -3,69 +3,20 @@ import { describe, expect, it, vi } from "vitest";
 import { CORE_TECHNICAL_CATALOG_SCHEMA_VERSION } from "@/features/practice/core-technical/domain/contracts";
 import { NODEJS_CORE_TECHNICAL_INTERVIEW_PATTERNS } from "@/features/practice/core-technical/domain/interview-patterns";
 import {
+  coreTechnicalLearningGuideFor,
   toPublicCoreTechnicalQuestion,
   type GeneratedQuestionCandidate
 } from "@/features/practice/core-technical/domain/question-contracts";
+import { coreTechnicalPracticePathBlueprint } from "@/features/practice/core-technical/domain/practice-path-blueprints";
 import type { GeneratedStoryCandidate } from "@/features/practice/core-technical/domain/story-contracts";
 import type { AiService } from "@/server/ai/ai.service";
 
 import { CoreTechnicalQuestionGenerator } from "./question-generator";
 
-const stagePlan = [
-  ["mcq", "javascript-identity-mutation-copy"],
-  ["predict-explain", "javascript-event-loop-order"],
-  ["written", "javascript-closure-lifetime"],
-  ["spoken", "nodejs-worker-thread-isolation"],
-  ["artifact-diagnosis", "nodejs-resource-leak-diagnosis"],
-  ["debug-repair", "nodejs-commonjs-esm-boundary"],
-  ["micro-implementation", "nodejs-stream-backpressure"],
-  ["written", "javascript-async-error-propagation"]
-] as const;
-
 function story(): GeneratedStoryCandidate {
-  return {
-    schemaVersion: CORE_TECHNICAL_CATALOG_SCHEMA_VERSION,
-    key: "follow-the-operation",
-    title: "Follow the operation through a production failure",
-    premise:
-      "A Node.js request passes through several asynchronous stages while customer traffic increases unexpectedly.",
-    incident:
-      "The latest release produces delayed responses, retained resources, and confusing output from one operation.",
-    candidateRole:
-      "Act as the backend engineer responsible for tracing the evidence and making a safe bounded repair.",
-    primaryTopicKey: "async-scheduling",
-    secondaryTopicKeys: [
-      "javascript-values-and-mutation",
-      "javascript-scope-and-closures",
-      "nodejs-resource-lifecycle"
-    ],
-    mechanismKeys: ["event-loop", "reference-identity", "heap-retention", "resource-cleanup"],
-    difficulty: "standard",
-    prerequisiteTopicKeys: ["javascript-values-and-mutation"],
-    expectedMinutes: 45,
-    forbiddenTopicKeys: [],
-    realismAnchors: [
-      "The service has a reproducible latency increase under a bounded production-like workload.",
-      "The incident supplies correlated logs and metrics from one failed customer operation.",
-      "The final repair must preserve the existing downstream request and cleanup contract."
-    ],
-    targetFitExplanation:
-      "The incident reflects the runtime ownership expected from a senior backend engineer.",
-    coverageExplanation:
-      "The sequence covers important JavaScript reasoning and its Node.js production consequences.",
-    stages: stagePlan.map(([format, patternKey], index) => ({
-      order: index + 1,
-      key: "stage-" + (index + 1),
-      title: "Trace incident stage " + (index + 1),
-      format,
-      patternKey,
-      objective:
-        "Use the current evidence to explain or repair the interview mechanism for this stage.",
-      artifactKey: "artifact-" + (index + 1),
-      storyDependency:
-        "Use the concrete output retained from the preceding incident investigation step."
-    }))
-  };
+  const blueprint = coreTechnicalPracticePathBlueprint("javascript-values-copying-mutation");
+  if (!blueprint) throw new Error("Missing values-and-mutation question-generator fixture");
+  return structuredClone(blueprint);
 }
 
 function question(
@@ -91,9 +42,9 @@ function question(
     topicKeys: pattern.topicKeys,
     mechanismKeys: pattern.mechanismKeys,
     prompt:
-      "Inspect production artifact " +
+      "You are given production artifact " +
       order +
-      " and provide the exact reasoning needed to resolve this incident stage using variant " +
+      ". Provide the exact reasoning needed to resolve this incident stage using variant " +
       variant +
       ". Explain the evidence aloud, identify the underlying mechanism, and propose the smallest safe correction.",
     artifact: {
@@ -214,22 +165,22 @@ function createGenerator(storyValue: GeneratedStoryCandidate) {
 }
 
 describe("CoreTechnicalQuestionGenerator", () => {
-  it("generates two candidates per stage and freezes one valid 8-question block", async () => {
+  it("generates two candidates per stage and freezes one valid six-question block", async () => {
     const storyValue = story();
     const { generator, generateStructured } = createGenerator(storyValue);
 
     const block = await generator.generateDraftBlock(storyValue);
 
-    expect(block.questions).toHaveLength(8);
-    expect(new Set(block.questions.map((item) => item.patternKey)).size).toBe(8);
-    expect(generateStructured).toHaveBeenCalledTimes(8);
+    expect(block.questions).toHaveLength(6);
+    expect(new Set(block.questions.map((item) => item.patternKey)).size).toBe(6);
+    expect(generateStructured).toHaveBeenCalledTimes(6);
     expect(generateStructured).toHaveBeenCalledWith(
       expect.objectContaining({ modelClass: "reasoning" })
     );
   });
 
   it("does not expose private answers, rubrics, hints, or hidden tests", () => {
-    const privateQuestion = question(story(), 7, "private");
+    const privateQuestion = question(story(), 5, "private");
 
     const publicQuestion = toPublicCoreTechnicalQuestion(privateQuestion, false);
 
@@ -249,6 +200,29 @@ describe("CoreTechnicalQuestionGenerator", () => {
     expect(toPublicCoreTechnicalQuestion(privateQuestion, true).interviewConnection).toContain(
       "standard technical interview"
     );
+  });
+
+  it("builds the complete learning guide contract for legacy frozen questions", () => {
+    const legacyQuestion = question(story(), 3, "legacy");
+    delete legacyQuestion.answer.learningGuide;
+
+    const guide = coreTechnicalLearningGuideFor(legacyQuestion);
+    const headings = [
+      "## What is happening",
+      "## How to reason through it",
+      "## A strong interview answer",
+      "## What to avoid"
+    ];
+
+    const positions = headings.map((heading) => guide.markdown.indexOf(heading));
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((left, right) => left - right));
+    expect(guide.diagram.steps.map(({ label }) => label)).toEqual([
+      "Observe",
+      "Explain",
+      "Repair",
+      "Verify"
+    ]);
   });
 
   it("rejects questions that introduce an unrelated mechanism", async () => {

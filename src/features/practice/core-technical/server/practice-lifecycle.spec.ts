@@ -167,7 +167,7 @@ describe("Core Technical practice lifecycle", () => {
     });
   });
 
-  it("makes the assessment READY atomically when Learn closes the eighth question", async () => {
+  it("makes the assessment READY atomically when Learn closes the final question", async () => {
     const questionUpdate = vi.fn().mockResolvedValue({});
     const assessmentUpdate = vi.fn().mockResolvedValue({});
     const progressUpdate = vi.fn().mockResolvedValue({});
@@ -185,6 +185,7 @@ describe("Core Technical practice lifecycle", () => {
       },
       coreTechnicalBlock: {
         findUnique: vi.fn().mockResolvedValue({
+          isCurrent: true,
           contentFingerprint: `sha256:${"b".repeat(64)}`,
           storySnapshot: artifact.story,
           questions: artifact.questionBlock.questions.map((question, index) => ({
@@ -229,6 +230,43 @@ describe("Core Technical practice lifecycle", () => {
         data: { status: "ASSESSMENT_READY" }
       })
     );
+  });
+
+  it("saves terminal progress on a loose path without unlocking its assessment", async () => {
+    const blockUpdate = vi.fn();
+    const assessmentUpdate = vi.fn();
+    const progressUpdate = vi.fn();
+    const tx = {
+      $executeRaw: vi.fn(),
+      coreTechnicalBlockQuestion: {
+        findFirst: vi
+          .fn()
+          .mockResolvedValue({ id: QUESTION_ID, blockId: BLOCK_ID, status: "ACTIVE" }),
+        update: vi.fn(),
+        count: vi.fn().mockResolvedValue(0)
+      },
+      coreTechnicalBlock: {
+        findUnique: vi.fn().mockResolvedValue({
+          isCurrent: false,
+          contentFingerprint: `sha256:${"b".repeat(64)}`,
+          storySnapshot: artifact.story,
+          questions: []
+        }),
+        update: blockUpdate
+      },
+      coreTechnicalAssessment: { update: assessmentUpdate },
+      coreTechnicalStoryProgress: { update: progressUpdate }
+    };
+    const prisma = transactionalPrisma(tx, questionRecord({ status: "LEARNED", learnedAt: NOW }));
+
+    await createService(prisma).learn("owner-1", {
+      questionId: QUESTION_ID,
+      confirmed: true
+    });
+
+    expect(blockUpdate).not.toHaveBeenCalled();
+    expect(assessmentUpdate).not.toHaveBeenCalled();
+    expect(progressUpdate).not.toHaveBeenCalled();
   });
 });
 

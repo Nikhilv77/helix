@@ -105,6 +105,22 @@ describe("CoreTechnicalQuestionWorkspace", () => {
     expect(screen.queryByLabelText("Core Technical JavaScript editor")).toBeNull();
   });
 
+  it("keeps an active question editable when its loose path is not current", () => {
+    const question = makeQuestion("written");
+
+    render(
+      <CoreTechnicalQuestionWorkspace
+        block={{ ...makeBlock(question), isCurrent: false }}
+        initialQuestion={question}
+        stageTitle="Practice ahead"
+      />
+    );
+
+    expect(screen.getByLabelText("Written answer")).not.toHaveAttribute("readonly");
+    expect(screen.getByRole("button", { name: "Submit answer" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Learn instead" })).toBeEnabled();
+  });
+
   it("completes every public format through its Step 12 run and attempt paths", async () => {
     const formats: CoreTechnicalQuestionFormat[] = [
       "mcq",

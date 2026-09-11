@@ -190,6 +190,8 @@ export type StoryPracticeBlockView = {
   selection: {
     difficulty: StoryPracticeDifficulty;
     reason: string;
+    generationProvenance?:
+      "live-personalized" | "live-generated" | "reviewed-fallback" | "reviewed-artifact" | null;
   };
   questions: StoryPracticeQuestionView[];
   assessment: StoryPracticeAssessmentView | null;
@@ -199,9 +201,15 @@ export type StoryPracticeLibraryEntryView = {
   key: string;
   version: number;
   title: string;
+  expectedMinutes?: number;
   difficulties: StoryPracticeDifficulty[];
   topicKeys: string[];
   mechanismKeys: string[];
+  questions?: Array<{
+    order: number;
+    title: string;
+    format: StoryPracticeQuestionFormat | string;
+  }>;
 };
 
 export type StoryPracticeHistorySummaryView = {
@@ -219,6 +227,11 @@ export type StoryPracticeHistorySummaryView = {
   };
   completedQuestionCount: number;
   learnedQuestionCount: number;
+  questions?: Array<{
+    id: string;
+    order: number;
+    status: StoryPracticeQuestionStatus;
+  }>;
   assessment: {
     id: string;
     status: StoryPracticeAssessmentStatus;

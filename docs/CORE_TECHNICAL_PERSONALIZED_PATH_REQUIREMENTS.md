@@ -1,345 +1,215 @@
-# Core Technical Personalized Practice Path Requirements
+# Core Technical Practice Requirements
 
-Status: Active product and engineering requirement  
-Scope: `/practice/core-technical` only  
-Audience: Product, design, frontend, backend, AI generation, and QA
+Status: Active
 
-## 1. Authority and intent
+Scope: `/practice/core-technical`
 
-This document defines the required experience for the new Core Technical practice path. It is a focused addendum to `STORY_DRIVEN_CORE_TECHNICAL.md` and overrides that document wherever the two conflict on entry flow, content framing, generation, or presentation.
+## Goal
 
-The candidate-facing product must use the term **practice path**, not **story**. “Story” may remain as an internal or legacy data-model term, but it must not produce fictional company narratives or vague scenarios in the UI.
+Prepare candidates for practical technical interviews with a small, personalized curriculum. The
+product must teach real mechanisms through code, logs, traces, diagnosis, repair, and production
+decisions. Candidate-facing copy must say **practice path**, never fictional “story”.
 
-The goal is to help a candidate learn and explain the practical technical topics most commonly discussed in real interviews. The experience should feel like a thoughtful human teacher prepared a focused session from the candidate's background—not like a random quiz generator.
+## Lean curriculum
 
-## 2. Product outcome
+The reviewed Node.js curriculum contains at most five consolidated path families:
 
-A candidate entering Core Technical practice should be able to:
+1. JavaScript values, identity, copying, and mutation.
+2. Scope, closures, and retained state.
+3. Modules, asynchronous scheduling, errors, timeouts, and cancellation.
+4. Event-loop health, concurrency, worker isolation, and reliability.
+5. Streams, resource lifecycle, testing, and runtime diagnostics.
 
-1. Choose a relevant technology, with useful options derived from their resume.
-2. Receive a natural acknowledgement from the teacher while their path is prepared.
-3. Work through exactly eight practical, interview-relevant questions in a coherent order.
-4. Learn from a detailed explanation, example, and diagram for every question.
-5. Complete a separate teacher-led block assessment based on what they just practised.
+A path contains six focused questions. Candidates complete only the paths supported by their gaps:
 
-The experience must prioritise technical correctness, practical relevance, clarity of explanation, and believable interviewer dialogue.
+- strong evidence: two or three paths;
+- broader gaps: three or four paths;
+- maximum curriculum: five paths, or 30 questions.
 
-## 3. Scope boundaries
+Readiness depends on demonstrated mastery and transfer, not consuming every path.
 
-This flow belongs only to `/practice/core-technical`.
+The active path is always shown first and expanded. Remaining paths retain prerequisite order,
+and questions inside every path remain in teaching order. Each question row uses the same animated
+disclosure, surface, difficulty, and estimated-time treatment as DSA practice.
 
-It must not:
+Existing immutable eight-question snapshots remain readable. New content should migrate to the
+six-question contract without rewriting saved candidate history.
 
-- replace or take over the general `/practice` landing page;
-- route a Core Technical block assessment to the generic `/interview` setup or interview flow;
-- silently generate content for unsupported ecosystems;
-- globally publish candidate-specific generated content;
-- redesign the dashboard shell, sidebar, or navigation;
-- expose reference answers, hidden tests, rubrics, or private generation data before the allowed learning state.
+## Personalization and difficulty
 
-## 4. Supported technology scope
+Every preparation decision uses:
 
-The currently supported, truthful technology vertical is the Node.js ecosystem:
+- selected supported technology;
+- candidate level and baseline answers;
+- target role and company;
+- resume topic and mechanism evidence;
+- prior practice and assessment weaknesses.
 
-- Node.js
-- JavaScript
-- TypeScript
-- NestJS
-- Express
-- Fastify
-- Koa
-- Next.js
+Resume evidence prioritizes paths and familiar examples but never grants mastery by itself.
 
-Resume-derived suggestions must be limited to technologies for which the product has a valid source-reviewed domain and executable environment. A user's explicit selection must override inferred role, language, or framework preferences.
+Difficulty is bounded by level:
 
-Python, databases, cloud platforms, or other technologies must not be offered merely because they appear on a resume. They can be added only after their question contracts, review rules, examples, and execution environments are supported.
+- junior: guided or standard;
+- mid-level: guided or standard;
+- senior: guided, standard, or stretch.
 
-## 5. Entry experience
+AI may personalize presentation, evidence, examples, and follow-ups. It must not replace the
+source-reviewed mechanism, introduce an unsupported ecosystem, or use obscure trivia merely to
+make a question harder.
 
-The Core Technical entry screen must render inside the normal authenticated dashboard shell, including the existing sidebar and navigation.
+## Generation and persistence
 
-The visual presentation should resemble the clarity of the post-onboarding welcome experience, with these constraints:
-
-- no outer welcome-card container;
-- no decorative accent blur inside option cards;
-- no small eyebrow copy such as “Your practice workspace”;
-- no explanatory subheading below the primary heading;
-- no visible “Suggested from your resume” label;
-- larger, easily readable technology titles and descriptions;
-- the teacher avatar remains visible on mobile;
-- the avatar image uses a soft alpha feather on the bottom, left, and right edges so it blends into the page instead of looking rectangular or cut out;
-- glow or drop shadow must not be used as a substitute for edge feathering.
-
-The primary prompt should remain short and direct, such as:
-
-> What do you want to get better at?
-
-Resume information may determine which options are presented and prioritised without adding extra visual labels.
-
-## 6. Teacher behaviour and dialogue
-
-The teacher should make the session feel guided, calm, and human. Dialogue must be concise and context-aware rather than repetitive or theatrical.
-
-### Initial greeting
-
-The teacher welcomes the candidate to Core Technical practice and asks which technology they want to work on. The wording may vary naturally between sessions. It should not repeat the full heading or read UI labels aloud verbatim.
-
-### After technology selection
-
-The teacher immediately acknowledges the selected technology with a short transition, for example:
-
-> Great—let me pull together a focused Node.js practice path for you.
-
-The exact sentence should vary, but it must accurately name or reflect the selected technology. It must not claim that live personalised content was created if a reviewed fallback is ultimately used.
-
-### During questions
-
-Teacher interventions should behave like a real interviewer or mentor:
-
-- introduce a task without restating every visible word;
-- ask one focused follow-up at a time;
-- react to the substance of the candidate's answer;
-- request clarification when reasoning is incomplete;
-- provide a progressive hint only when needed;
-- connect the mechanism to a realistic production or interview situation;
-- avoid generic praise, excessive narration, canned encouragement, and role-play filler.
-
-## 7. Practice-path generation
-
-Selecting a technology starts a live, per-candidate preparation request. Generation occurs at request time; it does not require a separate publishing workflow.
-
-The required flow is:
+Selecting a technology starts a live candidate-specific request:
 
 ```text
-Resume context + explicit technology selection
-                    |
-                    v
-        Resolve supported technology focus
-                    |
-                    v
-     Select source-reviewed patterns and ordering
-                    |
-                    v
-    Generate and independently review 8 questions
-                    |
-                    v
-       Validate contracts and executable tasks
-                    |
-                    v
-      Persist one immutable candidate snapshot
-                    |
-                    v
-          Open the current practice workspace
+Level + resume + baseline + technology
+                  ↓
+Select reviewed path and mechanisms
+                  ↓
+Generate and independently review questions
+                  ↓
+Validate answers and executable exercises
+                  ↓
+Persist one immutable candidate snapshot
 ```
 
-The source-reviewed patterns and their intended progression remain authoritative. Personalisation may adapt the title, concrete context, examples, and explanation level, but it must not weaken the technical mechanism or introduce an unrelated ecosystem.
+The request must be replay-safe and all-or-nothing. A snapshot stores its generation provenance:
 
-Preparation must be replay-safe. Repeating the same confirmed request must not create competing partial paths. Nothing may be persisted until the complete eight-question path has passed validation.
+- `live-personalized` for successful live generation;
+- `reviewed-fallback` when providers fail and an exact reviewed fallback is used.
 
-## 8. Eight-question contract
+Fallbacks must match the selected path, technology, and difficulty. A partial or unrelated path
+must never be saved. Existing saved paths remain readable when catalogue entries are retired.
 
-Every generated path must contain exactly eight ordered questions designed for approximately 40–50 minutes of focused practice.
+## Six-question path contract
 
-Across the eight questions, the path must:
+Each path should take approximately 30–40 minutes and cover six distinct interview tasks:
 
-- cover eight distinct patterns or mechanisms;
-- progress coherently from observation and explanation to diagnosis, repair, implementation, and production reasoning;
-- favour frequently asked interview concepts and practical engineering decisions;
-- use concrete symptoms, inputs, code, logs, or constraints;
-- be easy for a candidate to explain aloud;
-- avoid obscure trivia unless it is necessary for the selected role and explicitly supported by the source blueprint;
-- avoid fake company names, unexplained fictional incidents, and vague “something failed” stories;
-- avoid duplicated questions disguised with different wording.
+1. identify or explain the mechanism;
+2. predict concrete behavior;
+3. diagnose code, logs, a trace, or metrics;
+4. repair a realistic defect;
+5. implement or verify a bounded solution;
+6. defend a production decision or unseen transfer.
 
-Suitable framings include:
+Every prompt must be direct, independently understandable, and grounded in supplied evidence.
+Avoid vague incidents, fake companies, duplicated prompts, and unexplained background.
 
-- “Why does this request handler return before the work finishes?”
-- “Predict the output order and explain what the event loop is doing.”
-- “Fix this stream so a slow consumer does not exhaust memory.”
-- “How would you preserve the original error across this async boundary?”
-- “What makes this test flaky, and how would you make it deterministic?”
+Every question stores:
 
-Each prompt should normally be 24–90 words, use direct second-person language, and provide enough evidence to reason without invented background knowledge.
-
-The path must use a deliberate mix of formats, including:
-
-1. Multiple choice with explanation
-2. Predict and explain
-3. Written mechanism explanation
-4. Spoken or written explanation
-5. Artifact diagnosis
-6. Debug and repair
-7. Micro implementation
-8. Production decision or trade-off explanation
-
-Every question must include:
-
-- the candidate-visible prompt and artifacts;
-- one to four relevant interviewer follow-ups;
+- prompt and visible artifact;
+- one to three interviewer follow-ups;
 - three progressive hints;
-- a ten-point scoring rubric;
-- realistic common mistakes;
-- a clear interview connection;
-- a validated reference answer;
-- a detailed learning guide.
+- a ten-point rubric;
+- common mistakes;
+- validated reference answer;
+- detailed learning guide;
+- deterministic runner contract and tests when executable.
 
-## 9. Executable-question requirements
-
-Executable questions must be deterministic under the supported Node.js 22 runtime.
-
-They must not depend on:
-
-- network access;
-- filesystem access;
-- external packages;
-- random values;
-- wall-clock timing;
-- services or state outside the question snapshot.
-
-An executable question must store and validate its starter code, reference solution, public tests, hidden tests, mutation cases, and runner contract before the path becomes available.
-
-## 10. Detailed learning-answer contract
-
-Every question must generate and store a `learningGuide`. The guide is part of the immutable question snapshot so the candidate can return to the same explanation later.
-
-The Markdown answer must contain these sections:
+The learning guide contains:
 
 ```markdown
 ## What is happening
+
 ## How to reason through it
+
 ## A strong interview answer
+
 ## What to avoid
 ```
 
-The guide must:
+It also includes an accessible two-to-six-step diagram. Answers, rubrics, hidden tests, critic
+output, and provider data remain private until the candidate attempts or explicitly learns.
 
-- explain the underlying mechanism in plain language;
-- walk through the evidence or code step by step;
-- include a useful example where appropriate;
-- show what a concise, strong spoken interview answer sounds like;
-- identify common wrong assumptions and why they fail;
-- remain specific to the actual question rather than providing generic textbook material.
+Executable exercises use the pinned Node.js 22 sandbox without network, filesystem, external
+packages, randomness, or wall-clock dependence.
 
-Each guide must also include an ordered diagram containing two to six labelled steps. It should render horizontally on suitable desktop widths and vertically on mobile. The same order and labels must remain understandable to screen readers and when styling is unavailable.
+## Path library UI
 
-Older stored blocks that do not contain a learning guide may receive a bounded compatibility guide at read time. New blocks must always persist the complete generated guide.
+The overview shows all reviewed path families as expandable cards, following the DSA pattern
+library interaction:
 
-## 11. Review and quality gates
+- each card summary shows status, difficulty, topic, and progress;
+- expanding a card shows its ordered question list;
+- every question row is the action; there are no separate **Start path** or **Open saved path**
+  controls;
+- selecting a question in an unstarted path prepares that path invisibly, opens the chosen
+  question, and does not replace the current path;
+- questions from a prepared or historical path link directly to their saved workspace;
+- progress completed in a non-current path remains attached to those same questions when that
+  path later becomes current;
+- the current path is expanded by default.
 
-A path cannot be persisted until it passes all of the following gates:
+Cards use a restrained premium accent border for the selected state. Do not use an accent gradient,
+blur, glow wash, or decorative fade across the card surface. Hover and focus states must remain
+clear on desktop, keyboard, and touch layouts.
 
-- schema and field validation;
-- exactly eight questions and valid ordering;
-- prompt-length and format checks;
-- required learning-guide sections;
-- technical-correctness review;
-- common interview relevance;
-- coherent learning progression;
-- answer and explanation quality;
-- appropriate difficulty for the candidate context;
-- executable sandbox audit where applicable;
-- public/private snapshot boundary checks.
+## Assessment and readiness
 
-An independent critic should review generated content rather than relying only on the generator's self-assessment.
+After a path, the dedicated Core Technical assessment checks explanation, diagnosis, repair,
+implementation evidence, and production judgment. It must not route through the generic interview
+setup.
 
-## 12. Provider failure and reviewed fallback
+Only the current path can unlock or run a block assessment. Completing questions in another path
+saves their progress but does not create assessment eligibility. After the current assessment, the
+recommended next path becomes current; if it was prepared early, its existing solved and learned
+states are reused. Previous and next navigation keeps every prepared path accessible.
 
-The system should first attempt live personalised generation using the configured primary provider, then the configured provider fallback.
+The result either:
 
-If all live providers fail with a retryable provider error, the request may use a matching, approved fallback artifact only when all of these are true:
+- marks the covered mechanisms ready;
+- recommends one next material gap; or
+- ends preparation when no essential gap remains.
 
-- the artifact matches the confirmed supported technology domain;
-- it contains exactly eight reviewed questions;
-- its learning guides and executable contracts are valid;
-- it does not introduce an unrelated language or framework;
-- it can be stored safely as the candidate's immutable practice snapshot.
+Learned questions receive no solved-mastery credit. Executable claims require accepted runner
+evidence.
 
-A reviewed fallback is **not newly generated or live-personalised content**. This distinction must be recorded as provenance, for example:
+## Supported scope
 
-```text
-live-personalized
-reviewed-fallback
-```
+The current executable domain is JavaScript on Node.js 22, including TypeScript, NestJS, Express,
+Fastify, Koa, and Next.js framing. Unsupported languages or ecosystems must not be offered from
+resume inference.
 
-Logs and internal diagnostics must make the provenance clear. Candidate-facing status text must remain truthful and neutral. The product must never label a reviewed fallback as a newly personalised generation.
+The technology welcome remains inside the authenticated dashboard shell. The teacher avatar stays
+visible on mobile, uses bounded alpha feathering, and avoids decorative blur layers.
 
-If no exact approved fallback exists, preparation must fail safely with a recoverable error. It must not store a partial path or substitute an unrelated ecosystem.
+## Acceptance criteria
 
-The current reviewed Node.js fallback sets—including titles such as “Trace identity, copying, and nested mutation” and “Predict event-loop ordering”—are fallback artifacts. Seeing those exact questions does not prove that the new live-generation logic succeeded.
+1. Technology selection triggers replay-safe live personalization.
+2. Ranking uses level, baseline, resume, target role, history, and assessments.
+3. New paths follow the six-question progression; old eight-question snapshots remain readable.
+4. Every new question has a complete answer, learning guide, and accessible diagram.
+5. Executable questions pass the pinned Node.js 22 audit before persistence.
+6. Provider failure uses only an exact reviewed fallback with truthful provenance.
+7. The library uses expandable cards, makes question rows the only action, and exposes saved
+   questions as direct links without path-management buttons.
+8. The selected card uses a premium accent border without an accent surface fade.
+9. Only the current path unlocks assessment; promotion preserves progress completed in loose paths
+   and can stop preparation when mastery is sufficient.
+10. No private answer material or candidate-specific generated path is globally published.
 
-## 13. Persistence and privacy
+## Implementation steps
 
-The completed path must be stored as a candidate-owned immutable snapshot. A generation request does not globally publish the content.
+Work is delivered and verified in this order so each later layer depends on a stable earlier one:
 
-Before an attempt, candidate-facing APIs must not return:
+1. **Curriculum and compatibility** — keep the reviewed path catalogue lean, preserve immutable
+   legacy snapshots, and define the six-question progression for newly generated paths.
+2. **Personalized selection** — apply technology, level, baseline, resume, role, company, history,
+   and assessment evidence while enforcing the supported runtime and difficulty bounds.
+3. **Safe generation and persistence** — generate, review, audit, and atomically persist a complete
+   path with truthful provenance and replay-safe request IDs.
+4. **Loose path library** — make every question row directly actionable, lazily prepare an
+   unstarted path behind the selected row, keep that work non-current, and never expose separate
+   path-starting or path-opening controls.
+5. **Question workspace and learning** — support the required answer modes, progressive hints,
+   deterministic execution, private-answer boundaries, complete learning guides, and accessible
+   diagrams.
+6. **Current-only assessment and progression** — unlock assessment only for the current path,
+   distinguish solved from learned, choose one material next gap, promote an already prepared next
+   path without losing question progress, and retain previous/next access to history.
+7. **Experience and release verification** — match the DSA library interaction, retain the premium
+   border treatment, verify mobile and keyboard behavior, run contract/security/sandbox tests, and
+   confirm legacy snapshots still open.
 
-- reference answers;
-- hidden tests;
-- mutation cases;
-- scoring rubrics not intended for the candidate;
-- critic output;
-- provider prompts or raw provider responses.
-
-Authorised learning and review states may reveal the stored learning guide and permitted feedback after the candidate has attempted or explicitly chosen to learn the question.
-
-Provider logs may include safe operation names, attempt counts, duration, status, and sanitised failure reasons. They must not include secrets, full prompts, private resume text, or answer material.
-
-## 14. Block assessment hand-off
-
-After completing the eight-question practice path, the candidate can start a teacher-led block assessment tied to that path.
-
-The assessment must:
-
-- open the dedicated assessment room rather than the generic interview setup;
-- use the mechanisms and evidence from the completed eight-question path;
-- begin with a short, natural greeting;
-- ask focused questions and contextual follow-ups;
-- behave as a separate evaluative conversation, not a replay of the practice cards;
-- preserve the existing assessment/report lifecycle and use the result to inform the next practice path.
-
-## 15. UI and performance requirements
-
-The existing structural design must remain intact. UI changes should improve hierarchy, legibility, state communication, and responsive behaviour without adding decorative noise.
-
-Required behaviour:
-
-- avatars and essential text remain visible on mobile;
-- reduced-motion preferences are respected;
-- expensive filters and large blurred layers are avoided on constrained devices;
-- avatar feathering uses bounded masks or gradients and does not cause full-page repaint pressure;
-- loading states are minimal and do not place the loader inside a decorative container;
-- the transition from selection to the workspace clearly communicates preparation without excessive text;
-- question cards, learning guides, diagrams, and assessment controls remain usable at phone widths.
-
-## 16. Acceptance criteria
-
-This requirement is satisfied when:
-
-1. `/practice/core-technical` opens within the normal dashboard shell and shows the technology-selection welcome state.
-2. Resume-derived choices include only supported technologies, and explicit selection controls the generated domain.
-3. Selecting a technology produces a short teacher acknowledgement and a replay-safe preparation request.
-4. A successful live request stores exactly eight reviewed, practical, ordered questions with complete learning guides.
-5. Every new learning guide contains all four required Markdown sections and an accessible two-to-six-step diagram.
-6. Executable tasks pass deterministic Node.js 22 validation before persistence.
-7. Provider exhaustion uses only an exact reviewed fallback and records truthful provenance; otherwise it returns a recoverable error without a partial save.
-8. The UI never describes reviewed fallback questions as newly generated.
-9. The avatar blends on its bottom, left, and right edges and remains visible on mobile.
-10. Starting the block assessment opens the dedicated teacher-led assessment experience, not generic `/interview`.
-11. No private answer material is exposed before the authorised learning state.
-12. No generated candidate path is globally published as part of this flow.
-
-## 17. Implementation map
-
-The primary implementation areas are:
-
-- `src/features/practice/core-technical/domain/technology-focus.ts`
-- `src/features/practice/core-technical/domain/question-contracts.ts`
-- `src/features/practice/core-technical/server/story-generator.ts`
-- `src/features/practice/core-technical/server/question-generator.ts`
-- `src/features/practice/core-technical/server/generation-pipeline.ts`
-- `src/features/practice/core-technical/server/preparation.service.ts`
-- `src/features/practice/core-technical/server/persistence.service.ts`
-- `src/features/practice/core-technical/ui/core-technical-technology-welcome.tsx`
-- `src/features/practice/core-technical/ui/core-technical-question-workspace.tsx`
-- `src/features/practice/core-technical/ui/core-technical-learning-guide.tsx`
-
+Implementation status is tracked in code and tests rather than duplicating a volatile checklist in
+this requirement. Steps may be marked complete only after their acceptance tests pass.

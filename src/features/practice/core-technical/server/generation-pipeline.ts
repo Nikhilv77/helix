@@ -1,6 +1,7 @@
 import type { CoreTechnicalCriticReport } from "@/features/practice/core-technical/domain/critic-contracts";
 import type { FrozenQuestionBlock } from "@/features/practice/core-technical/domain/question-contracts";
 import type { SelectedCoreTechnicalStory } from "@/features/practice/core-technical/domain/story-contracts";
+import type { CoreTechnicalGenerationProvenance } from "@/features/practice/core-technical/domain/focus-ranking-contracts";
 
 import {
   assertCoreTechnicalCriticApproval,
@@ -26,6 +27,8 @@ export type ReviewedCoreTechnicalDraft = {
   storyReview: CoreTechnicalCriticReport;
   questionBlock: FrozenQuestionBlock;
   questionBlockReview: CoreTechnicalCriticReport;
+  /** Stored with the immutable candidate block; never inferred later from its content. */
+  provenance?: CoreTechnicalGenerationProvenance;
 };
 
 export class CoreTechnicalGenerationPipeline {
@@ -41,7 +44,7 @@ export class CoreTechnicalGenerationPipeline {
     } = {}
   ): Promise<ReviewedCoreTechnicalDraft> {
     if (options.preferApprovedArtifact) {
-      const approvedDraft = await this.reviewedArtifact(input);
+      const approvedDraft = await this.reviewedArtifact(input, "reviewed-artifact");
       if (approvedDraft) return approvedDraft;
     }
 
@@ -61,13 +64,19 @@ export class CoreTechnicalGenerationPipeline {
 
       await this.auditExecutableQuestions(questionBlock);
 
-      return { story, storyReview, questionBlock, questionBlockReview };
+      return {
+        story,
+        storyReview,
+        questionBlock,
+        questionBlockReview,
+        provenance: input.personalizePresentation ? "live-personalized" : "live-generated"
+      };
     } catch (error) {
       if (
         options.fallbackToApprovedArtifactOnProviderFailure &&
         error instanceof AiProviderException
       ) {
-        const approvedDraft = await this.reviewedArtifact(input);
+        const approvedDraft = await this.reviewedArtifact(input, "reviewed-fallback");
         if (approvedDraft) {
           this.logger.warn(
             JSON.stringify({
@@ -85,7 +94,8 @@ export class CoreTechnicalGenerationPipeline {
   }
 
   private async reviewedArtifact(
-    input: StoryGeneratorInput
+    input: StoryGeneratorInput,
+    provenance: CoreTechnicalGenerationProvenance
   ): Promise<ReviewedCoreTechnicalDraft | null> {
     const approvedDraft = (this.dependencies.approvedDraftResolver ?? approvedCoreTechnicalDraft)(
       input
@@ -94,7 +104,7 @@ export class CoreTechnicalGenerationPipeline {
     assertCoreTechnicalCriticApproval(approvedDraft.storyReview);
     assertCoreTechnicalCriticApproval(approvedDraft.questionBlockReview);
     await this.auditExecutableQuestions(approvedDraft.questionBlock);
-    return approvedDraft;
+    return { ...approvedDraft, provenance };
   }
 
   private async auditExecutableQuestions(questionBlock: FrozenQuestionBlock): Promise<void> {

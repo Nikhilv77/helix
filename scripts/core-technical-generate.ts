@@ -9,6 +9,7 @@ import {
   coreTechnicalStoryReviewArtifactSchema,
   type CoreTechnicalStoryReviewArtifact
 } from "../src/features/practice/core-technical/domain/review-artifact-contracts";
+import { NODEJS_CORE_TECHNICAL_PRACTICE_PATH_BLUEPRINTS } from "../src/features/practice/core-technical/domain/practice-path-blueprints";
 import { getAppContainer } from "../src/server/app-container";
 
 const REVIEW_ARTIFACT_DIRECTORY = path.resolve(
@@ -37,9 +38,14 @@ async function main(): Promise<void> {
   const summaries = [];
 
   for (const goldCase of selectedCases) {
+    const blueprint = NODEJS_CORE_TECHNICAL_PRACTICE_PATH_BLUEPRINTS.find(
+      (candidate) => candidate.title === goldCase.expected.storyTitle
+    );
+    if (!blueprint) throw new Error(`No active blueprint matches ${goldCase.key}`);
     const draft = await container.coreTechnicalGenerationPipeline.prepareReviewedDraft({
       ...goldCase.candidateContext,
       reviewedContract: {
+        storyKey: blueprint.key,
         storyTitle: goldCase.expected.storyTitle,
         stagePatternKeys: goldCase.expected.stagePatternKeys,
         requiredStoryTopicKeys: goldCase.expected.requiredStoryTopicKeys

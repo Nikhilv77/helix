@@ -42,7 +42,7 @@ describe("Core Technical gold-case audit", () => {
     changed[0]!.expected.requiredPrimaryMechanismKeys[0] = "wrong-mechanism";
 
     expect(audit(changed).primaryMechanismMismatches).toContain(
-      "follow-operation-guided-benchmark:stage-1:javascript-identity-mutation-copy"
+      "javascript-values-copying-mutation-guided-benchmark:stage-1:javascript-reference-identity"
     );
   });
 });

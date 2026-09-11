@@ -91,7 +91,9 @@ export function CoreTechnicalQuestionWorkspace({
   const [testCasesOpen, setTestCasesOpen] = useState(() => initialQuestion.latestRun !== null);
   const initialDraft = useRef(JSON.stringify(draftFor(workKind, choice, text, code)));
   const draftSequence = useRef(0);
-  const mutable = block.isCurrent && question.status === "ACTIVE";
+  // Non-current library paths remain ordinary practice. Current ownership only
+  // controls block-assessment eligibility, not whether a question can be solved.
+  const mutable = block.status === "PRACTISING" && question.status === "ACTIVE";
   const terminal = question.status === "COMPLETED" || question.status === "LEARNED";
   const questionMinutes = coreTechnicalQuestionMinutes(
     question.question.format,
@@ -328,11 +330,7 @@ export function CoreTechnicalQuestionWorkspace({
           <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
             {panelTab === "description" ? (
               <div className="space-y-7">
-                <section className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-[linear-gradient(145deg,rgba(156,109,255,0.09),rgba(255,255,255,0.018)_42%,rgba(0,0,0,0.16))] px-5 py-5 sm:px-6 sm:py-6">
-                  <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-[var(--workspace-accent)] opacity-[0.07] blur-3xl"
-                  />
+                <section className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111214] px-5 py-5 sm:px-6 sm:py-6">
                   <p className="relative text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
                     Question {question.order} of {block.questions.length} ·{" "}
                     {humanizeCoreTechnicalKey(question.question.format)}
@@ -403,7 +401,7 @@ export function CoreTechnicalQuestionWorkspace({
                     className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.035] text-[13px] font-semibold text-cream/72 transition hover:bg-white/[0.065] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)] disabled:opacity-55"
                   >
                     {pending === "hint" ? (
-                      <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                      <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" />
                     ) : (
                       <Lightbulb size={14} aria-hidden="true" />
                     )}
@@ -486,7 +484,7 @@ export function CoreTechnicalQuestionWorkspace({
                   className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-cream px-3.5 text-[12.5px] font-semibold text-[#171a16] transition hover:bg-white disabled:opacity-45"
                 >
                   {pending === "run" ? (
-                    <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+                    <Loader2 size={13} className="motion-safe:animate-spin" aria-hidden="true" />
                   ) : (
                     <Play size={13} aria-hidden="true" />
                   )}
@@ -556,7 +554,7 @@ export function CoreTechnicalQuestionWorkspace({
                   className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-cream px-4 text-[13px] font-semibold text-[#17181a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:opacity-55"
                 >
                   {pending === "learn" ? (
-                    <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                    <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" />
                   ) : null}
                   Confirm Learn
                 </button>
@@ -641,7 +639,7 @@ export function CoreTechnicalQuestionWorkspace({
                   className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-cream px-3.5 text-[12.5px] font-semibold text-[#17181a] transition hover:bg-white disabled:cursor-wait disabled:opacity-55"
                 >
                   {pending === "attempt" ? (
-                    <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+                    <Loader2 size={13} className="motion-safe:animate-spin" aria-hidden="true" />
                   ) : (
                     <Check size={13} aria-hidden="true" />
                   )}

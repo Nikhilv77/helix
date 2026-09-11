@@ -65,6 +65,11 @@ describe("CoreTechnicalTechnologyWelcome", () => {
     );
 
     expect(screen.queryByText("Suggested from your resume")).toBeNull();
+    expect(screen.queryByText(/complete practice workspace/i)).toBeNull();
+    expect(screen.getByTestId("teacher").parentElement).toHaveAttribute(
+      "data-avatar-feather",
+      "alpha-edge"
+    );
     fireEvent.click(screen.getByRole("button", { name: /TypeScript: Practical TypeScript/i }));
 
     await waitFor(() => expect(bodies).toHaveLength(2));

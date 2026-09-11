@@ -13,14 +13,12 @@ import type { AiService } from "@/server/ai/ai.service";
 import { CoreTechnicalStoryGenerator } from "./story-generator";
 
 const stagePlan = [
-  ["mcq", "javascript-identity-mutation-copy"],
-  ["predict-explain", "javascript-event-loop-order"],
-  ["written", "javascript-closure-lifetime"],
-  ["spoken", "nodejs-worker-thread-isolation"],
-  ["artifact-diagnosis", "nodejs-resource-leak-diagnosis"],
-  ["debug-repair", "nodejs-commonjs-esm-boundary"],
-  ["micro-implementation", "nodejs-stream-backpressure"],
-  ["written", "javascript-async-error-propagation"]
+  ["mcq", "javascript-reference-identity"],
+  ["predict-explain", "javascript-shallow-copy-aliasing"],
+  ["artifact-diagnosis", "javascript-shared-state-mutation"],
+  ["debug-repair", "javascript-mutation-boundary-repair"],
+  ["micro-implementation", "javascript-immutable-nested-update"],
+  ["production-decision", "javascript-copy-strategy-decision"]
 ] as const;
 
 function candidate(
@@ -35,27 +33,23 @@ function candidate(
   return {
     schemaVersion: CORE_TECHNICAL_CATALOG_SCHEMA_VERSION,
     key,
-    title: "A production operation loses control",
+    title: "Trace a production operation failure",
     premise:
       "The candidate owns a Node.js service that processes customer operations through several asynchronous stages.",
     incident:
       "A routine release creates inconsistent state, rising memory, and delayed responses during a traffic spike.",
     candidateRole:
       "Act as the on-call backend engineer who must trace the operation and make the smallest safe repair.",
-    primaryTopicKey: options.primaryTopicKey ?? "async-scheduling",
-    secondaryTopicKeys: options.secondaryTopicKeys ?? [
-      "javascript-values-and-mutation",
-      "javascript-scope-and-closures",
-      "nodejs-resource-lifecycle"
-    ],
+    primaryTopicKey: options.primaryTopicKey ?? "javascript-values-and-mutation",
+    secondaryTopicKeys: options.secondaryTopicKeys ?? [],
     mechanismKeys: options.mechanismKeys ?? [
-      "event-loop",
-      "microtask-queue",
-      "heap-retention",
-      "resource-cleanup"
+      "reference-identity",
+      "shallow-copy",
+      "copy-on-write",
+      "defensive-copy"
     ],
     difficulty: "standard",
-    prerequisiteTopicKeys: ["javascript-values-and-mutation"],
+    prerequisiteTopicKeys: [],
     expectedMinutes: 45,
     forbiddenTopicKeys: [],
     realismAnchors: options.realismAnchors ?? [
@@ -108,6 +102,8 @@ const validInput = {
   baselineState: "STANDARD" as const,
   weakMechanismKeys: ["event-loop", "microtask-queue"],
   unassessedMechanismKeys: ["heap-retention"],
+  resumeTopicKeys: ["nodejs-testing-and-diagnostics"],
+  resumeMechanismKeys: ["runtime-diagnostics"],
   recentTopicKeys: ["javascript-modules"]
 };
 
@@ -115,8 +111,8 @@ describe("CoreTechnicalStoryGenerator", () => {
   it("uses the reasoning model and selects the strongest valid candidate", async () => {
     const broad = candidate("broad-operation-story");
     const repeated = candidate("repeated-operation-story");
-    repeated.stages[7] = {
-      ...repeated.stages[7]!,
+    repeated.stages[5] = {
+      ...repeated.stages[5]!,
       patternKey: repeated.stages[0]!.patternKey
     };
     const weak = candidate("weak-operation-story", {
@@ -134,7 +130,7 @@ describe("CoreTechnicalStoryGenerator", () => {
     const result = await generator.generate(validInput);
 
     expect(result.key).toBe("broad-operation-story");
-    expect(result.stages).toHaveLength(8);
+    expect(result.stages).toHaveLength(6);
     expect(result.score.total).toBeGreaterThan(0);
     expect(generateStructured).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -142,6 +138,12 @@ describe("CoreTechnicalStoryGenerator", () => {
         modelClass: "reasoning"
       })
     );
+    const prompt = JSON.parse(generateStructured.mock.calls[0]![0].prompt);
+    expect(prompt.candidate).toMatchObject({
+      seniority: "senior",
+      resumeTopicKeys: ["nodejs-testing-and-diagnostics"],
+      resumeMechanismKeys: ["runtime-diagnostics"]
+    });
   });
 
   it("rejects a stack that the domain map does not support", async () => {
@@ -158,8 +160,8 @@ describe("CoreTechnicalStoryGenerator", () => {
   it("fails closed when every generated candidate violates catalogue rules", async () => {
     const candidates = ["one-story", "two-story", "three-story"].map((key) => {
       const item = candidate(key);
-      item.stages[7] = {
-        ...item.stages[7]!,
+      item.stages[5] = {
+        ...item.stages[5]!,
         patternKey: item.stages[0]!.patternKey
       };
       return item;
@@ -194,7 +196,12 @@ describe("CoreTechnicalStoryGenerator", () => {
           requiredStoryTopicKeys: goldCase.expected.requiredStoryTopicKeys
         }
       })
-    ).resolves.toMatchObject({ title: goldCase.expected.storyTitle });
+    ).resolves.toMatchObject({
+      title: goldCase.expected.storyTitle,
+      stages: expect.arrayContaining([
+        expect.objectContaining({ order: 6, format: "production-decision" })
+      ])
+    });
 
     const aiRequest = generateStructured.mock.calls[0]?.[0];
     expect(aiRequest.schema.safeParse({ candidates: [reviewedCandidate] }).success).toBe(true);

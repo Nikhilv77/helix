@@ -10,6 +10,7 @@ import { NODEJS_CORE_TECHNICAL_DOMAIN_MAP } from "@/features/practice/core-techn
 import { NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE } from "@/features/practice/core-technical/domain/story-ranking-catalogue";
 import type { CoreTechnicalConfirmedFocus } from "@/features/practice/core-technical/domain/focus-ranking-contracts";
 import type { PrismaService } from "@/server/database/prisma.service";
+import { focusedPracticePathFallback } from "./focused-practice-path-fallbacks";
 import { CoreTechnicalStoryRankingService } from "./story-ranking.service";
 import { CoreTechnicalPersistenceService } from "./persistence.service";
 
@@ -18,6 +19,13 @@ const FOCUS_ID = "22222222-2222-4222-8222-222222222222";
 const STORY_VERSION_ID = "33333333-3333-4333-8333-333333333333";
 const BLOCK_ID = "44444444-4444-4444-8444-444444444444";
 const artifact = coreTechnicalStoryReviewArtifactSchema.parse(rawArtifact);
+const activeDraft = requiredFallback("javascript-values-copying-mutation");
+
+function requiredFallback(storyKey: string) {
+  const draft = focusedPracticePathFallback(storyKey);
+  if (!draft) throw new Error(`Missing focused Core Technical fixture: ${storyKey}`);
+  return draft;
+}
 
 describe("CoreTechnicalPersistenceService", () => {
   it("saves a content-addressed focus revision and advances only its active pointer", async () => {
@@ -97,25 +105,33 @@ describe("CoreTechnicalPersistenceService", () => {
     expect(replayTx.coreTechnicalStoryVersion.create).not.toHaveBeenCalled();
   });
 
-  it("atomically publishes exactly eight frozen private/public questions and one assessment", async () => {
+  it("atomically publishes exactly six frozen private/public questions and one assessment", async () => {
     const tx = blockTransaction();
     const service = new CoreTechnicalPersistenceService(
       prisma(tx),
       () => new Date("2026-09-07T13:00:00Z")
     );
 
-    const result = await service.publishPreparedBlock("owner-1", publishInput());
+    const baseInput = publishInput();
+    const input = {
+      ...baseInput,
+      draft: { ...baseInput.draft, provenance: "live-personalized" as const }
+    };
+    const result = await service.publishPreparedBlock("owner-1", input);
 
     expect(result.id).toBe(BLOCK_ID);
     const create = tx.coreTechnicalBlock.create.mock.calls[0]![0];
     const questions = create.data.questions.create;
-    expect(questions).toHaveLength(8);
+    expect(questions).toHaveLength(6);
     expect(questions.map((question: { order: number }) => question.order)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8
+      1, 2, 3, 4, 5, 6
     ]);
     expect(create.data.assessment.create).toMatchObject({
       schemaVersion: 1,
       evaluatorVersion: "evaluator-v1"
+    });
+    expect(create.data.selectionSnapshot).toMatchObject({
+      generationProvenance: "live-personalized"
     });
     expect(questions.every((question: { state: unknown }) => question.state !== undefined)).toBe(
       true
@@ -246,7 +262,99 @@ describe("CoreTechnicalPersistenceService", () => {
     expect(tx.coreTechnicalBlock.create).toHaveBeenCalledOnce();
   });
 
-  it("rejects a foreign focus, unpublished story, critic failure, or malformed eight-slot ordering", async () => {
+  it("publishes loose library questions without replacing the assessment-bearing current path", async () => {
+    const current = blockRecord();
+    const tx = blockTransaction({ current });
+    const input = {
+      ...publishInput(),
+      requestId: "88888888-8888-4888-8888-888888888888",
+      libraryBlock: true
+    };
+
+    await new CoreTechnicalPersistenceService(prisma(tx)).publishPreparedBlock("owner-1", input);
+
+    expect(tx.coreTechnicalBlock.update).not.toHaveBeenCalled();
+    expect(tx.coreTechnicalBlock.create).toHaveBeenCalledOnce();
+    expect(tx.coreTechnicalBlock.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ isCurrent: false }) })
+    );
+  });
+
+  it("promotes a completed loose path and unlocks its assessment without losing progress", async () => {
+    const targetId = "99999999-9999-4999-8999-999999999999";
+    const input = publishInput();
+    const current = {
+      ...blockRecord(),
+      status: "ASSESSED",
+      assessment: { id: "66666666-6666-4666-8666-666666666666", status: "COMPLETED" }
+    };
+    const target = {
+      id: targetId,
+      focusRevisionId: FOCUS_ID,
+      contentFingerprint: `sha256:${"e".repeat(64)}`,
+      storySnapshot: activeDraft.story,
+      storyVersion: { storyKey: input.selection.selectedStory.storyKey },
+      questions: activeDraft.questionBlock.questions.map((question, index) => ({
+        id: `${String(index + 1).padStart(8, "0")}-9999-4999-8999-999999999999`,
+        order: question.order,
+        status: index === 0 ? "LEARNED" : "COMPLETED",
+        contentFingerprint: `sha256:${String(index + 1)
+          .repeat(64)
+          .slice(0, 64)}`,
+        privateSnapshot: question,
+        attempts: index === 0 ? [] : [{ score: 8, verificationStatus: "VERIFIED" }]
+      }))
+    };
+    const update = vi.fn().mockResolvedValue({});
+    const assessmentUpdate = vi.fn().mockResolvedValue({});
+    const progressUpdate = vi.fn().mockResolvedValue({});
+    const tx = {
+      $executeRaw: vi.fn(),
+      coreTechnicalBlock: {
+        findFirst: vi.fn().mockResolvedValueOnce(current).mockResolvedValueOnce(target),
+        update
+      },
+      coreTechnicalAssessment: { update: assessmentUpdate },
+      coreTechnicalStoryProgress: { update: progressUpdate },
+      coreTechnicalPreparationAttempt: { create: vi.fn().mockResolvedValue({}) }
+    };
+
+    const activated = await new CoreTechnicalPersistenceService(
+      prisma(tx),
+      () => new Date("2026-09-07T18:00:00.000Z")
+    ).activateLibraryBlock("owner-1", {
+      requestId: "88888888-8888-4888-8888-888888888888",
+      focusRevisionId: FOCUS_ID,
+      previousBlockId: BLOCK_ID,
+      selection: input.selection,
+      generatorVersion: input.generatorVersion,
+      validatorVersion: input.validatorVersion
+    });
+
+    expect(activated).toEqual({ id: targetId });
+    expect(update).toHaveBeenNthCalledWith(1, {
+      where: { id_ownerId: { id: BLOCK_ID, ownerId: "owner-1" } },
+      data: { isCurrent: false }
+    });
+    expect(update).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: { id_ownerId: { id: targetId, ownerId: "owner-1" } },
+        data: expect.objectContaining({ isCurrent: true, status: "ASSESSMENT_READY" })
+      })
+    );
+    expect(assessmentUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { blockId_ownerId: { blockId: targetId, ownerId: "owner-1" } },
+        data: expect.objectContaining({ status: "READY", assessmentSnapshot: expect.any(Object) })
+      })
+    );
+    expect(progressUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { status: "ASSESSMENT_READY" } })
+    );
+  });
+
+  it("rejects a foreign focus, unpublished story, critic failure, or malformed ordering", async () => {
     const foreignTx = blockTransaction({ focus: null });
     await expect(
       new CoreTechnicalPersistenceService(prisma(foreignTx)).publishPreparedBlock(
@@ -284,7 +392,7 @@ describe("CoreTechnicalPersistenceService", () => {
         "owner-1",
         malformed
       )
-    ).rejects.toThrow("eight unique ordered questions");
+    ).rejects.toThrow("six new or eight legacy unique ordered questions");
   });
 
   it("records bounded failure diagnostics without publishing a partial block", async () => {
@@ -459,10 +567,10 @@ function publishInput() {
     focusRevisionId: FOCUS_ID,
     selection,
     draft: {
-      story: structuredClone(artifact.story),
-      storyReview: structuredClone(artifact.storyReview),
-      questionBlock: structuredClone(artifact.questionBlock),
-      questionBlockReview: structuredClone(artifact.questionBlockReview)
+      story: structuredClone(activeDraft.story),
+      storyReview: structuredClone(activeDraft.storyReview),
+      questionBlock: structuredClone(activeDraft.questionBlock),
+      questionBlockReview: structuredClone(activeDraft.questionBlockReview)
     },
     generatorVersion: "generator-v1",
     validatorVersion: "validator-v1",
@@ -484,12 +592,10 @@ function focusTransaction(options: {
   return {
     $executeRaw: vi.fn().mockResolvedValue(1),
     candidateProfile: {
-      findUnique: vi
-        .fn()
-        .mockResolvedValue({
-          ownerId: "owner-1",
-          activeCoreTechnicalFocusRevisionId: options.activeFocusId ?? null
-        }),
+      findUnique: vi.fn().mockResolvedValue({
+        ownerId: "owner-1",
+        activeCoreTechnicalFocusRevisionId: options.activeFocusId ?? null
+      }),
       update: vi.fn().mockResolvedValue({})
     },
     coreTechnicalFocusRevision: {
@@ -555,7 +661,7 @@ function blockTransaction(
       findUnique: vi.fn().mockResolvedValue({
         id: STORY_VERSION_ID,
         publicationStatus: options.storyStatus ?? CoreTechnicalStoryPublicationStatus.PUBLISHED,
-        storySnapshot: artifact.story
+        storySnapshot: activeDraft.story
       })
     },
     coreTechnicalBlock: {

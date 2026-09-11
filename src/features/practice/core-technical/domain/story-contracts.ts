@@ -25,8 +25,21 @@ export const REQUIRED_STORY_STAGE_FORMATS = [
   ["artifact-diagnosis"],
   ["debug-repair"],
   ["micro-implementation"],
-  ["written", "spoken"]
+  ["production-decision", "written", "spoken"]
 ] as const;
+
+export const REQUIRED_SIX_QUESTION_STAGE_FORMATS = [
+  ["mcq", "written"],
+  ["predict-explain"],
+  ["artifact-diagnosis"],
+  ["debug-repair"],
+  ["micro-implementation"],
+  ["production-decision", "written", "spoken"]
+] as const;
+
+export function requiredStoryStageFormats(stageCount: number) {
+  return stageCount === 6 ? REQUIRED_SIX_QUESTION_STAGE_FORMATS : REQUIRED_STORY_STAGE_FORMATS;
+}
 
 export const generatedStoryStageSchema = z.object({
   order: z.number().int().min(1).max(8),
@@ -41,18 +54,21 @@ export const generatedStoryStageSchema = z.object({
 
 const generatedStoryStagesSchema = z
   .array(generatedStoryStageSchema)
-  .length(8)
+  .refine((stages) => stages.length === 6 || stages.length === 8, {
+    message: "A Core Technical path must contain six new stages or eight legacy stages"
+  })
   .superRefine((stages, context) => {
+    const requiredFormats = requiredStoryStageFormats(stages.length);
     stages.forEach((stage, index) => {
       if (stage.order !== index + 1) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Story stages must be ordered from 1 through 8",
+          message: `Story stages must be ordered from 1 through ${stages.length}`,
           path: [index, "order"]
         });
       }
 
-      const allowedFormats = REQUIRED_STORY_STAGE_FORMATS[index];
+      const allowedFormats = requiredFormats[index];
       if (!allowedFormats?.includes(stage.format as never)) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
@@ -71,7 +87,7 @@ export const generatedStoryCandidateSchema = z.object({
   incident: meaningfulTextSchema,
   candidateRole: meaningfulTextSchema,
   primaryTopicKey: identifierSchema,
-  secondaryTopicKeys: z.array(identifierSchema).min(1).max(3),
+  secondaryTopicKeys: z.array(identifierSchema).max(3),
   mechanismKeys: z
     .array(identifierSchema)
     .min(4)
@@ -79,7 +95,7 @@ export const generatedStoryCandidateSchema = z.object({
     .describe("Between 4 and 12 mechanism identifiers, never more than 12"),
   difficulty: coreTechnicalDifficultySchema,
   prerequisiteTopicKeys: z.array(identifierSchema),
-  expectedMinutes: z.number().int().min(40).max(50),
+  expectedMinutes: z.number().int().min(30).max(50),
   forbiddenTopicKeys: z.array(identifierSchema),
   realismAnchors: z.array(meaningfulTextSchema).min(3).max(6),
   targetFitExplanation: meaningfulTextSchema,
@@ -91,7 +107,7 @@ export const generatedStoryCandidateSchema = z.object({
 // The generator normalizes it back to the exact reviewed blueprint before the
 // frozen contract is validated.
 export const generatedReviewedStoryCandidateWireSchema = generatedStoryCandidateSchema.extend({
-  secondaryTopicKeys: z.array(identifierSchema).min(1).max(10),
+  secondaryTopicKeys: z.array(identifierSchema).max(10),
   mechanismKeys: z.array(identifierSchema).min(4).max(30),
   realismAnchors: z.array(meaningfulTextSchema).min(1).max(8)
 });

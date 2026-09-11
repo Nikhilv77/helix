@@ -114,7 +114,7 @@ export class CoreTechnicalAssessmentService {
         locked: () =>
           new ConflictErrorException(
             "CORE_TECHNICAL_ASSESSMENT_LOCKED",
-            "Complete or Learn every story question before starting the assessment."
+            "Complete or Learn every practice-path question before starting the assessment."
           )
       });
       if (disposition === "replay") return;

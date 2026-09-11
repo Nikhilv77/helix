@@ -1,4 +1,3 @@
-import { CoreTechnicalStoryPublicationStatus } from "@prisma/client";
 import { requireCoreTechnicalLaunchEligibility } from "@/app/api/practice/core-technical/_shared";
 import type { CoreTechnicalStoryRankingCandidate } from "@/features/practice/core-technical/domain/focus-ranking-contracts";
 import {
@@ -13,7 +12,7 @@ import { CoreTechnicalEligibilityService } from "./eligibility.service";
 import type { CoreTechnicalPublicBlock } from "./practice.service";
 
 describe("Core Technical UI integration state", () => {
-  it("fails closed until two matching catalogue and database stories plus the runner are available", async () => {
+  it("fails closed until two code-backed catalogue stories plus the runner are available", async () => {
     const findMany = vi.fn().mockResolvedValue([
       { storyKey: "story-one", version: 1 },
       { storyKey: "story-two", version: 1 }
@@ -34,16 +33,7 @@ describe("Core Technical UI integration state", () => {
         { key: "story-two", title: "Title story-two" }
       ]
     });
-    expect(findMany).toHaveBeenCalledWith({
-      where: {
-        publicationStatus: CoreTechnicalStoryPublicationStatus.PUBLISHED,
-        OR: [
-          { storyKey: "story-one", version: 1 },
-          { storyKey: "story-two", version: 1 }
-        ]
-      },
-      select: { storyKey: true, version: true }
-    });
+    expect(findMany).not.toHaveBeenCalled();
 
     const underReview = new CoreTechnicalEligibilityService(
       { coreTechnicalStoryVersion: { findMany } } as unknown as PrismaService,

@@ -172,7 +172,7 @@ export function CoreTechnicalIntro({
           className="absolute bottom-4 right-5 z-20 hidden h-10 items-center gap-2 rounded-lg border border-white/[0.055] bg-[#1a1c20] px-3.5 text-[13px] font-semibold text-cream/76 transition hover:bg-[#202226] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] lg:inline-flex"
         >
           {state === "loading" ? (
-            <Loader2 size={14} aria-hidden="true" className="animate-spin" />
+            <Loader2 size={14} aria-hidden="true" className="motion-safe:animate-spin" />
           ) : (
             <Volume2 size={14} aria-hidden="true" />
           )}

@@ -2,10 +2,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CoreTechnicalPublicBlock } from "@/features/practice/core-technical/server/practice.service";
 
-const mocks = vi.hoisted(() => ({ refresh: vi.fn(), replace: vi.fn() }));
+const mocks = vi.hoisted(() => ({ refresh: vi.fn(), replace: vi.fn(), push: vi.fn() }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: mocks.refresh, replace: mocks.replace })
+  useRouter: () => ({ refresh: mocks.refresh, replace: mocks.replace, push: mocks.push })
 }));
 
 import { CoreTechnicalAssessment } from "./core-technical-assessment";
@@ -15,6 +15,7 @@ describe("CoreTechnicalAssessment", () => {
     vi.restoreAllMocks();
     mocks.refresh.mockReset();
     mocks.replace.mockReset();
+    mocks.push.mockReset();
     window.sessionStorage.clear();
   });
 
@@ -61,6 +62,24 @@ describe("CoreTechnicalAssessment", () => {
       screen.getByText(/unfinished questions will be recorded as Learned/i)
     ).toBeInTheDocument();
     expect(screen.getByText("Communication & production")).toBeInTheDocument();
+  });
+
+  it("opens a dedicated Core Technical room from the overview", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      response({ assessment: makeAssessment("IN_PROGRESS") })
+    );
+    render(
+      <CoreTechnicalAssessment block={makeBlock("READY")} terminalCount={8} dedicatedRoom={false} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Start assessment" }));
+
+    await waitFor(() =>
+      expect(mocks.push).toHaveBeenCalledWith(
+        `/practice/core-technical/assessment/${ASSESSMENT_ID}?block=${BLOCK_ID}`
+      )
+    );
+    expect(screen.queryByRole("heading", { name: "Five-prompt evidence defence" })).toBeNull();
   });
 
   it("announces validation and moves focus to the first incomplete answer", () => {
@@ -152,10 +171,10 @@ describe("CoreTechnicalAssessment", () => {
     fireEvent.click(screen.getByText("Review your safe transcript"));
     expect(screen.getByText("Saved candidate answer 1")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Continue to next story" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue to next practice path" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/still current/i);
     expect(screen.getByRole("heading", { name: "70/100 overall" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Retry next story" }));
+    fireEvent.click(screen.getByRole("button", { name: "Retry next practice path" }));
 
     await waitFor(() =>
       expect(mocks.replace).toHaveBeenCalledWith(`/practice/core-technical?block=${NEXT_BLOCK_ID}`)

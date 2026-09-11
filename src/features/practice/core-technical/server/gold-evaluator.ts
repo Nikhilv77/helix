@@ -95,16 +95,19 @@ export class CoreTechnicalGoldEvaluator {
         ).length
       : 0;
     const titleMatches = story?.title === goldCase.expected.storyTitle;
-    const stageBlueprintEarned = Math.round(((stageMatches + (titleMatches ? 1 : 0)) / 9) * 15);
+    const expectedCount = goldCase.expected.stagePatternKeys.length;
+    const stageBlueprintEarned = Math.round(
+      ((stageMatches + (titleMatches ? 1 : 0)) / (expectedCount + 1)) * 15
+    );
     metrics.push(
       metric("stage-blueprint", stageBlueprintEarned, 15, [
-        ...(stageMatches !== 8
-          ? [stageMatches + " of 8 stage patterns match the gold blueprint"]
+        ...(stageMatches !== expectedCount
+          ? [stageMatches + ` of ${expectedCount} stage patterns match the gold blueprint`]
           : []),
         ...(!titleMatches ? ["Story title differs from the gold blueprint"] : [])
       ])
     );
-    if (stageMatches !== 8 || !titleMatches) {
+    if (stageMatches !== expectedCount || !titleMatches) {
       hardFailures.push("Generated stages do not match the reviewed interview blueprint");
     }
 
@@ -129,7 +132,9 @@ export class CoreTechnicalGoldEvaluator {
         ...(topicMatches !== goldCase.expected.requiredStoryTopicKeys.length
           ? ["One or more required story topics are missing"]
           : []),
-        ...(mechanismMatches !== 8 ? [mechanismMatches + " of 8 primary mechanisms match"] : [])
+        ...(mechanismMatches !== expectedCount
+          ? [mechanismMatches + ` of ${expectedCount} primary mechanisms match`]
+          : [])
       ])
     );
 
@@ -175,36 +180,40 @@ export class CoreTechnicalGoldEvaluator {
           }).length
         : 0;
     const uniqueQuestionData = block
-      ? new Set(block.questions.map((question) => question.key)).size === 8 &&
-        new Set(block.questions.map((question) => question.prompt)).size === 8 &&
-        new Set(block.questions.map((question) => question.mechanismKeys[0])).size === 8
+      ? new Set(block.questions.map((question) => question.key)).size === expectedCount &&
+        new Set(block.questions.map((question) => question.prompt)).size === expectedCount &&
+        new Set(block.questions.map((question) => question.mechanismKeys[0])).size === expectedCount
       : false;
     const executableEvidence = block
-      ? [5, 6].every((index) => {
-          const question = block.questions[index];
-          return Boolean(
-            question?.starterCode &&
-            question.referenceSolution &&
-            question.publicTests?.length &&
-            question.hiddenTests?.length &&
-            question.runnerContract
-          );
-        })
+      ? block.questions.filter((question) =>
+          ["debug-repair", "micro-implementation"].includes(question.format)
+        ).length === 2 &&
+        block.questions
+          .filter((question) => ["debug-repair", "micro-implementation"].includes(question.format))
+          .every((question) => {
+            return Boolean(
+              question.starterCode &&
+              question.referenceSolution &&
+              question.publicTests?.length &&
+              question.hiddenTests?.length &&
+              question.runnerContract
+            );
+          })
       : false;
     const questionIntegrityEarned =
-      Math.round((linkageMatches / 8) * 12) +
+      Math.round((linkageMatches / expectedCount) * 12) +
       (uniqueQuestionData ? 4 : 0) +
       (executableEvidence ? 4 : 0);
     metrics.push(
       metric("question-integrity", questionIntegrityEarned, 20, [
-        ...(linkageMatches !== 8
-          ? [linkageMatches + " of 8 questions match their frozen story stage"]
+        ...(linkageMatches !== expectedCount
+          ? [linkageMatches + ` of ${expectedCount} questions match their frozen story stage`]
           : []),
         ...(!uniqueQuestionData ? ["Question keys, prompts, or primary mechanisms repeat"] : []),
         ...(!executableEvidence ? ["Executable stages lack complete runner evidence"] : [])
       ])
     );
-    if (linkageMatches !== 8 || !uniqueQuestionData || !executableEvidence) {
+    if (linkageMatches !== expectedCount || !uniqueQuestionData || !executableEvidence) {
       hardFailures.push("Question-block integrity requirements failed");
     }
 

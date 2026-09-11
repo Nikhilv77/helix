@@ -9,13 +9,15 @@ export const CORE_TECHNICAL_PREPARATION_EXPERIENCE: StoryPracticePreparationExpe
   slug: "core-technical",
   apiBase: "/api/practice/core-technical",
   routeBase: "/practice/core-technical",
-  subjectNoun: "story",
-  heading: "What language do you want to practise in?",
-  optionLabel: "Practice language",
+  subjectNoun: "practice path",
+  heading: "What technology do you want to practise?",
+  optionLabel: "Practice technology",
   optionIcon: "code",
-  options: [{ value: "javascript", label: "JavaScript", detail: "Node.js interview stories" }],
+  options: [
+    { value: "javascript", label: "JavaScript", detail: "Practical Node.js interview questions" }
+  ],
   defaultOption: "javascript",
-  buildConfirmation: (language) => ({ language })
+  buildConfirmation: (technology) => ({ technology })
 };
 
 /** First-entry gate. The browser confirms one choice; every focus signal is server-derived. */
@@ -103,7 +105,7 @@ export function CoreTechnicalPreparation({
       sessionStorage.setItem(storageKey, requestId);
       await post(
         `${experience.apiBase}/prepare`,
-        { requestId, focusRevisionId: focusId },
+        { requestId, focusRevisionId: focusId, personalized: true },
         experience.subjectNoun
       );
       sessionStorage.removeItem(storageKey);
@@ -122,7 +124,7 @@ export function CoreTechnicalPreparation({
 
   const selected =
     experience.options.find((option) => option.value === optionValue) ?? experience.options[0];
-  if (!selected) throw new Error("Story Practice requires at least one preparation option.");
+  if (!selected) throw new Error("Core Technical requires at least one preparation option.");
   const headingWords = experience.heading.split(/\s+/);
 
   return (
@@ -265,12 +267,12 @@ export function CoreTechnicalPreparation({
           style={{ transitionDelay: "760ms" }}
         >
           {phase === "idle" ? null : (
-            <Loader2 size={15} className="animate-spin" aria-hidden="true" />
+            <Loader2 size={15} className="motion-safe:animate-spin" aria-hidden="true" />
           )}
           {phase === "confirming"
             ? "Personalising your focus…"
             : phase === "preparing"
-              ? "Preparing all 8 questions…"
+              ? "Preparing your questions…"
               : `Build my first ${experience.subjectNoun}`}
           {phase === "idle" ? (
             <ArrowRight

@@ -64,6 +64,35 @@ export class CoreTechnicalStoryRankingService {
     return deepFreeze(selection);
   }
 
+  /** Validates and personalizes an explicit library choice without overriding the user's choice. */
+  rankSelectedStory(
+    rawFocus: CoreTechnicalConfirmedFocus,
+    storyKey: string,
+    context: CoreTechnicalFirstStoryRankingContext = {}
+  ): CoreTechnicalFirstStorySelection {
+    const focus = coreTechnicalConfirmedFocusSchema.parse(rawFocus);
+    const candidates = coreTechnicalStoryRankingCandidateSchema.array().parse(this.candidates);
+    const candidate = candidates.find((item) => item.key === storyKey);
+    if (!candidate || !this.isSelectable(candidate, focus)) {
+      throw new Error("The selected Core Technical practice path is not available for this focus");
+    }
+    const selectedStory = this.score(
+      candidate,
+      focus,
+      availableDifficulty(candidate, difficultyFor(focus)),
+      context
+    );
+    return deepFreeze(
+      coreTechnicalFirstStorySelectionSchema.parse({
+        policyVersion: CORE_TECHNICAL_FIRST_STORY_RANKING_POLICY_VERSION,
+        focusFingerprint: focus.focusFingerprint,
+        selectedStory,
+        rankings: [selectedStory],
+        reason: `${selectedStory.title} was selected from the reviewed library and personalized for the candidate's level, evidence, and target role.`
+      })
+    );
+  }
+
   rankNextStory(
     rawFocus: CoreTechnicalConfirmedFocus,
     rawEvidence: CoreTechnicalAdaptiveEvidence
@@ -188,6 +217,28 @@ export class CoreTechnicalStoryRankingService {
     );
   }
 
+  private isSelectable(
+    candidate: CoreTechnicalStoryRankingCandidate,
+    focus: CoreTechnicalConfirmedFocus
+  ): boolean {
+    const topics = new Set(NODEJS_CORE_TECHNICAL_DOMAIN_MAP.topics.map((topic) => topic.key));
+    const mechanisms = new Set(
+      NODEJS_CORE_TECHNICAL_DOMAIN_MAP.topics.flatMap((topic) => topic.mechanismKeys)
+    );
+    return (
+      candidate.publicationStatus === "published" &&
+      candidate.roles.includes(focus.role) &&
+      candidate.language === focus.stack.language &&
+      candidate.runtime === focus.stack.runtime &&
+      candidate.runtimeVersion === focus.stack.runtimeVersion &&
+      (candidate.frameworks.length === 0 ||
+        (focus.stack.framework !== null && candidate.frameworks.includes(focus.stack.framework))) &&
+      !candidate.topicKeys.some((key) => focus.excludedTopicKeys.includes(key)) &&
+      candidate.topicKeys.every((key) => topics.has(key)) &&
+      candidate.mechanismKeys.every((key) => mechanisms.has(key))
+    );
+  }
+
   private isEligibleNext(
     candidate: CoreTechnicalStoryRankingCandidate,
     focus: CoreTechnicalConfirmedFocus,
@@ -298,8 +349,12 @@ export class CoreTechnicalStoryRankingService {
 }
 
 function difficultyFor(focus: CoreTechnicalConfirmedFocus): CoreTechnicalRankedStory["difficulty"] {
-  if (focus.baselineEvidence.state === "STANDARD") return "standard";
-  if (focus.baselineEvidence.state === "STRETCH") return "stretch";
+  if (focus.baselineEvidence.state === "STANDARD") {
+    return focus.seniority === "junior" ? "guided" : "standard";
+  }
+  if (focus.baselineEvidence.state === "STRETCH") {
+    return focus.seniority === "senior" ? "stretch" : "standard";
+  }
   return "guided";
 }
 

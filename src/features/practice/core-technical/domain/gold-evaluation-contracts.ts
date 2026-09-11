@@ -54,14 +54,14 @@ export const coreTechnicalGoldCaseSchema = z.object({
   expected: z.object({
     storyTitle: z.string().min(5).max(100),
     difficulty: coreTechnicalDifficultySchema,
-    stagePatternKeys: z.array(identifierSchema).length(8),
-    requiredStoryTopicKeys: z.array(identifierSchema).min(2).max(4),
-    requiredPrimaryMechanismKeys: z.array(identifierSchema).length(8),
+    stagePatternKeys: z.array(identifierSchema).length(6),
+    requiredStoryTopicKeys: z.array(identifierSchema).min(1).max(4),
+    requiredPrimaryMechanismKeys: z.array(identifierSchema).length(6),
     minimumConnectedStages: z.number().int().min(4).max(8),
     minimumUniqueArtifacts: z.number().int().min(4).max(8),
     expectedMinutes: z.object({
-      minimum: z.number().int().min(40).max(50),
-      maximum: z.number().int().min(40).max(50)
+      minimum: z.number().int().min(30).max(50),
+      maximum: z.number().int().min(30).max(50)
     }),
     rationale: z.array(z.string().min(20).max(700)).min(3)
   }),

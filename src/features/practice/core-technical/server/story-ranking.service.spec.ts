@@ -11,7 +11,7 @@ const publishedCatalogue = NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE.map((st
 }));
 
 describe("CoreTechnicalStoryRankingService", () => {
-  it("applies the documented 35/25/15/15/10 policy and selects assessment gaps", () => {
+  it("applies the documented 35/25/15/15/10 policy to the first focused family", () => {
     const service = new CoreTechnicalStoryRankingService(publishedCatalogue);
     const result = service.rankFirstStory(
       focus(
@@ -24,9 +24,9 @@ describe("CoreTechnicalStoryRankingService", () => {
     );
 
     expect(result.policyVersion).toBe(1);
-    expect(result.selectedStory.storyKey).toBe("follow-the-operation");
+    expect(result.selectedStory.storyKey).toBe("javascript-values-copying-mutation");
     expect(result.selectedStory.difficulty).toBe("guided");
-    expect(result.selectedStory.emphasizedConceptKeys).toContain("async-scheduling");
+    expect(result.selectedStory.emphasizedConceptKeys).toContain("javascript-values-and-mutation");
     expect(result.selectedStory.scores).toMatchObject({
       baselineGapTransfer: expect.any(Number),
       targetRoleJob: expect.any(Number),
@@ -39,7 +39,7 @@ describe("CoreTechnicalStoryRankingService", () => {
     expect(Object.isFrozen(result)).toBe(true);
   });
 
-  it("changes the selected story, emphasis, and difficulty when baseline evidence changes", () => {
+  it("keeps the prerequisite-first family while adapting emphasis to baseline evidence", () => {
     const service = new CoreTechnicalStoryRankingService(publishedCatalogue);
     const guided = service.rankFirstStory(
       focus(
@@ -52,23 +52,23 @@ describe("CoreTechnicalStoryRankingService", () => {
     );
     const stretch = service.rankFirstStory(focus(evidence({ state: "STRETCH" })));
 
-    expect(guided.selectedStory.storyKey).toBe("follow-the-operation");
+    expect(guided.selectedStory.storyKey).toBe("javascript-values-copying-mutation");
     expect(guided.selectedStory.difficulty).toBe("guided");
     expect(guided.selectedStory.emphasizedConceptKeys[0]).toBe("javascript-values-and-mutation");
-    expect(stretch.selectedStory.storyKey).toBe("the-operation-fails-halfway");
-    expect(stretch.selectedStory.difficulty).toBe("standard");
+    expect(stretch.selectedStory.storyKey).toBe("javascript-values-copying-mutation");
+    expect(stretch.selectedStory.difficulty).toBe("stretch");
     expect(stretch.reason).toContain("unassessed transfer");
   });
 
   it("uses a broad foundation story when evidence is UNKNOWN", () => {
     const service = new CoreTechnicalStoryRankingService(publishedCatalogue);
     const result = service.rankFirstStory(focus(evidence({ state: "UNKNOWN" })));
-    expect(result.selectedStory.storyKey).toBe("follow-the-operation");
+    expect(result.selectedStory.storyKey).toBe("javascript-values-copying-mutation");
     expect(result.selectedStory.difficulty).toBe("guided");
     expect(result.reason).toContain("baseline evidence is incomplete");
   });
 
-  it("selects the shipped standard block instead of generating an unavailable story variant", () => {
+  it("starts with the shipped prerequisite block before the standard closure family", () => {
     const service = new CoreTechnicalStoryRankingService(publishedCatalogue);
     const result = service.rankFirstStory(
       focus(evidence({ state: "STANDARD" }), {
@@ -81,10 +81,35 @@ describe("CoreTechnicalStoryRankingService", () => {
     );
 
     expect(result.selectedStory).toMatchObject({
-      storyKey: "the-operation-fails-halfway",
-      title: "The operation fails halfway",
+      storyKey: "javascript-values-copying-mutation",
+      title: "Trace and fix shared JavaScript state",
       difficulty: "standard"
     });
+  });
+
+  it("caps difficulty by candidate level even when baseline evidence is stronger", () => {
+    const service = new CoreTechnicalStoryRankingService(publishedCatalogue);
+    const junior = service.rankFirstStory(
+      focus(evidence({ state: "STRETCH" }), { seniority: "junior" })
+    );
+    const mid = service.rankFirstStory(focus(evidence({ state: "STRETCH" }), { seniority: "mid" }));
+
+    expect(junior.selectedStory.difficulty).toBe("standard");
+    expect(mid.selectedStory.difficulty).toBe("standard");
+  });
+
+  it("honors an explicit reviewed-library choice while retaining personalized difficulty", () => {
+    const service = new CoreTechnicalStoryRankingService(publishedCatalogue);
+    const result = service.rankSelectedStory(
+      focus(evidence({ state: "STRETCH" }), { seniority: "mid" }),
+      "javascript-scope-closures-retained-state"
+    );
+
+    expect(result.selectedStory).toMatchObject({
+      storyKey: "javascript-scope-closures-retained-state",
+      difficulty: "standard"
+    });
+    expect(result.reason).toContain("selected from the reviewed library");
   });
 
   it("enforces publication, exact stack, role, framework, prerequisites, and exclusions as hard gates", () => {
@@ -111,23 +136,21 @@ describe("CoreTechnicalStoryRankingService", () => {
     const excluded = focus(evidence({ state: "GUIDED" }), {
       excludedTopicKeys: ["javascript-values-and-mutation"]
     });
-    const result = new CoreTechnicalStoryRankingService(publishedCatalogue).rankFirstStory(
-      excluded
-    );
-    expect(result.selectedStory.storyKey).toBe("the-operation-fails-halfway");
-    expect(result.selectedStory.difficulty).toBe("standard");
+    expect(() =>
+      new CoreTechnicalStoryRankingService(publishedCatalogue).rankFirstStory(excluded)
+    ).toThrow("No published");
   });
 
   it("applies recent-story and topic cooldown without changing the frozen focus", () => {
     const service = new CoreTechnicalStoryRankingService(publishedCatalogue);
-    const confirmed = focus(evidence({ state: "STRETCH" }));
+    const confirmed = focus(evidence({ state: "GUIDED" }));
     const before = JSON.stringify(confirmed);
     const result = service.rankFirstStory(confirmed, {
-      recentStoryKeys: ["the-operation-fails-halfway"],
-      recentTopicKeys: ["nodejs-streams-and-io", "nodejs-event-loop-health"]
+      recentStoryKeys: ["javascript-values-copying-mutation"],
+      recentTopicKeys: ["javascript-values-and-mutation"]
     });
     const repeated = result.rankings.find(
-      (story) => story.storyKey === "the-operation-fails-halfway"
+      (story) => story.storyKey === "javascript-values-copying-mutation"
     )!;
     expect(repeated.scores.storyDiversity).toBeLessThan(10);
     expect(JSON.stringify(confirmed)).toBe(before);
@@ -136,6 +159,7 @@ describe("CoreTechnicalStoryRankingService", () => {
   it("breaks exact score ties by stable story key", () => {
     const duplicateScore = publishedCatalogue.map((story) => ({
       ...story,
+      prerequisiteStoryKeys: [],
       difficulties: ["standard" as const],
       targetKeywords: [],
       topicKeys: ["async-scheduling"],
@@ -146,7 +170,7 @@ describe("CoreTechnicalStoryRankingService", () => {
         resumeEvidence: { topicKeys: [], mechanismKeys: [] }
       })
     );
-    expect(result.rankings[0]!.storyKey).toBe("follow-the-operation");
+    expect(result.rankings[0]!.storyKey).toBe("javascript-scope-closures-retained-state");
   });
 });
 

@@ -6,10 +6,10 @@ import {
 export const NODEJS_CORE_TECHNICAL_GOLD_CASES = coreTechnicalGoldCaseSchema.array().parse([
   {
     goldSetVersion: CORE_TECHNICAL_GOLD_SET_VERSION,
-    key: "follow-operation-guided-benchmark",
-    title: "Follow the operation — guided benchmark",
+    key: "javascript-values-copying-mutation-guided-benchmark",
+    title: "JavaScript values, copying, and mutation — guided benchmark",
     purpose:
-      "Prove that a foundation block turns weak asynchronous execution evidence into one coherent Node.js production investigation without losing interview depth.",
+      "Prove that a foundation path teaches the JavaScript value, reference, copying, and mutation decisions candidates repeatedly explain in practical interviews.",
     candidateContext: {
       role: "backend",
       seniority: "mid",
@@ -17,47 +17,38 @@ export const NODEJS_CORE_TECHNICAL_GOLD_CASES = coreTechnicalGoldCaseSchema.arra
       runtime: "nodejs",
       targetJob: "Backend Engineer",
       baselineState: "GUIDED",
-      weakMechanismKeys: ["event-loop", "resource-cleanup"],
-      unassessedMechanismKeys: ["stream", "worker-thread"],
+      weakMechanismKeys: ["reference-identity", "shallow-copy"],
+      unassessedMechanismKeys: ["structured-clone", "copy-on-write"],
       recentTopicKeys: [],
       excludedTopicKeys: []
     },
     expected: {
-      storyTitle: "Follow the operation",
+      storyTitle: "Trace and fix shared JavaScript state",
       difficulty: "guided",
       stagePatternKeys: [
-        "javascript-identity-mutation-copy",
-        "javascript-event-loop-order",
-        "javascript-closure-lifetime",
-        "javascript-async-error-propagation",
-        "nodejs-deterministic-async-testing",
-        "nodejs-commonjs-esm-boundary",
-        "nodejs-stream-backpressure",
-        "nodejs-request-cancellation"
+        "javascript-reference-identity",
+        "javascript-shallow-copy-aliasing",
+        "javascript-shared-state-mutation",
+        "javascript-mutation-boundary-repair",
+        "javascript-immutable-nested-update",
+        "javascript-copy-strategy-decision"
       ],
-      requiredStoryTopicKeys: [
-        "async-scheduling",
-        "javascript-values-and-mutation",
-        "javascript-scope-and-closures",
-        "errors-and-cancellation"
-      ],
+      requiredStoryTopicKeys: ["javascript-values-and-mutation"],
       requiredPrimaryMechanismKeys: [
         "reference-identity",
-        "event-loop",
-        "lexical-scope",
-        "promise-rejection",
-        "fake-time",
-        "commonjs",
-        "stream",
-        "abort-signal"
+        "shallow-copy",
+        "shared-mutation",
+        "mutation-boundary",
+        "copy-on-write",
+        "defensive-copy"
       ],
-      minimumConnectedStages: 4,
-      minimumUniqueArtifacts: 6,
-      expectedMinutes: { minimum: 40, maximum: 50 },
+      minimumConnectedStages: 5,
+      minimumUniqueArtifacts: 5,
+      expectedMinutes: { minimum: 30, maximum: 40 },
       rationale: [
-        "The opening stages establish JavaScript state and scheduling before asking for production diagnosis.",
-        "The block exercises eight distinct source-backed patterns instead of repeatedly testing event-loop trivia.",
-        "The final stages require repair, implementation, and production reasoning after the mechanism has been traced."
+        "The opening stages establish value and identity reasoning before introducing copy boundaries and nested mutation.",
+        "The path uses six distinct source-backed patterns inside one family rather than mixing unrelated Node.js mechanisms.",
+        "The final stages require diagnosis, executable repair, implementation, and a defensible production copying decision."
       ]
     },
     review: {
@@ -65,16 +56,16 @@ export const NODEJS_CORE_TECHNICAL_GOLD_CASES = coreTechnicalGoldCaseSchema.arra
       reviewerId: "nikhilverma",
       reviewedAt: "2026-09-07",
       notes: [
-        "Approved by the project owner after reviewing the eight-pattern order, primary mechanisms, guided difficulty, coverage rationale, and 40–50 minute scope."
+        "Approved under the project owner's explicit direction to replace the legacy paths with the first focused family; pattern order and technical claims remain source-audited."
       ]
     }
   },
   {
     goldSetVersion: CORE_TECHNICAL_GOLD_SET_VERSION,
-    key: "operation-fails-halfway-standard-benchmark",
-    title: "The operation fails halfway — standard benchmark",
+    key: "javascript-scope-closures-retained-state-standard-benchmark",
+    title: "JavaScript scope, closures, and retained state — standard benchmark",
     purpose:
-      "Prove that an intermediate block tests partial failure, propagation, cancellation, resource lifetime, and bounded recovery through one realistic Node.js incident.",
+      "Prove that an intermediate path tests lexical lookup, closure behaviour, state ownership, retention evidence, cleanup, and production lifecycle decisions.",
     candidateContext: {
       role: "backend",
       seniority: "senior",
@@ -82,47 +73,38 @@ export const NODEJS_CORE_TECHNICAL_GOLD_CASES = coreTechnicalGoldCaseSchema.arra
       runtime: "nodejs",
       targetJob: "Senior Backend Engineer",
       baselineState: "STANDARD",
-      weakMechanismKeys: ["promise-rejection", "abort-signal", "resource-cleanup"],
-      unassessedMechanismKeys: ["backpressure", "concurrency-limit"],
+      weakMechanismKeys: ["lexical-scope", "closure", "garbage-collection-roots"],
+      unassessedMechanismKeys: ["listener-cleanup", "state-ownership"],
       recentTopicKeys: ["javascript-values-and-mutation"],
       excludedTopicKeys: []
     },
     expected: {
-      storyTitle: "The operation fails halfway",
+      storyTitle: "Trace and fix retained JavaScript state",
       difficulty: "standard",
       stagePatternKeys: [
-        "nodejs-commonjs-esm-boundary",
-        "javascript-event-loop-order",
-        "javascript-async-error-propagation",
-        "nodejs-request-cancellation",
-        "nodejs-resource-leak-diagnosis",
-        "nodejs-stream-backpressure",
-        "javascript-promise-concurrency",
-        "nodejs-event-loop-blocking"
+        "javascript-lexical-scope-resolution",
+        "javascript-loop-closure-binding",
+        "javascript-closure-retention-diagnosis",
+        "javascript-listener-closure-cleanup",
+        "javascript-closure-state-implementation",
+        "javascript-state-ownership-decision"
       ],
-      requiredStoryTopicKeys: [
-        "errors-and-cancellation",
-        "nodejs-streams-and-io",
-        "nodejs-event-loop-health",
-        "async-scheduling"
-      ],
+      requiredStoryTopicKeys: ["javascript-scope-and-closures"],
       requiredPrimaryMechanismKeys: [
-        "commonjs",
-        "event-loop",
-        "promise-rejection",
-        "abort-signal",
-        "heap-retention",
-        "stream",
-        "promise-concurrency",
-        "event-loop-lag"
+        "lexical-scope",
+        "loop-binding",
+        "garbage-collection-roots",
+        "listener-cleanup",
+        "encapsulated-state",
+        "state-ownership"
       ],
-      minimumConnectedStages: 6,
-      minimumUniqueArtifacts: 7,
-      expectedMinutes: { minimum: 40, maximum: 50 },
+      minimumConnectedStages: 5,
+      minimumUniqueArtifacts: 5,
+      expectedMinutes: { minimum: 30, maximum: 40 },
       rationale: [
-        "The stage sequence follows one operation from loading and scheduling through partial failure and cleanup.",
-        "Cancellation, backpressure, bounded concurrency, and event-loop health are evaluated as connected production decisions.",
-        "The benchmark requires distinct interview mechanisms and rejects a decorative incident wrapped around unrelated questions."
+        "The stage sequence moves from lexical lookup and loop binding into closure lifetime, retained data, cleanup, and ownership.",
+        "Every question stays inside the scope-and-closures family while using a distinct practical interview mechanism.",
+        "The benchmark requires evidence-led diagnosis, executable repair, implementation, and a production lifecycle decision."
       ]
     },
     review: {
@@ -130,7 +112,7 @@ export const NODEJS_CORE_TECHNICAL_GOLD_CASES = coreTechnicalGoldCaseSchema.arra
       reviewerId: "nikhilverma",
       reviewedAt: "2026-09-07",
       notes: [
-        "Approved by the project owner after reviewing the eight-pattern order, primary mechanisms, standard difficulty, coverage rationale, operational realism, and 40–50 minute scope."
+        "Approved under the project owner's explicit direction to replace the legacy paths with the second focused family; pattern order and technical claims remain source-audited."
       ]
     }
   }

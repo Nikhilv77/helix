@@ -12,62 +12,54 @@ export const NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE: readonly CoreTechnic
   deepFreeze(
     coreTechnicalStoryRankingCandidateSchema.array().parse([
       {
-        key: "follow-the-operation",
-        version: 1,
-        title: "Follow the operation",
+        key: "javascript-values-copying-mutation",
+        version: 2,
+        title: "Trace and fix shared JavaScript state",
         publicationStatus: "published",
         roles: ["backend", "fullstack"],
         language: "javascript",
         runtime: "nodejs",
         runtimeVersion: "22 LTS",
         frameworks: [],
-        // This is the difficulty of the complete, shipped eight-question block.
-        // Advertising unbuilt variants makes preparation fall through to the
-        // expensive live-generation pipeline instead of using the ready block.
-        difficulties: ["guided"],
+        difficulties: ["guided", "standard", "stretch"],
         prerequisiteStoryKeys: [],
-        topicKeys: [
-          "async-scheduling",
-          "javascript-values-and-mutation",
-          "javascript-scope-and-closures",
-          "errors-and-cancellation"
-        ],
+        topicKeys: ["javascript-values-and-mutation"],
         mechanismKeys: [
-          "event-loop",
           "reference-identity",
-          "lexical-scope",
-          "promise-rejection",
-          "resource-cleanup"
+          "shallow-copy",
+          "property-copy",
+          "structured-clone",
+          "shared-mutation",
+          "mutation-boundary",
+          "copy-on-write",
+          "defensive-copy"
         ],
-        targetKeywords: ["backend", "fullstack", "javascript", "node", "api", "request"]
+        targetKeywords: ["backend", "fullstack", "javascript", "typescript", "node", "api"]
       },
       {
-        key: "the-operation-fails-halfway",
-        version: 1,
-        title: "The operation fails halfway",
+        key: "javascript-scope-closures-retained-state",
+        version: 2,
+        title: "Trace and fix retained JavaScript state",
         publicationStatus: "published",
         roles: ["backend", "fullstack"],
         language: "javascript",
         runtime: "nodejs",
         runtimeVersion: "22 LTS",
         frameworks: [],
-        difficulties: ["standard"],
-        prerequisiteStoryKeys: [],
-        topicKeys: [
-          "errors-and-cancellation",
-          "nodejs-streams-and-io",
-          "nodejs-event-loop-health",
-          "async-scheduling"
-        ],
+        difficulties: ["guided", "standard", "stretch"],
+        prerequisiteStoryKeys: ["javascript-values-copying-mutation"],
+        topicKeys: ["javascript-scope-and-closures"],
         mechanismKeys: [
-          "promise-rejection",
-          "abort-signal",
-          "resource-cleanup",
-          "backpressure",
-          "promise-concurrency",
-          "event-loop-lag"
+          "lexical-scope",
+          "loop-binding",
+          "closure",
+          "module-state",
+          "garbage-collection-roots",
+          "listener-cleanup",
+          "encapsulated-state",
+          "state-ownership"
         ],
-        targetKeywords: ["backend", "senior", "reliability", "node", "api", "production"]
+        targetKeywords: ["backend", "fullstack", "javascript", "typescript", "node", "memory"]
       }
     ])
   );

@@ -143,6 +143,9 @@ export class CoreTechnicalQuestionGenerator {
     if (promptWordCount < 24 || promptWordCount > 90) {
       errors.push("prompt is not a focused 24 to 90 word interview question");
     }
+    if (!/\b(?:you|your)\b/i.test(candidate.prompt)) {
+      errors.push("prompt is not written directly to the candidate");
+    }
     if (!candidate.answer.learningGuide) {
       errors.push("question omitted its detailed learning guide");
     } else {
@@ -152,9 +155,13 @@ export class CoreTechnicalQuestionGenerator {
         "## A strong interview answer",
         "## What to avoid"
       ];
+      const headingPositions = requiredHeadings.map((heading) =>
+        candidate.answer.learningGuide!.markdown.indexOf(heading)
+      );
       if (
-        requiredHeadings.some(
-          (heading) => !candidate.answer.learningGuide?.markdown.includes(heading)
+        headingPositions.some((position) => position < 0) ||
+        headingPositions.some(
+          (position, index) => index > 0 && position <= headingPositions[index - 1]!
         )
       ) {
         errors.push("learning guide omitted a required teaching section");
@@ -164,10 +171,10 @@ export class CoreTechnicalQuestionGenerator {
   }
 
   private assertWholeBlock(questions: GeneratedQuestionCandidate[]): void {
-    if (new Set(questions.map((question) => question.key)).size !== 8) {
+    if (new Set(questions.map((question) => question.key)).size !== questions.length) {
       throw new Error("Generated Core Technical question keys must be unique");
     }
-    if (new Set(questions.map((question) => question.prompt)).size !== 8) {
+    if (new Set(questions.map((question) => question.prompt)).size !== questions.length) {
       throw new Error("Generated Core Technical prompts must be unique");
     }
     const primaryMechanisms = questions.map((question) => question.mechanismKeys[0]);

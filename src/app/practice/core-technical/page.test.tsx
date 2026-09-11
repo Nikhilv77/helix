@@ -67,14 +67,14 @@ describe("CoreTechnicalPracticePage", () => {
   it("shows a bounded unavailable state when launch eligibility fails", async () => {
     mocks.eligibility.mockResolvedValue({
       available: false,
-      message: "The reviewed Node.js story path is not available yet.",
+      message: "The reviewed Node.js practice path is not available yet.",
       stories: []
     });
 
     render(await CoreTechnicalPracticePage({ searchParams: Promise.resolve({}) }));
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "The reviewed Node.js story path is not available yet."
+      "The reviewed Node.js practice path is not available yet."
     );
     expect(screen.queryByTestId("preparation")).toBeNull();
   });

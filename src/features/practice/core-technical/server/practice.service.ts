@@ -35,6 +35,11 @@ import {
   publicCoreTechnicalConfirmedFocus
 } from "@/features/practice/core-technical/domain/focus-ranking-contracts";
 import { selectedStorySchema } from "@/features/practice/core-technical/domain/story-contracts";
+import {
+  coreTechnicalPracticeQuestionPrompt,
+  coreTechnicalPracticePathPresentation,
+  coreTechnicalPracticePathReason
+} from "@/features/practice/core-technical/domain/practice-path-presentation";
 import { BadRequestErrorException } from "@/server/common/exceptions/bad-request-error.exception";
 import { ConflictErrorException } from "@/server/common/exceptions/conflict-error.exception";
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
@@ -155,7 +160,7 @@ export class CoreTechnicalPracticeService {
     if (!block) {
       throw new NotFoundErrorException(
         "CORE_TECHNICAL_BLOCK_NOT_FOUND",
-        "Core Technical story block not found."
+        "Core Technical practice path not found."
       );
     }
     return publicBlock(block);
@@ -364,7 +369,11 @@ export class CoreTechnicalPracticeService {
     await this.prisma.$transaction(async (tx) => {
       await lock(tx, input.questionId);
       const question = await tx.coreTechnicalBlockQuestion.findFirst({
-        where: { id: input.questionId, ownerId, block: { isCurrent: true } },
+        where: {
+          id: input.questionId,
+          ownerId,
+          block: { status: CoreTechnicalBlockStatus.PRACTISING }
+        },
         select: { id: true, blockId: true, status: true }
       });
       if (!question) throw questionNotFound();
@@ -388,7 +397,7 @@ export class CoreTechnicalPracticeService {
 
   private async findQuestion(ownerId: string, questionId: string): Promise<QuestionRead> {
     const question = await this.prisma.coreTechnicalBlockQuestion.findFirst({
-      where: { id: questionId, ownerId, block: { isCurrent: true } },
+      where: { id: questionId, ownerId },
       select: questionReadSelect
     });
     if (!question) throw questionNotFound();
@@ -401,7 +410,7 @@ export class CoreTechnicalPracticeService {
         id: questionId,
         ownerId,
         status: CoreTechnicalQuestionStatus.ACTIVE,
-        block: { isCurrent: true, status: CoreTechnicalBlockStatus.PRACTISING }
+        block: { status: CoreTechnicalBlockStatus.PRACTISING }
       },
       select: { id: true, blockId: true, contentFingerprint: true, privateSnapshot: true }
     });
@@ -439,6 +448,8 @@ const attemptReplaySelect = {
 function publicBlock(block: BlockRead) {
   const questions = block.questions.map(publicQuestion);
   const selection = coreTechnicalStorySelectionSchema.parse(block.selectionSnapshot);
+  const storedStory = selectedStorySchema.parse(block.storySnapshot);
+  const story = coreTechnicalPracticePathPresentation(storedStory);
   return {
     id: block.id,
     ordinal: block.ordinal,
@@ -448,12 +459,13 @@ function publicBlock(block: BlockRead) {
     preparedAt: block.preparedAt.toISOString(),
     assessmentReadyAt: block.assessmentReadyAt?.toISOString() ?? null,
     assessedAt: block.assessedAt?.toISOString() ?? null,
-    story: selectedStorySchema.parse(block.storySnapshot),
+    story,
     selection: {
       policyVersion: selection.policyVersion,
       difficulty: selection.selectedStory.difficulty,
       emphasizedConceptKeys: selection.selectedStory.emphasizedConceptKeys,
-      reason: selection.reason
+      reason: coreTechnicalPracticePathReason(selection.reason, storedStory.key, storedStory.title),
+      generationProvenance: selection.generationProvenance ?? null
     },
     focus: publicCoreTechnicalConfirmedFocus(block.focusRevision.focusSnapshot),
     questions,
@@ -498,6 +510,10 @@ function publicQuestion(question: QuestionRead) {
     status: question.status,
     question: {
       ...snapshot,
+      prompt: coreTechnicalPracticeQuestionPrompt({
+        questionKey: question.questionKey,
+        prompt: snapshot.prompt
+      }),
       interviewConnection: answerAuthorized ? frozen.interviewConnection : undefined
     },
     draft: parseDraft(question.state?.draft),
@@ -632,7 +648,7 @@ async function mutableQuestion(tx: Prisma.TransactionClient, ownerId: string, qu
       id: questionId,
       ownerId,
       status: CoreTechnicalQuestionStatus.ACTIVE,
-      block: { isCurrent: true, status: CoreTechnicalBlockStatus.PRACTISING }
+      block: { status: CoreTechnicalBlockStatus.PRACTISING }
     },
     select: { id: true, blockId: true, contentFingerprint: true, privateSnapshot: true }
   });
@@ -688,6 +704,7 @@ async function makeAssessmentReadyIfTerminal(
   const frozen = await tx.coreTechnicalBlock.findUnique({
     where: { id_ownerId: { id: blockId, ownerId } },
     select: {
+      isCurrent: true,
       contentFingerprint: true,
       storySnapshot: true,
       questions: {
@@ -707,6 +724,10 @@ async function makeAssessmentReadyIfTerminal(
     }
   });
   if (!frozen) throw questionNotFound();
+  // Loose library practice saves question progress without creating a second
+  // assessment-bearing path. If this block is promoted later, activation will
+  // unlock its assessment when every saved question is already terminal.
+  if (!frozen.isCurrent) return;
   const assessmentSnapshot = buildCoreTechnicalAssessmentSnapshot({
     blockContentFingerprint: frozen.contentFingerprint,
     storySnapshot: frozen.storySnapshot,

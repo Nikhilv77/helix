@@ -59,6 +59,9 @@ export type StoryPracticeOverviewExperience<TAssessment = unknown, TReport = unk
   label: string;
   environmentLabel: string | null;
   libraryDescription: string;
+  startUnstartedPath?: {
+    endpoint: `/api/practice/${string}`;
+  };
   coachSteps: readonly [string, string, string];
   intro: StoryPracticeIntroExperience;
   assessment: StoryPracticeAssessmentExperience<TAssessment, TReport>;

@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Clock3 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Clock3, Loader2 } from "lucide-react";
+import { useRef, useState } from "react";
 import {
   coreTechnicalQuestionMinutes,
   humanizeCoreTechnicalKey
@@ -32,6 +34,9 @@ const CORE_TECHNICAL_OVERVIEW_EXPERIENCE: StoryPracticeOverviewExperience = {
   subjectNoun: "practice path",
   environmentLabel: "Node.js 22",
   libraryDescription: "Browse practical, reviewed interview question paths for Node.js.",
+  startUnstartedPath: {
+    endpoint: "/api/practice/core-technical/start-path"
+  },
   coachSteps: ["Name the mechanism", "Trace cause and consequence", "Prove the repair"],
   intro: CORE_TECHNICAL_INTRO_EXPERIENCE,
   assessment: CORE_TECHNICAL_ASSESSMENT_EXPERIENCE
@@ -175,6 +180,7 @@ export function CoreTechnicalOverview({
               block={block}
               terminalCount={terminalCount}
               allowEarlyStart={allowEarlyAssessmentStart}
+              dedicatedRoom={false}
               experience={resolvedExperience.assessment}
             />
           </div>
@@ -183,6 +189,7 @@ export function CoreTechnicalOverview({
             entries={storyLibrary}
             history={storyHistory}
             selectedBlockId={block.id}
+            selectedBlock={block}
             experience={resolvedExperience}
           />
         </section>
@@ -195,15 +202,63 @@ function StoryLibrary({
   entries,
   history,
   selectedBlockId,
+  selectedBlock,
   experience
 }: {
   entries: StoryPracticeLibraryEntryView[];
   history: StoryPracticeHistoryListView;
   selectedBlockId: string;
+  selectedBlock: StoryPracticeBlockView;
   experience: StoryPracticeOverviewExperience;
 }) {
-  const cards = storyLibraryCards(entries, history);
+  const router = useRouter();
+  const pending = useRef(false);
+  const [startingKey, setStartingKey] = useState<string | null>(null);
+  const [startError, setStartError] = useState<{ key: string; message: string } | null>(null);
+  const cards = storyLibraryCards(entries, history).sort((left, right) => {
+    const leftIsCurrent = left.history?.isCurrent === true;
+    const rightIsCurrent = right.history?.isCurrent === true;
+    if (leftIsCurrent !== rightIsCurrent) return leftIsCurrent ? -1 : 1;
+    const leftIsSelected = left.history?.id === selectedBlockId;
+    const rightIsSelected = right.history?.id === selectedBlockId;
+    if (leftIsSelected !== rightIsSelected) return leftIsSelected ? -1 : 1;
+    return left.curriculumOrder - right.curriculumOrder;
+  });
   if (!cards.length) return null;
+
+  const openLibraryQuestion = async (storyKey: string, order: number) => {
+    if (!experience.startUnstartedPath || pending.current) return;
+    pending.current = true;
+    const pendingKey = `${storyKey}:${order}`;
+    setStartingKey(pendingKey);
+    setStartError(null);
+    const storageKey = `${experience.slug}-start-path:${storyKey}`;
+    const requestId = sessionStorage.getItem(storageKey) ?? crypto.randomUUID();
+    sessionStorage.setItem(storageKey, requestId);
+    try {
+      const payload = await postLibraryPath(experience.startUnstartedPath.endpoint, {
+        requestId,
+        storyKey
+      });
+      const destination = readPreparedQuestion(payload, order);
+      if (!destination) throw new Error("The prepared question could not be opened.");
+      sessionStorage.removeItem(storageKey);
+      router.push(
+        `${experience.routeBase}/questions/${encodeURIComponent(destination.questionId)}?block=${encodeURIComponent(destination.blockId)}`
+      );
+      router.refresh();
+    } catch (cause) {
+      setStartError({
+        key: storyKey,
+        message:
+          cause instanceof Error
+            ? cause.message
+            : "This practice path could not be prepared. Your progress is safe; try again."
+      });
+      pending.current = false;
+      setStartingKey(null);
+    }
+  };
 
   return (
     <section className="mt-9" aria-labelledby={`${experience.slug}-library-heading`}>
@@ -214,7 +269,9 @@ function StoryLibrary({
         Explore all {experience.label}
       </h2>
       <p className="mt-2 max-w-[42rem] text-[14px] leading-6 text-cream/52">
-        {experience.libraryDescription} Questions stay inside the active {experience.subjectNoun}.
+        {experience.libraryDescription} Practice any question; only the current{" "}
+        {experience.subjectNoun}
+        unlocks an assessment.
       </p>
 
       <div className="mt-4 space-y-3">
@@ -224,6 +281,15 @@ function StoryLibrary({
             card={card}
             index={index}
             selected={card.history?.id === selectedBlockId}
+            selectedBlock={card.history?.id === selectedBlockId ? selectedBlock : null}
+            candidateDifficulty={selectedBlock.selection.difficulty}
+            startingKey={startingKey}
+            startError={startError?.key === card.key ? startError.message : null}
+            onQuestionOpen={
+              experience.startUnstartedPath
+                ? (order) => void openLibraryQuestion(card.key, order)
+                : null
+            }
             experience={experience}
           />
         ))}
@@ -237,7 +303,10 @@ type StoryLibraryCardView = {
   title: string;
   topicKeys: string[];
   difficulties: string[];
+  expectedMinutes: number;
+  questions: NonNullable<StoryPracticeLibraryEntryView["questions"]>;
   history: StoryPracticeHistoryListView[number] | null;
+  curriculumOrder: number;
 };
 
 function storyLibraryCards(
@@ -249,12 +318,15 @@ function storyLibraryCards(
     if (!latestByKey.has(item.story.key)) latestByKey.set(item.story.key, item);
   }
 
-  const cards = entries.map((entry) => ({
+  const cards = entries.map((entry, curriculumOrder) => ({
     key: entry.key,
     title: entry.title,
     topicKeys: entry.topicKeys,
     difficulties: entry.difficulties,
-    history: latestByKey.get(entry.key) ?? null
+    expectedMinutes: entry.expectedMinutes ?? 45,
+    questions: entry.questions ?? [],
+    history: latestByKey.get(entry.key) ?? null,
+    curriculumOrder
   }));
   const known = new Set(cards.map(({ key }) => key));
   for (const item of [...history].sort((left, right) => left.ordinal - right.ordinal)) {
@@ -265,7 +337,14 @@ function storyLibraryCards(
       title: item.story.title,
       topicKeys: [item.story.primaryTopicKey, ...item.story.secondaryTopicKeys],
       difficulties: [item.story.difficulty],
-      history: item
+      expectedMinutes: 45,
+      questions: item.story.stages.map(({ order }) => ({
+        order,
+        title: `Question ${order}`,
+        format: "written"
+      })),
+      history: item,
+      curriculumOrder: cards.length
     });
   }
   return cards;
@@ -275,14 +354,24 @@ function StoryLibraryCard({
   card,
   index,
   selected,
+  selectedBlock,
+  candidateDifficulty,
+  startingKey,
+  startError,
+  onQuestionOpen,
   experience
 }: {
   card: StoryLibraryCardView;
   index: number;
   selected: boolean;
+  selectedBlock: StoryPracticeBlockView | null;
+  candidateDifficulty: StoryPracticeBlockView["selection"]["difficulty"];
+  startingKey: string | null;
+  startError: string | null;
+  onQuestionOpen: ((order: number) => void) | null;
   experience: StoryPracticeOverviewExperience;
 }) {
-  const totalQuestions = card.history?.story.stages.length ?? 8;
+  const totalQuestions = card.questions.length || card.history?.story.stages.length || 8;
   const progressed = card.history
     ? card.history.completedQuestionCount + card.history.learnedQuestionCount
     : 0;
@@ -292,10 +381,10 @@ function StoryLibraryCard({
       ? "Completed"
       : card.history.isCurrent
         ? "Current"
-        : "Practised"
+        : "In progress"
     : "Not started";
-  const className = `group flex min-w-0 flex-col gap-5 rounded-[1.2rem] border px-5 py-5 transition sm:flex-row sm:items-center ${selected ? "border-[var(--workspace-accent-border)] bg-[linear-gradient(110deg,var(--workspace-accent-soft),#17181b_28%)]" : card.history ? "border-white/[0.06] bg-[#17181b] hover:-translate-y-0.5 hover:border-white/[0.11] hover:bg-[#191a1e]" : "border-white/[0.045] bg-[#141518]"}`;
-  const content = (
+  const className = `group overflow-hidden rounded-[1.2rem] border bg-[#17181b] transition duration-200 ${selected ? "border-[var(--workspace-accent-border)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_0_0_1px_var(--workspace-accent-soft),0_18px_48px_rgba(0,0,0,0.24)]" : card.history ? "border-white/[0.075] hover:border-white/[0.14] hover:bg-[#191a1e]" : "border-white/[0.055] bg-[#141518] hover:border-white/[0.11]"}`;
+  const summary = (
     <>
       <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/[0.05] font-mono text-[12px] font-semibold tabular-nums text-[var(--workspace-accent)]">
         {index + 1}
@@ -338,19 +427,203 @@ function StoryLibraryCard({
           />
         </span>
       </span>
+      <ChevronDown
+        size={17}
+        aria-hidden="true"
+        className="shrink-0 text-cream/35 transition-transform duration-200 group-open:rotate-180"
+      />
     </>
   );
 
-  return card.history ? (
-    <Link
-      href={`${experience.routeBase}?block=${encodeURIComponent(card.history.id)}`}
-      aria-current={selected ? "page" : undefined}
-      className={className}
+  const recommendedDifficulty = card.difficulties.includes(candidateDifficulty)
+    ? candidateDifficulty
+    : (card.difficulties[0] ?? candidateDifficulty);
+  const difficulty =
+    selectedBlock?.selection.difficulty ?? card.history?.story.difficulty ?? recommendedDifficulty;
+  const savedQuestionByOrder = new Map(
+    (card.history?.questions ?? []).map((question) => [question.order, question])
+  );
+  const questions = (
+    selectedBlock
+      ? selectedBlock.questions.map((question) => ({
+          order: question.order,
+          title:
+            selectedBlock.story.stages.find(({ order }) => order === question.order)?.title ??
+            `Question ${question.order}`,
+          format: question.question.format,
+          id: question.id,
+          status: question.status
+        }))
+      : card.questions.map((question) => ({
+          ...question,
+          id: savedQuestionByOrder.get(question.order)?.id ?? null,
+          status: savedQuestionByOrder.get(question.order)?.status ?? null
+        }))
+  ).sort((left, right) => left.order - right.order);
+
+  return (
+    <details
+      className={`dsa-chapter-details ${className}`}
+      open={selected || card.history?.isCurrent}
     >
-      {content}
-    </Link>
-  ) : (
-    <article className={className}>{content}</article>
+      <summary
+        className="flex min-h-[7.5rem] cursor-pointer list-none flex-col gap-5 px-5 py-5 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--workspace-accent)] sm:flex-row sm:items-center [&::-webkit-details-marker]:hidden"
+        aria-current={selected ? "page" : undefined}
+      >
+        {summary}
+      </summary>
+      <div className="dsa-chapter-body border-t border-white/[0.06] px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
+        <ul className="grid gap-2.5 lg:grid-cols-2">
+          {questions.map((question) => (
+            <LibraryQuestionRow
+              key={`${card.key}-${question.order}`}
+              question={question}
+              blockId={selectedBlock?.id ?? card.history?.id ?? null}
+              routeBase={experience.routeBase}
+              difficulty={difficulty}
+              minutes={coreTechnicalQuestionMinutes(
+                question.format as Parameters<typeof coreTechnicalQuestionMinutes>[0],
+                selectedBlock?.story.expectedMinutes ?? card.expectedMinutes
+              )}
+              loading={startingKey === `${card.key}:${question.order}`}
+              onOpen={!card.history && onQuestionOpen ? () => onQuestionOpen(question.order) : null}
+            />
+          ))}
+        </ul>
+        {startError ? (
+          <p role="alert" className="px-1 pt-3 text-[11px] leading-5 text-[#e7bd83]">
+            {startError}
+          </p>
+        ) : null}
+      </div>
+    </details>
+  );
+}
+
+async function postLibraryPath(url: string, body: unknown): Promise<unknown> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const payload: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message =
+      isRecord(payload) && isRecord(payload.error) && typeof payload.error.message === "string"
+        ? payload.error.message
+        : "This practice path could not be prepared. Your progress is safe; try again.";
+    throw new Error(message);
+  }
+  return payload;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readPreparedQuestion(
+  payload: unknown,
+  order: number
+): { blockId: string; questionId: string } | null {
+  if (!isRecord(payload) || !isRecord(payload.data) || !isRecord(payload.data.block)) return null;
+  const block = payload.data.block;
+  if (typeof block.id !== "string" || !Array.isArray(block.questions)) return null;
+  const question = block.questions.find(
+    (item) => isRecord(item) && item.order === order && typeof item.id === "string"
+  );
+  return isRecord(question) && typeof question.id === "string"
+    ? { blockId: block.id, questionId: question.id }
+    : null;
+}
+
+function LibraryQuestionRow({
+  question,
+  blockId,
+  routeBase,
+  difficulty,
+  minutes,
+  loading,
+  onOpen
+}: {
+  question: {
+    order: number;
+    title: string;
+    format: string;
+    id: string | null;
+    status: string | null;
+  };
+  blockId: string | null;
+  routeBase: string;
+  difficulty: string;
+  minutes: number;
+  loading: boolean;
+  onOpen: (() => void) | null;
+}) {
+  const completed = question.status === "COMPLETED";
+  const learned = question.status === "LEARNED";
+  const body = (
+    <>
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white/[0.05] text-[12px] font-semibold tabular-nums text-cream/50">
+        {question.order}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="truncate text-[15px] font-semibold tracking-[-0.015em] text-cream/88 group-hover/question:text-cream sm:text-[15.5px]">
+            {question.title}
+          </span>
+          {completed || learned ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--workspace-accent-soft)] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--workspace-accent)]">
+              <Check size={10} aria-hidden="true" /> {completed ? "Solved" : "Learned"}
+            </span>
+          ) : null}
+        </span>
+        <span className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 text-[12.5px] text-cream/50">
+          <span>{humanizeCoreTechnicalKey(question.format)}</span>
+          <span className="text-cream/22">•</span>
+          <span>{humanizeCoreTechnicalKey(difficulty)}</span>
+          <span className="text-cream/22">•</span>
+          <span className="inline-flex items-center gap-1 tabular-nums">
+            <Clock3 size={11} aria-hidden="true" /> {minutes} min
+          </span>
+        </span>
+      </span>
+      {loading ? (
+        <Loader2
+          size={14}
+          className="shrink-0 text-[var(--workspace-accent)] motion-safe:animate-spin"
+          aria-hidden="true"
+        />
+      ) : question.id || onOpen ? (
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-cream/30 group-hover/question:bg-white/[0.05] group-hover/question:text-cream/68">
+          <ArrowRight size={12} aria-hidden="true" />
+        </span>
+      ) : null}
+    </>
+  );
+  const rowClass =
+    "group/question flex h-full min-h-[5rem] items-start gap-3.5 rounded-[1rem] bg-[#111214] p-4";
+  return (
+    <li className="min-w-0">
+      {question.id && blockId ? (
+        <Link
+          href={`${routeBase}/questions/${encodeURIComponent(question.id)}?block=${encodeURIComponent(blockId)}`}
+          className={`${rowClass} transition duration-200 hover:-translate-y-0.5 hover:bg-[#141518] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]`}
+        >
+          {body}
+        </Link>
+      ) : onOpen ? (
+        <button
+          type="button"
+          disabled={loading}
+          onClick={onOpen}
+          className={`${rowClass} w-full text-left transition duration-200 hover:-translate-y-0.5 hover:bg-[#141518] disabled:cursor-wait focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]`}
+        >
+          {body}
+        </button>
+      ) : (
+        <div className={rowClass}>{body}</div>
+      )}
+    </li>
   );
 }
 

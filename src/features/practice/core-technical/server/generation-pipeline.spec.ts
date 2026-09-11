@@ -99,7 +99,8 @@ describe("CoreTechnicalGenerationPipeline", () => {
       story,
       storyReview: report("story", true),
       questionBlock,
-      questionBlockReview: report("question-block", true)
+      questionBlockReview: report("question-block", true),
+      provenance: "live-generated"
     });
     expect(critic.reviewStory).toHaveBeenCalledBefore(critic.reviewQuestionBlock);
   });
@@ -118,6 +119,7 @@ describe("CoreTechnicalGenerationPipeline", () => {
       {
         ...goldCase.candidateContext,
         reviewedContract: {
+          storyKey: "javascript-values-copying-mutation",
           storyTitle: goldCase.expected.storyTitle,
           stagePatternKeys: goldCase.expected.stagePatternKeys,
           requiredStoryTopicKeys: goldCase.expected.requiredStoryTopicKeys
@@ -126,9 +128,24 @@ describe("CoreTechnicalGenerationPipeline", () => {
       { preferApprovedArtifact: true }
     );
 
-    expect(approvedDraft.story.title).toBe("Follow the operation");
+    expect(approvedDraft.story.title).toBe("Trace and fix shared JavaScript state");
     expect(approvedDraft.story.difficulty).toBe("guided");
-    expect(approvedDraft.questionBlock.questions).toHaveLength(8);
+    expect(approvedDraft.questionBlock.questions).toHaveLength(6);
+    expect(
+      approvedDraft.questionBlock.questions.every((question) => {
+        const guide = question.answer.learningGuide;
+        return (
+          guide !== undefined &&
+          guide.markdown.includes("## What is happening") &&
+          guide.markdown.includes("## How to reason through it") &&
+          guide.markdown.includes("## A strong interview answer") &&
+          guide.markdown.includes("## What to avoid") &&
+          guide.diagram.steps.length >= 2 &&
+          guide.diagram.steps.length <= 6
+        );
+      })
+    ).toBe(true);
+    expect(approvedDraft.provenance).toBe("reviewed-artifact");
     expect(setupResult.storyGenerator.generate).not.toHaveBeenCalled();
     expect(setupResult.questionGenerator.generateDraftBlock).not.toHaveBeenCalled();
     expect(setupResult.critic.reviewStory).not.toHaveBeenCalled();
@@ -166,7 +183,7 @@ describe("CoreTechnicalGenerationPipeline", () => {
       pipeline.prepareReviewedDraft({} as never, {
         fallbackToApprovedArtifactOnProviderFailure: true
       })
-    ).resolves.toEqual(reviewedDraft);
+    ).resolves.toEqual({ ...reviewedDraft, provenance: "reviewed-fallback" });
     expect(approvedDraftResolver).toHaveBeenCalledOnce();
     expect(setupResult.questionGenerator.generateDraftBlock).not.toHaveBeenCalled();
     expect(warning).toHaveBeenCalledWith(
@@ -174,15 +191,16 @@ describe("CoreTechnicalGenerationPipeline", () => {
     );
   });
 
-  it("does not reuse an approved artifact at a different difficulty", async () => {
+  it("calibrates a reviewed fallback to the selected candidate difficulty", async () => {
     const setupResult = setup();
     const goldCase = NODEJS_CORE_TECHNICAL_GOLD_CASES[0]!;
 
-    await setupResult.pipeline.prepareReviewedDraft(
+    const draft = await setupResult.pipeline.prepareReviewedDraft(
       {
         ...goldCase.candidateContext,
         baselineState: "STRETCH",
         reviewedContract: {
+          storyKey: "javascript-values-copying-mutation",
           storyTitle: goldCase.expected.storyTitle,
           stagePatternKeys: goldCase.expected.stagePatternKeys,
           requiredStoryTopicKeys: goldCase.expected.requiredStoryTopicKeys
@@ -191,7 +209,9 @@ describe("CoreTechnicalGenerationPipeline", () => {
       { preferApprovedArtifact: true }
     );
 
-    expect(setupResult.storyGenerator.generate).toHaveBeenCalledTimes(1);
+    expect(draft.story.difficulty).toBe("stretch");
+    expect(draft.provenance).toBe("reviewed-artifact");
+    expect(setupResult.storyGenerator.generate).not.toHaveBeenCalled();
   });
 
   it("does not generate questions when the story review fails", async () => {
