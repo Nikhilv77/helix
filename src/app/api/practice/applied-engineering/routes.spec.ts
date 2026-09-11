@@ -25,6 +25,7 @@ vi.mock("@/server/rate-limit/shared-guard", async (importOriginal) => {
 
 import { POST as confirm } from "./confirm/handler";
 import { POST as prepare } from "./prepare/handler";
+import { POST as startPath } from "./start-path/handler";
 import { POST as startAssessment } from "./assessment/start/handler";
 
 const FOCUS_ID = "11111111-1111-4111-8111-111111111111";
@@ -95,10 +96,14 @@ describe("Applied Engineering representative API routes", () => {
   it("passes the explicit development-only early-start flag to assessment start", async () => {
     const release = vi.fn();
     mocks.acquire.mockResolvedValue({ release });
-    const start = vi.fn().mockResolvedValue({ id: ASSESSMENT_ID, status: "IN_PROGRESS" });
+    const startOrResume = vi.fn().mockResolvedValue({
+      assessment: { id: ASSESSMENT_ID, status: "IN_PROGRESS" },
+      sessionId: ASSESSMENT_ID,
+      created: true
+    });
     const app = {
       config: { nodeEnv: "development" },
-      appliedEngineeringAssessmentService: { start }
+      appliedEngineeringAssessmentRuntimeService: { startOrResume }
     };
     mocks.owner.mockResolvedValue({ ownerId: "owner-1", app, profile: {} });
     const request = post("/assessment/start", {
@@ -109,14 +114,45 @@ describe("Applied Engineering representative API routes", () => {
     const response = await startAssessment(request);
 
     expect(response.status).toBe(200);
-    expect(start).toHaveBeenCalledWith(
+    expect(startOrResume).toHaveBeenCalledWith(
       "owner-1",
       { assessmentId: ASSESSMENT_ID, requestId: REQUEST_ID },
       { allowLocked: true }
     );
+    await expect(response.json()).resolves.toMatchObject({
+      data: { sessionId: ASSESSMENT_ID, created: true }
+    });
     expect(mocks.acquire).toHaveBeenCalledWith(
       expect.objectContaining({ namespace: "applied-engineering-assessment-start" }),
       `owner-1:${ASSESSMENT_ID}`
+    );
+    expect(release).toHaveBeenCalledOnce();
+  });
+
+  it("materializes a reviewed library incident under a per-incident lease", async () => {
+    const release = vi.fn();
+    mocks.acquire.mockResolvedValue({ release });
+    const start = vi.fn().mockResolvedValue({ replayed: false, block: { id: "block-2" } });
+    const app = {
+      config: { nodeEnv: "test" },
+      appliedEngineeringPreparationService: { startPath: start }
+    };
+    mocks.owner.mockResolvedValue({ ownerId: "owner-1", app, profile: {} });
+    const request = post("/start-path", {
+      requestId: REQUEST_ID,
+      storyKey: "latency-cascade-under-load"
+    });
+
+    const response = await startPath(request);
+
+    expect(response.status).toBe(200);
+    expect(start).toHaveBeenCalledWith("owner-1", {
+      requestId: REQUEST_ID,
+      storyKey: "latency-cascade-under-load"
+    });
+    expect(mocks.acquire).toHaveBeenCalledWith(
+      expect.objectContaining({ namespace: "applied-engineering-start-path" }),
+      "owner-1:latency-cascade-under-load"
     );
     expect(release).toHaveBeenCalledOnce();
   });

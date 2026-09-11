@@ -30,3 +30,29 @@ export function assertStoryPracticeContinuationReady<TReport>(
     throw notReady();
   }
 }
+
+export function terminalStoryPracticeContinuation(input: {
+  masteredKeys: string[];
+  assessmentScores: Record<string, number>;
+  learnedCount: number;
+  meanVerifiedScore: number;
+  weakKeys: string[];
+  readySummary: string;
+  completeSummary: string;
+}) {
+  const scores = Object.values(input.assessmentScores);
+  const assessmentAverage =
+    scores.reduce((sum, score) => sum + score, 0) / Math.max(1, scores.length);
+  const ready =
+    assessmentAverage >= 70 &&
+    input.learnedCount === 0 &&
+    input.meanVerifiedScore >= 7 &&
+    input.weakKeys.length === 0;
+  return ready
+    ? {
+        kind: "ready" as const,
+        masteredKeys: [...new Set(input.masteredKeys)].sort(),
+        summary: input.readySummary
+      }
+    : { kind: "complete" as const, summary: input.completeSummary };
+}

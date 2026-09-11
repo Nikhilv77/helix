@@ -72,6 +72,63 @@ describe("CoreTechnicalAssessmentRuntimeService", () => {
     );
   });
 
+  it("resumes a Core room saved with only the legacy assessment identity", async () => {
+    const snapshot = assessmentSnapshot();
+    const assessments = { start: vi.fn().mockResolvedValue({ id: ASSESSMENT_ID }) };
+    const interviews = {
+      start: vi.fn().mockResolvedValue({ state: { id: ASSESSMENT_ID }, created: false })
+    };
+    const prisma = {
+      coreTechnicalAssessment: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: ASSESSMENT_ID,
+          blockId: BLOCK_ID,
+          assessmentSnapshot: snapshot,
+          block: {
+            storySnapshot: { title: "Trace retained state" },
+            owner: { targetRole: "backend", level: "3-5", context: null }
+          }
+        })
+      },
+      interviewSession: {
+        findUnique: vi.fn().mockResolvedValue({
+          ownerId: "owner-one",
+          state: {
+            setup: {
+              coreTechnicalAssessment: {
+                kind: "core-technical-assessment",
+                blockId: BLOCK_ID,
+                assessmentId: ASSESSMENT_ID
+              }
+            }
+          }
+        })
+      }
+    };
+    const runtime = new CoreTechnicalAssessmentRuntimeService(
+      prisma as never,
+      assessments as never,
+      interviews as never
+    );
+
+    await expect(
+      runtime.startOrResume("owner-one", {
+        assessmentId: ASSESSMENT_ID,
+        requestId: "33333333-3333-4333-8333-333333333333"
+      })
+    ).resolves.toMatchObject({ sessionId: ASSESSMENT_ID, created: false });
+
+    expect(interviews.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storyPracticeAssessment: expect.objectContaining({ practice: "core-technical" })
+      }),
+      "owner-one",
+      expect.any(Number),
+      expect.any(Array),
+      ASSESSMENT_ID
+    );
+  });
+
   it("keeps private evaluation material server-only in the plan guide", () => {
     const snapshot = assessmentSnapshot();
     const plan = buildCoreTechnicalAssessmentPlan(snapshot);

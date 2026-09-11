@@ -3,6 +3,10 @@ import {
   coreTechnicalAssessmentMoveOnUtterance,
   coreTechnicalAssessmentOpening
 } from "./core-technical-assessment-dialogue";
+import {
+  storyPracticeAssessmentDialogue,
+  storyPracticeAssessmentOpening
+} from "./story-practice-assessment-dialogue";
 
 describe("Core Technical assessment dialogue", () => {
   it("opens as a spoken, teaching-led five-prompt assessment", () => {
@@ -38,6 +42,17 @@ describe("Core Technical assessment dialogue", () => {
     expect(text).toContain("point to carry forward");
     expect(text).toContain("cleanup boundary");
     expect(text).toContain("How would you diagnose it?");
+  });
+
+  it("uses production-specific language for Applied Engineering without forking the room", () => {
+    const text = storyPracticeAssessmentOpening(
+      state(),
+      storyPracticeAssessmentDialogue("applied-engineering")
+    );
+
+    expect(text).toContain("five focused prompts");
+    expect(text).toMatch(/production signal|engineer on call|safe repair/i);
+    expect(text).toContain("Why does this closure retain state?");
   });
 });
 

@@ -61,8 +61,51 @@ describe("Applied Engineering presentation adapter", () => {
       debuggingImplementation: 64,
       communicationProduction: 55
     });
-    expect(view.assessment?.report?.nextStory.selectedStory.emphasizedConceptKeys).toEqual([
+    expect(view.assessment?.report?.nextStory!.selectedStory.emphasizedConceptKeys).toEqual([
       "rollout-safety"
     ]);
+  });
+
+  it("preserves a terminal completion without inventing a next incident", () => {
+    const view = appliedEngineeringBlockView({
+      incident: { productionSignalKeys: [] },
+      selection: { emphasizedSignalKeys: [] },
+      questions: [],
+      assessment: {
+        assessment: null,
+        transcript: null,
+        report: {
+          scores: {
+            diagnosisEvidence: 80,
+            implementationCorrectness: 80,
+            testingVerification: 80,
+            productionJudgment: 80,
+            ownershipDelivery: 80
+          },
+          overallScore: 80,
+          teacherSummary: "The available curriculum has been completed with solid evidence.",
+          strengths: ["Evidence-led diagnosis"],
+          improvementAreas: ["Keep practising rollout thresholds"],
+          promptFeedback: [],
+          solvedVsLearned: {
+            completedCount: 8,
+            learnedCount: 0,
+            masteryCreditNote: "All eight questions received solved mastery credit."
+          },
+          deterministicEvidence: {
+            acceptedCodeQuestionCount: 2,
+            totalCodeQuestionCount: 2,
+            implementationScoreCapped: false
+          },
+          continuation: {
+            kind: "complete",
+            summary: "Every currently eligible Applied Engineering incident is complete."
+          }
+        }
+      }
+    } as unknown as AppliedEngineeringPublicBlock);
+
+    expect(view.assessment?.report?.nextStory).toBeUndefined();
+    expect(view.assessment?.report?.continuation).toMatchObject({ kind: "complete" });
   });
 });

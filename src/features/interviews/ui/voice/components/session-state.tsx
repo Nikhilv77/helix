@@ -119,7 +119,8 @@ export function SessionStateScreen({
   answers = 0,
   workspaceAccent,
   blockAssessmentBlockId = null,
-  coreTechnicalBlockId = null
+  coreTechnicalBlockId = null,
+  storyPracticeAssessment = null
 }: {
   kind: "expired" | "complete";
   duration?: number;
@@ -127,6 +128,11 @@ export function SessionStateScreen({
   workspaceAccent: WorkspaceAccent;
   blockAssessmentBlockId?: string | null;
   coreTechnicalBlockId?: string | null;
+  storyPracticeAssessment?: {
+    blockId: string;
+    routeBase: string;
+    label: string;
+  } | null;
 }) {
   const teacher = useWorkspaceTeacher();
   const complete = kind === "complete";
@@ -150,7 +156,7 @@ export function SessionStateScreen({
                 Interview complete.
               </h1>
               <p className="mx-auto mt-4 max-w-2xl text-pretty text-sm leading-7 text-cream/62 sm:text-base">
-                {blockAssessmentBlockId || coreTechnicalBlockId
+                {blockAssessmentBlockId || coreTechnicalBlockId || storyPracticeAssessment
                   ? `Your assessment is saved. Review the five scores and feedback ${teacher.name} recorded for this block.`
                   : `Your conversation is safely recorded. Take a breath, then review the signals ${teacher.name} found or begin another focused round.`}
               </p>
@@ -179,13 +185,15 @@ export function SessionStateScreen({
             </div>
 
             <div className="mx-auto mt-5 flex max-w-xs flex-col gap-2.5">
-              {blockAssessmentBlockId || coreTechnicalBlockId ? (
+              {blockAssessmentBlockId || coreTechnicalBlockId || storyPracticeAssessment ? (
                 <>
                   <Link
                     href={
                       blockAssessmentBlockId
                         ? `/practice/dsa?block=${encodeURIComponent(blockAssessmentBlockId)}`
-                        : `/practice/core-technical?block=${encodeURIComponent(coreTechnicalBlockId!)}`
+                        : storyPracticeAssessment
+                          ? `${storyPracticeAssessment.routeBase}?block=${encodeURIComponent(storyPracticeAssessment.blockId)}`
+                          : `/practice/core-technical?block=${encodeURIComponent(coreTechnicalBlockId!)}`
                     }
                     className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white"
                   >
@@ -194,10 +202,18 @@ export function SessionStateScreen({
                     <ArrowRight size={15} aria-hidden="true" />
                   </Link>
                   <Link
-                    href={blockAssessmentBlockId ? "/practice/dsa" : "/practice/core-technical"}
+                    href={
+                      blockAssessmentBlockId
+                        ? "/practice/dsa"
+                        : (storyPracticeAssessment?.routeBase ?? "/practice/core-technical")
+                    }
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-cream/58 transition hover:bg-white/[0.04] hover:text-cream"
                   >
-                    Return to current {blockAssessmentBlockId ? "DSA" : "Core Technical"} practice
+                    Return to current{" "}
+                    {blockAssessmentBlockId
+                      ? "DSA"
+                      : (storyPracticeAssessment?.label ?? "Core Technical")}{" "}
+                    practice
                     <ArrowRight size={15} aria-hidden="true" />
                   </Link>
                 </>

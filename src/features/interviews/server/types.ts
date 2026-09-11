@@ -4,6 +4,10 @@ import type {
   QuestionFormat,
   SessionBlueprint
 } from "@/features/interviews/domain/personalized-plan";
+import {
+  storyPracticeAssessmentIdentityFromSetup,
+  type StoryPracticeAssessmentIdentity
+} from "@/features/practice/shared/server/contracts";
 
 export const ROLES = ["backend", "frontend", "fullstack", "data", "ai-ml", "pm"] as const;
 export const LEVELS = ["fresher", "0-2", "3-5", "5-plus"] as const;
@@ -62,6 +66,16 @@ export interface InterviewSetup {
    * question bank rather than from a model call.
    */
   fundamentalsRound?: boolean;
+  /**
+   * Neutral durable identity for Core, Applied, and future story-practice
+   * assessment rooms. Legacy domain-specific identities remain readable while
+   * saved sessions migrate additively.
+   */
+  storyPracticeAssessment?: StoryPracticeAssessmentIdentity;
+  storyPracticeAssessmentPresentation?: {
+    evidenceAnchorLabel: string;
+    stages: Array<{ id: "rapid" | "explain" | "scenario"; label: string; caption: string }>;
+  };
   /**
    * Explicit durable identity for the frozen end-of-block DSA assessment.
    * This deliberately does not depend on a display title: both answer grading
@@ -131,6 +145,13 @@ export interface PlannedQuestion {
   };
   /** Server-only answer and rubric evidence for a Core Technical prompt. */
   coreTechnicalInterviewerGuide?: {
+    expectedAnswer: string;
+    rubric: Array<{ criterion: string; points: number }>;
+  };
+  /** Neutral server-only guide for Core, Applied, and future story-practice assessments. */
+  storyPracticeInterviewerGuide?: {
+    practice: StoryPracticeAssessmentIdentity["practice"];
+    label: string;
     expectedAnswer: string;
     rubric: Array<{ criterion: string; points: number }>;
   };
@@ -344,6 +365,6 @@ export function roundCaps(setup: InterviewSetup | undefined): RoundCaps {
 export function isResumableBlockAssessment(setup: InterviewSetup | undefined): boolean {
   return (
     setup?.dsaBlockAssessment?.kind === "dsa-block-assessment" ||
-    setup?.coreTechnicalAssessment?.kind === "core-technical-assessment"
+    storyPracticeAssessmentIdentityFromSetup(setup) !== null
   );
 }

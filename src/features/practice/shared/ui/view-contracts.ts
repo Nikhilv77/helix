@@ -121,6 +121,20 @@ export type StoryPracticeAssessmentSnapshotView = {
   } | null;
 };
 
+export type StoryPracticeContinuationDecisionView<TNext = StoryPracticeNextItemView> =
+  | { kind: "continue"; next: TNext }
+  | { kind: "ready"; masteredKeys: string[]; summary: string }
+  | { kind: "complete"; summary: string };
+
+export type StoryPracticeNextItemView = {
+  reason: string;
+  selectedStory: {
+    title: string;
+    difficulty: StoryPracticeDifficulty;
+    emphasizedConceptKeys: string[];
+  };
+};
+
 export type StoryPracticeAssessmentReportView = {
   scores: {
     technicalAccuracy: number;
@@ -144,14 +158,9 @@ export type StoryPracticeAssessmentReportView = {
     totalCodeQuestionCount: number;
     implementationScoreCapped: boolean;
   };
-  nextStory: {
-    reason: string;
-    selectedStory: {
-      title: string;
-      difficulty: StoryPracticeDifficulty;
-      emphasizedConceptKeys: string[];
-    };
-  };
+  /** Compatibility projection while domain reports migrate to `continuation`. */
+  nextStory?: StoryPracticeNextItemView;
+  continuation?: StoryPracticeContinuationDecisionView;
 };
 
 export type StoryPracticeAssessmentView = {

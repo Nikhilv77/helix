@@ -90,7 +90,7 @@ const AGENT_JOIN_TIMEOUT_MS = 15_000;
 const MIC_SILENCE_WARNING_MS = 6_000;
 const MIC_DEVICE_STORAGE_KEY = "trailgrad.preferredMicrophone";
 const TYPED_ANSWER_TOPIC = "trailgrad.typed-answer";
-const CORE_TECHNICAL_ASSESSMENT_STAGES = [
+const LEGACY_CORE_TECHNICAL_ASSESSMENT_STAGES = [
   { id: "rapid" as const, label: "Review", caption: "Your saved path evidence" },
   { id: "explain" as const, label: "Diagnose & repair", caption: "Mechanism transfer" },
   { id: "scenario" as const, label: "Production", caption: "Prove and ship" }
@@ -165,6 +165,19 @@ export function VoiceInterviewClient({
   const [spokenAgentTurnKeys, setSpokenAgentTurnKeys] = useState<Set<string>>(new Set());
   const [phase, setPhase] = useState<Phase>("questioning");
   const [setup, setSetup] = useState<InterviewSetup | null>(null);
+  const storyPracticeAssessment = useMemo(
+    () =>
+      setup?.storyPracticeAssessment ??
+      (setup?.coreTechnicalAssessment?.kind === "core-technical-assessment"
+        ? {
+            kind: "story-practice-assessment" as const,
+            practice: "core-technical" as const,
+            blockId: setup.coreTechnicalAssessment.blockId,
+            assessmentId: setup.coreTechnicalAssessment.assessmentId
+          }
+        : null),
+    [setup?.coreTechnicalAssessment, setup?.storyPracticeAssessment]
+  );
   const [currentQuestion, setCurrentQuestion] = useState<InterviewQuestion | null>(null);
   const [progress, setProgress] = useState({ index: 0, count: 4, followUps: 0 });
   const [planStages, setPlanStages] = useState<Array<InterviewStage | null>>([]);
@@ -654,7 +667,7 @@ export function VoiceInterviewClient({
     if (
       setup?.templateTitle === "DSA practice interview" ||
       setup?.dsaBlockAssessment?.kind === "dsa-block-assessment" ||
-      setup?.coreTechnicalAssessment?.kind === "core-technical-assessment"
+      storyPracticeAssessment !== null
     ) {
       setTypedStartedAt(Date.now());
       return;
@@ -672,7 +685,7 @@ export function VoiceInterviewClient({
     setTypedNotes("");
     setTypedStartedAt(null);
   }, [
-    setup?.coreTechnicalAssessment?.kind,
+    storyPracticeAssessment,
     setup?.dsaBlockAssessment?.kind,
     setup?.fundamentalsRound,
     setup?.resumeRound,
@@ -697,7 +710,7 @@ export function VoiceInterviewClient({
   useEffect(() => {
     if (
       setup?.dsaBlockAssessment?.kind !== "dsa-block-assessment" &&
-      setup?.coreTechnicalAssessment?.kind !== "core-technical-assessment"
+      storyPracticeAssessment === null
     )
       return;
     // Assessment questions are a strict sequence. Do not carry a previous
@@ -719,7 +732,7 @@ export function VoiceInterviewClient({
     currentQuestion?.kind,
     dsaLanguage,
     progress.index,
-    setup?.coreTechnicalAssessment?.kind,
+    storyPracticeAssessment,
     setup?.dsaBlockAssessment?.kind
   ]);
 
@@ -1019,8 +1032,8 @@ export function VoiceInterviewClient({
     if (!sessionId) return;
 
     const dsaBlockId = setup?.dsaBlockAssessment?.blockId;
-    const coreTechnicalBlockId = setup?.coreTechnicalAssessment?.blockId;
-    if (dsaBlockId || coreTechnicalBlockId) {
+    const storyPracticeBlockId = storyPracticeAssessment?.blockId;
+    if (dsaBlockId || storyPracticeBlockId) {
       // Leaving never submits a partial block assessment. The same frozen
       // session stays resumable until every prompt is answered or skipped.
       intentionalDisconnectRef.current = true;
@@ -1028,7 +1041,7 @@ export function VoiceInterviewClient({
       router.push(
         dsaBlockId
           ? `/practice/dsa?block=${encodeURIComponent(dsaBlockId)}`
-          : `/practice/core-technical?block=${encodeURIComponent(coreTechnicalBlockId!)}`
+          : `/practice/${storyPracticeAssessment!.practice}?block=${encodeURIComponent(storyPracticeBlockId!)}`
       );
       return;
     }
@@ -1039,28 +1052,23 @@ export function VoiceInterviewClient({
     await endInterview(sessionId).catch(() => null);
     intentionalDisconnectRef.current = true;
     await roomRef.current?.disconnect();
-  }, [
-    router,
-    sessionId,
-    setup?.coreTechnicalAssessment?.blockId,
-    setup?.dsaBlockAssessment?.blockId
-  ]);
+  }, [router, sessionId, setup?.dsaBlockAssessment?.blockId, storyPracticeAssessment]);
 
   useEffect(() => {
     if (elapsed < hardCapMs || status === "ended" || sessionUnavailable) return;
     if (
       setup?.dsaBlockAssessment?.kind === "dsa-block-assessment" ||
-      setup?.coreTechnicalAssessment?.kind === "core-technical-assessment"
+      storyPracticeAssessment !== null
     )
       return;
     void stop();
   }, [
     elapsed,
     sessionUnavailable,
-    setup?.coreTechnicalAssessment?.kind,
     setup?.dsaBlockAssessment?.kind,
     status,
-    stop
+    stop,
+    storyPracticeAssessment
   ]);
 
   async function reconnect() {
@@ -1137,9 +1145,8 @@ export function VoiceInterviewClient({
     "Selected microphone";
   const isDsaInterview = setup?.templateTitle === "DSA practice interview";
   const isBlockAssessment = setup?.dsaBlockAssessment?.kind === "dsa-block-assessment";
-  const isCoreTechnicalAssessment =
-    setup?.coreTechnicalAssessment?.kind === "core-technical-assessment";
-  const isAnyBlockAssessment = isBlockAssessment || isCoreTechnicalAssessment;
+  const isStoryPracticeAssessment = storyPracticeAssessment !== null;
+  const isAnyBlockAssessment = isBlockAssessment || isStoryPracticeAssessment;
   const isResumeRound = setup?.resumeRound === true;
   const isFundamentalsRound = setup?.fundamentalsRound === true;
 
@@ -1194,7 +1201,18 @@ export function VoiceInterviewClient({
         duration={Math.min(elapsed, hardCapMs)}
         answers={turns.filter((turn) => turn.speaker === "user").length}
         blockAssessmentBlockId={setup?.dsaBlockAssessment?.blockId ?? null}
-        coreTechnicalBlockId={setup?.coreTechnicalAssessment?.blockId ?? null}
+        storyPracticeAssessment={
+          storyPracticeAssessment
+            ? {
+                blockId: storyPracticeAssessment.blockId,
+                routeBase: `/practice/${storyPracticeAssessment.practice}`,
+                label:
+                  storyPracticeAssessment.practice === "applied-engineering"
+                    ? "Applied Engineering"
+                    : "Core Technical"
+              }
+            : null
+        }
       />
     );
   }
@@ -1297,7 +1315,7 @@ export function VoiceInterviewClient({
           candidateCameraStream={candidateCameraStream}
           onDisableCamera={disableCandidateCamera}
         />
-      ) : isCoreTechnicalAssessment ? (
+      ) : isStoryPracticeAssessment ? (
         <BlockAssessmentReviewWorkspace
           question={currentQuestion}
           questionIndex={progress.index}
@@ -1323,8 +1341,13 @@ export function VoiceInterviewClient({
           onRequestMic={() => void toggleMic()}
           candidateCameraStream={candidateCameraStream}
           onDisableCamera={disableCandidateCamera}
-          stages={CORE_TECHNICAL_ASSESSMENT_STAGES}
-          anchorLabel="Practice evidence"
+          stages={
+            setup?.storyPracticeAssessmentPresentation?.stages ??
+            LEGACY_CORE_TECHNICAL_ASSESSMENT_STAGES
+          }
+          anchorLabel={
+            setup?.storyPracticeAssessmentPresentation?.evidenceAnchorLabel ?? "Practice evidence"
+          }
         />
       ) : isBlockAssessment && currentQuestion?.kind === "mcq" ? (
         <BlockAssessmentReviewWorkspace

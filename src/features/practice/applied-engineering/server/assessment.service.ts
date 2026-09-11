@@ -19,6 +19,9 @@ import { ConflictErrorException } from "@/server/common/exceptions/conflict-erro
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 import { ServiceUnavailableErrorException } from "@/server/common/exceptions/service-unavailable-error.exception";
 import type { PrismaService } from "@/server/database/prisma.service";
+import type { InterviewState } from "@/features/interviews/server/types";
+import { storyPracticeAssessmentIdentityFromSetup } from "@/features/practice/shared/server/contracts";
+import { storyPracticeInterviewResponses } from "@/features/practice/shared/server/assessment-transcript";
 import {
   assertStoryPracticeAssessmentResponses,
   storyPracticeAssessmentStartDisposition
@@ -341,6 +344,81 @@ export class AppliedEngineeringAssessmentService {
       ]);
     }, transactionOptions);
     return this.read(ownerId, input.assessmentId);
+  }
+
+  /** Converts a completed shared voice-room transcript into the Applied five-score report. */
+  async finalizeInterviewOwned(ownerId: string, sessionId: string) {
+    const session = await this.prisma.interviewSession.findFirst({
+      where: { id: sessionId, ownerId },
+      select: { state: true }
+    });
+    const state = session?.state as unknown as InterviewState | undefined;
+    const identity = storyPracticeAssessmentIdentityFromSetup(state?.setup);
+    if (!state || identity?.practice !== "applied-engineering") return null;
+    if (state.id !== sessionId || identity.assessmentId !== sessionId || state.phase !== "done") {
+      return null;
+    }
+
+    const assessment = await this.prisma.appliedEngineeringAssessment.findFirst({
+      where: { id: identity.assessmentId, ownerId },
+      select: { blockId: true, assessmentSnapshot: true }
+    });
+    if (!assessment?.assessmentSnapshot || assessment.blockId !== identity.blockId) return null;
+    const snapshot = appliedEngineeringAssessmentSnapshotSchema.parse(
+      assessment.assessmentSnapshot
+    );
+    if (
+      identity.snapshotVersion !== snapshot.schemaVersion ||
+      identity.evaluatorVersion !== APPLIED_ENGINEERING_ASSESSMENT_EVALUATOR_VERSION
+    ) {
+      return null;
+    }
+    const responses = storyPracticeInterviewResponses(snapshot.prompts, state.turns, 12_000);
+    if (responses.some((response) => response.answer.length === 0)) return null;
+
+    return this.finalize(ownerId, {
+      assessmentId: identity.assessmentId,
+      requestId: sessionId,
+      responses
+    });
+  }
+
+  /** Agent-capability path used after the final spoken or typed answer. */
+  async finalizeInterviewBySession(sessionId: string) {
+    const session = await this.prisma.interviewSession.findUnique({
+      where: { id: sessionId },
+      select: { ownerId: true }
+    });
+    return session ? this.finalizeInterviewOwned(session.ownerId, sessionId) : null;
+  }
+
+  /** Repairs a completed room or checkpoint whose deferred report generation was interrupted. */
+  async recoverCurrentInterview(ownerId: string) {
+    const assessment = await this.prisma.appliedEngineeringAssessment.findFirst({
+      where: {
+        ownerId,
+        status: {
+          in: [
+            AppliedEngineeringAssessmentStatus.IN_PROGRESS,
+            AppliedEngineeringAssessmentStatus.FINALIZING
+          ]
+        },
+        block: { isCurrent: true }
+      },
+      select: { id: true, status: true, assessmentSnapshot: true }
+    });
+    if (!assessment?.assessmentSnapshot) return null;
+    const snapshot = appliedEngineeringAssessmentSnapshotSchema.parse(
+      assessment.assessmentSnapshot
+    );
+    if (assessment.status === AppliedEngineeringAssessmentStatus.FINALIZING && snapshot.submission) {
+      return this.finalize(ownerId, {
+        assessmentId: assessment.id,
+        requestId: snapshot.submission.requestId,
+        responses: snapshot.submission.responses
+      });
+    }
+    return this.finalizeInterviewOwned(ownerId, assessment.id);
   }
 
   private async loadEvidence(ownerId: string, assessmentId: string) {

@@ -166,9 +166,7 @@ describe("Applied Engineering incident ranking", () => {
       ...candidate,
       publicationStatus: "review" as const
     }));
-    const service = new AppliedEngineeringIncidentRankingService(
-      unapproved
-    );
+    const service = new AppliedEngineeringIncidentRankingService(unapproved);
     expect(() => service.rankFirstIncident(focus(evidence("GUIDED")))).toThrow(
       "No published Applied Engineering incident"
     );
@@ -233,6 +231,24 @@ describe("Applied Engineering incident ranking", () => {
     ).toBe("latency-cascade-under-load");
   });
 
+  it("selects an explicit reviewed library incident while keeping server-owned difficulty", () => {
+    const service = new AppliedEngineeringIncidentRankingService(published);
+    const result = service.rankSelectedIncident(
+      focus(evidence("GUIDED")),
+      "latency-cascade-under-load",
+      { recentIncidentKeys: ["duplicate-work-after-retry"] }
+    );
+
+    expect(result.selectedIncident).toMatchObject({
+      incidentKey: "latency-cascade-under-load",
+      difficulty: "standard"
+    });
+    expect(result.rankings).toHaveLength(1);
+    expect(() => service.rankSelectedIncident(focus(evidence("GUIDED")), "not-published")).toThrow(
+      "not available for this focus"
+    );
+  });
+
   it("uses verified assessment evidence to select the next unrepeated incident", () => {
     const service = new AppliedEngineeringIncidentRankingService(published);
     const result = service.rankNextIncident(focus(evidence("GUIDED")), adaptiveEvidence());
@@ -261,7 +277,11 @@ describe("Applied Engineering eligibility", () => {
     await expect(service.forProfile(supportedProfile)).resolves.toMatchObject({
       available: true,
       reason: "AVAILABLE",
-      publishedIncidentCount: 2
+      publishedIncidentCount: 2,
+      incidents: [
+        expect.objectContaining({ expectedMinutes: 45, questions: expect.any(Array) }),
+        expect.objectContaining({ expectedMinutes: 45, questions: expect.any(Array) })
+      ]
     });
     expect(published).toHaveBeenCalledTimes(1);
   });

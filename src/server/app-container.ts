@@ -81,6 +81,7 @@ import { AppliedEngineeringAttemptEvaluator } from "@/features/practice/applied-
 import { AppliedEngineeringPracticeService } from "@/features/practice/applied-engineering/server/practice.service";
 import { AppliedEngineeringAssessmentEvaluator } from "@/features/practice/applied-engineering/server/assessment-evaluator";
 import { AppliedEngineeringAssessmentService } from "@/features/practice/applied-engineering/server/assessment.service";
+import { AppliedEngineeringAssessmentRuntimeService } from "@/features/practice/applied-engineering/server/assessment-runtime.service";
 import { AppliedEngineeringContinuationService } from "@/features/practice/applied-engineering/server/continuation.service";
 import { AppliedEngineeringHistoryService } from "@/features/practice/applied-engineering/server/history.service";
 import { AppliedEngineeringEligibilityService } from "@/features/practice/applied-engineering/server/eligibility.service";
@@ -176,6 +177,7 @@ export interface AppContainer {
   appliedEngineeringPracticeService: AppliedEngineeringPracticeService;
   appliedEngineeringAssessmentEvaluator: AppliedEngineeringAssessmentEvaluator;
   appliedEngineeringAssessmentService: AppliedEngineeringAssessmentService;
+  appliedEngineeringAssessmentRuntimeService: AppliedEngineeringAssessmentRuntimeService;
   appliedEngineeringContinuationService: AppliedEngineeringContinuationService;
   appliedEngineeringHistoryService: AppliedEngineeringHistoryService;
   appliedEngineeringEligibilityService: AppliedEngineeringEligibilityService;
@@ -376,6 +378,11 @@ export function getAppContainer(): AppContainer {
     prisma,
     appliedEngineeringAssessmentEvaluator
   );
+  const appliedEngineeringAssessmentRuntimeService = new AppliedEngineeringAssessmentRuntimeService(
+    prisma,
+    appliedEngineeringAssessmentService,
+    interviewService
+  );
   const appliedEngineeringContinuationService = new AppliedEngineeringContinuationService({
     prisma,
     persistence: appliedEngineeringPersistenceService,
@@ -493,6 +500,7 @@ export function getAppContainer(): AppContainer {
     appliedEngineeringPracticeService,
     appliedEngineeringAssessmentEvaluator,
     appliedEngineeringAssessmentService,
+    appliedEngineeringAssessmentRuntimeService,
     appliedEngineeringContinuationService,
     appliedEngineeringHistoryService,
     appliedEngineeringEligibilityService,

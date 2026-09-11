@@ -48,6 +48,8 @@ export const ARCHITECTURE_DESIGN_ASSESSMENT_EXPERIENCE: StoryPracticeAssessmentE
   apiBase: ARCHITECTURE_DESIGN_API_BASE,
   routeBase: ARCHITECTURE_DESIGN_ROUTE_BASE,
   subjectNoun: "scenario",
+  mode: "inline-form",
+  evidenceAnchorLabel: "Design evidence",
   measures: [
     "Requirements & scope",
     "APIs, data & capacity",

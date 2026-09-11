@@ -1,6 +1,7 @@
 # Story-Driven Applied Engineering: Requirements and Build Plan
 
-**Status:** Implementation in progress; Steps 1–8 complete. Step 9 remains.
+**Status:** Implementation in progress; Steps 1–8 complete. Step 9 automated gate is complete;
+authenticated browser and voice-room verification remain blocked by human verification.
 **Position:** Practice session 3, after DSA and Core Technical.
 **Rule:** Reuse the shipped Core Technical product shape. Do not redesign Practice or change DSA.
 **Current parity handoff:** Follow `docs/APPLIED_ENGINEERING_CORE_PARITY_REUSE_PLAN.md` for the
@@ -292,7 +293,7 @@ metrics, content catalogue, and the shared-lease namespace explicitly named
 | 6    | Frozen assessment, report, adaptive continuation, and analytics               | Complete — semantic evaluation, deterministic evidence caps, retry-safe continuation, and workspace analytics |
 | 7    | API routes and app-container registration                                     | Complete — eleven authenticated routes, strict guards, distributed leases, and full service wiring            |
 | 8    | Shared UI extraction, Applied Engineering wrappers, card, and server pages    | Complete — shared presentation shell, typed artifacts, order-3 card, owner-safe pages, and boundaries         |
-| 9    | Unit/integration/browser verification and release gate                        | Not started                                                                                                   |
+| 9    | Unit/integration/browser verification and release gate                        | In progress — automated gates pass; authenticated screenshots and voice-room exercise require the human verification gate |
 
 ### Remaining-step sizing
 
@@ -367,7 +368,8 @@ regressions pass with 13 files / 48 tests; the full repository suite passes with
 tests (2 files / 8 tests skipped). TypeScript, lint, Prisma validation, production Next.js build,
 and `git diff --check` pass.
 
-The next implementation task is the complete Step 9 verification and release-gate pass.
+The remaining Step 9 task is the authenticated desktop/mobile and real voice-room exercise after
+the required human-verification challenge is completed.
 
 ## 11. LOC budget and test strategy
 

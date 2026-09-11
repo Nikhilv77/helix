@@ -58,6 +58,17 @@ export const appliedEngineeringPrepareInputSchema = z
   .object({ requestId: z.string().uuid(), focusRevisionId: z.string().uuid() })
   .strict();
 
+export const appliedEngineeringStartPathInputSchema = z
+  .object({
+    requestId: z.string().uuid(),
+    storyKey: z
+      .string()
+      .min(2)
+      .max(120)
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+  })
+  .strict();
+
 export const appliedEngineeringAttemptFeedbackSchema = z
   .object({
     schemaVersion: z.literal(1),

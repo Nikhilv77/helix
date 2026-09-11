@@ -23,6 +23,7 @@ import { POST as appliedHint } from "../../applied-engineering/hint/handler";
 import { POST as appliedLearn } from "../../applied-engineering/learn/handler";
 import { POST as appliedPrepare } from "../../applied-engineering/prepare/handler";
 import { POST as appliedRun } from "../../applied-engineering/run/handler";
+import { POST as appliedStartPath } from "../../applied-engineering/start-path/handler";
 import { POST as architectureAssessmentFinalize } from "../../architecture-design/assessment/finalize/handler";
 import { POST as architectureAssessmentStart } from "../../architecture-design/assessment/start/handler";
 import { POST as architectureAttempt } from "../../architecture-design/attempt/handler";
@@ -64,6 +65,7 @@ const handlers: Readonly<Record<string, PracticeHandler>> = {
   "applied-engineering/learn": appliedLearn,
   "applied-engineering/prepare": appliedPrepare,
   "applied-engineering/run": appliedRun,
+  "applied-engineering/start-path": appliedStartPath,
   "architecture-design/assessment/finalize": architectureAssessmentFinalize,
   "architecture-design/assessment/start": architectureAssessmentStart,
   "architecture-design/attempt": architectureAttempt,

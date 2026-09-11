@@ -34,9 +34,9 @@ type Dependencies = {
   prisma: PrismaService;
   persistence: Pick<
     AppliedEngineeringPersistenceService,
-    "publishPreparedBlock" | "recordPreparationFailure"
+    "activateLibraryBlock" | "publishPreparedBlock" | "recordPreparationFailure"
   >;
-  practice: Pick<AppliedEngineeringPracticeService, "current">;
+  practice: Pick<AppliedEngineeringPracticeService, "current" | "historyBlock">;
 };
 
 /** Keeps an assessed report current until a recoverable Continue succeeds atomically. */
@@ -96,7 +96,33 @@ export class AppliedEngineeringContinuationService {
     const report = appliedEngineeringAssessmentReportSchema.parse(
       previous.assessment.report.reportSnapshot
     );
-    const selection = report.nextIncident;
+    const continuation =
+      report.continuation ??
+      (report.nextIncident ? { kind: "continue" as const, next: report.nextIncident } : null);
+    if (!continuation) {
+      throw new ConflictErrorException(
+        "APPLIED_ENGINEERING_CONTINUATION_INVALID",
+        "This assessment report does not contain a continuation decision."
+      );
+    }
+    if (continuation.kind !== "continue") {
+      return { replayed: false, block: null, continuation };
+    }
+    const selection = continuation.next;
+    const activated = await this.dependencies.persistence.activateLibraryBlock(ownerId, {
+      requestId: input.requestId,
+      focusRevisionId: previous.focusRevisionId,
+      previousBlockId: previous.id,
+      selection,
+      generatorVersion: APPLIED_ENGINEERING_PREPARATION_GENERATOR_VERSION,
+      validatorVersion: APPLIED_ENGINEERING_PREPARATION_VALIDATOR_VERSION
+    });
+    if (activated) {
+      return {
+        replayed: false,
+        block: await this.dependencies.practice.historyBlock(ownerId, activated.id)
+      };
+    }
     let stage: "validation" | "publishing" = "validation";
     try {
       const reviewed = await this.dependencies.prisma.appliedEngineeringIncidentVersion.findUnique({

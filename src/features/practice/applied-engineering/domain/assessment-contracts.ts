@@ -127,6 +127,20 @@ export const appliedEngineeringAssessmentEvaluationSchema = z
   })
   .strict();
 
+export const appliedEngineeringContinuationDecisionSchema = z.discriminatedUnion("kind", [
+  z
+    .object({ kind: z.literal("continue"), next: appliedEngineeringAdaptiveIncidentSelectionSchema })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("ready"),
+      masteredKeys: z.array(appliedEngineeringIdentifierSchema),
+      summary: z.string().min(20).max(700)
+    })
+    .strict(),
+  z.object({ kind: z.literal("complete"), summary: z.string().min(20).max(700) }).strict()
+]);
+
 export const appliedEngineeringAssessmentReportSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -164,9 +178,18 @@ export const appliedEngineeringAssessmentReportSchema = z
         implementationScoreCapped: z.boolean()
       })
       .strict(),
-    nextIncident: appliedEngineeringAdaptiveIncidentSelectionSchema
+    nextIncident: appliedEngineeringAdaptiveIncidentSelectionSchema.optional(),
+    continuation: appliedEngineeringContinuationDecisionSchema.optional()
   })
-  .strict();
+  .strict()
+  .superRefine((report, context) => {
+    if (!report.nextIncident && !report.continuation) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "A report requires a next incident or terminal continuation decision."
+      });
+    }
+  });
 
 export const appliedEngineeringSafeTranscriptSchema = z
   .object({

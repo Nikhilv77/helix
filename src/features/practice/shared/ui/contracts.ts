@@ -6,6 +6,7 @@ export const STORY_PRACTICE_KEYS = [
 
 export type StoryPracticeKey = (typeof STORY_PRACTICE_KEYS)[number];
 export type StoryPracticeQuestionCapability = "choice" | "text" | "code";
+export type StoryPracticeAssessmentMode = "inline-form" | "shared-voice-room";
 
 type StoryPracticeRouteIdentity = {
   slug: StoryPracticeKey;
@@ -18,6 +19,30 @@ export type StoryPracticePreparationOption<TValue extends string = string> = {
   value: TValue;
   label: string;
   detail: string;
+};
+
+export type StoryPracticeTechnologyOption<TValue extends string = string> =
+  StoryPracticePreparationOption<TValue> & {
+    resumeMatched?: boolean;
+  };
+
+/**
+ * Domain-neutral configuration for the polished teacher-led first-entry
+ * screen. The server still derives every trusted focus field; the browser
+ * contributes only the selected option through `buildConfirmation`.
+ */
+export type StoryPracticeTechnologyWelcomeExperience<TValue extends string = string> = Pick<
+  StoryPracticeRouteIdentity,
+  "slug" | "apiBase" | "routeBase"
+> & {
+  label: string;
+  heading: string;
+  choosingScript: string;
+  confirmingScript: (selectedLabel: string | null) => string;
+  generatingScript: string;
+  options: readonly StoryPracticeTechnologyOption<TValue>[];
+  buildConfirmation: (value: TValue) => unknown;
+  buildPreparation: (focusRevisionId: string, requestId: string) => unknown;
 };
 
 export type StoryPracticePreparationExperience<TValue extends string = string> =
@@ -44,6 +69,8 @@ export type StoryPracticeAssessmentExperience<
   TReport = unknown
 > = StoryPracticeRouteIdentity & {
   label: string;
+  mode: StoryPracticeAssessmentMode;
+  evidenceAnchorLabel: string;
   measures: readonly string[];
   defenceDescription: string;
   answerPlaceholder: string;
@@ -92,6 +119,7 @@ export type StoryPracticeExperience<
 > = {
   key: StoryPracticeKey;
   preparation: StoryPracticePreparationExperience<TValue>;
+  technologyWelcome?: StoryPracticeTechnologyWelcomeExperience<TValue>;
   intro: StoryPracticeIntroExperience;
   overview: StoryPracticeOverviewExperience<TAssessment, TReport>;
   workspace: StoryPracticeWorkspaceExperience<TQuestion>;

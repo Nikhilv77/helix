@@ -35,7 +35,9 @@ describe("AppliedEngineeringPersistenceService", () => {
 
   it("replays an approved incident publication and refuses unapproved content", async () => {
     const transaction = vi.fn();
-    const service = new AppliedEngineeringPersistenceService({ $transaction: transaction } as unknown as PrismaService);
+    const service = new AppliedEngineeringPersistenceService({
+      $transaction: transaction
+    } as unknown as PrismaService);
     const unapproved = structuredClone(artifact);
     unapproved.humanReview.status = "candidate";
     unapproved.humanReview.reviewerId = null;
@@ -50,7 +52,9 @@ describe("AppliedEngineeringPersistenceService", () => {
       status: "approved",
       reviewerId: "project-owner",
       reviewedAt: "2026-09-08",
-      notes: ["The project owner reviewed the incident, private answers, executable repairs, and rollout evidence."]
+      notes: [
+        "The project owner reviewed the incident, private answers, executable repairs, and rollout evidence."
+      ]
     };
     const stored = { id: INCIDENT_VERSION_ID, incidentKey: artifact.caseKey, version: 1 };
     const tx = incidentTransaction({ stored });
@@ -90,6 +94,73 @@ describe("AppliedEngineeringPersistenceService", () => {
     );
   });
 
+  it("publishes a loose library block without replacing the current incident", async () => {
+    const current = { id: "current-block", ordinal: 1, status: "PRACTISING" };
+    const tx = blockTransaction({ current });
+    await new AppliedEngineeringPersistenceService(prisma(tx)).publishPreparedBlock("owner-1", {
+      requestId: REQUEST_ID,
+      focusRevisionId: FOCUS_ID,
+      libraryBlock: true,
+      selection: selection(),
+      draft: { incident: artifact.incident, questionBlock: artifact.questionBlock },
+      generatorVersion: "applied-generator-v1",
+      validatorVersion: "applied-validator-v1",
+      evaluatorVersion: "applied-evaluator-v1"
+    });
+
+    expect(tx.appliedEngineeringBlock.update).not.toHaveBeenCalled();
+    expect(tx.appliedEngineeringBlock.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ isCurrent: false }) })
+    );
+  });
+
+  it("promotes the saved library block in place without recreating its questions", async () => {
+    const target = {
+      id: BLOCK_ID,
+      focusRevisionId: FOCUS_ID,
+      contentFingerprint: `sha256:${"c".repeat(64)}`,
+      selectionSnapshot: selection(),
+      incidentVersion: { incidentKey: artifact.caseKey },
+      questions: [{ id: "saved-question", order: 1, status: "ACTIVE" }]
+    };
+    const tx = {
+      $executeRaw: vi.fn(),
+      appliedEngineeringBlock: {
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce({
+            id: "55555555-5555-4555-8555-555555555555",
+            status: "ASSESSED",
+            focusRevisionId: FOCUS_ID,
+            assessment: { status: "COMPLETED" }
+          })
+          .mockResolvedValueOnce(target),
+        update: vi.fn()
+      },
+      appliedEngineeringPreparationAttempt: { create: vi.fn() },
+      appliedEngineeringAssessment: { update: vi.fn() },
+      appliedEngineeringIncidentProgress: { update: vi.fn() }
+    };
+
+    await expect(
+      new AppliedEngineeringPersistenceService(prisma(tx)).activateLibraryBlock("owner-1", {
+        requestId: REQUEST_ID,
+        focusRevisionId: FOCUS_ID,
+        previousBlockId: "55555555-5555-4555-8555-555555555555",
+        selection: selection(),
+        generatorVersion: "applied-generator-v1",
+        validatorVersion: "applied-validator-v1"
+      })
+    ).resolves.toEqual({ id: BLOCK_ID });
+
+    expect(tx.appliedEngineeringBlock.update).toHaveBeenCalledTimes(2);
+    expect(tx.appliedEngineeringBlock.update).toHaveBeenLastCalledWith({
+      where: { id_ownerId: { id: BLOCK_ID, ownerId: "owner-1" } },
+      data: { isCurrent: true }
+    });
+    expect(tx.appliedEngineeringAssessment.update).not.toHaveBeenCalled();
+  });
+
   it("keeps the migration isolated and enforces current-block/request uniqueness", () => {
     const sql = readFileSync(
       "prisma/migrations/20260908100000_story_driven_applied_engineering_persistence/migration.sql",
@@ -97,9 +168,11 @@ describe("AppliedEngineeringPersistenceService", () => {
     );
     expect(sql).toContain('CREATE TABLE "AppliedEngineeringBlock"');
     expect(sql).toContain('CREATE UNIQUE INDEX "AppliedEngineeringBlock_one_current_per_owner"');
-    expect(sql).toContain('CREATE UNIQUE INDEX "AppliedEngineeringPreparationAttempt_ownerId_requestId_key"');
-    expect(sql).not.toContain('DROP TABLE');
-    expect(sql).not.toContain('CoreTechnical');
+    expect(sql).toContain(
+      'CREATE UNIQUE INDEX "AppliedEngineeringPreparationAttempt_ownerId_requestId_key"'
+    );
+    expect(sql).not.toContain("DROP TABLE");
+    expect(sql).not.toContain("CoreTechnical");
   });
 });
 
@@ -111,9 +184,18 @@ function focus(): AppliedEngineeringConfirmedFocus {
     targetJob: "Backend Engineer",
     targetCompany: null,
     targetDate: null,
-    stack: { language: "javascript" as const, runtime: "nodejs" as const, runtimeVersion: "22 LTS" as const, framework: null },
+    stack: {
+      language: "javascript" as const,
+      runtime: "nodejs" as const,
+      runtimeVersion: "22 LTS" as const,
+      framework: null
+    },
     excludedIncidentKeys: [],
-    resumeEvidence: { technologyKeys: ["nodejs"], projectKeywords: ["checkout"], productionSignalKeys: ["retry-safety" as const] },
+    resumeEvidence: {
+      technologyKeys: ["nodejs"],
+      projectKeywords: ["checkout"],
+      productionSignalKeys: ["retry-safety" as const]
+    },
     baselineEvidence: {
       schemaVersion: 1 as const,
       registryVersion: 1 as const,
@@ -139,7 +221,22 @@ function focus(): AppliedEngineeringConfirmedFocus {
 }
 
 function selection() {
-  const selectedIncident = { incidentKey: artifact.caseKey, incidentVersion: 1, title: artifact.incident.title, difficulty: artifact.incident.difficulty, emphasizedSignalKeys: artifact.incident.productionSignalKeys.slice(0, 4), scores: { baselineGapTransfer: 20, targetRoleJob: 12, resumeProjectRelevance: 4, productionEvidenceCoverage: 10, plannedCoverage: 4, novelty: 5, total: 55 } };
+  const selectedIncident = {
+    incidentKey: artifact.caseKey,
+    incidentVersion: 1,
+    title: artifact.incident.title,
+    difficulty: artifact.incident.difficulty,
+    emphasizedSignalKeys: artifact.incident.productionSignalKeys.slice(0, 4),
+    scores: {
+      baselineGapTransfer: 20,
+      targetRoleJob: 12,
+      resumeProjectRelevance: 4,
+      productionEvidenceCoverage: 10,
+      plannedCoverage: 4,
+      novelty: 5,
+      total: 55
+    }
+  };
   return {
     policyVersion: 1 as const,
     focusFingerprint: focus().focusFingerprint,
@@ -150,14 +247,18 @@ function selection() {
 }
 
 function prisma(tx: Record<string, unknown>): PrismaService {
-  return { $transaction: vi.fn(async (callback: (value: unknown) => unknown) => callback(tx)) } as unknown as PrismaService;
+  return {
+    $transaction: vi.fn(async (callback: (value: unknown) => unknown) => callback(tx))
+  } as unknown as PrismaService;
 }
 
 function focusTransaction(options: { created?: unknown; existing?: unknown } = {}) {
   return {
     $executeRaw: vi.fn(),
     candidateProfile: {
-      findUnique: vi.fn().mockResolvedValue({ ownerId: "owner-1", activeAppliedEngineeringFocusRevisionId: null }),
+      findUnique: vi
+        .fn()
+        .mockResolvedValue({ ownerId: "owner-1", activeAppliedEngineeringFocusRevisionId: null }),
       update: vi.fn()
     },
     appliedEngineeringFocusRevision: {
@@ -180,7 +281,10 @@ function incidentTransaction(options: { stored: unknown }) {
   };
 }
 
-function blockTransaction() {
+function blockTransaction(options: { current?: unknown } = {}) {
+  const findFirst = options.current
+    ? vi.fn().mockResolvedValueOnce(options.current).mockResolvedValueOnce({ ordinal: 1 })
+    : vi.fn().mockResolvedValue(null);
   return {
     $executeRaw: vi.fn(),
     appliedEngineeringPreparationAttempt: {
@@ -189,13 +293,20 @@ function blockTransaction() {
       update: vi.fn()
     },
     appliedEngineeringFocusRevision: {
-      findUnique: vi.fn().mockResolvedValue({ id: FOCUS_ID, focusFingerprint: focus().focusFingerprint })
+      findUnique: vi
+        .fn()
+        .mockResolvedValue({ id: FOCUS_ID, focusFingerprint: focus().focusFingerprint })
     },
     appliedEngineeringIncidentVersion: {
-      findUnique: vi.fn().mockResolvedValue({ id: INCIDENT_VERSION_ID, publicationStatus: "PUBLISHED", incidentSnapshot: artifact.incident })
+      findUnique: vi.fn().mockResolvedValue({
+        id: INCIDENT_VERSION_ID,
+        publicationStatus: "PUBLISHED",
+        incidentSnapshot: artifact.incident
+      })
     },
     appliedEngineeringBlock: {
-      findFirst: vi.fn().mockResolvedValue(null),
+      findFirst,
+      update: vi.fn(),
       create: vi.fn().mockResolvedValue({ id: BLOCK_ID })
     },
     appliedEngineeringIncidentProgress: { upsert: vi.fn() }

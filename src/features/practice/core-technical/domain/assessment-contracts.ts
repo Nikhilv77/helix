@@ -128,6 +128,20 @@ export const coreTechnicalAssessmentEvaluationSchema = z
   })
   .strict();
 
+export const coreTechnicalContinuationDecisionSchema = z.discriminatedUnion("kind", [
+  z
+    .object({ kind: z.literal("continue"), next: coreTechnicalAdaptiveStorySelectionSchema })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("ready"),
+      masteredKeys: z.array(identifierSchema),
+      summary: z.string().min(20).max(700)
+    })
+    .strict(),
+  z.object({ kind: z.literal("complete"), summary: z.string().min(20).max(700) }).strict()
+]);
+
 export const coreTechnicalAssessmentReportSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -165,9 +179,18 @@ export const coreTechnicalAssessmentReportSchema = z
         implementationScoreCapped: z.boolean()
       })
       .strict(),
-    nextStory: coreTechnicalAdaptiveStorySelectionSchema
+    nextStory: coreTechnicalAdaptiveStorySelectionSchema.optional(),
+    continuation: coreTechnicalContinuationDecisionSchema.optional()
   })
-  .strict();
+  .strict()
+  .superRefine((report, context) => {
+    if (!report.nextStory && !report.continuation) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "A report requires a next practice path or terminal continuation decision."
+      });
+    }
+  });
 
 export const coreTechnicalSafeTranscriptSchema = z
   .object({

@@ -20,6 +20,8 @@ import { NotFoundErrorException } from "@/server/common/exceptions/not-found-err
 import { ServiceUnavailableErrorException } from "@/server/common/exceptions/service-unavailable-error.exception";
 import type { PrismaService } from "@/server/database/prisma.service";
 import type { InterviewState } from "@/features/interviews/server/types";
+import { storyPracticeAssessmentIdentityFromSetup } from "@/features/practice/shared/server/contracts";
+import { storyPracticeInterviewResponses } from "@/features/practice/shared/server/assessment-transcript";
 import {
   assertStoryPracticeAssessmentResponses,
   storyPracticeAssessmentStartDisposition
@@ -347,8 +349,8 @@ export class CoreTechnicalAssessmentService {
       select: { state: true }
     });
     const state = session?.state as unknown as InterviewState | undefined;
-    const identity = state?.setup.coreTechnicalAssessment;
-    if (!state || identity?.kind !== "core-technical-assessment") return null;
+    const identity = storyPracticeAssessmentIdentityFromSetup(state?.setup);
+    if (!state || identity?.practice !== "core-technical") return null;
     if (state.id !== sessionId || identity.assessmentId !== sessionId || state.phase !== "done") {
       return null;
     }
@@ -501,23 +503,9 @@ async function lockAssessment(tx: Prisma.TransactionClient, assessmentId: string
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`core-technical-assessment:${assessmentId}`}))`;
 }
 
-function boundedInterviewAnswer(value: string): string {
-  const normalized = value.trim();
-  if (normalized.length <= 4_000) return normalized;
-  return normalized.slice(normalized.length - 4_000);
-}
-
 export function coreTechnicalInterviewResponses(
   snapshot: ReturnType<typeof coreTechnicalAssessmentSnapshotSchema.parse>,
   state: Pick<InterviewState, "turns">
 ) {
-  return snapshot.prompts.map((prompt, index) => ({
-    promptId: prompt.id,
-    answer: boundedInterviewAnswer(
-      state.turns
-        .filter((turn) => turn.speaker === "user" && turn.questionIndex === index)
-        .map((turn) => turn.text)
-        .join("\n\n")
-    )
-  }));
+  return storyPracticeInterviewResponses(snapshot.prompts, state.turns, 12_000);
 }

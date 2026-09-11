@@ -75,10 +75,38 @@ describe("Applied Engineering assessment, adaptation, continuation, and analytic
       learnedCount: 1,
       learnedQuestionOrders: [1]
     });
-    expect(result.report.nextIncident.selectedIncident.incidentKey).toBe(second.incident.key);
-    expect(result.report.nextIncident.evidence.assessmentScores.implementationCorrectness).toBe(35);
+    expect(result.report.nextIncident!.selectedIncident.incidentKey).toBe(second.incident.key);
+    expect(result.report.nextIncident!.evidence.assessmentScores.implementationCorrectness).toBe(35);
     expect(JSON.stringify(result.transcript)).not.toContain("expectedAnswer");
     expect(JSON.stringify(result.transcript)).not.toContain("rubric");
+  });
+
+  it("completes preparation cleanly when no unused published incident remains", async () => {
+    const snapshot = assessmentSnapshot();
+    const evaluator = new AppliedEngineeringAssessmentEvaluator(
+      { generateStructured: vi.fn().mockResolvedValue(aiEvaluation(snapshot)) } as never,
+      new AppliedEngineeringIncidentRankingService([
+        NODEJS_APPLIED_ENGINEERING_INCIDENT_RANKING_CATALOGUE.find(
+          (candidate) => candidate.key === first.incident.key
+        )!
+      ])
+    );
+
+    const result = await evaluator.evaluate({
+      assessmentId: ASSESSMENT_ID,
+      blockId: BLOCK_ID,
+      incidentKey: first.incident.key,
+      focus: focus(),
+      snapshot,
+      responses: responses(snapshot),
+      questions: evidenceQuestions({ learnedFirst: true, acceptedCodeRuns: 1 }),
+      priorIncidentKeys: [first.incident.key],
+      priorTopicKeys: first.questionBlock.questions.flatMap((question) => question.topicKeys),
+      finalizedAt: NOW
+    });
+
+    expect(result.report.nextIncident).toBeUndefined();
+    expect(result.report.continuation).toMatchObject({ kind: "complete" });
   });
 
   it("starts a READY assessment once and resumes the frozen snapshot", async () => {
@@ -122,9 +150,7 @@ describe("Applied Engineering assessment, adaptation, continuation, and analytic
   it("checkpoints finalization before atomically publishing one report", async () => {
     const snapshot = assessmentSnapshot();
     const answerSet = responses(snapshot);
-    const report = reportWith(
-      ranking().rankNextIncident(focus(), adaptiveEvidence())
-    );
+    const report = reportWith(ranking().rankNextIncident(focus(), adaptiveEvidence()));
     const transcript = transcriptFor(snapshot, answerSet);
     const assessmentUpdate = vi.fn();
     const reportCreate = vi.fn();
@@ -197,11 +223,7 @@ describe("Applied Engineering assessment, adaptation, continuation, and analytic
       transcript,
       evidence: adaptiveEvidence()
     });
-    const service = new AppliedEngineeringAssessmentService(
-      prisma,
-      { evaluate },
-      () => NOW
-    );
+    const service = new AppliedEngineeringAssessmentService(prisma, { evaluate }, () => NOW);
 
     const finalized = await service.finalize("owner-1", {
       assessmentId: ASSESSMENT_ID,
@@ -289,10 +311,11 @@ describe("Applied Engineering assessment, adaptation, continuation, and analytic
         })
       }
     } as unknown as PrismaService;
+    const activateLibraryBlock = vi.fn().mockResolvedValue(null);
     const service = new AppliedEngineeringContinuationService({
       prisma,
-      persistence: { publishPreparedBlock, recordPreparationFailure },
-      practice: { current }
+      persistence: { activateLibraryBlock, publishPreparedBlock, recordPreparationFailure },
+      practice: { current, historyBlock: vi.fn() }
     });
 
     await expect(
@@ -303,6 +326,98 @@ describe("Applied Engineering assessment, adaptation, continuation, and analytic
       expect.objectContaining({ previousBlockId: BLOCK_ID, selection })
     );
     expect(recordPreparationFailure).not.toHaveBeenCalled();
+  });
+
+  it("promotes an already-practised library incident without rebuilding it", async () => {
+    const selection = ranking().rankNextIncident(focus(), adaptiveEvidence());
+    const report = reportWith(selection);
+    const activateLibraryBlock = vi.fn().mockResolvedValue({ id: "library-block" });
+    const publishPreparedBlock = vi.fn();
+    const historyBlock = vi.fn().mockResolvedValue({
+      id: "library-block",
+      questions: [{ id: "saved-question", status: "COMPLETED" }]
+    });
+    const prisma = {
+      appliedEngineeringPreparationAttempt: { findUnique: vi.fn().mockResolvedValue(null) },
+      appliedEngineeringBlock: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: BLOCK_ID,
+          status: "ASSESSED",
+          focusRevisionId: "55555555-5555-4555-8555-555555555555",
+          focusRevision: { focusSnapshot: focus() },
+          assessment: { status: "COMPLETED", report: { reportSnapshot: report } }
+        })
+      },
+      appliedEngineeringIncidentVersion: { findUnique: vi.fn() }
+    } as unknown as PrismaService;
+    const service = new AppliedEngineeringContinuationService({
+      prisma,
+      persistence: {
+        activateLibraryBlock,
+        publishPreparedBlock,
+        recordPreparationFailure: vi.fn()
+      },
+      practice: { current: vi.fn(), historyBlock }
+    });
+
+    await expect(
+      service.continue("owner-1", { blockId: BLOCK_ID, requestId: REQUEST_ID })
+    ).resolves.toMatchObject({
+      replayed: false,
+      block: { id: "library-block", questions: [{ status: "COMPLETED" }] }
+    });
+    expect(activateLibraryBlock).toHaveBeenCalledWith(
+      "owner-1",
+      expect.objectContaining({ previousBlockId: BLOCK_ID, selection })
+    );
+    expect(publishPreparedBlock).not.toHaveBeenCalled();
+    expect(prisma.appliedEngineeringIncidentVersion.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("returns a terminal continuation without preparing another incident", async () => {
+    const baseReport = reportWith(ranking().rankNextIncident(focus(), adaptiveEvidence()));
+    delete baseReport.nextIncident;
+    const report = appliedEngineeringAssessmentReportSchema.parse({
+      ...baseReport,
+      continuation: {
+        kind: "complete",
+        summary:
+          "Every currently eligible Applied Engineering incident is complete; review the saved feedback."
+      }
+    });
+    const activateLibraryBlock = vi.fn();
+    const publishPreparedBlock = vi.fn();
+    const prisma = {
+      appliedEngineeringPreparationAttempt: { findUnique: vi.fn().mockResolvedValue(null) },
+      appliedEngineeringBlock: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: BLOCK_ID,
+          status: "ASSESSED",
+          focusRevisionId: "55555555-5555-4555-8555-555555555555",
+          focusRevision: { focusSnapshot: focus() },
+          assessment: { status: "COMPLETED", report: { reportSnapshot: report } }
+        })
+      }
+    } as unknown as PrismaService;
+    const service = new AppliedEngineeringContinuationService({
+      prisma,
+      persistence: {
+        activateLibraryBlock,
+        publishPreparedBlock,
+        recordPreparationFailure: vi.fn()
+      },
+      practice: { current: vi.fn(), historyBlock: vi.fn() }
+    });
+
+    await expect(
+      service.continue("owner-1", { blockId: BLOCK_ID, requestId: REQUEST_ID })
+    ).resolves.toMatchObject({
+      replayed: false,
+      block: null,
+      continuation: { kind: "complete" }
+    });
+    expect(activateLibraryBlock).not.toHaveBeenCalled();
+    expect(publishPreparedBlock).not.toHaveBeenCalled();
   });
 
   it("keeps the report current and records a retryable continuation publication failure", async () => {
@@ -330,10 +445,11 @@ describe("Applied Engineering assessment, adaptation, continuation, and analytic
     const service = new AppliedEngineeringContinuationService({
       prisma,
       persistence: {
+        activateLibraryBlock: vi.fn().mockResolvedValue(null),
         publishPreparedBlock: vi.fn().mockRejectedValue(new Error("database unavailable")),
         recordPreparationFailure
       },
-      practice: { current: vi.fn() }
+      practice: { current: vi.fn(), historyBlock: vi.fn() }
     });
 
     await expect(
@@ -382,7 +498,9 @@ describe("Applied Engineering assessment, adaptation, continuation, and analytic
       learnedQuestionCount: 1,
       assessment: { overallScore: report.overallScore }
     });
-    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { ownerId: "owner-1" } }));
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { ownerId: "owner-1" } })
+    );
   });
 
   it("projects practice activity, next question, streak, assessment history, and reports", async () => {
@@ -470,7 +588,9 @@ function assessmentSnapshot() {
       id: `${String(index + 1).padStart(8, "0")}-1111-4111-8111-111111111111`,
       order: question.order,
       status: index === 0 ? ("LEARNED" as const) : ("COMPLETED" as const),
-      contentFingerprint: `sha256:${String(index + 1).repeat(64).slice(0, 64)}`,
+      contentFingerprint: `sha256:${String(index + 1)
+        .repeat(64)
+        .slice(0, 64)}`,
       privateSnapshot: question,
       attempts: index === 0 ? [] : [{ score: 8, verificationStatus: "VERIFIED" }]
     }))
@@ -561,7 +681,9 @@ function adaptiveEvidence(): AppliedEngineeringAdaptiveEvidence {
       meanVerifiedScore: 7,
       hintsUsed: 4,
       acceptedCodeQuestionCount: 1,
-      weakTopicKeys: first.questionBlock.questions.flatMap((question) => question.topicKeys).slice(0, 2),
+      weakTopicKeys: first.questionBlock.questions
+        .flatMap((question) => question.topicKeys)
+        .slice(0, 2),
       weakSignalKeys: ["database-performance", "caching", "testing-verification"]
     },
     priorIncidentKeys: [first.incident.key],
@@ -614,7 +736,10 @@ function aiEvaluation(snapshot: ReturnType<typeof assessmentSnapshot>) {
   };
 }
 
-function startTransaction(snapshot: ReturnType<typeof assessmentSnapshot>, update: ReturnType<typeof vi.fn>) {
+function startTransaction(
+  snapshot: ReturnType<typeof assessmentSnapshot>,
+  update: ReturnType<typeof vi.fn>
+) {
   return {
     $executeRaw: vi.fn(),
     appliedEngineeringAssessment: {
@@ -657,7 +782,9 @@ function readAssessment(status: string, snapshot: ReturnType<typeof assessmentSn
   };
 }
 
-function reportWith(nextIncident: ReturnType<AppliedEngineeringIncidentRankingService["rankNextIncident"]>) {
+function reportWith(
+  nextIncident: ReturnType<AppliedEngineeringIncidentRankingService["rankNextIncident"]>
+) {
   return appliedEngineeringAssessmentReportSchema.parse({
     schemaVersion: 1,
     evaluatorVersion: "applied-engineering-assessment-evaluator-v1",
@@ -678,7 +805,8 @@ function reportWith(nextIncident: ReturnType<AppliedEngineeringIncidentRankingSe
       completedCount: 7,
       learnedCount: 1,
       learnedQuestionOrders: [1],
-      masteryCreditNote: "Question 1 was learned rather than solved and contributes zero Practice mastery credit."
+      masteryCreditNote:
+        "Question 1 was learned rather than solved and contributes zero Practice mastery credit."
     },
     deterministicEvidence: {
       acceptedCodeQuestionCount: 1,

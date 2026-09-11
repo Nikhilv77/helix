@@ -16,6 +16,7 @@ import {
 import { generatedQuestionCandidateSchema } from "@/features/practice/core-technical/domain/question-contracts";
 import type { AiService } from "@/server/ai/ai.service";
 import type { z } from "zod";
+import { terminalStoryPracticeContinuation } from "@/features/practice/shared/server/continuation-orchestrator";
 import type { CoreTechnicalStoryRankingService } from "./story-ranking.service";
 
 type EvidenceQuestion = {
@@ -43,7 +44,7 @@ type EvaluateInput = {
 export class CoreTechnicalAssessmentEvaluator {
   constructor(
     private readonly ai: Pick<AiService, "generateStructured">,
-    private readonly ranking: Pick<CoreTechnicalStoryRankingService, "rankNextStory">
+    private readonly ranking: Pick<CoreTechnicalStoryRankingService, "findNextStory">
   ) {}
 
   async evaluate(input: EvaluateInput): Promise<{
@@ -79,7 +80,25 @@ export class CoreTechnicalAssessmentEvaluator {
       debuggingImplementation: Math.min(raw.scores.debuggingImplementation, implementationCap)
     };
     const evidence = adaptiveEvidence(input, scores);
-    const nextStory = this.ranking.rankNextStory(input.focus, evidence);
+    const nextStory = this.ranking.findNextStory(input.focus, evidence);
+    const continuation = nextStory
+      ? { kind: "continue" as const, next: nextStory }
+      : terminalStoryPracticeContinuation({
+          masteredKeys: evidence.priorTopicKeys.filter(
+            (key) => !evidence.practice.weakTopicKeys.includes(key)
+          ),
+          assessmentScores: evidence.assessmentScores,
+          learnedCount: evidence.practice.learnedCount,
+          meanVerifiedScore: evidence.practice.meanVerifiedScore,
+          weakKeys: [
+            ...evidence.practice.weakTopicKeys,
+            ...evidence.practice.weakMechanismKeys
+          ],
+          readySummary:
+            "You have demonstrated the available Core Technical outcomes with verified practice and assessment evidence.",
+          completeSummary:
+            "You have completed every currently eligible Core Technical practice path. Review the remaining feedback before interview day."
+        });
     const learnedQuestionOrders = input.questions
       .filter((question) => question.status === "LEARNED")
       .map((question) => question.order)
@@ -100,7 +119,7 @@ export class CoreTechnicalAssessmentEvaluator {
         learnedCount: learnedQuestionOrders.length,
         learnedQuestionOrders,
         masteryCreditNote: learnedQuestionOrders.length === 0
-          ? "All eight Practice questions were solved through attempts; no Learn action reduced Practice mastery credit."
+          ? `All ${input.questions.length} Practice questions were solved through attempts; no Learn action reduced Practice mastery credit.`
           : `Questions ${learnedQuestionOrders.join(", ")} were learned rather than solved and contribute zero Practice mastery credit.`
       },
       deterministicEvidence: {
@@ -108,7 +127,8 @@ export class CoreTechnicalAssessmentEvaluator {
         totalCodeQuestionCount,
         implementationScoreCapped: scores.debuggingImplementation !== raw.scores.debuggingImplementation
       },
-      nextStory
+      ...(nextStory ? { nextStory } : {}),
+      continuation
     });
     const responseById = new Map(input.responses.map((response) => [response.promptId, response]));
     const transcript = coreTechnicalSafeTranscriptSchema.parse({

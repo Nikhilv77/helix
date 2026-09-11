@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
     // optimizer refuses it. 72 is the delivery portrait, 76 the question-lab
     // laptop; 75 is next/image's own default, kept so an unannotated <Image>
     // keeps working.
-    qualities: [72, 75, 76]
+    qualities: [72, 75, 76, 85]
   },
   async redirects() {
     return [

@@ -112,9 +112,40 @@ describe("Core Technical assessment, adaptation, and history lifecycle", () => {
       learnedCount: 1,
       learnedQuestionOrders: [1]
     });
-    expect(result.report.nextStory.selectedStory.storyKey).toBe(second.story.key);
+    expect(result.report.nextStory!.selectedStory.storyKey).toBe(second.story.key);
     expect(JSON.stringify(result.transcript)).not.toContain("expectedAnswer");
     expect(JSON.stringify(result.transcript)).not.toContain("rubric");
+  });
+
+  it("completes the Core curriculum when the final published path has no successor", async () => {
+    const snapshot = assessmentSnapshot();
+    const evaluator = new CoreTechnicalAssessmentEvaluator(
+      { generateStructured: vi.fn().mockResolvedValue(aiEvaluation(snapshot)) } as never,
+      new CoreTechnicalStoryRankingService(
+        NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE.filter(
+          (candidate) => candidate.key === first.story.key
+        ).map((candidate) => ({ ...candidate, publicationStatus: "published" as const }))
+      )
+    );
+
+    const result = await evaluator.evaluate({
+      assessmentId: ASSESSMENT_ID,
+      blockId: BLOCK_ID,
+      storyKey: first.story.key,
+      focus: focus(),
+      snapshot,
+      responses: snapshot.prompts.map((prompt) => ({
+        promptId: prompt.id,
+        answer: `Grounded answer for ${prompt.id}.`
+      })),
+      questions: evidenceQuestions({ learnedFirst: true, acceptedCodeRuns: 1 }),
+      priorStoryKeys: [first.story.key],
+      priorTopicKeys: first.questionBlock.questions.flatMap((question) => question.topicKeys),
+      finalizedAt: NOW
+    });
+
+    expect(result.report.nextStory).toBeUndefined();
+    expect(result.report.continuation).toMatchObject({ kind: "complete" });
   });
 
   it("starts once and resumes the same durable assessment", async () => {
@@ -285,7 +316,7 @@ describe("Core Technical assessment, adaptation, and history lifecycle", () => {
     });
 
     expect(finalized.status).toBe("COMPLETED");
-    expect(finalized.report?.nextStory.selectedStory.storyKey).toBe(second.story.key);
+    expect(finalized.report?.nextStory!.selectedStory.storyKey).toBe(second.story.key);
     expect(assessmentUpdate).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({

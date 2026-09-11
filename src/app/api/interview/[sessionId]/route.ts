@@ -22,7 +22,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       access.kind === "owner"
         ? await app.interviewService.getOwnedActive(access.ownerId, id)
         : await app.interviewService.get(id);
-    return apiSuccess(serialise(state));
+    return apiSuccess(serialiseInterviewState(state));
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   }
@@ -46,16 +46,19 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
           : app.dsaBlockAssessmentFinalizationService.finalizeBySession(id),
         access.kind === "owner"
           ? app.coreTechnicalAssessmentService.finalizeInterviewOwned(access.ownerId, id)
-          : app.coreTechnicalAssessmentService.finalizeInterviewBySession(id)
+          : app.coreTechnicalAssessmentService.finalizeInterviewBySession(id),
+        access.kind === "owner"
+          ? app.appliedEngineeringAssessmentService.finalizeInterviewOwned(access.ownerId, id)
+          : app.appliedEngineeringAssessmentService.finalizeInterviewBySession(id)
       ]);
     });
-    return apiSuccess(serialise(state));
+    return apiSuccess(serialiseInterviewState(state));
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   }
 }
 
-function serialise(state: InterviewState) {
+export function serialiseInterviewState(state: InterviewState) {
   const question = currentQuestion(state);
 
   return {

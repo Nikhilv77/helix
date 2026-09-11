@@ -60,4 +60,27 @@ describe("SessionStateScreen block assessment completion", () => {
       screen.getByRole("link", { name: /return to current core technical practice/i })
     ).toHaveAttribute("href", "/practice/core-technical");
   });
+
+  it("returns a completed Applied Engineering voice assessment to its incident report", () => {
+    const blockId = "33333333-3333-4333-8333-333333333333";
+    render(
+      <SessionStateScreen
+        kind="complete"
+        workspaceAccent="ember"
+        storyPracticeAssessment={{
+          blockId,
+          routeBase: "/practice/applied-engineering",
+          label: "Applied Engineering"
+        }}
+      />
+    );
+
+    expect(screen.getByRole("link", { name: /view block results/i })).toHaveAttribute(
+      "href",
+      `/practice/applied-engineering?block=${blockId}`
+    );
+    expect(
+      screen.getByRole("link", { name: /return to current applied engineering practice/i })
+    ).toHaveAttribute("href", "/practice/applied-engineering");
+  });
 });

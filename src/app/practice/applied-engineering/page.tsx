@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { AppliedEngineeringOverview } from "@/features/practice/applied-engineering/ui/applied-engineering-overview";
-import { AppliedEngineeringPreparation } from "@/features/practice/applied-engineering/ui/applied-engineering-preparation";
+import { AppliedEngineeringTechnologyWelcome } from "@/features/practice/applied-engineering/ui/applied-engineering-technology-welcome";
+import { appliedEngineeringTechnologyOptions } from "@/features/practice/applied-engineering/domain/technology-focus";
 import { appliedEngineeringHistoryNavigation } from "@/features/practice/applied-engineering/domain/ui-state";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
@@ -23,8 +24,12 @@ export default async function AppliedEngineeringPracticePage({
   const { ownerId, profile } = await requireOnboardedProfile();
   const app = getAppContainer();
   const allowEarlyAssessmentStart = app.config?.nodeEnv === "development";
+  const recovery = app.appliedEngineeringAssessmentService
+    .recoverCurrentInterview(ownerId)
+    .catch(() => null);
   const query = await searchParams;
   const requestedBlockId = typeof query.block === "string" ? query.block : null;
+  await recovery;
   const [eligibility, currentBlock, historyList] = await Promise.all([
     app.appliedEngineeringEligibilityService.forProfile(profile),
     app.appliedEngineeringPracticeService.current(ownerId),
@@ -53,9 +58,9 @@ export default async function AppliedEngineeringPracticePage({
 
   if (needsFirstIncident) {
     return (
-      <main className="min-h-[70vh]" aria-label="Applied Engineering setup">
-        <AppliedEngineeringPreparation />
-      </main>
+      <AppliedEngineeringTechnologyWelcome
+        technologies={appliedEngineeringTechnologyOptions(profile.resume?.skills ?? [])}
+      />
     );
   }
 

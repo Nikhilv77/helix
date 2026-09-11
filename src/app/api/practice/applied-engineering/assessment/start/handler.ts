@@ -24,11 +24,11 @@ export async function POST(r: NextRequest) {
       },
       `${ownerId}:${input.assessmentId}`
     );
-    return apiSuccess({
-      assessment: await app.appliedEngineeringAssessmentService.start(ownerId, input, {
+    return apiSuccess(
+      await app.appliedEngineeringAssessmentRuntimeService.startOrResume(ownerId, input, {
         allowLocked: app.config.nodeEnv === "development"
       })
-    });
+    );
   } catch (e) {
     return apiError(e, r.nextUrl.pathname);
   } finally {

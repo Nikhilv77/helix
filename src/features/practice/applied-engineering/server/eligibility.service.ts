@@ -1,5 +1,6 @@
 import {
   NODEJS_APPLIED_ENGINEERING_INCIDENT_RANKING_CATALOGUE,
+  APPLIED_ENGINEERING_REVIEW_CANDIDATES,
   type AppliedEngineeringIncidentRankingCandidate
 } from "@/features/practice/applied-engineering/domain";
 import type { CandidateProfile } from "@/lib/shared/types";
@@ -24,6 +25,8 @@ export type AppliedEngineeringIncidentLibraryEntry = {
   difficulties: AppliedEngineeringIncidentRankingCandidate["difficulties"];
   topicKeys: string[];
   productionSignalKeys: AppliedEngineeringIncidentRankingCandidate["productionSignalKeys"];
+  expectedMinutes: number;
+  questions: Array<{ order: number; title: string; format: string }>;
 };
 
 export type AppliedEngineeringEligibility = {
@@ -153,12 +156,18 @@ function unavailable(
 function publicIncident(
   candidate: AppliedEngineeringIncidentRankingCandidate
 ): AppliedEngineeringIncidentLibraryEntry {
+  const reviewed = APPLIED_ENGINEERING_REVIEW_CANDIDATES.find(
+    (artifact) => artifact.caseKey === candidate.key
+  );
   return {
     key: candidate.key,
     version: candidate.version,
     title: candidate.title,
     difficulties: [...candidate.difficulties],
     topicKeys: [...candidate.topicKeys],
-    productionSignalKeys: [...candidate.productionSignalKeys]
+    productionSignalKeys: [...candidate.productionSignalKeys],
+    expectedMinutes: reviewed?.incident.expectedMinutes ?? 45,
+    questions:
+      reviewed?.incident.stages.map(({ order, title, format }) => ({ order, title, format })) ?? []
   };
 }

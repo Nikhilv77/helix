@@ -97,6 +97,19 @@ export class CoreTechnicalStoryRankingService {
     rawFocus: CoreTechnicalConfirmedFocus,
     rawEvidence: CoreTechnicalAdaptiveEvidence
   ): CoreTechnicalAdaptiveStorySelection {
+    const selection = this.findNextStory(rawFocus, rawEvidence);
+    if (!selection) {
+      throw new Error(
+        "No published Core Technical story is compatible with the verified assessment evidence"
+      );
+    }
+    return selection;
+  }
+
+  findNextStory(
+    rawFocus: CoreTechnicalConfirmedFocus,
+    rawEvidence: CoreTechnicalAdaptiveEvidence
+  ): CoreTechnicalAdaptiveStorySelection | null {
     const focus = coreTechnicalConfirmedFocusSchema.parse(rawFocus);
     const evidence = coreTechnicalAdaptiveEvidenceSchema.parse(rawEvidence);
     const candidates = coreTechnicalStoryRankingCandidateSchema.array().parse(this.candidates);
@@ -111,11 +124,7 @@ export class CoreTechnicalStoryRankingService {
       candidate.difficulties.includes(requestedDifficulty)
     );
     const pool = exactDifficulty.length > 0 ? exactDifficulty : novel;
-    if (pool.length === 0) {
-      throw new Error(
-        "No published Core Technical story is compatible with the verified assessment evidence"
-      );
-    }
+    if (pool.length === 0) return null;
     const rankings = pool
       .map((candidate) => {
         const difficulty = availableDifficulty(candidate, requestedDifficulty);

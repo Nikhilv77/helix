@@ -15,72 +15,75 @@ import type {
 import type { PrismaService } from "@/server/database/prisma.service";
 import { ConflictErrorException } from "@/server/common/exceptions/conflict-error.exception";
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
+import { StoryPracticeAssessmentRuntimeCoordinator } from "@/features/practice/shared/server/assessment-runtime";
 import type { CoreTechnicalAssessmentService } from "./assessment.service";
 
 /** Launches a frozen Core assessment in the shared DSA-quality voice room. */
 export class CoreTechnicalAssessmentRuntimeService {
+  private readonly coordinator: StoryPracticeAssessmentRuntimeCoordinator<
+    ReturnType<typeof coreTechnicalAssessmentStartInputSchema.parse>,
+    Awaited<ReturnType<CoreTechnicalAssessmentService["start"]>>,
+    CoreTechnicalAssessmentSnapshot,
+    RuntimeRecord
+  >;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly assessments: CoreTechnicalAssessmentService,
-    private readonly interviews: InterviewService
-  ) {}
+    interviews: InterviewService
+  ) {
+    this.coordinator = new StoryPracticeAssessmentRuntimeCoordinator(interviews, {
+      practice: "core-technical",
+      parseInput: (rawInput) => coreTechnicalAssessmentStartInputSchema.parse(rawInput),
+      startAssessment: (ownerId, input, options) => this.assessments.start(ownerId, input, options),
+      loadRecord: async (ownerId, assessmentId) => {
+        const record = await this.prisma.coreTechnicalAssessment.findFirst({
+          where: { id: assessmentId, ownerId },
+          select: {
+            id: true,
+            blockId: true,
+            assessmentSnapshot: true,
+            block: {
+              select: {
+                storySnapshot: true,
+                owner: { select: { targetRole: true, level: true, context: true } }
+              }
+            }
+          }
+        });
+        return record?.assessmentSnapshot ? record : null;
+      },
+      parseSnapshot: (record) =>
+        coreTechnicalAssessmentSnapshotSchema.parse(record.assessmentSnapshot),
+      findSession: (sessionId) =>
+        this.prisma.interviewSession.findUnique({
+          where: { id: sessionId },
+          select: { ownerId: true, state: true }
+        }),
+      buildSetup: buildCoreTechnicalAssessmentSetup,
+      buildPlan: buildCoreTechnicalAssessmentPlan,
+      notFound: () =>
+        new NotFoundErrorException(
+          "CORE_TECHNICAL_ASSESSMENT_NOT_FOUND",
+          "Core Technical assessment not found."
+        ),
+      sessionConflict: () =>
+        new ConflictErrorException(
+          "CORE_TECHNICAL_ASSESSMENT_SESSION_CONFLICT",
+          "This assessment room reservation does not match the frozen assessment."
+        )
+    });
+  }
 
   async startOrResume(ownerId: string, rawInput: unknown, options: { allowLocked?: boolean } = {}) {
-    const input = coreTechnicalAssessmentStartInputSchema.parse(rawInput);
-    const assessment = await this.assessments.start(ownerId, input, options);
-    const record = await this.prisma.coreTechnicalAssessment.findFirst({
-      where: { id: input.assessmentId, ownerId },
-      select: {
-        id: true,
-        blockId: true,
-        assessmentSnapshot: true,
-        block: {
-          select: {
-            storySnapshot: true,
-            owner: { select: { targetRole: true, level: true, context: true } }
-          }
-        }
-      }
-    });
-    if (!record?.assessmentSnapshot) {
-      throw new NotFoundErrorException(
-        "CORE_TECHNICAL_ASSESSMENT_NOT_FOUND",
-        "Core Technical assessment not found."
-      );
-    }
-
-    const snapshot = coreTechnicalAssessmentSnapshotSchema.parse(record.assessmentSnapshot);
-    const existing = await this.prisma.interviewSession.findUnique({
-      where: { id: record.id },
-      select: { ownerId: true, state: true }
-    });
-    const existingIdentity = (
-      existing?.state as
-        { setup?: { coreTechnicalAssessment?: { assessmentId?: unknown } } } | undefined
-    )?.setup?.coreTechnicalAssessment?.assessmentId;
-    if (existing && (existing.ownerId !== ownerId || existingIdentity !== record.id)) {
-      throw new ConflictErrorException(
-        "CORE_TECHNICAL_ASSESSMENT_SESSION_CONFLICT",
-        "This assessment room reservation does not match the frozen assessment."
-      );
-    }
-
-    const started = await this.interviews.start(
-      buildCoreTechnicalAssessmentSetup(record, snapshot),
-      ownerId,
-      Date.now(),
-      buildCoreTechnicalAssessmentPlan(snapshot),
-      // Assessment IDs are UUIDs and one-to-one with blocks, so the same ID is
-      // a durable, replay-safe room reservation without another nullable link.
-      record.id
-    );
-    return { assessment, sessionId: started.state.id, created: started.created };
+    return this.coordinator.startOrResume(ownerId, rawInput, options);
   }
 }
 
 type RuntimeRecord = {
   id: string;
   blockId: string;
+  assessmentSnapshot?: Prisma.JsonValue;
   block: {
     storySnapshot: Prisma.JsonValue;
     owner: { targetRole: string | null; level: string | null; context: string | null };
@@ -109,6 +112,22 @@ export function buildCoreTechnicalAssessmentSetup(
     templateTitle: `${storyTitle} assessment`,
     durationMinutes: 30,
     questionCount: 5,
+    storyPracticeAssessment: {
+      kind: "story-practice-assessment",
+      practice: "core-technical",
+      blockId: record.blockId,
+      assessmentId: record.id,
+      snapshotVersion: snapshot.schemaVersion,
+      evaluatorVersion: CORE_TECHNICAL_ASSESSMENT_EVALUATOR_VERSION
+    },
+    storyPracticeAssessmentPresentation: {
+      evidenceAnchorLabel: "Practice evidence",
+      stages: [
+        { id: "rapid", label: "Review", caption: "Your saved path evidence" },
+        { id: "explain", label: "Diagnose & repair", caption: "Mechanism transfer" },
+        { id: "scenario", label: "Production", caption: "Prove and ship" }
+      ]
+    },
     coreTechnicalAssessment: {
       kind: "core-technical-assessment",
       blockId: record.blockId,
@@ -137,6 +156,12 @@ export function buildCoreTechnicalAssessmentPlan(
       probeIfMissing: probeFor(prompt.kind),
       maxFollowUps: 1,
       coreTechnicalInterviewerGuide: {
+        expectedAnswer: prompt.privateEvaluation.expectedAnswer,
+        rubric: prompt.privateEvaluation.rubric.map((item) => ({ ...item }))
+      },
+      storyPracticeInterviewerGuide: {
+        practice: "core-technical" as const,
+        label: "Core Technical",
         expectedAnswer: prompt.privateEvaluation.expectedAnswer,
         rubric: prompt.privateEvaluation.rubric.map((item) => ({ ...item }))
       }

@@ -92,7 +92,19 @@ export class CoreTechnicalContinuationService {
     const report = coreTechnicalAssessmentReportSchema.parse(
       previous.assessment.report.reportSnapshot
     );
-    const selection = report.nextStory;
+    const continuation =
+      report.continuation ??
+      (report.nextStory ? { kind: "continue" as const, next: report.nextStory } : null);
+    if (!continuation) {
+      throw new ConflictErrorException(
+        "CORE_TECHNICAL_CONTINUATION_INVALID",
+        "This assessment report does not contain a continuation decision."
+      );
+    }
+    if (continuation.kind !== "continue") {
+      return { replayed: false, block: null, continuation };
+    }
+    const selection = continuation.next;
     const activated = await this.dependencies.persistence.activateLibraryBlock(ownerId, {
       requestId: input.requestId,
       focusRevisionId: previous.focusRevisionId,

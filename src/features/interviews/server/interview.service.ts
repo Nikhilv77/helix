@@ -56,9 +56,11 @@ import {
   dsaBlockAssessmentReviewFeedback
 } from "./dsa-block-assessment-dialogue";
 import {
-  coreTechnicalAssessmentMoveOnUtterance,
-  coreTechnicalAssessmentOpening
-} from "./core-technical-assessment-dialogue";
+  storyPracticeAssessmentDialogue,
+  storyPracticeAssessmentMoveOnUtterance,
+  storyPracticeAssessmentOpening
+} from "./story-practice-assessment-dialogue";
+import { storyPracticeAssessmentIdentityFromSetup } from "@/features/practice/shared/server/contracts";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** A spoken conversation should never wait on the model's full provider timeout. */
@@ -488,6 +490,7 @@ export class InterviewService {
         evidenceLedger: withAnswer.evidence?.[String(withAnswer.questionIndex)],
         dsaInterviewerGuide: question.dsaInterviewerGuide,
         coreTechnicalInterviewerGuide: question.coreTechnicalInterviewerGuide,
+        storyPracticeInterviewerGuide: question.storyPracticeInterviewerGuide,
         conversationHistory: withAnswer.turns
           .slice(0, -1)
           .slice(-8)
@@ -860,6 +863,7 @@ export class InterviewService {
     evidenceLedger?: EvidenceLedger;
     dsaInterviewerGuide?: PlannedQuestion["dsaInterviewerGuide"];
     coreTechnicalInterviewerGuide?: PlannedQuestion["coreTechnicalInterviewerGuide"];
+    storyPracticeInterviewerGuide?: PlannedQuestion["storyPracticeInterviewerGuide"];
   }) {
     try {
       return await within(this.decider.decide(input), DECIDER_BUDGET_MS, "Interview decider");
@@ -903,8 +907,13 @@ export class InterviewService {
     if (state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment") {
       return dsaBlockAssessmentMoveOnUtterance(state, acknowledgement);
     }
-    if (state.setup.coreTechnicalAssessment?.kind === "core-technical-assessment") {
-      return coreTechnicalAssessmentMoveOnUtterance(state, acknowledgement);
+    const storyPracticeIdentity = storyPracticeAssessmentIdentityFromSetup(state.setup);
+    if (storyPracticeIdentity) {
+      return storyPracticeAssessmentMoveOnUtterance(
+        state,
+        acknowledgement,
+        storyPracticeAssessmentDialogue(storyPracticeIdentity.practice)
+      );
     }
 
     if (state.phase === "done" || state.phase === "wrap") {
@@ -1204,11 +1213,10 @@ export function rubricFor(setup: InterviewSetup, question: PlannedQuestion) {
   if (setup.dsaBlockAssessment?.kind === "dsa-block-assessment") {
     return BLOCK_ASSESSMENT_RUBRIC.filter((rubric) => rubricKeys.has(rubric.key));
   }
-  if (
-    setup.coreTechnicalAssessment?.kind === "core-technical-assessment" &&
-    question.coreTechnicalInterviewerGuide
-  ) {
-    const rubric = question.coreTechnicalInterviewerGuide.rubric;
+  const storyPracticeGuide =
+    question.storyPracticeInterviewerGuide ?? question.coreTechnicalInterviewerGuide;
+  if (storyPracticeAssessmentIdentityFromSetup(setup) && storyPracticeGuide) {
+    const rubric = storyPracticeGuide.rubric;
     const total = rubric.reduce((sum, item) => sum + item.points, 0) || 1;
     return rubric.map((item, index) => ({
       key: `criterion-${index + 1}`,
@@ -1333,11 +1341,15 @@ function delay(milliseconds: number): Promise<void> {
 function introUtterance(state: InterviewState): string {
   const first = state.plan[0];
   const minutes = Math.round(roundCaps(state.setup).hardCapMs / 60000);
+  const storyPracticeIdentity = storyPracticeAssessmentIdentityFromSetup(state.setup);
   const intro =
     state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment"
       ? dsaBlockAssessmentOpening(state)
-      : state.setup.coreTechnicalAssessment?.kind === "core-technical-assessment"
-        ? coreTechnicalAssessmentOpening(state)
+      : storyPracticeIdentity
+        ? storyPracticeAssessmentOpening(
+            state,
+            storyPracticeAssessmentDialogue(storyPracticeIdentity.practice)
+          )
         : state.setup.templateTitle === "DSA practice interview"
           ? "Hi, I'm Maya. Welcome to your DSA interview. I picked a few problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful."
           : state.setup.fundamentalsRound

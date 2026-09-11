@@ -1,12 +1,15 @@
 import type {
   StoryPracticeAssessmentView,
   StoryPracticeBlockView,
+  StoryPracticeContinuationDecisionView,
   StoryPracticeHistoryListView,
   StoryPracticeLibraryEntryView,
+  StoryPracticeNextItemView,
   StoryPracticeQuestionView
 } from "@/features/practice/shared/ui/view-contracts";
 import type { AppliedEngineeringIncidentLibraryEntry } from "@/features/practice/applied-engineering/server/eligibility.service";
 import type { AppliedEngineeringHistoryList } from "@/features/practice/applied-engineering/server/history.service";
+import type { AppliedEngineeringAdaptiveIncidentSelection } from "@/features/practice/applied-engineering/domain/focus-ranking-contracts";
 import type {
   AppliedEngineeringPublicBlock,
   AppliedEngineeringPublicQuestion
@@ -52,11 +55,14 @@ export function appliedEngineeringAssessmentView(
   assessment: NonNullable<AppliedEngineeringPublicBlock["assessment"]>
 ): StoryPracticeAssessmentView {
   const report = assessment.report;
+  const nextStory = report?.nextIncident
+    ? appliedEngineeringNextIncidentView(report.nextIncident)
+    : undefined;
+  const continuation = report ? appliedEngineeringContinuationView(report, nextStory) : undefined;
   return {
     ...assessment,
     report: report
       ? {
-          ...report,
           scores: {
             technicalAccuracy: report.scores.diagnosisEvidence,
             mechanismReasoning: report.scores.implementationCorrectness,
@@ -64,16 +70,46 @@ export function appliedEngineeringAssessmentView(
             debuggingImplementation: report.scores.productionJudgment,
             communicationProduction: report.scores.ownershipDelivery
           },
-          nextStory: {
-            ...report.nextIncident,
-            selectedStory: {
-              ...report.nextIncident.selectedIncident,
-              emphasizedConceptKeys: report.nextIncident.selectedIncident.emphasizedSignalKeys
-            }
-          }
+          overallScore: report.overallScore,
+          teacherSummary: report.teacherSummary,
+          strengths: report.strengths,
+          improvementAreas: report.improvementAreas,
+          promptFeedback: report.promptFeedback,
+          solvedVsLearned: report.solvedVsLearned,
+          deterministicEvidence: report.deterministicEvidence,
+          ...(nextStory ? { nextStory } : {}),
+          ...(continuation ? { continuation } : {})
         }
       : null
   };
+}
+
+function appliedEngineeringNextIncidentView(
+  selection: AppliedEngineeringAdaptiveIncidentSelection
+): StoryPracticeNextItemView {
+  return {
+    ...selection,
+    selectedStory: {
+      ...selection.selectedIncident,
+      emphasizedConceptKeys: selection.selectedIncident.emphasizedSignalKeys
+    }
+  };
+}
+
+function appliedEngineeringContinuationView(
+  report: NonNullable<NonNullable<AppliedEngineeringPublicBlock["assessment"]>["report"]>,
+  legacyNext: StoryPracticeNextItemView | undefined
+): StoryPracticeContinuationDecisionView | undefined {
+  if (!report.continuation) {
+    return legacyNext ? { kind: "continue", next: legacyNext } : undefined;
+  }
+  if (report.continuation.kind === "continue") {
+    return {
+      kind: "continue",
+      next: appliedEngineeringNextIncidentView(report.continuation.next)
+    };
+  }
+  return report.continuation;
 }
 
 export function appliedEngineeringBlockView(

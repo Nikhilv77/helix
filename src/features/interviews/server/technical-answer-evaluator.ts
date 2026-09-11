@@ -123,6 +123,9 @@ export function buildTechnicalEvaluationPrompt(input: TechnicalAnswerEvaluationI
         .join("\n")
     : "No execution evidence was recorded. Judge code semantically and state uncertainty.";
 
+  const storyPracticeGuide =
+    question.storyPracticeInterviewerGuide ?? question.coreTechnicalInterviewerGuide;
+
   return `Evaluate the candidate's cumulative answer to one interview question.
 
 Target role: ${setup.role}
@@ -135,7 +138,7 @@ Intent: ${question.intent ?? "Assess technically correct reasoning."}
 Expected evidence:
 ${question.mustHit.map((item) => `- ${item}`).join("\n")}
 
-${question.coreTechnicalInterviewerGuide ? `Authoritative expected mechanism and evidence (server-only):\n${question.coreTechnicalInterviewerGuide.expectedAnswer}` : ""}
+${storyPracticeGuide ? `Authoritative expected mechanism and evidence (server-only):\n${storyPracticeGuide.expectedAnswer}` : ""}
 
 Rubric:
 ${formatRubric(rubric)}

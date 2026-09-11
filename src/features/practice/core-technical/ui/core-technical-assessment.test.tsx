@@ -199,6 +199,27 @@ describe("CoreTechnicalAssessment", () => {
     expect(screen.getByText("Historical reports are read-only.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /next story/i })).toBeNull();
   });
+
+  it("renders a terminal completion without offering another path", () => {
+    const block = makeBlock("COMPLETED");
+    block.assessment!.report = {
+      ...report(),
+      nextStory: undefined,
+      continuation: {
+        kind: "complete",
+        summary:
+          "Every currently eligible Core Technical practice path is complete; review the saved feedback."
+      }
+    } as NonNullable<NonNullable<CoreTechnicalPublicBlock["assessment"]>["report"]>;
+
+    render(<CoreTechnicalAssessment block={block} terminalCount={8} />);
+
+    expect(screen.getByText("Preparation complete")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "You’ve completed the available practice path curriculum" })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /continue to next/i })).toBeNull();
+  });
 });
 
 const BLOCK_ID = "11111111-1111-4111-8111-111111111111";

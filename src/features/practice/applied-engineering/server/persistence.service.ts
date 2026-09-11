@@ -1,8 +1,11 @@
 import { createHash } from "node:crypto";
 import {
+  AppliedEngineeringAssessmentStatus,
+  AppliedEngineeringBlockStatus,
   AppliedEngineeringIncidentPublicationStatus,
   AppliedEngineeringIncidentProgressStatus,
   AppliedEngineeringPreparationStatus,
+  AppliedEngineeringQuestionStatus,
   Prisma
 } from "@prisma/client";
 import { z } from "zod";
@@ -14,16 +17,15 @@ import {
 } from "@/features/practice/applied-engineering/domain/focus-ranking-contracts";
 import {
   appliedEngineeringQuestionBlockSchema,
-  toPublicAppliedEngineeringQuestion,
+  toPublicAppliedEngineeringQuestion
 } from "@/features/practice/applied-engineering/domain/question-contracts";
-import {
-  appliedEngineeringReviewArtifactSchema
-} from "@/features/practice/applied-engineering/domain/review-artifact-contracts";
+import { appliedEngineeringReviewArtifactSchema } from "@/features/practice/applied-engineering/domain/review-artifact-contracts";
 import { auditAppliedEngineeringContent } from "@/features/practice/applied-engineering/domain/content-release-audit";
 import { selectedAppliedEngineeringIncidentSchema } from "@/features/practice/applied-engineering/domain/incident-contracts";
 import { ConflictErrorException } from "@/server/common/exceptions/conflict-error.exception";
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 import type { PrismaService } from "@/server/database/prisma.service";
+import { buildAppliedEngineeringAssessmentSnapshot } from "./assessment-blueprint";
 
 const focusRevisionSelect = {
   id: true,
@@ -106,7 +108,13 @@ const preparationFailureSchema = z
     selection: appliedEngineeringIncidentSelectionSchema.optional(),
     diagnostic: z
       .object({
-        stage: z.enum(["ranking", "story-generation", "question-generation", "validation", "publishing"]),
+        stage: z.enum([
+          "ranking",
+          "story-generation",
+          "question-generation",
+          "validation",
+          "publishing"
+        ]),
         code: z.string().min(2).max(120),
         message: z.string().min(2).max(700),
         retryable: z.boolean()
@@ -115,23 +123,28 @@ const preparationFailureSchema = z
   })
   .strict();
 
-export type SavedAppliedEngineeringFocusRevision = Prisma.AppliedEngineeringFocusRevisionGetPayload<{
-  select: typeof focusRevisionSelect;
-}>;
-export type PublishedAppliedEngineeringIncidentVersion = Prisma.AppliedEngineeringIncidentVersionGetPayload<{
-  select: typeof incidentVersionSelect;
-}>;
+export type SavedAppliedEngineeringFocusRevision =
+  Prisma.AppliedEngineeringFocusRevisionGetPayload<{
+    select: typeof focusRevisionSelect;
+  }>;
+export type PublishedAppliedEngineeringIncidentVersion =
+  Prisma.AppliedEngineeringIncidentVersionGetPayload<{
+    select: typeof incidentVersionSelect;
+  }>;
 export type PublishedAppliedEngineeringBlock = Prisma.AppliedEngineeringBlockGetPayload<{
   select: typeof publishedBlockSelect;
 }>;
-export type AppliedEngineeringPreparationAttemptRecord = Prisma.AppliedEngineeringPreparationAttemptGetPayload<{
-  select: typeof preparationAttemptSelect;
-}>;
+export type AppliedEngineeringPreparationAttemptRecord =
+  Prisma.AppliedEngineeringPreparationAttemptGetPayload<{
+    select: typeof preparationAttemptSelect;
+  }>;
 
 export type PublishAppliedEngineeringBlockInput = {
   requestId: string;
   focusRevisionId: string;
   previousBlockId?: string;
+  /** Loose library work must not replace the assessment-bearing current incident. */
+  libraryBlock?: boolean;
   selection: AppliedEngineeringIncidentSelection;
   draft: {
     incident: z.input<typeof selectedAppliedEngineeringIncidentSchema>;
@@ -311,7 +324,10 @@ export class AppliedEngineeringPersistenceService {
         });
         if (replay) return replay;
       }
-      if (existingAttempt && existingAttempt.status !== AppliedEngineeringPreparationStatus.FAILED) {
+      if (
+        existingAttempt &&
+        existingAttempt.status !== AppliedEngineeringPreparationStatus.FAILED
+      ) {
         throw new ConflictErrorException(
           "APPLIED_ENGINEERING_PREPARATION_NOT_REPLAYABLE",
           "This preparation request did not publish a reusable block."
@@ -336,14 +352,22 @@ export class AppliedEngineeringPersistenceService {
         },
         select: { id: true, publicationStatus: true, incidentSnapshot: true }
       });
-      if (!incidentVersion || incidentVersion.publicationStatus !== AppliedEngineeringIncidentPublicationStatus.PUBLISHED) {
+      if (
+        !incidentVersion ||
+        incidentVersion.publicationStatus !== AppliedEngineeringIncidentPublicationStatus.PUBLISHED
+      ) {
         throw new ConflictErrorException(
           "APPLIED_ENGINEERING_INCIDENT_NOT_PUBLISHED",
           "The selected Applied Engineering incident version is not published."
         );
       }
-      const storedIncident = selectedAppliedEngineeringIncidentSchema.parse(incidentVersion.incidentSnapshot);
-      if (storedIncident.key !== input.draft.incident.key || storedIncident.title !== input.draft.incident.title) {
+      const storedIncident = selectedAppliedEngineeringIncidentSchema.parse(
+        incidentVersion.incidentSnapshot
+      );
+      if (
+        storedIncident.key !== input.draft.incident.key ||
+        storedIncident.title !== input.draft.incident.title
+      ) {
         throw new ConflictErrorException(
           "APPLIED_ENGINEERING_REVIEWED_CONTRACT_MISMATCH",
           "The generated block differs from its published reviewed incident contract."
@@ -354,7 +378,7 @@ export class AppliedEngineeringPersistenceService {
         where: { ownerId, isCurrent: true },
         select: publishedBlockSelect
       });
-      if (current && !input.previousBlockId) return current;
+      if (current && !input.previousBlockId && !input.libraryBlock) return current;
       if (current && input.previousBlockId && current.id !== input.previousBlockId) {
         throw new ConflictErrorException(
           "APPLIED_ENGINEERING_CONTINUATION_STALE",
@@ -393,7 +417,7 @@ export class AppliedEngineeringPersistenceService {
             },
             select: { id: true }
           });
-      if (current) {
+      if (current && input.previousBlockId) {
         await tx.appliedEngineeringBlock.update({
           where: { id_ownerId: { id: current.id, ownerId } },
           data: { isCurrent: false }
@@ -402,6 +426,7 @@ export class AppliedEngineeringPersistenceService {
       const block = await tx.appliedEngineeringBlock.create({
         data: {
           ordinal: (latest?.ordinal ?? 0) + 1,
+          isCurrent: !input.libraryBlock,
           owner: { connect: { ownerId } },
           focusRevision: { connect: { id_ownerId: { id: input.focusRevisionId, ownerId } } },
           incidentVersion: { connect: { id: incidentVersion.id } },
@@ -437,10 +462,19 @@ export class AppliedEngineeringPersistenceService {
       await Promise.all([
         tx.appliedEngineeringPreparationAttempt.update({
           where: { id: attempt.id },
-          data: { status: AppliedEngineeringPreparationStatus.SUCCEEDED, blockId: block.id, completedAt: preparedAt }
+          data: {
+            status: AppliedEngineeringPreparationStatus.SUCCEEDED,
+            blockId: block.id,
+            completedAt: preparedAt
+          }
         }),
         tx.appliedEngineeringIncidentProgress.upsert({
-          where: { ownerId_incidentKey: { ownerId, incidentKey: input.selection.selectedIncident.incidentKey } },
+          where: {
+            ownerId_incidentKey: {
+              ownerId,
+              incidentKey: input.selection.selectedIncident.incidentKey
+            }
+          },
           create: {
             ownerId,
             incidentKey: input.selection.selectedIncident.incidentKey,
@@ -448,10 +482,160 @@ export class AppliedEngineeringPersistenceService {
             unlockedAt: preparedAt,
             startedAt: preparedAt
           },
-          update: { status: AppliedEngineeringIncidentProgressStatus.PRACTISING, startedAt: preparedAt }
+          update: {
+            status: AppliedEngineeringIncidentProgressStatus.PRACTISING,
+            startedAt: preparedAt
+          }
         })
       ]);
       return block;
+    }, transactionOptions);
+  }
+
+  /** Promotes an existing loose incident and retains all of its question progress. */
+  async activateLibraryBlock(
+    ownerId: string,
+    rawInput: {
+      requestId: string;
+      focusRevisionId: string;
+      previousBlockId: string;
+      selection: AppliedEngineeringIncidentSelection;
+      generatorVersion: string;
+      validatorVersion: string;
+    }
+  ): Promise<{ id: string } | null> {
+    const input = {
+      requestId: z.string().uuid().parse(rawInput.requestId),
+      focusRevisionId: z.string().uuid().parse(rawInput.focusRevisionId),
+      previousBlockId: z.string().uuid().parse(rawInput.previousBlockId),
+      selection: appliedEngineeringIncidentSelectionSchema.parse(rawInput.selection),
+      generatorVersion: z.string().min(1).max(160).parse(rawInput.generatorVersion),
+      validatorVersion: z.string().min(1).max(160).parse(rawInput.validatorVersion)
+    };
+    const activatedAt = this.now();
+    return this.prisma.$transaction(async (tx) => {
+      await lock(tx, `applied-engineering-block:${ownerId}`);
+      const current = await tx.appliedEngineeringBlock.findFirst({
+        where: { ownerId, isCurrent: true },
+        select: {
+          id: true,
+          status: true,
+          focusRevisionId: true,
+          assessment: { select: { status: true } }
+        }
+      });
+      if (
+        !current ||
+        current.id !== input.previousBlockId ||
+        current.status !== AppliedEngineeringBlockStatus.ASSESSED ||
+        current.assessment?.status !== AppliedEngineeringAssessmentStatus.COMPLETED
+      ) {
+        throw new ConflictErrorException(
+          "APPLIED_ENGINEERING_CONTINUATION_STALE",
+          "The assessed incident is no longer the current incident."
+        );
+      }
+      const target = await tx.appliedEngineeringBlock.findFirst({
+        where: {
+          ownerId,
+          isCurrent: false,
+          incidentVersion: { incidentKey: input.selection.selectedIncident.incidentKey }
+        },
+        orderBy: { ordinal: "desc" },
+        select: {
+          id: true,
+          focusRevisionId: true,
+          contentFingerprint: true,
+          selectionSnapshot: true,
+          incidentVersion: { select: { incidentKey: true } },
+          questions: {
+            orderBy: { order: "asc" },
+            select: {
+              id: true,
+              order: true,
+              status: true,
+              contentFingerprint: true,
+              privateSnapshot: true,
+              attempts: {
+                orderBy: { createdAt: "desc" },
+                select: { score: true, verificationStatus: true }
+              }
+            }
+          }
+        }
+      });
+      if (!target) return null;
+      if (
+        current.focusRevisionId !== input.focusRevisionId ||
+        target.focusRevisionId !== input.focusRevisionId
+      ) {
+        throw new ConflictErrorException(
+          "APPLIED_ENGINEERING_FOCUS_MISMATCH",
+          "The prepared library incident belongs to a different practice focus."
+        );
+      }
+      await tx.appliedEngineeringBlock.update({
+        where: { id_ownerId: { id: current.id, ownerId } },
+        data: { isCurrent: false }
+      });
+      const allQuestionsTerminal = target.questions.every(
+        ({ status }) => status !== AppliedEngineeringQuestionStatus.ACTIVE
+      );
+      const assessmentReadyAt = allQuestionsTerminal ? activatedAt : null;
+      await tx.appliedEngineeringBlock.update({
+        where: { id_ownerId: { id: target.id, ownerId } },
+        data: {
+          isCurrent: true,
+          ...(allQuestionsTerminal
+            ? {
+                status: AppliedEngineeringBlockStatus.ASSESSMENT_READY,
+                assessmentReadyAt
+              }
+            : {})
+        }
+      });
+      if (allQuestionsTerminal) {
+        const assessmentSnapshot = buildAppliedEngineeringAssessmentSnapshot({
+          blockContentFingerprint: target.contentFingerprint,
+          selectionSnapshot: target.selectionSnapshot,
+          questions: target.questions,
+          preparedAt: activatedAt
+        });
+        await Promise.all([
+          tx.appliedEngineeringAssessment.update({
+            where: { blockId_ownerId: { blockId: target.id, ownerId } },
+            data: {
+              status: AppliedEngineeringAssessmentStatus.READY,
+              readyAt: assessmentReadyAt,
+              assessmentSnapshot: toJson(assessmentSnapshot)
+            }
+          }),
+          tx.appliedEngineeringIncidentProgress.update({
+            where: {
+              ownerId_incidentKey: {
+                ownerId,
+                incidentKey: target.incidentVersion.incidentKey
+              }
+            },
+            data: { status: AppliedEngineeringIncidentProgressStatus.ASSESSMENT_READY }
+          })
+        ]);
+      }
+      await tx.appliedEngineeringPreparationAttempt.create({
+        data: {
+          ownerId,
+          focusRevisionId: input.focusRevisionId,
+          blockId: target.id,
+          requestId: input.requestId,
+          status: AppliedEngineeringPreparationStatus.SUCCEEDED,
+          generatorVersion: input.generatorVersion,
+          validatorVersion: input.validatorVersion,
+          selectionSnapshot: toJson(input.selection),
+          startedAt: activatedAt,
+          completedAt: activatedAt
+        }
+      });
+      return { id: target.id };
     }, transactionOptions);
   }
 
@@ -467,15 +651,36 @@ export class AppliedEngineeringPersistenceService {
         where: { id_ownerId: { id: input.focusRevisionId, ownerId } },
         select: { id: true }
       });
-      if (!focus) throw new ConflictErrorException("APPLIED_ENGINEERING_FOCUS_MISMATCH", "The failed preparation does not belong to this candidate's focus revision.");
+      if (!focus)
+        throw new ConflictErrorException(
+          "APPLIED_ENGINEERING_FOCUS_MISMATCH",
+          "The failed preparation does not belong to this candidate's focus revision."
+        );
       const existing = await tx.appliedEngineeringPreparationAttempt.findUnique({
         where: { ownerId_requestId: { ownerId, requestId: input.requestId } },
         select: preparationAttemptSelect
       });
-      if (existing && existing.focusRevisionId !== input.focusRevisionId) throw new ConflictErrorException("APPLIED_ENGINEERING_PREPARATION_REQUEST_CONFLICT", "This preparation request ID belongs to a different focus revision.");
-      if (existing?.status === AppliedEngineeringPreparationStatus.SUCCEEDED || existing?.status === AppliedEngineeringPreparationStatus.FAILED) return existing;
-      const data = { status: AppliedEngineeringPreparationStatus.FAILED, diagnosticsSnapshot: toJson(input.diagnostic), completedAt: failedAt } as const;
-      if (existing) return tx.appliedEngineeringPreparationAttempt.update({ where: { id: existing.id }, data, select: preparationAttemptSelect });
+      if (existing && existing.focusRevisionId !== input.focusRevisionId)
+        throw new ConflictErrorException(
+          "APPLIED_ENGINEERING_PREPARATION_REQUEST_CONFLICT",
+          "This preparation request ID belongs to a different focus revision."
+        );
+      if (
+        existing?.status === AppliedEngineeringPreparationStatus.SUCCEEDED ||
+        existing?.status === AppliedEngineeringPreparationStatus.FAILED
+      )
+        return existing;
+      const data = {
+        status: AppliedEngineeringPreparationStatus.FAILED,
+        diagnosticsSnapshot: toJson(input.diagnostic),
+        completedAt: failedAt
+      } as const;
+      if (existing)
+        return tx.appliedEngineeringPreparationAttempt.update({
+          where: { id: existing.id },
+          data,
+          select: preparationAttemptSelect
+        });
       return tx.appliedEngineeringPreparationAttempt.create({
         data: {
           ownerId,
@@ -496,10 +701,14 @@ export class AppliedEngineeringPersistenceService {
 }
 
 function parsePublishInput(input: PublishAppliedEngineeringBlockInput) {
+  if (input.previousBlockId && input.libraryBlock) {
+    throw new Error("An incident publication cannot be both a continuation and a library block");
+  }
   return {
     requestId: z.string().uuid().parse(input.requestId),
     focusRevisionId: z.string().uuid().parse(input.focusRevisionId),
     previousBlockId: z.string().uuid().optional().parse(input.previousBlockId),
+    libraryBlock: z.boolean().optional().default(false).parse(input.libraryBlock),
     selection: appliedEngineeringIncidentSelectionSchema.parse(input.selection),
     draft: {
       incident: selectedAppliedEngineeringIncidentSchema.parse(input.draft.incident),
@@ -517,14 +726,20 @@ function assertCompleteDraft(input: ReturnType<typeof parsePublishInput>): void 
     selected.incidentKey !== input.draft.incident.key ||
     selected.title !== input.draft.incident.title ||
     input.draft.questionBlock.incidentKey !== input.draft.incident.key
-  ) throw new Error("The ranked selection, incident, and question block do not match");
+  )
+    throw new Error("The ranked selection, incident, and question block do not match");
   const orders = input.draft.questionBlock.questions.map((question) => question.order);
   if (new Set(orders).size !== 8 || orders.some((order, index) => order !== index + 1)) {
     throw new Error("A published Applied Engineering block requires eight ordered questions");
   }
   input.draft.questionBlock.questions.forEach((question, index) => {
     const stage = input.draft.incident.stages[index];
-    if (!stage || question.stageKey !== stage.key || question.format !== stage.format || question.patternKey !== stage.patternKey) {
+    if (
+      !stage ||
+      question.stageKey !== stage.key ||
+      question.format !== stage.format ||
+      question.patternKey !== stage.patternKey
+    ) {
       throw new Error(`Question ${index + 1} does not match its frozen incident stage`);
     }
   });
@@ -537,7 +752,10 @@ function fingerprint(value: unknown): string {
 function stableStringify(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
   if (typeof value === "object" && value !== null) {
-    return `{${Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => `${JSON.stringify(key)}:${stableStringify(child)}`).join(",")}}`;
+    return `{${Object.entries(value)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, child]) => `${JSON.stringify(key)}:${stableStringify(child)}`)
+      .join(",")}}`;
   }
   return JSON.stringify(value);
 }

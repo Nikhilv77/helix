@@ -19,6 +19,7 @@ import {
 export type AppliedEngineeringFirstIncidentRankingContext = {
   recentIncidentKeys?: string[];
   recentTopicKeys?: string[];
+  completedIncidentKeys?: string[];
 };
 
 const FOUNDATION_SIGNALS = new Set<AppliedEngineeringProductionSignal>([
@@ -45,8 +46,7 @@ export class AppliedEngineeringIncidentRankingService {
     const requestedDifficulty = difficultyFor(focus);
     const recentIncidentKeys = new Set(context.recentIncidentKeys ?? []);
     const compatible = candidates.filter(
-      (candidate) =>
-        !recentIncidentKeys.has(candidate.key) && this.isEligible(candidate, focus, [])
+      (candidate) => !recentIncidentKeys.has(candidate.key) && this.isEligible(candidate, focus, [])
     );
     const exact = compatible.filter((candidate) =>
       candidate.difficulties.includes(requestedDifficulty)
@@ -84,10 +84,54 @@ export class AppliedEngineeringIncidentRankingService {
     );
   }
 
+  /** Selects one reviewed library incident without allowing the client to choose its difficulty. */
+  rankSelectedIncident(
+    rawFocus: AppliedEngineeringConfirmedFocus,
+    incidentKey: string,
+    context: AppliedEngineeringFirstIncidentRankingContext = {}
+  ): AppliedEngineeringFirstIncidentSelection {
+    const focus = appliedEngineeringConfirmedFocusSchema.parse(rawFocus);
+    const candidates = appliedEngineeringIncidentRankingCandidateSchema
+      .array()
+      .parse(this.candidates);
+    const candidate = candidates.find((item) => item.key === incidentKey);
+    if (!candidate || !this.isEligible(candidate, focus, context.completedIncidentKeys ?? [])) {
+      throw new Error("The selected Applied Engineering incident is not available for this focus");
+    }
+    const selectedIncident = this.scoreFirst(
+      candidate,
+      focus,
+      availableDifficulty(candidate, difficultyFor(focus)),
+      context
+    );
+    return deepFreeze(
+      appliedEngineeringFirstIncidentSelectionSchema.parse({
+        policyVersion: APPLIED_ENGINEERING_FIRST_INCIDENT_RANKING_POLICY_VERSION,
+        focusFingerprint: focus.focusFingerprint,
+        selectedIncident,
+        rankings: [selectedIncident],
+        reason: `${candidate.title} was selected from the reviewed incident library for focused practice.`
+      })
+    );
+  }
+
   rankNextIncident(
     rawFocus: AppliedEngineeringConfirmedFocus,
     rawEvidence: AppliedEngineeringAdaptiveEvidence
   ): AppliedEngineeringAdaptiveIncidentSelection {
+    const selection = this.findNextIncident(rawFocus, rawEvidence);
+    if (!selection) {
+      throw new Error(
+        "No published Applied Engineering incident is compatible with the verified evidence"
+      );
+    }
+    return selection;
+  }
+
+  findNextIncident(
+    rawFocus: AppliedEngineeringConfirmedFocus,
+    rawEvidence: AppliedEngineeringAdaptiveEvidence
+  ): AppliedEngineeringAdaptiveIncidentSelection | null {
     const focus = appliedEngineeringConfirmedFocusSchema.parse(rawFocus);
     const evidence = appliedEngineeringAdaptiveEvidenceSchema.parse(rawEvidence);
     const candidates = appliedEngineeringIncidentRankingCandidateSchema
@@ -102,11 +146,7 @@ export class AppliedEngineeringIncidentRankingService {
     );
     const exact = novel.filter((candidate) => candidate.difficulties.includes(requestedDifficulty));
     const pool = exact.length > 0 ? exact : novel;
-    if (pool.length === 0) {
-      throw new Error(
-        "No published Applied Engineering incident is compatible with the verified evidence"
-      );
-    }
+    if (pool.length === 0) return null;
 
     const weaknessSignals = adaptiveWeaknessSignals(evidence);
     const rankings = pool

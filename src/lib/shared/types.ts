@@ -1,5 +1,6 @@
 import type { SessionBlueprint } from "@/features/interviews/domain/personalized-plan";
 import type { PreparationOnboardingState } from "@/features/preparation-onboarding/domain/preparation-onboarding";
+import type { StoryPracticeAssessmentIdentity } from "@/features/practice/shared/server/contracts";
 
 export type Role = "backend" | "frontend" | "fullstack" | "data" | "ai-ml" | "pm";
 export type Level = "fresher" | "0-2" | "3-5" | "5-plus";
@@ -41,6 +42,11 @@ export interface InterviewSetup {
   resumeRound?: boolean;
   /** Marks the computer fundamentals round. */
   fundamentalsRound?: boolean;
+  storyPracticeAssessment?: StoryPracticeAssessmentIdentity;
+  storyPracticeAssessmentPresentation?: {
+    evidenceAnchorLabel: string;
+    stages: Array<{ id: "rapid" | "explain" | "scenario"; label: string; caption: string }>;
+  };
   dsaBlockAssessment?: {
     kind: "dsa-block-assessment";
     blockId: string;

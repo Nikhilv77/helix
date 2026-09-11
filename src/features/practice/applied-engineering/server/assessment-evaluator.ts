@@ -15,6 +15,7 @@ import {
 } from "@/features/practice/applied-engineering/domain/focus-ranking-contracts";
 import { appliedEngineeringQuestionSchema } from "@/features/practice/applied-engineering/domain/question-contracts";
 import type { AiService } from "@/server/ai/ai.service";
+import { terminalStoryPracticeContinuation } from "@/features/practice/shared/server/continuation-orchestrator";
 import type { AppliedEngineeringIncidentRankingService } from "./incident-ranking.service";
 
 type EvidenceQuestion = {
@@ -42,7 +43,7 @@ type EvaluateInput = {
 export class AppliedEngineeringAssessmentEvaluator {
   constructor(
     private readonly ai: Pick<AiService, "generateStructured">,
-    private readonly ranking: Pick<AppliedEngineeringIncidentRankingService, "rankNextIncident">
+    private readonly ranking: Pick<AppliedEngineeringIncidentRankingService, "findNextIncident">
   ) {}
 
   async evaluate(input: EvaluateInput): Promise<{
@@ -84,7 +85,25 @@ export class AppliedEngineeringAssessmentEvaluator {
       )
     };
     const evidence = adaptiveEvidence(input, scores);
-    const nextIncident = this.ranking.rankNextIncident(input.focus, evidence);
+    const nextIncident = this.ranking.findNextIncident(input.focus, evidence);
+    const continuation = nextIncident
+      ? { kind: "continue" as const, next: nextIncident }
+      : terminalStoryPracticeContinuation({
+          masteredKeys: evidence.priorTopicKeys.filter(
+            (key) => !evidence.practice.weakTopicKeys.includes(key)
+          ),
+          assessmentScores: evidence.assessmentScores,
+          learnedCount: evidence.practice.learnedCount,
+          meanVerifiedScore: evidence.practice.meanVerifiedScore,
+          weakKeys: [
+            ...evidence.practice.weakTopicKeys,
+            ...evidence.practice.weakSignalKeys
+          ],
+          readySummary:
+            "You have demonstrated the available Applied Engineering outcomes with verified practice and assessment evidence.",
+          completeSummary:
+            "You have completed every currently eligible Applied Engineering incident. Review the remaining feedback before interview day."
+        });
     const learnedQuestionOrders = input.questions
       .filter((question) => question.status === "LEARNED")
       .map((question) => question.order)
@@ -106,7 +125,7 @@ export class AppliedEngineeringAssessmentEvaluator {
         learnedQuestionOrders,
         masteryCreditNote:
           learnedQuestionOrders.length === 0
-            ? "All eight Practice questions were solved through attempts; no Learn action reduced Practice mastery credit."
+            ? `All ${input.questions.length} Practice questions were solved through attempts; no Learn action reduced Practice mastery credit.`
             : `Questions ${learnedQuestionOrders.join(", ")} were learned rather than solved and contribute zero Practice mastery credit.`
       },
       deterministicEvidence: {
@@ -115,7 +134,8 @@ export class AppliedEngineeringAssessmentEvaluator {
         implementationScoreCapped:
           scores.implementationCorrectness !== raw.scores.implementationCorrectness
       },
-      nextIncident
+      ...(nextIncident ? { nextIncident } : {}),
+      continuation
     });
     const responseById = new Map(input.responses.map((response) => [response.promptId, response]));
     const transcript = appliedEngineeringSafeTranscriptSchema.parse({

@@ -1,6 +1,6 @@
 # Applied Engineering — Core Technical Parity and Reuse Plan
 
-Status: Proposed implementation handoff
+Status: Implementation in progress; Steps 1–8 complete; Step 9 automated gate complete
 
 Scope: `/practice/applied-engineering`
 
@@ -140,30 +140,18 @@ The shared foundation already includes:
 - authenticated route factories and leases in
   `src/features/practice/shared/server/route-kit.ts`.
 
-### 3.1 Important current limitation
+### 3.1 Current shared ownership
 
-Several files named `story-practice-*` are currently compatibility re-exports of components still
-owned by Core Technical. For example, the shared overview and assessment modules re-export
-`CoreTechnicalOverview` and `CoreTechnicalAssessment`.
-
-This proves that the presentation can be reused, but it is not the final dependency direction.
-The actual implementation must move under `src/features/practice/shared/ui/`. Core Technical and
-Applied Engineering should then import the neutral component or expose a tiny compatibility
-wrapper around it.
+The stable presentation implementations, including the polished technology welcome, now live in
+`src/features/practice/shared/ui/`. Core Technical keeps thin configuration wrappers so its route
+and test imports remain stable; Applied Engineering consumes the same neutral components through
+its own configuration and view adapters.
 
 ### 3.2 Missing parity today
 
-Applied Engineering does not yet have all of the current Core behavior:
-
-- its first-entry preparation is a generic language selector rather than the polished technology
-  welcome with the teacher;
-- its path library does not expose Core's question-row-only materialization behavior;
-- it has no Applied assessment runtime service that launches the shared voice room;
-- its assessment start route returns only an assessment, not a durable room session;
-- the interview setup and client currently recognize Core Technical through a Core-specific field;
-- the assessment UI enables the shared voice room through a hard-coded Core slug check;
-- the Applied assessment still follows the older form-oriented path;
-- Applied does not yet have the same automatic completed-room recovery on overview load.
+The implementation work is complete through readiness and continuation parity. Release verification
+still needs authenticated desktop/mobile comparison, keyboard and screen-reader checks, and a real
+voice-room exercise covering microphone, typed fallback, Save & exit, resume, and completion.
 
 ## 4. Target architecture
 
@@ -494,12 +482,29 @@ Implement in small, independently tested steps.
 
 ### Step 1 — Freeze parity contracts
 
+Status: Complete on 2026-09-11.
+
+Implemented as an additive, backward-compatible contract slice. Core and Applied now explicitly
+declare the shared voice-room mode and evidence label, Architecture explicitly retains its current
+inline mode, and the shared server contracts define the neutral durable assessment identity and
+terminal continuation decision. Runtime migration begins in Step 5; legacy Core identity behavior
+is intentionally unchanged until then.
+
 - Add the missing capability fields to shared UI contracts.
 - Add the neutral assessment identity and continuation outcome.
 - Add contract tests for Core and Applied adapters.
 - Do not change rendered behavior yet.
 
 ### Step 2 — Move shared UI ownership
+
+Status: Complete on 2026-09-11.
+
+The preparation gate, intro, overview/library, question workspace, assessment surface, learning
+guide, and presentation helpers now live under `practice/shared/ui`. Existing Core UI filenames are
+thin compatibility wrappers containing only Core configuration, so routes and tests keep their
+stable imports. Applied and Architecture wrappers consume those same shared implementations. The
+legacy Core-only room-launch check is deliberately retained until Step 5; this keeps rendered and
+navigation behavior unchanged while Applied's room runtime is not yet registered.
 
 - Move component implementations from Core UI into neutral shared UI files.
 - Leave thin Core compatibility exports.
@@ -508,17 +513,42 @@ Implement in small, independently tested steps.
 
 ### Step 3 — Share technology welcome
 
+Status: Complete on 2026-09-11.
+
+Core and Applied now use `story-practice-technology-welcome.tsx` for the identical teacher stage,
+avatar feathering, responsive layout, voice lifecycle, pending states, errors, and replay-safe
+preparation. Domain wrappers provide only reviewed options, copy, and separate confirmation and
+preparation payload builders. Applied currently offers JavaScript because that is the only stack
+accepted by its server contract and backed by reviewed executable incidents.
+
 - Extract Core's polished welcome as a configured shared component.
 - Provide Core and Applied options/copy/payload builders.
 - Preserve teacher voice, avatar feathering, mobile layout, pending states, errors, and idempotency.
 
 ### Step 4 — Match library behavior
 
+Status: Complete on 2026-09-11.
+
+Applied eligibility now exposes reviewed incident stages as library question rows. The new
+owner-scoped `start-path` route selects the requested published incident server-side, copies its
+exact reviewed snapshot, and publishes it as a non-current library block. Continuing later
+promotes a matching loose block in place, retaining question progress and making its assessment
+ready immediately when all eight saved questions are already terminal.
+
 - Configure Applied's unstarted-row endpoint.
 - Add exact reviewed incident materialization without live AI.
 - Preserve the current incident and reuse loose-path progress during promotion.
 
 ### Step 5 — Extract the voice assessment protocol
+
+Status: Complete on 2026-09-11.
+
+Core and Applied now resolve through one neutral, durable story-practice assessment identity. The
+interview service, decider, technical evaluator, resumability checks, voice client, assessment
+workspace, completion handoff, and server-only interviewer guide all use that shared protocol.
+Opening, transition, teaching, and closing behavior is selected by practice configuration, so
+Applied uses production-specific language without copying the room. Existing Core sessions remain
+readable through a compatibility resolver, including older sessions that predate version fields.
 
 - Generalize interview identity checks and resumable-block helpers.
 - Extract neutral opening/transition/teaching/closing behavior.
@@ -527,12 +557,31 @@ Implement in small, independently tested steps.
 
 ### Step 6 — Add Applied assessment runtime
 
+Status: Complete on 2026-09-11.
+
+A shared replay-safe runtime coordinator now owns assessment start, frozen-record loading, reserved
+session validation, and room creation. Thin Core and Applied adapters supply their own snapshot
+parser, identity, presentation labels, and five-question plan. Applied assessment start now returns
+the durable assessment UUID as the room session ID with `{ assessment, sessionId, created }`, and
+the shared assessment surface opens the same voice room used by Core. Private expected answers and
+rubrics remain only in the persisted server plan and are omitted by the interview API serializer.
+Transcript-to-report finalization remains intentionally scoped to Step 7.
+
 - Build a five-question room plan from the frozen Applied snapshot.
 - Register `AppliedEngineeringAssessmentRuntimeService` in the app container.
 - Make Applied assessment start return `{ assessment, sessionId, created }`.
 - Redirect the Applied assessment page to the shared interview room.
 
 ### Step 7 — Add Applied transcript finalization and recovery
+
+Status: Complete on 2026-09-11.
+
+Core and Applied now share one bounded transcript-to-response helper that groups durable candidate
+turns by frozen prompt index. Applied validates the owned room and neutral assessment identity,
+requires the room to be complete, replays the room UUID as its finalization request ID, and invokes
+its existing five-score evaluator and atomic report transaction. Both interview completion paths
+schedule the Applied finalizer, while overview load recovers completed rooms and checkpointed
+`FINALIZING` submissions without repeating the interview.
 
 - Convert owned room turns to the five Applied response IDs.
 - Trigger deferred finalization after the final answer.
@@ -541,12 +590,46 @@ Implement in small, independently tested steps.
 
 ### Step 8 — Add readiness and continuation parity
 
+Status: Complete on 2026-09-11.
+
+Core and Applied reports now add an explicit continuation decision while remaining compatible with
+saved reports that contain only `nextStory` or `nextIncident`. Ranking returns a next reviewed item
+when one exists; otherwise evaluation records either evidence-backed readiness or clean curriculum
+completion instead of throwing and leaving the assessment in `FINALIZING`. Shared report UI renders
+the terminal outcome without a phantom Continue action, and existing loose-block promotion retains
+question attempts, runs, hints, and completion state. Mastery copy now derives its question count
+from the frozen block.
+
 - Return either a next incident or a terminal readiness/completion result.
 - Promote a prepared incident without losing progress.
 - Keep historical reports read-only.
 - Never leave the last available incident permanently finalizing.
 
 ### Step 9 — Polish and release verification
+
+Status: Automated gate complete on 2026-09-11; authenticated manual verification blocked.
+
+Core and Applied now have durable render-parity coverage for the shared responsive technology
+welcome, overview, and all assessment states: locked, ready, in progress, finalizing, and completed.
+The checks assert matching structural geometry, mobile-visible teacher placement, labelled
+landmarks, progress semantics, keyboard-sized controls, and visible focus treatment. This pass
+found and fixed missing focus rings on the shared ready/retry assessment controls and allowed the
+portrait quality already requested by the shared and DSA assessment cards in the central Next.js
+image configuration. Interview response serialization is directly tested to exclude the private
+answer guide and rubric.
+
+The five focused regression groups passed with 87 files / 468 tests after the new parity cases;
+the final repository run passed with 233 files / 1,391 tests (2 files / 8 tests skipped). Scoped
+ESLint, Prisma validation, Vercel function-count verification, the production Next.js build, and
+`git diff --check` pass. Repository-wide `tsc --noEmit` still reports only the two pre-existing
+tuple/undefined errors in `src/app/api/help/[...path]/route.test.ts:49`.
+
+The local app loads with content and no framework error overlay, and the stored Trailgrad account
+reaches Clerk's Google OAuth callback. Clerk then requires a Cloudflare human-verification
+challenge, which automated browser tooling must not bypass. Consequently the authenticated
+desktop/mobile screenshots and the real LiveKit microphone, typed fallback, Save & exit, resume,
+and completion exercise remain a manual release gate. Evidence of the boundary is saved at
+`artifacts/applied-engineering-step9/authentication-blocker.png`.
 
 - Compare Core and Applied desktop/mobile screenshots for every state.
 - Run keyboard and screen-reader checks.

@@ -17,9 +17,7 @@ export const APPLIED_ENGINEERING_PREPARATION_EXPERIENCE: StoryPracticePreparatio
   heading: "What language do you want to practise in?",
   optionLabel: "Practice language",
   optionIcon: "code",
-  options: [
-    { value: "javascript", label: "JavaScript", detail: "Node.js production incidents" }
-  ],
+  options: [{ value: "javascript", label: "JavaScript", detail: "Node.js production incidents" }],
   defaultOption: "javascript",
   buildConfirmation: (language) => ({ language })
 };
@@ -39,6 +37,8 @@ export const APPLIED_ENGINEERING_ASSESSMENT_EXPERIENCE: StoryPracticeAssessmentE
   apiBase: "/api/practice/applied-engineering",
   routeBase: "/practice/applied-engineering",
   subjectNoun: "incident",
+  mode: "shared-voice-room",
+  evidenceAnchorLabel: "Production evidence",
   measures: [
     "Diagnosis & evidence",
     "Implementation correctness",
@@ -75,6 +75,9 @@ export const APPLIED_ENGINEERING_OVERVIEW_EXPERIENCE: StoryPracticeOverviewExper
   subjectNoun: "incident",
   environmentLabel: "Node.js 22",
   libraryDescription: "Browse the reviewed production incidents in your Node.js path.",
+  startUnstartedPath: {
+    endpoint: "/api/practice/applied-engineering/start-path"
+  },
   coachSteps: ["Read the production signal", "Isolate cause and blast radius", "Ship safely"],
   intro: APPLIED_ENGINEERING_INTRO_EXPERIENCE,
   assessment: APPLIED_ENGINEERING_ASSESSMENT_EXPERIENCE
