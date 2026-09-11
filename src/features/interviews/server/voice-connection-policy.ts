@@ -1,4 +1,4 @@
-import { roundCaps, type InterviewState } from "./types";
+import { isResumableBlockAssessment, roundCaps, type InterviewState } from "./types";
 
 /**
  * Ordinary interviews expire against their original wall-clock deadline.
@@ -12,7 +12,7 @@ export function voiceConnectionLifetimeMs(
 ): number {
   const hardCapMs = roundCaps(state.setup).hardCapMs;
   const resumableBlockAssessment =
-    state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment" && state.phase !== "done";
+    isResumableBlockAssessment(state.setup) && state.phase !== "done";
 
   return resumableBlockAssessment ? hardCapMs : hardCapMs - (now - state.startedAt);
 }

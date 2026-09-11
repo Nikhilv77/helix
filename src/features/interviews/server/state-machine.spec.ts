@@ -169,6 +169,27 @@ describe("per-round time caps", () => {
     expect(result.forcedBy).toBeNull();
   });
 
+  it("keeps an incomplete Core Technical assessment resumable past its room lease", () => {
+    const assessment = stateWith({
+      setup: {
+        ...setup,
+        durationMinutes: 30,
+        coreTechnicalAssessment: {
+          kind: "core-technical-assessment",
+          blockId: "11111111-1111-4111-8111-111111111111",
+          assessmentId: "22222222-2222-4222-8222-222222222222",
+          snapshotVersion: 1,
+          evaluatorVersion: "core-technical-assessment-evaluator-v1"
+        }
+      }
+    });
+
+    const result = advance(assessment, "probe", 31 * 60 * 1000);
+
+    expect(result.state.phase).toBe("questioning");
+    expect(result.forcedBy).toBeNull();
+  });
+
   it("does not extend a default round past the shared hard cap", () => {
     expect(advance(stateWith(), "probe", HARD_CAP_MS + 1).forcedBy).toBe("hard-time");
   });

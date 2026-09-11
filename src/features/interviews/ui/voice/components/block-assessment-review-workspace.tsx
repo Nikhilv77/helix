@@ -5,6 +5,7 @@ import { MayaAside } from "./maya-aside";
 import {
   InterviewQuestionPanel,
   type InterviewGrade,
+  type InterviewStageDef,
   type StageCounts
 } from "./interview-question-panel";
 
@@ -38,7 +39,9 @@ export function BlockAssessmentReviewWorkspace({
   onSubmit,
   onRequestMic,
   candidateCameraStream,
-  onDisableCamera
+  onDisableCamera,
+  stages = REVIEW_STAGES,
+  anchorLabel = "Saved solution"
 }: {
   question: InterviewQuestion | null;
   questionIndex: number;
@@ -64,6 +67,8 @@ export function BlockAssessmentReviewWorkspace({
   onRequestMic: () => void;
   candidateCameraStream: MediaStream | null;
   onDisableCamera: () => void;
+  stages?: InterviewStageDef[];
+  anchorLabel?: string;
 }) {
   return (
     <div className="thin-scroll flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 xl:grid xl:grid-cols-[minmax(0,1fr)_19rem] xl:overflow-hidden xl:pb-0">
@@ -71,8 +76,8 @@ export function BlockAssessmentReviewWorkspace({
         question={question}
         questionIndex={questionIndex}
         questionCount={questionCount}
-        stages={REVIEW_STAGES}
-        anchorLabel="Saved solution"
+        stages={stages}
+        anchorLabel={anchorLabel}
         counts={counts}
         grade={grade}
         liveTranscript={liveUserText}

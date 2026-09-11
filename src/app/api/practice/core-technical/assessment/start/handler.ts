@@ -8,7 +8,6 @@ import {
 } from "@/server/rate-limit/shared-guard";
 import { coreTechnicalMutationOwner, parseCoreTechnicalJson } from "../../_shared";
 
-
 export async function POST(request: NextRequest) {
   let lease: SharedLease | undefined;
   try {
@@ -23,11 +22,11 @@ export async function POST(request: NextRequest) {
       },
       `${ownerId}:${input.assessmentId}`
     );
-    return apiSuccess({
-      assessment: await app.coreTechnicalAssessmentService.start(ownerId, input, {
+    return apiSuccess(
+      await app.coreTechnicalAssessmentRuntimeService.startOrResume(ownerId, input, {
         allowLocked: app.config.nodeEnv === "development"
       })
-    });
+    );
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   } finally {

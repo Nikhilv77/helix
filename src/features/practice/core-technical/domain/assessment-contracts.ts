@@ -13,7 +13,7 @@ const identifierSchema = z
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 const fingerprintSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
 const boundedTextSchema = z.string().trim().min(1).max(12_000);
-const assessmentAnswerSchema = z.string().trim().min(4).max(4_000);
+const assessmentAnswerSchema = z.string().trim().min(1).max(4_000);
 
 export const coreTechnicalAssessmentPromptKindSchema = z.enum([
   "weak-response-review",

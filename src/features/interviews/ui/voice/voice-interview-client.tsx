@@ -90,6 +90,11 @@ const AGENT_JOIN_TIMEOUT_MS = 15_000;
 const MIC_SILENCE_WARNING_MS = 6_000;
 const MIC_DEVICE_STORAGE_KEY = "trailgrad.preferredMicrophone";
 const TYPED_ANSWER_TOPIC = "trailgrad.typed-answer";
+const CORE_TECHNICAL_ASSESSMENT_STAGES = [
+  { id: "rapid" as const, label: "Review", caption: "Your saved path evidence" },
+  { id: "explain" as const, label: "Diagnose & repair", caption: "Mechanism transfer" },
+  { id: "scenario" as const, label: "Production", caption: "Prove and ship" }
+];
 
 // The permission screen does not render the interviewer. Keep Three.js, the
 // GLTF loader, and the model runtime out of that first interaction entirely.
@@ -648,7 +653,8 @@ export function VoiceInterviewClient({
     setTypedSending(false);
     if (
       setup?.templateTitle === "DSA practice interview" ||
-      setup?.dsaBlockAssessment?.kind === "dsa-block-assessment"
+      setup?.dsaBlockAssessment?.kind === "dsa-block-assessment" ||
+      setup?.coreTechnicalAssessment?.kind === "core-technical-assessment"
     ) {
       setTypedStartedAt(Date.now());
       return;
@@ -665,7 +671,15 @@ export function VoiceInterviewClient({
     setTypedDraft("");
     setTypedNotes("");
     setTypedStartedAt(null);
-  }, [setup?.fundamentalsRound, setup?.resumeRound, setup?.templateTitle, turns, typedSending]);
+  }, [
+    setup?.coreTechnicalAssessment?.kind,
+    setup?.dsaBlockAssessment?.kind,
+    setup?.fundamentalsRound,
+    setup?.resumeRound,
+    setup?.templateTitle,
+    turns,
+    typedSending
+  ]);
 
   useEffect(() => {
     if (!setup?.resumeRound && !setup?.fundamentalsRound) return;
@@ -681,7 +695,11 @@ export function VoiceInterviewClient({
   }, [progress.index, setup?.fundamentalsRound, setup?.resumeRound]);
 
   useEffect(() => {
-    if (setup?.dsaBlockAssessment?.kind !== "dsa-block-assessment") return;
+    if (
+      setup?.dsaBlockAssessment?.kind !== "dsa-block-assessment" &&
+      setup?.coreTechnicalAssessment?.kind !== "core-technical-assessment"
+    )
+      return;
     // Assessment questions are a strict sequence. Do not carry a previous
     // answer, language output, or explanation into the next frozen prompt.
     setSelectedOption(null);
@@ -701,6 +719,7 @@ export function VoiceInterviewClient({
     currentQuestion?.kind,
     dsaLanguage,
     progress.index,
+    setup?.coreTechnicalAssessment?.kind,
     setup?.dsaBlockAssessment?.kind
   ]);
 
@@ -999,13 +1018,18 @@ export function VoiceInterviewClient({
   const stop = useCallback(async () => {
     if (!sessionId) return;
 
-    const blockId = setup?.dsaBlockAssessment?.blockId;
-    if (blockId) {
+    const dsaBlockId = setup?.dsaBlockAssessment?.blockId;
+    const coreTechnicalBlockId = setup?.coreTechnicalAssessment?.blockId;
+    if (dsaBlockId || coreTechnicalBlockId) {
       // Leaving never submits a partial block assessment. The same frozen
       // session stays resumable until every prompt is answered or skipped.
       intentionalDisconnectRef.current = true;
       await roomRef.current?.disconnect().catch(() => null);
-      router.push(`/practice/dsa?block=${encodeURIComponent(blockId)}`);
+      router.push(
+        dsaBlockId
+          ? `/practice/dsa?block=${encodeURIComponent(dsaBlockId)}`
+          : `/practice/core-technical?block=${encodeURIComponent(coreTechnicalBlockId!)}`
+      );
       return;
     }
 
@@ -1015,13 +1039,29 @@ export function VoiceInterviewClient({
     await endInterview(sessionId).catch(() => null);
     intentionalDisconnectRef.current = true;
     await roomRef.current?.disconnect();
-  }, [router, sessionId, setup?.dsaBlockAssessment?.blockId]);
+  }, [
+    router,
+    sessionId,
+    setup?.coreTechnicalAssessment?.blockId,
+    setup?.dsaBlockAssessment?.blockId
+  ]);
 
   useEffect(() => {
     if (elapsed < hardCapMs || status === "ended" || sessionUnavailable) return;
-    if (setup?.dsaBlockAssessment?.kind === "dsa-block-assessment") return;
+    if (
+      setup?.dsaBlockAssessment?.kind === "dsa-block-assessment" ||
+      setup?.coreTechnicalAssessment?.kind === "core-technical-assessment"
+    )
+      return;
     void stop();
-  }, [elapsed, sessionUnavailable, setup?.dsaBlockAssessment?.kind, status, stop]);
+  }, [
+    elapsed,
+    sessionUnavailable,
+    setup?.coreTechnicalAssessment?.kind,
+    setup?.dsaBlockAssessment?.kind,
+    status,
+    stop
+  ]);
 
   async function reconnect() {
     if (agentWaitTimerRef.current !== null) {
@@ -1097,6 +1137,9 @@ export function VoiceInterviewClient({
     "Selected microphone";
   const isDsaInterview = setup?.templateTitle === "DSA practice interview";
   const isBlockAssessment = setup?.dsaBlockAssessment?.kind === "dsa-block-assessment";
+  const isCoreTechnicalAssessment =
+    setup?.coreTechnicalAssessment?.kind === "core-technical-assessment";
+  const isAnyBlockAssessment = isBlockAssessment || isCoreTechnicalAssessment;
   const isResumeRound = setup?.resumeRound === true;
   const isFundamentalsRound = setup?.fundamentalsRound === true;
 
@@ -1151,6 +1194,7 @@ export function VoiceInterviewClient({
         duration={Math.min(elapsed, hardCapMs)}
         answers={turns.filter((turn) => turn.speaker === "user").length}
         blockAssessmentBlockId={setup?.dsaBlockAssessment?.blockId ?? null}
+        coreTechnicalBlockId={setup?.coreTechnicalAssessment?.blockId ?? null}
       />
     );
   }
@@ -1220,7 +1264,7 @@ export function VoiceInterviewClient({
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-white/[0.045] px-3 text-sm font-semibold text-cream/65 transition hover:bg-white/[0.08] hover:text-cream"
           >
             <Square size={11} aria-hidden="true" />
-            <span className="hidden sm:inline">{isBlockAssessment ? "Save & exit" : "End"}</span>
+            <span className="hidden sm:inline">{isAnyBlockAssessment ? "Save & exit" : "End"}</span>
           </button>
         </div>
       </header>
@@ -1252,6 +1296,35 @@ export function VoiceInterviewClient({
           onRequestMic={() => void toggleMic()}
           candidateCameraStream={candidateCameraStream}
           onDisableCamera={disableCandidateCamera}
+        />
+      ) : isCoreTechnicalAssessment ? (
+        <BlockAssessmentReviewWorkspace
+          question={currentQuestion}
+          questionIndex={progress.index}
+          questionCount={progress.count}
+          counts={stageProgress}
+          grade={lastGrade}
+          turns={displayTurns}
+          spokenAgentTurnKeys={spokenAgentTurnKeys}
+          liveUserText={liveTranscript}
+          startedAt={startedAt}
+          setup={setup}
+          thinking={agentState === "thinking"}
+          bottomRef={bottomRef}
+          agentSlot={interviewerSlot()}
+          micOn={micOn}
+          sending={typedSending}
+          error={typedError}
+          draft={typedDraft}
+          selectedOption={selectedOption}
+          onDraftChange={setTypedDraft}
+          onSelectOption={(option) => void submitOptionAnswer(option)}
+          onSubmit={() => void submitTypedAnswer()}
+          onRequestMic={() => void toggleMic()}
+          candidateCameraStream={candidateCameraStream}
+          onDisableCamera={disableCandidateCamera}
+          stages={CORE_TECHNICAL_ASSESSMENT_STAGES}
+          anchorLabel="Practice evidence"
         />
       ) : isBlockAssessment && currentQuestion?.kind === "mcq" ? (
         <BlockAssessmentReviewWorkspace

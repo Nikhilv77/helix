@@ -40,4 +40,25 @@ describe("voice connection lifetime", () => {
       )
     ).toBe(40 * 60_000);
   });
+
+  it("gives an incomplete Core Technical block assessment a fresh bounded lease", () => {
+    const blockSetup: InterviewSetup = {
+      ...setup,
+      durationMinutes: 30,
+      coreTechnicalAssessment: {
+        kind: "core-technical-assessment",
+        blockId: "11111111-1111-4111-8111-111111111111",
+        assessmentId: "22222222-2222-4222-8222-222222222222",
+        snapshotVersion: 1,
+        evaluatorVersion: "core-technical-assessment-evaluator-v1"
+      }
+    };
+
+    expect(
+      voiceConnectionLifetimeMs(
+        { phase: "questioning", setup: blockSetup, startedAt: 1_000 },
+        1_000 + 3 * 60 * 60_000
+      )
+    ).toBe(30 * 60_000);
+  });
 });

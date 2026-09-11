@@ -72,10 +72,7 @@ export function shouldEvaluateTechnicalAnswer(
   if (question.topicKey?.startsWith("adaptive-behavioral-")) return false;
   if (setup.resumeRound) return question.stage === "skills" || question.stage === "code";
   if (setup.fundamentalsRound) return question.stage === "explain" || question.stage === "scenario";
-  if (
-    setup.templateId === "dsa" ||
-    setup.templateTitle === "DSA practice interview"
-  ) {
+  if (setup.templateId === "dsa" || setup.templateTitle === "DSA practice interview") {
     return true;
   }
   return setup.roundType === "technical" || Boolean(setup.personalizedBlueprint);
@@ -138,6 +135,8 @@ Intent: ${question.intent ?? "Assess technically correct reasoning."}
 Expected evidence:
 ${question.mustHit.map((item) => `- ${item}`).join("\n")}
 
+${question.coreTechnicalInterviewerGuide ? `Authoritative expected mechanism and evidence (server-only):\n${question.coreTechnicalInterviewerGuide.expectedAnswer}` : ""}
+
 Rubric:
 ${formatRubric(rubric)}
 
@@ -163,7 +162,8 @@ Return one overall score plus rubric-specific scores. The summary and gaps must 
 }
 
 function formatRubric(rubric: BlueprintRubricDimension[]): string {
-  if (!rubric.length) return "- technical-correctness: correct mechanism, constraints, and trade-offs";
+  if (!rubric.length)
+    return "- technical-correctness: correct mechanism, constraints, and trade-offs";
   return rubric
     .map(
       (dimension) =>

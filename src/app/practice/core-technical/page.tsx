@@ -26,6 +26,9 @@ export default async function CoreTechnicalPracticePage({
   const allowEarlyAssessmentStart = app.config?.nodeEnv === "development";
   const query = await searchParams;
   const requestedBlockId = typeof query.block === "string" ? query.block : null;
+  // Match DSA recovery: a terminal voice room remains authoritative even if
+  // deferred report generation was interrupted after the final answer.
+  await app.coreTechnicalAssessmentService.recoverCurrentInterview(ownerId).catch(() => null);
   const [eligibility, currentBlock, historyList] = await Promise.all([
     app.coreTechnicalEligibilityService.forProfile(profile),
     app.coreTechnicalPracticeService.current(ownerId),

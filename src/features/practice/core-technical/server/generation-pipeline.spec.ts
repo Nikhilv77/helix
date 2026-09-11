@@ -115,18 +115,15 @@ describe("CoreTechnicalGenerationPipeline", () => {
     });
     const goldCase = NODEJS_CORE_TECHNICAL_GOLD_CASES[0]!;
 
-    const approvedDraft = await pipeline.prepareReviewedDraft(
-      {
-        ...goldCase.candidateContext,
-        reviewedContract: {
-          storyKey: "javascript-values-copying-mutation",
-          storyTitle: goldCase.expected.storyTitle,
-          stagePatternKeys: goldCase.expected.stagePatternKeys,
-          requiredStoryTopicKeys: goldCase.expected.requiredStoryTopicKeys
-        }
-      },
-      { preferApprovedArtifact: true }
-    );
+    const approvedDraft = await pipeline.prepareApprovedDraft({
+      ...goldCase.candidateContext,
+      reviewedContract: {
+        storyKey: "javascript-values-copying-mutation",
+        storyTitle: goldCase.expected.storyTitle,
+        stagePatternKeys: goldCase.expected.stagePatternKeys,
+        requiredStoryTopicKeys: goldCase.expected.requiredStoryTopicKeys
+      }
+    });
 
     expect(approvedDraft.story.title).toBe("Trace and fix shared JavaScript state");
     expect(approvedDraft.story.difficulty).toBe("guided");

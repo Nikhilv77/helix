@@ -19,6 +19,7 @@ import { ConflictErrorException } from "@/server/common/exceptions/conflict-erro
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 import { ServiceUnavailableErrorException } from "@/server/common/exceptions/service-unavailable-error.exception";
 import type { PrismaService } from "@/server/database/prisma.service";
+import type { InterviewState } from "@/features/interviews/server/types";
 import {
   assertStoryPracticeAssessmentResponses,
   storyPracticeAssessmentStartDisposition
@@ -339,6 +340,70 @@ export class CoreTechnicalAssessmentService {
     return this.read(ownerId, input.assessmentId);
   }
 
+  /** Converts a completed shared voice-room transcript into the existing Core report contract. */
+  async finalizeInterviewOwned(ownerId: string, sessionId: string) {
+    const session = await this.prisma.interviewSession.findFirst({
+      where: { id: sessionId, ownerId },
+      select: { state: true }
+    });
+    const state = session?.state as unknown as InterviewState | undefined;
+    const identity = state?.setup.coreTechnicalAssessment;
+    if (!state || identity?.kind !== "core-technical-assessment") return null;
+    if (state.id !== sessionId || identity.assessmentId !== sessionId || state.phase !== "done") {
+      return null;
+    }
+
+    const assessment = await this.prisma.coreTechnicalAssessment.findFirst({
+      where: { id: identity.assessmentId, ownerId },
+      select: { blockId: true, assessmentSnapshot: true }
+    });
+    if (!assessment?.assessmentSnapshot || assessment.blockId !== identity.blockId) return null;
+    const snapshot = coreTechnicalAssessmentSnapshotSchema.parse(assessment.assessmentSnapshot);
+    const responses = coreTechnicalInterviewResponses(snapshot, state);
+    if (responses.some((response) => response.answer.length === 0)) return null;
+
+    return this.finalize(ownerId, {
+      assessmentId: identity.assessmentId,
+      // The durable room UUID is stable across retries and uniquely belongs to
+      // this one assessment, so it is also the finalization idempotency key.
+      requestId: sessionId,
+      responses
+    });
+  }
+
+  /** Agent-capability path used after the final spoken answer. */
+  async finalizeInterviewBySession(sessionId: string) {
+    const session = await this.prisma.interviewSession.findUnique({
+      where: { id: sessionId },
+      select: { ownerId: true }
+    });
+    return session ? this.finalizeInterviewOwned(session.ownerId, sessionId) : null;
+  }
+
+  /** Repairs a completed room whose deferred report generation was interrupted. */
+  async recoverCurrentInterview(ownerId: string) {
+    const assessment = await this.prisma.coreTechnicalAssessment.findFirst({
+      where: {
+        ownerId,
+        status: {
+          in: [CoreTechnicalAssessmentStatus.IN_PROGRESS, CoreTechnicalAssessmentStatus.FINALIZING]
+        },
+        block: { isCurrent: true }
+      },
+      select: { id: true, status: true, assessmentSnapshot: true }
+    });
+    if (!assessment?.assessmentSnapshot) return null;
+    const snapshot = coreTechnicalAssessmentSnapshotSchema.parse(assessment.assessmentSnapshot);
+    if (assessment.status === CoreTechnicalAssessmentStatus.FINALIZING && snapshot.submission) {
+      return this.finalize(ownerId, {
+        assessmentId: assessment.id,
+        requestId: snapshot.submission.requestId,
+        responses: snapshot.submission.responses
+      });
+    }
+    return this.finalizeInterviewOwned(ownerId, assessment.id);
+  }
+
   private async loadEvidence(ownerId: string, assessmentId: string) {
     const assessment = await this.prisma.coreTechnicalAssessment.findFirst({
       where: { id: assessmentId, ownerId },
@@ -434,4 +499,25 @@ function toJson(value: unknown): Prisma.InputJsonValue {
 
 async function lockAssessment(tx: Prisma.TransactionClient, assessmentId: string) {
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`core-technical-assessment:${assessmentId}`}))`;
+}
+
+function boundedInterviewAnswer(value: string): string {
+  const normalized = value.trim();
+  if (normalized.length <= 4_000) return normalized;
+  return normalized.slice(normalized.length - 4_000);
+}
+
+export function coreTechnicalInterviewResponses(
+  snapshot: ReturnType<typeof coreTechnicalAssessmentSnapshotSchema.parse>,
+  state: Pick<InterviewState, "turns">
+) {
+  return snapshot.prompts.map((prompt, index) => ({
+    promptId: prompt.id,
+    answer: boundedInterviewAnswer(
+      state.turns
+        .filter((turn) => turn.speaker === "user" && turn.questionIndex === index)
+        .map((turn) => turn.text)
+        .join("\n\n")
+    )
+  }));
 }

@@ -3,6 +3,8 @@
 **Status:** Implementation in progress; Steps 1–8 complete. Step 9 remains.
 **Position:** Practice session 3, after DSA and Core Technical.
 **Rule:** Reuse the shipped Core Technical product shape. Do not redesign Practice or change DSA.
+**Current parity handoff:** Follow `docs/APPLIED_ENGINEERING_CORE_PARITY_REUSE_PLAN.md` for the
+shared polished UI, technology welcome, DSA/Core live assessment room, and reuse migration.
 
 ## 1. Product requirement
 

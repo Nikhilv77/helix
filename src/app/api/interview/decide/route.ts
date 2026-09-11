@@ -85,12 +85,22 @@ export async function POST(request: NextRequest) {
             );
       const { response } = answerResult;
       if (response.phase === "done") {
-        after(() =>
-          (access.kind === "owner"
-            ? app.dsaBlockAssessmentFinalizationService.finalizeOwned(access.ownerId, parsed.data.sessionId)
-            : app.dsaBlockAssessmentFinalizationService.finalizeBySession(parsed.data.sessionId)
-          ).catch(() => null)
-        );
+        after(async () => {
+          await Promise.allSettled([
+            access.kind === "owner"
+              ? app.dsaBlockAssessmentFinalizationService.finalizeOwned(
+                  access.ownerId,
+                  parsed.data.sessionId
+                )
+              : app.dsaBlockAssessmentFinalizationService.finalizeBySession(parsed.data.sessionId),
+            access.kind === "owner"
+              ? app.coreTechnicalAssessmentService.finalizeInterviewOwned(
+                  access.ownerId,
+                  parsed.data.sessionId
+                )
+              : app.coreTechnicalAssessmentService.finalizeInterviewBySession(parsed.data.sessionId)
+          ]);
+        });
       }
 
       return apiSuccess(response);

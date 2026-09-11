@@ -33,7 +33,10 @@ type Dependencies = {
   prisma: PrismaService;
   focus: Pick<CoreTechnicalFocusService, "confirm">;
   ranking: Pick<CoreTechnicalStoryRankingService, "rankFirstStory" | "rankSelectedStory">;
-  generation: Pick<CoreTechnicalGenerationPipeline, "prepareReviewedDraft">;
+  generation: Pick<
+    CoreTechnicalGenerationPipeline,
+    "prepareApprovedDraft" | "prepareReviewedDraft"
+  >;
   persistence: Pick<
     CoreTechnicalPersistenceService,
     "saveConfirmedFocus" | "publishPreparedBlock" | "recordPreparationFailure"
@@ -100,12 +103,10 @@ export class CoreTechnicalPreparationService {
     }
     const focus = coreTechnicalConfirmedFocusSchema.parse(revision.focusSnapshot);
     let selection: ReturnType<CoreTechnicalStoryRankingService["rankFirstStory"]> | undefined;
-    let stage:
-      "ranking" | "story-generation" | "question-generation" | "validation" | "publishing" =
-      "ranking";
+    let stage: "ranking" | "artifact-resolution" | "validation" | "publishing" = "ranking";
     try {
       selection = this.dependencies.ranking.rankFirstStory(focus);
-      stage = "story-generation";
+      stage = "artifact-resolution";
       const reviewedStory = coreTechnicalPracticePathBlueprint(
         selection.selectedStory.storyKey,
         selection.selectedStory.storyVersion
@@ -258,36 +259,33 @@ export class CoreTechnicalPreparationService {
       if (!reviewedStory) throw new Error("The selected reviewed practice path is unavailable");
 
       stage = "story-generation";
-      const draft = await this.dependencies.generation.prepareReviewedDraft(
-        {
-          role: focus.role,
-          seniority: focus.seniority,
-          language: focus.stack.language,
-          runtime: focus.stack.runtime,
-          framework: focus.stack.framework ?? undefined,
-          technology: focus.stack.technology,
-          targetJob: focus.targetJob,
-          targetCompany: focus.targetCompany ?? undefined,
-          baselineState: difficultyState(selection.selectedStory.difficulty),
-          weakMechanismKeys: focus.baselineEvidence.weakMechanismKeys,
-          unassessedMechanismKeys: focus.baselineEvidence.unassessedMechanismKeys,
-          resumeTopicKeys: focus.resumeEvidence.topicKeys,
-          resumeMechanismKeys: focus.resumeEvidence.mechanismKeys,
-          recentTopicKeys,
-          excludedTopicKeys: focus.excludedTopicKeys,
-          personalizePresentation: true,
-          reviewedContract: {
-            storyKey: reviewedStory.key,
-            storyTitle: reviewedStory.title,
-            stagePatternKeys: reviewedStory.stages.map((item) => item.patternKey),
-            requiredStoryTopicKeys: [
-              reviewedStory.primaryTopicKey,
-              ...reviewedStory.secondaryTopicKeys
-            ]
-          }
-        },
-        { fallbackToApprovedArtifactOnProviderFailure: true }
-      );
+      const draft = await this.dependencies.generation.prepareApprovedDraft({
+        role: focus.role,
+        seniority: focus.seniority,
+        language: focus.stack.language,
+        runtime: focus.stack.runtime,
+        framework: focus.stack.framework ?? undefined,
+        technology: focus.stack.technology,
+        targetJob: focus.targetJob,
+        targetCompany: focus.targetCompany ?? undefined,
+        baselineState: difficultyState(selection.selectedStory.difficulty),
+        weakMechanismKeys: focus.baselineEvidence.weakMechanismKeys,
+        unassessedMechanismKeys: focus.baselineEvidence.unassessedMechanismKeys,
+        resumeTopicKeys: focus.resumeEvidence.topicKeys,
+        resumeMechanismKeys: focus.resumeEvidence.mechanismKeys,
+        recentTopicKeys,
+        excludedTopicKeys: focus.excludedTopicKeys,
+        personalizePresentation: false,
+        reviewedContract: {
+          storyKey: reviewedStory.key,
+          storyTitle: reviewedStory.title,
+          stagePatternKeys: reviewedStory.stages.map((item) => item.patternKey),
+          requiredStoryTopicKeys: [
+            reviewedStory.primaryTopicKey,
+            ...reviewedStory.secondaryTopicKeys
+          ]
+        }
+      });
       stage = "publishing";
       const published = await this.dependencies.persistence.publishPreparedBlock(ownerId, {
         requestId: input.requestId,

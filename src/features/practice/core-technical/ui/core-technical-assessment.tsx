@@ -21,6 +21,7 @@ import type {
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { DARK_PORTRAIT_PLACEHOLDER } from "@/lib/avatars/portrait-placeholder";
 import { humanizeCoreTechnicalKey } from "@/features/practice/core-technical/domain/ui-state";
+import { openInterviewRoom } from "@/features/interviews/ui/shared/interview-room-navigation";
 
 export type PublicAssessment = StoryPracticeAssessmentView;
 type AssessmentSnapshot = NonNullable<PublicAssessment["assessment"]>;
@@ -99,6 +100,7 @@ export function CoreTechnicalAssessment({
   const report = assessment?.report ?? null;
   const retryingFinalization = status === "FINALIZING" || recoverySubmission !== null;
   const draftKey = assessment ? `${experience.slug}-assessment-draft:${assessment.id}` : null;
+  const usesSharedVoiceRoom = experience.slug === "core-technical";
 
   useEffect(() => {
     setAssessment(block.assessment);
@@ -195,6 +197,77 @@ export function CoreTechnicalAssessment({
     );
   }
 
+  if (usesSharedVoiceRoom && !dedicatedRoom && status === "IN_PROGRESS") {
+    return (
+      <AssessmentPreviewFrame
+        id="assessment"
+        label={`${experience.label} assessment`}
+        teacherName={teacher.name}
+        teacherPortrait={teacherPortrait}
+        coachLabel={`${experience.subjectNoun} coach`}
+      >
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+          Assessment in progress
+        </p>
+        <h3 className="mt-2 font-display text-[1.5rem] font-semibold text-cream">
+          Continue your 1:1 with {teacher.name}
+        </h3>
+        <p className="mt-2 text-[14px] leading-6 text-cream/58">
+          Your frozen prompts and conversation are saved in the same voice room used by DSA.
+        </p>
+        <button
+          type="button"
+          onClick={() => void startAssessment()}
+          className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        >
+          {pending === "start" ? "Opening voice room…" : "Continue assessment"}
+          {pending === "start" ? (
+            <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" />
+          ) : (
+            <ArrowRight size={14} aria-hidden="true" />
+          )}
+        </button>
+      </AssessmentPreviewFrame>
+    );
+  }
+
+  if (usesSharedVoiceRoom && !dedicatedRoom && status === "FINALIZING") {
+    return (
+      <AssessmentPreviewFrame
+        id="assessment"
+        label={`${experience.label} assessment`}
+        teacherName={teacher.name}
+        teacherPortrait={teacherPortrait}
+        coachLabel={`${experience.subjectNoun} coach`}
+      >
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+          Assessment complete
+        </p>
+        <h3 className="mt-2 font-display text-[1.5rem] font-semibold text-cream">
+          {teacher.name} is building your report
+        </h3>
+        <p className="mt-2 text-[14px] leading-6 text-cream/58">
+          Your full voice transcript is saved. You can safely retry report generation without
+          repeating the assessment.
+        </p>
+        <button
+          type="button"
+          onClick={() => void finalizeAssessment()}
+          disabled={pending === "finalize"}
+          className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:bg-white disabled:cursor-wait disabled:opacity-65"
+        >
+          {pending === "finalize" ? (
+            <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" />
+          ) : (
+            <RotateCcw size={14} aria-hidden="true" />
+          )}
+          {pending === "finalize" ? "Building report…" : "Retry report"}
+        </button>
+        {error ? <ActionError message={error} /> : null}
+      </AssessmentPreviewFrame>
+    );
+  }
+
   if (!dedicatedRoom && (status === "IN_PROGRESS" || status === "FINALIZING")) {
     return (
       <AssessmentPreviewFrame
@@ -263,12 +336,6 @@ export function CoreTechnicalAssessment({
                 ? "The submission outcome is unknown, so your five answers and request ID are frozen for one exact retry."
                 : "Answer every prompt. Drafts remain in this browser until the server checkpoints the complete submission."}
           </p>
-          {dedicatedRoom && status === "IN_PROGRESS" && !recoverySubmission ? (
-            <p className="mt-3 max-w-[39rem] text-[13px] leading-6 text-cream/66">
-              {teacher.name}: “Let’s work through these one at a time. Explain what the evidence
-              tells you, then tell me what you would do.”
-            </p>
-          ) : null}
         </div>
         <StateBadge
           label={
@@ -363,13 +430,17 @@ export function CoreTechnicalAssessment({
     const key = `${experience.slug}-assessment-start:${assessment.id}`;
     const requestId = replaySafeRequestId(key, assessment.id);
     try {
-      const data = await post<{ assessment: PublicAssessment }>(
-        `${experience.apiBase}/assessment/start`,
-        { assessmentId: assessment.id, requestId }
-      );
+      const data = await post<{
+        assessment: PublicAssessment;
+        sessionId?: string;
+        created?: boolean;
+      }>(`${experience.apiBase}/assessment/start`, { assessmentId: assessment.id, requestId });
       window.sessionStorage.removeItem(key);
-      if (dedicatedRoom) {
-        setAssessment(experience.adaptAssessment(data.assessment));
+      setAssessment(experience.adaptAssessment(data.assessment));
+      if (usesSharedVoiceRoom && !dedicatedRoom) {
+        if (!data.sessionId) throw new Error("The voice assessment room could not be prepared.");
+        openInterviewRoom(data.sessionId);
+      } else if (dedicatedRoom) {
         router.refresh();
       } else {
         router.push(assessmentRoomHref(experience.routeBase, assessment.id, block.id));

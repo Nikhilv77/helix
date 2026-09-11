@@ -103,7 +103,9 @@ export function SessionLoadingScreen({
               </button>
             </>
           ) : (
-            <p className="relative mt-2.5 text-sm text-cream/42">{teacher.name} will join shortly.</p>
+            <p className="relative mt-2.5 text-sm text-cream/42">
+              {teacher.name} will join shortly.
+            </p>
           )}
         </div>
       </section>
@@ -116,13 +118,15 @@ export function SessionStateScreen({
   duration = 0,
   answers = 0,
   workspaceAccent,
-  blockAssessmentBlockId = null
+  blockAssessmentBlockId = null,
+  coreTechnicalBlockId = null
 }: {
   kind: "expired" | "complete";
   duration?: number;
   answers?: number;
   workspaceAccent: WorkspaceAccent;
   blockAssessmentBlockId?: string | null;
+  coreTechnicalBlockId?: string | null;
 }) {
   const teacher = useWorkspaceTeacher();
   const complete = kind === "complete";
@@ -146,7 +150,7 @@ export function SessionStateScreen({
                 Interview complete.
               </h1>
               <p className="mx-auto mt-4 max-w-2xl text-pretty text-sm leading-7 text-cream/62 sm:text-base">
-                {blockAssessmentBlockId
+                {blockAssessmentBlockId || coreTechnicalBlockId
                   ? `Your assessment is saved. Review the five scores and feedback ${teacher.name} recorded for this block.`
                   : `Your conversation is safely recorded. Take a breath, then review the signals ${teacher.name} found or begin another focused round.`}
               </p>
@@ -175,10 +179,14 @@ export function SessionStateScreen({
             </div>
 
             <div className="mx-auto mt-5 flex max-w-xs flex-col gap-2.5">
-              {blockAssessmentBlockId ? (
+              {blockAssessmentBlockId || coreTechnicalBlockId ? (
                 <>
                   <Link
-                    href={`/practice/dsa?block=${encodeURIComponent(blockAssessmentBlockId)}`}
+                    href={
+                      blockAssessmentBlockId
+                        ? `/practice/dsa?block=${encodeURIComponent(blockAssessmentBlockId)}`
+                        : `/practice/core-technical?block=${encodeURIComponent(coreTechnicalBlockId!)}`
+                    }
                     className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white"
                   >
                     <FileText size={15} aria-hidden="true" />
@@ -186,10 +194,10 @@ export function SessionStateScreen({
                     <ArrowRight size={15} aria-hidden="true" />
                   </Link>
                   <Link
-                    href="/practice/dsa"
+                    href={blockAssessmentBlockId ? "/practice/dsa" : "/practice/core-technical"}
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-cream/58 transition hover:bg-white/[0.04] hover:text-cream"
                   >
-                    Return to current DSA practice
+                    Return to current {blockAssessmentBlockId ? "DSA" : "Core Technical"} practice
                     <ArrowRight size={15} aria-hidden="true" />
                   </Link>
                 </>

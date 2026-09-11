@@ -45,4 +45,19 @@ describe("SessionStateScreen block assessment completion", () => {
     );
     expect(screen.queryByRole("link", { name: /^view report$/i })).toBeNull();
   });
+
+  it("returns a completed Core Technical voice assessment to its block report", () => {
+    const blockId = "22222222-2222-4222-8222-222222222222";
+    render(
+      <SessionStateScreen kind="complete" workspaceAccent="ember" coreTechnicalBlockId={blockId} />
+    );
+
+    expect(screen.getByRole("link", { name: /view block results/i })).toHaveAttribute(
+      "href",
+      `/practice/core-technical?block=${blockId}`
+    );
+    expect(
+      screen.getByRole("link", { name: /return to current core technical practice/i })
+    ).toHaveAttribute("href", "/practice/core-technical");
+  });
 });

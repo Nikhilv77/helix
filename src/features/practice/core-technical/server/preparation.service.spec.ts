@@ -11,13 +11,14 @@ const FOCUS_ID = "22222222-2222-4222-8222-222222222222";
 const REQUEST_ID = "33333333-3333-4333-8333-333333333333";
 
 describe("CoreTechnicalPreparationService library paths", () => {
-  it("personalizes and atomically switches to an explicitly selected reviewed path", async () => {
+  it("copies an approved loose path without invoking live generation", async () => {
     const focus = confirmedFocus();
     const ranker = new CoreTechnicalStoryRankingService(
       NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE
     );
     const selection = ranker.rankSelectedStory(focus, "javascript-scope-closures-retained-state");
-    const prepareReviewedDraft = vi.fn().mockResolvedValue({ draft: true });
+    const prepareApprovedDraft = vi.fn().mockResolvedValue({ draft: true });
+    const prepareReviewedDraft = vi.fn();
     const publishPreparedBlock = vi.fn().mockResolvedValue({ id: "published-block" });
     const service = new CoreTechnicalPreparationService({
       prisma: {
@@ -39,7 +40,7 @@ describe("CoreTechnicalPreparationService library paths", () => {
         rankFirstStory: vi.fn(),
         rankSelectedStory: vi.fn().mockReturnValue(selection)
       },
-      generation: { prepareReviewedDraft },
+      generation: { prepareApprovedDraft, prepareReviewedDraft },
       persistence: {
         saveConfirmedFocus: vi.fn(),
         publishPreparedBlock,
@@ -58,18 +59,18 @@ describe("CoreTechnicalPreparationService library paths", () => {
       })
     ).resolves.toMatchObject({ replayed: false, block: { id: "published-block" } });
 
-    expect(prepareReviewedDraft).toHaveBeenCalledWith(
+    expect(prepareApprovedDraft).toHaveBeenCalledWith(
       expect.objectContaining({
         seniority: "mid",
         resumeTopicKeys: focus.resumeEvidence.topicKeys,
         recentTopicKeys: expect.arrayContaining(["javascript-values-and-mutation"]),
-        personalizePresentation: true,
+        personalizePresentation: false,
         reviewedContract: expect.objectContaining({
           storyKey: "javascript-scope-closures-retained-state"
         })
-      }),
-      { fallbackToApprovedArtifactOnProviderFailure: true }
+      })
     );
+    expect(prepareReviewedDraft).not.toHaveBeenCalled();
     expect(publishPreparedBlock).toHaveBeenCalledWith(
       "owner-1",
       expect.objectContaining({

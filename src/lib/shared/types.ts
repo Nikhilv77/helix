@@ -48,6 +48,13 @@ export interface InterviewSetup {
     snapshotVersion: number;
     rubricVersion: number;
   };
+  coreTechnicalAssessment?: {
+    kind: "core-technical-assessment";
+    blockId: string;
+    assessmentId: string;
+    snapshotVersion: number;
+    evaluatorVersion: string;
+  };
 }
 
 export interface CandidateStory {

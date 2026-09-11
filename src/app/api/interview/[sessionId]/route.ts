@@ -39,12 +39,16 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       access.kind === "owner"
         ? await app.interviewService.endOwned(access.ownerId, id)
         : await app.interviewService.end(id);
-    after(() =>
-      (access.kind === "owner"
-        ? app.dsaBlockAssessmentFinalizationService.finalizeOwned(access.ownerId, id)
-        : app.dsaBlockAssessmentFinalizationService.finalizeBySession(id)
-      ).catch(() => null)
-    );
+    after(async () => {
+      await Promise.allSettled([
+        access.kind === "owner"
+          ? app.dsaBlockAssessmentFinalizationService.finalizeOwned(access.ownerId, id)
+          : app.dsaBlockAssessmentFinalizationService.finalizeBySession(id),
+        access.kind === "owner"
+          ? app.coreTechnicalAssessmentService.finalizeInterviewOwned(access.ownerId, id)
+          : app.coreTechnicalAssessmentService.finalizeInterviewBySession(id)
+      ]);
+    });
     return apiSuccess(serialise(state));
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);

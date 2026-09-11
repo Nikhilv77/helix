@@ -74,6 +74,14 @@ export interface InterviewSetup {
     snapshotVersion: number;
     rubricVersion: number;
   };
+  /** Durable identity for a frozen Core Technical path assessment. */
+  coreTechnicalAssessment?: {
+    kind: "core-technical-assessment";
+    blockId: string;
+    assessmentId: string;
+    snapshotVersion: number;
+    evaluatorVersion: string;
+  };
 }
 
 export type InterviewStage =
@@ -120,6 +128,11 @@ export interface PlannedQuestion {
     commonMistakes: string[];
     followUpPrompts: string[];
     edgeCases: string[];
+  };
+  /** Server-only answer and rubric evidence for a Core Technical prompt. */
+  coreTechnicalInterviewerGuide?: {
+    expectedAnswer: string;
+    rubric: Array<{ criterion: string; points: number }>;
   };
   /** Which stage of a resume round this question belongs to. */
   stage?: InterviewStage;
@@ -326,4 +339,11 @@ export function roundCaps(setup: InterviewSetup | undefined): RoundCaps {
     };
   }
   return { softWrapMs: SOFT_WRAP_MS, hardCapMs: HARD_CAP_MS };
+}
+
+export function isResumableBlockAssessment(setup: InterviewSetup | undefined): boolean {
+  return (
+    setup?.dsaBlockAssessment?.kind === "dsa-block-assessment" ||
+    setup?.coreTechnicalAssessment?.kind === "core-technical-assessment"
+  );
 }

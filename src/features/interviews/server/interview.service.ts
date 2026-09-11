@@ -40,6 +40,7 @@ import {
   MissingDimension,
   PlannedQuestion,
   QuestionEvaluation,
+  isResumableBlockAssessment,
   roundCaps
 } from "./types";
 import { isResumeRound } from "./prompt-context";
@@ -54,6 +55,10 @@ import {
   dsaBlockAssessmentOpening,
   dsaBlockAssessmentReviewFeedback
 } from "./dsa-block-assessment-dialogue";
+import {
+  coreTechnicalAssessmentMoveOnUtterance,
+  coreTechnicalAssessmentOpening
+} from "./core-technical-assessment-dialogue";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** A spoken conversation should never wait on the model's full provider timeout. */
@@ -482,6 +487,7 @@ export class InterviewService {
         fallbackProbe: question.probeIfMissing,
         evidenceLedger: withAnswer.evidence?.[String(withAnswer.questionIndex)],
         dsaInterviewerGuide: question.dsaInterviewerGuide,
+        coreTechnicalInterviewerGuide: question.coreTechnicalInterviewerGuide,
         conversationHistory: withAnswer.turns
           .slice(0, -1)
           .slice(-8)
@@ -688,13 +694,10 @@ export class InterviewService {
 
   async end(sessionId: string, ownerId?: string): Promise<InterviewState> {
     const session = await this.versionedSession(sessionId, ownerId);
-    if (
-      session.state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment" &&
-      session.state.phase !== "done"
-    ) {
+    if (isResumableBlockAssessment(session.state.setup) && session.state.phase !== "done") {
       throw new BadRequestErrorException(
         "ASSESSMENT_INCOMPLETE",
-        "Complete or explicitly skip every assessment question before submitting.",
+        "Complete every assessment question before submitting.",
         { sessionId }
       );
     }
@@ -856,6 +859,7 @@ export class InterviewService {
     conversationHistory: Array<{ speaker: "agent" | "user"; text: string }>;
     evidenceLedger?: EvidenceLedger;
     dsaInterviewerGuide?: PlannedQuestion["dsaInterviewerGuide"];
+    coreTechnicalInterviewerGuide?: PlannedQuestion["coreTechnicalInterviewerGuide"];
   }) {
     try {
       return await within(this.decider.decide(input), DECIDER_BUDGET_MS, "Interview decider");
@@ -898,6 +902,9 @@ export class InterviewService {
 
     if (state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment") {
       return dsaBlockAssessmentMoveOnUtterance(state, acknowledgement);
+    }
+    if (state.setup.coreTechnicalAssessment?.kind === "core-technical-assessment") {
+      return coreTechnicalAssessmentMoveOnUtterance(state, acknowledgement);
     }
 
     if (state.phase === "done" || state.phase === "wrap") {
@@ -1197,6 +1204,20 @@ export function rubricFor(setup: InterviewSetup, question: PlannedQuestion) {
   if (setup.dsaBlockAssessment?.kind === "dsa-block-assessment") {
     return BLOCK_ASSESSMENT_RUBRIC.filter((rubric) => rubricKeys.has(rubric.key));
   }
+  if (
+    setup.coreTechnicalAssessment?.kind === "core-technical-assessment" &&
+    question.coreTechnicalInterviewerGuide
+  ) {
+    const rubric = question.coreTechnicalInterviewerGuide.rubric;
+    const total = rubric.reduce((sum, item) => sum + item.points, 0) || 1;
+    return rubric.map((item, index) => ({
+      key: `criterion-${index + 1}`,
+      label: `Criterion ${index + 1}`,
+      weightPercent: Math.round((item.points / total) * 100),
+      strongSignals: [item.criterion],
+      weakSignals: [`Does not establish: ${item.criterion}`]
+    }));
+  }
   return setup.personalizedBlueprint?.rubric.filter((rubric) => rubricKeys.has(rubric.key));
 }
 
@@ -1302,7 +1323,7 @@ function sessionMutationError(error: unknown, sessionId: string): unknown {
 }
 
 function isIncompleteBlockAssessment(state: InterviewState): boolean {
-  return state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment" && state.phase !== "done";
+  return isResumableBlockAssessment(state.setup) && state.phase !== "done";
 }
 
 function delay(milliseconds: number): Promise<void> {
@@ -1315,15 +1336,17 @@ function introUtterance(state: InterviewState): string {
   const intro =
     state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment"
       ? dsaBlockAssessmentOpening(state)
-      : state.setup.templateTitle === "DSA practice interview"
-        ? "Hi, I'm Maya. Welcome to your DSA interview. I picked a few problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful."
-        : state.setup.fundamentalsRound
-          ? "Hi, I'm Maya. This is a computer fundamentals round, in three parts. A few quick checks first, then I'll ask you to explain the mechanism behind some of them, and we'll finish by diagnosing something real. After each answer I'll show you what I was listening for."
-          : isResumeRound(state.setup)
-            ? "Hi, I'm Maya. Let's have a relaxed conversation about the work on your resume. I'll pick a few threads and ask about what actually happened, what you did, and what changed. Take your time."
-            : `Hi, I'm Maya, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
+      : state.setup.coreTechnicalAssessment?.kind === "core-technical-assessment"
+        ? coreTechnicalAssessmentOpening(state)
+        : state.setup.templateTitle === "DSA practice interview"
+          ? "Hi, I'm Maya. Welcome to your DSA interview. I picked a few problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful."
+          : state.setup.fundamentalsRound
+            ? "Hi, I'm Maya. This is a computer fundamentals round, in three parts. A few quick checks first, then I'll ask you to explain the mechanism behind some of them, and we'll finish by diagnosing something real. After each answer I'll show you what I was listening for."
+            : isResumeRound(state.setup)
+              ? "Hi, I'm Maya. Let's have a relaxed conversation about the work on your resume. I'll pick a few threads and ask about what actually happened, what you did, and what changed. Take your time."
+              : `Hi, I'm Maya, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
 
-  if (state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment") return intro;
+  if (isResumableBlockAssessment(state.setup)) return intro;
   return first ? `${intro} ${first.text}` : intro;
 }
 

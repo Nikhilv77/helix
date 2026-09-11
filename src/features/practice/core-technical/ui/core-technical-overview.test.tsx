@@ -84,7 +84,7 @@ describe("CoreTechnicalOverview", () => {
     expect(within(library).queryByRole("link", { name: /open saved path/i })).toBeNull();
   });
 
-  it("opens an unstarted library question directly and materializes its path invisibly", async () => {
+  it("reuses reviewed path preparation while letting the latest selected row choose the destination", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -92,7 +92,10 @@ describe("CoreTechnicalOverview", () => {
             replayed: false,
             block: {
               id: "block-two",
-              questions: [{ id: "pipeline-question-1", order: 1 }]
+              questions: [
+                { id: "pipeline-question-1", order: 1 },
+                { id: "pipeline-question-2", order: 2 }
+              ]
             }
           }
         }),
@@ -112,7 +115,11 @@ describe("CoreTechnicalOverview", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Pipeline stage 1/i }));
+    const first = screen.getByRole("button", { name: /Pipeline stage 1/i });
+    const second = screen.getByRole("button", { name: /Pipeline stage 2/i });
+    fireEvent.click(first);
+    expect(second).toBeEnabled();
+    fireEvent.click(second);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     expect(fetchMock).toHaveBeenCalledWith(

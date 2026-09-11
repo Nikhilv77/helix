@@ -7,7 +7,8 @@ const mocks = vi.hoisted(() => ({
   eligibility: vi.fn(),
   current: vi.fn(),
   historyList: vi.fn(),
-  historyRead: vi.fn()
+  historyRead: vi.fn(),
+  recoverCurrentInterview: vi.fn()
 }));
 
 vi.mock("@/server/auth/onboarding-guard", () => ({
@@ -17,7 +18,10 @@ vi.mock("@/server/app-container", () => ({
   getAppContainer: () => ({
     coreTechnicalEligibilityService: { forProfile: mocks.eligibility },
     coreTechnicalPracticeService: { current: mocks.current },
-    coreTechnicalHistoryService: { list: mocks.historyList, read: mocks.historyRead }
+    coreTechnicalHistoryService: { list: mocks.historyList, read: mocks.historyRead },
+    coreTechnicalAssessmentService: {
+      recoverCurrentInterview: mocks.recoverCurrentInterview
+    }
   })
 }));
 vi.mock("@/features/practice/core-technical/ui/core-technical-overview", () => ({
@@ -56,6 +60,7 @@ describe("CoreTechnicalPracticePage", () => {
     mocks.eligibility.mockResolvedValue({ available: true, message: "Ready", stories: [] });
     mocks.current.mockResolvedValue(null);
     mocks.historyList.mockResolvedValue([]);
+    mocks.recoverCurrentInterview.mockResolvedValue(null);
   });
 
   it("shows confirmation only for a server-approved path", async () => {

@@ -117,6 +117,7 @@ const preparationFailureSchema = z
       .object({
         stage: z.enum([
           "ranking",
+          "artifact-resolution",
           "story-generation",
           "question-generation",
           "validation",

@@ -133,8 +133,8 @@ library interaction:
 - expanding a card shows its ordered question list;
 - every question row is the action; there are no separate **Start path** or **Open saved path**
   controls;
-- selecting a question in an unstarted path prepares that path invisibly, opens the chosen
-  question, and does not replace the current path;
+- selecting a question in an unstarted path copies its exact reviewed snapshot without calling a
+  live generation provider, opens the chosen question, and does not replace the current path;
 - questions from a prepared or historical path link directly to their saved workspace;
 - progress completed in a non-current path remains attached to those same questions when that
   path later becomes current;
@@ -149,6 +149,19 @@ clear on desktop, keyboard, and touch layouts.
 After a path, the dedicated Core Technical assessment checks explanation, diagnosis, repair,
 implementation evidence, and production judgment. It must not route through the generic interview
 setup.
+
+Starting or resuming the assessment opens the same live assessment room used by DSA, without a
+second setup flow or a form-only substitute:
+
+- the selected teacher joins by voice and speaks every prompt and focused follow-up;
+- the current frozen prompt and its saved practice artifact remain visible in the question panel;
+- candidates may answer aloud or use the typed-answer fallback;
+- the teacher gives a concise technical teaching point before moving to the next prompt;
+- incomplete rounds use **Save & exit** and resume the same durable room;
+- opening the room never generates assessment questions in real time; all five prompts come from
+  the immutable snapshot prepared with the path;
+- after the fifth prompt, the voice transcript is converted into the existing five-score Core
+  Technical report and the candidate returns to the block results.
 
 Only the current path can unlock or run a block assessment. Completing questions in another path
 saves their progress but does not create assessment eligibility. After the current assessment, the
@@ -187,6 +200,9 @@ visible on mobile, uses bounded alpha feathering, and avoids decorative blur lay
 9. Only the current path unlocks assessment; promotion preserves progress completed in loose paths
    and can stop preparation when mastery is sufficient.
 10. No private answer material or candidate-specific generated path is globally published.
+11. Core Technical assessment uses the DSA live-room shell, teacher voice, question panel,
+    transcript, media setup, save/resume behavior, and completion handoff while preserving its own
+    frozen prompts and scoring contract.
 
 ## Implementation steps
 
@@ -198,15 +214,18 @@ Work is delivered and verified in this order so each later layer depends on a st
    and assessment evidence while enforcing the supported runtime and difficulty bounds.
 3. **Safe generation and persistence** — generate, review, audit, and atomically persist a complete
    path with truthful provenance and replay-safe request IDs.
-4. **Loose path library** — make every question row directly actionable, lazily prepare an
-   unstarted path behind the selected row, keep that work non-current, and never expose separate
-   path-starting or path-opening controls.
+4. **Loose path library** — make every question row directly actionable, copy an exact reviewed
+   snapshot without live AI when an unstarted path is selected, keep that work non-current, and
+   never expose separate path-starting or path-opening controls.
 5. **Question workspace and learning** — support the required answer modes, progressive hints,
    deterministic execution, private-answer boundaries, complete learning guides, and accessible
    diagrams.
-6. **Current-only assessment and progression** — unlock assessment only for the current path,
-   distinguish solved from learned, choose one material next gap, promote an already prepared next
-   path without losing question progress, and retain previous/next access to history.
+6. **Current-only DSA-parity assessment and progression** — unlock assessment only for the current
+   path; launch its frozen prompts in the shared voice room with the teacher, question panel,
+   transcript, grounded follow-ups, teaching feedback, and save/resume behavior; convert the
+   completed conversation into the Core five-score report; distinguish solved from learned; choose
+   one material next gap; promote an already prepared next path without losing question progress;
+   and retain previous/next access to history.
 7. **Experience and release verification** — match the DSA library interaction, retain the premium
    border treatment, verify mobile and keyboard behavior, run contract/security/sandbox tests, and
    confirm legacy snapshots still open.

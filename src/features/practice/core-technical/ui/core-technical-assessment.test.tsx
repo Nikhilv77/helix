@@ -2,10 +2,18 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CoreTechnicalPublicBlock } from "@/features/practice/core-technical/server/practice.service";
 
-const mocks = vi.hoisted(() => ({ refresh: vi.fn(), replace: vi.fn(), push: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  refresh: vi.fn(),
+  replace: vi.fn(),
+  push: vi.fn(),
+  openInterviewRoom: vi.fn()
+}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: mocks.refresh, replace: mocks.replace, push: mocks.push })
+}));
+vi.mock("@/features/interviews/ui/shared/interview-room-navigation", () => ({
+  openInterviewRoom: mocks.openInterviewRoom
 }));
 
 import { CoreTechnicalAssessment } from "./core-technical-assessment";
@@ -16,6 +24,7 @@ describe("CoreTechnicalAssessment", () => {
     mocks.refresh.mockReset();
     mocks.replace.mockReset();
     mocks.push.mockReset();
+    mocks.openInterviewRoom.mockReset();
     window.sessionStorage.clear();
   });
 
@@ -31,7 +40,7 @@ describe("CoreTechnicalAssessment", () => {
     expect(await screen.findByRole("button", { name: "Start assessment" })).toBeInTheDocument();
 
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      response({ assessment: makeAssessment("IN_PROGRESS") })
+      response({ assessment: makeAssessment("IN_PROGRESS"), sessionId: ASSESSMENT_ID })
     );
     fireEvent.click(screen.getByRole("button", { name: "Start assessment" }));
 
@@ -66,7 +75,7 @@ describe("CoreTechnicalAssessment", () => {
 
   it("opens a dedicated Core Technical room from the overview", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      response({ assessment: makeAssessment("IN_PROGRESS") })
+      response({ assessment: makeAssessment("IN_PROGRESS"), sessionId: ASSESSMENT_ID })
     );
     render(
       <CoreTechnicalAssessment block={makeBlock("READY")} terminalCount={8} dedicatedRoom={false} />
@@ -74,11 +83,7 @@ describe("CoreTechnicalAssessment", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Start assessment" }));
 
-    await waitFor(() =>
-      expect(mocks.push).toHaveBeenCalledWith(
-        `/practice/core-technical/assessment/${ASSESSMENT_ID}?block=${BLOCK_ID}`
-      )
-    );
+    await waitFor(() => expect(mocks.openInterviewRoom).toHaveBeenCalledWith(ASSESSMENT_ID));
     expect(screen.queryByRole("heading", { name: "Five-prompt evidence defence" })).toBeNull();
   });
 

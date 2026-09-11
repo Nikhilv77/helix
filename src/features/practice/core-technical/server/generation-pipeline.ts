@@ -36,6 +36,19 @@ export class CoreTechnicalGenerationPipeline {
 
   constructor(private readonly dependencies: GenerationPipelineDependencies) {}
 
+  /**
+   * Resolves a source-reviewed snapshot without ever calling a generation
+   * provider. Loose library paths use this bounded path so opening a question
+   * does not inherit live-generation latency or retries.
+   */
+  async prepareApprovedDraft(input: StoryGeneratorInput): Promise<ReviewedCoreTechnicalDraft> {
+    const approvedDraft = await this.reviewedArtifact(input, "reviewed-artifact");
+    if (!approvedDraft) {
+      throw new Error("No exact reviewed Core Technical practice path is available");
+    }
+    return approvedDraft;
+  }
+
   async prepareReviewedDraft(
     input: StoryGeneratorInput,
     options: {

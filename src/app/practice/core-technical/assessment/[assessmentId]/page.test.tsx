@@ -1,4 +1,3 @@
-import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 
@@ -6,6 +5,10 @@ const mocks = vi.hoisted(() => ({
   requireOnboardedProfile: vi.fn(),
   current: vi.fn(),
   historyRead: vi.fn(),
+  startOrResume: vi.fn(),
+  redirect: vi.fn(() => {
+    throw new Error("NEXT_REDIRECT");
+  }),
   notFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
   })
@@ -17,26 +20,14 @@ vi.mock("@/server/auth/onboarding-guard", () => ({
 vi.mock("@/server/app-container", () => ({
   getAppContainer: () => ({
     coreTechnicalPracticeService: { current: mocks.current },
-    coreTechnicalHistoryService: { read: mocks.historyRead }
+    coreTechnicalHistoryService: { read: mocks.historyRead },
+    coreTechnicalAssessmentRuntimeService: { startOrResume: mocks.startOrResume }
   })
 }));
 vi.mock("next/navigation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/navigation")>()),
-  notFound: mocks.notFound
-}));
-vi.mock("@/features/practice/core-technical/ui/core-technical-assessment", () => ({
-  CoreTechnicalAssessment: (props: {
-    block: { id: string };
-    terminalCount: number;
-    dedicatedRoom: boolean;
-  }) => (
-    <div
-      data-testid="assessment-room"
-      data-block={props.block.id}
-      data-terminal={props.terminalCount}
-      data-dedicated={props.dedicatedRoom}
-    />
-  )
+  notFound: mocks.notFound,
+  redirect: mocks.redirect
 }));
 
 import CoreTechnicalAssessmentRoomPage from "./page";
@@ -47,20 +38,23 @@ describe("CoreTechnicalAssessmentRoomPage", () => {
     mocks.requireOnboardedProfile.mockResolvedValue({ ownerId: "owner-one" });
   });
 
-  it("loads the owner-scoped block into the dedicated assessment room", async () => {
+  it("redirects an in-progress assessment into its durable shared voice room", async () => {
     mocks.historyRead.mockResolvedValue(block("block-one", "assessment-one"));
+    mocks.startOrResume.mockResolvedValue({ sessionId: "assessment-one" });
 
-    render(
-      await CoreTechnicalAssessmentRoomPage({
+    await expect(
+      CoreTechnicalAssessmentRoomPage({
         params: Promise.resolve({ assessmentId: "assessment-one" }),
         searchParams: Promise.resolve({ block: "block-one" })
       })
-    );
+    ).rejects.toThrow("NEXT_REDIRECT");
 
     expect(mocks.historyRead).toHaveBeenCalledWith("owner-one", "block-one");
-    expect(screen.getByTestId("assessment-room")).toHaveAttribute("data-block", "block-one");
-    expect(screen.getByTestId("assessment-room")).toHaveAttribute("data-terminal", "2");
-    expect(screen.getByTestId("assessment-room")).toHaveAttribute("data-dedicated", "true");
+    expect(mocks.startOrResume).toHaveBeenCalledWith("owner-one", {
+      assessmentId: "assessment-one",
+      requestId: "assessment-one"
+    });
+    expect(mocks.redirect).toHaveBeenCalledWith("/interview/voice?session=assessment-one");
   });
 
   it("fails closed when the assessment does not belong to the selected block", async () => {
@@ -91,11 +85,7 @@ describe("CoreTechnicalAssessmentRoomPage", () => {
 function block(id: string, assessmentId: string) {
   return {
     id,
-    assessment: { id: assessmentId },
-    questions: [
-      { status: "COMPLETED" },
-      { status: "LEARNED" },
-      { status: "ACTIVE" }
-    ]
+    assessment: { id: assessmentId, status: "IN_PROGRESS" },
+    questions: [{ status: "COMPLETED" }, { status: "LEARNED" }, { status: "ACTIVE" }]
   };
 }

@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
         code: "CORE_TECHNICAL_PREPARATION_IN_PROGRESS",
         message: "This Core Technical practice path is already being prepared."
       },
-      ownerId
+      `${ownerId}:${input.storyKey}`
     );
     return apiSuccess(await app.coreTechnicalPreparationService.startPath(ownerId, input));
   } catch (error) {

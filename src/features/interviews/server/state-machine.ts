@@ -4,6 +4,7 @@ import {
   InterviewState,
   MAX_FOLLOW_UPS,
   PlannedQuestion,
+  isResumableBlockAssessment,
   roundCaps,
   Turn
 } from "./types";
@@ -60,7 +61,7 @@ export function followUpLimit(state: InterviewState): number {
 
 export function advance(state: InterviewState, requested: DecisionAction, now: number): Advance {
   const elapsed = elapsedMs(state, now);
-  const isBlockAssessment = state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment";
+  const isBlockAssessment = isResumableBlockAssessment(state.setup);
   // Caps depend on the round: a three-stage resume round needs longer than a
   // single-arc conversation, and the guards must use the same budget the room
   // is counting down.

@@ -212,9 +212,10 @@ function StoryLibrary({
   experience: StoryPracticeOverviewExperience;
 }) {
   const router = useRouter();
-  const pending = useRef(false);
-  const [startingKey, setStartingKey] = useState<string | null>(null);
-  const [startError, setStartError] = useState<{ key: string; message: string } | null>(null);
+  const pendingPaths = useRef(new Set<string>());
+  const requestedOrderByPath = useRef(new Map<string, number>());
+  const [startingOrderByPath, setStartingOrderByPath] = useState<Record<string, number>>({});
+  const [startErrorByPath, setStartErrorByPath] = useState<Record<string, string>>({});
   const cards = storyLibraryCards(entries, history).sort((left, right) => {
     const leftIsCurrent = left.history?.isCurrent === true;
     const rightIsCurrent = right.history?.isCurrent === true;
@@ -227,11 +228,14 @@ function StoryLibrary({
   if (!cards.length) return null;
 
   const openLibraryQuestion = async (storyKey: string, order: number) => {
-    if (!experience.startUnstartedPath || pending.current) return;
-    pending.current = true;
-    const pendingKey = `${storyKey}:${order}`;
-    setStartingKey(pendingKey);
-    setStartError(null);
+    if (!experience.startUnstartedPath) return;
+    requestedOrderByPath.current.set(storyKey, order);
+    setStartingOrderByPath((current) => ({ ...current, [storyKey]: order }));
+    setStartErrorByPath((current) => withoutKey(current, storyKey));
+    // A second row click in the same path reuses the in-flight preparation and
+    // changes only the destination question. Other paths remain interactive.
+    if (pendingPaths.current.has(storyKey)) return;
+    pendingPaths.current.add(storyKey);
     const storageKey = `${experience.slug}-start-path:${storyKey}`;
     const requestId = sessionStorage.getItem(storageKey) ?? crypto.randomUUID();
     sessionStorage.setItem(storageKey, requestId);
@@ -240,23 +244,27 @@ function StoryLibrary({
         requestId,
         storyKey
       });
-      const destination = readPreparedQuestion(payload, order);
+      const destination = readPreparedQuestion(
+        payload,
+        requestedOrderByPath.current.get(storyKey) ?? order
+      );
       if (!destination) throw new Error("The prepared question could not be opened.");
       sessionStorage.removeItem(storageKey);
       router.push(
         `${experience.routeBase}/questions/${encodeURIComponent(destination.questionId)}?block=${encodeURIComponent(destination.blockId)}`
       );
-      router.refresh();
     } catch (cause) {
-      setStartError({
-        key: storyKey,
-        message:
+      setStartErrorByPath((current) => ({
+        ...current,
+        [storyKey]:
           cause instanceof Error
             ? cause.message
             : "This practice path could not be prepared. Your progress is safe; try again."
-      });
-      pending.current = false;
-      setStartingKey(null);
+      }));
+    } finally {
+      pendingPaths.current.delete(storyKey);
+      requestedOrderByPath.current.delete(storyKey);
+      setStartingOrderByPath((current) => withoutKey(current, storyKey));
     }
   };
 
@@ -283,8 +291,8 @@ function StoryLibrary({
             selected={card.history?.id === selectedBlockId}
             selectedBlock={card.history?.id === selectedBlockId ? selectedBlock : null}
             candidateDifficulty={selectedBlock.selection.difficulty}
-            startingKey={startingKey}
-            startError={startError?.key === card.key ? startError.message : null}
+            startingOrder={startingOrderByPath[card.key] ?? null}
+            startError={startErrorByPath[card.key] ?? null}
             onQuestionOpen={
               experience.startUnstartedPath
                 ? (order) => void openLibraryQuestion(card.key, order)
@@ -356,7 +364,7 @@ function StoryLibraryCard({
   selected,
   selectedBlock,
   candidateDifficulty,
-  startingKey,
+  startingOrder,
   startError,
   onQuestionOpen,
   experience
@@ -366,7 +374,7 @@ function StoryLibraryCard({
   selected: boolean;
   selectedBlock: StoryPracticeBlockView | null;
   candidateDifficulty: StoryPracticeBlockView["selection"]["difficulty"];
-  startingKey: string | null;
+  startingOrder: number | null;
   startError: string | null;
   onQuestionOpen: ((order: number) => void) | null;
   experience: StoryPracticeOverviewExperience;
@@ -485,7 +493,7 @@ function StoryLibraryCard({
                 question.format as Parameters<typeof coreTechnicalQuestionMinutes>[0],
                 selectedBlock?.story.expectedMinutes ?? card.expectedMinutes
               )}
-              loading={startingKey === `${card.key}:${question.order}`}
+              loading={startingOrder === question.order}
               onOpen={!card.history && onQuestionOpen ? () => onQuestionOpen(question.order) : null}
             />
           ))}
@@ -519,6 +527,13 @@ async function postLibraryPath(url: string, body: unknown): Promise<unknown> {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function withoutKey<T>(record: Record<string, T>, key: string): Record<string, T> {
+  if (!(key in record)) return record;
+  const next = { ...record };
+  delete next[key];
+  return next;
 }
 
 function readPreparedQuestion(

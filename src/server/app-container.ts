@@ -66,6 +66,7 @@ import { CoreTechnicalPracticeService } from "@/features/practice/core-technical
 import { CoreTechnicalPreparationService } from "@/features/practice/core-technical/server/preparation.service";
 import { CoreTechnicalAssessmentEvaluator } from "@/features/practice/core-technical/server/assessment-evaluator";
 import { CoreTechnicalAssessmentService } from "@/features/practice/core-technical/server/assessment.service";
+import { CoreTechnicalAssessmentRuntimeService } from "@/features/practice/core-technical/server/assessment-runtime.service";
 import { CoreTechnicalContinuationService } from "@/features/practice/core-technical/server/continuation.service";
 import { CoreTechnicalHistoryService } from "@/features/practice/core-technical/server/history.service";
 import { CoreTechnicalEligibilityService } from "@/features/practice/core-technical/server/eligibility.service";
@@ -161,6 +162,7 @@ export interface AppContainer {
   coreTechnicalPreparationService: CoreTechnicalPreparationService;
   coreTechnicalAssessmentEvaluator: CoreTechnicalAssessmentEvaluator;
   coreTechnicalAssessmentService: CoreTechnicalAssessmentService;
+  coreTechnicalAssessmentRuntimeService: CoreTechnicalAssessmentRuntimeService;
   coreTechnicalContinuationService: CoreTechnicalContinuationService;
   coreTechnicalHistoryService: CoreTechnicalHistoryService;
   coreTechnicalWorkspaceAnalyticsService: CoreTechnicalWorkspaceAnalyticsService;
@@ -273,6 +275,11 @@ export function getAppContainer(): AppContainer {
     new PrismaSessionStore(prisma),
     config.interviewDailyLimit,
     new TechnicalAnswerEvaluator(interviewAi)
+  );
+  const coreTechnicalAssessmentRuntimeService = new CoreTechnicalAssessmentRuntimeService(
+    prisma,
+    coreTechnicalAssessmentService,
+    interviewService
   );
   const dsaBlockAssessmentRuntimeService = new DsaBlockAssessmentRuntimeService(
     prisma,
@@ -467,6 +474,7 @@ export function getAppContainer(): AppContainer {
     coreTechnicalPreparationService,
     coreTechnicalAssessmentEvaluator,
     coreTechnicalAssessmentService,
+    coreTechnicalAssessmentRuntimeService,
     coreTechnicalContinuationService,
     coreTechnicalHistoryService,
     coreTechnicalEligibilityService,
