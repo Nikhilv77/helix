@@ -28,6 +28,7 @@ vi.mock("@/server/rate-limit/shared-guard", async (importOriginal) => {
 import { POST as startAssessment } from "./assessment/start/handler";
 import { POST as confirm } from "./confirm/handler";
 import { POST as prepare } from "./prepare/handler";
+import { POST as startPath } from "./start-path/handler";
 
 const FOCUS_ID = "11111111-1111-4111-8111-111111111111";
 const ASSESSMENT_ID = "22222222-2222-4222-8222-222222222222";
@@ -94,10 +95,14 @@ describe("Architecture & Design representative API routes", () => {
   it("passes the explicit development-only early-start flag to assessment start", async () => {
     const release = vi.fn();
     mocks.acquire.mockResolvedValue({ release });
-    const start = vi.fn().mockResolvedValue({ id: ASSESSMENT_ID, status: "IN_PROGRESS" });
+    const startOrResume = vi.fn().mockResolvedValue({
+      assessment: { id: ASSESSMENT_ID, status: "IN_PROGRESS" },
+      sessionId: ASSESSMENT_ID,
+      created: true
+    });
     const app = {
       config: { nodeEnv: "development" },
-      architectureDesign: { assessment: { start } }
+      architectureDesign: { assessmentRuntime: { startOrResume } }
     };
     mocks.owner.mockResolvedValue({ ownerId: "owner-1", app, profile: {} });
 
@@ -106,7 +111,7 @@ describe("Architecture & Design representative API routes", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(start).toHaveBeenCalledWith(
+    expect(startOrResume).toHaveBeenCalledWith(
       "owner-1",
       { assessmentId: ASSESSMENT_ID, requestId: REQUEST_ID },
       { allowLocked: true }
@@ -114,6 +119,32 @@ describe("Architecture & Design representative API routes", () => {
     expect(mocks.acquire).toHaveBeenCalledWith(
       expect.objectContaining({ namespace: "architecture-design-assessment-start" }),
       `owner-1:${ASSESSMENT_ID}`
+    );
+    expect(release).toHaveBeenCalledOnce();
+  });
+
+  it("materializes an exact reviewed scenario under a scenario-scoped lease", async () => {
+    const release = vi.fn();
+    mocks.acquire.mockResolvedValue({ release });
+    const materialize = vi.fn().mockResolvedValue({ replayed: false, block: { id: "block-2" } });
+    const app = {
+      config: { nodeEnv: "test" },
+      architectureDesign: { preparation: { startPath: materialize } }
+    };
+    mocks.owner.mockResolvedValue({ ownerId: "owner-1", app, profile: { targetRole: "backend" } });
+
+    const response = await startPath(
+      post("/start-path", { requestId: REQUEST_ID, storyKey: "global-media-processing" })
+    );
+
+    expect(response.status).toBe(200);
+    expect(materialize).toHaveBeenCalledWith("owner-1", {
+      requestId: REQUEST_ID,
+      storyKey: "global-media-processing"
+    });
+    expect(mocks.acquire).toHaveBeenCalledWith(
+      expect.objectContaining({ namespace: "architecture-design-start-path" }),
+      "owner-1:global-media-processing"
     );
     expect(release).toHaveBeenCalledOnce();
   });

@@ -1,6 +1,6 @@
 # Architecture & Design — Story Practice Parity and Reuse Plan
 
-Status: Proposed implementation plan
+Status: Implementation complete through Step 7; authenticated release verification remains pending
 
 Scope: `/practice/architecture-design`
 
@@ -20,7 +20,7 @@ It must not become a copy of Core Technical or Applied Engineering.
 
 The repository already contains most of the Architecture domain implementation:
 
-- two reviewed four-question scenarios;
+- six reviewed four-question scenarios;
 - Architecture focus, eligibility, ranking, preparation, practice, assessment, continuation,
   history, and analytics services;
 - separate Architecture Prisma records and repository adapter;
@@ -310,10 +310,10 @@ question Core/Applied shape.
 Architecture's stable sixteen dimensions remain its ranking and scoring vocabulary. They must not
 be renamed to Core mechanisms or Applied production signals merely to satisfy a generic API.
 
-### 7.1 Reviewed launch paths already in the catalogue
+### 7.1 Original reviewed launch paths
 
-The version-one catalogue already contains two approved immutable scenarios. Preserve their keys,
-questions, fingerprints, and saved snapshots:
+The original version-one launch catalogue contained two approved immutable scenarios. Preserve
+their keys, questions, fingerprints, and saved snapshots:
 
 1. `multi-tenant-webhook-delivery`
    - requirements and scale: scope at-least-once delivery, calculate fan-out and history volume,
@@ -350,16 +350,16 @@ select only the smallest set needed to address material gaps.
 | ---------------------------------- | ----------------------------------- | ------------------------------------------------- | ---------------------- |
 | Multi-tenant webhook delivery      | `multi-tenant-webhook-delivery`     | asynchronous delivery and tenant isolation        | reviewed and published |
 | High-volume notifications          | `high-volume-notification-platform` | priority fan-out and provider routing             | reviewed and published |
-| Marketplace checkout and inventory | `marketplace-checkout-inventory`    | transactional workflow and reconciliation         | proposed               |
-| Collaborative document editing     | `collaborative-document-editing`    | real-time state, ordering, and offline merge      | proposed               |
-| Global media upload and processing | `global-media-processing`           | large-object storage, pipelines, and CDN delivery | proposed               |
-| Search and autocomplete            | `search-autocomplete-platform`      | indexing, freshness, relevance, and read scaling  | proposed               |
+| Marketplace checkout and inventory | `marketplace-checkout-inventory`    | transactional workflow and reconciliation         | reviewed and published |
+| Collaborative document editing     | `collaborative-document-editing`    | real-time state, ordering, and offline merge      | reviewed and published |
+| Global media upload and processing | `global-media-processing`           | large-object storage, pipelines, and CDN delivery | reviewed and published |
+| Search and autocomplete            | `search-autocomplete-platform`      | indexing, freshness, relevance, and read scaling  | reviewed and published |
 
 Do not reorder or rewrite existing saved blocks to match this table. It describes catalogue
 coverage. The server ranker continues to choose the active scenario from compatibility, evidence,
 novelty, and difficulty.
 
-### 7.3 Proposed path 3 — Marketplace checkout and inventory
+### 7.3 Reviewed path 3 — Marketplace checkout and inventory
 
 **Scenario premise:** Design checkout for a multi-seller marketplace that reserves limited stock,
 authorizes payment, creates an order, and recovers safely when inventory, payment, or fulfillment
@@ -445,7 +445,7 @@ Evaluation logic:
 - retain one side-effect authority during shadowing and canary rollout;
 - require compatible state/schema rollback rather than only redeploying old code.
 
-### 7.4 Proposed path 4 — Collaborative document editing
+### 7.4 Reviewed path 4 — Collaborative document editing
 
 **Scenario premise:** Design a multi-device collaborative document editor with live updates,
 presence, offline edits, access control, and durable version history.
@@ -517,7 +517,7 @@ Evaluation logic:
 - version client/server protocols and support mixed-version clients during rollout;
 - use shadow validation and document cohorts with a fencing/rollback control.
 
-### 7.5 Proposed path 5 — Global media upload and processing
+### 7.5 Reviewed path 5 — Global media upload and processing
 
 **Scenario premise:** Design a platform that accepts large photos and videos, processes variants,
 serves them globally, and enforces tenant access, deletion, and lifecycle policy.
@@ -588,7 +588,7 @@ Evaluation logic:
 - use storage tiers and derivative policy rather than retaining every output indefinitely;
 - canary one asset class or tenant with compatible metadata and a routing kill switch.
 
-### 7.6 Proposed path 6 — Search and autocomplete
+### 7.6 Reviewed path 6 — Search and autocomplete
 
 **Scenario premise:** Design product search and autocomplete over a large, frequently changing
 catalogue with filters, authorization, relevance, typo tolerance, and regional reads.
@@ -740,13 +740,30 @@ a separate change that does not mark unpublished scenarios as eligible.
 
 #### Content Part 1 — Freeze briefs and catalogue metadata
 
+**Status: Complete (2026-09-12).**
+
 - approve the four proposed keys, premises, role compatibility, seniority/difficulty support, topic
   keys, constraints, and scale profiles;
 - add draft/review catalogue entries without publishing them;
 - add the architecture-family novelty signal without changing current two-scenario outcomes;
 - test that draft/review entries never make a candidate eligible or become selectable.
 
+Implementation notes:
+
+- `scenario-briefs.ts` initially froze four schema-validated draft briefs with no questions or
+  private evaluation material; after Part 2 it retains the three briefs that remain drafts;
+- the ranking catalogue initially contained two `published` reviewed artifacts and four `draft`
+  briefs; after Part 2 it contains three of each;
+- every candidate declares an Architecture family, and the existing bounded novelty score prefers
+  a family not represented by prior scenario keys;
+- eligibility and ranking continue to filter strictly to `published`; introducing family novelty
+  did not change selection while only the two original live scenarios existed;
+- focused content, ranking, eligibility, preparation, assessment-flow, and continuation tests prove
+  the draft publication boundary and family-novelty behavior.
+
 #### Content Part 2 — Marketplace checkout and inventory
+
+**Status: Complete (2026-09-12).**
 
 - author all four questions, visible artifacts, hints, private answers, rubrics, mistakes,
   follow-ups, and transfer connections;
@@ -754,28 +771,109 @@ a separate change that does not mark unpublished scenarios as eligible.
 - obtain owner/human approval and publish the exact version atomically;
 - test ranking after webhook/notification and no-next behavior before and after publication.
 
+Implementation notes:
+
+- `MARKETPLACE_CHECKOUT_INVENTORY` is a complete four-question reviewed artifact covering checkout
+  scope and capacity, durable contracts, workflow failure recovery, and production migration;
+- every question has a distinct candidate-safe artifact, three progressive hints, a private
+  reference answer, a 10-point canonical-dimension rubric, common mistakes, follow-ups, and a
+  transfer connection;
+- the content audit passes schema identity, scenario coherence, all-sixteen-dimension coverage, and
+  private/public leakage checks;
+- at Part 2 completion the catalogue promoted only `marketplace-checkout-inventory` from `draft` to
+  `published`, while the collaboration, media, and search briefs remained non-selectable drafts;
+- the Part 2 transition tests proved checkout selection after both original asynchronous-delivery
+  scenarios and exhaustion when the then-current three published scenarios were used;
+- the replay-safe transactional publisher persisted `marketplace-checkout-inventory@1` with content
+  fingerprint `sha256:24185c986e8da4a0eb96478fc923f8fb7196b81931361e003d6f2b291a5eae74`.
+
 #### Content Part 3 — Collaborative document editing
+
+**Status: Complete (2026-09-12).**
 
 - repeat the complete author-review-audit-publish cycle;
 - add explicit audit cases for offline edits after permission revocation, mixed client versions,
   slow consumers, hot documents, and fenced failover;
 - verify its realtime/consistency family receives novelty preference after fan-out practice.
 
+Implementation notes:
+
+- `COLLABORATIVE_DOCUMENT_EDITING` is a complete four-question reviewed artifact covering
+  collaboration semantics and scale, versioned operation contracts, realtime failure recovery, and
+  privacy-safe protocol evolution;
+- its reviewed evidence explicitly covers offline edits after permission revocation, mixed client
+  and protocol versions, bounded slow-consumer recovery, celebrity-hot documents, and fenced
+  regional ownership;
+- every question has a distinct candidate-safe artifact, three progressive hints, a private
+  reference answer, a 10-point canonical-dimension rubric, common mistakes, follow-ups, and a
+  transfer connection;
+- the content audit passes schema identity, coherence, all-sixteen-dimension coverage, and
+  private/public leakage checks;
+- at Part 3 completion the catalogue promoted only `collaborative-document-editing` from `draft` to
+  `published`, while media and search remained non-selectable drafts;
+- adaptive ranking gives the realtime/consistency family full novelty after asynchronous-delivery
+  practice and selects it when target evidence is collaboration-aligned;
+- the replay-safe transactional publisher persisted `collaborative-document-editing@1` with content
+  fingerprint `sha256:4a17e8911764826d18293513806734ed0be9c0b0d101d569eb30c6940648eb90`.
+
 #### Content Part 4 — Global media upload and processing
+
+**Status: Complete (2026-09-12).**
 
 - repeat the complete author-review-audit-publish cycle;
 - audit signed-upload authorization, object-key ownership, derivative lineage, deletion propagation,
   and duplicate processing behavior;
 - verify storage/CDN evidence can influence ranking without exposing raw resume data.
 
+Implementation notes:
+
+- `GLOBAL_MEDIA_PROCESSING` is a complete four-question reviewed artifact covering lifecycle and
+  capacity, ownership-safe upload contracts, idempotent processing and CDN delivery, and secure
+  cost-aware migration;
+- its reviewed evidence explicitly covers short-lived signed upload authorization, server-owned
+  object keys, immutable derivative lineage, multi-target deletion propagation, and duplicate job
+  delivery;
+- every question has a distinct candidate-safe artifact, three progressive hints, a private
+  reference answer, a 10-point canonical-dimension rubric, common mistakes, follow-ups, and a
+  transfer connection;
+- the content audit passes schema identity, coherence, all-sixteen-dimension coverage, and
+  private/public leakage checks;
+- at Part 4 completion the catalogue promoted only `global-media-processing` from `draft` to
+  `published`, while search remained the sole non-selectable draft;
+- sanitized object-storage, media, workflow, and CDN evidence can prioritize this family without
+  exposing project keywords in the selection snapshot;
+- the replay-safe transactional publisher persisted `global-media-processing@1` with content
+  fingerprint `sha256:6fb70e2afc2a8f937c41e92e1b79b5ed9ad657dfa0bfb23a56b63841eef01b47`.
+
 #### Content Part 5 — Search and autocomplete
+
+**Status: Complete (2026-09-12).**
 
 - repeat the complete author-review-audit-publish cycle;
 - audit authorization-filter leakage, stale event rejection, pagination stability, reindex rollback,
   and privacy deletion propagation;
 - verify search/indexing novelty and weakness scoring against all earlier paths.
 
+Implementation notes:
+
+- `SEARCH_AUTOCOMPLETE_PLATFORM` is a complete four-question reviewed artifact covering search
+  requirements and capacity, safe query/index contracts, isolated ingestion and serving, and
+  relevance-aware index evolution;
+- its reviewed evidence explicitly covers authorization-filter leakage, stale-event rejection,
+  signed cursor pagination, end-to-end privacy deletion, and reversible generation/alias rollback;
+- every question has a distinct candidate-safe artifact, three progressive hints, a private
+  reference answer, a 10-point canonical-dimension rubric, common mistakes, follow-ups, and a
+  transfer connection;
+- the content audit passes schema identity, coherence, all-sixteen-dimension coverage, and
+  private/public leakage checks;
+- `search-autocomplete-platform` is published and the six-path catalogue now contains no draft or
+  review entries;
+- the replay-safe transactional publisher persisted `search-autocomplete-platform@1` with content
+  fingerprint `sha256:ae5f5397d53cf284e6f833fb53a628baf81d16c5b0c171d9f6d9f81eb40e96be`.
+
 #### Content Part 6 — Six-path curriculum and release verification
+
+**Status: Automated content and integration gates complete; authenticated browser verification pending.**
 
 - test deterministic first and next selection across junior, mid, and senior backend/full-stack
   profiles;
@@ -785,6 +883,32 @@ a separate change that does not mark unpublished scenarios as eligible.
   assessment shape;
 - perform authenticated desktop/mobile and keyboard checks for the expanded library;
 - publish a path only when its full private/public content audit and owner review pass.
+
+Completed automated evidence:
+
+- all six backend/full-stack scenarios are approved, database-published, non-executable immutable
+  four-question artifacts with complete sixteen-dimension coverage;
+- deterministic first and next selection, used-scenario exclusion, family novelty, evidence-based
+  media selection, weak-dimension emphasis, and exhausted-catalogue behavior are covered;
+- ranking uses bounded scenario emphasis dimensions instead of treating each scenario's mandatory
+  sixteen-dimension rubric coverage as equal relevance to every gap;
+- junior and mid-level adaptive selection is now bounded to `guided` or `standard`, while only
+  senior profiles may receive `stretch`;
+- all six paths build answer-free public snapshots and the same frozen five-prompt assessment
+  shape through the shared Architecture contracts;
+- the expanded library now materializes exact reviewed loose blocks, permits progress without
+  transferring assessment eligibility, and promotes the same block in place during continuation;
+- the shared room now supports Architecture identity, dialogue, five-prompt planning, transcript
+  finalization, interrupted-report recovery, and terminal readiness/completion;
+- the cross-domain automated regression run passes 111 test files and 582 tests, and the optimized
+  production build completes successfully.
+
+Still pending before this part can be marked fully complete:
+
+- authenticated desktop/mobile, keyboard, and screen-reader checks for the six-path library remain
+  part of parity Step 8;
+- authenticated microphone, typed fallback, Save & exit, resume, final-prompt completion, and
+  browser-network privacy exercises remain part of parity Step 8.
 
 Do not create all four path files first and plan to add answers, rubrics, or audits later. One path
 is complete only when its whole immutable reviewed artifact is safe to publish. This keeps each part
@@ -1151,6 +1275,8 @@ Implement one numbered step at a time and keep each step independently testable.
 
 ### Step 1 — Freeze Architecture parity contracts
 
+**Status: Complete (2026-09-12).**
+
 - Add `architecture-design` to the neutral assessment identity.
 - Change the Architecture experience contract to declare the shared room target.
 - Add the continuation union additively while accepting old `nextScenario` reports.
@@ -1159,13 +1285,21 @@ Implement one numbered step at a time and keep each step independently testable.
 
 ### Step 2 — Match first entry and library behavior
 
+**Status: Complete (2026-09-12).**
+
 - Add the thin Architecture wrapper for the polished shared welcome.
 - Send only `{ path: "role-aligned" }` from the browser.
 - Preserve replay-safe confirmation and preparation IDs.
 - Add exact reviewed scenario row materialization.
 - Preserve loose-scenario progress for later promotion.
 
+Verification note: every eligible catalogue entry now derives its four candidate-safe row
+descriptors and expected duration from the matching reviewed scenario. Unstarted cards therefore
+render the real four stages instead of the shared empty-entry fallback.
+
 ### Step 3 — Add Architecture room dialogue and identity support
+
+**Status: Complete (2026-09-12).**
 
 - Configure Architecture opening, transition, teaching, and closing wording.
 - Generalize identity checks and resumable-room helpers to the third practice kind.
@@ -1173,6 +1307,8 @@ Implement one numbered step at a time and keep each step independently testable.
 - Prove one grounded follow-up maximum remains shared.
 
 ### Step 4 — Add the Architecture assessment runtime
+
+**Status: Complete (2026-09-12).**
 
 - Build five planned questions from the frozen Architecture snapshot.
 - Attach private guides only to the server plan.
@@ -1182,12 +1318,16 @@ Implement one numbered step at a time and keep each step independently testable.
 
 ### Step 5 — Add transcript finalization and recovery
 
+**Status: Complete (2026-09-12).**
+
 - Map room turns to the five Architecture prompt IDs.
 - Trigger deferred Architecture finalization after room completion.
 - Recover completed rooms and checkpointed `FINALIZING` submissions on overview load.
 - Preserve legacy inline finalization and reports.
 
 ### Step 6 — Add terminal readiness and continuation
+
+**Status: Complete (2026-09-12).**
 
 - Return a next scenario or terminal readiness/completion.
 - Prevent the final catalogue item from remaining `FINALIZING`.
@@ -1196,6 +1336,8 @@ Implement one numbered step at a time and keep each step independently testable.
 
 ### Step 7 — Prove UI, privacy, and lifecycle parity
 
+**Status: Complete by automated gates (2026-09-12).**
+
 - Add Core/Applied/Architecture render-parity tests for equivalent states.
 - Test mobile teacher visibility and non-executable workspace behavior.
 - Test every assessment state and legacy inline compatibility.
@@ -1203,6 +1345,8 @@ Implement one numbered step at a time and keep each step independently testable.
 - Run shared, Core, Applied, Architecture, interview, and Practice regressions.
 
 ### Step 8 — Authenticated release verification
+
+**Status: Pending authenticated manual verification.**
 
 - Compare desktop and mobile screenshots for equivalent Core, Applied, and Architecture states.
 - Run keyboard and screen-reader checks.

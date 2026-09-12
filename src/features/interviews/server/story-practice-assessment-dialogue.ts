@@ -56,12 +56,33 @@ const APPLIED_ENGINEERING_DIALOGUE: StoryPracticeAssessmentDialogue = {
   teachingPrefix: "The production point to carry forward is this:"
 };
 
+const ARCHITECTURE_DESIGN_DIALOGUE: StoryPracticeAssessmentDialogue = {
+  openingShape:
+    "We’ll work through five focused prompts from the design scenario you just practised: frame the requirements and scale, define the contracts and data, defend the architecture and failure strategy, then finish with operability and evolution.",
+  expectations: [
+    "Think out loud. State your assumptions, quantify the important constraint, and make the trade-off explicit. I may pressure-test one boundary before we move on.",
+    "Treat this like a real system-design interview. Trace the request and data flow, identify the failure boundary, and defend why the design fits the stated scale.",
+    "Use the scenario evidence on screen. Be precise about consistency, reliability, security, and operational consequences; I’ll help sharpen one missing detail when useful."
+  ],
+  transitions: [
+    "Let’s carry those constraints into the next design decision.",
+    "Now let’s pressure-test the system at the next boundary.",
+    "All right, here’s the next part of the design."
+  ],
+  closingLines: [
+    "That completes the assessment. Thanks for making the architecture trade-offs explicit—your design feedback will be ready shortly.",
+    "That’s the full round. Your system-design scores and next focus will be ready shortly.",
+    "We’ve covered the design from requirements through evolution. Your report will be ready shortly."
+  ],
+  teachingPrefix: "The design point to carry forward is this:"
+};
+
 export function storyPracticeAssessmentDialogue(
   practice: StoryPracticeAssessmentKind
 ): StoryPracticeAssessmentDialogue {
-  return practice === "applied-engineering"
-    ? APPLIED_ENGINEERING_DIALOGUE
-    : CORE_TECHNICAL_DIALOGUE;
+  if (practice === "applied-engineering") return APPLIED_ENGINEERING_DIALOGUE;
+  if (practice === "architecture-design") return ARCHITECTURE_DESIGN_DIALOGUE;
+  return CORE_TECHNICAL_DIALOGUE;
 }
 
 export function storyPracticeAssessmentOpening(

@@ -2,10 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { APPLIED_ENGINEERING_ASSESSMENT_EXPERIENCE } from "@/features/practice/applied-engineering/ui/applied-engineering-experience";
 import { CORE_TECHNICAL_ASSESSMENT_EXPERIENCE } from "@/features/practice/core-technical/ui/core-technical-assessment";
-import type {
-  StoryPracticeAssessmentStatus,
-  StoryPracticeBlockView
-} from "./view-contracts";
+import { ARCHITECTURE_DESIGN_ASSESSMENT_EXPERIENCE } from "@/features/practice/architecture-design/ui/architecture-design-experience";
+import type { StoryPracticeAssessmentStatus, StoryPracticeBlockView } from "./view-contracts";
 import { StoryPracticeAssessment } from "./story-practice-assessment";
 
 vi.mock("next/navigation", () => ({
@@ -55,7 +53,9 @@ describe("story-practice assessment state parity", () => {
       }
 
       if (status === "LOCKED") {
-        expect(screen.getByRole("heading", { name: "1 question left to unlock" })).toBeInTheDocument();
+        expect(
+          screen.getByRole("heading", { name: "1 question left to unlock" })
+        ).toBeInTheDocument();
       } else if (status === "READY") {
         expect(screen.getByRole("button", { name: /Start assessment/i })).toBeInTheDocument();
       } else if (status === "IN_PROGRESS") {
@@ -68,6 +68,33 @@ describe("story-practice assessment state parity", () => {
       }
     }
   );
+
+  it("keeps a pre-migration Architecture assessment inline and sends stamped snapshots to the room", () => {
+    const legacy = render(
+      <StoryPracticeAssessment
+        block={block("IN_PROGRESS")}
+        terminalCount={2}
+        dedicatedRoom={false}
+        experience={ARCHITECTURE_DESIGN_ASSESSMENT_EXPERIENCE}
+      />
+    );
+    expect(screen.getAllByRole("textbox")).toHaveLength(5);
+    expect(screen.queryByRole("button", { name: /Continue assessment/i })).toBeNull();
+    legacy.unmount();
+
+    const roomBlock = block("IN_PROGRESS");
+    roomBlock.assessment!.assessment!.deliveryMode = "shared-voice-room";
+    render(
+      <StoryPracticeAssessment
+        block={roomBlock}
+        terminalCount={2}
+        dedicatedRoom={false}
+        experience={ARCHITECTURE_DESIGN_ASSESSMENT_EXPERIENCE}
+      />
+    );
+    expect(screen.getByRole("button", { name: /Continue assessment/i })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
 });
 
 function classSignature(container: HTMLElement) {

@@ -20,12 +20,6 @@ export function DashboardScoreRing({
       className={`dashboard-score-ring relative isolate grid shrink-0 place-items-center ${className}`}
       style={{ "--dashboard-ring-offset": 100 - progress } as CSSProperties}
     >
-      <span
-        aria-hidden="true"
-        className="dashboard-score-ring-halo absolute inset-0 rounded-full"
-      />
-      <span aria-hidden="true" className="dashboard-score-ring-core absolute rounded-full" />
-
       <svg
         className="absolute inset-0 h-full w-full -rotate-90 overflow-visible"
         viewBox="0 0 160 160"
@@ -62,9 +56,10 @@ export function DashboardScoreRing({
       </svg>
 
       <span
-        className={`relative z-10 font-mono font-semibold tabular-nums tracking-[-0.055em] text-cream ${valueClassName}`}
+        className={`relative z-10 inline-flex items-center font-sans font-semibold leading-none tabular-nums text-cream ${valueClassName}`}
       >
-        {progress}%
+        <span>{progress}</span>
+        <span className="relative ml-[-0.04em] translate-y-[0.08em]">%</span>
       </span>
     </div>
   );

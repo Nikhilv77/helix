@@ -107,6 +107,7 @@ export type StoryPracticeQuestionView = {
 };
 
 export type StoryPracticeAssessmentSnapshotView = {
+  deliveryMode?: "shared-voice-room";
   prompts: Array<{
     id: string;
     order: number;

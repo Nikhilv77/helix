@@ -54,6 +54,17 @@ describe("Core Technical assessment dialogue", () => {
     expect(text).toMatch(/production signal|engineer on call|safe repair/i);
     expect(text).toContain("Why does this closure retain state?");
   });
+
+  it("uses design-specific language for Architecture without forking the room", () => {
+    const text = storyPracticeAssessmentOpening(
+      state(),
+      storyPracticeAssessmentDialogue("architecture-design")
+    );
+
+    expect(text).toContain("five focused prompts");
+    expect(text).toMatch(/requirements and scale|architecture|trade-off/i);
+    expect(text).toContain("Why does this closure retain state?");
+  });
 });
 
 function state() {

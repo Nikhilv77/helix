@@ -33,6 +33,7 @@ import { POST as architectureDraft } from "../../architecture-design/draft/handl
 import { POST as architectureHint } from "../../architecture-design/hint/handler";
 import { POST as architectureLearn } from "../../architecture-design/learn/handler";
 import { POST as architecturePrepare } from "../../architecture-design/prepare/handler";
+import { POST as architectureStartPath } from "../../architecture-design/start-path/handler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -74,7 +75,8 @@ const handlers: Readonly<Record<string, PracticeHandler>> = {
   "architecture-design/draft": architectureDraft,
   "architecture-design/hint": architectureHint,
   "architecture-design/learn": architectureLearn,
-  "architecture-design/prepare": architecturePrepare
+  "architecture-design/prepare": architecturePrepare,
+  "architecture-design/start-path": architectureStartPath
 };
 
 /**

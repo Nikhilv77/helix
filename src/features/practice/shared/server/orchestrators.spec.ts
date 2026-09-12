@@ -89,6 +89,16 @@ describe("story-practice orchestration invariants", () => {
     expect(
       isStoryPracticeAssessmentIdentity({
         kind: "story-practice-assessment",
+        practice: "architecture-design",
+        blockId: "block-2",
+        assessmentId: "assessment-2",
+        snapshotVersion: 1,
+        evaluatorVersion: "architecture-design-assessment-evaluator-v1"
+      })
+    ).toBe(true);
+    expect(
+      isStoryPracticeAssessmentIdentity({
+        kind: "story-practice-assessment",
         practice: "unknown",
         blockId: "block-1",
         assessmentId: "assessment-1",

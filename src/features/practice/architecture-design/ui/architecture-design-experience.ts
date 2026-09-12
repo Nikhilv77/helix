@@ -48,7 +48,7 @@ export const ARCHITECTURE_DESIGN_ASSESSMENT_EXPERIENCE: StoryPracticeAssessmentE
   apiBase: ARCHITECTURE_DESIGN_API_BASE,
   routeBase: ARCHITECTURE_DESIGN_ROUTE_BASE,
   subjectNoun: "scenario",
-  mode: "inline-form",
+  mode: "shared-voice-room",
   evidenceAnchorLabel: "Design evidence",
   measures: [
     "Requirements & scope",
@@ -86,6 +86,9 @@ export const ARCHITECTURE_DESIGN_OVERVIEW_EXPERIENCE: StoryPracticeOverviewExper
   subjectNoun: "scenario",
   environmentLabel: null,
   libraryDescription: "Browse the reviewed system-design scenarios in your role-aligned path.",
+  startUnstartedPath: {
+    endpoint: "/api/practice/architecture-design/start-path"
+  },
   coachSteps: ["Frame scope and scale", "Trace boundaries and failure", "Defend trade-offs"],
   intro: ARCHITECTURE_DESIGN_INTRO_EXPERIENCE,
   assessment: ARCHITECTURE_DESIGN_ASSESSMENT_EXPERIENCE

@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   current: vi.fn(),
   historyList: vi.fn(),
   historyRead: vi.fn(),
+  recoverCurrentInterview: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
   })
@@ -22,6 +23,7 @@ vi.mock("@/server/app-container", () => ({
     architectureDesign: {
       eligibility: { forProfile: mocks.eligibility },
       practice: { current: mocks.current },
+      assessment: { recoverCurrentInterview: mocks.recoverCurrentInterview },
       history: { list: mocks.historyList, read: mocks.historyRead }
     }
   })
@@ -39,9 +41,12 @@ vi.mock("@/features/practice/architecture-design/ui/architecture-design-overview
     history: { totalBlocks: number };
   }) => <div data-testid="scenario" data-block={block.id} data-total={history.totalBlocks} />
 }));
-vi.mock("@/features/practice/architecture-design/ui/architecture-design-preparation", () => ({
-  ArchitectureDesignPreparation: () => <div data-testid="preparation" />
-}));
+vi.mock(
+  "@/features/practice/architecture-design/ui/architecture-design-technology-welcome",
+  () => ({
+    ArchitectureDesignTechnologyWelcome: () => <div data-testid="preparation" />
+  })
+);
 
 import ArchitectureDesignPracticePage from "./page";
 
@@ -50,6 +55,7 @@ describe("ArchitectureDesignPracticePage", () => {
     vi.clearAllMocks();
     mocks.eligibility.mockResolvedValue({ available: true, message: "Ready", scenarios: [] });
     mocks.current.mockResolvedValue(null);
+    mocks.recoverCurrentInterview.mockResolvedValue(null);
     mocks.historyList.mockResolvedValue([]);
   });
 

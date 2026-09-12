@@ -8,7 +8,6 @@ import {
 } from "@/server/rate-limit/shared-guard";
 import { apiError, architectureDesignOwner, parseArchitectureDesignJson } from "../../_shared";
 
-
 export async function POST(request: NextRequest) {
   let lease: SharedLease | undefined;
   try {
@@ -26,11 +25,11 @@ export async function POST(request: NextRequest) {
       },
       `${ownerId}:${input.assessmentId}`
     );
-    return apiSuccess({
-      assessment: await app.architectureDesign.assessment.start(ownerId, input, {
+    return apiSuccess(
+      await app.architectureDesign.assessmentRuntime.startOrResume(ownerId, input, {
         allowLocked: app.config.nodeEnv === "development"
       })
-    });
+    );
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   } finally {

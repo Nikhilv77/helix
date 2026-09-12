@@ -1209,7 +1209,9 @@ export function VoiceInterviewClient({
                 label:
                   storyPracticeAssessment.practice === "applied-engineering"
                     ? "Applied Engineering"
-                    : "Core Technical"
+                    : storyPracticeAssessment.practice === "architecture-design"
+                      ? "Architecture & Design"
+                      : "Core Technical"
               }
             : null
         }

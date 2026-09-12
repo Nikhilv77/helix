@@ -69,6 +69,7 @@ export function buildArchitectureDesignAssessmentSnapshot(input: {
   return architectureDesignAssessmentSnapshotSchema.parse({
     schemaVersion: ARCHITECTURE_DESIGN_ASSESSMENT_SCHEMA_VERSION,
     blueprintVersion: ARCHITECTURE_DESIGN_ASSESSMENT_BLUEPRINT_VERSION,
+    deliveryMode: "shared-voice-room",
     preparedAt: input.preparedAt.toISOString(),
     blockContentFingerprint: input.blockContentFingerprint,
     sourceSelection: selection,

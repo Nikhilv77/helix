@@ -23,6 +23,13 @@ export const architectureDesignPublicationStatusSchema = z.enum([
 ]);
 export const architectureDesignRoleSchema = z.enum(["backend", "fullstack"]);
 export const architectureDesignSenioritySchema = z.enum(["junior", "mid", "senior"]);
+export const architectureDesignFamilySchema = z.enum([
+  "asynchronous-delivery",
+  "transactional-workflow",
+  "realtime-collaboration",
+  "media-storage-delivery",
+  "search-indexing"
+]);
 
 /** Version 1 deliberately excludes executable and diagram-only presentation modes. */
 export const architectureDesignQuestionFormatSchema = z.enum([
@@ -66,6 +73,7 @@ export type ArchitectureDesignPublicationStatus = z.infer<
 >;
 export type ArchitectureDesignRole = z.infer<typeof architectureDesignRoleSchema>;
 export type ArchitectureDesignSeniority = z.infer<typeof architectureDesignSenioritySchema>;
+export type ArchitectureDesignFamily = z.infer<typeof architectureDesignFamilySchema>;
 export type ArchitectureDesignQuestionFormat = z.infer<
   typeof architectureDesignQuestionFormatSchema
 >;

@@ -88,14 +88,35 @@ export function architectureDesignAssessmentView(
             totalCodeQuestionCount: 0,
             implementationScoreCapped: false
           },
-          nextStory: {
-            reason: report.nextScenario.reason,
-            selectedStory: {
-              title: report.nextScenario.selectedScenario.title,
-              difficulty: report.nextScenario.selectedScenario.difficulty,
-              emphasizedConceptKeys: report.nextScenario.selectedScenario.emphasizedDimensionKeys
-            }
-          }
+          ...(report.nextScenario
+            ? {
+                nextStory: {
+                  reason: report.nextScenario.reason,
+                  selectedStory: {
+                    title: report.nextScenario.selectedScenario.title,
+                    difficulty: report.nextScenario.selectedScenario.difficulty,
+                    emphasizedConceptKeys:
+                      report.nextScenario.selectedScenario.emphasizedDimensionKeys
+                  }
+                }
+              }
+            : {}),
+          continuation: report.continuation
+            ? report.continuation.kind === "continue"
+              ? {
+                  kind: "continue" as const,
+                  next: {
+                    reason: report.continuation.next.reason,
+                    selectedStory: {
+                      title: report.continuation.next.selectedScenario.title,
+                      difficulty: report.continuation.next.selectedScenario.difficulty,
+                      emphasizedConceptKeys:
+                        report.continuation.next.selectedScenario.emphasizedDimensionKeys
+                    }
+                  }
+                }
+              : report.continuation
+            : undefined
         }
       : null
   };

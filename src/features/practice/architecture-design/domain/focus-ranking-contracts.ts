@@ -3,6 +3,7 @@ import { architectureDesignBaselineEvidenceSchema } from "./baseline-evidence-co
 import {
   architectureDesignDifficultySchema,
   architectureDesignDimensionSchema,
+  architectureDesignFamilySchema,
   architectureDesignFingerprintSchema,
   architectureDesignIdentifierSchema,
   architectureDesignRoleSchema,
@@ -51,16 +52,28 @@ export const architectureDesignScenarioRankingCandidateSchema = z
     key: architectureDesignIdentifierSchema,
     version: z.number().int().positive(),
     title: z.string().trim().min(5).max(120),
-    publicationStatus: z.enum(["review", "published", "retired"]),
+    publicationStatus: z.enum(["draft", "review", "published", "retired"]),
+    architectureFamily: architectureDesignFamilySchema,
     roles: z.array(architectureDesignRoleSchema).min(1),
     seniorities: z.array(architectureDesignSenioritySchema).min(1),
     difficulties: z.array(architectureDesignDifficultySchema).min(1),
     prerequisiteScenarioKeys: z.array(architectureDesignIdentifierSchema),
     topicKeys: z.array(architectureDesignIdentifierSchema).min(1),
     dimensionKeys: z.array(architectureDesignDimensionSchema).min(1),
+    emphasisDimensionKeys: z.array(architectureDesignDimensionSchema).min(2).max(8),
     targetKeywords: z.array(z.string().trim().min(2).max(80))
   })
-  .strict();
+  .strict()
+  .superRefine((candidate, context) => {
+    const covered = new Set(candidate.dimensionKeys);
+    if (candidate.emphasisDimensionKeys.some((dimension) => !covered.has(dimension))) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["emphasisDimensionKeys"],
+        message: "Ranking emphasis dimensions must be covered by the scenario rubric"
+      });
+    }
+  });
 
 export const architectureDesignScenarioScoreSchema = z
   .object({

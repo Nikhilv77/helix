@@ -194,8 +194,7 @@ function evidence(): ArchitectureDesignBaselineEvidence {
 }
 
 function publishedCatalogue() {
-  return ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE.map((candidate) => ({
-    ...candidate,
-    publicationStatus: "published" as const
-  }));
+  return ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE.filter(
+    ({ publicationStatus }) => publicationStatus === "published"
+  );
 }

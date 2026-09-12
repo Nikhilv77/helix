@@ -37,7 +37,7 @@ The smallest safe launch scope is:
 
 - backend and full-stack profiles;
 - role-aligned, language-independent system design;
-- two human-reviewed and published scenarios;
+- six human-reviewed and published scenarios;
 - four compound questions per scenario and five assessment prompts;
 - existing text, choice, scenario, metrics, trace, and config presentation only;
 - no executable code questions and no Node.js runner dependency;
@@ -670,7 +670,7 @@ and has no executable-question runner.
 | ---------------------------------------------- | --------------: |
 | Shared extraction/refactoring                  |   0–300 net-new |
 | Architecture contracts and onboarding evidence |         450–650 |
-| Two complete reviewed scenarios                |     1,200–1,800 |
+| Initial two complete reviewed scenarios        |     1,200–1,800 |
 | Ranking and evaluation                         |         600–900 |
 | Persistence and migration                      |         400–600 |
 | Backend adapters and Architecture services     |         500–800 |
@@ -684,7 +684,8 @@ planning estimates, not targets to reach. Fewer lines are welcome when they come
 If production exceeds roughly 5,500 lines, stop and audit the change for copied presentation,
 Route Handler, lifecycle, persistence-orchestration, or assessment behavior.
 
-Most Architecture-owned lines should be substantive domain material: eight reviewed MVP questions,
+Most Architecture-owned lines should be substantive domain material: twenty-four reviewed
+questions,
 private grading rubrics, scenario metadata, evidence mappings, and tests. A small line count must
 not be achieved by weakening owner scoping, snapshot privacy, validation, idempotency, or content
 review.
@@ -819,19 +820,23 @@ Step 4 completion evidence:
 
 Step 5 completion evidence:
 
-- Two approved four-question artifacts cover multi-tenant webhook delivery and a
-  high-volume notification platform. Every question has three progressive hints, a private
+- Six approved four-question artifacts cover multi-tenant webhook delivery, a high-volume
+  notification platform, marketplace checkout with inventory reservation, collaborative document
+  editing, global media upload and processing, and search with autocomplete. Every question has
+  three progressive hints, a private
   reference answer, a 10-point dimension-linked rubric, common mistakes, follow-ups, and a transfer
-  connection; the two scenarios cover all sixteen dimensions without executable capabilities.
+  connection; all six scenarios cover all sixteen dimensions without executable capabilities.
 - The ranking catalogue is derived deterministically from reviewed artifact compatibility and
-  exposes both approved artifacts as version-1 published candidates.
+  exposes all six approved artifacts as version-1 published candidates.
 - The content audit checks schema identity, scenario/question coherence, distinct artifacts,
   complete dimension coverage, unique hints, and private/public snapshot safety.
-- The project owner approved both artifacts on 2026-09-08. The idempotent repository publisher
-  persists stable fingerprints and separate private/public question snapshots while continuing to
-  reject candidate or unapproved content.
-- Both immutable version-1 scenarios are published in the configured database and live eligibility
-  reports `AVAILABLE` with `publishedScenarioCount: 2` for a supported backend/full-stack profile.
+- The project owner approved the original two artifacts on 2026-09-08 and the four catalogue
+  expansions on 2026-09-12. The idempotent repository publisher persists stable fingerprints and
+  separate private/public question snapshots while continuing to reject candidate or unapproved
+  content.
+- All six immutable version-1 scenarios are published in the configured database and live
+  eligibility reports `AVAILABLE` with `publishedScenarioCount: 6` for a supported backend/full-stack
+  profile.
 
 Step 6 completion evidence:
 
@@ -846,7 +851,8 @@ Step 6 completion evidence:
   separate public/private reviewed snapshots, verifies the exact published content fingerprint,
   and creates all four questions plus the locked assessment atomically.
 - Persistence tests independently retain a synthetic unapproved fixture to prove the approval gate;
-  the two approved source artifacts are published through the same idempotent persistence service.
+  the six approved source artifacts are published through the same idempotent persistence
+  service.
   The full suite passes alongside Prisma validation, TypeScript, ESLint, formatting, and diff checks.
 
 Step 7 completion evidence:
@@ -990,7 +996,8 @@ Architecture & Design is complete only when:
   resumable work can open it;
 - a first entry freezes server-derived onboarding/resume context;
 - the browser cannot select difficulty or scenario;
-- two reviewed, database-published scenarios satisfy eligibility;
+- six reviewed, database-published scenarios are available and satisfy the two-scenario
+  eligibility minimum;
 - preparation atomically creates one frozen four-question block;
 - all question states, assessment states, history, and continuation survive refresh/retry;
 - public APIs never expose answer keys or private rubrics;

@@ -29,8 +29,13 @@ export const ARCHITECTURE_DESIGN_CONTINUATION_VALIDATOR_VERSION =
 type Dependencies = {
   prisma: PrismaService;
   repository: Pick<ArchitectureDesignRepositoryAdapter, "reviewedScenarioVersion"> &
-    Pick<ArchitectureDesignPersistenceService, "publishPreparedBlock" | "recordPreparationFailure">;
-  practice: Pick<ArchitectureDesignPracticeService, "current">;
+    Pick<
+      ArchitectureDesignPersistenceService,
+      "publishPreparedBlock" | "recordPreparationFailure"
+    > &
+    Partial<Pick<ArchitectureDesignPersistenceService, "activateLibraryBlock">>;
+  practice: Pick<ArchitectureDesignPracticeService, "current"> &
+    Partial<Pick<ArchitectureDesignPracticeService, "historyBlock">>;
 };
 
 /** Keeps the assessed block current until its recommended successor publishes atomically. */
@@ -88,7 +93,35 @@ export class ArchitectureDesignContinuationService {
     const report = architectureDesignAssessmentReportSchema.parse(
       previous.assessment.report.reportSnapshot
     );
-    const selection = report.nextScenario;
+    const continuation =
+      report.continuation ??
+      (report.nextScenario ? { kind: "continue" as const, next: report.nextScenario } : null);
+    if (!continuation) {
+      throw new ConflictErrorException(
+        "ARCHITECTURE_DESIGN_CONTINUATION_INVALID",
+        "This assessment report does not contain a continuation decision."
+      );
+    }
+    if (continuation.kind !== "continue") {
+      return { replayed: false, block: null, continuation };
+    }
+    const selection = continuation.next;
+    const activated = await this.dependencies.repository.activateLibraryBlock?.(ownerId, {
+      requestId: input.requestId,
+      focusRevisionId: previous.focusRevisionId,
+      previousBlockId: previous.id,
+      selection,
+      generatorVersion: ARCHITECTURE_DESIGN_CONTINUATION_GENERATOR_VERSION,
+      validatorVersion: ARCHITECTURE_DESIGN_CONTINUATION_VALIDATOR_VERSION
+    });
+    if (activated) {
+      return {
+        replayed: false,
+        block: this.dependencies.practice.historyBlock
+          ? await this.dependencies.practice.historyBlock(ownerId, activated.id)
+          : await this.dependencies.practice.current(ownerId)
+      };
+    }
     let stage: "content-reading" | "validation" | "publishing" = "content-reading";
     try {
       const reviewed = await this.dependencies.repository.reviewedScenarioVersion(

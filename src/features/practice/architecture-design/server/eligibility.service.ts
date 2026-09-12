@@ -2,6 +2,7 @@ import {
   ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE,
   type ArchitectureDesignScenarioRankingCandidate
 } from "@/features/practice/architecture-design/domain";
+import { ARCHITECTURE_DESIGN_REVIEW_CANDIDATES } from "@/features/practice/architecture-design/domain/reviewed-scenarios";
 import type { CandidateProfile } from "@/lib/shared/types";
 import type { ArchitectureScenarioPublicationIdentity } from "./repository-adapter";
 
@@ -15,6 +16,8 @@ export type ArchitectureDesignScenarioLibraryEntry = Readonly<{
   difficulties: ArchitectureDesignScenarioRankingCandidate["difficulties"];
   topicKeys: string[];
   dimensionKeys: ArchitectureDesignScenarioRankingCandidate["dimensionKeys"];
+  expectedMinutes: number;
+  questions: Array<{ order: number; title: string; format: string }>;
 }>;
 
 export type ArchitectureDesignEligibility = Readonly<{
@@ -117,13 +120,19 @@ function unavailable(
 function publicScenario(
   candidate: ArchitectureDesignScenarioRankingCandidate
 ): ArchitectureDesignScenarioLibraryEntry {
+  const reviewed = ARCHITECTURE_DESIGN_REVIEW_CANDIDATES.find(
+    (artifact) => artifact.caseKey === candidate.key
+  );
   return {
     key: candidate.key,
     version: candidate.version,
     title: candidate.title,
     difficulties: [...candidate.difficulties],
     topicKeys: [...candidate.topicKeys],
-    dimensionKeys: [...candidate.dimensionKeys]
+    dimensionKeys: [...candidate.dimensionKeys],
+    expectedMinutes: reviewed?.scenario.expectedMinutes ?? 45,
+    questions:
+      reviewed?.scenario.stages.map(({ order, title, format }) => ({ order, title, format })) ?? []
   };
 }
 

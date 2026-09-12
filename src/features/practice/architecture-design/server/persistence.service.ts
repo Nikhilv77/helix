@@ -1,5 +1,8 @@
 import {
+  ArchitectureAssessmentStatus,
+  ArchitectureBlockStatus,
   ArchitecturePreparationStatus,
+  ArchitectureQuestionStatus,
   ArchitectureScenarioProgressStatus,
   ArchitectureScenarioPublicationStatus,
   Prisma
@@ -22,6 +25,7 @@ import { ConflictErrorException } from "@/server/common/exceptions/conflict-erro
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 import type { PrismaService } from "@/server/database/prisma.service";
 import { storyPracticeFingerprint } from "@/features/practice/shared/server/practice-orchestrator";
+import { buildArchitectureDesignAssessmentSnapshot } from "./assessment-blueprint";
 
 const focusRevisionSelect = {
   id: true,
@@ -134,6 +138,8 @@ export type PublishArchitectureBlockInput = {
   requestId: string;
   focusRevisionId: string;
   previousBlockId?: string;
+  /** Loose library work must not replace the assessment-bearing current scenario. */
+  libraryBlock?: boolean;
   selection: ArchitectureDesignScenarioSelection;
   draft: {
     scenario: z.input<typeof architectureDesignScenarioSchema>;
@@ -386,7 +392,7 @@ export class ArchitectureDesignPersistenceService {
         where: { ownerId, isCurrent: true },
         select: publishedBlockSelect
       });
-      if (current && !input.previousBlockId) return current;
+      if (current && !input.previousBlockId && !input.libraryBlock) return current;
       if (current && input.previousBlockId && current.id !== input.previousBlockId) {
         throw new ConflictErrorException(
           "ARCHITECTURE_DESIGN_CONTINUATION_STALE",
@@ -425,7 +431,7 @@ export class ArchitectureDesignPersistenceService {
             },
             select: { id: true }
           });
-      if (current) {
+      if (current && input.previousBlockId) {
         await tx.architectureBlock.update({
           where: { id_ownerId: { id: current.id, ownerId } },
           data: { isCurrent: false }
@@ -434,6 +440,7 @@ export class ArchitectureDesignPersistenceService {
       const block = await tx.architectureBlock.create({
         data: {
           ordinal: (latest?.ordinal ?? 0) + 1,
+          isCurrent: !input.libraryBlock,
           owner: { connect: { ownerId } },
           focusRevision: { connect: { id_ownerId: { id: input.focusRevisionId, ownerId } } },
           scenarioVersion: { connect: { id: scenarioVersion.id } },
@@ -489,6 +496,143 @@ export class ArchitectureDesignPersistenceService {
         })
       ]);
       return block;
+    }, transactionOptions);
+  }
+
+  /** Promotes an existing loose scenario and retains all of its question progress. */
+  async activateLibraryBlock(
+    ownerId: string,
+    rawInput: {
+      requestId: string;
+      focusRevisionId: string;
+      previousBlockId: string;
+      selection: ArchitectureDesignScenarioSelection;
+      generatorVersion: string;
+      validatorVersion: string;
+    }
+  ): Promise<{ id: string } | null> {
+    const input = {
+      requestId: z.string().uuid().parse(rawInput.requestId),
+      focusRevisionId: z.string().uuid().parse(rawInput.focusRevisionId),
+      previousBlockId: z.string().uuid().parse(rawInput.previousBlockId),
+      selection: architectureDesignScenarioSelectionSchema.parse(rawInput.selection),
+      generatorVersion: z.string().min(1).max(160).parse(rawInput.generatorVersion),
+      validatorVersion: z.string().min(1).max(160).parse(rawInput.validatorVersion)
+    };
+    const activatedAt = this.now();
+    return this.prisma.$transaction(async (tx) => {
+      await lock(tx, `architecture-design-block:${ownerId}`);
+      const current = await tx.architectureBlock.findFirst({
+        where: { ownerId, isCurrent: true },
+        select: {
+          id: true,
+          status: true,
+          focusRevisionId: true,
+          assessment: { select: { status: true } }
+        }
+      });
+      if (
+        !current ||
+        current.id !== input.previousBlockId ||
+        current.status !== ArchitectureBlockStatus.ASSESSED ||
+        current.assessment?.status !== ArchitectureAssessmentStatus.COMPLETED
+      ) {
+        throw new ConflictErrorException(
+          "ARCHITECTURE_DESIGN_CONTINUATION_STALE",
+          "The assessed scenario is no longer the current scenario."
+        );
+      }
+      const target = await tx.architectureBlock.findFirst({
+        where: {
+          ownerId,
+          isCurrent: false,
+          scenarioVersion: { scenarioKey: input.selection.selectedScenario.scenarioKey }
+        },
+        orderBy: { ordinal: "desc" },
+        select: {
+          id: true,
+          focusRevisionId: true,
+          contentFingerprint: true,
+          selectionSnapshot: true,
+          scenarioVersion: { select: { scenarioKey: true } },
+          questions: {
+            orderBy: { order: "asc" },
+            select: {
+              id: true,
+              order: true,
+              status: true,
+              contentFingerprint: true,
+              privateSnapshot: true
+            }
+          }
+        }
+      });
+      if (!target) return null;
+      if (
+        current.focusRevisionId !== input.focusRevisionId ||
+        target.focusRevisionId !== input.focusRevisionId
+      ) {
+        throw new ConflictErrorException(
+          "ARCHITECTURE_DESIGN_FOCUS_MISMATCH",
+          "The prepared library scenario belongs to a different practice focus."
+        );
+      }
+      await tx.architectureBlock.update({
+        where: { id_ownerId: { id: current.id, ownerId } },
+        data: { isCurrent: false }
+      });
+      const allQuestionsTerminal = target.questions.every(
+        ({ status }) => status !== ArchitectureQuestionStatus.ACTIVE
+      );
+      const assessmentReadyAt = allQuestionsTerminal ? activatedAt : null;
+      await tx.architectureBlock.update({
+        where: { id_ownerId: { id: target.id, ownerId } },
+        data: {
+          isCurrent: true,
+          ...(allQuestionsTerminal
+            ? { status: ArchitectureBlockStatus.ASSESSMENT_READY, assessmentReadyAt }
+            : {})
+        }
+      });
+      if (allQuestionsTerminal) {
+        const assessmentSnapshot = buildArchitectureDesignAssessmentSnapshot({
+          blockContentFingerprint: target.contentFingerprint,
+          selectionSnapshot: target.selectionSnapshot,
+          questions: target.questions,
+          preparedAt: activatedAt
+        });
+        await Promise.all([
+          tx.architectureAssessment.update({
+            where: { blockId_ownerId: { blockId: target.id, ownerId } },
+            data: {
+              status: ArchitectureAssessmentStatus.READY,
+              readyAt: assessmentReadyAt,
+              assessmentSnapshot: toJson(assessmentSnapshot)
+            }
+          }),
+          tx.architectureScenarioProgress.update({
+            where: {
+              ownerId_scenarioKey: { ownerId, scenarioKey: target.scenarioVersion.scenarioKey }
+            },
+            data: { status: ArchitectureScenarioProgressStatus.ASSESSMENT_READY }
+          })
+        ]);
+      }
+      await tx.architecturePreparationAttempt.create({
+        data: {
+          ownerId,
+          focusRevisionId: input.focusRevisionId,
+          blockId: target.id,
+          requestId: input.requestId,
+          status: ArchitecturePreparationStatus.SUCCEEDED,
+          generatorVersion: input.generatorVersion,
+          validatorVersion: input.validatorVersion,
+          selectionSnapshot: toJson(input.selection),
+          startedAt: activatedAt,
+          completedAt: activatedAt
+        }
+      });
+      return { id: target.id };
     }, transactionOptions);
   }
 
@@ -562,6 +706,7 @@ function parsePublishInput(input: PublishArchitectureBlockInput) {
     requestId: z.string().uuid().parse(input.requestId),
     focusRevisionId: z.string().uuid().parse(input.focusRevisionId),
     previousBlockId: z.string().uuid().optional().parse(input.previousBlockId),
+    libraryBlock: z.boolean().optional().parse(input.libraryBlock),
     selection: architectureDesignScenarioSelectionSchema.parse(input.selection),
     draft: {
       scenario: architectureDesignScenarioSchema.parse(input.draft.scenario),

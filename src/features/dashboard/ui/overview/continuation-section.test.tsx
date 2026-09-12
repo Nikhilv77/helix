@@ -47,7 +47,7 @@ describe("ContinuationSection", () => {
     );
 
     expect(screen.getByRole("article", { name: "Interview continuation" })).toBeTruthy();
-    expect(screen.getByText("68%")).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Latest interview score 68%" })).toBeTruthy();
     expect(screen.getByText("Latest score")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Choose next interview" }).getAttribute("href")).toBe(
       "/interviews"

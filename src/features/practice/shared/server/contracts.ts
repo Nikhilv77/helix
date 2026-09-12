@@ -21,7 +21,8 @@ export type StoryPracticeAssessmentStatus = (typeof STORY_PRACTICE_ASSESSMENT_ST
 
 export const STORY_PRACTICE_ASSESSMENT_KINDS = [
   "core-technical",
-  "applied-engineering"
+  "applied-engineering",
+  "architecture-design"
 ] as const;
 
 export type StoryPracticeAssessmentKind = (typeof STORY_PRACTICE_ASSESSMENT_KINDS)[number];

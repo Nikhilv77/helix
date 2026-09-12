@@ -8,6 +8,7 @@ export * from "./question-contracts";
 export * from "./review-artifact-contracts";
 export * from "./reviewed-scenarios";
 export * from "./scenario-ranking-catalogue";
+export * from "./scenario-briefs";
 export * from "./scenario-contracts";
 export * from "./ui-state";
 export * from "./workspace-analytics";

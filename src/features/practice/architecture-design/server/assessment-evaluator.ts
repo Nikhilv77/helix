@@ -16,6 +16,7 @@ import {
 import { architectureDesignQuestionSchema } from "@/features/practice/architecture-design/domain/question-contracts";
 import type { AiService } from "@/server/ai/ai.service";
 import { storyPracticeFingerprint } from "@/features/practice/shared/server/practice-orchestrator";
+import { terminalStoryPracticeContinuation } from "@/features/practice/shared/server/continuation-orchestrator";
 import type { ArchitectureDesignScenarioRankingService } from "./scenario-ranking.service";
 
 type EvidenceQuestion = {
@@ -42,7 +43,7 @@ type EvaluateInput = {
 export class ArchitectureDesignAssessmentEvaluator {
   constructor(
     private readonly ai: Pick<AiService, "generateStructured">,
-    private readonly ranking: Pick<ArchitectureDesignScenarioRankingService, "rankNextScenario">,
+    private readonly ranking: Pick<ArchitectureDesignScenarioRankingService, "findNextScenario">,
     private readonly model = { provider: "configured-ai", model: "reasoning" }
   ) {}
 
@@ -64,7 +65,20 @@ export class ArchitectureDesignAssessmentEvaluator {
       })
     );
     const evidence = adaptiveEvidence(input, raw.scores);
-    const nextScenario = this.ranking.rankNextScenario(input.focus, evidence);
+    const nextScenario = this.ranking.findNextScenario(input.focus, evidence);
+    const continuation = nextScenario
+      ? { kind: "continue" as const, next: nextScenario }
+      : terminalStoryPracticeContinuation({
+          masteredKeys: evidence.practice.strongDimensionKeys,
+          assessmentScores: evidence.assessmentScores,
+          learnedCount: evidence.practice.learnedCount,
+          meanVerifiedScore: evidence.practice.meanVerifiedScore,
+          weakKeys: evidence.practice.weakDimensionKeys,
+          readySummary:
+            "You have demonstrated the available Architecture & Design outcomes with verified practice and assessment evidence.",
+          completeSummary:
+            "You have completed every currently eligible Architecture & Design scenario. Review the remaining feedback before interview day."
+        });
     const learnedQuestionOrders = input.questions
       .filter(({ status }) => status === "LEARNED")
       .map(({ order }) => order)
@@ -98,7 +112,8 @@ export class ArchitectureDesignAssessmentEvaluator {
             ? "All four Practice questions were solved through attempts; no Learn action reduced Practice mastery credit."
             : `Questions ${learnedQuestionOrders.join(", ")} were learned rather than solved and contribute zero Practice mastery credit.`
       },
-      nextScenario
+      ...(nextScenario ? { nextScenario } : {}),
+      continuation
     });
     const responseById = new Map(input.responses.map((response) => [response.promptId, response]));
     const transcript = architectureDesignSafeTranscriptSchema.parse({

@@ -11,6 +11,10 @@ import type { PrismaService } from "@/server/database/prisma.service";
 import { storyPracticeFingerprint } from "@/features/practice/shared/server/practice-orchestrator";
 import { buildArchitectureDesignAssessmentSnapshot } from "./assessment-blueprint";
 import { ArchitectureDesignAssessmentEvaluator } from "./assessment-evaluator";
+import {
+  ArchitectureDesignAssessmentRuntimeService,
+  buildArchitectureDesignAssessmentPlan
+} from "./assessment-runtime.service";
 import { ArchitectureDesignAssessmentService } from "./assessment.service";
 import { ArchitectureDesignScenarioRankingService } from "./scenario-ranking.service";
 
@@ -26,6 +30,7 @@ describe("Architecture assessment blueprint and evaluator", () => {
     const publicSnapshot = publicArchitectureDesignAssessmentSnapshot(snapshot);
 
     expect(snapshot.prompts).toHaveLength(5);
+    expect(snapshot.deliveryMode).toBe("shared-voice-room");
     expect(snapshot.prompts.map(({ kind }) => kind)).toEqual([
       "requirements-scope",
       "api-data-capacity",
@@ -34,6 +39,10 @@ describe("Architecture assessment blueprint and evaluator", () => {
       "communication-evolution"
     ]);
     expect(JSON.stringify(publicSnapshot)).not.toMatch(/privateEvaluation|expectedAnswer|rubric/);
+    expect(
+      publicArchitectureDesignAssessmentSnapshot({ ...snapshot, deliveryMode: undefined })
+        .deliveryMode
+    ).toBeUndefined();
     expect(() =>
       buildArchitectureDesignAssessmentSnapshot({
         blockContentFingerprint: FINGERPRINT,
@@ -44,6 +53,128 @@ describe("Architecture assessment blueprint and evaluator", () => {
         preparedAt: new Date("2026-09-08T12:00:00Z")
       })
     ).toThrow("four terminal questions");
+  });
+
+  it("opens a durable five-prompt room while keeping answer guides server-only", async () => {
+    const snapshot = assessmentSnapshot();
+    const interviews = {
+      start: vi.fn().mockResolvedValue({ state: { id: ASSESSMENT_ID }, created: true })
+    };
+    const prisma = {
+      architectureAssessment: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: ASSESSMENT_ID,
+          blockId: BLOCK_ID,
+          assessmentSnapshot: snapshot,
+          block: {
+            scenarioSnapshot: { title: "Multi-tenant webhook delivery" },
+            owner: { targetRole: "backend", level: "3-5", context: "Distributed systems" }
+          }
+        })
+      },
+      interviewSession: { findUnique: vi.fn().mockResolvedValue(null) }
+    };
+    const runtime = new ArchitectureDesignAssessmentRuntimeService(
+      prisma as never,
+      { start: vi.fn().mockResolvedValue({ id: ASSESSMENT_ID }) } as never,
+      interviews as never
+    );
+
+    await expect(
+      runtime.startOrResume("owner-one", { assessmentId: ASSESSMENT_ID, requestId: REQUEST_ID })
+    ).resolves.toMatchObject({ sessionId: ASSESSMENT_ID, created: true });
+    const plan = buildArchitectureDesignAssessmentPlan(snapshot);
+    expect(plan).toHaveLength(5);
+    expect(plan.every(({ maxFollowUps }) => maxFollowUps === 1)).toBe(true);
+    expect(plan[0]?.storyPracticeInterviewerGuide).toMatchObject({
+      practice: "architecture-design",
+      label: "Architecture & Design"
+    });
+    expect(interviews.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        templateId: "architecture-design-scenario-assessment",
+        storyPracticeAssessment: expect.objectContaining({
+          practice: "architecture-design",
+          blockId: BLOCK_ID,
+          assessmentId: ASSESSMENT_ID
+        })
+      }),
+      "owner-one",
+      expect.any(Number),
+      expect.any(Array),
+      ASSESSMENT_ID
+    );
+  });
+
+  it("maps a completed Architecture room transcript to its five frozen prompt IDs", async () => {
+    const snapshot = assessmentSnapshot();
+    const setup = (
+      await import("./assessment-runtime.service")
+    ).buildArchitectureDesignAssessmentSetup(
+      {
+        id: ASSESSMENT_ID,
+        blockId: BLOCK_ID,
+        block: {
+          scenarioSnapshot: { title: "Multi-tenant webhook delivery" },
+          owner: { targetRole: "backend", level: "3-5", context: null }
+        }
+      },
+      snapshot
+    );
+    const turns = snapshot.prompts.map((_, index) => ({
+      speaker: "user" as const,
+      text: `Architecture answer ${index + 1}`,
+      questionIndex: index
+    }));
+    const prisma = {
+      interviewSession: {
+        findFirst: vi.fn().mockResolvedValue({
+          state: { id: ASSESSMENT_ID, phase: "done", setup, turns }
+        })
+      },
+      architectureAssessment: {
+        findFirst: vi.fn().mockResolvedValue({ blockId: BLOCK_ID, assessmentSnapshot: snapshot })
+      }
+    };
+    const service = new ArchitectureDesignAssessmentService(prisma as never, { evaluate: vi.fn() });
+    const finalize = vi
+      .spyOn(service, "finalize")
+      .mockResolvedValue({ id: ASSESSMENT_ID } as never);
+
+    await service.finalizeInterviewOwned("owner-one", ASSESSMENT_ID);
+
+    expect(finalize).toHaveBeenCalledWith("owner-one", {
+      assessmentId: ASSESSMENT_ID,
+      requestId: ASSESSMENT_ID,
+      responses: snapshot.prompts.map((prompt, index) => ({
+        promptId: prompt.id,
+        answer: `Architecture answer ${index + 1}`
+      }))
+    });
+  });
+
+  it("finalizes with terminal readiness when no reviewed scenario remains", async () => {
+    const snapshot = assessmentSnapshot();
+    const responses = snapshot.prompts.map(({ id }, index) => ({
+      promptId: id,
+      answer: `A complete architecture answer ${index + 1}`
+    }));
+    const result = await evaluatedFixture(
+      {
+        ...snapshot,
+        submission: {
+          requestId: REQUEST_ID,
+          responseFingerprint: FINGERPRINT,
+          responses,
+          submittedAt: "2026-09-08T12:30:00.000Z"
+        }
+      },
+      responses,
+      publishedCatalogue().filter(({ key }) => key === selection().selectedScenario.scenarioKey)
+    );
+
+    expect(result.report.nextScenario).toBeUndefined();
+    expect(result.report.continuation).toMatchObject({ kind: "ready" });
   });
 
   it("produces a versioned immutable report, zeroes Learned practice mastery, and adapts", async () => {
@@ -92,7 +223,7 @@ describe("Architecture assessment blueprint and evaluator", () => {
       solvedVsLearned: { completedCount: 3, learnedCount: 1, learnedQuestionOrders: [1] }
     });
     expect(result.report.dimensionMastery).toHaveLength(16);
-    expect(result.report.nextScenario.selectedScenario.scenarioKey).not.toBe(
+    expect(result.report.nextScenario!.selectedScenario.scenarioKey).not.toBe(
       selection().selectedScenario.scenarioKey
     );
     expect(result.evidence.practice.meanVerifiedScore).toBe(6);
@@ -402,11 +533,12 @@ async function evaluatedFixture(
       submittedAt: string;
     };
   },
-  responses: Array<{ promptId: string; answer: string }>
+  responses: Array<{ promptId: string; answer: string }>,
+  catalogue = publishedCatalogue()
 ) {
   return new ArchitectureDesignAssessmentEvaluator(
     { generateStructured: vi.fn().mockResolvedValue(evaluation()) },
-    new ArchitectureDesignScenarioRankingService(publishedCatalogue())
+    new ArchitectureDesignScenarioRankingService(catalogue)
   ).evaluate({
     assessmentId: ASSESSMENT_ID,
     blockId: BLOCK_ID,
@@ -467,10 +599,9 @@ function selection() {
 }
 
 function publishedCatalogue() {
-  return ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE.map((candidate) => ({
-    ...candidate,
-    publicationStatus: "published" as const
-  }));
+  return ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE.filter(
+    ({ publicationStatus }) => publicationStatus === "published"
+  );
 }
 
 function focus(): ArchitectureDesignConfirmedFocus {

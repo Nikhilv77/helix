@@ -98,7 +98,9 @@ export async function POST(request: NextRequest) {
                   access.ownerId,
                   parsed.data.sessionId
                 )
-              : app.coreTechnicalAssessmentService.finalizeInterviewBySession(parsed.data.sessionId),
+              : app.coreTechnicalAssessmentService.finalizeInterviewBySession(
+                  parsed.data.sessionId
+                ),
             access.kind === "owner"
               ? app.appliedEngineeringAssessmentService.finalizeInterviewOwned(
                   access.ownerId,
@@ -106,7 +108,13 @@ export async function POST(request: NextRequest) {
                 )
               : app.appliedEngineeringAssessmentService.finalizeInterviewBySession(
                   parsed.data.sessionId
+                ),
+            access.kind === "owner"
+              ? app.architectureDesign.assessment.finalizeInterviewOwned(
+                  access.ownerId,
+                  parsed.data.sessionId
                 )
+              : app.architectureDesign.assessment.finalizeInterviewBySession(parsed.data.sessionId)
           ]);
         });
       }

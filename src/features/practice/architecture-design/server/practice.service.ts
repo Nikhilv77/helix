@@ -286,7 +286,16 @@ export class ArchitectureDesignPracticeService {
     await this.prisma.$transaction(async (tx) => {
       await lock(tx, input.questionId);
       const question = await tx.architectureBlockQuestion.findFirst({
-        where: { id: input.questionId, ownerId, block: { isCurrent: true } },
+        where: {
+          id: input.questionId,
+          ownerId,
+          block: {
+            OR: [
+              { isCurrent: true },
+              { isCurrent: false, status: ArchitectureBlockStatus.PRACTISING }
+            ]
+          }
+        },
         select: { id: true, blockId: true, status: true }
       });
       if (!question) throw questionNotFound();
@@ -310,7 +319,16 @@ export class ArchitectureDesignPracticeService {
 
   private async findQuestion(ownerId: string, questionId: string): Promise<QuestionRead> {
     const question = await this.prisma.architectureBlockQuestion.findFirst({
-      where: { id: questionId, ownerId, block: { isCurrent: true } },
+      where: {
+        id: questionId,
+        ownerId,
+        block: {
+          OR: [
+            { isCurrent: true },
+            { isCurrent: false, status: ArchitectureBlockStatus.PRACTISING }
+          ]
+        }
+      },
       select: questionReadSelect
     });
     if (!question) throw questionNotFound();
@@ -323,7 +341,10 @@ export class ArchitectureDesignPracticeService {
         id: questionId,
         ownerId,
         status: ArchitectureQuestionStatus.ACTIVE,
-        block: { isCurrent: true, status: ArchitectureBlockStatus.PRACTISING }
+        block: {
+          status: ArchitectureBlockStatus.PRACTISING,
+          OR: [{ isCurrent: true }, { isCurrent: false }]
+        }
       },
       select: { id: true, blockId: true, contentFingerprint: true, privateSnapshot: true }
     });
@@ -493,7 +514,10 @@ async function mutableQuestion(tx: Prisma.TransactionClient, ownerId: string, qu
       id: questionId,
       ownerId,
       status: ArchitectureQuestionStatus.ACTIVE,
-      block: { isCurrent: true, status: ArchitectureBlockStatus.PRACTISING }
+      block: {
+        status: ArchitectureBlockStatus.PRACTISING,
+        OR: [{ isCurrent: true }, { isCurrent: false }]
+      }
     },
     select: { id: true, blockId: true, contentFingerprint: true, privateSnapshot: true }
   });
@@ -514,9 +538,12 @@ async function makeAssessmentReadyIfTerminal(
   const readyAt = now();
   const block = await tx.architectureBlock.findUnique({
     where: { id_ownerId: { id: blockId, ownerId } },
-    select: { scenarioVersion: { select: { scenarioKey: true } } }
+    select: { isCurrent: true, scenarioVersion: { select: { scenarioKey: true } } }
   });
   if (!block) throw questionNotFound();
+  // A loose library scenario retains terminal question progress, but its
+  // assessment becomes eligible only if continuation later promotes it.
+  if (block.isCurrent === false) return;
   await tx.architectureBlock.update({
     where: { id_ownerId: { id: blockId, ownerId } },
     data: { status: ArchitectureBlockStatus.ASSESSMENT_READY, assessmentReadyAt: readyAt }

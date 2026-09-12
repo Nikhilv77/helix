@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { ArchitectureDesignOverview } from "@/features/practice/architecture-design/ui/architecture-design-overview";
-import { ArchitectureDesignPreparation } from "@/features/practice/architecture-design/ui/architecture-design-preparation";
+import { ArchitectureDesignTechnologyWelcome } from "@/features/practice/architecture-design/ui/architecture-design-technology-welcome";
 import { architectureDesignHistoryNavigation } from "@/features/practice/architecture-design/domain/ui-state";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
@@ -24,8 +24,10 @@ export default async function ArchitectureDesignPracticePage({
   const app = getAppContainer();
   const services = app.architectureDesign;
   const allowEarlyAssessmentStart = app.config.nodeEnv === "development";
+  const recovery = services.assessment.recoverCurrentInterview(ownerId).catch(() => null);
   const query = await searchParams;
   const requestedBlockId = typeof query.block === "string" ? query.block : null;
+  await recovery;
   const [eligibility, currentBlock, historyList] = await Promise.all([
     services.eligibility.forProfile(profile),
     services.practice.current(ownerId),
@@ -49,11 +51,7 @@ export default async function ArchitectureDesignPracticePage({
 
   const needsFirstScenario = !block && eligibility.available;
   if (needsFirstScenario) {
-    return (
-      <main className="min-h-[70vh]" aria-label="Architecture & Design setup">
-        <ArchitectureDesignPreparation />
-      </main>
-    );
+    return <ArchitectureDesignTechnologyWelcome />;
   }
 
   return (

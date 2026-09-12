@@ -71,6 +71,8 @@ export const architectureDesignAssessmentSnapshotSchema = z
   .object({
     schemaVersion: z.literal(ARCHITECTURE_DESIGN_ASSESSMENT_SCHEMA_VERSION),
     blueprintVersion: z.literal(ARCHITECTURE_DESIGN_ASSESSMENT_BLUEPRINT_VERSION),
+    /** Missing only on assessments frozen before the shared-room migration. */
+    deliveryMode: z.literal("shared-voice-room").optional(),
     preparedAt: z.string().datetime(),
     blockContentFingerprint: architectureDesignFingerprintSchema,
     sourceSelection: architectureDesignScenarioSelectionSchema,
@@ -109,6 +111,7 @@ export const publicArchitectureDesignAssessmentSnapshotSchema = z
   .object({
     schemaVersion: z.literal(ARCHITECTURE_DESIGN_ASSESSMENT_SCHEMA_VERSION),
     blueprintVersion: z.literal(ARCHITECTURE_DESIGN_ASSESSMENT_BLUEPRINT_VERSION),
+    deliveryMode: z.literal("shared-voice-room").optional(),
     preparedAt: z.string().datetime(),
     prompts: z.array(architectureDesignPublicAssessmentPromptSchema).length(5),
     submission: z
@@ -163,6 +166,23 @@ export const architectureDesignAssessmentEvaluationSchema = z
     }
   });
 
+export const architectureDesignContinuationDecisionSchema = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("continue"),
+      next: architectureDesignAdaptiveScenarioSelectionSchema
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("ready"),
+      masteredKeys: z.array(architectureDesignIdentifierSchema),
+      summary: z.string().min(20).max(700)
+    })
+    .strict(),
+  z.object({ kind: z.literal("complete"), summary: z.string().min(20).max(700) }).strict()
+]);
+
 export const architectureDesignAssessmentReportSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -189,10 +209,18 @@ export const architectureDesignAssessmentReportSchema = z
         masteryCreditNote: z.string().trim().min(20).max(400)
       })
       .strict(),
-    nextScenario: architectureDesignAdaptiveScenarioSelectionSchema
+    nextScenario: architectureDesignAdaptiveScenarioSelectionSchema.optional(),
+    continuation: architectureDesignContinuationDecisionSchema.optional()
   })
   .strict()
   .superRefine((report, context) => {
+    if (!report.nextScenario && !report.continuation) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "An Architecture report requires a next scenario or terminal continuation decision."
+      });
+    }
     if (
       new Set(report.dimensionMastery.map(({ dimensionKey }) => dimensionKey)).size !==
       architectureDesignDimensionSchema.options.length
@@ -260,6 +288,7 @@ export function publicArchitectureDesignAssessmentSnapshot(raw: unknown) {
   return publicArchitectureDesignAssessmentSnapshotSchema.parse({
     schemaVersion: snapshot.schemaVersion,
     blueprintVersion: snapshot.blueprintVersion,
+    deliveryMode: snapshot.deliveryMode,
     preparedAt: snapshot.preparedAt,
     prompts: snapshot.prompts.map(({ id, order, kind, prompt, context }) => ({
       id,

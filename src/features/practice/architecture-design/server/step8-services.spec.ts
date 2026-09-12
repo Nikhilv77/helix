@@ -17,7 +17,6 @@ import { ArchitectureDesignScenarioRankingService } from "./scenario-ranking.ser
 import { ArchitectureDesignWorkspaceAnalyticsService } from "./workspace-analytics.service";
 
 const first = ARCHITECTURE_DESIGN_REVIEW_CANDIDATES[0]!;
-const second = ARCHITECTURE_DESIGN_REVIEW_CANDIDATES[1]!;
 const FINGERPRINT = `sha256:${"a".repeat(64)}`;
 const BLOCK_ID = "11111111-1111-4111-8111-111111111111";
 const REQUEST_ID = "22222222-2222-4222-8222-222222222222";
@@ -27,11 +26,14 @@ const ASSESSMENT_ID = "44444444-4444-4444-8444-444444444444";
 describe("Architecture Step 8 services", () => {
   it("continues through the exact published snapshot and atomically hands off current", async () => {
     const report = assessmentReport();
+    const selected = ARCHITECTURE_DESIGN_REVIEW_CANDIDATES.find(
+      ({ caseKey }) => caseKey === report.nextScenario!.selectedScenario.scenarioKey
+    )!;
     const publishPreparedBlock = vi.fn().mockResolvedValue({ id: "next-block" });
     const reviewedScenarioVersion = vi.fn().mockResolvedValue({
       contentFingerprint: FINGERPRINT,
-      scenario: second.scenario,
-      questionBlock: second.questionBlock
+      scenario: selected.scenario,
+      questionBlock: selected.questionBlock
     });
     const current = vi.fn().mockResolvedValue({ id: "next-block", ordinal: 2 });
     const prisma = {
@@ -60,17 +62,61 @@ describe("Architecture Step 8 services", () => {
       service.continue("owner-1", { blockId: BLOCK_ID, requestId: REQUEST_ID })
     ).resolves.toEqual({ replayed: false, block: { id: "next-block", ordinal: 2 } });
     expect(reviewedScenarioVersion).toHaveBeenCalledWith(
-      report.nextScenario.selectedScenario.scenarioKey,
-      report.nextScenario.selectedScenario.scenarioVersion
+      report.nextScenario!.selectedScenario.scenarioKey,
+      report.nextScenario!.selectedScenario.scenarioVersion
     );
     expect(publishPreparedBlock).toHaveBeenCalledWith(
       "owner-1",
       expect.objectContaining({
         previousBlockId: BLOCK_ID,
         selection: report.nextScenario,
-        draft: { scenario: second.scenario, questionBlock: second.questionBlock }
+        draft: { scenario: selected.scenario, questionBlock: selected.questionBlock }
       })
     );
+  });
+
+  it("promotes an existing loose scenario without republishing its reviewed questions", async () => {
+    const report = assessmentReport();
+    const activateLibraryBlock = vi.fn().mockResolvedValue({ id: "loose-block" });
+    const publishPreparedBlock = vi.fn();
+    const historyBlock = vi.fn().mockResolvedValue({ id: "loose-block", isCurrent: true });
+    const service = new ArchitectureDesignContinuationService({
+      prisma: {
+        architecturePreparationAttempt: { findUnique: vi.fn().mockResolvedValue(null) },
+        architectureBlock: {
+          findFirst: vi.fn().mockResolvedValue({
+            id: BLOCK_ID,
+            status: "ASSESSED",
+            focusRevisionId: FOCUS_ID,
+            focusRevision: { focusSnapshot: focus() },
+            assessment: { status: "COMPLETED", report: { reportSnapshot: report } }
+          })
+        }
+      } as unknown as PrismaService,
+      repository: {
+        activateLibraryBlock,
+        reviewedScenarioVersion: vi.fn(),
+        publishPreparedBlock,
+        recordPreparationFailure: vi.fn()
+      },
+      practice: { current: vi.fn(), historyBlock }
+    });
+
+    await expect(
+      service.continue("owner-1", { blockId: BLOCK_ID, requestId: REQUEST_ID })
+    ).resolves.toEqual({
+      replayed: false,
+      block: { id: "loose-block", isCurrent: true }
+    });
+    expect(activateLibraryBlock).toHaveBeenCalledWith(
+      "owner-1",
+      expect.objectContaining({
+        previousBlockId: BLOCK_ID,
+        selection: report.nextScenario
+      })
+    );
+    expect(historyBlock).toHaveBeenCalledWith("owner-1", "loose-block");
+    expect(publishPreparedBlock).not.toHaveBeenCalled();
   });
 
   it("replays successful continuation and does not republish", async () => {
@@ -304,10 +350,9 @@ function firstSelection() {
 
 function ranking() {
   return new ArchitectureDesignScenarioRankingService(
-    ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE.map((candidate) => ({
-      ...candidate,
-      publicationStatus: "published" as const
-    }))
+    ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE.filter(
+      ({ publicationStatus }) => publicationStatus === "published"
+    )
   );
 }
 

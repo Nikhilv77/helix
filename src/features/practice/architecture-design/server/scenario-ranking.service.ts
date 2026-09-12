@@ -49,9 +49,19 @@ export class ArchitectureDesignScenarioRankingService {
       throw new Error("No published Architecture scenario is compatible with the confirmed focus");
     }
 
+    const recentFamilies = architectureFamiliesForKeys(
+      candidates,
+      context.recentScenarioKeys ?? []
+    );
     const rankings = pool
       .map((candidate) =>
-        score(candidate, focus, availableDifficulty(candidate, requestedDifficulty), context)
+        score(
+          candidate,
+          focus,
+          availableDifficulty(candidate, requestedDifficulty),
+          context,
+          recentFamilies
+        )
       )
       .sort(
         (left, right) =>
@@ -70,6 +80,44 @@ export class ArchitectureDesignScenarioRankingService {
     );
   }
 
+  /** Materializes one explicitly selected reviewed library scenario under the active focus. */
+  rankSelectedScenario(
+    rawFocus: ArchitectureDesignConfirmedFocus,
+    scenarioKey: string,
+    context: ArchitectureDesignFirstScenarioRankingContext = {}
+  ): ArchitectureDesignFirstScenarioSelection {
+    const focus = architectureDesignConfirmedFocusSchema.parse(rawFocus);
+    const candidates = architectureDesignScenarioRankingCandidateSchema
+      .array()
+      .parse(this.candidates);
+    const candidate = candidates.find(({ key }) => key === scenarioKey);
+    if (
+      !candidate ||
+      !isEligibleForContinuation(candidate, focus, context.recentScenarioKeys ?? [])
+    ) {
+      throw new Error(
+        "The selected published Architecture scenario is not compatible with the confirmed focus"
+      );
+    }
+    const requestedDifficulty = focus.baselineEvidence.state === "STANDARD" ? "standard" : "guided";
+    const ranked = score(
+      candidate,
+      focus,
+      availableDifficulty(candidate, requestedDifficulty),
+      context,
+      architectureFamiliesForKeys(candidates, context.recentScenarioKeys ?? [])
+    );
+    return deepFreeze(
+      architectureDesignFirstScenarioSelectionSchema.parse({
+        policyVersion: ARCHITECTURE_DESIGN_FIRST_SCENARIO_RANKING_POLICY_VERSION,
+        focusFingerprint: focus.focusFingerprint,
+        selectedScenario: ranked,
+        rankings: [ranked],
+        reason: `You selected ${ranked.title} from the reviewed Architecture & Design library for this role-aligned path.`
+      })
+    );
+  }
+
   rankNextScenario(
     rawFocus: ArchitectureDesignConfirmedFocus,
     rawEvidence: ArchitectureDesignAdaptiveEvidence
@@ -79,7 +127,7 @@ export class ArchitectureDesignScenarioRankingService {
     const candidates = architectureDesignScenarioRankingCandidateSchema
       .array()
       .parse(this.candidates);
-    const requestedDifficulty = adaptiveDifficulty(evidence);
+    const requestedDifficulty = adaptiveDifficulty(evidence, focus.seniority);
     const compatible = candidates.filter((candidate) =>
       isEligibleForContinuation(candidate, focus, evidence.priorScenarioKeys)
     );
@@ -94,6 +142,7 @@ export class ArchitectureDesignScenarioRankingService {
       );
     }
     const weakDimensions = adaptiveWeaknessDimensions(evidence);
+    const priorFamilies = architectureFamiliesForKeys(candidates, evidence.priorScenarioKeys);
     const rankings = pool
       .map((candidate) =>
         scoreAdaptive(
@@ -101,7 +150,8 @@ export class ArchitectureDesignScenarioRankingService {
           focus,
           evidence,
           weakDimensions,
-          availableDifficulty(candidate, requestedDifficulty)
+          availableDifficulty(candidate, requestedDifficulty),
+          priorFamilies
         )
       )
       .sort(
@@ -123,6 +173,23 @@ export class ArchitectureDesignScenarioRankingService {
         reason: `We chose ${selectedScenario.title} because ${humanize(weakestMeasure ?? "architecture judgment")} needs the most reinforcement and this scenario adds unrepeated evidence.`
       })
     );
+  }
+
+  findNextScenario(
+    rawFocus: ArchitectureDesignConfirmedFocus,
+    rawEvidence: ArchitectureDesignAdaptiveEvidence
+  ): ArchitectureDesignAdaptiveScenarioSelection | null {
+    const focus = architectureDesignConfirmedFocusSchema.parse(rawFocus);
+    const evidence = architectureDesignAdaptiveEvidenceSchema.parse(rawEvidence);
+    const candidates = architectureDesignScenarioRankingCandidateSchema
+      .array()
+      .parse(this.candidates);
+    const hasEligibleNovelScenario = candidates.some(
+      (candidate) =>
+        isEligibleForContinuation(candidate, focus, evidence.priorScenarioKeys) &&
+        !evidence.priorScenarioKeys.includes(candidate.key)
+    );
+    return hasEligibleNovelScenario ? this.rankNextScenario(focus, evidence) : null;
   }
 }
 
@@ -157,11 +224,12 @@ function score(
   candidate: ArchitectureDesignScenarioRankingCandidate,
   focus: ArchitectureDesignConfirmedFocus,
   difficulty: ArchitectureDesignRankedScenario["difficulty"],
-  context: ArchitectureDesignFirstScenarioRankingContext
+  context: ArchitectureDesignFirstScenarioRankingContext,
+  recentFamilies: ReadonlySet<ArchitectureDesignScenarioRankingCandidate["architectureFamily"]>
 ): ArchitectureDesignRankedScenario {
   const candidateSignals = new Set([
     ...candidate.topicKeys,
-    ...candidate.dimensionKeys,
+    ...candidate.emphasisDimensionKeys,
     ...candidate.targetKeywords.map(normalize)
   ]);
   const baselineTargets =
@@ -181,12 +249,13 @@ function score(
   const resumeProjectRelevance =
     resumeSignals.length === 0 ? 0 : Math.round(15 * hitRatio(candidateSignals, resumeSignals));
   const dimensionCoverage = Math.round(
-    20 * hitRatio(new Set(candidate.dimensionKeys), baselineTargets)
+    20 * hitRatio(new Set(candidate.emphasisDimensionKeys), baselineTargets)
   );
   const planSignals = [...focus.planEvidence.topicKeys, ...focus.planEvidence.skillKeys];
   const plannedCoverage = Math.round(10 * hitRatio(candidateSignals, planSignals));
   const recentTopics = new Set(context.recentTopicKeys ?? []);
-  const novelty = Math.round(5 * (1 - hitRatio(recentTopics, candidate.topicKeys)));
+  const topicNovelty = Math.round(5 * (1 - hitRatio(recentTopics, candidate.topicKeys)));
+  const novelty = familyNovelty(candidate, recentFamilies, topicNovelty);
   const scores = {
     baselineGapTransfer,
     targetRoleJob,
@@ -219,6 +288,7 @@ function prioritizedDimensions(
   return [
     ...focus.baselineEvidence.weakDimensionKeys,
     ...focus.baselineEvidence.unassessedDimensionKeys,
+    ...candidate.emphasisDimensionKeys,
     ...candidate.dimensionKeys
   ]
     .filter((key) => candidate.dimensionKeys.includes(key))
@@ -231,11 +301,12 @@ function scoreAdaptive(
   focus: ArchitectureDesignConfirmedFocus,
   evidence: ArchitectureDesignAdaptiveEvidence,
   weakDimensions: ArchitectureDesignDimension[],
-  difficulty: ArchitectureDesignAdaptiveRankedScenario["difficulty"]
+  difficulty: ArchitectureDesignAdaptiveRankedScenario["difficulty"],
+  priorFamilies: ReadonlySet<ArchitectureDesignScenarioRankingCandidate["architectureFamily"]>
 ): ArchitectureDesignAdaptiveRankedScenario {
   const candidateSignals = new Set([
     ...candidate.topicKeys,
-    ...candidate.dimensionKeys,
+    ...candidate.emphasisDimensionKeys,
     ...candidate.targetKeywords.map(normalize)
   ]);
   const assessmentAverage = average(Object.values(evidence.assessmentScores));
@@ -253,7 +324,7 @@ function scoreAdaptive(
   ).length;
   const targetRoleJob = Math.min(15, 9 + targetMatches * 3);
   const dimensionCoverage = Math.round(
-    15 * hitRatio(new Set(candidate.dimensionKeys), weakDimensions)
+    15 * hitRatio(new Set(candidate.emphasisDimensionKeys), weakDimensions)
   );
   const priorTopics = new Set(evidence.priorTopicKeys);
   const plannedCoverage = Math.round(
@@ -261,7 +332,7 @@ function scoreAdaptive(
       (candidate.topicKeys.filter((key) => !priorTopics.has(key)).length /
         candidate.topicKeys.length)
   );
-  const novelty = evidence.priorScenarioKeys.includes(candidate.key) ? 0 : 5;
+  const novelty = familyNovelty(candidate, priorFamilies, 5);
   const scores = {
     assessmentWeakness,
     practiceWeakness,
@@ -319,10 +390,13 @@ function availableDifficulty(
 }
 
 function adaptiveDifficulty(
-  evidence: ArchitectureDesignAdaptiveEvidence
+  evidence: ArchitectureDesignAdaptiveEvidence,
+  seniority: ArchitectureDesignConfirmedFocus["seniority"]
 ): ArchitectureDesignAdaptiveRankedScenario["difficulty"] {
   const score = average(Object.values(evidence.assessmentScores));
-  if (score >= 82 && evidence.practice.learnedCount === 0) return "stretch";
+  if (score >= 82 && evidence.practice.learnedCount === 0 && seniority === "senior") {
+    return "stretch";
+  }
   if (score < 55 || evidence.practice.learnedCount >= 2) return "guided";
   return "standard";
 }
@@ -382,6 +456,27 @@ function average(values: number[]): number {
 
 function humanize(value: string): string {
   return value.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+}
+
+function architectureFamiliesForKeys(
+  candidates: readonly ArchitectureDesignScenarioRankingCandidate[],
+  scenarioKeys: readonly string[]
+): ReadonlySet<ArchitectureDesignScenarioRankingCandidate["architectureFamily"]> {
+  const keys = new Set(scenarioKeys);
+  return new Set(
+    candidates
+      .filter((candidate) => keys.has(candidate.key))
+      .map((candidate) => candidate.architectureFamily)
+  );
+}
+
+function familyNovelty(
+  candidate: ArchitectureDesignScenarioRankingCandidate,
+  priorFamilies: ReadonlySet<ArchitectureDesignScenarioRankingCandidate["architectureFamily"]>,
+  fallback: number
+): number {
+  if (priorFamilies.size === 0) return fallback;
+  return priorFamilies.has(candidate.architectureFamily) ? 0 : 5;
 }
 
 function uniqueValue<T>(value: T, index: number, values: T[]): boolean {

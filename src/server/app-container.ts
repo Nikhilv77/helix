@@ -89,6 +89,7 @@ import { AppliedEngineeringWorkspaceAnalyticsService } from "@/features/practice
 import { AppliedEngineeringPreparationService } from "@/features/practice/applied-engineering/server/preparation.service";
 import { ArchitectureDesignAssessmentEvaluator } from "@/features/practice/architecture-design/server/assessment-evaluator";
 import { ArchitectureDesignAssessmentService } from "@/features/practice/architecture-design/server/assessment.service";
+import { ArchitectureDesignAssessmentRuntimeService } from "@/features/practice/architecture-design/server/assessment-runtime.service";
 import { ArchitectureDesignAttemptEvaluator } from "@/features/practice/architecture-design/server/attempt-evaluator";
 import { ArchitectureDesignBaselineEvidenceService } from "@/features/practice/architecture-design/server/baseline-evidence.service";
 import { ArchitectureDesignContinuationService } from "@/features/practice/architecture-design/server/continuation.service";
@@ -193,6 +194,7 @@ export interface AppContainer {
     preparation: ArchitectureDesignPreparationService;
     assessmentEvaluator: ArchitectureDesignAssessmentEvaluator;
     assessment: ArchitectureDesignAssessmentService;
+    assessmentRuntime: ArchitectureDesignAssessmentRuntimeService;
     continuation: ArchitectureDesignContinuationService;
     history: ArchitectureDesignHistoryService;
     eligibility: ArchitectureDesignEligibilityService;
@@ -450,6 +452,11 @@ export function getAppContainer(): AppContainer {
     prisma,
     architectureDesignAssessmentEvaluator
   );
+  const architectureDesignAssessmentRuntimeService = new ArchitectureDesignAssessmentRuntimeService(
+    prisma,
+    architectureDesignAssessmentService,
+    interviewService
+  );
   const architectureDesignContinuationService = new ArchitectureDesignContinuationService({
     prisma,
     repository: architectureDesignRepositoryAdapter,
@@ -516,6 +523,7 @@ export function getAppContainer(): AppContainer {
       preparation: architectureDesignPreparationService,
       assessmentEvaluator: architectureDesignAssessmentEvaluator,
       assessment: architectureDesignAssessmentService,
+      assessmentRuntime: architectureDesignAssessmentRuntimeService,
       continuation: architectureDesignContinuationService,
       history: architectureDesignHistoryService,
       eligibility: architectureDesignEligibilityService,

@@ -5,6 +5,7 @@ import {
   Prisma
 } from "@prisma/client";
 import {
+  ARCHITECTURE_DESIGN_ASSESSMENT_EVALUATOR_VERSION,
   architectureDesignAssessmentFinalizeInputSchema,
   architectureDesignAssessmentReportSchema,
   architectureDesignAssessmentSnapshotSchema,
@@ -18,6 +19,9 @@ import { ConflictErrorException } from "@/server/common/exceptions/conflict-erro
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 import { ServiceUnavailableErrorException } from "@/server/common/exceptions/service-unavailable-error.exception";
 import type { PrismaService } from "@/server/database/prisma.service";
+import type { InterviewState } from "@/features/interviews/server/types";
+import { storyPracticeAssessmentIdentityFromSetup } from "@/features/practice/shared/server/contracts";
+import { storyPracticeInterviewResponses } from "@/features/practice/shared/server/assessment-transcript";
 import {
   assertStoryPracticeAssessmentResponses,
   storyPracticeAssessmentStartDisposition
@@ -123,7 +127,7 @@ export class ArchitectureDesignAssessmentService {
             status: question.status === "ACTIVE" ? ("LEARNED" as const) : question.status
           }))
         : assessment.block.questions;
-      const snapshot = assessment.assessmentSnapshot
+      const frozenSnapshot = assessment.assessmentSnapshot
         ? architectureDesignAssessmentSnapshotSchema.parse(assessment.assessmentSnapshot)
         : buildArchitectureDesignAssessmentSnapshot({
             blockContentFingerprint: assessment.block.contentFingerprint,
@@ -131,6 +135,10 @@ export class ArchitectureDesignAssessmentService {
             questions,
             preparedAt: startedAt
           });
+      const snapshot = architectureDesignAssessmentSnapshotSchema.parse({
+        ...frozenSnapshot,
+        deliveryMode: "shared-voice-room"
+      });
       await Promise.all([
         tx.architectureAssessment.update({
           where: { id_ownerId: { id: input.assessmentId, ownerId } },
@@ -158,6 +166,77 @@ export class ArchitectureDesignAssessmentService {
       ]);
     }, transactionOptions);
     return this.read(ownerId, input.assessmentId);
+  }
+
+  /** Converts a completed shared voice-room transcript into the Architecture five-score report. */
+  async finalizeInterviewOwned(ownerId: string, sessionId: string) {
+    const session = await this.prisma.interviewSession.findFirst({
+      where: { id: sessionId, ownerId },
+      select: { state: true }
+    });
+    const state = session?.state as unknown as InterviewState | undefined;
+    const identity = storyPracticeAssessmentIdentityFromSetup(state?.setup);
+    if (!state || identity?.practice !== "architecture-design") return null;
+    if (state.id !== sessionId || identity.assessmentId !== sessionId || state.phase !== "done") {
+      return null;
+    }
+
+    const assessment = await this.prisma.architectureAssessment.findFirst({
+      where: { id: identity.assessmentId, ownerId },
+      select: { blockId: true, assessmentSnapshot: true }
+    });
+    if (!assessment?.assessmentSnapshot || assessment.blockId !== identity.blockId) return null;
+    const snapshot = architectureDesignAssessmentSnapshotSchema.parse(
+      assessment.assessmentSnapshot
+    );
+    if (
+      identity.snapshotVersion !== snapshot.schemaVersion ||
+      identity.evaluatorVersion !== ARCHITECTURE_DESIGN_ASSESSMENT_EVALUATOR_VERSION
+    ) {
+      return null;
+    }
+    const responses = storyPracticeInterviewResponses(snapshot.prompts, state.turns, 6_000);
+    if (responses.some((response) => response.answer.length < 8)) return null;
+
+    return this.finalize(ownerId, {
+      assessmentId: identity.assessmentId,
+      requestId: sessionId,
+      responses
+    });
+  }
+
+  async finalizeInterviewBySession(sessionId: string) {
+    const session = await this.prisma.interviewSession.findUnique({
+      where: { id: sessionId },
+      select: { ownerId: true }
+    });
+    return session ? this.finalizeInterviewOwned(session.ownerId, sessionId) : null;
+  }
+
+  /** Repairs a completed room or a checkpointed legacy/room finalization. */
+  async recoverCurrentInterview(ownerId: string) {
+    const assessment = await this.prisma.architectureAssessment.findFirst({
+      where: {
+        ownerId,
+        status: {
+          in: [ArchitectureAssessmentStatus.IN_PROGRESS, ArchitectureAssessmentStatus.FINALIZING]
+        },
+        block: { isCurrent: true }
+      },
+      select: { id: true, status: true, assessmentSnapshot: true }
+    });
+    if (!assessment?.assessmentSnapshot) return null;
+    const snapshot = architectureDesignAssessmentSnapshotSchema.parse(
+      assessment.assessmentSnapshot
+    );
+    if (assessment.status === ArchitectureAssessmentStatus.FINALIZING && snapshot.submission) {
+      return this.finalize(ownerId, {
+        assessmentId: assessment.id,
+        requestId: snapshot.submission.requestId,
+        responses: snapshot.submission.responses
+      });
+    }
+    return this.finalizeInterviewOwned(ownerId, assessment.id);
   }
 
   async finalize(ownerId: string, rawInput: unknown) {

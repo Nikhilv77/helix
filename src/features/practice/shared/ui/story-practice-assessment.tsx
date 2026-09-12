@@ -70,7 +70,12 @@ export function StoryPracticeAssessment({
   const report = assessment?.report ?? null;
   const retryingFinalization = status === "FINALIZING" || recoverySubmission !== null;
   const draftKey = assessment ? `${experience.slug}-assessment-draft:${assessment.id}` : null;
-  const usesSharedVoiceRoom = experience.mode === "shared-voice-room";
+  const legacyInlineAssessment =
+    experience.slug === "architecture-design" &&
+    (status === "IN_PROGRESS" || status === "FINALIZING") &&
+    snapshot !== null &&
+    snapshot.deliveryMode !== "shared-voice-room";
+  const usesSharedVoiceRoom = experience.mode === "shared-voice-room" && !legacyInlineAssessment;
 
   useEffect(() => {
     setAssessment(block.assessment);
@@ -188,7 +193,7 @@ export function StoryPracticeAssessment({
         <button
           type="button"
           onClick={() => void startAssessment()}
-          className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          className="mt-4 inline-flex min-h-10 self-start items-center gap-2 rounded-xl bg-cream px-4 text-[13px] font-semibold text-[#090a0b] transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
         >
           {pending === "start" ? "Opening voice room…" : "Continue assessment"}
           {pending === "start" ? (
@@ -238,7 +243,11 @@ export function StoryPracticeAssessment({
     );
   }
 
-  if (!dedicatedRoom && (status === "IN_PROGRESS" || status === "FINALIZING")) {
+  if (
+    !dedicatedRoom &&
+    !legacyInlineAssessment &&
+    (status === "IN_PROGRESS" || status === "FINALIZING")
+  ) {
     return (
       <AssessmentPreviewFrame
         id="assessment"
@@ -261,7 +270,7 @@ export function StoryPracticeAssessment({
           onClick={() =>
             router.push(assessmentRoomHref(experience.routeBase, assessment.id, block.id))
           }
-          className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          className="mt-4 inline-flex min-h-10 self-start items-center gap-2 rounded-xl bg-cream px-4 text-[13px] font-semibold text-[#090a0b] transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
         >
           Continue assessment <ArrowRight size={14} aria-hidden="true" />
         </button>
@@ -488,11 +497,7 @@ export function StoryPracticeAssessment({
         replayed: boolean;
         block: StoryPracticeBlockView | null;
         continuation?: { kind: "ready" | "complete"; summary: string };
-      }>(
-        `${experience.apiBase}/continue`,
-        { blockId: block.id, requestId },
-        experience.label
-      );
+      }>(`${experience.apiBase}/continue`, { blockId: block.id, requestId }, experience.label);
       if (!data.block) {
         if (data.continuation) {
           window.sessionStorage.removeItem(key);
@@ -859,9 +864,7 @@ function Report({
           <p className="mt-2 text-[12.5px] leading-5 text-cream/52">{nextItem.reason}</p>
           <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-cream/36">
             {humanizeStoryPracticeKey(nextItem.selectedStory.difficulty)} ·{" "}
-            {nextItem.selectedStory.emphasizedConceptKeys
-              .map(humanizeStoryPracticeKey)
-              .join(" · ")}
+            {nextItem.selectedStory.emphasizedConceptKeys.map(humanizeStoryPracticeKey).join(" · ")}
           </p>
         </section>
       ) : continuation && continuation.kind !== "continue" ? (
