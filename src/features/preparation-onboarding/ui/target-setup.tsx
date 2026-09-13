@@ -107,7 +107,7 @@ export function TargetChoiceGrid<T extends string>({
             aria-pressed={selected}
             onClick={() => onChange(option.value)}
             className={[
-              "group relative min-h-24 rounded-xl border p-4 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)]",
+              "maya-target-choice group relative min-h-24 rounded-xl border p-4 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)]",
               selected
                 ? "border-[var(--workspace-accent)] bg-[var(--workspace-accent-soft)]/30 shadow-[0_16px_32px_-24px_var(--workspace-accent)]"
                 : "border-cream/[0.13] bg-black/15 hover:border-cream/30 hover:bg-white/[0.035]"
@@ -118,10 +118,10 @@ export function TargetChoiceGrid<T extends string>({
                 <Check size={13} strokeWidth={2.6} aria-hidden="true" />
               </span>
             ) : null}
-            <span className="block pr-6 text-[15px] font-semibold text-cream sm:text-base">
+            <span className="maya-target-choice-title block pr-6 text-[15px] font-semibold text-cream sm:text-base">
               {option.label}
             </span>
-            <span className="mt-1.5 block text-[13px] leading-5 text-cream/55">
+            <span className="maya-target-choice-detail mt-1.5 block text-[13px] leading-5 text-cream/55">
               {option.detail}
             </span>
           </button>
@@ -146,7 +146,7 @@ export function PreparationAreaGrid({ role }: { role: Role }) {
           return (
             <div
               key={area.id}
-              className="min-h-28 rounded-xl border border-cream/[0.13] bg-black/15 p-4 sm:p-[1.125rem]"
+              className="maya-preparation-area min-h-28 rounded-xl border border-cream/[0.13] bg-black/15 p-4 sm:p-[1.125rem]"
             >
               <Icon
                 size={21}
@@ -160,7 +160,7 @@ export function PreparationAreaGrid({ role }: { role: Role }) {
           );
         })}
       </div>
-      <p className="mt-4 text-sm leading-6 text-cream/60">
+      <p className="maya-preparation-copy mt-4 text-sm leading-6 text-cream/60">
         These are not fixed sessions or a mandatory course sequence. They are dimensions Trailgrad
         may evaluate and train.
       </p>

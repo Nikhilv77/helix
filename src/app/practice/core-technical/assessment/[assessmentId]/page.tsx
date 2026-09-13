@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { interviewRoomHref } from "@/features/interviews/ui/shared/interview-room-navigation";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
@@ -33,12 +33,14 @@ export default async function CoreTechnicalAssessmentRoomPage({
       error instanceof NotFoundErrorException &&
       error.code === "CORE_TECHNICAL_BLOCK_NOT_FOUND"
     ) {
-      notFound();
+      redirect("/practice/core-technical");
     }
     throw error;
   }
 
-  if (!block?.assessment || block.assessment.id !== assessmentId) notFound();
+  if (!block?.assessment || block.assessment.id !== assessmentId) {
+    redirect("/practice/core-technical");
+  }
   if (block.assessment.status === "IN_PROGRESS") {
     const started = await app.coreTechnicalAssessmentRuntimeService.startOrResume(ownerId, {
       assessmentId,

@@ -108,11 +108,11 @@ export function ResumeIdentityStep({
 
       <div className="mx-auto flex min-h-[calc(100svh-9rem)] w-full max-w-5xl flex-col items-center justify-center pb-10 pt-14 text-center sm:mt-10 sm:min-h-[31rem] sm:py-0">
         {phase === 0 ? (
-          <section key="hello" className="identity-stage-in w-full">
+          <section key="hello" className="resume-identity-stage identity-stage-in w-full">
             <BadgeCheck
               size={58}
               strokeWidth={1.35}
-              className="mx-auto mb-7 text-cream/76"
+              className="resume-identity-icon mx-auto mb-7 text-cream/76"
               aria-hidden="true"
             />
             <p className="thinking-shimmer blueprint-label text-cream/45">Resume received</p>
@@ -126,7 +126,7 @@ export function ResumeIdentityStep({
         ) : null}
 
         {phase === 1 ? (
-          <section key="summary" className="identity-stage-in w-full">
+          <section key="summary" className="resume-identity-stage identity-stage-in w-full">
             <p className="thinking-shimmer blueprint-label text-cream/45">
               {teacherName} read your profile
             </p>
@@ -137,7 +137,7 @@ export function ResumeIdentityStep({
         ) : null}
 
         {phase === 2 ? (
-          <section key="things" className="identity-stage-in w-full">
+          <section key="things" className="resume-identity-stage identity-stage-in w-full">
             <p className="blueprint-label text-cream/45">Great, your resume contains</p>
             <h1
               className="identity-text-shine display-heading mx-auto mt-5 max-w-3xl text-cream"
@@ -152,7 +152,7 @@ export function ResumeIdentityStep({
                 return (
                   <div
                     key={item.label}
-                    className="onboarding-card-reveal rounded-[1.35rem] bg-cream/[0.038] px-5 py-7 text-center text-cream transition duration-300 hover:-translate-y-1 hover:bg-cream/[0.055] sm:backdrop-blur-sm"
+                    className="resume-identity-card onboarding-card-reveal rounded-[1.35rem] bg-cream/[0.038] px-5 py-7 text-center text-cream transition duration-300 hover:-translate-y-1 hover:bg-cream/[0.055] sm:backdrop-blur-sm"
                     style={
                       {
                         "--card-delay": `${240 + index * 150}ms`
@@ -162,13 +162,13 @@ export function ResumeIdentityStep({
                     <Icon
                       size={42}
                       strokeWidth={1.45}
-                      className="mx-auto text-cream/74"
+                      className="resume-identity-icon mx-auto text-cream/74"
                       aria-hidden="true"
                     />
-                    <p className="mt-5 text-2xl font-bold leading-none tracking-[-0.025em]">
+                    <p className="resume-identity-card-title mt-5 text-2xl font-bold leading-none tracking-[-0.025em]">
                       {item.label}
                     </p>
-                    <p className="blueprint-label mt-3 text-cream/48">{item.value}</p>
+                    <p className="resume-identity-card-meta blueprint-label mt-3 text-cream/48">{item.value}</p>
                   </div>
                 );
               })}

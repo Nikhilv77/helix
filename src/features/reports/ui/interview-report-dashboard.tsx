@@ -234,7 +234,7 @@ function ReportQuickRead({
   gap: string;
 }) {
   return (
-    <section className="grid gap-3 sm:grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)]">
+    <section className="mb-6 grid gap-3 sm:grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)]">
       <div className="report-glass-card rounded-2xl px-5 py-4">
         <p className="text-xs font-medium uppercase tracking-[0.13em] text-cream/42">Round score</p>
         <div className="mt-3 flex items-end gap-2">

@@ -35,7 +35,7 @@ export function CandidateCameraPreview({
       aria-label="Your camera preview"
       className={`border-t ${INTERVIEW_PANEL_RULE} p-3`}
     >
-      <div className="group relative aspect-video overflow-hidden rounded-xl border border-white/[0.09] bg-[#090a0c] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_14px_35px_rgba(0,0,0,0.24)]">
+      <div className="interview-camera-preview group relative aspect-video overflow-hidden rounded-xl border border-white/[0.09] bg-[#090a0c] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_14px_35px_rgba(0,0,0,0.24)]">
         <video
           ref={videoRef}
           muted
@@ -46,7 +46,7 @@ export function CandidateCameraPreview({
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/20" />
 
-        <div className="interview-live-chip absolute left-2.5 top-2.5 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/50 px-2.5 py-1 text-sm font-medium text-cream/78 backdrop-blur-md">
+        <div className="interview-camera-chip interview-live-chip absolute left-2.5 top-2.5 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/50 px-2.5 py-1 text-sm font-medium text-cream/78 backdrop-blur-md">
           <span className="h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_8px_var(--workspace-accent)]" />
           Self view
         </div>
@@ -59,7 +59,7 @@ export function CandidateCameraPreview({
           <button
             type="button"
             onClick={onDisable}
-            className="interview-live-chip inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-white/10 bg-black/55 px-2.5 text-sm font-medium text-cream/74 backdrop-blur-md transition hover:border-white/20 hover:bg-black/70 hover:text-cream"
+            className="interview-camera-control interview-live-chip inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-white/10 bg-black/55 px-2.5 text-sm font-medium text-cream/74 backdrop-blur-md transition hover:border-white/20 hover:bg-black/70 hover:text-cream"
           >
             <CameraOff size={13} aria-hidden="true" />
             Off

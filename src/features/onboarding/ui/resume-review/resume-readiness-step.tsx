@@ -164,9 +164,9 @@ export function ResumeReadinessStep({
         </div>
       ) : null}
 
-      <section className="mx-auto flex min-h-[calc(100svh-9rem)] w-full max-w-4xl flex-col items-center justify-center pb-28 pt-16 text-center sm:mt-8 sm:min-h-[32rem] sm:py-0">
+      <section className="resume-readiness-stage mx-auto flex min-h-[calc(100svh-9rem)] w-full max-w-4xl flex-col items-center justify-center pb-28 pt-16 text-center sm:mt-8 sm:min-h-[32rem] sm:py-0">
         <div className="identity-stage-in flex w-full flex-col items-center">
-          <Tags size={58} strokeWidth={1.25} className="text-cream/78" aria-hidden="true" />
+          <Tags size={58} strokeWidth={1.25} className="resume-readiness-icon text-cream/78" aria-hidden="true" />
           <h1 className="mt-7 min-h-[3.5rem] text-balance text-[2.25rem] font-bold leading-tight tracking-[-0.035em] text-cream sm:min-h-[4.5rem] sm:text-[3.35rem]">
             <WordRevealLine
               words={skillsTitle.words}
@@ -180,7 +180,7 @@ export function ResumeReadinessStep({
               visibleSkills.slice(0, visibleSkillCount).map((skill, index) => (
                 <span
                   key={skill}
-                  className="step-in rounded-lg border border-white/25 px-3.5 py-1.5 text-base font-semibold leading-7 text-cream/72 sm:text-[1.0625rem]"
+                  className="resume-readiness-skill step-in rounded-lg border border-white/25 px-3.5 py-1.5 text-base font-semibold leading-7 text-cream/72 sm:text-[1.0625rem]"
                   style={
                     {
                       "--step-delay": `${index * 24}ms`
@@ -200,7 +200,7 @@ export function ResumeReadinessStep({
 
         {showRouteTitle ? (
           <div className="step-in mt-12 flex w-full flex-col items-center">
-            <Target size={54} strokeWidth={1.25} className="text-cream/76" aria-hidden="true" />
+            <Target size={54} strokeWidth={1.25} className="resume-readiness-icon text-cream/76" aria-hidden="true" />
             <h2 className="mt-7 min-h-[3rem] text-balance text-[2rem] font-bold leading-tight tracking-[-0.035em] text-cream sm:min-h-[3.75rem] sm:text-[2.8rem]">
               <WordRevealLine
                 words={routeTitle.words}
@@ -214,16 +214,13 @@ export function ResumeReadinessStep({
                 visibleFocusAreas.slice(0, visibleFocusCount).map((area, index) => (
                   <li
                     key={area}
-                    className="step-in flex items-center gap-4 rounded-lg bg-cream/[0.035] px-4 py-3 text-cream/76"
+                    className="resume-readiness-focus step-in flex items-center rounded-lg bg-cream/[0.035] px-4 py-3 text-cream/76"
                     style={
                       {
                         "--step-delay": `${index * 35}ms`
                       } as CSSProperties
                     }
                   >
-                    <span className="font-mono text-[12px] font-semibold tabular-nums text-cream/42">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
                     <span className="text-base font-semibold sm:text-[1.0625rem]">{area}</span>
                   </li>
                 ))

@@ -55,7 +55,7 @@ export function PracticeSessionsView({
     (appliedEngineeringTotals?.completedQuestions ?? 0) +
     (architectureDesignTotals?.completedQuestions ?? 0);
   return (
-    <main className="relative isolate mx-auto flex w-full max-w-[92rem] flex-col overflow-x-clip px-4 pb-20 pt-10 sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
+    <main className="practice-page relative isolate mx-auto flex w-full max-w-[92rem] flex-col overflow-x-clip px-4 pb-20 pt-10 sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
       <DocumentTitle title="Practice" />
 
       <section

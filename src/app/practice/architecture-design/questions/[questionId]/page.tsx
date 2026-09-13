@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { ArchitectureDesignQuestionWorkspace } from "@/features/practice/architecture-design/ui/architecture-design-question-workspace";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
@@ -32,18 +32,18 @@ export default async function ArchitectureDesignQuestionPage({
       error instanceof NotFoundErrorException &&
       error.code === "ARCHITECTURE_DESIGN_BLOCK_NOT_FOUND"
     ) {
-      notFound();
+      redirect("/practice/architecture-design");
     }
     throw error;
   }
   const question = block?.questions.find(({ id }) => id === questionId);
-  if (!block || !question) notFound();
+  if (!block || !question) redirect("/practice/architecture-design");
   const stageTitle =
     block.scenario.stages.find(({ order }) => order === question.order)?.title ??
     `Question ${question.order}`;
 
   return (
-    <main className="w-full bg-black p-2 sm:p-3 xl:h-[calc(100svh-4.25rem)] xl:overflow-hidden">
+    <main className="practice-question-page w-full bg-black p-2 sm:p-3 xl:h-[calc(100svh-4.25rem)] xl:overflow-hidden">
       <ArchitectureDesignQuestionWorkspace
         block={block}
         initialQuestion={question}

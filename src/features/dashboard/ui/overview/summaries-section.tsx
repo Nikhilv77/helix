@@ -57,7 +57,7 @@ function ProgressSummaryCard({ progress }: { progress: DashboardProgressSummary 
             {progress.state === "unavailable" ? "—" : `${progressPercent}%`}
           </span>
         </div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-cream/[0.06]">
+        <div className="dashboard-progress-track mt-2 h-1.5 overflow-hidden rounded-full bg-cream/[0.06]">
           <span
             className="block h-full rounded-full bg-cream/45"
             style={{ width: `${progress.state === "unavailable" ? 0 : progressPercent}%` }}

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { AppliedEngineeringQuestionWorkspace } from "@/features/practice/applied-engineering/ui/applied-engineering-question-workspace";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
@@ -33,18 +33,18 @@ export default async function AppliedEngineeringQuestionPage({
       error instanceof NotFoundErrorException &&
       error.code === "APPLIED_ENGINEERING_BLOCK_NOT_FOUND"
     ) {
-      notFound();
+      redirect("/practice/applied-engineering");
     }
     throw error;
   }
   const question = block?.questions.find(({ id }) => id === questionId);
-  if (!block || !question) notFound();
+  if (!block || !question) redirect("/practice/applied-engineering");
   const stageTitle =
     block.incident.stages.find(({ order }) => order === question.order)?.title ??
     `Question ${question.order}`;
 
   return (
-    <main className="w-full bg-black p-2 sm:p-3 xl:h-[calc(100svh-4.25rem)] xl:overflow-hidden">
+    <main className="practice-question-page w-full bg-black p-2 sm:p-3 xl:h-[calc(100svh-4.25rem)] xl:overflow-hidden">
       <AppliedEngineeringQuestionWorkspace
         block={block}
         initialQuestion={question}

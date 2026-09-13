@@ -3,7 +3,6 @@
 import { SignOutButton, useReverification, useUser } from "@clerk/nextjs";
 import { isReverificationCancelledError } from "@clerk/nextjs/errors";
 import dynamic from "next/dynamic";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Bell,
@@ -21,6 +20,7 @@ import {
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ProfileAvatar } from "@/features/profile/ui/profile-avatar";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { ALL_PERSONAS, MAYA, personaById, type InterviewerPersona } from "@/lib/avatars/personas";
 import {
   ApiClientError,
@@ -195,7 +195,7 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
                   <SignOutButton redirectUrl="/">
                     <button
                       type="button"
-                      className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-cream px-4 text-sm font-semibold text-[#171a16] transition hover:bg-white sm:w-auto sm:min-w-32"
+                      className="manage-action-button manage-action-button-primary inline-flex h-10 w-full items-center justify-center rounded-lg bg-cream px-4 text-sm font-semibold text-[#171a16] transition hover:bg-white sm:w-auto sm:min-w-32"
                     >
                       Log out
                     </button>
@@ -211,7 +211,7 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
                   <button
                     type="button"
                     onClick={() => setShowDeleteWarning(true)}
-                    className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-red-400/30 px-4 text-sm font-semibold text-red-300 transition hover:bg-red-400/[0.08] sm:w-auto sm:min-w-32"
+                    className="manage-action-button manage-action-button-danger inline-flex h-10 w-full items-center justify-center rounded-lg border border-red-400/30 px-4 text-sm font-semibold text-red-300 transition hover:bg-red-400/[0.08] sm:w-auto sm:min-w-32"
                   >
                     Delete account
                   </button>
@@ -228,9 +228,15 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
           <section className="manage-panel order-2 mx-auto mt-4 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:mt-4 sm:p-6">
             <div>
               <h2 className="text-base font-semibold text-cream">Theme</h2>
-              <p className="mt-1 text-sm leading-6 text-cream/52">
-                Choose an accent color for your Trailgrad experience.
-              </p>
+              <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm leading-6 text-cream/52">
+                  Choose an accent color for your Trailgrad experience.
+                </p>
+                <div className="manage-appearance-toggle inline-flex items-center gap-2 rounded-xl bg-black/15 px-2 pl-4 py-1.5 text-sm font-medium text-cream/72">
+                  Light or dark appearance
+                  <ThemeToggle className="h-9 w-9" size={17} />
+                </div>
+              </div>
             </div>
 
             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
@@ -342,7 +348,7 @@ function ManageTeacherPicker({
   };
 
   return (
-    <section className="manage-panel order-1 mx-auto mt-10 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:p-6">
+    <section className="manage-panel manage-teacher-panel order-1 mx-auto mt-10 w-full max-w-6xl rounded-[1.5rem] p-5 text-left sm:p-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
         <div>
           <h2 className="text-base font-semibold text-cream">Your teacher</h2>
@@ -360,7 +366,7 @@ function ManageTeacherPicker({
           type="button"
           onClick={() => move(-1)}
           aria-label="Previous teacher"
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/[0.045] text-cream/62 transition-colors hover:bg-white/[0.09] hover:text-cream"
+          className="manage-teacher-control grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/[0.045] text-cream/62 transition-colors hover:bg-white/[0.09] hover:text-cream"
         >
           <ChevronLeft size={18} />
         </button>
@@ -368,7 +374,7 @@ function ManageTeacherPicker({
         <TeacherSidePreview persona={previous} onClick={() => move(-1)} />
 
         <div className="w-full max-w-[17rem] text-center sm:max-w-[19rem]">
-          <div className="relative mx-auto h-56 w-full overflow-hidden rounded-[1.35rem] bg-[#121316] shadow-[0_24px_60px_-42px_rgba(0,0,0,0.9)] sm:h-64">
+          <div className="manage-teacher-canvas relative mx-auto h-56 w-full overflow-hidden rounded-[1.35rem] bg-[#121316] shadow-[0_24px_60px_-42px_rgba(0,0,0,0.9)] sm:h-64">
             <div
               className="h-full w-full"
               role="img"
@@ -391,7 +397,7 @@ function ManageTeacherPicker({
               type="button"
               onClick={() => (speaking ? stop() : void speak(focused.greeting, focused.id))}
               aria-label={speaking ? `Stop ${focused.name}` : `Hear ${focused.name}`}
-              className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-black/72 text-cream/78 transition-colors hover:bg-black/88 hover:text-cream"
+              className="manage-teacher-voice-control absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-black/72 text-cream/78 transition-colors hover:bg-black/88 hover:text-cream"
             >
               {state === "loading" ? (
                 <Loader2 size={15} className="animate-spin" />
@@ -428,7 +434,7 @@ function ManageTeacherPicker({
           type="button"
           onClick={() => move(1)}
           aria-label="Next teacher"
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/[0.045] text-cream/62 transition-colors hover:bg-white/[0.09] hover:text-cream"
+          className="manage-teacher-control grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/[0.045] text-cream/62 transition-colors hover:bg-white/[0.09] hover:text-cream"
         >
           <ChevronRight size={18} />
         </button>
@@ -439,7 +445,7 @@ function ManageTeacherPicker({
           type="button"
           onClick={() => void saveTeacher()}
           disabled={saving || selected}
-          className="inline-flex h-11 min-w-40 items-center justify-center rounded-lg bg-cream px-5 text-sm font-medium text-[#171a16] transition-colors hover:bg-white disabled:cursor-default disabled:bg-white/[0.07] disabled:text-cream/38"
+          className="manage-teacher-submit inline-flex h-11 min-w-40 items-center justify-center rounded-lg bg-cream px-5 text-sm font-medium text-white transition-colors hover:bg-white disabled:cursor-default disabled:bg-white/[0.07] disabled:text-cream/38"
         >
           {saving
             ? "Saving teacher…"
@@ -464,16 +470,18 @@ function TeacherSidePreview({
       type="button"
       onClick={onClick}
       aria-label={`Preview ${persona.name}`}
-      className="group hidden w-28 shrink-0 text-center opacity-48 transition duration-300 hover:-translate-y-0.5 hover:opacity-80 sm:block lg:w-32"
+      className="manage-teacher-preview group hidden w-28 shrink-0 text-center opacity-48 transition duration-300 hover:-translate-y-0.5 hover:opacity-80 sm:block lg:w-32"
     >
-      <span className="relative block h-36 overflow-hidden rounded-[1.1rem] bg-white/[0.025] lg:h-40">
-        <Image
-          src={persona.portrait}
-          alt=""
-          fill
-          sizes="(min-width: 1024px) 128px, 112px"
-          quality={72}
-          className="object-cover object-center"
+      <span className="manage-teacher-preview-canvas relative block h-36 overflow-hidden rounded-[1.1rem] bg-white/[0.025] lg:h-40">
+        <AvatarStage
+          agentTrack={null}
+          state="listening"
+          url={persona.model}
+          rig={persona.rig}
+          framing="default"
+          performanceProfile="preview"
+          showStatus={false}
+          feather={false}
         />
       </span>
       <span className="mt-2 block text-xs font-medium text-cream/60 group-hover:text-cream/82">
@@ -551,7 +559,7 @@ function NotificationPreferenceRow({
         aria-label={`${enabled ? "Disable" : "Enable"} ${title}`}
         disabled={saving}
         onClick={onToggle}
-        className="relative h-7 w-12 shrink-0 rounded-full border border-white/[0.1] bg-white/[0.07] outline-none transition disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+        className="manage-notification-toggle relative h-7 w-12 shrink-0 rounded-full border border-white/[0.1] bg-white/[0.07] outline-none transition disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
       >
         <span
           aria-hidden="true"
@@ -583,7 +591,7 @@ function AccentThemeCard({
       aria-pressed={selected}
       style={{ "--card-accent": option.color } as CSSProperties}
       className={`
-        group relative min-w-0 rounded-[16px] border p-2.5 text-left
+        manage-accent-card group relative min-w-0 rounded-[16px] border p-2.5 text-left
         transition-[background-color,border-color,box-shadow,opacity] duration-200
         disabled:cursor-wait disabled:opacity-60
         ${
@@ -594,11 +602,11 @@ function AccentThemeCard({
       `}
     >
       {/* preview */}
-      <div className="relative aspect-[1.32/1] overflow-hidden rounded-[11px] border border-white/[0.07] bg-[#0d0e10]">
+      <div className="manage-accent-preview relative aspect-[1.32/1] overflow-hidden rounded-[11px] border border-white/[0.07] bg-[#0d0e10]">
         <div className="flex h-full">
           {/* empty accent sidebar */}
           <div
-            className="relative w-[28%] shrink-0 border-r border-white/[0.06]"
+            className="manage-accent-preview-rail relative w-[28%] shrink-0 border-r border-white/[0.06]"
             style={{
               background: `
                 radial-gradient(
@@ -626,7 +634,7 @@ function AccentThemeCard({
           </div>
 
           {/* dashboard */}
-          <div className="relative flex-1 px-[11%] py-[13%]">
+          <div className="manage-accent-preview-body relative flex-1 px-[11%] py-[13%]">
             {/* top */}
             <div className="flex items-center justify-between">
               <div className="h-[5px] w-[42%] rounded-full bg-[#96928b]" />

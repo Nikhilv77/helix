@@ -58,7 +58,7 @@ export async function BlogPostPage({ params }: { params: Promise<{ slug: string 
 
   return (
     <div
-      className="blueprint marketing-theme min-h-screen overflow-x-clip"
+      className="blueprint marketing-blog marketing-theme min-h-screen overflow-x-clip"
       data-marketing-accent="orange"
     >
       <SiteNav
@@ -84,8 +84,7 @@ export async function BlogPostPage({ params }: { params: Promise<{ slug: string 
           </nav>
 
           <header className="mt-10">
-            <p className="blueprint-label text-[color:var(--dm-accent-soft)]">{post.category}</p>
-            <h1 className="marketing-page-title mt-5 text-cream">{post.title}</h1>
+            <h1 className="marketing-page-title text-cream">{post.title}</h1>
             <p className="marketing-page-lede mt-5 text-cream/70 sm:mt-6">{post.dek}</p>
             <p className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.8125rem] font-medium text-cream/35">
               <span>{post.publishedAt}</span>

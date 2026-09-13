@@ -55,12 +55,12 @@ export function BaselineIntro({ role }: { role: Role }) {
   ];
   return (
     <div className="mt-7 max-w-3xl">
-      <p className="text-base font-semibold text-cream">{BASELINE_DURATION_LABEL}</p>
+      <p className="maya-baseline-duration text-base font-semibold text-cream">{BASELINE_DURATION_LABEL}</p>
       <div className="mt-5 grid gap-x-8 gap-y-6 sm:grid-cols-2">
         {checks.map(({ icon: Icon, title, detail }) => (
           <div
             key={title}
-            className="min-w-0 rounded-xl border border-cream/[0.13] bg-white/[0.02] p-4 sm:p-5"
+            className="maya-baseline-check min-w-0 rounded-xl border border-cream/[0.13] bg-white/[0.02] p-4 sm:p-5"
           >
             <Icon className="size-6 text-[var(--workspace-accent)]" aria-hidden="true" />
             <p className="mt-3 text-[17px] font-semibold leading-6 text-cream">{title}</p>
@@ -68,7 +68,7 @@ export function BaselineIntro({ role }: { role: Role }) {
           </div>
         ))}
       </div>
-      <p className="mt-7 text-[15px] leading-6 text-cream/60">
+      <p className="maya-baseline-note mt-7 text-[15px] leading-6 text-cream/60">
         This is a first read, not a final verdict. Trailgrad will keep uncertainty visible until you
         give it more evidence.
       </p>
@@ -88,7 +88,7 @@ export function BaselineQuestionCard({
   const promptReveal = useWordReveal(question.prompt, true, 180, WELCOME_BODY_STAGGER_MS);
   return (
     <div className="mt-7 max-w-2xl">
-      <p className="text-[17px] font-semibold leading-7 text-cream sm:text-lg">
+      <p className="maya-baseline-prompt text-[17px] font-semibold leading-7 text-cream sm:text-lg">
         <WordRevealLine
           words={promptReveal.words}
           visibleCount={promptReveal.visibleCount}
@@ -114,7 +114,7 @@ export function BaselineQuestionCard({
               aria-pressed={selected}
               onClick={() => onChoice(option.id)}
               className={[
-                "rounded-xl border px-4 py-4 text-left text-[16px] font-medium leading-6 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)]",
+                "maya-baseline-choice rounded-xl border px-4 py-4 text-left text-[16px] font-medium leading-6 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)]",
                 selected
                   ? "border-[var(--workspace-accent)] bg-[var(--workspace-accent-soft)]/30 text-cream"
                   : "border-cream/[0.13] bg-white/[0.02] text-cream/78 hover:border-cream/30 hover:text-cream"

@@ -7,7 +7,7 @@ function Line({ className = "" }: { className?: string }) {
 export function DsaQuestionSkeleton() {
   return (
     <div
-      className="w-full bg-black p-2 text-cream sm:p-3 xl:h-[calc(100svh-4.25rem)] xl:overflow-hidden"
+      className="practice-skeleton practice-question-page w-full bg-black p-2 text-cream sm:p-3 xl:h-[calc(100svh-4.25rem)] xl:overflow-hidden"
       aria-busy="true"
       aria-label="Loading question"
     >

@@ -118,7 +118,7 @@ export function ResumeEvidenceStep({
             return (
               <article
                 key={item.label}
-                className="onboarding-card-reveal group flex min-h-[17.5rem] flex-col rounded-[1.35rem] bg-cream/[0.035] p-5 text-left text-cream backdrop-blur-[2px] transition duration-300 hover:-translate-y-1 hover:bg-cream/[0.05] sm:p-6"
+                className="resume-evidence-card onboarding-card-reveal group flex min-h-[17.5rem] flex-col rounded-[1.35rem] bg-cream/[0.035] p-5 text-left text-cream backdrop-blur-[2px] transition duration-300 hover:-translate-y-1 hover:bg-cream/[0.05] sm:p-6"
                 style={
                   {
                     "--card-delay": `${260 + index * 170}ms`
@@ -129,20 +129,20 @@ export function ResumeEvidenceStep({
                   <Icon
                     size={38}
                     strokeWidth={1.35}
-                    className="text-cream/72 transition duration-300 group-hover:text-cream/88"
+                    className="resume-evidence-icon text-cream/72 transition duration-300 group-hover:text-cream/88"
                     aria-hidden="true"
                   />
-                  <span className="blueprint-label rounded-full border border-cream/18 px-3 py-1 text-cream/44">
+                  <span className="resume-evidence-count blueprint-label rounded-full border border-cream/18 px-3 py-1 text-cream/44">
                     {item.count}
                   </span>
                 </div>
 
-                <p className="blueprint-label mt-8 text-cream/42">{item.label}</p>
-                <h2 className="mt-3 text-2xl font-bold leading-tight tracking-[-0.025em] text-cream sm:text-[1.7rem]">
+                <p className="resume-evidence-label blueprint-label mt-8 text-cream/42">{item.label}</p>
+                <h2 className="resume-evidence-title mt-3 text-2xl font-bold leading-tight tracking-[-0.025em] text-cream sm:text-[1.7rem]">
                   {item.title}
                 </h2>
-                <p className="onboarding-lede mt-3 font-semibold text-cream/66">{item.detail}</p>
-                <p className="onboarding-lede mt-auto pt-7 text-cream/54">{item.note}</p>
+                <p className="resume-evidence-detail onboarding-lede mt-3 font-semibold text-cream/66">{item.detail}</p>
+                <p className="resume-evidence-note onboarding-lede mt-auto pt-7 text-cream/54">{item.note}</p>
               </article>
             );
           })}

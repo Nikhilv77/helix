@@ -29,39 +29,43 @@ export const clerkAppearance = {
     spacing: "1rem"
   },
   elements: {
-    rootBox: "w-full",
+    rootBox: "trailgrad-auth-root w-full",
     cardBox:
-      "!w-[min(28rem,calc(100vw-2rem))] !max-h-[calc(100svh-1rem)] !overflow-y-auto !overflow-x-hidden !rounded-2xl !border !border-white/[0.07] !bg-[#121315] !shadow-[0_32px_90px_-48px_rgba(0,0,0,0.95)] !backdrop-blur-none max-sm:!w-[min(28rem,calc(100vw-1.25rem))]",
-    card: "!border-none !bg-[radial-gradient(circle_at_50%_0%,rgba(242,110,1,0.025),transparent_42%)] !shadow-none max-sm:!p-5",
+      "trailgrad-auth-card-box !w-[min(28rem,calc(100vw-2rem))] !max-h-[calc(100svh-1rem)] !overflow-y-auto !overflow-x-hidden !rounded-2xl !border !border-white/[0.07] !bg-[#121315] !shadow-[0_32px_90px_-48px_rgba(0,0,0,0.95)] !backdrop-blur-none max-sm:!w-[min(28rem,calc(100vw-1.25rem))]",
+    card: "trailgrad-auth-card !border-none !bg-[radial-gradient(circle_at_50%_0%,rgba(242,110,1,0.025),transparent_42%)] !shadow-none max-sm:!p-5",
     modalBackdrop:
       "trailgrad-auth-backdrop trailgrad-auth-backdrop--plain !bg-[#080909] !backdrop-blur-none",
     modalContent: "!max-h-[100svh] !overflow-y-auto !px-4 !py-4 max-sm:!px-2 max-sm:!py-2",
     modalCloseButton:
-      "!text-cream/55 transition hover:!bg-cream/10 hover:!text-cream focus-visible:!ring-2 focus-visible:!ring-cream/40",
+      "trailgrad-auth-close !text-cream/55 transition hover:!bg-cream/10 hover:!text-cream focus-visible:!ring-2 focus-visible:!ring-cream/40",
     logoBox: "!mb-4 !bg-transparent max-sm:!mb-2",
-    logoImage: "!h-10 !w-10 !rounded-none !bg-transparent !shadow-none max-sm:!h-8 max-sm:!w-8",
+    logoImage:
+      "trailgrad-auth-logo !h-10 !w-10 !rounded-none !bg-transparent !shadow-none max-sm:!h-8 max-sm:!w-8",
     header: "!gap-2 max-sm:!gap-1",
     headerTitle:
-      "!font-display !text-2xl !font-semibold !tracking-tight !text-cream max-sm:!text-[1.65rem]",
-    headerSubtitle: "!text-sm !leading-6 !text-cream/55 max-sm:!text-[0.95rem] max-sm:!leading-5",
+      "trailgrad-auth-title !font-display !text-2xl !font-semibold !tracking-tight !text-cream max-sm:!text-[1.65rem]",
+    headerSubtitle:
+      "trailgrad-auth-subtitle !text-sm !leading-6 !text-cream/55 max-sm:!text-[0.95rem] max-sm:!leading-5",
     socialButtonsBlockButton:
-      "!min-h-12 !border !border-white/[0.07] !bg-[#191a1d] !font-semibold !text-cream transition hover:!border-white/10 hover:!bg-[#1d1e22] max-sm:!min-h-11",
-    socialButtonsBlockButtonText: "!font-semibold !text-cream",
-    dividerLine: "!bg-cream/15",
-    dividerText: "!font-mono !text-[10px] !uppercase !tracking-[0.16em] !text-cream/35",
-    formFieldLabel: "!mb-2 !font-medium !text-cream/80",
+      "trailgrad-auth-social-button !min-h-12 !border !border-white/[0.07] !bg-[#191a1d] !font-semibold !text-cream transition hover:!border-white/10 hover:!bg-[#1d1e22] max-sm:!min-h-11",
+    socialButtonsBlockButtonText: "trailgrad-auth-social-label !font-semibold !text-cream",
+    dividerLine: "trailgrad-auth-divider !bg-cream/15",
+    dividerText:
+      "trailgrad-auth-divider-text !font-mono !text-[10px] !uppercase !tracking-[0.16em] !text-cream/35",
+    formFieldLabel: "trailgrad-auth-label !mb-2 !font-medium !text-cream/80",
     formFieldInput:
-      "!min-h-12 !rounded-xl !border !border-white/[0.07] !bg-[#1a1b1e] !px-4 !text-cream !shadow-none placeholder:!text-cream/30 focus:!border-[#F26E01]/40 focus:!bg-[#1d1e21] focus:!ring-2 focus:!ring-[#F26E01]/[0.08] max-sm:!min-h-11",
+      "trailgrad-auth-input !min-h-12 !rounded-xl !border !border-white/[0.07] !bg-[#1a1b1e] !px-4 !text-cream !shadow-none placeholder:!text-cream/30 focus:!border-[#F26E01]/40 focus:!bg-[#1d1e21] focus:!ring-2 focus:!ring-[#F26E01]/[0.08] max-sm:!min-h-11",
     otpCodeFieldInputs: "!border-0 !bg-transparent !shadow-none",
 
     otpCodeFieldInput:
       "!border !border-cream/35 !bg-cream/18 !text-cream !shadow-none !ring-0 focus:!border-cream focus:!bg-cream/24 focus:!ring-2 focus:!ring-cream/28 data-[active=true]:!border-cream data-[active=true]:!bg-cream/90 data-[active=true]:!text-[#152864]",
     formButtonPrimary:
-      "!min-h-12 !rounded-xl !bg-[#f3f1ec] !font-semibold !text-[#17181b] !shadow-none hover:!bg-white max-sm:!min-h-11",
-    footer: "!border-none !bg-transparent !shadow-none",
-    footerActionText: "!text-cream/45",
-    footerActionLink: "!font-semibold !text-[#F26E01] hover:!text-[#F26E01]",
-    footerPagesLink: "!text-cream/40 hover:!text-cream",
+      "trailgrad-auth-primary-button !min-h-12 !rounded-xl !bg-[#f3f1ec] !font-semibold !text-[#17181b] !shadow-none hover:!bg-white max-sm:!min-h-11",
+    footer: "trailgrad-auth-footer !border-none !bg-transparent !shadow-none",
+    footerActionText: "trailgrad-auth-footer-text !text-cream/45",
+    footerActionLink:
+      "trailgrad-auth-footer-link !font-semibold !text-[#F26E01] hover:!text-[#F26E01]",
+    footerPagesLink: "trailgrad-auth-footer-pages-link !text-cream/40 hover:!text-cream",
     identityPreview:
       "!mx-auto !mt-3 !min-h-10 !w-full !max-w-[23rem] !justify-center !gap-2 !rounded-xl !border !border-cream/20 !bg-cream/[0.075] !px-4 !py-2 !shadow-none [&_*]:!min-w-0",
     identityPreviewText:

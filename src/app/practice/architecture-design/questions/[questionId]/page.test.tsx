@@ -67,7 +67,7 @@ describe("ArchitectureDesignQuestionPage", () => {
     );
   });
 
-  it("uses the same not-found boundary for missing and foreign resources", async () => {
+  it("returns to Architecture & Design for missing and foreign resources", async () => {
     mocks.historyRead.mockRejectedValue(
       new NotFoundErrorException("ARCHITECTURE_DESIGN_BLOCK_NOT_FOUND", "not found")
     );
@@ -76,7 +76,7 @@ describe("ArchitectureDesignQuestionPage", () => {
         params: Promise.resolve({ questionId: "question-one" }),
         searchParams: Promise.resolve({ block: "foreign" })
       })
-    ).rejects.toThrow("NEXT_NOT_FOUND");
+    ).rejects.toThrow("NEXT_REDIRECT");
   });
 });
 

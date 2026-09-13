@@ -312,7 +312,7 @@ export function DsaQuestionWorkspace({
             type="button"
             onClick={() => void runCode()}
             disabled={running || !code.trim()}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-cream px-3.5 text-[12.5px] font-semibold text-[#171a16] transition hover:bg-white disabled:pointer-events-none disabled:opacity-45"
+            className="practice-run-code inline-flex h-9 items-center gap-1.5 rounded-lg bg-cream px-3.5 text-[12.5px] font-semibold text-[#171a16] transition hover:bg-white disabled:pointer-events-none disabled:opacity-45"
           >
             {running ? (
               <Loader2 size={13} className="animate-spin" aria-hidden="true" />

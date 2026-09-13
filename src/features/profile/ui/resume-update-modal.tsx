@@ -153,7 +153,7 @@ export function ResumeUpdateModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[1100] grid place-items-center bg-black/45 p-2.5 sm:p-5"
+      className="resume-update-backdrop fixed inset-0 z-[1100] grid place-items-center bg-black/45 p-2.5 sm:p-5"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}
@@ -162,7 +162,7 @@ export function ResumeUpdateModal({
         role="dialog"
         aria-modal="true"
         aria-label={profile.resume ? "Update resume" : "Upload resume"}
-        className="blueprint onboarding-theme relative max-h-[calc(100dvh-1.25rem)] w-full max-w-2xl overflow-hidden rounded-[1.25rem] bg-[#141517] shadow-2xl sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-[1.5rem]"
+        className="resume-update-modal blueprint onboarding-theme relative max-h-[calc(100dvh-1.25rem)] w-full max-w-2xl overflow-hidden rounded-[1.25rem] bg-[#141517] shadow-2xl sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-[1.5rem]"
         style={{ background: "#141517" }}
       >
         <button

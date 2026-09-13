@@ -3,9 +3,9 @@ import { ArrowRight, FileQuestion } from "lucide-react";
 
 export default function QuestionNotFound() {
   return (
-    <div className="mx-auto flex w-full max-w-[95rem] flex-col items-start px-5 py-16 sm:px-8 lg:px-10">
-      <div className="w-full max-w-xl rounded-[1.5rem] bg-[#3557b4] p-4 shadow-[inset_0_0_0_1px_rgba(239,232,214,0.07)] sm:p-5">
-        <div className="rounded-2xl bg-[#2a4aa0] p-6 sm:p-8">
+    <div className="route-feedback mx-auto flex w-full max-w-[95rem] flex-col items-start px-5 py-16 sm:px-8 lg:px-10">
+      <div className="route-feedback-panel w-full max-w-xl rounded-[1.5rem] bg-[#3557b4] p-4 shadow-[inset_0_0_0_1px_rgba(239,232,214,0.07)] sm:p-5">
+        <div className="route-feedback-panel-inner rounded-2xl bg-[#2a4aa0] p-6 sm:p-8">
           <span className="grid h-11 w-11 place-items-center rounded-xl bg-cream/[0.08] text-cream/55">
             <FileQuestion size={20} aria-hidden="true" />
           </span>

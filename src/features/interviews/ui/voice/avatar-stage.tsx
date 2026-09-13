@@ -527,7 +527,11 @@ export function AvatarStage({
       // Raw audio energy is too wide for these morphs: jaw and vowel targets
       // compound visually even though only one vowel is active. Keep the face
       // articulate without stretching the lips to their authored extremes.
-      const open = voice.level * 0.58;
+      // Avatar meshes share target names but not target ranges. A persona can
+      // dial this down without changing the shared speech algorithm used in
+      // onboarding, welcomes, account settings, and the live interview room.
+      const mouthActivity = rigRef.current.mouthActivity ?? 1;
+      const open = voice.level * 0.58 * mouthActivity;
       const voicing = speaking && !voice.silent;
       // Lips only meet between words *within* a line. At rest every mouth shape
       // returns to zero, otherwise the face sits there with pressed lips.
@@ -563,7 +567,13 @@ export function AvatarStage({
       shapes.O = ease(shapes.O, O, 16, 10, delta);
       shapes.U = ease(shapes.U, U, 15, 10, delta);
       shapes.sil = ease(shapes.sil, betweenWords ? 0.16 : 0, 16, 13, delta);
-      shapes.press = ease(shapes.press, betweenWords ? 0.05 : 0, 15, 12, delta);
+      shapes.press = ease(
+        shapes.press,
+        betweenWords ? 0.05 * mouthActivity : 0,
+        15,
+        12,
+        delta
+      );
       // Barely there. On this rig the smile target pushes the lips up and out,
       // so anything much higher reads as a pout rather than a resting
       // expression — which is why personas vary it only within a narrow band.

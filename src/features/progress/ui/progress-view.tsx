@@ -83,7 +83,7 @@ export function ProgressView({
   }, [awaitingGesture, setAwaitingGesture, speakBriefing]);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col items-center px-4 pb-20 pt-8 text-cream sm:px-6 sm:pt-10 lg:px-8 lg:pt-12">
+    <main className="progress-page mx-auto flex min-h-screen w-full max-w-5xl flex-col items-center px-4 pb-20 pt-8 text-cream sm:px-6 sm:pt-10 lg:px-8 lg:pt-12">
       <DocumentTitle title="Progress" />
 
       <section className="flex min-h-[calc(100svh-9rem)] w-full flex-col items-center justify-center py-8">
@@ -135,7 +135,7 @@ export function ProgressView({
           ) : (
             <Link
               href={briefing.primaryHref}
-              className="progress-cta-shimmer group relative mt-7 inline-flex min-h-12 items-center gap-2 overflow-hidden rounded-2xl bg-cream px-6 py-3 text-base font-semibold text-[#171a16] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+              className="progress-cta-shimmer group relative mt-7 inline-flex min-h-12 items-center gap-2 overflow-hidden rounded-2xl bg-cream px-6 py-3 text-base font-semibold text-[#171a16] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-black"
             >
               <span className="relative z-10">{briefing.primaryCta}</span>
               <ArrowRight
@@ -179,7 +179,7 @@ function StarterQuestionCards({ questions }: { questions: ProgressStarterQuestio
               <span>
                 {question.difficulty} · {question.minutes} min
               </span>
-              <span className="inline-flex items-center gap-1.5 group-hover:text-cream">
+              <span className="inline-flex items-center gap-1.5">
                 Start
                 <ArrowRight
                   size={16}

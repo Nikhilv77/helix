@@ -25,9 +25,9 @@ describe("AppliedEngineeringQuestionPage", () => {
     expect(screen.getByTestId("workspace")).toHaveAttribute("data-stage", "Find the bottleneck");
   });
 
-  it("uses the same not-found boundary for missing and foreign resources", async () => {
+  it("returns to Applied Engineering for missing and foreign resources", async () => {
     mocks.historyRead.mockRejectedValue(new NotFoundErrorException("APPLIED_ENGINEERING_BLOCK_NOT_FOUND", "not found"));
-    await expect(AppliedEngineeringQuestionPage({ params: Promise.resolve({ questionId: "question-one" }), searchParams: Promise.resolve({ block: "foreign" }) })).rejects.toThrow("NEXT_NOT_FOUND");
+    await expect(AppliedEngineeringQuestionPage({ params: Promise.resolve({ questionId: "question-one" }), searchParams: Promise.resolve({ block: "foreign" }) })).rejects.toThrow("NEXT_REDIRECT");
   });
 });
 

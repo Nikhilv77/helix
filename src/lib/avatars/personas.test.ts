@@ -6,6 +6,7 @@ import {
   ALL_PERSONAS,
   INTERVIEWERS,
   MAYA,
+  ONBOARDING_PERSONAS,
   personaById,
   personaForSession,
   welcomePersonaFromQuery,
@@ -32,6 +33,7 @@ const VOICE_GENDER: Record<string, PersonaGender> = {
   "aura-2-apollo-en": "masculine",
   "aura-2-arcas-en": "masculine",
   "aura-2-atlas-en": "masculine",
+  "aura-2-orion-en": "masculine",
   "aura-2-zeus-en": "masculine"
 };
 
@@ -77,6 +79,21 @@ describe("interviewer personas", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it("keeps the intended onboarding carousel order", () => {
+    expect(ONBOARDING_PERSONAS.map((persona) => persona.id)).toEqual([
+      "alex",
+      "pooja",
+      "olivia",
+      "ethan",
+      "ryan",
+      "claire",
+      "daniel",
+      "james",
+      "sophia",
+      "maya"
+    ]);
+  });
+
   it("gives every persona a distinct voice", () => {
     const voices = ALL_PERSONAS.map((persona) => persona.voice);
     expect(new Set(voices).size).toBe(voices.length);
@@ -91,7 +108,7 @@ describe("interviewer personas", () => {
   });
 
   it.each(ALL_PERSONAS)("$name keeps its rig inside the usable range", (persona) => {
-    const { restingSmile, blinkIntervalMs, motion, browActivity } = persona.rig;
+    const { restingSmile, blinkIntervalMs, motion, browActivity, mouthActivity } = persona.rig;
     // Past roughly 0.08 the smile target pushes the lips out into a pout.
     expect(restingSmile).toBeGreaterThanOrEqual(0);
     expect(restingSmile).toBeLessThanOrEqual(0.08);
@@ -99,6 +116,12 @@ describe("interviewer personas", () => {
     expect(blinkIntervalMs[0]).toBeGreaterThan(0);
     expect(motion).toBeGreaterThan(0);
     expect(browActivity).toBeGreaterThanOrEqual(0);
+    if (mouthActivity !== undefined) {
+      expect(mouthActivity).toBeGreaterThan(0);
+      // A few model exports have notably quieter mouth targets. The safe
+      // upper bound still leaves the authored shapes below their extremes.
+      expect(mouthActivity).toBeLessThanOrEqual(1.4);
+    }
   });
 
   it.each(ALL_PERSONAS)("$name speaks with a voice matching the face", (persona) => {

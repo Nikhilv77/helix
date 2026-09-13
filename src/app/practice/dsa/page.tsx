@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { DsaTopics } from "@/features/practice/dsa/ui/dsa-topics";
 import { privatePageMetadata } from "@/lib/shared/seo";
@@ -62,12 +62,14 @@ export default async function DsaPracticePage({
       questionStatuses
     );
   } catch (error) {
-    if (error instanceof DsaBlockHistoryError && error.code === "BLOCK_NOT_FOUND") notFound();
+    if (error instanceof DsaBlockHistoryError && error.code === "BLOCK_NOT_FOUND") {
+      redirect("/practice/dsa");
+    }
     throw error;
   }
 
   return (
-    <div className="mx-auto w-full max-w-[86rem] px-4 pb-20 pt-7 sm:px-7 sm:pt-9 lg:px-8 lg:pt-8">
+    <div className="dsa-practice-page practice-page mx-auto w-full max-w-[86rem] px-4 pb-20 pt-7 sm:px-7 sm:pt-9 lg:px-8 lg:pt-8">
       <Link
         href="/practice"
         className="mb-5 inline-flex h-9 items-center gap-2 rounded-lg px-2.5 text-[12.5px] font-semibold text-cream/52 transition hover:bg-white/[0.055] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"

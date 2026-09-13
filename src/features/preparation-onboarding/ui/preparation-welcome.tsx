@@ -218,9 +218,8 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
     current,
     slides,
     visible,
-    touchPresentation,
     step,
-    targetStage,
+    alreadyOnboarded,
     baselineStage,
     activeBaselineSection,
     onboarding,
@@ -398,13 +397,13 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
             type="button"
             onClick={() => dismiss()}
             aria-label={`Close ${teacher.name} welcome`}
-            className="absolute right-3 top-3 z-20 flex h-12 w-12 items-center justify-center rounded-full text-cream/65 transition hover:bg-white/[0.07] hover:text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)] sm:right-5 sm:top-5"
+            className="maya-welcome-close absolute right-3 top-3 z-20 flex h-12 w-12 items-center justify-center rounded-full text-cream/65 transition hover:bg-white/[0.07] hover:text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)] sm:right-5 sm:top-5"
           >
             <X size={25} strokeWidth={1.8} aria-hidden="true" />
           </button>
         ) : null}
 
-        <div className="relative z-10 min-h-0 overflow-hidden bg-white/[0.012]">
+        <div className="maya-welcome-avatar-stage relative z-10 min-h-0 overflow-hidden bg-white/[0.012]">
           {lightweightAvatar ? (
             <Image
               src={teacher.portrait}
@@ -423,7 +422,7 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
               performanceProfile="welcome"
             />
           )}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[rgba(17,18,20,0.7)] to-transparent" />
+          <div className="maya-welcome-avatar-fade pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[rgba(17,18,20,0.7)] to-transparent" />
           <button
             type="button"
             onClick={toggleVoice}
@@ -431,7 +430,7 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
             aria-pressed={speaking}
             title={voiceLabel(voiceState, teacher.name)}
             className={[
-              "absolute bottom-3 left-3 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border shadow-[0_12px_32px_rgba(0,0,0,0.34)] transition hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)] sm:bottom-5 sm:left-5",
+              "maya-welcome-voice-control absolute bottom-3 left-3 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border shadow-[0_12px_32px_rgba(0,0,0,0.34)] transition hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-accent)] sm:bottom-5 sm:left-5",
               awaitingGesture
                 ? "animate-pulse border-[var(--workspace-accent)] bg-[var(--workspace-accent)] text-white"
                 : "border-white/15 bg-black/65 text-cream/78 hover:bg-black/80 hover:text-cream"
@@ -447,7 +446,7 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
           </button>
         </div>
 
-        <div className="relative z-10 flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden bg-transparent px-5 pb-5 pt-5 sm:px-10 sm:pb-8 sm:pt-8 lg:px-14 lg:pb-9 lg:pt-10">
+        <div className="maya-welcome-content relative z-10 flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden bg-transparent px-5 pb-5 pt-5 sm:px-10 sm:pb-8 sm:pt-8 lg:px-14 lg:pb-9 lg:pt-10">
           <div className="relative z-10 flex shrink-0 items-center gap-2.5 pr-12">
             {Array.from({ length: 10 }, (_, index) => (
               <span
@@ -455,8 +454,8 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
                 className={[
                   "h-1.5 rounded-full transition-all duration-300",
                   index === welcomeProgressIndex(step, targetStage, baselineStage)
-                    ? "workspace-accent-dot w-12"
-                    : "w-6 bg-cream/25"
+                    ? "maya-welcome-progress-active workspace-accent-dot w-12"
+                    : "maya-welcome-progress-idle w-6 bg-cream/25"
                 ].join(" ")}
               />
             ))}
@@ -483,18 +482,18 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
                 aria-hidden="true"
               />
               {current.eyebrow ? (
-                <p className="blueprint-label text-cream/45 min-[360px]:mt-4 sm:mt-5 lg:mt-7">
+                <p className="maya-welcome-eyebrow blueprint-label text-cream/45 min-[360px]:mt-4 sm:mt-5 lg:mt-7">
                   {current.eyebrow}
                 </p>
               ) : null}
               <h1
                 id="maya-welcome-title"
-                className={`display-heading ${current.eyebrow ? "mt-3 sm:mt-4" : "mt-5 sm:mt-6"} max-w-2xl text-[2.15rem] leading-[1.03] text-cream sm:text-[3rem]`}
+                className={`maya-welcome-title display-heading ${current.eyebrow ? "mt-3 sm:mt-4" : "mt-5 sm:mt-6"} max-w-2xl text-[2.15rem] leading-[1.03] text-cream sm:text-[3rem]`}
               >
                 <WordRevealLine words={titleReveal.words} visibleCount={titleReveal.visibleCount} />
               </h1>
               {current.body ? (
-                <p className="mt-5 max-w-2xl text-[15px] font-medium leading-7 text-cream/78 sm:text-lg sm:leading-8">
+                <p className="maya-welcome-body mt-5 max-w-2xl text-[15px] font-medium leading-7 text-cream/78 sm:text-lg sm:leading-8">
                   <WordRevealLine
                     words={bodyReveal.words}
                     visibleCount={bodyReveal.visibleCount}
@@ -538,7 +537,10 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
                           className="text-[var(--workspace-accent)]"
                           aria-hidden="true"
                         />
-                        Company name <span className="font-normal text-cream/45">Optional</span>
+                        Company name{" "}
+                        <span className="maya-welcome-field-optional font-normal text-cream/45">
+                          Optional
+                        </span>
                       </label>
                       <input
                         id="target-company"
@@ -548,7 +550,7 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
                         placeholder="e.g. Stripe, Google, or your dream team"
                         className="mt-4 h-12 w-full rounded-lg border border-cream/15 bg-black/25 px-3.5 text-base text-cream outline-none transition placeholder:text-cream/35 focus:border-[var(--workspace-accent)] focus:ring-2 focus:ring-[var(--workspace-accent-soft)]"
                       />
-                      <p className="mt-3 text-sm leading-6 text-cream/55">
+                      <p className="maya-welcome-field-note mt-3 text-sm leading-6 text-cream/55">
                         No company in mind is completely fine. Your preparation will still be
                         tailored to your role and level.
                       </p>
@@ -580,7 +582,7 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
             </div>
           </div>
 
-          <div className="relative z-10 flex shrink-0 border-t border-cream/[0.1] pt-4 sm:items-center sm:pt-5">
+          <div className="maya-welcome-footer relative z-10 flex shrink-0 border-t border-cream/[0.1] pt-4 sm:items-center sm:pt-5">
             <div className="flex w-full gap-3 sm:ml-auto sm:w-auto">
               {step === 1 && baselineStage === null ? (
                 <button
@@ -591,7 +593,7 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
                     if (targetStage === 0) setStep(0);
                     else setTargetStage((stage) => stage - 1);
                   }}
-                  className="inline-flex h-11 items-center justify-center rounded-lg border border-cream/15 px-5 text-sm font-semibold text-cream/80 transition hover:border-cream/35 hover:text-cream disabled:cursor-not-allowed disabled:opacity-50"
+                  className="maya-welcome-back inline-flex h-11 items-center justify-center rounded-lg border border-cream/15 px-5 text-sm font-semibold text-cream/80 transition hover:border-cream/35 hover:text-cream disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Back
                 </button>
@@ -618,7 +620,7 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
                   }
                   void advanceTargetSetup();
                 }}
-                className="browse-nudge inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-[#f5f3ef] px-5 text-sm font-semibold text-[#17181b] shadow-[0_18px_44px_-26px_rgba(245,243,239,0.22)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70 sm:flex-none"
+                className="maya-welcome-primary browse-nudge inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-[#f5f3ef] px-5 text-sm font-semibold text-[#17181b] shadow-[0_18px_44px_-26px_rgba(245,243,239,0.22)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70 sm:flex-none"
               >
                 {saving ? (
                   <>

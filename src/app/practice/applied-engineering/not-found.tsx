@@ -3,7 +3,7 @@ import { ArrowRight, Compass } from "lucide-react";
 
 export default function AppliedEngineeringNotFound() {
   return (
-    <div className="mx-auto flex min-h-[72svh] w-full max-w-[86rem] items-center bg-black px-5 py-16 sm:px-8">
+    <div className="route-feedback mx-auto flex min-h-[72svh] w-full max-w-[86rem] items-center bg-black px-5 py-16 sm:px-8">
       <section className="w-full max-w-xl">
         <Compass size={24} aria-hidden="true" className="text-cream/48" />
         <h1 className="mt-6 font-display text-[clamp(2rem,5vw,3.2rem)] font-semibold leading-[1.04] tracking-[-0.04em] text-cream">

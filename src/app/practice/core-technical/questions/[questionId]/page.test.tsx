@@ -77,14 +77,14 @@ describe("CoreTechnicalQuestionPage", () => {
     expect(screen.getByTestId("workspace")).toHaveAttribute("data-block", "current-block");
   });
 
-  it("uses the same not-found boundary for a missing question or a foreign block", async () => {
+  it("returns to Core Technical for a missing question or foreign block", async () => {
     mocks.historyRead.mockResolvedValue(block("owned-block", "different-question", false));
     await expect(
       CoreTechnicalQuestionPage({
         params: Promise.resolve({ questionId: "missing-question" }),
         searchParams: Promise.resolve({ block: "owned-block" })
       })
-    ).rejects.toThrow("NEXT_NOT_FOUND");
+    ).rejects.toThrow("NEXT_REDIRECT");
 
     mocks.historyRead.mockRejectedValue(
       new NotFoundErrorException(
@@ -97,7 +97,7 @@ describe("CoreTechnicalQuestionPage", () => {
         params: Promise.resolve({ questionId: "question-one" }),
         searchParams: Promise.resolve({ block: "foreign-block" })
       })
-    ).rejects.toThrow("NEXT_NOT_FOUND");
+    ).rejects.toThrow("NEXT_REDIRECT");
   });
 });
 

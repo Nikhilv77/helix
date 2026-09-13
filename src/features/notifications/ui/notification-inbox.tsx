@@ -237,7 +237,7 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
         onClick={toggleOpen}
         aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
         aria-expanded={open}
-        className="relative grid h-11 w-11 place-items-center rounded-xl text-cream/58 transition hover:bg-cream/[0.055] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+        className="workspace-notification-trigger relative grid h-11 w-11 place-items-center rounded-xl text-cream/58 transition hover:bg-cream/[0.055] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
       >
         <Bell size={22} strokeWidth={1.8} aria-hidden="true" />
         {unread > 0 ? (
@@ -253,13 +253,13 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
 
       {open && typeof document !== "undefined"
         ? createPortal(
-            <div className="fixed inset-0 z-[80] bg-black/65 backdrop-blur-[3px] md:pointer-events-none md:bg-transparent md:backdrop-blur-none">
+            <div className="workspace-notification-backdrop fixed inset-0 z-[80] bg-black/65 backdrop-blur-[3px] md:pointer-events-none md:bg-transparent md:backdrop-blur-none">
               <div
                 ref={dialog}
                 role="dialog"
                 aria-modal="true"
                 aria-label="Notifications"
-                className="pointer-events-auto fixed inset-2 flex flex-col overflow-hidden rounded-[1.5rem] bg-[#151619]/[0.99] shadow-[0_36px_110px_-32px_rgba(0,0,0,0.98),0_12px_38px_-24px_rgba(0,0,0,0.9)] ring-1 ring-inset ring-white/[0.075] backdrop-blur-2xl md:inset-auto md:right-6 md:top-[4.75rem] md:h-[min(42rem,calc(100vh-6rem))] md:w-[32rem] md:rounded-[1.75rem] lg:w-[36rem]"
+                className="workspace-notification-popover pointer-events-auto fixed inset-2 flex flex-col overflow-hidden rounded-[1.5rem] bg-[#151619]/[0.99] shadow-[0_36px_110px_-32px_rgba(0,0,0,0.98),0_12px_38px_-24px_rgba(0,0,0,0.9)] ring-1 ring-inset ring-white/[0.075] backdrop-blur-2xl md:inset-auto md:right-6 md:top-[4.75rem] md:h-[min(42rem,calc(100vh-6rem))] md:w-[32rem] md:rounded-[1.75rem] lg:w-[36rem]"
               >
                 <header className="relative flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.065] px-4 pb-4 pt-4 sm:gap-5 sm:px-6 sm:pb-5 sm:pt-6">
                   <div className="min-w-0">

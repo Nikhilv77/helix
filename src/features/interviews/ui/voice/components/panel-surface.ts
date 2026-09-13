@@ -6,7 +6,7 @@
  * single constant means a change to the room's look lands in both.
  */
 export const INTERVIEW_PANEL_SHELL =
-  "rounded-2xl border border-white/[0.075] bg-[#111215] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]";
+  "interview-panel-shell rounded-2xl border border-white/[0.075] bg-[#111215] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]";
 
 /**
  * Keep this surface opaque and neutral. Accent is reserved for small state and
@@ -14,7 +14,7 @@ export const INTERVIEW_PANEL_SHELL =
  */
 
 /** Hairline rule between a panel's header, body, and footer. */
-export const INTERVIEW_PANEL_RULE = "border-white/[0.055]";
+export const INTERVIEW_PANEL_RULE = "interview-panel-rule border-white/[0.055]";
 
 /** Raised surface for cards sitting inside a panel. */
-export const INTERVIEW_PANEL_CARD = "rounded-xl bg-white/[0.03]";
+export const INTERVIEW_PANEL_CARD = "interview-panel-card rounded-xl bg-white/[0.03]";

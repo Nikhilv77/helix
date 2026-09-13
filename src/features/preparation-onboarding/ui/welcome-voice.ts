@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { useMayaVoice, voiceUrl, type VoiceState } from "@/infrastructure/realtime/use-maya-voice";
+import { useMayaVoice, type VoiceState } from "@/infrastructure/realtime/use-maya-voice";
 import {
   baselineQuestionTeacherCue,
   firstBaselineSection,
@@ -23,9 +23,8 @@ export function useWelcomeVoice({
   current,
   slides,
   visible,
-  touchPresentation,
   step,
-  targetStage,
+  alreadyOnboarded,
   baselineStage,
   activeBaselineSection,
   onboarding,
@@ -35,55 +34,36 @@ export function useWelcomeVoice({
   current: VoiceSlide;
   slides: VoiceSlide[];
   visible: boolean;
-  touchPresentation: boolean;
   step: number;
-  targetStage: number;
+  alreadyOnboarded: boolean;
   baselineStage: BaselineFlowStage;
   activeBaselineSection: BaselineSection | null;
   onboarding: PreparationOnboardingState;
   targetRole: Role;
 }) {
   const voiceEnabled = useRef(true);
-  const voicePreloads = useRef(new Map<string, HTMLAudioElement>());
   const {
     state: voiceState,
     speak: speakLine,
     stop: stopVoice,
+    preload: preloadVoice,
     awaitingGesture,
     setAwaitingGesture
   } = useMayaVoice();
   const warmVoice = useCallback(
     (line: string) => {
       if (!line.trim()) return;
-      const url = voiceUrl(line, teacherId);
-      if (voicePreloads.current.has(url)) return;
-      const warm = new Audio(url);
-      warm.preload = "auto";
-      voicePreloads.current.set(url, warm);
-      warm.load();
-      if (voicePreloads.current.size > 3) {
-        const oldestUrl = voicePreloads.current.keys().next().value;
-        if (oldestUrl) {
-          const oldest = voicePreloads.current.get(oldestUrl);
-          oldest?.pause();
-          oldest?.removeAttribute("src");
-          voicePreloads.current.delete(oldestUrl);
-        }
-      }
+      preloadVoice(line, teacherId);
     },
-    [teacherId]
+    [preloadVoice, teacherId]
   );
 
-  useEffect(
-    () => () => {
-      for (const element of voicePreloads.current.values()) {
-        element.pause();
-        element.removeAttribute("src");
-      }
-      voicePreloads.current.clear();
-    },
-    []
-  );
+  useEffect(() => {
+    // Returning candidates can land directly on this final slide. Start its
+    // request during the component's first client render, before the modal is
+    // made visible and before its automatic playback effect runs.
+    if (alreadyOnboarded) warmVoice(welcomeBackVoiceText());
+  }, [alreadyOnboarded, warmVoice]);
 
   useEffect(() => {
     if (!visible || !voiceEnabled.current || awaitingGesture) return;
@@ -92,26 +72,35 @@ export function useWelcomeVoice({
   }, [awaitingGesture, current, speakLine, visible]);
 
   useEffect(() => {
-    if (!visible || touchPresentation) return;
+    if (!visible) return;
     const next = slides[step + 1];
     if (next) warmVoice(slideVoiceText(next));
-  }, [slides, step, touchPresentation, visible, warmVoice]);
+  }, [slides, step, visible, warmVoice]);
 
   useEffect(() => {
-    if (!visible || touchPresentation || step !== 1) return;
-    const nextTarget = TARGET_SETUP_COPY[targetStage + 1];
-    if (nextTarget) warmVoice(`${nextTarget.title} ${nextTarget.body}`);
-  }, [step, targetStage, touchPresentation, visible, warmVoice]);
+    if (!visible || step !== 1) return;
+    // Target setup is a short, finite flow. Warming every line as soon as the
+    // user enters it keeps the voice response immediate after any selection,
+    // including the preparation-areas screen on touch devices.
+    for (const target of TARGET_SETUP_COPY) warmVoice(`${target.title} ${target.body}`);
+    warmVoice(baselineIntroVoiceText(targetRole));
+  }, [step, targetRole, visible, warmVoice]);
 
   useEffect(() => {
-    if (!visible || touchPresentation) return;
+    if (!visible) return;
     const nextSection =
       baselineStage === "intro"
         ? firstBaselineSection(targetRole)
         : activeBaselineSection
           ? nextBaselineSection(activeBaselineSection)
           : null;
-    if (!nextSection) return;
+    if (!nextSection) {
+      // The completion screen arrives only after the final answer is saved.
+      // Prime it while that last question is still on screen so its voice does
+      // not wait on the mutation response.
+      if (activeBaselineSection) warmVoice(completionVoiceText());
+      return;
+    }
     const nextQuestion = onboarding.questions[nextSection];
     if (nextQuestion)
       warmVoice(
@@ -123,7 +112,6 @@ export function useWelcomeVoice({
     onboarding.questionIds,
     onboarding.questions,
     targetRole,
-    touchPresentation,
     visible,
     warmVoice
   ]);
@@ -170,4 +158,20 @@ export function voiceLabel(state: VoiceState, teacherName: string): string {
 
 function slideVoiceText(slide: VoiceSlide): string {
   return slide.voiceText ?? `${slide.title} ${slide.body}`;
+}
+
+function baselineIntroVoiceText(role: Role) {
+  const body =
+    role === "ai-ml"
+      ? "This is not about measuring everything today. A stack-aware technical pulse, an engineering scenario, and one architecture decision are enough for a useful starting picture."
+      : "This is not about measuring everything today. A short DSA pulse, a stack-aware technical pulse, an engineering scenario, and one architecture decision are enough for a useful starting picture.";
+  return `Let’s find your starting point. ${body}`;
+}
+
+function completionVoiceText() {
+  return "We have your first evidence. This is a starting picture, not a readiness verdict. Trailgrad will earn real scores from your future practice and interviews—not invent them today.";
+}
+
+function welcomeBackVoiceText() {
+  return "You’re already onboarded. Your learning path is ready and waiting for you. Enjoy learning, keep building momentum, and take the next step whenever you’re ready.";
 }

@@ -106,7 +106,7 @@ function ConversationCardSkeleton({ wide = false }: { wide?: boolean }) {
 export function HelpHubSkeleton() {
   return (
     <main
-      className="mx-auto w-full max-w-[88rem] animate-pulse px-4 pb-24 pt-8 sm:px-8 sm:pt-10 lg:px-10"
+      className="trailmate-skeleton mx-auto w-full max-w-[88rem] animate-pulse px-4 pb-24 pt-8 sm:px-8 sm:pt-10 lg:px-10"
       aria-busy="true"
       aria-label="Loading Trailmate"
     >

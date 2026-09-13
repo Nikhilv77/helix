@@ -24,6 +24,11 @@ export interface AvatarRig {
   motion: number;
   /** How far the inner brow rides with the jaw while speaking. 0 is deadpan. */
   browActivity: number;
+  /**
+   * Per-face multiplier for jaw and viseme movement. Some otherwise identical
+   * Avatar rigs exaggerate their mouth shapes more than others.
+   */
+  mouthActivity?: number;
 }
 
 /**
@@ -75,7 +80,8 @@ export const DEFAULT_RIG: AvatarRig = {
   restingSmile: 0.025,
   blinkIntervalMs: [2600, 6400],
   motion: 1,
-  browActivity: 0.12
+  browActivity: 0.12,
+  mouthActivity: 1
 };
 
 /**
@@ -108,7 +114,13 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     tagline: "Encouraging, patient, still probing",
     bio: "I've sat on both sides of this table. You won't get cut off here — finish the thought, then we go deeper together.",
     greeting: "Hey, I'm Claire. No rush with me — take the space you need.",
-    rig: { restingSmile: 0.055, blinkIntervalMs: [3000, 6800], motion: 1.05, browActivity: 0.18 }
+    rig: {
+      restingSmile: 0.055,
+      blinkIntervalMs: [3000, 6800],
+      motion: 1.05,
+      browActivity: 0.18,
+      mouthActivity: 1.04
+    }
   },
   {
     id: "daniel",
@@ -121,7 +133,13 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     tagline: "Senior, measured, hard to read",
     bio: "Twelve years, mostly staff level. I ask less than you'd expect and hear more than you'd think. The silence is me thinking, not judging.",
     greeting: "Daniel. Let's get into it.",
-    rig: { restingSmile: 0.005, blinkIntervalMs: [4200, 8000], motion: 0.62, browActivity: 0.05 }
+    rig: {
+      restingSmile: 0.005,
+      blinkIntervalMs: [4200, 8000],
+      motion: 0.62,
+      browActivity: 0.05,
+      mouthActivity: 1.1
+    }
   },
   {
     id: "olivia",
@@ -134,7 +152,13 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     tagline: "Fast, sharp, chases the detail",
     bio: "I move quick and I'll follow every “we basically just…” until there's a real mechanism behind it. Bring specifics and we'll have fun.",
     greeting: "Olivia. Fair warning — I ask a lot of follow-ups.",
-    rig: { restingSmile: 0.02, blinkIntervalMs: [2000, 4400], motion: 1.15, browActivity: 0.2 }
+    rig: {
+      restingSmile: 0.02,
+      blinkIntervalMs: [2000, 4400],
+      motion: 1.15,
+      browActivity: 0.2,
+      mouthActivity: 1.03
+    }
   },
   {
     id: "james",
@@ -147,7 +171,13 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     tagline: "Formal, structured, no surprises",
     bio: "One question at a time, in order, no games. If you like knowing exactly where you stand at every moment, we'll get along.",
     greeting: "Good to meet you. I'm James. Shall we begin?",
-    rig: { restingSmile: 0.0, blinkIntervalMs: [3800, 7400], motion: 0.72, browActivity: 0.07 }
+    rig: {
+      restingSmile: 0.0,
+      blinkIntervalMs: [3800, 7400],
+      motion: 0.72,
+      browActivity: 0.07,
+      mouthActivity: 1.12
+    }
   },
   {
     id: "pooja",
@@ -161,7 +191,13 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     tagline: "Methodical, warm, builds up",
     bio: "We start at the foundation and build upward. No skipped steps, no faking confidence. By the end you'll know why, not just what.",
     greeting: "Hi, I'm Pooja. Let's build this from the ground up.",
-    rig: { restingSmile: 0.045, blinkIntervalMs: [3200, 6600], motion: 0.95, browActivity: 0.14 }
+    rig: {
+      restingSmile: 0.045,
+      blinkIntervalMs: [3200, 6600],
+      motion: 0.95,
+      browActivity: 0.14,
+      mouthActivity: 1.04
+    }
   },
   {
     id: "alex",
@@ -169,12 +205,20 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     model: "/avatars/alex.glb",
     portrait: "/images/teacher-portraits/alex.jpg",
     gender: "masculine",
-    voice: "aura-2-zeus-en",
+    voice: "aura-2-orion-en",
     manner: "Brisk and pragmatic. Wants the trade-off, not the tour.",
     tagline: "Brisk, pragmatic, trade-offs first",
     bio: "Skip the setup and give me the trade-off. I care about what you'd cut and why — not the guided tour of your architecture.",
     greeting: "Alex. Let's skip the warm-up and get to the interesting part.",
-    rig: { restingSmile: 0.015, blinkIntervalMs: [2400, 5200], motion: 1.1, browActivity: 0.13 }
+    rig: {
+      restingSmile: 0.015,
+      blinkIntervalMs: [2400, 5200],
+      motion: 1.1,
+      browActivity: 0.13,
+      // Alex's mouth targets have a larger authored range than the rest of the
+      // cast. Keep his speech clear without stretching the lips into a pout.
+      mouthActivity: 0.72
+    }
   },
   {
     id: "sophia",
@@ -187,7 +231,13 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     tagline: "Calm, analytical, quietly lethal",
     bio: "I stay quiet while you talk, then ask the one question that finds the gap. It's never personal — that's just the interesting part.",
     greeting: "Sophia. I'll listen more than I talk.",
-    rig: { restingSmile: 0.02, blinkIntervalMs: [4000, 7600], motion: 0.68, browActivity: 0.08 }
+    rig: {
+      restingSmile: 0.02,
+      blinkIntervalMs: [4000, 7600],
+      motion: 0.68,
+      browActivity: 0.08,
+      mouthActivity: 1.06
+    }
   },
   {
     id: "ryan",
@@ -200,7 +250,14 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     tagline: "Casual, low pressure, thorough",
     bio: "Low stakes, real talk. We're two people figuring out a system together. Still thorough — nobody just needs to sweat through it.",
     greeting: "Hey, what's up? I'm Ryan. Relax, it's just a conversation.",
-    rig: { restingSmile: 0.06, blinkIntervalMs: [2800, 6000], motion: 1.25, browActivity: 0.19 }
+    rig: {
+      restingSmile: 0.06,
+      blinkIntervalMs: [2800, 6000],
+      motion: 1.25,
+      browActivity: 0.19,
+      // Ryan's model has the least pronounced jaw target in the cast.
+      mouthActivity: 1.34
+    }
   },
   {
     id: "ethan",
@@ -213,11 +270,39 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     tagline: "High energy, thinks out loud",
     bio: "I think out loud and I want you to as well. Half-formed ideas are welcome here — that's usually where the good stuff is hiding.",
     greeting: "Hey! Ethan. Let's think out loud together.",
-    rig: { restingSmile: 0.04, blinkIntervalMs: [2200, 4800], motion: 1.35, browActivity: 0.22 }
+    rig: {
+      restingSmile: 0.04,
+      blinkIntervalMs: [2200, 4800],
+      motion: 1.35,
+      browActivity: 0.22,
+      mouthActivity: 1.1
+    }
   }
 ];
 
 export const ALL_PERSONAS: InterviewerPersona[] = [MAYA, ...INTERVIEWERS];
+
+/**
+ * Presentation order for the onboarding carousel. This is intentionally kept
+ * separate from `INTERVIEWERS`, whose order participates in the deterministic
+ * session fallback for older interview records.
+ */
+export const ONBOARDING_PERSONAS: InterviewerPersona[] = [
+  "alex",
+  "pooja",
+  "olivia",
+  "ethan",
+  "ryan",
+  "claire",
+  "daniel",
+  "james",
+  "sophia",
+  "maya"
+].map((id) => {
+  const persona = ALL_PERSONAS.find((candidate) => candidate.id === id);
+  if (!persona) throw new Error(`Unknown onboarding persona: ${id}`);
+  return persona;
+});
 
 export function personaById(id: string | null | undefined): InterviewerPersona | null {
   if (!id) return null;

@@ -57,7 +57,37 @@ const registerTheme: BeforeMount = (monaco) => {
       "editorOverviewRuler.border": "#00000000"
     }
   });
+  monaco.editor.defineTheme("trailgrad-practice-light", {
+    base: "vs",
+    inherit: true,
+    rules: [
+      { token: "comment", foreground: "64748B", fontStyle: "italic" },
+      { token: "keyword", foreground: "7C3AED" },
+      { token: "string", foreground: "15803D" },
+      { token: "number", foreground: "B45309" },
+      { token: "type", foreground: "0369A1" },
+      { token: "function", foreground: "1D4ED8" },
+      { token: "variable", foreground: "1F2937" },
+      { token: "operator", foreground: "475569" },
+      { token: "delimiter", foreground: "64748B" }
+    ],
+    colors: {
+      "editor.background": "#F8FAFC",
+      "editor.foreground": "#1F2937",
+      "editorLineNumber.foreground": "#94A3B8",
+      "editorLineNumber.activeForeground": "#475569",
+      "editorGutter.background": "#F8FAFC",
+      "editor.lineHighlightBackground": "#00000000",
+      "editor.lineHighlightBorder": "#00000000",
+      "editorOverviewRuler.border": "#00000000"
+    }
+  });
 };
+
+function currentThemeIsLight() {
+  const root = document.documentElement;
+  return root.classList.contains("light") || root.dataset.theme === "light";
+}
 
 /** Monaco's ids differ from the language names carried on an answer key. */
 function monacoLanguage(language: string): string {
@@ -91,6 +121,9 @@ export function PracticeCodeViewer({
   const editorRef = useRef<MonacoEditor | null>(null);
   const decorationsRef = useRef<DecorationsCollection | null>(null);
   const [ready, setReady] = useState(false);
+  const [lightTheme, setLightTheme] = useState(
+    () => typeof document !== "undefined" && currentThemeIsLight()
+  );
 
   const lineCount = code.split("\n").length;
   // 21px per line plus a little breathing room; Monaco needs an explicit height.
@@ -101,6 +134,17 @@ export function PracticeCodeViewer({
     decorationsRef.current = instance.createDecorationsCollection();
     setReady(true);
   };
+
+  useEffect(() => {
+    const syncTheme = () => setLightTheme(currentThemeIsLight());
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "data-theme"]
+    });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const collection = decorationsRef.current;
@@ -130,12 +174,12 @@ export function PracticeCodeViewer({
   }, [highlightLine, ready]);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0f10] py-2">
+    <div className="practice-code-viewer overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0f10] py-2">
       <Editor
         height={`${height}px`}
         language={monacoLanguage(language)}
         value={code}
-        theme="trailgrad-practice"
+        theme={lightTheme ? "trailgrad-practice-light" : "trailgrad-practice"}
         beforeMount={registerTheme}
         onMount={onMount}
         loading={

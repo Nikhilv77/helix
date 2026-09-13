@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo } from "react";
-import { ArrowRight, AudioLines, Loader2, Play, Volume2 } from "lucide-react";
+import { ArrowRight, Loader2, Play, Volume2 } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import type { DsaRecommendation } from "@/features/practice/dsa/domain/dsa-recommendation";
@@ -143,7 +143,7 @@ export function PracticeIntro({
         </div>
       </header>
 
-      <section className="relative mt-6 flex flex-col overflow-hidden rounded-2xl border border-white/[0.085] bg-[#141619] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:mt-7 md:block md:min-h-[13.5rem]">
+      <section className="practice-intro-stage relative mt-6 flex flex-col overflow-hidden rounded-2xl border border-white/[0.085] bg-[#141619] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:mt-7 md:block md:min-h-[13.5rem]">
         <div className="relative z-20 order-2 flex max-w-none flex-col items-start justify-start px-5 py-7 sm:px-7 md:min-h-[13.5rem] md:max-w-[52%] md:justify-center lg:px-8">
           {!recommendation ? (
             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-cream/44">
@@ -162,7 +162,7 @@ export function PracticeIntro({
           {nextHref ? (
             <Link
               href={nextHref}
-              className="group mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-cream px-4 py-2.5 text-[14px] font-semibold text-[#17181a] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:w-auto sm:px-5"
+              className="practice-intro-cta group mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-cream px-4 py-2.5 text-[14px] font-semibold text-[#17181a] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:w-auto sm:px-5"
             >
               <Play size={14} aria-hidden="true" fill="currentColor" />
               <span>{nextLabel}</span>
@@ -193,28 +193,10 @@ export function PracticeIntro({
           <MayaStage speaking={speaking} transparent performanceProfile="practice" />
         </div>
 
-        <div className="absolute right-5 top-5 z-20 hidden w-[clamp(14.5rem,22vw,17rem)] max-w-[40%] rounded-xl border border-white/[0.07] bg-[#1a1c20]/95 px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.28)] lg:block">
-          <span
-            aria-hidden
-            className="absolute -left-2 top-8 h-4 w-4 rotate-45 border-b border-l border-white/[0.07] bg-[#1a1c20]"
-          />
-          <div className="relative flex gap-3">
-            <AudioLines
-              size={21}
-              strokeWidth={1.8}
-              aria-hidden="true"
-              className="mt-0.5 shrink-0 text-[var(--workspace-accent)]"
-            />
-            <p className="min-w-0 break-words text-pretty text-[14px] leading-6 text-cream/82">
-              “{script}”
-            </p>
-          </div>
-        </div>
-
         <button
           type="button"
           onClick={say}
-          className="absolute bottom-4 right-5 z-20 hidden h-10 items-center gap-2 rounded-lg border border-white/[0.055] bg-[#1a1c20] px-3.5 text-[13px] font-semibold text-cream/76 transition hover:bg-[#202226] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] lg:inline-flex"
+          className="practice-intro-listen absolute bottom-4 right-5 z-20 hidden h-10 items-center gap-2 rounded-lg border border-white/[0.055] bg-[#1a1c20] px-3.5 text-[13px] font-semibold text-cream/76 transition hover:bg-[#202226] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] lg:inline-flex"
         >
           {state === "loading" ? (
             <Loader2 size={14} aria-hidden="true" className="animate-spin" />

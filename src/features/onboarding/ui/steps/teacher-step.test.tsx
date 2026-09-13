@@ -55,36 +55,45 @@ describe("TeacherStep model handoff", () => {
 
   afterEach(() => vi.restoreAllMocks());
 
+  it("opens on Pooja and starts her preview once her model is ready", () => {
+    render(<TeacherStep selected={null} onSelect={() => undefined} onContinue={() => undefined} />);
+
+    expect(screen.getByTestId("teacher-avatar")).toHaveAttribute("data-url", "/avatars/pooja.glb");
+    act(() => mocks.avatarProps?.onModelReady?.("/avatars/pooja.glb"));
+
+    expect(mocks.speak).toHaveBeenCalledWith(expect.any(String), "pooja");
+  });
+
   it("shows a loader instead of moving the card while the requested teacher loads", () => {
     render(
-      <TeacherStep selected="sophia" onSelect={() => undefined} onContinue={() => undefined} />
+      <TeacherStep selected="pooja" onSelect={() => undefined} onContinue={() => undefined} />
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Next teacher" }));
 
-    expect(screen.getByTestId("teacher-avatar")).toHaveAttribute("data-url", "/avatars/ryan.glb");
-    expect(screen.getByText("LOADING RYAN...")).toBeInTheDocument();
+    expect(screen.getByTestId("teacher-avatar")).toHaveAttribute("data-url", "/avatars/olivia.glb");
+    expect(screen.getByText("LOADING OLIVIA...")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next teacher" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /continue with ryan/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /continue with olivia/i })).toBeDisabled();
     expect(mocks.speak).not.toHaveBeenCalled();
 
-    act(() => mocks.avatarProps?.onModelReady?.("/avatars/ryan.glb"));
+    act(() => mocks.avatarProps?.onModelReady?.("/avatars/olivia.glb"));
 
-    expect(screen.queryByText("LOADING RYAN...")).not.toBeInTheDocument();
+    expect(screen.queryByText("LOADING OLIVIA...")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next teacher" })).toBeEnabled();
-    expect(mocks.speak).toHaveBeenCalledWith(expect.any(String), "ryan");
+    expect(mocks.speak).toHaveBeenCalledWith(expect.any(String), "olivia");
   });
 
   it("restores the previous teacher if the requested model fails", () => {
     render(
-      <TeacherStep selected="sophia" onSelect={() => undefined} onContinue={() => undefined} />
+      <TeacherStep selected="pooja" onSelect={() => undefined} onContinue={() => undefined} />
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Next teacher" }));
-    act(() => mocks.avatarProps?.onModelError?.("/avatars/ryan.glb"));
+    act(() => mocks.avatarProps?.onModelError?.("/avatars/olivia.glb"));
 
-    expect(screen.getByTestId("teacher-avatar")).toHaveAttribute("data-url", "/avatars/sophia.glb");
-    expect(screen.getByText("Ryan couldn't load. Try again.")).toBeInTheDocument();
+    expect(screen.getByTestId("teacher-avatar")).toHaveAttribute("data-url", "/avatars/pooja.glb");
+    expect(screen.getByText("Olivia couldn't load. Try again.")).toBeInTheDocument();
     expect(mocks.speak).not.toHaveBeenCalled();
   });
 });

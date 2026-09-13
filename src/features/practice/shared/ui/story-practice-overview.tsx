@@ -121,15 +121,6 @@ export function StoryPracticeOverview({
                     <span
                       className={`relative z-10 block h-1.5 w-full rounded-full transition duration-200 group-hover/step:-translate-y-0.5 ${terminal ? "bg-[var(--workspace-accent)] shadow-[0_0_14px_var(--workspace-accent)]" : "bg-[#303236] group-hover/step:bg-[#3a3c41]"}`}
                     />
-                    <span className="pointer-events-none absolute bottom-[calc(100%+0.55rem)] left-1/2 z-30 hidden w-max max-w-56 -translate-x-1/2 rounded-lg bg-[#0e0f11] px-2.5 py-2 text-center text-[11px] leading-4 text-cream/72 opacity-0 shadow-[0_12px_30px_rgba(0,0,0,0.42)] transition group-hover/step:opacity-100 group-focus-visible/step:opacity-100 sm:block">
-                      <strong className="block font-medium text-cream/92">
-                        {question.order} ·{" "}
-                        {stage?.title ?? `${capitalize(resolvedExperience.subjectNoun)} stage`}
-                      </strong>
-                      <span className="capitalize text-cream/45">
-                        {current ? "Current progress" : question.status.toLowerCase()}
-                      </span>
-                    </span>
                   </Link>
                 );
               })}

@@ -115,7 +115,7 @@ export function InterviewQuestionPanel({
     >
       <StageRail stages={stages} current={stage} counts={counts} />
 
-      <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-7">
+      <div className="interview-question-body thin-scroll min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-7">
         {question ? (
           <>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
@@ -155,7 +155,7 @@ export function InterviewQuestionPanel({
             ) : null}
 
             {question.codeSnippet ? (
-              <pre className="thin-scroll mt-5 max-h-80 overflow-auto rounded-xl bg-black/35 p-4 font-mono text-sm leading-6 text-cream/78 ring-1 ring-inset ring-white/[0.06]">
+              <pre className="interview-code-snippet thin-scroll mt-5 max-h-80 overflow-auto rounded-xl bg-black/35 p-4 font-mono text-sm leading-6 text-cream/78 ring-1 ring-inset ring-white/[0.06]">
                 <code>{question.codeSnippet}</code>
               </pre>
             ) : null}
@@ -191,7 +191,7 @@ export function InterviewQuestionPanel({
                         type="button"
                         disabled={sending || Boolean(selectedOption)}
                         onClick={() => onSelectOption(option)}
-                        className={`group flex w-full items-start gap-3.5 rounded-xl px-4 py-3.5 text-left transition disabled:cursor-default ${
+                        className={`interview-answer-option group flex w-full items-start gap-3.5 rounded-xl px-4 py-3.5 text-left transition disabled:cursor-default ${
                           state === "right"
                             ? "bg-[var(--workspace-accent)]/[0.14] ring-1 ring-inset ring-[var(--workspace-accent)]/55"
                             : state === "wrong"
@@ -275,7 +275,7 @@ export function InterviewQuestionPanel({
 
       {question && format !== "mcq" ? (
         <div
-          className={`shrink-0 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 px-4 py-3.5 sm:px-5`}
+          className={`interview-answer-composer shrink-0 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 px-4 py-3.5 sm:px-5`}
         >
           <label htmlFor="resume-answer" className="text-sm font-semibold text-cream/80">
             {question.codeTask ? `Explain your code to ${teacher.name}` : "Or write your answer"}
@@ -342,7 +342,7 @@ function StageRail({
 }) {
   return (
     <div
-      className={`grid shrink-0 gap-px border-b ${INTERVIEW_PANEL_RULE} bg-white/[0.04]`}
+      className={`interview-stage-rail grid shrink-0 gap-px border-b ${INTERVIEW_PANEL_RULE} bg-white/[0.04]`}
       style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(0, 1fr))` }}
     >
       {stages.map((stage) => {
@@ -354,7 +354,7 @@ function StageRail({
           <div
             key={stage.id}
             aria-current={active ? "step" : undefined}
-            className={`relative px-4 py-3 transition ${
+            className={`interview-stage-cell relative px-4 py-3 transition ${
               active
                 ? "bg-[color-mix(in_srgb,var(--workspace-accent)_9%,rgba(17,18,21,0.9))]"
                 : "bg-[rgba(17,18,21,0.9)]"
@@ -372,19 +372,19 @@ function StageRail({
                 }`}
               />
               <p
-                className={`truncate text-sm font-semibold ${
+                className={`interview-stage-label truncate text-sm font-semibold ${
                   active ? "text-cream" : complete ? "text-cream/60" : "text-cream/38"
                 }`}
               >
                 {stage.label}
               </p>
               {total > 0 ? (
-                <span className="ml-auto shrink-0 text-[11px] tabular-nums text-cream/34">
+                <span className="interview-stage-count ml-auto shrink-0 text-[11px] tabular-nums text-cream/34">
                   {Math.min(done, total)}/{total}
                 </span>
               ) : null}
             </div>
-            <p className="mt-0.5 truncate text-[11px] leading-5 text-cream/32">{stage.caption}</p>
+            <p className="interview-stage-caption mt-0.5 truncate text-[11px] leading-5 text-cream/32">{stage.caption}</p>
             {active ? (
               <span
                 aria-hidden="true"

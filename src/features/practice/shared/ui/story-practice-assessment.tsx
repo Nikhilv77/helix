@@ -52,7 +52,11 @@ export function StoryPracticeAssessment({
 }: StoryPracticeAssessmentProps) {
   const router = useRouter();
   const teacher = useWorkspaceTeacher();
-  const teacherPortrait = `/images/teacher-portraits/assessment-headsets/${teacher.id}.jpg`;
+  const lightTheme = useDocumentLightTheme();
+  const teacherPortrait =
+    lightTheme
+      ? `/images/teacher-portraits/assessment-headsets/light/${teacher.id}.jpg`
+      : `/images/teacher-portraits/assessment-headsets/${teacher.id}.jpg`;
   const [assessment, setAssessment] = useState(block.assessment);
   const serverSubmission = assessment?.assessment?.submission ?? null;
   const [recoverySubmission, setRecoverySubmission] = useState<SavedSubmission | null>(null);
@@ -117,7 +121,6 @@ export function StoryPracticeAssessment({
           label={`${experience.label} assessment`}
           teacherName={teacher.name}
           teacherPortrait={teacherPortrait}
-          coachLabel={`${experience.subjectNoun} coach`}
         >
           <ReadyAssessment
             teacherName={teacher.name}
@@ -137,7 +140,6 @@ export function StoryPracticeAssessment({
         label={`${experience.label} assessment`}
         teacherName={teacher.name}
         teacherPortrait={teacherPortrait}
-        coachLabel={`${experience.subjectNoun} coach`}
       >
         <AssessmentHeader
           eyebrow="Block assessment"
@@ -158,7 +160,6 @@ export function StoryPracticeAssessment({
         label={`${experience.label} assessment`}
         teacherName={teacher.name}
         teacherPortrait={teacherPortrait}
-        coachLabel={`${experience.subjectNoun} coach`}
       >
         <ReadyAssessment
           teacherName={teacher.name}
@@ -179,7 +180,6 @@ export function StoryPracticeAssessment({
         label={`${experience.label} assessment`}
         teacherName={teacher.name}
         teacherPortrait={teacherPortrait}
-        coachLabel={`${experience.subjectNoun} coach`}
       >
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
           Assessment in progress
@@ -213,7 +213,6 @@ export function StoryPracticeAssessment({
         label={`${experience.label} assessment`}
         teacherName={teacher.name}
         teacherPortrait={teacherPortrait}
-        coachLabel={`${experience.subjectNoun} coach`}
       >
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
           Assessment complete
@@ -254,7 +253,6 @@ export function StoryPracticeAssessment({
         label={`${experience.label} assessment`}
         teacherName={teacher.name}
         teacherPortrait={teacherPortrait}
-        coachLabel={`${experience.subjectNoun} coach`}
       >
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
           Assessment in progress
@@ -602,29 +600,43 @@ function AssessmentMeasures({ measures }: { measures: readonly string[] }) {
   );
 }
 
+function useDocumentLightTheme(): boolean {
+  const [lightTheme, setLightTheme] = useState(false);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const update = () =>
+      setLightTheme(root.classList.contains("light") || root.dataset.theme === "light");
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(root, { attributes: true, attributeFilter: ["class", "data-theme"] });
+    return () => observer.disconnect();
+  }, []);
+
+  return lightTheme;
+}
+
 function AssessmentPreviewFrame({
   id,
   label,
   teacherName,
   teacherPortrait,
-  coachLabel,
   children
 }: {
   id: string;
   label: string;
   teacherName: string;
   teacherPortrait: string;
-  coachLabel: string;
   children: React.ReactNode;
 }) {
   return (
     <aside
       id={id}
       aria-label={label}
-      className="relative overflow-hidden rounded-[1.15rem] border border-white/[0.075] bg-[#0e1011] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
+      className="story-assessment-preview relative overflow-hidden rounded-[1.15rem] border border-white/[0.075] bg-[#0e1011] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
     >
       <div className="grid min-w-0 sm:grid-cols-[9.5rem_minmax(0,1fr)] lg:grid-cols-[11.5rem_minmax(0,1fr)]">
-        <div className="relative h-36 overflow-hidden bg-[#08090a] sm:h-auto sm:min-h-[12.5rem]">
+        <div className="story-assessment-portrait relative h-36 overflow-hidden bg-[#08090a] sm:h-auto sm:min-h-[12.5rem]">
           <Image
             src={teacherPortrait}
             alt={`${teacherName}, your teacher`}
@@ -633,16 +645,13 @@ function AssessmentPreviewFrame({
             quality={85}
             placeholder="blur"
             blurDataURL={DARK_PORTRAIT_PLACEHOLDER}
-            className="bg-[#08090a] object-cover object-[center_25%] opacity-95 sm:origin-top sm:scale-[1.65] sm:object-top"
+            className="story-assessment-portrait-image bg-[#08090a] object-cover object-[center_25%] opacity-95 sm:origin-top sm:scale-[1.65] sm:object-top"
           />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,transparent_32%,rgba(4,5,6,0.18)_64%,rgba(4,5,6,0.72)_100%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_58%,rgba(8,9,10,0.72)_100%)] sm:bg-[linear-gradient(90deg,transparent_58%,rgba(14,16,17,0.9)_100%),linear-gradient(180deg,transparent_62%,rgba(8,9,10,0.68)_100%)]" />
+          <div className="story-assessment-portrait-vignette absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,transparent_32%,rgba(4,5,6,0.18)_64%,rgba(4,5,6,0.72)_100%)]" />
+          <div className="story-assessment-portrait-fade absolute inset-0 bg-[linear-gradient(180deg,transparent_58%,rgba(8,9,10,0.72)_100%)] sm:bg-[linear-gradient(90deg,transparent_58%,rgba(14,16,17,0.9)_100%),linear-gradient(180deg,transparent_62%,rgba(8,9,10,0.68)_100%)]" />
           <div className="absolute inset-y-[12%] right-0 w-px bg-[linear-gradient(180deg,transparent,var(--workspace-accent),transparent)] opacity-55" />
           <span className="absolute left-3 top-3 h-5 w-5 border-l border-t border-[color:var(--workspace-accent-border)]" />
           <span className="absolute bottom-3 right-3 h-5 w-5 border-b border-r border-white/20" />
-          <div className="absolute bottom-3 left-3 rounded-full border border-white/10 bg-[#090a0b]/90 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.13em] text-cream/78">
-            {teacherName} · {coachLabel}
-          </div>
         </div>
         <div className="flex min-w-0 flex-col justify-center px-4 py-4 sm:px-5 sm:py-5 lg:px-6">
           {children}
@@ -665,7 +674,7 @@ function AssessmentFrame({
     <aside
       id={id}
       aria-label={label}
-      className="relative overflow-hidden rounded-[1.15rem] border border-white/[0.075] bg-[#0e1011] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] sm:px-6"
+      className="story-assessment-frame relative overflow-hidden rounded-[1.15rem] border border-white/[0.075] bg-[#0e1011] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] sm:px-6"
     >
       {children}
     </aside>

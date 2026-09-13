@@ -142,7 +142,7 @@ export function CoverPicker({
             ].join(" ")}
           >
             <span
-              className="relative block overflow-hidden rounded-xl bg-[#1a1b1f]"
+              className="image-picker-preview relative block overflow-hidden rounded-xl bg-[#1a1b1f]"
               style={{ aspectRatio: `${cover.width} / ${cover.height}` }}
             >
               <Image
@@ -272,7 +272,7 @@ export function ImagePickerOverlay({
   return createPortal(
     <div
       className={[
-        "image-picker-backdrop-slow",
+        "image-picker-backdrop image-picker-backdrop-slow",
         "fixed inset-0 z-[1000] flex min-h-dvh items-center justify-center bg-[#01030a]/64 p-2 backdrop-blur-sm sm:p-6"
       ].join(" ")}
     >
@@ -286,12 +286,12 @@ export function ImagePickerOverlay({
       )}
       <section
         className={[
-          "image-picker-panel-slow",
+          "image-picker-panel image-picker-panel-slow",
           "relative flex max-h-[calc(100dvh-1rem)] w-full flex-col overflow-hidden rounded-[1.25rem] border border-white/[0.1] bg-[#17181b] text-cream shadow-[0_28px_90px_-48px_rgba(0,0,0,0.9)] sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl",
           choosingCover ? "max-w-6xl" : "max-w-4xl"
         ].join(" ")}
       >
-        <div className="sticky top-0 z-20 flex shrink-0 items-center justify-center bg-[#17181b] px-4 pb-3 pt-4 sm:px-6 sm:pb-2 sm:pt-6">
+        <div className="image-picker-header sticky top-0 z-20 flex shrink-0 items-center justify-center bg-[#17181b] px-4 pb-3 pt-4 sm:px-6 sm:pb-2 sm:pt-6">
           <div className="max-w-xl text-center">
             <h2 className="text-2xl font-medium text-cream sm:text-3xl">
               {choosingCover ? "Pick your cover" : "Pick your avatar"}
@@ -333,7 +333,7 @@ export function ImagePickerOverlay({
                       selected ? "ring-1 ring-cream/42" : "ring-1 ring-cream/8 hover:ring-cream/20"
                     ].join(" ")}
                   >
-                    <span className="relative block aspect-[3.2/1] overflow-hidden rounded-xl bg-[#1a1b1f] sm:aspect-[4/1]">
+                    <span className="image-picker-preview relative block aspect-[3.2/1] overflow-hidden rounded-xl bg-[#1a1b1f] sm:aspect-[4/1]">
                       <Image
                         src={cover.src}
                         alt=""

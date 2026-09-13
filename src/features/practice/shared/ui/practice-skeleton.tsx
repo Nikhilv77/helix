@@ -5,7 +5,7 @@ function SkeletonLine({ className }: { className: string }) {
 /** Page-shaped fallback for the Practice sessions overview. */
 export function PracticeSkeleton() {
   return (
-    <main className="min-h-[100svh] w-full bg-black" aria-busy="true" aria-label="Loading practice">
+    <main className="practice-skeleton min-h-[100svh] w-full bg-black" aria-busy="true" aria-label="Loading practice">
       <div className="mx-auto flex w-full max-w-[92rem] flex-col animate-pulse px-4 pb-20 pt-10 sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
         <section className="order-2 mt-12 md:order-1 md:mt-0" aria-label="Loading practice summary">
           <div className="grid gap-4 sm:grid-cols-2 lg:gap-5 xl:grid-cols-4">
@@ -71,7 +71,7 @@ export function PracticeSkeleton() {
 export function DsaPracticeSkeleton() {
   return (
     <main
-      className="min-h-[100svh] w-full bg-black"
+      className="practice-skeleton min-h-[100svh] w-full bg-black"
       aria-busy="true"
       aria-label="Loading DSA practice"
     >

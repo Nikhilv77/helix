@@ -78,7 +78,7 @@ export function InterviewsView({
   const introWords = introCopy.split(" ");
 
   return (
-    <main className="relative isolate mx-auto w-full max-w-[92rem] overflow-x-clip px-4 pb-20 pt-10 sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
+    <main className="interviews-page relative isolate mx-auto w-full max-w-[92rem] overflow-x-clip px-4 pb-20 pt-10 sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
       <DocumentTitle title="Interviews" />
       <span
         aria-hidden="true"

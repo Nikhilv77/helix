@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Menu, X } from "lucide-react";
 import { TrailgradMark } from "@/components/brand/blueprint-art";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 // Every href below resolves to a section that exists on this page, in the
 // order those sections appear — the previous set listed Interview before
@@ -147,7 +148,7 @@ export function SiteNav({
           aria-label="Trailgrad home"
           className="shrink-0 rounded-lg text-cream outline-none transition-opacity duration-300 hover:opacity-70 focus-visible:ring-2 focus-visible:ring-cream/40"
         >
-          <TrailgradMark className="h-8 w-8" />
+          <TrailgradMark className="marketing-brand-mark h-8 w-8" />
         </Link>
 
         <nav aria-label="Sections" className="hidden items-center justify-center gap-9 sm:flex">
@@ -173,7 +174,8 @@ export function SiteNav({
           })}
         </nav>
 
-        <div className="col-start-3 flex shrink-0 items-center justify-self-end">
+        <div className="col-start-3 flex shrink-0 items-center justify-self-end gap-3">
+          <ThemeToggle />
           <div className={desktopActionClass}>{action}</div>
           <button
             type="button"
@@ -192,7 +194,7 @@ export function SiteNav({
         inert={menuOpen ? undefined : true}
         className={[
           "overflow-hidden transition-[max-height,opacity] duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] sm:hidden",
-          menuOpen ? "max-h-[24rem] opacity-100" : "max-h-0 opacity-0"
+          menuOpen ? "max-h-[28rem] opacity-100" : "max-h-0 opacity-0"
         ].join(" ")}
       >
         <div className="border-t border-white/[0.06] px-5 pt-2">
@@ -217,6 +219,13 @@ export function SiteNav({
           })}
         </div>
 
+        <div className="flex items-center justify-between border-t border-white/[0.06] px-5 py-3">
+          <span className="text-xs font-semibold uppercase tracking-wider text-cream/50">
+            Theme
+          </span>
+          <ThemeToggle />
+        </div>
+
         <div className={mobileActionClass}>{action}</div>
       </div>
     </header>
@@ -238,7 +247,7 @@ export function SiteFooter({ sectionHrefPrefix = "" }: { sectionHrefPrefix?: str
             aria-label="Trailgrad home"
             className="inline-flex items-center gap-2.5 rounded-lg text-cream outline-none transition-opacity duration-300 hover:opacity-70 focus-visible:ring-2 focus-visible:ring-cream/40"
           >
-            <TrailgradMark className="h-5 w-5" />
+            <TrailgradMark className="marketing-brand-mark h-5 w-5" />
             <span className="text-[0.95rem] font-medium tracking-tight">Trailgrad</span>
           </Link>
 

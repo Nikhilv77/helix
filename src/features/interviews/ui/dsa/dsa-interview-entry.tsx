@@ -130,7 +130,7 @@ export function DsaInterviewEntry({
   return (
     <main
       data-workspace-accent={workspaceAccent}
-      className="blueprint workspace-black relative min-h-screen overflow-hidden px-6 py-10 text-cream sm:px-10 lg:px-16"
+      className="interview-launch-page blueprint workspace-black relative min-h-screen overflow-hidden px-6 py-10 text-cream sm:px-10 lg:px-16"
     >
       <span
         aria-hidden

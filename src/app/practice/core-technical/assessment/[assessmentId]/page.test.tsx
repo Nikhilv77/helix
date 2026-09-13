@@ -57,7 +57,7 @@ describe("CoreTechnicalAssessmentRoomPage", () => {
     expect(mocks.redirect).toHaveBeenCalledWith("/interview/voice?session=assessment-one");
   });
 
-  it("fails closed when the assessment does not belong to the selected block", async () => {
+  it("returns to Core Technical when the assessment does not belong to the selected block", async () => {
     mocks.historyRead.mockResolvedValue(block("block-one", "another-assessment"));
 
     await expect(
@@ -65,7 +65,7 @@ describe("CoreTechnicalAssessmentRoomPage", () => {
         params: Promise.resolve({ assessmentId: "assessment-one" }),
         searchParams: Promise.resolve({ block: "block-one" })
       })
-    ).rejects.toThrow("NEXT_NOT_FOUND");
+    ).rejects.toThrow("NEXT_REDIRECT");
 
     mocks.historyRead.mockRejectedValue(
       new NotFoundErrorException(
@@ -78,7 +78,7 @@ describe("CoreTechnicalAssessmentRoomPage", () => {
         params: Promise.resolve({ assessmentId: "assessment-one" }),
         searchParams: Promise.resolve({ block: "foreign-block" })
       })
-    ).rejects.toThrow("NEXT_NOT_FOUND");
+    ).rejects.toThrow("NEXT_REDIRECT");
   });
 });
 

@@ -13,7 +13,7 @@ export function ReportsView({
   candidate: { name: string; discipline: string };
 }) {
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[84rem] flex-col px-4 pb-20 pt-6 text-cream sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
+    <div className="reports-page mx-auto flex min-h-screen w-full max-w-[84rem] flex-col px-4 pb-20 pt-6 text-cream sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
       <DocumentTitle title="Reports" />
       <InterviewReportDashboard
         report={overview.latestCompletedReport ?? null}

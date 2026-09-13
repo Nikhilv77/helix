@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { ChapterSession } from "@/features/practice/shared/ui/chapter-session";
 import { briefBeats, buildChapterBrief } from "@/lib/roadmap/chapter-brief";
 import { findQuestion } from "@/features/practice/dsa/domain/dsa";
@@ -42,7 +42,7 @@ export default async function ChapterSessionPage({
   ]);
 
   const planChapter = plan?.chapters.find((item) => item.id === chapter);
-  if (!planChapter) notFound();
+  if (!planChapter) redirect("/practice");
 
   // The teaching layer lives on the full question records, not the plan's
   // trimmed ones, so resolve each slug back to the bank.
@@ -51,7 +51,7 @@ export default async function ChapterSessionPage({
     .filter((question): question is NonNullable<typeof question> => Boolean(question));
 
   const brief = buildChapterBrief(chapter, questions);
-  if (!brief) notFound();
+  if (!brief) redirect("/practice");
 
   // Keyed by chapter so switching sessions restarts the briefing at beat one
   // rather than inheriting the previous chapter's step and phase.

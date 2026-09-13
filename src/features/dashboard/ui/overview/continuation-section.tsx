@@ -115,7 +115,7 @@ function TeacherAdvicePanel({ practice }: { practice: DashboardPracticeContinuat
                 {practice.progressPercent}%
               </span>
             </div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-cream/[0.07]">
+            <div className="dashboard-progress-track mt-2 h-2 overflow-hidden rounded-full bg-cream/[0.07]">
               <span
                 className="block h-full rounded-full bg-[var(--workspace-accent)]"
                 style={{ width: `${practice.progressPercent}%` }}

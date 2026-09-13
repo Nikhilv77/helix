@@ -4,7 +4,7 @@ function Line({ className = "" }: { className?: string }) {
 
 export function ProfileSkeleton() {
   return (
-    <main className="min-h-[100svh] w-full bg-black" aria-busy="true" aria-label="Loading profile">
+    <main className="profile-skeleton min-h-[100svh] w-full bg-black" aria-busy="true" aria-label="Loading profile">
       <div className="mx-auto w-full max-w-[84rem] animate-pulse px-4 pb-20 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
         <header className="relative overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-[#151619]">
           <div className="relative px-5 py-6 sm:px-7 sm:py-7 lg:px-8">

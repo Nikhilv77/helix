@@ -4,7 +4,6 @@ export type LegalSection = {
 };
 
 export type LegalDocument = {
-  eyebrow: string;
   title: string;
   introduction: string;
   updatedAt: string;
@@ -14,7 +13,6 @@ export type LegalDocument = {
 const updatedAt = "August 8, 2026";
 
 export const privacyPolicy: LegalDocument = {
-  eyebrow: "Trailgrad Privacy",
   title: "Privacy Policy",
   introduction:
     "A clear summary of what Trailgrad processes when you upload a resume, practice interviews, and review reports.",
@@ -44,7 +42,6 @@ export const privacyPolicy: LegalDocument = {
 };
 
 export const termsOfService: LegalDocument = {
-  eyebrow: "Trailgrad Legal",
   title: "Terms of Service",
   introduction: "The simple agreement for using Trailgrad interview practice.",
   updatedAt,

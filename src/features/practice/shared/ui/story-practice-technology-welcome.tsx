@@ -85,7 +85,7 @@ export function StoryPracticeTechnologyWelcome<TValue extends string>({
   );
 
   return (
-    <main className="mx-auto flex min-h-[calc(100svh-5rem)] w-full max-w-[86rem] items-center px-4 py-10 sm:px-8 lg:px-10">
+    <main className="practice-page mx-auto flex min-h-[calc(100svh-5rem)] w-full max-w-[86rem] items-center px-4 py-10 sm:px-8 lg:px-10">
       <DocumentTitle title="Practice" />
       <section
         aria-labelledby={`${experience.slug}-welcome-title`}

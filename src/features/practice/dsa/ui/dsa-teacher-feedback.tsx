@@ -91,13 +91,13 @@ export function DsaTeacherFeedback({
     >
       <div
         aria-hidden="true"
-        className="practice-mobile-overlay absolute inset-0 bg-black/70 backdrop-blur-[3px]"
+        className="teacher-feedback-backdrop practice-mobile-overlay absolute inset-0 bg-black/70 backdrop-blur-[3px]"
       />
       <aside
         role="dialog"
         aria-modal="true"
         aria-labelledby="teacher-feedback-title"
-        className="relative grid h-[min(48rem,calc(100dvh-1.5rem))] w-full max-w-[44rem] grid-rows-[16rem_minmax(0,1fr)] overflow-hidden rounded-[1.6rem] border border-white/[0.11] bg-[#141719] shadow-[0_32px_120px_rgba(0,0,0,0.62)] sm:grid-rows-[18rem_minmax(0,1fr)]"
+        className="teacher-feedback-modal relative grid h-[min(48rem,calc(100dvh-1.5rem))] w-full max-w-[44rem] grid-rows-[16rem_minmax(0,1fr)] overflow-hidden rounded-[1.6rem] border border-white/[0.11] bg-[#141719] shadow-[0_32px_120px_rgba(0,0,0,0.62)] sm:grid-rows-[18rem_minmax(0,1fr)]"
       >
         <TeacherStage
           teacherName={teacher.name}
@@ -108,7 +108,7 @@ export function DsaTeacherFeedback({
           }}
         />
 
-        <div className="thin-scroll min-h-0 overflow-y-auto bg-[#15181a] px-5 py-5 sm:px-7 sm:py-6">
+        <div className="teacher-feedback-content thin-scroll min-h-0 overflow-y-auto bg-[#15181a] px-5 py-5 sm:px-7 sm:py-6">
           {state.status === "loading" ? <FeedbackLoading teacherName={teacher.name} /> : null}
           {state.status === "error" ? (
             <FeedbackError message={state.message} onRetry={onRetry} />
@@ -135,7 +135,7 @@ export function DsaTeacherFeedback({
               {feedbackVisible ? (
                 <div className="mt-5">
                   <MarkdownFeedback markdown={feedback.markdown} />
-                  <div className="mt-4 rounded-2xl border border-white/[0.07] bg-black/15 p-3.5">
+                  <div className="teacher-feedback-follow-up mt-4 rounded-2xl border border-white/[0.07] bg-black/15 p-3.5">
                     <div className="flex gap-2.5">
                       <MessageCircleQuestion
                         size={15}
@@ -178,12 +178,12 @@ function TeacherStage({
   onClose: () => void;
 }) {
   return (
-    <div className="relative min-h-0 overflow-hidden border-b border-white/[0.07] bg-[#0c0e0f]">
+    <div className="teacher-feedback-stage relative min-h-0 overflow-hidden border-b border-white/[0.07] bg-[#0c0e0f]">
       <div className="practice-accent-glow absolute inset-x-[8%] bottom-[-28%] z-0 h-[65%] opacity-85" />
       <div className="absolute inset-x-0 bottom-0 top-5 z-0">
         <MayaStage speaking={speaking} performanceProfile="practice" />
       </div>
-      <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between bg-gradient-to-b from-black/55 to-transparent p-4 sm:p-5">
+      <div className="teacher-feedback-stage-header absolute inset-x-0 top-0 z-10 flex items-start justify-between bg-gradient-to-b from-black/55 to-transparent p-4 sm:p-5">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cream/45">
             Teacher debrief
@@ -199,7 +199,7 @@ function TeacherStage({
           <X size={16} aria-hidden="true" />
         </button>
       </div>
-      <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-[#0c0e0f] via-[#0c0e0f]/65 to-transparent px-4 pb-4 pt-12 sm:px-5 sm:pb-5">
+      <div className="teacher-feedback-stage-footer absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-[#0c0e0f] via-[#0c0e0f]/65 to-transparent px-4 pb-4 pt-12 sm:px-5 sm:pb-5">
         <span className="inline-flex items-center gap-2 rounded-full bg-black/35 px-3 py-1.5 text-[12px] font-medium text-cream/68">
           <span
             className={`h-1.5 w-1.5 rounded-full ${speaking ? "shadow-[0_0_12px_var(--workspace-accent)]" : "bg-cream/35"}`}
@@ -214,7 +214,7 @@ function TeacherStage({
 
 function CodeMoment({ snippet, language }: { snippet: string; language: DsaEditorLanguage }) {
   return (
-    <div className="mt-4 overflow-hidden rounded-xl border border-white/[0.065] bg-[#0c0e0f]">
+    <div className="teacher-feedback-code mt-4 overflow-hidden rounded-xl border border-white/[0.065] bg-[#0c0e0f]">
       <div className="flex items-center gap-2 border-b border-white/[0.055] px-3 py-2">
         <span className="h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)]" />
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-cream/40">

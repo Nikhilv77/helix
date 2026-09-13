@@ -11,7 +11,7 @@ interface DashboardProps {
 
 export function DashboardOverview({ overviewData }: DashboardProps) {
   return (
-    <main className="min-h-screen w-full overflow-hidden bg-black text-cream">
+    <main className="dashboard-page min-h-screen w-full overflow-hidden bg-black text-cream">
       <DocumentTitle title="Overview" />
       <div className="mx-auto w-full max-w-[84rem] px-4 pb-20 pt-7 sm:px-6 sm:pt-9 lg:px-8 lg:pt-11">
         <CoachingReadinessSection

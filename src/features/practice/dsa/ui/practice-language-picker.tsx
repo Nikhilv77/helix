@@ -82,7 +82,7 @@ export function PracticeLanguagePicker({
   };
 
   return (
-    <div ref={root} className="relative">
+    <div ref={root} className="practice-language-picker relative">
       <button
         ref={trigger}
         type="button"
@@ -100,7 +100,7 @@ export function PracticeLanguagePicker({
               : Math.max(selectedIndex - 1, 0)
           );
         }}
-        className="group inline-flex h-10 min-w-[8.75rem] items-center justify-between gap-3 rounded-xl border border-cream/10 bg-cream/[0.055] px-3.5 text-[13px] font-medium text-cream/80 outline-none transition hover:border-cream/20 hover:bg-cream/[0.08] focus-visible:border-[var(--workspace-accent-border)] focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-soft)]"
+        className="practice-language-trigger group inline-flex h-10 min-w-[8.75rem] items-center justify-between gap-3 rounded-xl border border-cream/10 bg-cream/[0.055] px-3.5 text-[13px] font-medium text-cream/80 outline-none transition hover:border-cream/20 hover:bg-cream/[0.08] focus-visible:border-[var(--workspace-accent-border)] focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-soft)]"
       >
         <span>{selected?.label ?? value}</span>
         <ChevronDown
@@ -115,7 +115,7 @@ export function PracticeLanguagePicker({
           id={listboxId}
           role="listbox"
           aria-label="Programming languages"
-          className="absolute right-0 top-[calc(100%+0.45rem)] z-50 min-w-full overflow-hidden rounded-xl border border-white/[0.11] bg-[#17191d]/[0.98] p-1.5 shadow-[0_22px_55px_-24px_rgba(0,0,0,0.98)] backdrop-blur-xl"
+          className="practice-language-menu absolute right-0 top-[calc(100%+0.45rem)] z-50 min-w-full space-y-1 overflow-hidden rounded-xl border border-white/[0.11] bg-[#17191d]/[0.98] p-2 shadow-[0_22px_55px_-24px_rgba(0,0,0,0.98)] backdrop-blur-xl"
         >
           {options.map((option, index) => {
             const isSelected = option.value === value;

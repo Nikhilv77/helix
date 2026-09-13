@@ -159,7 +159,7 @@ export function HelpHub({
   }
 
   return (
-    <main className="mx-auto w-full max-w-[88rem] px-4 pb-24 pt-8 sm:px-8 sm:pt-10 lg:px-10">
+    <main className="trailmate-page mx-auto w-full max-w-[88rem] px-4 pb-24 pt-8 sm:px-8 sm:pt-10 lg:px-10">
       <DocumentTitle title="Trailmate" />
       <h1 className="sr-only">Trailmate</h1>
 
@@ -243,7 +243,7 @@ function BadgeRankingToast({ overview, onClose }: { overview: HelpOverview; onCl
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex min-h-dvh items-center justify-center overflow-y-auto bg-black/[0.82] px-4 py-6"
+      className="trailmate-badge-backdrop fixed inset-0 z-[9999] flex min-h-dvh items-center justify-center overflow-y-auto bg-black/[0.82] px-4 py-6"
       onMouseDown={(event) => {
         if (event.currentTarget === event.target) onClose();
       }}
@@ -252,7 +252,7 @@ function BadgeRankingToast({ overview, onClose }: { overview: HelpOverview; onCl
         role="dialog"
         aria-modal="true"
         aria-labelledby="badge-ranking-title"
-        className="my-auto w-full max-w-md rounded-[1.5rem] bg-[rgba(20,21,24,0.94)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_30px_100px_rgba(0,0,0,0.85)] backdrop-blur-2xl sm:p-6"
+        className="trailmate-badge-modal my-auto w-full max-w-md rounded-[1.5rem] bg-[rgba(20,21,24,0.94)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_30px_100px_rgba(0,0,0,0.85)] backdrop-blur-2xl sm:p-6"
       >
         <div className="flex items-start justify-between gap-5">
           <div className="flex items-center gap-3">
@@ -339,7 +339,7 @@ function ActiveConversationView({
   conversation: NonNullable<HelpOverview["activeConversation"]>;
 }) {
   return (
-    <main className="mx-auto grid min-h-[calc(100dvh-4rem)] w-full max-w-[76rem] place-items-center px-4 py-12 sm:px-8">
+    <main className="trailmate-page mx-auto grid min-h-[calc(100dvh-4rem)] w-full max-w-[76rem] place-items-center px-4 py-12 sm:px-8">
       <DocumentTitle title="Trailmate" />
       <section className="w-full rounded-[1.5rem] border border-white/[0.18] bg-black p-6 sm:p-9">
         <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">

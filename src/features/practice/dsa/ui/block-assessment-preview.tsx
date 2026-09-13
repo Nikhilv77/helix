@@ -6,6 +6,7 @@ import { ArrowRight, Check, ChevronDown, Loader2, Play, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
+import { useTheme } from "@/lib/theme/theme-context";
 import { DARK_PORTRAIT_PLACEHOLDER } from "@/lib/avatars/portrait-placeholder";
 import {
   interviewRoomHref,
@@ -31,7 +32,11 @@ export function BlockAssessmentPreview({
   allowEarlyStart?: boolean;
 }) {
   const teacher = useWorkspaceTeacher();
-  const assessmentPortrait = `/images/teacher-portraits/assessment-headsets/${teacher.id}.jpg`;
+  const { resolvedTheme } = useTheme();
+  const assessmentPortrait =
+    resolvedTheme === "light"
+      ? `/images/teacher-portraits/assessment-headsets/light/${teacher.id}.jpg`
+      : `/images/teacher-portraits/assessment-headsets/${teacher.id}.jpg`;
   const remainingQuestions = Math.max(block.totalQuestions - block.completedQuestions, 0);
   const [noticeVisible, setNoticeVisible] = useState(false);
   const [nudging, setNudging] = useState(false);
@@ -85,7 +90,7 @@ export function BlockAssessmentPreview({
     <>
       <aside
         aria-label="Block assessment"
-        className={`${nudging ? "assessment-card-nudge" : ""} relative overflow-hidden rounded-[1.15rem] border border-white/[0.075] bg-[#0e1011] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]`}
+        className={`dsa-assessment-card ${nudging ? "assessment-card-nudge" : ""} relative overflow-hidden rounded-[1.15rem] border border-white/[0.075] bg-[#0e1011] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]`}
       >
         <div
           className={
@@ -99,7 +104,7 @@ export function BlockAssessmentPreview({
               type="button"
               onClick={showLockedNotice}
               disabled={!block.flags.practising}
-              className="relative h-36 overflow-hidden bg-[#08090a] text-left disabled:cursor-default sm:h-auto sm:min-h-[12.5rem]"
+              className="dsa-assessment-portrait relative h-36 overflow-hidden bg-[#08090a] text-left disabled:cursor-default sm:h-auto sm:min-h-[12.5rem]"
               aria-label={
                 block.flags.practising
                   ? `Block assessment, ${remainingQuestions} ${remainingQuestions === 1 ? "problem" : "problems"} left`
@@ -114,14 +119,14 @@ export function BlockAssessmentPreview({
                 quality={85}
                 placeholder="blur"
                 blurDataURL={DARK_PORTRAIT_PLACEHOLDER}
-                className="bg-[#08090a] object-cover object-[center_25%] opacity-95 sm:origin-top sm:scale-[1.65] sm:object-top"
+                className="dsa-assessment-portrait-image bg-[#08090a] object-cover object-[center_25%] opacity-95 sm:origin-top sm:scale-[1.65] sm:object-top"
               />
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,transparent_32%,rgba(4,5,6,0.18)_64%,rgba(4,5,6,0.72)_100%)]" />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_58%,rgba(8,9,10,0.72)_100%)] sm:bg-[linear-gradient(90deg,transparent_58%,rgba(14,16,17,0.9)_100%),linear-gradient(180deg,transparent_62%,rgba(8,9,10,0.68)_100%)]" />
+              <div className="dsa-assessment-portrait-vignette absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,transparent_32%,rgba(4,5,6,0.18)_64%,rgba(4,5,6,0.72)_100%)]" />
+              <div className="dsa-assessment-portrait-fade absolute inset-0 bg-[linear-gradient(180deg,transparent_58%,rgba(8,9,10,0.72)_100%)] sm:bg-[linear-gradient(90deg,transparent_58%,rgba(14,16,17,0.9)_100%),linear-gradient(180deg,transparent_62%,rgba(8,9,10,0.68)_100%)]" />
               <div className="absolute inset-y-[12%] right-0 w-px bg-[linear-gradient(180deg,transparent,var(--workspace-accent),transparent)] opacity-55" />
               <span className="absolute left-3 top-3 h-5 w-5 border-l border-t border-[color:var(--workspace-accent-border)]" />
               <span className="absolute bottom-3 right-3 h-5 w-5 border-b border-r border-white/20" />
-              <div className="absolute bottom-3 left-3 rounded-full border border-white/10 bg-[#090a0b]/90 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.13em] text-cream/78">
+              <div className="dsa-assessment-portrait-label absolute bottom-3 left-3 rounded-full border border-white/10 bg-[#090a0b]/90 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.13em] text-cream/78">
                 {teacher.name} · 1:1 coach
               </div>
             </button>
@@ -543,7 +548,7 @@ function AssessmentNotice({
       role="status"
       aria-live="polite"
       aria-label="Assessment notification"
-      className="practice-mobile-glass fixed bottom-8 left-1/2 z-[100] w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-[1.4rem] bg-[#18191c]/[0.99] shadow-[0_28px_90px_-26px_rgba(0,0,0,0.98)] backdrop-blur-xl"
+      className="dsa-assessment-notice practice-mobile-glass fixed bottom-8 left-1/2 z-[100] w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-[1.4rem] bg-[#18191c]/[0.99] shadow-[0_28px_90px_-26px_rgba(0,0,0,0.98)] backdrop-blur-xl"
     >
       <div className="h-0.5 w-full bg-[var(--workspace-accent)]" />
       <div className="flex items-start gap-4 p-5 sm:p-6">

@@ -161,7 +161,7 @@ export function DsaQuestionNotes({ slug }: { slug: string }) {
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <div className="inline-flex items-center rounded-lg bg-black/25 p-1">
+        <div className="dsa-notes-page-controls inline-flex items-center rounded-lg bg-black/25 p-1">
           <button
             type="button"
             onClick={() => setActivePageIndex((index) => Math.max(0, index - 1))}
@@ -190,7 +190,7 @@ export function DsaQuestionNotes({ slug }: { slug: string }) {
           type="button"
           onClick={addPage}
           disabled={busy || drawing.pages.length >= MAX_DSA_NOTE_PAGES}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 text-[11.5px] font-semibold text-cream/54 transition hover:bg-white/[0.075] hover:text-cream disabled:pointer-events-none disabled:opacity-30"
+          className="dsa-notes-add-page inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 text-[11.5px] font-semibold text-cream/54 transition hover:bg-white/[0.075] hover:text-cream disabled:pointer-events-none disabled:opacity-30"
         >
           <Plus size={13} aria-hidden="true" /> New page
         </button>

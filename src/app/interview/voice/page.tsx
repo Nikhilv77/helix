@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 import { VoiceInterviewClient } from "@/features/interviews/ui/voice/voice-interview-client";
+import { VoiceInterviewSkeleton } from "@/features/interviews/ui/voice/voice-interview-skeleton";
 
 /** Route entry point. LiveKit and browser media stay inside the client feature. */
 export default async function VoiceInterviewPage({
@@ -14,7 +15,7 @@ export default async function VoiceInterviewPage({
   if (!sessionId) redirect("/interviews");
 
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<VoiceInterviewSkeleton />}>
       {/* The resume backs the document preview in a resume round. It is already
           loaded here, so passing it costs nothing extra. */}
       <VoiceInterviewClient

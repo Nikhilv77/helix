@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { AppliedEngineeringOverview } from "@/features/practice/applied-engineering/ui/applied-engineering-overview";
 import { AppliedEngineeringTechnologyWelcome } from "@/features/practice/applied-engineering/ui/applied-engineering-technology-welcome";
@@ -45,7 +45,7 @@ export default async function AppliedEngineeringPracticePage({
         error instanceof NotFoundErrorException &&
         error.code === "APPLIED_ENGINEERING_BLOCK_NOT_FOUND"
       ) {
-        notFound();
+        redirect("/practice/applied-engineering");
       }
       throw error;
     }
@@ -65,7 +65,7 @@ export default async function AppliedEngineeringPracticePage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-[86rem] px-4 pb-20 pt-7 sm:px-7 sm:pt-9 lg:px-8 lg:pt-8">
+    <main className="practice-page mx-auto w-full max-w-[86rem] px-4 pb-20 pt-7 sm:px-7 sm:pt-9 lg:px-8 lg:pt-8">
       <Link
         href="/practice"
         className="mb-5 inline-flex h-9 items-center gap-2 rounded-lg px-2.5 text-[12.5px] font-semibold text-cream/52 transition hover:bg-white/[0.055] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"

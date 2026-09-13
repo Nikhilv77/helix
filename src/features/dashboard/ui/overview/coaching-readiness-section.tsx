@@ -61,7 +61,7 @@ export function CoachingReadinessSection({
                 onClick={toggleVoice}
                 aria-label={speaking ? "Stop teacher summary" : "Play teacher summary"}
                 title={speaking ? "Stop teacher summary" : "Listen to teacher summary"}
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-cream/[0.07] bg-cream/[0.045] text-cream/58 transition hover:bg-cream/[0.09] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cream/[0.045] text-cream/58 transition hover:bg-cream/[0.09] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
               >
                 {state === "loading" ? (
                   <Loader2 size={16} className="animate-spin" aria-hidden="true" />
@@ -180,7 +180,7 @@ function ReadinessCard({ readiness }: { readiness: DashboardOverviewData["readin
         valueClassName="text-[2rem]"
       />
 
-      <div className="relative mt-3 w-full rounded-2xl bg-black/20 px-4 py-3 text-left">
+      <div className="dashboard-readiness-insight relative mt-3 w-full rounded-2xl bg-black/20 px-4 py-3 text-left">
         <p className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-cream/34">
           What this means
         </p>
@@ -210,7 +210,7 @@ function readinessSummary(score: number): string {
 function ReadinessDelta({ delta }: { delta: number | null }) {
   if (delta === null) {
     return (
-      <span className="rounded-full border border-cream/[0.07] bg-cream/[0.035] px-2.5 py-1 text-[10px] font-semibold text-cream/42">
+      <span className="dashboard-readiness-chip rounded-full border border-cream/[0.07] bg-cream/[0.035] px-2.5 py-1 text-[10px] font-semibold text-cream/42">
         Baseline
       </span>
     );
@@ -218,7 +218,7 @@ function ReadinessDelta({ delta }: { delta: number | null }) {
 
   if (delta === 0) {
     return (
-      <span className="rounded-full border border-cream/[0.07] bg-cream/[0.035] px-2.5 py-1 text-[10px] font-semibold text-cream/42">
+      <span className="dashboard-readiness-chip rounded-full border border-cream/[0.07] bg-cream/[0.035] px-2.5 py-1 text-[10px] font-semibold text-cream/42">
         No change
       </span>
     );

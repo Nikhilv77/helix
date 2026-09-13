@@ -574,7 +574,7 @@ export default function InterviewSetupClient({
     <main
       data-workspace-accent={workspaceAccent}
       style={workspaceAccentCssVariables(workspaceAccent) as CSSProperties}
-      className="workspace-black relative flex min-h-screen flex-col overflow-hidden bg-black text-cream"
+      className="interview-setup-page workspace-black relative flex min-h-screen flex-col overflow-hidden bg-black text-cream"
     >
       <div className="interview-ambient-glow pointer-events-none absolute left-1/2 top-[-12rem] h-[32rem] w-[44rem] max-w-[92vw] -translate-x-1/2 rounded-full bg-[var(--workspace-accent)] opacity-[0.055] blur-[160px]" />
 
@@ -738,7 +738,7 @@ export default function InterviewSetupClient({
                   type="button"
                   onClick={next}
                   disabled={!canContinue}
-                  className="ml-auto inline-flex min-h-12 items-center gap-2.5 rounded-xl border border-cream bg-cream px-6 text-sm font-semibold text-blueprint transition hover:-translate-y-0.5 hover:bg-white disabled:pointer-events-none disabled:opacity-30"
+                  className="interview-primary-action ml-auto inline-flex min-h-12 items-center gap-2.5 rounded-xl border border-cream bg-cream px-6 text-sm font-semibold text-blueprint transition hover:-translate-y-0.5 hover:bg-white disabled:pointer-events-none disabled:opacity-30"
                 >
                   {onLastStep ? "Start interview" : "Continue"}
                   <ArrowRight size={16} aria-hidden="true" />

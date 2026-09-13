@@ -35,7 +35,7 @@ export function DsaProblemPanel({ question }: { question: DsaQuestion }) {
       <div
         role="tablist"
         aria-label="Question reference"
-        className="thin-scroll flex shrink-0 items-center gap-1 overflow-x-auto border-b border-white/[0.07] px-2 pt-2"
+        className="dsa-problem-tabs thin-scroll flex shrink-0 items-center gap-1 overflow-x-auto border-b border-white/[0.07] px-2 pt-2"
       >
         {TABS.map((item) => {
           const selected = item.id === tab;
@@ -47,7 +47,7 @@ export function DsaProblemPanel({ question }: { question: DsaQuestion }) {
               aria-selected={selected}
               onClick={() => setTab(item.id)}
               className={[
-                "relative h-10 shrink-0 rounded-t-lg px-3 text-[13px] font-semibold transition-colors",
+                "dsa-problem-tab relative h-10 shrink-0 rounded-t-lg px-3 text-[13px] font-semibold transition-colors",
                 selected ? "text-cream" : "text-cream/42 hover:bg-white/[0.035] hover:text-cream/72"
               ].join(" ")}
             >

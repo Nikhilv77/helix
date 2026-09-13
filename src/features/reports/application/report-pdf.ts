@@ -29,11 +29,11 @@ type PdfColor = readonly [number, number, number];
 
 const PAGE = { width: 595.28, height: 841.89, margin: 56, footer: 44 };
 const palette = {
-  graphite: [18, 19, 21] as PdfColor,
-  cream: [248, 245, 237] as PdfColor,
-  body: [218, 214, 205] as PdfColor,
-  muted: [171, 168, 160] as PdfColor,
-  rule: [61, 61, 60] as PdfColor
+  graphite: [255, 255, 255] as PdfColor,
+  cream: [17, 24, 39] as PdfColor,
+  body: [71, 85, 105] as PdfColor,
+  muted: [100, 116, 139] as PdfColor,
+  rule: [226, 232, 240] as PdfColor
 };
 
 const RALEWAY_REGULAR_URL = "https://fonts.gstatic.com/s/raleway/v37/1Ptxg8zYS_SKggPN4iEgvnHyvveLxVvaooCP.ttf";

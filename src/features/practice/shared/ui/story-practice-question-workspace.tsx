@@ -287,7 +287,7 @@ export function StoryPracticeQuestionWorkspace({
           <div
             role="tablist"
             aria-label={`${experience.label} question reference`}
-            className="thin-scroll flex shrink-0 items-center gap-1 overflow-x-auto border-b border-white/[0.07] px-2 pt-2"
+            className="story-practice-tabs thin-scroll flex shrink-0 items-center gap-1 overflow-x-auto border-b border-white/[0.07] px-2 pt-2"
           >
             {panelTabs.map((item) => {
               const selected = item.id === panelTab;
@@ -298,7 +298,7 @@ export function StoryPracticeQuestionWorkspace({
                   role="tab"
                   aria-selected={selected}
                   onClick={() => setPanelTab(item.id)}
-                  className={`relative h-10 shrink-0 rounded-t-lg px-3 text-[13px] font-semibold transition-colors ${selected ? "text-cream" : "text-cream/42 hover:bg-white/[0.035] hover:text-cream/72"}`}
+                  className={`story-practice-tab relative h-10 shrink-0 rounded-t-lg px-3 text-[13px] font-semibold transition-colors ${selected ? "text-cream" : "text-cream/42 hover:bg-white/[0.035] hover:text-cream/72"}`}
                 >
                   {item.label}
                   {item.id === "hints" ? (

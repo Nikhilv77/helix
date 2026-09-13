@@ -117,32 +117,34 @@ export function LevelStep({
 
               <span className="relative flex min-h-full items-center justify-between gap-6 pr-10 sm:pr-0">
                 <span className="min-w-0">
-                  <span className="block text-[13px] font-semibold text-cream/58">
+                  <span className="onboarding-level-label block text-[13px] font-semibold text-cream/58">
                     {option.label}
                   </span>
                   <TypingText
                     text={copy.word}
                     delay={baseDelay}
                     duration={560}
-                    className="mt-1.5 text-[2rem] font-bold leading-none text-cream sm:text-[2.45rem]"
+                    className="onboarding-level-title mt-1.5 text-[2rem] font-bold leading-none text-cream sm:text-[2.45rem]"
                   />
                   <TypingText
                     text={copy.line}
                     delay={baseDelay + 430}
                     duration={1250}
-                    className="mt-2.5 max-w-2xl text-base leading-[1.7] text-cream/72"
+                    className="onboarding-level-copy mt-2.5 max-w-2xl text-base leading-[1.7] text-cream/72"
                   />
                 </span>
 
                 <span className="hidden shrink-0 text-right sm:block">
-                  <span className="text-[13px] font-medium text-cream/52">{option.detail}</span>
+                  <span className="onboarding-level-detail text-[13px] font-medium text-cream/52">
+                    {option.detail}
+                  </span>
                 </span>
               </span>
 
               <span
                 aria-hidden="true"
                 className={[
-                  "absolute right-5 top-5 grid h-7 w-7 place-items-center rounded-full border transition",
+                  "onboarding-level-indicator absolute right-5 top-5 grid h-7 w-7 place-items-center rounded-full border transition",
                   active
                     ? "onboarding-accent-fill border-[#F26E01]/45 text-[#17181b]"
                     : "border-white/25"

@@ -15,3 +15,16 @@ export function isWorkspaceChromeRoute(pathname: string): boolean {
     pathname === "/manage"
   );
 }
+
+/**
+ * Full-screen interview rooms intentionally hide the persistent navigation,
+ * but they still belong to the signed-in workspace. Keeping their canvas here
+ * avoids exposing the public dark document background during a route change.
+ */
+export function isWorkspaceCanvasRoute(pathname: string): boolean {
+  return (
+    isWorkspaceChromeRoute(pathname) ||
+    pathname === "/interview" ||
+    pathname.startsWith("/interview/")
+  );
+}

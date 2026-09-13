@@ -38,8 +38,8 @@ export function StoryPracticeArtifact({ artifact }: { artifact: StoryPracticeArt
           {humanize(artifact.kind)}
         </span>
       </div>
-      <div className="overflow-hidden rounded-xl border border-white/[0.085] bg-[#0b0d10] shadow-[0_16px_45px_rgba(0,0,0,0.2)]">
-        <div className="flex h-10 items-center gap-2 border-b border-white/[0.065] bg-[#15181d] px-3.5">
+      <div className="story-practice-artifact overflow-hidden rounded-xl border border-white/[0.085] bg-[#0b0d10] shadow-[0_16px_45px_rgba(0,0,0,0.2)]">
+        <div className="story-practice-artifact-header flex h-10 items-center gap-2 border-b border-white/[0.065] bg-[#15181d] px-3.5">
           {presentation.editor ? (
             <Code2 size={12} aria-hidden="true" className="text-[var(--workspace-accent)]" />
           ) : (

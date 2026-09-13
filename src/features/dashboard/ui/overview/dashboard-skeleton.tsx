@@ -8,7 +8,7 @@ function Line({ className = "" }: { className?: string }) {
 export function DashboardSkeleton() {
   return (
     <div
-      className="min-h-screen w-full min-w-0 overflow-hidden bg-black"
+      className="dashboard-skeleton min-h-screen w-full min-w-0 overflow-hidden bg-black"
       aria-busy="true"
       aria-label="Loading home"
     >

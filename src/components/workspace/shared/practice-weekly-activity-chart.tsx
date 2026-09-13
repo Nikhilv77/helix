@@ -46,9 +46,9 @@ export function PracticeWeeklyActivityChart({
               tabIndex={0}
               aria-describedby={tooltipId}
             >
-              <div className="flex h-32 items-end overflow-hidden rounded-[1.45rem] bg-white/[0.07]">
+              <div className="practice-weekly-activity-bar flex h-32 items-end overflow-hidden rounded-[1.45rem] bg-white/[0.07]">
                 <span
-                  className="w-full rounded-b-[1.45rem] rounded-t-[0.7rem] bg-[var(--workspace-accent)] transition-[height] duration-500 ease-out"
+                  className={`w-full rounded-b-[1.45rem] rounded-t-[0.7rem] bg-[var(--workspace-accent)] transition-[height] duration-500 ease-out${day.solved > 0 ? " practice-weekly-activity-fill" : ""}`}
                   style={{ height: `${Math.min(100, (day.solved / dailyTarget) * 100)}%` }}
                 />
               </div>

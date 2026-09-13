@@ -1231,7 +1231,7 @@ export function VoiceInterviewClient({
     <VoiceShell workspaceAccent={workspaceAccent} wide>
       <audio ref={audioRef} autoPlay />
 
-      <header className="interview-live-glass mb-3 flex shrink-0 flex-col gap-2 rounded-2xl border border-white/[0.08] bg-[rgba(25,26,29,0.58)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:min-h-14 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
+      <header className="interview-live-header interview-live-glass mb-3 flex shrink-0 flex-col gap-2 rounded-2xl border border-white/[0.08] bg-[rgba(25,26,29,0.58)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:min-h-14 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
         <div className="thin-scroll w-full min-w-0 overflow-x-auto py-1 sm:flex-1">
           <PathRail
             phase={phase}
@@ -1271,7 +1271,7 @@ export function VoiceInterviewClient({
           </div>
 
           <span
-            className={`rounded-xl bg-black/20 px-3 py-2.5 font-mono text-sm tabular-nums ${
+            className={`interview-live-timer rounded-xl bg-black/20 px-3 py-2.5 font-mono text-sm tabular-nums ${
               overCap ? "text-[var(--workspace-accent)]" : "text-cream/72"
             }`}
           >
@@ -1785,7 +1785,7 @@ function DsaLiveWorkspace({
   }, []);
 
   return (
-    <div className="thin-scroll flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 xl:grid xl:grid-cols-[minmax(0,1fr)_19rem] xl:overflow-hidden xl:pb-0">
+    <div className="dsa-live-workspace thin-scroll flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 xl:grid xl:grid-cols-[minmax(0,1fr)_19rem] xl:overflow-hidden xl:pb-0">
       <div
         ref={splitWorkspaceRef}
         style={
@@ -1807,7 +1807,7 @@ function DsaLiveWorkspace({
           {question ? (
             <div className="px-5 pb-7 sm:px-7 sm:pb-8">
               <div
-                className={`interview-live-sticky sticky top-0 z-10 -mx-5 flex items-center justify-between gap-3 border-b ${INTERVIEW_PANEL_RULE} bg-[rgba(17,18,21,0.92)] px-5 py-4 text-sm backdrop-blur-2xl sm:-mx-7 sm:px-7`}
+                className={`dsa-live-question-header interview-live-sticky sticky top-0 z-10 -mx-5 flex items-center justify-between gap-3 border-b ${INTERVIEW_PANEL_RULE} bg-[rgba(17,18,21,0.92)] px-5 py-4 text-sm backdrop-blur-2xl sm:-mx-7 sm:px-7`}
               >
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--workspace-accent)] shadow-[0_0_10px_var(--workspace-accent)]" />
@@ -1855,7 +1855,7 @@ function DsaLiveWorkspace({
                     {question.examples.map((example, index) => (
                       <article
                         key={`${example.input}-${example.output}`}
-                        className="rounded-xl bg-white/[0.03] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:p-5"
+                        className="dsa-live-example rounded-xl bg-white/[0.03] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:p-5"
                       >
                         <div className="flex items-center gap-2.5">
                           <span
@@ -1867,13 +1867,13 @@ function DsaLiveWorkspace({
                         <dl className="mt-4 grid gap-3 text-sm leading-6">
                           <div className="grid gap-1.5 sm:grid-cols-[4.5rem_minmax(0,1fr)]">
                             <dt className="font-medium text-cream/42">Input</dt>
-                            <dd className="thin-scroll overflow-x-auto whitespace-pre rounded-lg bg-black/20 px-3 py-2 font-mono text-cream/72">
+                            <dd className="dsa-live-example-code thin-scroll overflow-x-auto whitespace-pre rounded-lg bg-black/20 px-3 py-2 font-mono text-cream/72">
                               {example.input}
                             </dd>
                           </div>
                           <div className="grid gap-1.5 sm:grid-cols-[4.5rem_minmax(0,1fr)]">
                             <dt className="font-medium text-cream/42">Output</dt>
-                            <dd className="thin-scroll overflow-x-auto whitespace-pre rounded-lg bg-black/20 px-3 py-2 font-mono text-cream/72">
+                            <dd className="dsa-live-example-code thin-scroll overflow-x-auto whitespace-pre rounded-lg bg-black/20 px-3 py-2 font-mono text-cream/72">
                               {example.output}
                             </dd>
                           </div>
@@ -1930,7 +1930,7 @@ function DsaLiveWorkspace({
               return Math.min(58, Math.max(28, current + change));
             });
           }}
-          className={`group relative hidden cursor-col-resize touch-none items-center justify-center overflow-hidden text-cream/24 outline-none transition-[opacity,color] duration-300 hover:text-[var(--workspace-accent)] focus-visible:text-[var(--workspace-accent)] xl:flex ${
+          className={`dsa-live-pane-divider group relative hidden cursor-col-resize touch-none items-center justify-center overflow-hidden text-cream/24 outline-none transition-[opacity,color] duration-300 hover:text-[var(--workspace-accent)] focus-visible:text-[var(--workspace-accent)] xl:flex ${
             expandedPane ? "xl:pointer-events-none xl:opacity-0" : "xl:opacity-100"
           }`}
           aria-label="Resize question and solution panes"
@@ -1955,7 +1955,7 @@ function DsaLiveWorkspace({
           }`}
         >
           <div
-            className={`flex min-h-16 shrink-0 flex-col items-stretch gap-3 border-b ${INTERVIEW_PANEL_RULE} px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5`}
+            className={`dsa-live-editor-header flex min-h-16 shrink-0 flex-col items-stretch gap-3 border-b ${INTERVIEW_PANEL_RULE} px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5`}
           >
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 text-base font-semibold text-cream">
@@ -1988,7 +1988,7 @@ function DsaLiveWorkspace({
                 id="dsa-language"
                 value={language}
                 onChange={(event) => onLanguageChange(event.target.value as DsaLanguage)}
-                className="h-10 min-w-0 rounded-xl border-0 bg-white/[0.045] px-3 text-sm text-cream/75 outline-none ring-1 ring-inset ring-white/[0.045] transition focus:bg-white/[0.07] focus:ring-white/[0.11] sm:min-w-32"
+                className="dsa-live-language-picker h-10 min-w-0 rounded-xl border-0 bg-white/[0.045] px-3 text-sm text-cream/75 outline-none ring-1 ring-inset ring-white/[0.045] transition focus:bg-white/[0.07] focus:ring-white/[0.11] sm:min-w-32"
               >
                 <option value="javascript">JavaScript</option>
                 <option value="python">Python</option>
@@ -2010,7 +2010,7 @@ function DsaLiveWorkspace({
               </button>
             </div>
           </div>
-          <div className="min-h-64 flex-1 overflow-hidden bg-[#0b0d10]">
+          <div className="dsa-live-editor-canvas min-h-64 flex-1 overflow-hidden bg-[#0b0d10]">
             <DsaCodeEditor
               language={language}
               value={draft}
@@ -2023,7 +2023,7 @@ function DsaLiveWorkspace({
             result={runResult}
             running={running}
           />
-          <div className={`shrink-0 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 p-4 sm:p-5`}>
+          <div className={`dsa-live-editor-composer shrink-0 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 p-4 sm:p-5`}>
             <label htmlFor="dsa-approach" className="text-sm font-semibold text-cream/82">
               Explain your approach to {teacher.name}
               <span className="ml-2 hidden font-normal text-cream/38 xl:inline">
@@ -2147,7 +2147,7 @@ function DsaOutputPanel({
 
   return (
     <section
-      className={`max-h-64 shrink-0 overflow-hidden border-t ${INTERVIEW_PANEL_RULE} bg-black/10`}
+      className={`dsa-live-output max-h-64 shrink-0 overflow-hidden border-t ${INTERVIEW_PANEL_RULE} bg-black/10`}
     >
       <div className="flex min-h-12 items-center justify-between gap-4 px-4 pb-2 pt-3.5">
         <div>
@@ -2187,7 +2187,7 @@ function DsaOutputPanel({
         ) : result?.tests.length ? (
           <div className="space-y-2">
             {result.tests.map((test) => (
-              <div key={test.index} className="rounded-xl bg-white/[0.03] p-3.5">
+              <div key={test.index} className="dsa-live-test-case rounded-xl bg-white/[0.03] p-3.5">
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-sm font-semibold text-cream/78">Case {test.index + 1}</span>
                   <span

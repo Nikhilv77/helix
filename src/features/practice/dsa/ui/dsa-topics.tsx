@@ -392,7 +392,7 @@ function ChapterBlock({
       </summary>
 
       <div className="dsa-chapter-body">
-        <div className="px-4 pb-3 sm:px-5 sm:pb-4">
+        <div className="dsa-chapter-stepper-wrap px-4 pb-5 pt-3 sm:px-5 sm:pb-6 sm:pt-4">
           <QuestionStepper
             questions={chapter.questions}
             statusBySlug={statusBySlug}
@@ -400,7 +400,7 @@ function ChapterBlock({
           />
         </div>
 
-        <ul className="grid gap-2.5 px-3 pb-3 sm:px-4 sm:pb-4 lg:grid-cols-2">
+        <ul className="grid gap-3 px-3 pb-4 sm:px-4 sm:pb-5 lg:grid-cols-2">
           {chapter.questions.map((question, questionIndex) => (
             <QuestionRow
               key={question.slug}
@@ -428,7 +428,7 @@ function QuestionStepper({
   const currentStepIndex = Math.min(completedQuestions, Math.max(questions.length - 1, 0));
 
   return (
-    <nav className="flex gap-1.5" aria-label="Jump to a question in this pattern">
+    <nav className="dsa-question-stepper flex gap-1.5" aria-label="Jump to a question in this pattern">
       {questions.map((question, index) => {
         const status = statusBySlug?.get(question.slug) ?? null;
         const isPassed = index < completedQuestions;
@@ -439,7 +439,7 @@ function QuestionStepper({
             href={`/dsa-questions/${question.slug}`}
             aria-label={`Question ${index + 1}: ${question.title}${isCurrent ? ", current progress step" : status === "COMPLETED" ? ", completed" : ""}`}
             aria-current={isCurrent ? "step" : undefined}
-            className="group/step relative min-w-0 flex-1 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17181b]"
+            className="dsa-question-step group/step relative min-w-0 flex-1 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17181b]"
           >
             {isCurrent ? (
               <span
@@ -449,22 +449,10 @@ function QuestionStepper({
             ) : null}
             <span
               className={[
-                "relative z-10 block h-1.5 w-full rounded-full transition duration-200 group-hover/step:-translate-y-0.5 group-hover/step:brightness-125",
+                "dsa-question-step-bar relative z-10 block h-1.5 w-full rounded-full transition duration-200 group-hover/step:-translate-y-0.5 group-hover/step:brightness-125",
                 stepTone(isPassed, isCurrent)
               ].join(" ")}
             />
-            <span className="pointer-events-none absolute bottom-[calc(100%+0.55rem)] left-1/2 z-30 hidden w-max max-w-56 -translate-x-1/2 rounded-lg bg-[#0e0f11] px-2.5 py-2 text-center text-[11px] leading-4 text-cream/72 opacity-0 shadow-[0_12px_30px_rgba(0,0,0,0.42)] transition group-hover/step:opacity-100 group-focus-visible/step:opacity-100 sm:block">
-              <strong className="block font-medium text-cream/92">
-                {index + 1} · {question.title}
-              </strong>
-              <span className="capitalize text-cream/45">
-                {isCurrent
-                  ? "Current progress"
-                  : status === "COMPLETED"
-                    ? "Completed"
-                    : question.difficulty}
-              </span>
-            </span>
           </Link>
         );
       })}
@@ -490,7 +478,7 @@ function QuestionRow({
     <li className="min-w-0">
       <Link
         href={`/dsa-questions/${question.slug}`}
-        className="group/question flex h-full min-h-[5rem] items-start gap-3.5 rounded-[1rem] bg-[#111214] p-4 transition duration-200 hover:-translate-y-0.5 hover:bg-[#141518] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
+        className="dsa-question-row group/question flex h-full min-h-[5rem] items-start gap-3.5 rounded-[1rem] bg-[#111214] p-4 transition duration-200 hover:-translate-y-0.5 hover:bg-[#141518] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]"
       >
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white/[0.05] text-[12px] font-semibold tabular-nums text-cream/50">
           {index + 1}

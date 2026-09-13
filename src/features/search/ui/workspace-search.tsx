@@ -133,7 +133,11 @@ export function WorkspaceSearch({ mobile = false }: { mobile?: boolean }) {
   return (
     <div
       ref={searchRef}
-      className={mobile ? "relative w-[min(14rem,calc(100vw-4.75rem))]" : "relative w-60"}
+      className={
+        mobile
+          ? "workspace-search relative w-[min(12rem,calc(100vw-10rem))] shrink-0"
+          : "workspace-search relative w-60"
+      }
     >
       <label className="relative block">
         <span className="sr-only">Search workspace</span>
@@ -160,7 +164,7 @@ export function WorkspaceSearch({ mobile = false }: { mobile?: boolean }) {
             results[activeIndex] ? `${resultsId}-${results[activeIndex].id}` : undefined
           }
           className={[
-            "w-full border border-white/[0.12] bg-[#17181b] pl-9 pr-3 text-cream outline-none placeholder:text-cream/38 transition hover:border-white/[0.18] hover:bg-[#1b1c20] focus:border-white/[0.12] focus:bg-[#17181b] focus:outline-none focus-visible:outline-none focus-visible:ring-0",
+            "workspace-search-input w-full border border-white/[0.12] bg-[#17181b] pl-9 pr-3 text-cream outline-none placeholder:text-cream/38 transition hover:border-white/[0.18] hover:bg-[#1b1c20] focus:border-white/[0.12] focus:bg-[#17181b] focus:outline-none focus-visible:outline-none focus-visible:ring-0",
             mobile ? "h-9 rounded-lg text-[0.8rem]" : "h-10 rounded-xl text-[0.84rem]"
           ].join(" ")}
         />
@@ -172,7 +176,7 @@ export function WorkspaceSearch({ mobile = false }: { mobile?: boolean }) {
           role="listbox"
           aria-label="Workspace search results"
           className={[
-            "thin-scroll absolute top-[calc(100%+0.55rem)] z-50 max-h-[min(31rem,calc(100vh-5rem))] overflow-y-auto rounded-2xl border border-white/[0.1] bg-[#17181b] p-2 shadow-[0_28px_72px_-34px_rgba(0,0,0,0.98)]",
+            "workspace-search-results thin-scroll absolute top-[calc(100%+0.55rem)] z-50 max-h-[min(31rem,calc(100vh-5rem))] overflow-y-auto rounded-2xl border border-white/[0.1] bg-[#17181b] p-2 shadow-[0_28px_72px_-34px_rgba(0,0,0,0.98)]",
             mobile ? "left-0 w-[min(22rem,calc(100vw-4.5rem))]" : "left-0 w-[26rem]"
           ].join(" ")}
         >

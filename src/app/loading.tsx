@@ -52,7 +52,7 @@ export default async function RootLoading() {
 
   if (manageRoute) {
     return (
-      <div className="blueprint relative min-h-[100svh]" aria-busy="true" aria-label="Loading">
+      <div className="app-root-loader blueprint relative min-h-[100svh]" aria-busy="true" aria-label="Loading">
         <div className="relative z-10">
           <ManageSkeleton />
         </div>
@@ -62,7 +62,7 @@ export default async function RootLoading() {
 
   if (profileRoute) {
     return (
-      <div className="blueprint relative min-h-[100svh]" aria-busy="true" aria-label="Loading">
+      <div className="app-root-loader blueprint relative min-h-[100svh]" aria-busy="true" aria-label="Loading">
         <div className="blueprint-glow" />
         <div className="relative z-10">
           <ProfileSkeleton />
@@ -73,7 +73,7 @@ export default async function RootLoading() {
 
   if (workspaceRoute) {
     return (
-      <div className="blueprint relative min-h-[100svh]" aria-busy="true" aria-label="Loading">
+      <div className="app-root-loader blueprint relative min-h-[100svh]" aria-busy="true" aria-label="Loading">
         <RouteProgress />
       </div>
     );
@@ -81,7 +81,7 @@ export default async function RootLoading() {
 
   return (
     <div
-      className="blueprint relative grid min-h-[100svh] place-items-center"
+      className="app-root-loader blueprint relative grid min-h-[100svh] place-items-center"
       aria-busy="true"
       aria-label="Loading"
     >

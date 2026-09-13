@@ -24,7 +24,7 @@ export function BlogIndexPage() {
 
   return (
     <div
-      className="blueprint marketing-theme min-h-screen overflow-x-clip"
+      className="blueprint marketing-blog marketing-theme min-h-screen overflow-x-clip"
       data-marketing-accent="orange"
     >
       <SiteNav
@@ -40,8 +40,7 @@ export function BlogIndexPage() {
       <main className="marketing-theme-section relative z-10 px-5 pb-24 pt-36 sm:px-10 sm:pb-28 sm:pt-40">
         <div className="mx-auto w-full max-w-[58rem]">
           <header className="text-center">
-            <p className="blueprint-label text-[color:var(--dm-accent-soft)]">Trailgrad notes</p>
-            <h1 className="marketing-page-title mt-5 text-cream">Clearer practice starts here.</h1>
+            <h1 className="marketing-page-title text-cream">Clearer practice starts here.</h1>
             <p className="marketing-page-lede mx-auto mt-5 max-w-lg text-cream/70 sm:mt-6">
               Short reads on resumes, interview answers, and the small fixes that make practice
               easier.

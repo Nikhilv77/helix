@@ -5,7 +5,7 @@ import { RotateCcw } from "lucide-react";
 
 export default function ArchitectureDesignError({ reset }: { reset: () => void }) {
   return (
-    <main className="mx-auto flex min-h-[72svh] w-full max-w-[86rem] items-center px-5 py-16 sm:px-8">
+    <main className="route-feedback mx-auto flex min-h-[72svh] w-full max-w-[86rem] items-center px-5 py-16 sm:px-8">
       <section role="alert" className="max-w-xl">
         <h1 className="font-display text-[clamp(2rem,5vw,3.2rem)] font-semibold leading-[1.04] tracking-[-0.04em] text-cream">
           This design scenario could not be loaded.

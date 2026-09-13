@@ -192,7 +192,7 @@ export function ResumeStep({
           >
             {file ? (
               <>
-                <span className="upload-float text-cream/88 drop-shadow-[0_18px_32px_rgba(3,10,31,0.25)]">
+                <span className="resume-upload-icon upload-float text-cream/88 drop-shadow-[0_18px_32px_rgba(3,10,31,0.25)]">
                   <FileCheck2 size={54} strokeWidth={1.45} />
                 </span>
                 <TypingText
@@ -201,11 +201,11 @@ export function ResumeStep({
                   duration={760}
                   title={file.name}
                   className={[
-                    "max-w-[18rem] font-bold text-cream sm:max-w-xl",
+                    "resume-upload-file-name max-w-[18rem] font-bold text-cream sm:max-w-xl",
                     compact ? "mt-4 text-xl sm:mt-6 sm:text-[2rem]" : "mt-6 text-2xl sm:text-[2rem]"
                   ].join(" ")}
                 />
-                <p className="blueprint-label mt-2 text-cream/48">
+                <p className="resume-upload-meta blueprint-label mt-2 text-cream/48">
                   {formatBytes(file.size)} · ready to verify
                 </p>
                 <button
@@ -213,14 +213,14 @@ export function ResumeStep({
                   onClick={() => {
                     onChooseAnother();
                   }}
-                  className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-lg border border-cream/20 px-3.5 text-[0.9375rem] font-medium text-cream/62 transition hover:bg-cream/[0.08] hover:text-cream disabled:cursor-not-allowed disabled:opacity-45"
+                  className="resume-upload-secondary mt-5 inline-flex min-h-10 items-center gap-2 rounded-lg border border-cream/20 px-3.5 text-[0.9375rem] font-medium text-cream/62 transition hover:bg-cream/[0.08] hover:text-cream disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   <X size={14} /> Choose another
                 </button>
               </>
             ) : (
               <>
-                <span className="upload-float text-cream/88 drop-shadow-[0_18px_32px_rgba(3,10,31,0.25)]">
+                <span className="resume-upload-icon upload-float text-cream/88 drop-shadow-[0_18px_32px_rgba(3,10,31,0.25)]">
                   <FileUp
                     size={56}
                     strokeWidth={1.45}
@@ -232,7 +232,7 @@ export function ResumeStep({
                   delay={620}
                   duration={880}
                   className={[
-                    "font-bold leading-none tracking-[-0.035em] text-cream",
+                    "resume-upload-title font-bold leading-none tracking-[-0.035em] text-cream",
                     compact
                       ? "mt-4 text-[clamp(1.65rem,8vw,2.15rem)] sm:mt-6 sm:text-[2.35rem]"
                       : "mt-6 text-[2rem] sm:text-[2.45rem]"
@@ -240,7 +240,7 @@ export function ResumeStep({
                 />
                 <p
                   className={[
-                    "max-w-md tracking-[-0.008em] text-cream/68",
+                    "resume-upload-copy max-w-md tracking-[-0.008em] text-cream/68",
                     compact
                       ? "mt-3 text-sm leading-6 sm:mt-4 sm:text-lg sm:leading-[1.7]"
                       : "mt-4 text-[1.0625rem] leading-[1.7] sm:text-lg"
@@ -253,7 +253,7 @@ export function ResumeStep({
                   disabled={uploading}
                   onClick={() => inputRef.current?.click()}
                   className={[
-                    "browse-nudge min-h-11 rounded-lg border border-cream/20 bg-cream/[0.035] px-5 text-sm font-bold text-cream transition hover:border-cream/35 hover:bg-cream/[0.09] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0 sm:min-h-12 sm:px-6 sm:text-base lg:hover:-translate-y-0.5",
+                    "resume-upload-browse browse-nudge min-h-11 rounded-lg border border-cream/20 bg-cream/[0.035] px-5 text-sm font-bold text-cream transition hover:border-cream/35 hover:bg-cream/[0.09] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0 sm:min-h-12 sm:px-6 sm:text-base lg:hover:-translate-y-0.5",
                     compact ? "mt-5 sm:mt-7" : "mt-7"
                   ].join(" ")}
                 >

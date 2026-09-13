@@ -237,8 +237,8 @@ export function DsaNoteDrawingCanvas({
   };
 
   return (
-    <div className="mt-4 overflow-hidden rounded-xl bg-[#0b0d10] ring-1 ring-inset ring-white/[0.065]">
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-white/[0.065] bg-white/[0.018] px-2.5 py-2">
+    <div className="dsa-notes-drawing mt-4 overflow-hidden rounded-xl bg-[#0b0d10] ring-1 ring-inset ring-white/[0.065]">
+      <div className="dsa-notes-toolbar flex flex-wrap items-center gap-1.5 border-b border-white/[0.065] bg-white/[0.018] px-2.5 py-2">
         <DrawingTool active={tool === "fine"} label="Fine" onClick={() => setTool("fine")}>
           <Pencil size={13} aria-hidden="true" />
         </DrawingTool>
@@ -319,7 +319,7 @@ export function DsaNoteDrawingCanvas({
         )}
       </div>
 
-      <div className="relative min-h-[38rem] bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:24px_24px] sm:min-h-[44rem]">
+      <div className="dsa-notes-grid relative min-h-[38rem] bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:24px_24px] sm:min-h-[44rem]">
         {strokes.length === 0 && !drawing ? (
           <div className="pointer-events-none absolute inset-0 grid place-items-center px-8 text-center">
             <div>
@@ -372,7 +372,7 @@ function DrawingTool({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-[11.5px] font-medium transition ${
+      className={`dsa-notes-tool inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-[11.5px] font-medium transition ${
         active
           ? "bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]"
           : "text-cream/44 hover:bg-white/[0.05] hover:text-cream"

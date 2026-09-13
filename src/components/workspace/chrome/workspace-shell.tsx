@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useLinkStatus } from "next/link";
 import { SignOutButton, useUser } from "@clerk/nextjs";
@@ -25,6 +25,7 @@ import {
   X
 } from "lucide-react";
 import { ProfileAvatar } from "@/features/profile/ui/profile-avatar";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { HelpRequestToast } from "@/features/peer-help/ui/help-request-toast";
 import { ActivePeerHelpToast } from "@/features/peer-help/ui/active-peer-help-toast";
 import { CurrentPeerHelpPrompt } from "@/features/peer-help/ui/current-peer-help-prompt";
@@ -36,7 +37,7 @@ import {
   type WorkspaceAccent,
   WORKSPACE_ACCENT_CHANGE_EVENT
 } from "@/lib/workspace/accent";
-import { isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
+import { isWorkspaceCanvasRoute, isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
 import { useWorkspaceProfileImage } from "@/lib/workspace/profile-image";
 import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
 
@@ -104,6 +105,7 @@ export function WorkspaceShell({
   initialProfileImage?: string | null;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUser();
   const welcomeHome =
@@ -123,9 +125,9 @@ export function WorkspaceShell({
   }, []);
 
   useEffect(() => {
-    document.body.classList.toggle("workspace", showChrome);
+    document.body.classList.toggle("workspace", Boolean(pathname && isWorkspaceCanvasRoute(pathname)));
     return () => document.body.classList.remove("workspace");
-  }, [showChrome]);
+  }, [pathname]);
 
   useEffect(() => {
     if (!showChrome) return;
@@ -161,6 +163,27 @@ export function WorkspaceShell({
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    // The App Router may restore an earlier public `/` payload from browser
+    // history while this signed-in shell stays mounted. Refresh only that
+    // restored route so Home is resolved again against the current profile.
+    const refreshRestoredHome = () => {
+      if (window.location.pathname !== "/") return;
+      window.requestAnimationFrame(() => router.refresh());
+    };
+
+    const refreshPersistedHome = (event: PageTransitionEvent) => {
+      if (event.persisted) refreshRestoredHome();
+    };
+
+    window.addEventListener("popstate", refreshRestoredHome);
+    window.addEventListener("pageshow", refreshPersistedHome);
+    return () => {
+      window.removeEventListener("popstate", refreshRestoredHome);
+      window.removeEventListener("pageshow", refreshPersistedHome);
+    };
+  }, [router]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -208,7 +231,7 @@ export function WorkspaceShell({
           //
           // No bg override: `.blueprint` owns the shared product canvas. The
           // grid and rails below keep the signed-in shell visually connected.
-          "blueprint workspace-black relative min-h-screen overflow-x-clip transition-[padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          "blueprint workspace-black workspace-shell relative min-h-screen overflow-x-clip transition-[padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
           collapsed ? "md:pl-[6rem]" : "md:pl-[16rem]"
         ].join(" ")}
       >
@@ -229,7 +252,7 @@ export function WorkspaceShell({
             type="button"
             aria-label="Close navigation"
             onClick={() => setMenuOpen(false)}
-            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
+            className="workspace-menu-backdrop fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
           />
         ) : null}
 
@@ -239,7 +262,7 @@ export function WorkspaceShell({
             // Rail + panel, the way dense product consoles are built: a narrow
             // always-visible icon column, and a wider labelled panel that is what
             // actually collapses.
-            "fixed inset-y-0 left-0 z-50 flex w-[min(15rem,calc(100vw-1rem))] border-r border-white/[0.07] bg-[#111214] shadow-[18px_0_50px_-38px_rgba(0,0,0,0.9)] transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:inset-y-3 md:left-3 md:rounded-2xl md:border",
+            "workspace-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(15rem,calc(100vw-1rem))] border-r border-white/[0.07] bg-[#111214] shadow-[18px_0_50px_-38px_rgba(0,0,0,0.9)] transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:inset-y-3 md:left-3 md:rounded-2xl md:border",
             menuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
             collapsed ? "md:w-[5rem]" : "md:w-[15rem]"
           ].join(" ")}
@@ -249,7 +272,7 @@ export function WorkspaceShell({
             className={[
               // Expanded, the rail is the darker of two columns. Collapsed, it is
               // the whole sidebar, so it uses the panel surface consistently.
-              "flex w-16 shrink-0 flex-col items-center gap-1.5 rounded-l-2xl bg-[#0d0e10] py-3 text-cream shadow-[inset_-1px_0_0_rgba(241,234,216,0.07)] transition-colors duration-300",
+              "workspace-icon-rail flex w-16 shrink-0 flex-col items-center gap-1.5 rounded-l-2xl bg-[#0d0e10] py-3 text-cream shadow-[inset_-1px_0_0_rgba(241,234,216,0.07)] transition-colors duration-300",
               collapsed ? "md:w-20 md:gap-2 md:rounded-2xl md:py-4" : ""
             ].join(" ")}
           >
@@ -326,7 +349,7 @@ export function WorkspaceShell({
           {/* Labelled panel — this is what collapses away. */}
           <div
             className={[
-              "flex min-w-0 flex-1 flex-col overflow-x-hidden rounded-r-2xl bg-[#151619] px-3.5 pb-20 pt-3.5 md:py-3.5",
+              "workspace-nav-panel flex min-w-0 flex-1 flex-col overflow-x-hidden rounded-r-2xl bg-[#151619] px-3.5 pb-20 pt-3.5 md:py-3.5",
               collapsed ? "md:hidden" : ""
             ].join(" ")}
           >
@@ -397,11 +420,11 @@ export function WorkspaceShell({
 
             <UpgradeCard onNavigate={() => setMenuOpen(false)} />
 
-            <div className="mt-3 hidden shrink-0 items-center rounded-xl bg-black/15 px-3 py-3 md:flex">
+            <div className="workspace-profile-summary mt-3 hidden shrink-0 items-center rounded-xl bg-black/15 px-3 py-3 md:flex">
               <Link
                 href="/profile"
                 onClick={() => setMenuOpen(false)}
-                className="group min-w-0 flex-1 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+                className="group -mx-3 -my-3 block min-w-0 rounded-xl px-3 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
               >
                 <span className="block truncate text-[0.92rem] font-medium text-cream/88 transition-colors group-hover:text-cream">
                   {userName || "Your account"}
@@ -413,7 +436,7 @@ export function WorkspaceShell({
             </div>
           </div>
 
-          <div className="absolute inset-x-0 bottom-0 flex h-16 items-center gap-2 border-t border-white/[0.07] bg-[#151619] px-3 md:hidden">
+          <div className="workspace-mobile-bottom absolute inset-x-0 bottom-0 flex h-16 items-center gap-2 border-t border-white/[0.07] bg-[#151619] px-3 md:hidden">
             <AvatarMenu
               profileImage={profileImage}
               name={userName}
@@ -444,28 +467,32 @@ export function WorkspaceShell({
 
         <div
           className={[
-            "fixed right-0 top-0 z-30 hidden h-[4.25rem] items-start justify-between bg-black px-5 pt-3 transition-[left] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:flex lg:px-7",
+            "workspace-topbar fixed right-0 top-0 z-30 hidden h-[4.25rem] items-start justify-between bg-black px-5 pt-3 transition-[left] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:flex lg:px-7",
             collapsed ? "left-[7rem]" : "left-[17rem]"
           ].join(" ")}
         >
           <WorkspaceSearch />
           <div className="flex items-center gap-1.5">
+            <ThemeToggle className="workspace-theme-toggle" size={17} />
             <NotificationInbox />
             <AvatarMenu profileImage={profileImage} name={userName} size="small" />
           </div>
         </div>
 
         {/* Stays put while the page scrolls, so the drawer is always one tap away. */}
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-white/[0.07] bg-[#101113]/92 px-3 shadow-[0_12px_30px_-24px_rgba(0,0,0,0.9)] backdrop-blur-xl md:hidden">
+        <header className="workspace-mobile-topbar sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-white/[0.07] bg-[#101113]/92 px-3 shadow-[0_12px_30px_-24px_rgba(0,0,0,0.9)] backdrop-blur-xl md:hidden">
           <WorkspaceSearch mobile />
-          <button
-            type="button"
-            aria-label="Open navigation"
-            onClick={() => setMenuOpen(true)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-cream/80 outline-none transition-colors hover:bg-white/[0.06] hover:text-cream focus-visible:ring-2 focus-visible:ring-[#F26E01]/45"
-          >
-            <Menu size={25} strokeWidth={1.7} aria-hidden="true" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <ThemeToggle className="workspace-theme-toggle h-10 w-10 rounded-lg" size={18} />
+            <button
+              type="button"
+              aria-label="Open navigation"
+              onClick={() => setMenuOpen(true)}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-cream/80 outline-none transition-colors hover:bg-white/[0.06] hover:text-cream focus-visible:ring-2 focus-visible:ring-[#F26E01]/45"
+            >
+              <Menu size={25} strokeWidth={1.7} aria-hidden="true" />
+            </button>
+          </div>
         </header>
 
         {/* The workspace surface: a panel floating on the darker page, matching
@@ -536,7 +563,7 @@ function AvatarMenu({
       {open ? (
         <div
           className={[
-            "account-menu-pop absolute z-[60] w-44 overflow-hidden rounded-lg border border-white/[0.14] bg-[#1b1d20] p-1.5 text-cream shadow-[0_24px_58px_-30px_rgba(0,0,0,0.96)]",
+            "account-menu-pop workspace-account-menu absolute z-[60] w-44 overflow-hidden rounded-lg border border-white/[0.14] bg-[#1b1d20] p-1.5 text-cream shadow-[0_24px_58px_-30px_rgba(0,0,0,0.96)]",
             placement === "sidebar"
               ? "bottom-[calc(100%+0.6rem)] left-0"
               : "right-0 top-[calc(100%+0.6rem)]"

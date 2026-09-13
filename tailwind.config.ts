@@ -1,16 +1,17 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        ink: "#f6f7fb",
-        muted: "#98a2b8",
-        panel: "rgba(17, 19, 29, 0.82)",
-        line: "rgba(148, 163, 184, 0.18)",
-        brand: "#e8edf6",
-        accent: "#c9d3df",
+        ink: "rgb(var(--color-ink-rgb, 246 247 251) / <alpha-value>)",
+        muted: "rgb(var(--color-muted-rgb, 152 162 184) / <alpha-value>)",
+        panel: "var(--panel, rgba(17, 19, 29, 0.82))",
+        line: "var(--line, rgba(148, 163, 184, 0.18))",
+        brand: "rgb(var(--color-brand-rgb, 232 237 246) / <alpha-value>)",
+        accent: "rgb(var(--color-accent-rgb, 201 211 223) / <alpha-value>)",
         blueprint: {
           DEFAULT: "#3657b4",
           deep: "#27469a",
@@ -18,9 +19,9 @@ const config: Config = {
           light: "#4a6ac4"
         },
         cream: {
-          DEFAULT: "#f1ead8",
-          soft: "#f7f2e5",
-          dim: "#bcb7a8"
+          DEFAULT: "rgb(var(--color-cream-rgb, 241 234 216) / <alpha-value>)",
+          soft: "rgb(var(--color-cream-soft-rgb, 247 242 229) / <alpha-value>)",
+          dim: "rgb(var(--color-cream-dim-rgb, 188 183 168) / <alpha-value>)"
         },
         note: {
           white: "#fcfaf4",

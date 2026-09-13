@@ -91,12 +91,12 @@ describe("ArchitectureDesignPracticePage", () => {
     expect(screen.getByTestId("scenario")).toHaveAttribute("data-total", "2");
   });
 
-  it("uses the owner-safe not-found boundary for foreign history IDs", async () => {
+  it("returns to Architecture & Design for foreign history IDs", async () => {
     mocks.historyRead.mockRejectedValue(
       new NotFoundErrorException("ARCHITECTURE_DESIGN_BLOCK_NOT_FOUND", "not found")
     );
     await expect(
       ArchitectureDesignPracticePage({ searchParams: Promise.resolve({ block: "foreign" }) })
-    ).rejects.toThrow("NEXT_NOT_FOUND");
+    ).rejects.toThrow("NEXT_REDIRECT");
   });
 });

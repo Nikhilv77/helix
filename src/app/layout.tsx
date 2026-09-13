@@ -14,9 +14,10 @@ import { clerkAppearance } from "@/lib/auth/clerk-theme";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared/seo";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
-import { isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
+import { isWorkspaceCanvasRoute, isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { getProfileForRequest } from "@/features/profile/server/profile-query";
+import { ThemeProvider, ThemeScript } from "@/lib/theme/theme-context";
 import "./globals.css";
 
 const googleSiteVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
@@ -151,6 +152,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const pathname = requestHeaders.get("x-trailgrad-pathname") ?? "";
   const search = requestHeaders.get("x-trailgrad-search") ?? "";
   const workspaceRoute = isWorkspaceChromeRoute(pathname);
+  const workspaceCanvasRoute = isWorkspaceCanvasRoute(pathname);
   const welcomeHome =
     pathname === "/" &&
     welcomePersonaFromQuery(new URLSearchParams(search).get("welcome")) !== null;
@@ -180,7 +182,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   }
 
   const app = (
-    <>
+    <ThemeProvider defaultTheme="dark">
       <ScrollRestoration />
       {userId ? (
         <WorkspaceTeacherProvider teacherId={initialTeacherId}>
@@ -197,14 +199,17 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <main>{children}</main>
         </>
       )}
-    </>
+    </ThemeProvider>
   );
 
   return (
-    <html lang="en" className={fontVariables}>
+    <html lang="en" className={fontVariables} suppressHydrationWarning>
+      <head>
+        <ThemeScript />
+      </head>
       {/* Decided on the server alongside the shell itself so workspace-specific
           global behavior is present on the first paint. */}
-      <body className={userId && workspaceRoute ? "workspace" : undefined}>
+      <body className={userId && workspaceCanvasRoute ? "workspace" : undefined}>
         {clerkPublishableKey ? (
           <ClerkProvider appearance={clerkAppearance}>{app}</ClerkProvider>
         ) : (

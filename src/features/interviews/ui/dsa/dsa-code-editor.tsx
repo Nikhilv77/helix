@@ -1,7 +1,7 @@
 "use client";
 
 import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type DsaEditorLanguage = "python" | "javascript" | "cpp" | "java";
 
@@ -74,6 +74,44 @@ const registerTrailgradTheme: BeforeMount = (monaco) => {
       "scrollbarSlider.activeBackground": "#A0A8B85C"
     }
   });
+  monaco.editor.defineTheme("trailgrad-modern-light", {
+    base: "vs",
+    inherit: true,
+    rules: [
+      { token: "comment", foreground: "64748B", fontStyle: "italic" },
+      { token: "keyword", foreground: "7C3AED" },
+      { token: "keyword.control", foreground: "7C3AED" },
+      { token: "string", foreground: "047857" },
+      { token: "number", foreground: "B45309" },
+      { token: "type", foreground: "0369A1" },
+      { token: "identifier.function", foreground: "1E3A8A" },
+      { token: "function", foreground: "1E3A8A" },
+      { token: "variable", foreground: "1F2937" }
+    ],
+    colors: {
+      "editor.background": "#FFFFFF",
+      "editor.foreground": "#1F2937",
+      "editorLineNumber.foreground": "#94A3B8",
+      "editorLineNumber.activeForeground": "#475569",
+      "editorCursor.foreground": "#7C3AED",
+      "editor.selectionBackground": "#DDD6FE99",
+      "editor.lineHighlightBackground": "#F8FAFC",
+      "editorIndentGuide.background1": "#E2E8F0",
+      "editorIndentGuide.activeBackground1": "#CBD5E1",
+      "editorGutter.background": "#FFFFFF",
+      "editorWidget.background": "#FFFFFF",
+      "editorWidget.border": "#CBD5E1",
+      "editorHoverWidget.background": "#FFFFFF",
+      "editorHoverWidget.border": "#CBD5E1",
+      "editorSuggestWidget.background": "#FFFFFF",
+      "editorSuggestWidget.border": "#CBD5E1",
+      "editorSuggestWidget.selectedBackground": "#F1F5F9",
+      "input.background": "#FFFFFF",
+      "input.border": "#CBD5E1",
+      "dropdown.background": "#FFFFFF",
+      "dropdown.border": "#CBD5E1"
+    }
+  });
 };
 
 export function DsaCodeEditor({
@@ -98,6 +136,21 @@ export function DsaCodeEditor({
   ariaLabel?: string;
 }) {
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const monacoRef = useRef<Parameters<OnMount>[1] | null>(null);
+  const [lightTheme, setLightTheme] = useState(false);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const syncTheme = () => setLightTheme(root.classList.contains("light"));
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ["class", "data-theme"] });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    monacoRef.current?.editor.setTheme(lightTheme ? "trailgrad-modern-light" : "trailgrad-modern");
+  }, [lightTheme]);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -108,7 +161,12 @@ export function DsaCodeEditor({
 
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
-    monaco.editor.setTheme("trailgrad-modern");
+    monacoRef.current = monaco;
+    monaco.editor.setTheme(
+      document.documentElement.classList.contains("light")
+        ? "trailgrad-modern-light"
+        : "trailgrad-modern"
+    );
     if (!readOnly && onRun) {
       editor.addAction({
         id: "trailgrad-run-code",

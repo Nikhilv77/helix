@@ -35,6 +35,7 @@ export function isAutoplayBlocked(error: unknown): boolean {
 export function useMayaVoice() {
   const teacher = useWorkspaceTeacher();
   const audio = useRef<HTMLAudioElement | null>(null);
+  const preloadedAudio = useRef(new Map<string, HTMLAudioElement>());
   const progressFrame = useRef<number | null>(null);
   const progressUpdatedAt = useRef(0);
   const [state, setState] = useState<VoiceState>("idle");
@@ -65,6 +66,33 @@ export function useMayaVoice() {
     setState("idle");
   }, []);
 
+  const preload = useCallback(
+    (line: string, personaId?: string) => {
+      if (!line.trim()) return;
+      const resolvedPersonaId = personaId ?? teacher.id;
+      const url = voiceUrl(line, resolvedPersonaId);
+      if (preloadedAudio.current.has(url)) return;
+
+      const element = new Audio();
+      element.preload = "auto";
+      element.crossOrigin = "anonymous";
+      element.src = url;
+      element.load();
+      preloadedAudio.current.set(url, element);
+
+      if (preloadedAudio.current.size > 10) {
+        const oldestUrl = preloadedAudio.current.keys().next().value;
+        if (oldestUrl) {
+          const oldest = preloadedAudio.current.get(oldestUrl);
+          oldest?.pause();
+          oldest?.removeAttribute("src");
+          preloadedAudio.current.delete(oldestUrl);
+        }
+      }
+    },
+    [teacher.id]
+  );
+
   const speak = useCallback(
     async (
       line: string,
@@ -77,7 +105,20 @@ export function useMayaVoice() {
 
       try {
         const resolvedPersonaId = personaId ?? teacher.id;
-        const element = new Audio(voiceUrl(line, resolvedPersonaId));
+        const url = voiceUrl(line, resolvedPersonaId);
+        // Reuse the exact element that was warmed during the prior step. A
+        // separate Audio instance can trigger another streamed TTS request,
+        // which is why a preloaded transition still appeared to be loading.
+        const element = preloadedAudio.current.get(url) ?? new Audio();
+        preloadedAudio.current.delete(url);
+        if (!element.src) element.src = url;
+        element.pause();
+        try {
+          element.currentTime = 0;
+        } catch {
+          // A streaming response may not be seekable until its metadata is
+          // available; it is already positioned at its beginning in that case.
+        }
         const requestedRate = callbacks?.playbackRate;
         element.playbackRate =
           typeof requestedRate === "number" && Number.isFinite(requestedRate)
@@ -151,5 +192,16 @@ export function useMayaVoice() {
 
   useEffect(() => stop, [stop]);
 
-  return { state, progress, speak, stop, awaitingGesture, setAwaitingGesture } as const;
+  useEffect(
+    () => () => {
+      for (const element of preloadedAudio.current.values()) {
+        element.pause();
+        element.removeAttribute("src");
+      }
+      preloadedAudio.current.clear();
+    },
+    []
+  );
+
+  return { state, progress, speak, stop, preload, awaitingGesture, setAwaitingGesture } as const;
 }

@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { ChevronLeft, ChevronRight, Loader2, Volume2, VolumeX } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 
-import { ALL_PERSONAS, type InterviewerPersona } from "@/lib/avatars/personas";
+import { ONBOARDING_PERSONAS, type InterviewerPersona } from "@/lib/avatars/personas";
 import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
 import { PRIMARY_BUTTON } from "../flow/onboarding-data";
 
@@ -22,12 +22,12 @@ const AvatarStage = dynamic(
 
 const headingWords = ["Who", "should", "teach", "you?"];
 
-export const DEFAULT_TEACHER_ID = "sophia";
+export const DEFAULT_TEACHER_ID = "pooja";
 const FRAMING = "default" as const;
 
 /** Only the centre stage plus its two neighbours are ever mounted. */
 function neighbours(index: number) {
-  const count = ALL_PERSONAS.length;
+  const count = ONBOARDING_PERSONAS.length;
   return {
     left: (index - 1 + count) % count,
     right: (index + 1) % count
@@ -63,14 +63,18 @@ export function TeacherStep({
   onContinue: () => void;
 }) {
   const [index, setIndex] = useState(() => {
-    const found = ALL_PERSONAS.findIndex((persona) => persona.id === selected);
+    const found = ONBOARDING_PERSONAS.findIndex((persona) => persona.id === selected);
     if (found !== -1) return found;
-    const defaultIndex = ALL_PERSONAS.findIndex((persona) => persona.id === DEFAULT_TEACHER_ID);
+    const defaultIndex = ONBOARDING_PERSONAS.findIndex(
+      (persona) => persona.id === DEFAULT_TEACHER_ID
+    );
     return defaultIndex === -1 ? 0 : defaultIndex;
   });
   const { state, speak, stop, awaitingGesture } = useMayaVoice();
   const wide = useWideViewport();
   const introducedRef = useRef(false);
+  const initialPreviewStartedRef = useRef(false);
+  const shouldAutoplayInitialPreviewRef = useRef(selected === null);
   const pendingTeacherRef = useRef<{
     persona: InterviewerPersona;
     previousIndex: number;
@@ -78,7 +82,7 @@ export function TeacherStep({
   const [loadingTeacherId, setLoadingTeacherId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const focused = ALL_PERSONAS[index]!;
+  const focused = ONBOARDING_PERSONAS[index]!;
   const { left, right } = neighbours(index);
   const speaking = state === "speaking" || state === "loading";
   const voiceBroken = state === "unavailable";
@@ -101,9 +105,9 @@ export function TeacherStep({
   const go = useCallback(
     (nextIndex: number) => {
       if (loadingTeacher) return;
-      const count = ALL_PERSONAS.length;
+      const count = ONBOARDING_PERSONAS.length;
       const wrapped = (nextIndex + count) % count;
-      const persona = ALL_PERSONAS[wrapped]!;
+      const persona = ONBOARDING_PERSONAS[wrapped]!;
 
       // Cover the previous canvas with a stable loading state while the next
       // GLB decodes. There is intentionally no card motion during this handoff.
@@ -119,12 +123,27 @@ export function TeacherStep({
   const handleModelReady = useCallback(
     (modelUrl: string) => {
       const pending = pendingTeacherRef.current;
-      if (!pending || pending.persona.model !== modelUrl) return;
-      pendingTeacherRef.current = null;
-      setLoadingTeacherId(null);
-      greet(pending.persona);
+      if (pending?.persona.model === modelUrl) {
+        pendingTeacherRef.current = null;
+        setLoadingTeacherId(null);
+        greet(pending.persona);
+        return;
+      }
+
+      // Start the first preview only after its model is on canvas, so the
+      // mouth is ready for the opening line. Browsers that block autoplay keep
+      // the existing speaker control as the visible one-tap fallback.
+      if (
+        shouldAutoplayInitialPreviewRef.current &&
+        !initialPreviewStartedRef.current &&
+        focused.id === DEFAULT_TEACHER_ID &&
+        focused.model === modelUrl
+      ) {
+        initialPreviewStartedRef.current = true;
+        greet(focused);
+      }
     },
-    [greet]
+    [focused, greet]
   );
 
   const handleModelError = useCallback((modelUrl: string) => {
@@ -179,7 +198,7 @@ export function TeacherStep({
       <div className="relative mx-auto mt-7 flex w-full max-w-6xl items-center justify-center gap-3 sm:gap-6">
         {wide ? (
           <Peek
-            persona={ALL_PERSONAS[left]!}
+            persona={ONBOARDING_PERSONAS[left]!}
             side="left"
             disabled={loadingTeacher}
             onClick={() => go(index - 1)}
@@ -222,7 +241,7 @@ export function TeacherStep({
               onClick={() => (speaking ? stop() : greet(focused))}
               aria-label={speaking ? `Stop ${focused.name}` : `Hear ${focused.name}`}
               className={[
-                "absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.22)] transition duration-300 hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#F26E01] lg:backdrop-blur-xl",
+                "teacher-carousel-voice-control absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.22)] transition duration-300 hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#F26E01] lg:backdrop-blur-xl",
                 awaitingGesture
                   ? "animate-pulse bg-[#F26E01] text-white hover:bg-[#ff7a0a]"
                   : "bg-black/65 text-cream/75 hover:bg-black/75 hover:text-cream lg:bg-black/30 lg:hover:bg-black/50"
@@ -253,7 +272,7 @@ export function TeacherStep({
 
         {wide ? (
           <Peek
-            persona={ALL_PERSONAS[right]!}
+            persona={ONBOARDING_PERSONAS[right]!}
             side="right"
             disabled={loadingTeacher}
             onClick={() => go(index + 1)}
@@ -265,7 +284,7 @@ export function TeacherStep({
       </div>
 
       <div className="mx-auto mt-7 flex w-full max-w-5xl flex-col items-center gap-4">
-        <p className="min-h-5 text-[12.5px] text-cream/50" role="status">
+        <p className="teacher-carousel-status min-h-5 text-[12.5px] text-cream/50" role="status">
           {loadingTeacher
             ? `Loading ${focused.name}...`
             : loadError
@@ -333,7 +352,7 @@ function Peek({
         showStatus={false}
         feather={false}
       />
-      <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-[rgba(14,15,17,0.94)] to-transparent px-3 pb-3 pt-10 text-[13px] font-semibold text-cream/85">
+      <span className="teacher-carousel-peek-label pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-[rgba(14,15,17,0.94)] to-transparent px-3 pb-3 pt-10 text-[13px] font-semibold text-cream/85">
         {persona.name}
       </span>
     </button>
@@ -356,7 +375,7 @@ function Arrow({
       disabled={disabled}
       aria-label={side === "left" ? "Previous teacher" : "Next teacher"}
       className={[
-        "absolute top-[9.5rem] z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-[#17181b]/95 text-cream/70 shadow-[0_10px_30px_rgba(0,0,0,0.25)] transition duration-300 hover:scale-110 hover:bg-[#222328] hover:text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#F26E01] disabled:cursor-wait disabled:opacity-45 disabled:hover:scale-100 sm:top-[12rem] lg:bg-white/[0.055] lg:backdrop-blur-xl lg:hover:bg-white/[0.12]",
+        "teacher-carousel-arrow absolute top-[9.5rem] z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-[#17181b]/95 text-cream/70 shadow-[0_10px_30px_rgba(0,0,0,0.25)] transition duration-300 hover:scale-110 hover:bg-[#222328] hover:text-cream focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#F26E01] disabled:cursor-wait disabled:opacity-45 disabled:hover:scale-100 sm:top-[12rem] lg:bg-white/[0.055] lg:backdrop-blur-xl lg:hover:bg-white/[0.12]",
         side === "left" ? "left-0 sm:-left-2" : "right-0 sm:-right-2"
       ].join(" ")}
     >

@@ -47,7 +47,7 @@ export function InitialSkillProfile({
         const evidence = signal?.evidence === "baseline";
         const Icon = AREA_ICONS[area.id];
         return (
-          <div key={area.id} className="rounded-xl border border-cream/[0.13] bg-black/15 p-4">
+          <div key={area.id} className="maya-skill-profile-card rounded-xl border border-cream/[0.13] bg-black/15 p-4">
             <div className="flex items-center gap-3">
               <Icon className="size-5 shrink-0 text-[var(--workspace-accent)]" aria-hidden="true" />
               <p className="text-[18px] font-semibold leading-6 text-cream">{area.title}</p>
@@ -88,7 +88,7 @@ function TopicFamiliarityLine({
   const StatusIcon = presentation.icon;
   return (
     <div className="grid min-h-5 min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 text-[13px] leading-5">
-      <span className="min-w-0 break-words text-cream/76">{label}</span>
+      <span className="maya-skill-topic min-w-0 break-words text-cream/76">{label}</span>
       <span
         className={[
           "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap font-medium",

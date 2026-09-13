@@ -166,14 +166,14 @@ export function ProfileHero({
                 <button
                   type="button"
                   onClick={onEdit}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 text-xs font-semibold text-cream/72 transition hover:bg-white/[0.1] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/70"
+                  className="profile-action-button inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.1] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/70"
                 >
                   <Pencil size={14} /> Edit profile
                 </button>
                 <button
                   type="button"
                   onClick={onResumeUpdate}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 text-xs font-semibold text-cream/72 transition hover:bg-white/[0.1] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/70"
+                  className="profile-action-button inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.1] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/70"
                 >
                   <Upload size={14} /> {resume ? "Update resume" : "Upload resume"}
                 </button>

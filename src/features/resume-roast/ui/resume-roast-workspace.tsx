@@ -388,7 +388,7 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
   const flagged = flaggedResumeLines(resume, events);
 
   return (
-    <main className="h-[calc(100dvh-4.25rem)] w-full touch-pan-y overflow-y-scroll overscroll-y-auto bg-black px-3 py-2 text-cream md:overflow-hidden md:overscroll-none sm:px-5 sm:py-3">
+    <main className="resume-roast-page h-[calc(100dvh-4.25rem)] w-full touch-pan-y overflow-y-scroll overscroll-y-auto bg-black px-3 py-2 text-cream md:overflow-hidden md:overscroll-none sm:px-5 sm:py-3">
       <DocumentTitle title="Resume Roast" />
       <div className="mx-auto grid w-full max-w-[78rem] grid-rows-[30rem_minmax(32rem,calc(100dvh-5.25rem))] gap-3 md:h-full md:min-h-0 md:grid-cols-[minmax(20rem,0.86fr)_minmax(22rem,1.14fr)] md:grid-rows-1 md:gap-7 lg:gap-10">
         <ResumeStage resume={resume} flagged={flagged} speaking={voiceState === "speaking"} />
@@ -457,7 +457,7 @@ function ResumeStage({
   }, [items.length, visibleCount]);
 
   return (
-    <section className="flex min-h-0 flex-col items-center overflow-hidden">
+    <section className="resume-roast-resume-stage flex min-h-0 flex-col items-center overflow-hidden">
       <div className="relative z-0 w-full max-w-[28rem] shrink-0">
         <span
           aria-hidden
@@ -730,7 +730,7 @@ function JamesChat({
   }, [roastComplete, scrollToLatest, showingPrevious]);
 
   return (
-    <section className="progress-maya-bubble min-h-0 overflow-hidden rounded-2xl">
+    <section className="resume-roast-chat-stage progress-maya-bubble min-h-0 overflow-hidden rounded-2xl">
       <div
         ref={scrollRef}
         data-testid="resume-roast-chat-scroll"
@@ -946,7 +946,7 @@ function RoastCards({
           </h2>
         </div>
         {opening ? (
-          <p className="mb-4 text-base font-semibold leading-7 text-orange-100/90">
+          <p className="mb-4 text-base font-semibold leading-7 text-cream">
             {opening.openingRoast}
           </p>
         ) : null}
@@ -957,7 +957,7 @@ function RoastCards({
                 key={`${event.problem.evidenceAnchors.join("-")}-${index}`}
                 className="rounded-2xl border border-red-400/35 bg-white/[0.035] p-5"
               >
-                <p className="text-base font-bold leading-7 text-orange-100">
+                <p className="text-base font-bold leading-7 text-cream">
                   {event.problem.joke}
                 </p>
                 <p className="mt-2 text-sm leading-6 text-cream/78">{event.problem.issue}</p>
@@ -1052,7 +1052,7 @@ function RoastCards({
 function FixCard({ number, text, detail }: { number: number; text: string; detail?: string }) {
   return (
     <article className="flex gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-5">
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--workspace-accent-soft)] text-sm font-black text-orange-100">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--workspace-accent-soft)] text-sm font-black text-[var(--workspace-accent)]">
         {number}
       </span>
       <div>
@@ -1065,7 +1065,7 @@ function FixCard({ number, text, detail }: { number: number; text: string; detai
 
 function MissingResume() {
   return (
-    <main className="grid h-[calc(100dvh-4.25rem)] place-items-center bg-black px-4 text-cream">
+    <main className="resume-roast-page grid h-[calc(100dvh-4.25rem)] place-items-center bg-black px-4 text-cream">
       <DocumentTitle title="Resume Roast" />
       <div className="progress-maya-bubble w-full max-w-lg rounded-2xl p-7 text-center">
         <FileText className="mx-auto text-orange-200" />
@@ -1083,7 +1083,7 @@ function MissingResume() {
 
 function LoadFailure({ message, onRetry }: { message: string | null; onRetry: () => void }) {
   return (
-    <main className="grid h-[calc(100dvh-4.25rem)] place-items-center bg-black px-4 text-cream">
+    <main className="resume-roast-page grid h-[calc(100dvh-4.25rem)] place-items-center bg-black px-4 text-cream">
       <div className="progress-maya-bubble w-full max-w-lg rounded-2xl p-7 text-center">
         <p>{message}</p>
         <button
@@ -1103,14 +1103,14 @@ export function ResumeRoastLoading() {
     <main
       aria-busy="true"
       aria-label="Loading Resume Roast"
-      className="h-[calc(100dvh-4.25rem)] touch-pan-y overflow-y-scroll overscroll-y-auto bg-black px-5 py-3 md:overflow-hidden md:overscroll-none"
+      className="resume-roast-skeleton h-[calc(100dvh-4.25rem)] touch-pan-y overflow-y-scroll overscroll-y-auto bg-black px-5 py-3 md:overflow-hidden md:overscroll-none"
     >
       <div className="mx-auto grid max-w-[78rem] grid-rows-[30rem_minmax(32rem,calc(100dvh-5.25rem))] gap-3 md:h-full md:min-h-0 md:grid-cols-[0.86fr_1.14fr] md:grid-rows-1 md:gap-10">
-        <div className="flex min-h-0 flex-col items-center">
+        <div className="resume-roast-skeleton-stage flex min-h-0 flex-col items-center">
           <div className="h-[20rem] w-[20rem] animate-pulse rounded-full bg-white/[0.025]" />
           <div className="progress-maya-bubble -mt-10 min-h-0 w-full flex-1 rounded-2xl" />
         </div>
-        <div className="progress-maya-bubble animate-pulse rounded-2xl" />
+        <div className="resume-roast-skeleton-chat progress-maya-bubble animate-pulse rounded-2xl" />
       </div>
     </main>
   );

@@ -27,7 +27,7 @@ export function VoiceShell({
     <main
       data-workspace-accent={workspaceAccent}
       style={workspaceAccentCssVariables(workspaceAccent) as CSSProperties}
-      className="workspace-black relative h-[100dvh] overflow-hidden bg-black px-4 text-cream sm:px-8"
+      className="interview-workspace-page workspace-black relative h-[100dvh] overflow-hidden bg-black px-4 text-cream sm:px-8"
     >
       <span
         aria-hidden="true"

@@ -27,8 +27,7 @@ export function LegalPage({ document }: { document: LegalDocument }) {
       <main className="marketing-theme-section relative z-10 px-5 pb-24 pt-36 sm:px-10 sm:pb-28 sm:pt-40">
         <article className="mx-auto w-full max-w-[44rem]">
           <header>
-            <p className="blueprint-label text-[color:var(--dm-accent-soft)]">{document.eyebrow}</p>
-            <h1 className="marketing-page-title mt-5 text-cream">{document.title}</h1>
+            <h1 className="marketing-page-title text-cream">{document.title}</h1>
             <p className="marketing-page-lede mt-5 max-w-[40rem] text-cream/70 sm:mt-6">
               {document.introduction}
             </p>

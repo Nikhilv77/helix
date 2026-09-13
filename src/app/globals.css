@@ -18,6 +18,15 @@
   --muted: #98a2b8;
   --brand: #e8edf6;
   --accent: #c9d3df;
+
+  /* RGB channels for Tailwind opacity modifiers (dark mode default) */
+  --color-ink-rgb: 246 247 251;
+  --color-muted-rgb: 152 162 184;
+  --color-brand-rgb: 232 237 246;
+  --color-accent-rgb: 201 211 223;
+  --color-cream-rgb: 241 234 216;
+  --color-cream-soft-rgb: 247 242 229;
+  --color-cream-dim-rgb: 188 183 168;
 }
 
 * {
@@ -71,10 +80,25 @@ a {
   color: #f1ead8;
 }
 
+html.light .marketing-theme ::selection,
+html[data-theme="light"] .marketing-theme ::selection {
+  background: rgba(242, 110, 1, 0.2);
+  color: #0f172a;
+}
+
 input,
 textarea,
 select {
   color-scheme: dark;
+}
+
+html.light .marketing-theme input,
+html.light .marketing-theme textarea,
+html.light .marketing-theme select,
+html[data-theme="light"] .marketing-theme input,
+html[data-theme="light"] .marketing-theme textarea,
+html[data-theme="light"] .marketing-theme select {
+  color-scheme: light;
 }
 
 .trailgrad-auth-backdrop {
@@ -137,6 +161,110 @@ select {
 .trailgrad-auth-backdrop--plain::before,
 .trailgrad-auth-backdrop--plain::after {
   content: none;
+}
+
+/* Clerk is rendered in a portal, outside `.marketing-theme`, so its light
+   appearance follows the root theme directly. These named element hooks keep
+   the modal in the same quiet palette as the public marketing pages. */
+html.light .trailgrad-auth-root,
+html[data-theme="light"] .trailgrad-auth-root {
+  color-scheme: light;
+}
+
+html.light .trailgrad-auth-backdrop,
+html[data-theme="light"] .trailgrad-auth-backdrop {
+  background:
+    radial-gradient(circle at 18% 24%, rgba(242, 110, 1, 0.09), transparent 24rem),
+    radial-gradient(circle at 82% 78%, rgba(255, 208, 157, 0.16), transparent 26rem),
+    linear-gradient(180deg, #f7f8fa 0%, #f2f0ed 100%) !important;
+}
+
+html.light .trailgrad-auth-card-box,
+html[data-theme="light"] .trailgrad-auth-card-box {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+html.light .trailgrad-auth-card,
+html[data-theme="light"] .trailgrad-auth-card {
+  background: transparent !important;
+}
+
+html.light .trailgrad-auth-logo,
+html[data-theme="light"] .trailgrad-auth-logo {
+  filter: brightness(0);
+}
+
+html.light .trailgrad-auth-title,
+html.light .trailgrad-auth-label,
+html.light .trailgrad-auth-social-label,
+html[data-theme="light"] .trailgrad-auth-title,
+html[data-theme="light"] .trailgrad-auth-label,
+html[data-theme="light"] .trailgrad-auth-social-label {
+  color: #111827 !important;
+}
+
+html.light .trailgrad-auth-subtitle,
+html.light .trailgrad-auth-divider-text,
+html.light .trailgrad-auth-footer-text,
+html.light .trailgrad-auth-footer-pages-link,
+html[data-theme="light"] .trailgrad-auth-subtitle,
+html[data-theme="light"] .trailgrad-auth-divider-text,
+html[data-theme="light"] .trailgrad-auth-footer-text,
+html[data-theme="light"] .trailgrad-auth-footer-pages-link {
+  color: #64748b !important;
+}
+
+html.light .trailgrad-auth-social-button,
+html[data-theme="light"] .trailgrad-auth-social-button {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+}
+
+html.light .trailgrad-auth-social-button:hover,
+html[data-theme="light"] .trailgrad-auth-social-button:hover {
+  border-color: rgba(15, 23, 42, 0.2) !important;
+  background: #ffffff !important;
+}
+
+html.light .trailgrad-auth-divider,
+html[data-theme="light"] .trailgrad-auth-divider {
+  background: rgba(15, 23, 42, 0.12) !important;
+}
+
+html.light .trailgrad-auth-input,
+html[data-theme="light"] .trailgrad-auth-input {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  background: rgba(248, 250, 252, 0.92) !important;
+  color: #111827 !important;
+}
+
+html.light .trailgrad-auth-input::placeholder,
+html[data-theme="light"] .trailgrad-auth-input::placeholder {
+  color: #94a3b8 !important;
+}
+
+html.light .trailgrad-auth-input:focus,
+html[data-theme="light"] .trailgrad-auth-input:focus {
+  border-color: rgba(242, 110, 1, 0.5) !important;
+  background: #ffffff !important;
+}
+
+html.light .trailgrad-auth-primary-button,
+html[data-theme="light"] .trailgrad-auth-primary-button {
+  background: #111827 !important;
+  color: #ffffff !important;
+}
+
+html.light .trailgrad-auth-primary-button:hover,
+html[data-theme="light"] .trailgrad-auth-primary-button:hover {
+  background: #1e293b !important;
+}
+
+html.light .trailgrad-auth-close,
+html[data-theme="light"] .trailgrad-auth-close {
+  color: #64748b !important;
 }
 
 @keyframes float-in {
@@ -337,6 +465,336 @@ select {
     radial-gradient(42rem 28rem at 50% 0%, rgba(242, 110, 1, 0.032), transparent 72%), #080909;
 }
 
+html.light .onboarding-theme,
+html[data-theme="light"] .onboarding-theme {
+  color-scheme: light;
+  background:
+    radial-gradient(48rem 32rem at 50% 0%, rgba(242, 110, 1, 0.06), transparent 72%),
+    linear-gradient(180deg, #fafafc 0%, #f5f3f0 100%);
+  --color-ink-rgb: 15 23 42;
+  --color-muted-rgb: 100 116 139;
+  --color-brand-rgb: 15 23 42;
+  --color-accent-rgb: 51 65 85;
+  --color-cream-rgb: 19 21 27;
+  --color-cream-soft-rgb: 51 65 85;
+  --color-cream-dim-rgb: 100 116 139;
+}
+
+html.light .onboarding-theme .bg-white\/15,
+html[data-theme="light"] .onboarding-theme .bg-white\/15 {
+  background: rgba(15, 23, 42, 0.13);
+}
+
+html.light .onboarding-theme .onboarding-card-reveal,
+html[data-theme="light"] .onboarding-theme .onboarding-card-reveal {
+  border-color: transparent !important;
+  background: rgba(255, 255, 255, 0.78) !important;
+  box-shadow: none !important;
+}
+
+html.light .onboarding-theme button.onboarding-card-reveal[aria-pressed="true"],
+html[data-theme="light"] .onboarding-theme button.onboarding-card-reveal[aria-pressed="true"] {
+  border-color: transparent !important;
+  background: rgba(255, 247, 240, 0.96) !important;
+}
+
+/* Level cards use animated nested text, so set their light text colours on
+   named elements rather than relying on inherited Tailwind opacity utilities. */
+html.light .onboarding-theme .onboarding-level-label,
+html[data-theme="light"] .onboarding-theme .onboarding-level-label {
+  color: #bd5600;
+}
+
+html.light .onboarding-theme .onboarding-level-title,
+html[data-theme="light"] .onboarding-theme .onboarding-level-title {
+  color: #111827;
+}
+
+html.light .onboarding-theme .onboarding-level-copy,
+html[data-theme="light"] .onboarding-theme .onboarding-level-copy {
+  color: #475569;
+}
+
+html.light .onboarding-theme .onboarding-level-detail,
+html[data-theme="light"] .onboarding-theme .onboarding-level-detail {
+  color: #64748b;
+}
+
+html.light .onboarding-theme .onboarding-level-indicator,
+html[data-theme="light"] .onboarding-theme .onboarding-level-indicator {
+  border-color: rgba(15, 23, 42, 0.2);
+}
+
+html.light .onboarding-theme button.onboarding-card-reveal[aria-pressed="true"] .onboarding-level-indicator,
+html[data-theme="light"] .onboarding-theme button.onboarding-card-reveal[aria-pressed="true"] .onboarding-level-indicator {
+  border-color: rgba(242, 110, 1, 0.5);
+}
+
+html.light .onboarding-theme [data-resume-drop-panel],
+html[data-theme="light"] .onboarding-theme [data-resume-drop-panel] {
+  border-color: transparent !important;
+  background: rgba(255, 255, 255, 0.86) !important;
+  box-shadow: none !important;
+}
+
+html.light .onboarding-theme .resume-upload-icon,
+html[data-theme="light"] .onboarding-theme .resume-upload-icon {
+  color: #c65a00;
+  filter: none;
+}
+
+html.light .onboarding-theme .resume-upload-title,
+html.light .onboarding-theme .resume-upload-file-name,
+html[data-theme="light"] .onboarding-theme .resume-upload-title,
+html[data-theme="light"] .onboarding-theme .resume-upload-file-name {
+  color: #111827;
+}
+
+html.light .onboarding-theme .resume-upload-title,
+html[data-theme="light"] .onboarding-theme .resume-upload-title {
+  color: #334155;
+  font-weight: 600;
+  line-height: 1.12;
+}
+
+html.light .onboarding-theme .resume-upload-copy,
+html[data-theme="light"] .onboarding-theme .resume-upload-copy {
+  color: #475569;
+}
+
+html.light .onboarding-theme .resume-upload-meta,
+html[data-theme="light"] .onboarding-theme .resume-upload-meta {
+  color: #64748b;
+}
+
+html.light .onboarding-theme .resume-upload-browse,
+html[data-theme="light"] .onboarding-theme .resume-upload-browse {
+  border-color: transparent;
+  background: #111827;
+  color: #ffffff;
+}
+
+html.light .onboarding-theme .resume-upload-browse:hover,
+html[data-theme="light"] .onboarding-theme .resume-upload-browse:hover {
+  border-color: transparent;
+  background: #1e293b;
+}
+
+html.light .onboarding-theme .resume-upload-secondary,
+html[data-theme="light"] .onboarding-theme .resume-upload-secondary {
+  border-color: transparent;
+  background: rgba(15, 23, 42, 0.06);
+  color: #334155;
+}
+
+/* Resume review is a text-heavy sequence. Its dark shimmer used cream-on-black
+   gradients, so light mode needs its own slate and warm-accent text palette. */
+html.light .onboarding-theme .identity-text-shine,
+html[data-theme="light"] .onboarding-theme .identity-text-shine {
+  background-image: linear-gradient(105deg, #334155 0%, #111827 42%, #c65a00 56%, #111827 100%);
+}
+
+html.light .onboarding-theme .thinking-shimmer,
+html[data-theme="light"] .onboarding-theme .thinking-shimmer {
+  background-image: linear-gradient(100deg, #a64b00 0%, #c65a00 45%, #64748b 62%, #a64b00 100%);
+}
+
+html.light .onboarding-theme .resume-evidence-card,
+html.light .onboarding-theme .resume-identity-card,
+html[data-theme="light"] .onboarding-theme .resume-evidence-card,
+html[data-theme="light"] .onboarding-theme .resume-identity-card {
+  border-color: transparent !important;
+  background: rgba(255, 255, 255, 0.84) !important;
+  box-shadow: none !important;
+}
+
+html.light .onboarding-theme .resume-evidence-icon,
+html.light .onboarding-theme .resume-identity-icon,
+html.light .onboarding-theme .resume-readiness-icon,
+html[data-theme="light"] .onboarding-theme .resume-evidence-icon,
+html[data-theme="light"] .onboarding-theme .resume-identity-icon,
+html[data-theme="light"] .onboarding-theme .resume-readiness-icon {
+  color: #c65a00;
+}
+
+html.light .onboarding-theme .resume-evidence-count,
+html[data-theme="light"] .onboarding-theme .resume-evidence-count {
+  border-color: transparent;
+  background: rgba(242, 110, 1, 0.1);
+  color: #a64b00;
+}
+
+html.light .onboarding-theme .resume-evidence-label,
+html[data-theme="light"] .onboarding-theme .resume-evidence-label {
+  color: #bd5600;
+}
+
+html.light .onboarding-theme .resume-evidence-title,
+html.light .onboarding-theme .resume-identity-card-title,
+html[data-theme="light"] .onboarding-theme .resume-evidence-title,
+html[data-theme="light"] .onboarding-theme .resume-identity-card-title {
+  color: #111827;
+}
+
+html.light .onboarding-theme .resume-evidence-detail,
+html[data-theme="light"] .onboarding-theme .resume-evidence-detail {
+  color: #334155;
+}
+
+html.light .onboarding-theme .resume-evidence-note,
+html.light .onboarding-theme .resume-identity-card-meta,
+html[data-theme="light"] .onboarding-theme .resume-evidence-note,
+html[data-theme="light"] .onboarding-theme .resume-identity-card-meta {
+  color: #64748b;
+}
+
+html.light .onboarding-theme .resume-readiness-stage h1,
+html.light .onboarding-theme .resume-readiness-stage h2,
+html[data-theme="light"] .onboarding-theme .resume-readiness-stage h1,
+html[data-theme="light"] .onboarding-theme .resume-readiness-stage h2 {
+  color: #111827;
+}
+
+html.light .onboarding-theme .resume-readiness-skill,
+html[data-theme="light"] .onboarding-theme .resume-readiness-skill {
+  border-color: transparent;
+  background: rgba(242, 110, 1, 0.1);
+  color: #9f4800;
+}
+
+html.light .onboarding-theme .resume-readiness-focus,
+html[data-theme="light"] .onboarding-theme .resume-readiness-focus {
+  background: rgba(255, 255, 255, 0.74);
+  color: #334155;
+}
+
+html.light .onboarding-theme .wave-bar,
+html.light .onboarding-theme .identity-progress-line,
+html[data-theme="light"] .onboarding-theme .wave-bar,
+html[data-theme="light"] .onboarding-theme .identity-progress-line {
+  background-color: #f26e01;
+}
+
+html.light .onboarding-theme .teacher-carousel-scene,
+html[data-theme="light"] .onboarding-theme .teacher-carousel-scene {
+  border: 0;
+  /* The same composition as the public hero, flipped: warm accent enters
+     from the top and settles into clean paper below the teacher. */
+  background:
+    radial-gradient(50% 34% at 50% -4%, rgba(255, 178, 88, 0.82) 0%, rgba(255, 178, 88, 0) 72%),
+    radial-gradient(76% 56% at 50% -9%, rgba(242, 110, 1, 0.78) 0%, rgba(242, 110, 1, 0) 74%),
+    radial-gradient(104% 76% at 50% -15%, rgba(186, 58, 2, 0.48) 0%, rgba(186, 58, 2, 0) 76%),
+    linear-gradient(180deg, #fff4eb 0%, #fffaf6 52%, #fffefd 100%);
+  box-shadow: none;
+}
+
+html.light .onboarding-theme .teacher-carousel-orbit,
+html[data-theme="light"] .onboarding-theme .teacher-carousel-orbit {
+  background:
+    linear-gradient(135deg, rgba(255, 252, 245, 0.42), transparent 34%),
+    radial-gradient(ellipse at 50% -4%, rgba(242, 110, 1, 0.18), transparent 60%);
+}
+
+html.light .onboarding-theme .teacher-carousel-peek,
+html[data-theme="light"] .onboarding-theme .teacher-carousel-peek {
+  border: 0;
+  background:
+    radial-gradient(50% 34% at 50% -4%, rgba(255, 178, 88, 0.82) 0%, rgba(255, 178, 88, 0) 72%),
+    radial-gradient(76% 56% at 50% -9%, rgba(242, 110, 1, 0.78) 0%, rgba(242, 110, 1, 0) 74%),
+    radial-gradient(104% 76% at 50% -15%, rgba(186, 58, 2, 0.48) 0%, rgba(186, 58, 2, 0) 76%),
+    linear-gradient(180deg, #fff4eb 0%, #fffaf6 52%, #fffefd 100%);
+  box-shadow: none;
+}
+
+html.light .onboarding-theme .teacher-carousel-peek-label,
+html[data-theme="light"] .onboarding-theme .teacher-carousel-peek-label {
+  color: #ffffff;
+}
+
+html.light .onboarding-theme .teacher-carousel-copy > p:first-child,
+html[data-theme="light"] .onboarding-theme .teacher-carousel-copy > p:first-child {
+  color: #111827;
+}
+
+html.light .onboarding-theme .teacher-carousel-copy > p:nth-child(2),
+html[data-theme="light"] .onboarding-theme .teacher-carousel-copy > p:nth-child(2) {
+  color: #c45a00;
+}
+
+html.light .onboarding-theme .teacher-carousel-copy > p:nth-child(3),
+html[data-theme="light"] .onboarding-theme .teacher-carousel-copy > p:nth-child(3) {
+  color: #475569;
+}
+
+html.light .onboarding-theme .teacher-carousel-status,
+html[data-theme="light"] .onboarding-theme .teacher-carousel-status {
+  color: #64748b;
+}
+
+html.light .onboarding-theme .teacher-carousel-arrow,
+html[data-theme="light"] .onboarding-theme .teacher-carousel-arrow {
+  border: 0;
+  background: rgba(255, 255, 255, 0.94);
+  color: #111111;
+  box-shadow: 0 8px 20px rgba(154, 61, 0, 0.18);
+}
+
+html.light .onboarding-theme .teacher-carousel-arrow:hover,
+html[data-theme="light"] .onboarding-theme .teacher-carousel-arrow:hover {
+  background: #ffffff;
+  color: #111111;
+}
+
+html.light .onboarding-theme .teacher-carousel-voice-control,
+html[data-theme="light"] .onboarding-theme .teacher-carousel-voice-control {
+  border: 0;
+  background: rgba(255, 255, 255, 0.94);
+  color: #111111;
+  box-shadow: 0 8px 20px rgba(154, 61, 0, 0.18);
+}
+
+html.light .onboarding-theme .teacher-carousel-scene > [role="status"],
+html[data-theme="light"] .onboarding-theme .teacher-carousel-scene > [role="status"] {
+  background:
+    radial-gradient(50% 34% at 50% -4%, rgba(255, 178, 88, 0.82) 0%, rgba(255, 178, 88, 0) 72%),
+    radial-gradient(76% 56% at 50% -9%, rgba(242, 110, 1, 0.78) 0%, rgba(242, 110, 1, 0) 74%),
+    radial-gradient(104% 76% at 50% -15%, rgba(186, 58, 2, 0.48) 0%, rgba(186, 58, 2, 0) 76%),
+    linear-gradient(180deg, #fff4eb 0%, #fffaf6 52%, #fffefd 100%);
+}
+
+html.light .onboarding-theme .teacher-carousel-scene > [role="status"] > div,
+html[data-theme="light"] .onboarding-theme .teacher-carousel-scene > [role="status"] > div {
+  color: rgba(115, 43, 0, 0.78);
+}
+
+html.light .onboarding-theme .onboarding-primary-button,
+html[data-theme="light"] .onboarding-theme .onboarding-primary-button {
+  border-color: #111827;
+  background: #111827;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+html.light .onboarding-theme .onboarding-primary-button:hover,
+html[data-theme="light"] .onboarding-theme .onboarding-primary-button:hover {
+  border-color: #1e293b;
+  background: #1e293b;
+}
+
+html.light .onboarding-theme .onboarding-secondary-button,
+html[data-theme="light"] .onboarding-theme .onboarding-secondary-button {
+  border-color: rgba(15, 23, 42, 0.15);
+  background: transparent;
+  color: #334155;
+}
+
+html.light .onboarding-theme .onboarding-secondary-button:hover,
+html[data-theme="light"] .onboarding-theme .onboarding-secondary-button:hover {
+  border-color: rgba(15, 23, 42, 0.25);
+  background: rgba(15, 23, 42, 0.04);
+  color: #111827;
+}
+
 .public-glass {
   border: 1px solid rgba(245, 243, 239, 0.1);
   background: linear-gradient(145deg, rgba(28, 29, 33, 0.72), rgba(15, 16, 19, 0.58));
@@ -347,7 +805,11 @@ select {
 }
 
 .marketing-theme {
-  background: #030304;
+  background:
+    radial-gradient(72rem 44rem at 10% 28%, rgba(242, 110, 1, 0.045), transparent 72%),
+    radial-gradient(64rem 40rem at 90% 58%, rgba(255, 178, 88, 0.025), transparent 74%),
+    radial-gradient(62rem 38rem at 24% 84%, rgba(242, 110, 1, 0.035), transparent 72%),
+    linear-gradient(180deg, #030304 0%, #080706 100%);
 }
 
 .onboarding-accent-fill {
@@ -355,17 +817,16 @@ select {
   box-shadow: 0 0 10px rgba(242, 110, 1, 0.1);
 }
 
-/* Teacher picker: the avatar is the hero, so its surrounding surface is made
-   with soft luminance and atmosphere instead of a card-shaped outline. */
+/* Teacher picker: the dark canvas mirrors the light hero composition — amber
+   rises from the top and resolves into graphite, without a glass panel. */
 .teacher-carousel-scene {
   isolation: isolate;
   background:
-    radial-gradient(circle at 50% 24%, rgba(242, 110, 1, 0.13), transparent 38%),
-    linear-gradient(155deg, #25262d 0%, #17181d 48%, #101115 100%);
-  box-shadow:
-    0 45px 100px -48px rgba(0, 0, 0, 0.95),
-    0 16px 46px -32px rgba(242, 110, 1, 0.26),
-    inset 0 1px 0 rgba(255, 255, 255, 0.075);
+    radial-gradient(50% 34% at 50% -4%, rgba(255, 178, 88, 0.62) 0%, rgba(255, 178, 88, 0) 72%),
+    radial-gradient(76% 56% at 50% -9%, rgba(242, 110, 1, 0.56) 0%, rgba(242, 110, 1, 0) 74%),
+    radial-gradient(104% 76% at 50% -15%, rgba(186, 58, 2, 0.34) 0%, rgba(186, 58, 2, 0) 76%),
+    linear-gradient(180deg, #21130d 0%, #151317 48%, #0d0e10 100%);
+  box-shadow: none;
 }
 
 .teacher-carousel-orbit {
@@ -375,8 +836,8 @@ select {
   inset: 0;
   border-radius: inherit;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.045), transparent 30%),
-    radial-gradient(ellipse at 50% 102%, rgba(0, 0, 0, 0.46), transparent 50%);
+    radial-gradient(ellipse 80% 54% at 50% -8%, rgba(255, 220, 181, 0.08), transparent 66%),
+    linear-gradient(180deg, transparent 35%, rgba(0, 0, 0, 0.28) 100%);
 }
 
 .teacher-carousel-label {
@@ -392,10 +853,11 @@ select {
 }
 
 .teacher-carousel-peek {
-  background: linear-gradient(155deg, #1e2025, #101115);
-  box-shadow:
-    0 30px 70px -44px rgba(0, 0, 0, 0.96),
-    inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  background:
+    radial-gradient(50% 34% at 50% -4%, rgba(255, 178, 88, 0.52) 0%, rgba(255, 178, 88, 0) 72%),
+    radial-gradient(76% 56% at 50% -9%, rgba(242, 110, 1, 0.46) 0%, rgba(242, 110, 1, 0) 74%),
+    linear-gradient(180deg, #21130d 0%, #151317 48%, #0d0e10 100%);
+  box-shadow: none;
 }
 
 .teacher-carousel-continue {
@@ -1232,6 +1694,1030 @@ select {
   .profile-avatar-image-change {
     filter: none !important;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Light workspace chrome. These remain scoped to signed-in surfaces so the
+   marketing canvas can keep its own, deliberately quieter treatment.
+   --------------------------------------------------------------------------- */
+html.light body.workspace,
+html[data-theme="light"] body.workspace {
+  background: #f8f7f5;
+}
+
+html.light .workspace-black,
+html[data-theme="light"] .workspace-black {
+  background:
+    radial-gradient(58rem 30rem at 52% 108%, color-mix(in srgb, var(--workspace-accent) 10%, transparent), transparent 72%),
+    #f8f7f5 !important;
+  --workspace-canvas: #f8f7f5;
+  --workspace-raised: #ffffff;
+  --workspace-card: #ffffff;
+  --workspace-card-hover: #f3f4f6;
+  --workspace-accent-soft: color-mix(in srgb, var(--workspace-accent) 10%, transparent);
+  --workspace-accent-border: color-mix(in srgb, var(--workspace-accent) 34%, transparent);
+}
+
+html.light .workspace-sidebar,
+html[data-theme="light"] .workspace-sidebar {
+  border-color: transparent !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  box-shadow: 0 20px 52px -38px rgba(15, 23, 42, 0.28) !important;
+}
+
+html.light .workspace-nav-panel,
+html[data-theme="light"] .workspace-nav-panel,
+html.light .workspace-mobile-bottom,
+html[data-theme="light"] .workspace-mobile-bottom {
+  background: rgba(255, 255, 255, 0.88) !important;
+  box-shadow: none !important;
+}
+
+html.light .workspace-icon-rail,
+html[data-theme="light"] .workspace-icon-rail {
+  border-right: 1px solid rgba(15, 23, 42, 0.07) !important;
+  background: rgba(15, 23, 42, 0.045) !important;
+  color: #64748b !important;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.75) !important;
+}
+
+html.light .workspace-mobile-bottom,
+html[data-theme="light"] .workspace-mobile-bottom {
+  border-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+html.light .workspace-profile-summary,
+html[data-theme="light"] .workspace-profile-summary {
+  background: rgba(15, 23, 42, 0.045) !important;
+}
+
+html.light .workspace-topbar,
+html[data-theme="light"] .workspace-topbar,
+html.light .workspace-mobile-topbar,
+html[data-theme="light"] .workspace-mobile-topbar {
+  border-color: rgba(15, 23, 42, 0.06) !important;
+  background: rgba(248, 247, 245, 0.86) !important;
+  box-shadow: 0 14px 34px -30px rgba(15, 23, 42, 0.3) !important;
+}
+
+html.light .workspace-menu-backdrop,
+html[data-theme="light"] .workspace-menu-backdrop {
+  background: rgba(15, 23, 42, 0.2) !important;
+}
+
+html.light .workspace-sidebar [class*="text-cream/"],
+html[data-theme="light"] .workspace-sidebar [class*="text-cream/"],
+html.light .workspace-mobile-topbar [class*="text-cream/"],
+html[data-theme="light"] .workspace-mobile-topbar [class*="text-cream/"] {
+  color: #64748b !important;
+}
+
+html.light .workspace-sidebar [aria-current="page"],
+html[data-theme="light"] .workspace-sidebar [aria-current="page"],
+html.light .workspace-sidebar [class~="text-cream"],
+html[data-theme="light"] .workspace-sidebar [class~="text-cream"],
+html.light .workspace-mobile-topbar [class~="text-cream"],
+html[data-theme="light"] .workspace-mobile-topbar [class~="text-cream"] {
+  color: #1f2937 !important;
+}
+
+html.light .workspace-sidebar a:hover,
+html[data-theme="light"] .workspace-sidebar a:hover,
+html.light .workspace-sidebar button:hover,
+html[data-theme="light"] .workspace-sidebar button:hover,
+html.light .workspace-mobile-topbar button:hover,
+html[data-theme="light"] .workspace-mobile-topbar button:hover {
+  background-color: rgba(15, 23, 42, 0.055) !important;
+  color: #1f2937 !important;
+}
+
+html.light .workspace-theme-toggle,
+html[data-theme="light"] .workspace-theme-toggle {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  background: transparent !important;
+  color: #475569 !important;
+}
+
+html.light .workspace-theme-toggle:hover,
+html[data-theme="light"] .workspace-theme-toggle:hover {
+  background: rgba(15, 23, 42, 0.045) !important;
+  color: #111827 !important;
+}
+
+html.light .manage-appearance-toggle .theme-toggle-icon,
+html[data-theme="light"] .manage-appearance-toggle .theme-toggle-icon {
+  color: #475569;
+}
+
+html.light .manage-appearance-toggle button,
+html[data-theme="light"] .manage-appearance-toggle button {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  background: transparent !important;
+  color: #475569 !important;
+}
+
+html.light .workspace-topbar input,
+html[data-theme="light"] .workspace-topbar input,
+html.light .workspace-mobile-topbar input,
+html[data-theme="light"] .workspace-mobile-topbar input {
+  border-color: transparent !important;
+  background: rgba(15, 23, 42, 0.055) !important;
+  color: #1f2937 !important;
+}
+
+html.light .workspace-topbar input::placeholder,
+html[data-theme="light"] .workspace-topbar input::placeholder,
+html.light .workspace-mobile-topbar input::placeholder,
+html[data-theme="light"] .workspace-mobile-topbar input::placeholder {
+  color: #94a3b8 !important;
+}
+
+html.light .workspace-account-menu,
+html[data-theme="light"] .workspace-account-menu {
+  border-color: transparent !important;
+  background: #ffffff !important;
+  color: #1f2937 !important;
+  box-shadow: 0 22px 48px -30px rgba(15, 23, 42, 0.3) !important;
+}
+
+html.light .workspace-account-menu a,
+html[data-theme="light"] .workspace-account-menu a,
+html.light .workspace-account-menu button,
+html[data-theme="light"] .workspace-account-menu button {
+  color: #475569 !important;
+}
+
+html.light .workspace-account-menu a:hover,
+html[data-theme="light"] .workspace-account-menu a:hover,
+html.light .workspace-account-menu button:hover,
+html[data-theme="light"] .workspace-account-menu button:hover {
+  background: rgba(15, 23, 42, 0.055) !important;
+  color: #111827 !important;
+}
+
+html.light .workspace-notification-trigger,
+html[data-theme="light"] .workspace-notification-trigger {
+  color: #64748b !important;
+}
+
+html.light .workspace-notification-trigger:hover,
+html[data-theme="light"] .workspace-notification-trigger:hover {
+  background: rgba(15, 23, 42, 0.045) !important;
+  color: #1f2937 !important;
+}
+
+html.light .workspace-notification-backdrop,
+html[data-theme="light"] .workspace-notification-backdrop {
+  background: rgba(15, 23, 42, 0.16) !important;
+}
+
+@media (min-width: 768px) {
+  html.light .workspace-notification-backdrop,
+  html[data-theme="light"] .workspace-notification-backdrop {
+    background: transparent !important;
+  }
+}
+
+html.light .workspace-notification-popover,
+html[data-theme="light"] .workspace-notification-popover {
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 28px 72px -42px rgba(15, 23, 42, 0.34) !important;
+  color: #1f2937 !important;
+}
+
+html.light .workspace-notification-popover [class~="text-cream"],
+html[data-theme="light"] .workspace-notification-popover [class~="text-cream"] {
+  color: #1f2937 !important;
+}
+
+html.light .workspace-notification-popover [class*="text-cream/"],
+html[data-theme="light"] .workspace-notification-popover [class*="text-cream/"] {
+  color: #64748b !important;
+}
+
+html.light .workspace-notification-popover [class*="bg-cream/"],
+html[data-theme="light"] .workspace-notification-popover [class*="bg-cream/"] {
+  background-color: rgba(15, 23, 42, 0.035) !important;
+}
+
+html.light .profile-theme,
+html[data-theme="light"] .profile-theme {
+  background: transparent !important;
+  color: #1f2937;
+}
+
+html.light .profile-skeleton,
+html[data-theme="light"] .profile-skeleton {
+  background: transparent !important;
+}
+
+html.light .profile-skeleton [class*="bg-[#151619]"],
+html[data-theme="light"] .profile-skeleton [class*="bg-[#151619]"],
+html.light .profile-skeleton [class*="bg-white/"],
+html[data-theme="light"] .profile-skeleton [class*="bg-white/"] {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  background: rgba(255, 255, 255, 0.84) !important;
+}
+
+html.light .profile-skeleton [class*="bg-black"],
+html[data-theme="light"] .profile-skeleton [class*="bg-black"] {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: #eef2f6 !important;
+}
+
+html.light .profile-skeleton .skeleton,
+html[data-theme="light"] .profile-skeleton .skeleton {
+  background: rgba(15, 23, 42, 0.075) !important;
+}
+
+html.light .profile-skeleton .skeleton::after,
+html[data-theme="light"] .profile-skeleton .skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72) 45%, rgba(255, 255, 255, 0.9) 55%, transparent) !important;
+}
+
+html.light .profile-skeleton .profile-image-skeleton,
+html[data-theme="light"] .profile-skeleton .profile-image-skeleton {
+  background: linear-gradient(145deg, #dce4ec, #f8fafc) !important;
+}
+
+html.light .profile-skeleton .profile-image-skeleton::after,
+html[data-theme="light"] .profile-skeleton .profile-image-skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.62) 45%, rgba(255, 255, 255, 0.86) 55%, transparent) !important;
+}
+
+html.light .profile-theme .surface,
+html[data-theme="light"] .profile-theme .surface,
+html.light .profile-theme .surface-raised,
+html[data-theme="light"] .profile-theme .surface-raised,
+html.light .profile-theme .profile-glass,
+html[data-theme="light"] .profile-theme .profile-glass {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.055), 0 18px 42px -36px rgba(15, 23, 42, 0.28) !important;
+}
+
+html.light .manage-panel,
+html[data-theme="light"] .manage-panel {
+  border-color: transparent !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 18px 42px -36px rgba(15, 23, 42, 0.28) !important;
+}
+
+html.light .profile-theme [class*="border-white/"],
+html[data-theme="light"] .profile-theme [class*="border-white/"] {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+html.light .profile-theme .pill,
+html[data-theme="light"] .profile-theme .pill {
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  background: rgba(255, 255, 255, 0.78) !important;
+}
+
+/* These profile actions intentionally use the same decisive treatment as the
+   primary workspace CTA when the canvas is light. */
+html.light .profile-theme .profile-action-button,
+html[data-theme="light"] .profile-theme .profile-action-button {
+  border-color: #111827 !important;
+  background: #111827 !important;
+  color: #ffffff !important;
+  font-size: 0.875rem !important;
+}
+
+html.light .profile-theme .profile-action-button:hover,
+html[data-theme="light"] .profile-theme .profile-action-button:hover {
+  border-color: #1e293b !important;
+  background: #1e293b !important;
+  color: #ffffff !important;
+}
+
+/* Resume replacement retains the onboarding building blocks, but its modal is
+   mounted over the dashboard and previously kept an inline dark canvas. */
+html.light .resume-update-backdrop,
+html[data-theme="light"] .resume-update-backdrop {
+  background: rgba(15, 23, 42, 0.34) !important;
+}
+
+html.light .resume-update-modal,
+html[data-theme="light"] .resume-update-modal {
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  background:
+    radial-gradient(38rem 22rem at 50% 0%, rgba(242, 110, 1, 0.08), transparent 72%),
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  box-shadow: 0 28px 72px -36px rgba(15, 23, 42, 0.55) !important;
+}
+
+html.light .resume-update-modal > button,
+html[data-theme="light"] .resume-update-modal > button {
+  background: rgba(15, 23, 42, 0.06) !important;
+  color: #475569 !important;
+}
+
+html.light .resume-update-modal > button:hover,
+html[data-theme="light"] .resume-update-modal > button:hover {
+  background: rgba(15, 23, 42, 0.1) !important;
+  color: #111827 !important;
+}
+
+/* Search is portalled visually above profile content, so give both its input
+   and result menu their own light palette rather than inheriting graphite. */
+html.light .workspace-search-input,
+html[data-theme="light"] .workspace-search-input {
+  border-color: rgba(15, 23, 42, 0.09) !important;
+  background: rgba(15, 23, 42, 0.045) !important;
+  color: #1f2937 !important;
+}
+
+html.light .workspace-search-input::placeholder,
+html[data-theme="light"] .workspace-search-input::placeholder {
+  color: #94a3b8 !important;
+}
+
+html.light .workspace-search label > svg,
+html[data-theme="light"] .workspace-search label > svg {
+  color: #64748b !important;
+}
+
+html.light .workspace-search-input:hover,
+html.light .workspace-search-input:focus,
+html[data-theme="light"] .workspace-search-input:hover,
+html[data-theme="light"] .workspace-search-input:focus {
+  border-color: rgba(15, 23, 42, 0.16) !important;
+  background: #ffffff !important;
+}
+
+html.light .workspace-search-results,
+html[data-theme="light"] .workspace-search-results {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: #ffffff !important;
+  box-shadow: 0 24px 54px -28px rgba(15, 23, 42, 0.34) !important;
+}
+
+html.light .workspace-search-results [class*="text-cream/"],
+html[data-theme="light"] .workspace-search-results [class*="text-cream/"] {
+  color: #64748b !important;
+}
+
+html.light .workspace-search-results [class~="text-cream"],
+html[data-theme="light"] .workspace-search-results [class~="text-cream"] {
+  color: #1f2937 !important;
+}
+
+html.light .workspace-search-results [class*="bg-white/"],
+html[data-theme="light"] .workspace-search-results [class*="bg-white/"] {
+  background: rgba(15, 23, 42, 0.045) !important;
+}
+
+html.light .workspace-search-results [role="option"] + [role="option"],
+html[data-theme="light"] .workspace-search-results [role="option"] + [role="option"] {
+  margin-top: 0.3rem;
+}
+
+/* Trailmate is a dense community surface, so its light treatment keeps the
+   same hierarchy as graphite: paper cards, slate copy, and dark only for
+   decisive actions. This also covers state rendered inline in history cards. */
+html.light .trailmate-page,
+html[data-theme="light"] .trailmate-page {
+  color: #1f2937;
+}
+
+html.light .trailmate-page [class*="text-cream/"],
+html[data-theme="light"] .trailmate-page [class*="text-cream/"] {
+  color: #64748b !important;
+}
+
+html.light .trailmate-page [class~="text-cream"],
+html[data-theme="light"] .trailmate-page [class~="text-cream"] {
+  color: #1f2937 !important;
+}
+
+html.light .trailmate-page [class*="border-white/"],
+html[data-theme="light"] .trailmate-page [class*="border-white/"] {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+html.light .trailmate-ranking-card,
+html[data-theme="light"] .trailmate-ranking-card,
+html.light .trailmate-history-card,
+html[data-theme="light"] .trailmate-history-card {
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.055), 0 18px 38px -34px rgba(15, 23, 42, 0.32) !important;
+}
+
+html.light .trailmate-ranking-card:hover,
+html[data-theme="light"] .trailmate-ranking-card:hover,
+html.light .trailmate-history-card:hover,
+html[data-theme="light"] .trailmate-history-card:hover {
+  background: #ffffff !important;
+}
+
+html.light .trailmate-page [class*="bg-white/"],
+html[data-theme="light"] .trailmate-page [class*="bg-white/"] {
+  background: rgba(15, 23, 42, 0.035) !important;
+}
+
+html.light .trailmate-page [class*="bg-black"],
+html[data-theme="light"] .trailmate-page [class*="bg-black"] {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: #ffffff !important;
+}
+
+html.light .trailmate-page button[class*="bg-black"],
+html[data-theme="light"] .trailmate-page button[class*="bg-black"] {
+  border-color: #111827 !important;
+  background: #111827 !important;
+  color: #ffffff !important;
+}
+
+html.light .trailmate-page button[class*="bg-black"] [class*="text-cream"],
+html[data-theme="light"] .trailmate-page button[class*="bg-black"] [class*="text-cream"] {
+  color: #ffffff !important;
+}
+
+html.light .trailmate-page textarea,
+html[data-theme="light"] .trailmate-page textarea {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  background: #ffffff !important;
+  color: #1f2937 !important;
+}
+
+html.light .trailmate-skeleton,
+html[data-theme="light"] .trailmate-skeleton {
+  color: transparent;
+}
+
+html.light .trailmate-skeleton [class*="bg-[rgba"],
+html[data-theme="light"] .trailmate-skeleton [class*="bg-[rgba"],
+html.light .trailmate-skeleton [class*="bg-[#17181b]"],
+html[data-theme="light"] .trailmate-skeleton [class*="bg-[#17181b]"],
+html.light .trailmate-skeleton [class*="bg-black"],
+html[data-theme="light"] .trailmate-skeleton [class*="bg-black"] {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  background: rgba(255, 255, 255, 0.86) !important;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.05) !important;
+}
+
+html.light .trailmate-skeleton [class*="bg-white/"],
+html[data-theme="light"] .trailmate-skeleton [class*="bg-white/"] {
+  background: rgba(15, 23, 42, 0.065) !important;
+}
+
+html.light .trailmate-skeleton [class*="border-white/"],
+html[data-theme="light"] .trailmate-skeleton [class*="border-white/"] {
+  border-color: rgba(15, 23, 42, 0.09) !important;
+}
+
+/* Badge ranking is portalled outside the page tree, hence its own scope. */
+html.light .trailmate-badge-backdrop,
+html[data-theme="light"] .trailmate-badge-backdrop {
+  background: rgba(15, 23, 42, 0.34) !important;
+}
+
+html.light .trailmate-badge-modal,
+html[data-theme="light"] .trailmate-badge-modal {
+  border: 1px solid rgba(15, 23, 42, 0.09);
+  background: #ffffff !important;
+  box-shadow: 0 30px 100px -44px rgba(15, 23, 42, 0.52) !important;
+}
+
+html.light .trailmate-badge-modal [class*="text-cream/"],
+html[data-theme="light"] .trailmate-badge-modal [class*="text-cream/"] {
+  color: #64748b !important;
+}
+
+html.light .trailmate-badge-modal [class~="text-cream"],
+html[data-theme="light"] .trailmate-badge-modal [class~="text-cream"] {
+  color: #1f2937 !important;
+}
+
+html.light .trailmate-badge-modal [class*="border-white/"],
+html[data-theme="light"] .trailmate-badge-modal [class*="border-white/"] {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+html.light .trailmate-badge-modal [class*="bg-black"],
+html[data-theme="light"] .trailmate-badge-modal [class*="bg-black"] {
+  background: rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Reports, progress, and resume roast all share the teacher-stage language.
+   Keep that stage warm in light mode while turning the reading surfaces into
+   paper and preserving the selected workspace accent. */
+html.light .reports-page,
+html[data-theme="light"] .reports-page,
+html.light .progress-page,
+html[data-theme="light"] .progress-page,
+html.light .resume-roast-page,
+html[data-theme="light"] .resume-roast-page {
+  background:
+    radial-gradient(circle at 25% 24%, color-mix(in srgb, var(--workspace-accent) 8%, transparent), transparent 28rem),
+    #f8f7f5 !important;
+  color: #1f2937;
+}
+
+html.light .reports-page [class*="text-cream/"],
+html[data-theme="light"] .reports-page [class*="text-cream/"],
+html.light .progress-page [class*="text-cream/"],
+html[data-theme="light"] .progress-page [class*="text-cream/"],
+html.light .resume-roast-page [class*="text-cream/"],
+html[data-theme="light"] .resume-roast-page [class*="text-cream/"] {
+  color: #64748b !important;
+}
+
+html.light .reports-page [class~="text-cream"],
+html[data-theme="light"] .reports-page [class~="text-cream"],
+html.light .progress-page [class~="text-cream"],
+html[data-theme="light"] .progress-page [class~="text-cream"],
+html.light .resume-roast-page [class~="text-cream"],
+html[data-theme="light"] .resume-roast-page [class~="text-cream"] {
+  color: #1f2937 !important;
+}
+
+/* Report paragraphs reveal word-by-word and set their own cream colour, so
+   they need an explicit light override rather than inheriting from the p. */
+html.light .reports-page .report-copy-word,
+html[data-theme="light"] .reports-page .report-copy-word {
+  color: #64748b !important;
+}
+
+html.light .reports-page .report-primary-action,
+html[data-theme="light"] .reports-page .report-primary-action {
+  background-color: #111827 !important;
+  background-image: linear-gradient(105deg, #111827 0%, #111827 40%, #475569 50%, #111827 60%, #111827 100%) !important;
+  color: #ffffff !important;
+}
+
+html.light .reports-page .report-primary-action:hover,
+html[data-theme="light"] .reports-page .report-primary-action:hover {
+  background-color: #1e293b !important;
+  background-image: linear-gradient(105deg, #1e293b 0%, #1e293b 40%, #64748b 50%, #1e293b 60%, #1e293b 100%) !important;
+  color: #ffffff !important;
+}
+
+/* Completed-report download uses the shared CTA shimmer rather than the
+   report-link animation. Keep that moving highlight over the dark surface. */
+html.light .reports-page .progress-cta-shimmer,
+html[data-theme="light"] .reports-page .progress-cta-shimmer {
+  background: #111827 !important;
+  color: #ffffff !important;
+}
+
+html.light .reports-page .progress-cta-shimmer:hover,
+html[data-theme="light"] .reports-page .progress-cta-shimmer:hover {
+  background: #1e293b !important;
+  color: #ffffff !important;
+}
+
+/* Keep Progress's primary action as a high-contrast dark button in light mode.
+   This changes only the surface and inherited text color, leaving the shared
+   progress-cta-shimmer pseudo-element and animation intact. */
+html.light .progress-page .progress-cta-shimmer,
+html[data-theme="light"] .progress-page .progress-cta-shimmer {
+  background: #111827 !important;
+  color: #ffffff !important;
+}
+
+html.light .progress-page .progress-cta-shimmer:hover,
+html[data-theme="light"] .progress-page .progress-cta-shimmer:hover {
+  background: #1e293b !important;
+  color: #ffffff !important;
+}
+
+html.light .reports-page [class*="border-white/"],
+html[data-theme="light"] .reports-page [class*="border-white/"],
+html.light .progress-page [class*="border-white/"],
+html[data-theme="light"] .progress-page [class*="border-white/"],
+html.light .resume-roast-page [class*="border-white/"],
+html[data-theme="light"] .resume-roast-page [class*="border-white/"] {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+html.light .reports-page .report-glass-card,
+html[data-theme="light"] .reports-page .report-glass-card,
+html.light .progress-page .progress-maya-bubble,
+html[data-theme="light"] .progress-page .progress-maya-bubble,
+html.light .resume-roast-page .progress-maya-bubble,
+html[data-theme="light"] .resume-roast-page .progress-maya-bubble {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.05), 0 18px 42px -34px rgba(15, 23, 42, 0.32) !important;
+}
+
+/* The resume reading pane is intentionally unframed in light mode. */
+html.light .resume-roast-page .resume-roast-resume-stage .progress-maya-bubble,
+html[data-theme="light"] .resume-roast-page .resume-roast-resume-stage .progress-maya-bubble {
+  border: 0 !important;
+  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.32) !important;
+}
+
+html.light .reports-page .report-glass-tail,
+html[data-theme="light"] .reports-page .report-glass-tail,
+html.light .progress-page .progress-maya-tail,
+html[data-theme="light"] .progress-page .progress-maya-tail,
+html.light .resume-roast-page .progress-maya-tail,
+html[data-theme="light"] .resume-roast-page .progress-maya-tail {
+  background: #ffffff !important;
+}
+
+html.light .progress-page .progress-question-card,
+html[data-theme="light"] .progress-page .progress-question-card {
+  border-color: rgba(15, 23, 42, 0.09) !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  box-shadow: 0 18px 36px -30px rgba(15, 23, 42, 0.3) !important;
+}
+
+html.light .progress-page .progress-question-card:hover,
+html[data-theme="light"] .progress-page .progress-question-card:hover {
+  border-color: color-mix(in srgb, var(--workspace-accent) 34%, transparent) !important;
+  background: #ffffff !important;
+}
+
+html.light .reports-page [class*="bg-[#151619]"],
+html[data-theme="light"] .reports-page [class*="bg-[#151619]"],
+html.light .reports-page [class*="bg-[#1b1c20]"],
+html[data-theme="light"] .reports-page [class*="bg-[#1b1c20]"],
+html.light .resume-roast-page [class*="bg-black"],
+html[data-theme="light"] .resume-roast-page [class*="bg-black"] {
+  background: #ffffff !important;
+}
+
+html.light .resume-roast-page [class*="bg-white/"],
+html[data-theme="light"] .resume-roast-page [class*="bg-white/"] {
+  background: rgba(15, 23, 42, 0.04) !important;
+}
+
+html.light .resume-roast-page [class*="bg-emerald-300/"],
+html[data-theme="light"] .resume-roast-page [class*="bg-emerald-300/"] {
+  background: rgba(16, 185, 129, 0.1) !important;
+}
+
+html.light .resume-roast-page [class*="text-emerald-"],
+html[data-theme="light"] .resume-roast-page [class*="text-emerald-"] {
+  color: #047857 !important;
+}
+
+html.light .progress-skeleton,
+html[data-theme="light"] .progress-skeleton,
+html.light .resume-roast-skeleton,
+html[data-theme="light"] .resume-roast-skeleton,
+html.light .reports-skeleton,
+html[data-theme="light"] .reports-skeleton {
+  background: transparent !important;
+}
+
+/* Resume Roast owns its black canvas on the root element, so descendant
+   selectors cannot recolour it. Give both the live stage and its loading
+   shell the same paper canvas in light mode. */
+html.light .resume-roast-skeleton,
+html[data-theme="light"] .resume-roast-skeleton {
+  background:
+    radial-gradient(circle at 25% 24%, color-mix(in srgb, var(--workspace-accent) 8%, transparent), transparent 28rem),
+    #f8f7f5 !important;
+}
+
+html.light .resume-roast-skeleton .progress-maya-bubble,
+html[data-theme="light"] .resume-roast-skeleton .progress-maya-bubble {
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.05), 0 18px 42px -34px rgba(15, 23, 42, 0.32) !important;
+}
+
+/* Resume Roast is a two-canvas experience. In light mode the teacher keeps a
+   quiet tinted stage while the analysis remains on a clean paper surface. */
+html.light .resume-roast-page .resume-roast-resume-stage,
+html[data-theme="light"] .resume-roast-page .resume-roast-resume-stage,
+html.light .resume-roast-skeleton .resume-roast-skeleton-stage,
+html[data-theme="light"] .resume-roast-skeleton .resume-roast-skeleton-stage {
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--workspace-accent) 16%, transparent), transparent 16rem),
+    linear-gradient(160deg, #ffffff 0%, #f6f3ef 100%) !important;
+  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.32);
+}
+
+html.light .resume-roast-page .resume-roast-chat-stage,
+html[data-theme="light"] .resume-roast-page .resume-roast-chat-stage,
+html.light .resume-roast-skeleton .resume-roast-skeleton-chat,
+html[data-theme="light"] .resume-roast-skeleton .resume-roast-skeleton-chat {
+  background: #ffffff !important;
+}
+
+/* Weak points are marked by their outline alone; the reading copy stays in
+   the normal light-theme ink rather than turning red or orange. */
+html.light .resume-roast-page [class*="border-red-"],
+html[data-theme="light"] .resume-roast-page [class*="border-red-"] {
+  border-color: rgba(220, 38, 38, 0.32) !important;
+}
+
+html.light .progress-skeleton [class*="bg-"],
+html[data-theme="light"] .progress-skeleton [class*="bg-"],
+html.light .resume-roast-skeleton [class*="bg-"],
+html[data-theme="light"] .resume-roast-skeleton [class*="bg-"],
+html.light .reports-skeleton [class*="bg-"],
+html[data-theme="light"] .reports-skeleton [class*="bg-"] {
+  background: rgba(15, 23, 42, 0.075) !important;
+}
+
+html.light .progress-skeleton [class*="border-white/"],
+html[data-theme="light"] .progress-skeleton [class*="border-white/"],
+html.light .resume-roast-skeleton [class*="border-white/"],
+html[data-theme="light"] .resume-roast-skeleton [class*="border-white/"],
+html.light .reports-skeleton [class*="border-white/"],
+html[data-theme="light"] .reports-skeleton [class*="border-white/"] {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+html.light .profile-theme [class~="text-cream"],
+html[data-theme="light"] .profile-theme [class~="text-cream"],
+html.light .manage-panel [class~="text-cream"],
+html[data-theme="light"] .manage-panel [class~="text-cream"] {
+  color: #1f2937 !important;
+}
+
+html.light .profile-theme [class*="text-cream/88"],
+html[data-theme="light"] .profile-theme [class*="text-cream/88"],
+html.light .profile-theme [class*="text-cream/82"],
+html[data-theme="light"] .profile-theme [class*="text-cream/82"],
+html.light .profile-theme [class*="text-cream/78"],
+html[data-theme="light"] .profile-theme [class*="text-cream/78"] {
+  color: #334155 !important;
+}
+
+html.light .profile-theme [class*="text-cream/"],
+html[data-theme="light"] .profile-theme [class*="text-cream/"],
+html.light .manage-panel [class*="text-cream/"],
+html[data-theme="light"] .manage-panel [class*="text-cream/"] {
+  color: #64748b !important;
+}
+
+/* Profile copy is revealed word-by-word and therefore carries a direct cream
+   declaration instead of a Tailwind text utility. Recolour it explicitly so
+   the completed animation never leaves pale cream words on the light canvas. */
+html.light .profile-theme .profile-copy-word,
+html[data-theme="light"] .profile-theme .profile-copy-word {
+  color: #64748b !important;
+}
+
+html.light .image-picker-backdrop,
+html[data-theme="light"] .image-picker-backdrop {
+  background: rgba(248, 247, 245, 0.68) !important;
+}
+
+html.light .image-picker-panel,
+html[data-theme="light"] .image-picker-panel {
+  border-color: transparent !important;
+  background: #ffffff !important;
+  color: #1f2937 !important;
+  box-shadow: 0 24px 64px -42px rgba(15, 23, 42, 0.32) !important;
+}
+
+html.light .image-picker-header,
+html[data-theme="light"] .image-picker-header {
+  background: #ffffff !important;
+}
+
+html.light .image-picker-panel h2,
+html[data-theme="light"] .image-picker-panel h2 {
+  color: #1f2937 !important;
+}
+
+html.light .image-picker-panel [class*="text-cream/"],
+html[data-theme="light"] .image-picker-panel [class*="text-cream/"] {
+  color: #64748b !important;
+}
+
+html.light .image-picker-choice,
+html[data-theme="light"] .image-picker-choice {
+  background: rgba(15, 23, 42, 0.035) !important;
+  box-shadow: none !important;
+}
+
+html.light .image-picker-choice[aria-pressed="true"],
+html[data-theme="light"] .image-picker-choice[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--workspace-accent) !important;
+}
+
+html.light .image-picker-preview,
+html[data-theme="light"] .image-picker-preview {
+  background: #f1f5f9 !important;
+}
+
+html.light .manage-appearance-toggle,
+html[data-theme="light"] .manage-appearance-toggle {
+  background: rgba(15, 23, 42, 0.045) !important;
+  color: #475569 !important;
+}
+
+/* Manage keeps the teacher chooser in the same warm, paper-like stage as the
+   onboarding teacher step. The controls float above it instead of bringing
+   back a dark glass card in an otherwise light workspace. */
+html.light .manage-teacher-canvas,
+html[data-theme="light"] .manage-teacher-canvas,
+html.light .manage-teacher-preview-canvas,
+html[data-theme="light"] .manage-teacher-preview-canvas {
+  border: 0 !important;
+  background:
+    radial-gradient(50% 34% at 50% -4%, rgba(255, 178, 88, 0.82), transparent 72%),
+    radial-gradient(76% 56% at 50% -9%, rgba(242, 110, 1, 0.72), transparent 74%),
+    radial-gradient(104% 76% at 50% -15%, rgba(186, 58, 2, 0.4), transparent 76%),
+    linear-gradient(180deg, #fff4eb 0%, #fffaf6 52%, #fffefd 100%) !important;
+  box-shadow: none !important;
+}
+
+html.light .manage-teacher-control,
+html[data-theme="light"] .manage-teacher-control,
+html.light .manage-teacher-voice-control,
+html[data-theme="light"] .manage-teacher-voice-control {
+  border-color: transparent !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  color: #111827 !important;
+  box-shadow: 0 8px 20px rgba(154, 61, 0, 0.16) !important;
+}
+
+html.light .manage-teacher-control:hover,
+html[data-theme="light"] .manage-teacher-control:hover,
+html.light .manage-teacher-voice-control:hover,
+html[data-theme="light"] .manage-teacher-voice-control:hover {
+  background: #ffffff !important;
+  color: #111827 !important;
+}
+
+html.light .profile-theme .manage-teacher-submit,
+html[data-theme="light"] .profile-theme .manage-teacher-submit,
+html.light .profile-theme .manage-action-button-primary,
+html[data-theme="light"] .profile-theme .manage-action-button-primary {
+  background: #111827 !important;
+  color: #ffffff !important;
+}
+
+html.light .profile-theme .manage-teacher-submit:hover:not(:disabled),
+html[data-theme="light"] .profile-theme .manage-teacher-submit:hover:not(:disabled),
+html.light .profile-theme .manage-action-button-primary:hover,
+html[data-theme="light"] .profile-theme .manage-action-button-primary:hover {
+  background: #1e293b !important;
+}
+
+html.light .profile-theme .manage-teacher-submit:disabled,
+html[data-theme="light"] .profile-theme .manage-teacher-submit:disabled {
+  background: #eef2f7 !important;
+  color: #64748b !important;
+}
+
+html.light .manage-action-button-danger,
+html[data-theme="light"] .manage-action-button-danger {
+  border-color: #fecaca !important;
+  color: #dc2626 !important;
+}
+
+html.light .manage-action-button-danger:hover,
+html[data-theme="light"] .manage-action-button-danger:hover {
+  background: #fef2f2 !important;
+  border-color: #fca5a5 !important;
+}
+
+html.light .manage-accent-card,
+html[data-theme="light"] .manage-accent-card {
+  border-color: transparent !important;
+  background: #f8fafc !important;
+  box-shadow: none !important;
+}
+
+html.light .manage-accent-card[aria-pressed="true"],
+html[data-theme="light"] .manage-accent-card[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--card-accent) 10%, #ffffff) !important;
+  box-shadow: 0 0 0 2px var(--card-accent) !important;
+}
+
+html.light .manage-accent-card:hover:not(:disabled),
+html[data-theme="light"] .manage-accent-card:hover:not(:disabled) {
+  background: #ffffff !important;
+  box-shadow: 0 12px 24px -22px rgba(15, 23, 42, 0.34) !important;
+}
+
+html.light .manage-accent-preview,
+html[data-theme="light"] .manage-accent-preview {
+  border-color: transparent !important;
+  background: #ffffff !important;
+}
+
+html.light .manage-accent-preview-rail,
+html[data-theme="light"] .manage-accent-preview-rail {
+  border-color: rgba(15, 23, 42, 0.06) !important;
+  background:
+    radial-gradient(circle at 35% 22%, color-mix(in srgb, var(--card-accent) 18%, transparent), transparent 46%),
+    #f8fafc !important;
+}
+
+html.light .manage-accent-preview-body,
+html[data-theme="light"] .manage-accent-preview-body {
+  background: #ffffff !important;
+}
+
+html.light .manage-notification-toggle,
+html[data-theme="light"] .manage-notification-toggle {
+  border-color: transparent !important;
+  background: #e2e8f0 !important;
+  box-shadow: none;
+}
+
+html.light .manage-notification-toggle[aria-checked="true"],
+html[data-theme="light"] .manage-notification-toggle[aria-checked="true"] {
+  border-color: transparent !important;
+  background: color-mix(in srgb, var(--workspace-accent) 28%, #ffffff) !important;
+}
+
+html.light .manage-notification-toggle > span,
+html[data-theme="light"] .manage-notification-toggle > span {
+  background: #ffffff !important;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.18);
+}
+
+html.light .manage-notification-toggle[aria-checked="true"] > span,
+html[data-theme="light"] .manage-notification-toggle[aria-checked="true"] > span {
+  background: var(--workspace-accent) !important;
+  box-shadow: none;
+}
+
+/* Route boundaries render outside their feature screens. Give 404s and
+   recoverable errors the same global canvas instead of leaving a black hole
+   behind when the visitor has selected light mode. */
+html.light .route-feedback,
+html[data-theme="light"] .route-feedback {
+  background:
+    radial-gradient(54rem 30rem at 50% 106%, rgba(242, 110, 1, 0.14), transparent 72%),
+    radial-gradient(32rem 24rem at 7% 8%, rgba(255, 205, 164, 0.1), transparent 74%),
+    #f8f7f5 !important;
+  color: #1f2937;
+}
+
+html.light .route-feedback h1,
+html[data-theme="light"] .route-feedback h1 {
+  color: #111827 !important;
+}
+
+html.light .route-feedback p,
+html[data-theme="light"] .route-feedback p {
+  color: #64748b !important;
+}
+
+html.light .route-feedback svg,
+html[data-theme="light"] .route-feedback svg {
+  color: #b45309;
+}
+
+html.light .route-feedback-mark,
+html[data-theme="light"] .route-feedback-mark {
+  filter: brightness(0);
+}
+
+html.light .route-feedback a,
+html[data-theme="light"] .route-feedback a,
+html.light .route-feedback button,
+html[data-theme="light"] .route-feedback button {
+  border-color: transparent !important;
+  background: #111827 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+html.light .route-feedback a svg,
+html[data-theme="light"] .route-feedback a svg,
+html.light .route-feedback button svg,
+html[data-theme="light"] .route-feedback button svg {
+  color: currentColor !important;
+}
+
+html.light .route-feedback a:hover,
+html[data-theme="light"] .route-feedback a:hover,
+html.light .route-feedback button:hover,
+html[data-theme="light"] .route-feedback button:hover {
+  background: #1e293b !important;
+}
+
+/* A secondary link follows the primary action in the full-page 404 and error
+   boundaries. It remains clear without reintroducing a hard outline. */
+html.light .route-feedback a + a,
+html[data-theme="light"] .route-feedback a + a,
+html.light .route-feedback button + a,
+html[data-theme="light"] .route-feedback button + a {
+  background: rgba(15, 23, 42, 0.055) !important;
+  color: #475569 !important;
+}
+
+html.light .route-feedback a + a:hover,
+html[data-theme="light"] .route-feedback a + a:hover,
+html.light .route-feedback button + a:hover,
+html[data-theme="light"] .route-feedback button + a:hover {
+  background: rgba(15, 23, 42, 0.09) !important;
+  color: #111827 !important;
+}
+
+html.light .route-feedback-panel,
+html[data-theme="light"] .route-feedback-panel,
+html.light .route-feedback-panel-inner,
+html[data-theme="light"] .route-feedback-panel-inner {
+  background: rgba(255, 255, 255, 0.82) !important;
+  box-shadow: none !important;
 }
 
 /* ---------------------------------------------------------------------------
@@ -2244,8 +3730,7 @@ html {
   --dm-accent-rgb: 66, 133, 244;
 }
 
-.marketing-theme-hero,
-.marketing-theme-section {
+.marketing-theme-hero {
   background: #030304;
 }
 
@@ -2415,6 +3900,7 @@ html {
  * slot with `!important`.
  */
 .begin-ember {
+  display: none;
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -2454,7 +3940,7 @@ html {
 
 .marketing-theme-section {
   border-top: 0;
-  background: #030304 !important;
+  background: transparent !important;
 }
 
 /* Paint containment keeps the dense product demonstrations from invalidating
@@ -2652,6 +4138,258 @@ html {
 
 .marketing-theme > footer a:hover {
   color: var(--dm-accent-soft);
+}
+
+/* Light theme marketing experience overrides */
+html.light .marketing-theme,
+html[data-theme="light"] .marketing-theme {
+  color-scheme: light;
+  background:
+    radial-gradient(72rem 42rem at 10% 28%, rgba(255, 208, 157, 0.075), transparent 70%),
+    radial-gradient(68rem 46rem at 90% 52%, rgba(242, 110, 1, 0.055), transparent 72%),
+    radial-gradient(64rem 40rem at 24% 82%, rgba(255, 218, 181, 0.06), transparent 70%),
+    linear-gradient(180deg, #fafafc 0%, #f7f5f2 100%);
+  color: #0f172a;
+  --background: #fafafc;
+  --canvas: #fafafc;
+  --canvas-deep: #f2f3f7;
+  --scroll-thumb: rgba(100, 116, 139, 0.28);
+  --scroll-thumb-hover: rgba(71, 85, 105, 0.44);
+  --scroll-thumb-active: rgba(242, 110, 1, 0.48);
+  --panel: rgba(255, 255, 255, 0.92);
+  --panel-strong: rgba(255, 255, 255, 0.98);
+  --line: rgba(15, 23, 42, 0.08);
+  --line-strong: rgba(15, 23, 42, 0.14);
+  --ink: #0f172a;
+  --muted: #64748b;
+  --brand: #0f172a;
+  --accent: #334155;
+  --color-ink-rgb: 15 23 42;
+  --color-muted-rgb: 100 116 139;
+  --color-brand-rgb: 15 23 42;
+  --color-accent-rgb: 51 65 85;
+  --color-cream-rgb: 19 21 27;
+  --color-cream-soft-rgb: 51 65 85;
+  --color-cream-dim-rgb: 100 116 139;
+}
+
+.marketing-brand-mark {
+  transition: filter 240ms ease;
+}
+
+html.light .marketing-brand-mark,
+html[data-theme="light"] .marketing-brand-mark {
+  filter: brightness(0);
+}
+
+html.light .marketing-theme-hero,
+html[data-theme="light"] .marketing-theme-hero {
+  background: linear-gradient(180deg, #fafafc 0%, #f7f5f2 100%) !important;
+}
+
+html.light .marketing-theme-section,
+html[data-theme="light"] .marketing-theme-section {
+  background: transparent !important;
+}
+
+html.light .marketing-theme-hero::before,
+html[data-theme="light"] .marketing-theme-hero::before {
+  opacity: 0.16;
+  filter: saturate(1.2);
+}
+
+html.light .begin-ember,
+html[data-theme="light"] .begin-ember {
+  display: none;
+}
+
+html.light .public-glass,
+html[data-theme="light"] .public-glass {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.88));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 20px 48px -24px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+html.light .site-nav-surface,
+html[data-theme="light"] .site-nav-surface {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+html.light .site-nav-rule,
+html[data-theme="light"] .site-nav-rule {
+  background: #0f172a;
+}
+
+html.light .glass-cta,
+html.light .site-nav-action > *,
+html[data-theme="light"] .glass-cta,
+html[data-theme="light"] .site-nav-action > * {
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #0f172a;
+  box-shadow:
+    0 10px 28px rgba(15, 23, 42, 0.12),
+    0 2px 6px rgba(15, 23, 42, 0.08);
+  color: #ffffff;
+}
+
+html.light .glass-cta:hover,
+html.light .site-nav-action > *:hover,
+html[data-theme="light"] .glass-cta:hover,
+html[data-theme="light"] .site-nav-action > *:hover {
+  border-color: rgba(15, 23, 42, 0.25);
+  background: #1e293b;
+  transform: translateY(-2px);
+}
+
+html.light .marketing-theme > footer,
+html[data-theme="light"] .marketing-theme > footer {
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Blog pages deliberately stay paper-like in light mode: the shared marketing
+   canvas provides the atmosphere, while the reading column stays neutral and
+   high contrast. */
+html.light .marketing-blog .marketing-page-title,
+html.light .marketing-blog .marketing-card-title,
+html.light .marketing-blog .marketing-list-title,
+html.light .marketing-blog .marketing-reading-title,
+html[data-theme="light"] .marketing-blog .marketing-page-title,
+html[data-theme="light"] .marketing-blog .marketing-card-title,
+html[data-theme="light"] .marketing-blog .marketing-list-title,
+html[data-theme="light"] .marketing-blog .marketing-reading-title {
+  color: #111827;
+}
+
+html.light .marketing-blog .marketing-page-lede,
+html.light .marketing-blog .marketing-reading-copy,
+html[data-theme="light"] .marketing-blog .marketing-page-lede,
+html[data-theme="light"] .marketing-blog .marketing-reading-copy {
+  color: #475569;
+}
+
+html.light .marketing-blog .public-glass:hover,
+html[data-theme="light"] .marketing-blog .public-glass:hover {
+  border-color: rgba(15, 23, 42, 0.14);
+  background: rgba(255, 255, 255, 0.98);
+}
+
+html.light .marketing-theme [class*="border-white/"],
+html[data-theme="light"] .marketing-theme [class*="border-white/"] {
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+html.light .marketing-theme [class*="bg-white/"],
+html[data-theme="light"] .marketing-theme [class*="bg-white/"] {
+  background-color: rgba(15, 23, 42, 0.04);
+}
+
+html.light .marketing-theme-section .rounded-2xl.bg-cream\/\[0\.065\],
+html.light .marketing-theme-section article > div.bg-cream\/\[0\.035\],
+html[data-theme="light"] .marketing-theme-section .rounded-2xl.bg-cream\/\[0\.065\],
+html[data-theme="light"] .marketing-theme-section article > div.bg-cream\/\[0\.035\] {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(248, 250, 252, 0.85)
+  ) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 16px 40px -24px rgba(15, 23, 42, 0.06);
+}
+
+html.light .marketing-theme .code-content,
+html[data-theme="light"] .marketing-theme .code-content {
+  background: rgba(248, 250, 252, 0.85);
+  color: #334155;
+}
+
+html.light .marketing-theme .practice-zone,
+html[data-theme="light"] .marketing-theme .practice-zone {
+  background: rgba(15, 23, 42, 0.025);
+}
+
+html.light .marketing-theme .practice-heading,
+html.light .marketing-theme .help-heading,
+html.light .marketing-theme .pushback-heading,
+html[data-theme="light"] .marketing-theme .practice-heading,
+html[data-theme="light"] .marketing-theme .help-heading,
+html[data-theme="light"] .marketing-theme .pushback-heading {
+  text-shadow: 0 12px 36px rgba(242, 110, 1, 0.09);
+}
+
+html.light .marketing-theme .code-content .c-r,
+html[data-theme="light"] .marketing-theme .code-content .c-r {
+  color: #9a5d10;
+}
+
+html.light .marketing-theme .code-content .c-o,
+html[data-theme="light"] .marketing-theme .code-content .c-o {
+  color: #c75d00;
+}
+
+html.light .marketing-theme .code-content .c-y,
+html[data-theme="light"] .marketing-theme .code-content .c-y {
+  color: #9a7a11;
+}
+
+html.light .marketing-theme .code-content .c-g,
+html[data-theme="light"] .marketing-theme .code-content .c-g {
+  color: #23734d;
+}
+
+html.light .marketing-theme .code-content .c-p,
+html[data-theme="light"] .marketing-theme .code-content .c-p {
+  color: #825f78;
+}
+
+html.light .marketing-theme .code-content .c-b,
+html[data-theme="light"] .marketing-theme .code-content .c-b {
+  color: #35657a;
+}
+
+html.light .marketing-theme .code-content .c-c,
+html[data-theme="light"] .marketing-theme .code-content .c-c {
+  color: #64748b;
+}
+
+html.light .blueprint-grid,
+html[data-theme="light"] .blueprint-grid {
+  background-image:
+    linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
+}
+
+html.light .practice-editor-caret,
+html[data-theme="light"] .practice-editor-caret {
+  border-right-color: #0f172a;
+}
+
+@keyframes theme-toggle-icon-in {
+  from {
+    opacity: 0;
+    transform: rotate(-28deg) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+}
+
+.theme-toggle-icon {
+  animation: theme-toggle-icon-in 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle-icon {
+    animation: none;
+  }
 }
 
 /* Section eyebrow. 0.22em tracking at 11px scattered the letters and read as
@@ -3647,4 +5385,1446 @@ body {
   width: 3px !important;
   margin-left: 3px;
   background: var(--workspace-accent);
+}
+
+/* The preparation welcome is rendered in a portal, outside the public shell.
+   Keep it in step with the persisted site theme instead of inheriting the
+   workspace's dark-only defaults. The warm colour lives in the page and coach
+   canvas, not in the content surfaces themselves. */
+html.light .maya-welcome-backdrop,
+html[data-theme="light"] .maya-welcome-backdrop {
+  background:
+    radial-gradient(66rem 36rem at 50% 108%, rgba(242, 110, 1, 0.16), transparent 71%),
+    radial-gradient(38rem 25rem at 12% 10%, rgba(255, 205, 164, 0.12), transparent 73%),
+    linear-gradient(180deg, #fbfbfd 0%, #f6f4f1 100%) !important;
+  --workspace-canvas: #f6f4f1;
+  --workspace-raised: #ffffff;
+  --workspace-card: #ffffff;
+  --workspace-card-hover: #f8fafc;
+  --workspace-accent-soft: color-mix(in srgb, var(--workspace-accent) 12%, transparent);
+  --workspace-accent-border: color-mix(in srgb, var(--workspace-accent) 30%, transparent);
+}
+
+html.light .maya-welcome-loading,
+html[data-theme="light"] .maya-welcome-loading {
+  background:
+    radial-gradient(62rem 34rem at 50% 108%, rgba(242, 110, 1, 0.14), transparent 72%),
+    #f8f7f5 !important;
+}
+
+html.light .maya-welcome-ambient,
+html[data-theme="light"] .maya-welcome-ambient {
+  opacity: 0.08;
+}
+
+html.light .maya-welcome-panel,
+html[data-theme="light"] .maya-welcome-panel {
+  border-color: transparent !important;
+  background: rgba(255, 255, 255, 0.86) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html.light .maya-welcome-avatar-stage,
+html[data-theme="light"] .maya-welcome-avatar-stage {
+  background:
+    radial-gradient(56% 36% at 50% -5%, rgba(255, 187, 112, 0.72), transparent 72%),
+    radial-gradient(82% 60% at 50% -8%, rgba(242, 110, 1, 0.63), transparent 74%),
+    radial-gradient(108% 82% at 50% -18%, rgba(180, 62, 7, 0.32), transparent 76%),
+    linear-gradient(180deg, #fff3e9 0%, #fffaf7 53%, #fffefd 100%) !important;
+}
+
+html.light .maya-welcome-avatar-fade,
+html[data-theme="light"] .maya-welcome-avatar-fade {
+  background: linear-gradient(to top, rgba(255, 254, 253, 0.72), transparent) !important;
+}
+
+html.light .maya-welcome-close,
+html[data-theme="light"] .maya-welcome-close {
+  color: #64748b !important;
+}
+
+html.light .maya-welcome-close:hover,
+html[data-theme="light"] .maya-welcome-close:hover {
+  background: rgba(15, 23, 42, 0.055) !important;
+  color: #0f172a !important;
+}
+
+html.light .maya-welcome-voice-control,
+html[data-theme="light"] .maya-welcome-voice-control {
+  border-color: transparent !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #111827 !important;
+  box-shadow: 0 12px 28px -16px rgba(110, 61, 18, 0.25) !important;
+}
+
+html.light .maya-welcome-voice-control:hover,
+html[data-theme="light"] .maya-welcome-voice-control:hover {
+  background: #ffffff !important;
+}
+
+html.light .maya-welcome-progress-idle,
+html[data-theme="light"] .maya-welcome-progress-idle {
+  background: #d9d7d4 !important;
+}
+
+.maya-welcome-progress-active {
+  box-shadow: none !important;
+}
+
+html.light .maya-welcome-eyebrow,
+html[data-theme="light"] .maya-welcome-eyebrow {
+  color: color-mix(in srgb, var(--workspace-accent) 82%, #633000) !important;
+}
+
+html.light .maya-welcome-title,
+html[data-theme="light"] .maya-welcome-title {
+  color: #111827 !important;
+}
+
+html.light .maya-welcome-body,
+html[data-theme="light"] .maya-welcome-body {
+  color: #475569 !important;
+}
+
+html.light .maya-welcome-copy-word.trail-word-visible,
+html[data-theme="light"] .maya-welcome-copy-word.trail-word-visible {
+  color: #475569;
+  background: none;
+  animation: none;
+}
+
+html.light .maya-welcome-footer,
+html[data-theme="light"] .maya-welcome-footer {
+  border-color: transparent !important;
+}
+
+html.light .maya-welcome-back,
+html[data-theme="light"] .maya-welcome-back {
+  border-color: transparent !important;
+  background: rgba(15, 23, 42, 0.055);
+  color: #475569 !important;
+}
+
+html.light .maya-welcome-back:hover,
+html[data-theme="light"] .maya-welcome-back:hover {
+  background: rgba(15, 23, 42, 0.09);
+  color: #111827 !important;
+}
+
+html.light .maya-welcome-primary,
+html[data-theme="light"] .maya-welcome-primary {
+  background: #111827 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+html.light .maya-welcome-primary:hover,
+html[data-theme="light"] .maya-welcome-primary:hover {
+  background: #1e293b !important;
+}
+
+html.light .maya-welcome-content label,
+html[data-theme="light"] .maya-welcome-content label {
+  color: #1f2937 !important;
+}
+
+html.light .maya-welcome-field-optional,
+html[data-theme="light"] .maya-welcome-field-optional,
+html.light .maya-welcome-field-note,
+html[data-theme="light"] .maya-welcome-field-note {
+  color: #64748b !important;
+}
+
+html.light .maya-welcome-content input,
+html[data-theme="light"] .maya-welcome-content input {
+  border-color: transparent !important;
+  background: rgba(15, 23, 42, 0.045) !important;
+  color: #1f2937 !important;
+}
+
+html.light .maya-welcome-content input::placeholder,
+html[data-theme="light"] .maya-welcome-content input::placeholder {
+  color: #94a3b8 !important;
+}
+
+html.light .maya-target-choice,
+html[data-theme="light"] .maya-target-choice,
+html.light .maya-preparation-area,
+html[data-theme="light"] .maya-preparation-area {
+  border-color: transparent !important;
+  background: rgba(15, 23, 42, 0.035) !important;
+  box-shadow: none !important;
+}
+
+html.light .maya-target-choice:hover,
+html[data-theme="light"] .maya-target-choice:hover,
+html.light .maya-target-choice[aria-pressed="true"],
+html[data-theme="light"] .maya-target-choice[aria-pressed="true"] {
+  border-color: transparent !important;
+  background: color-mix(in srgb, var(--workspace-accent) 11%, #ffffff) !important;
+}
+
+html.light .maya-target-choice-title,
+html[data-theme="light"] .maya-target-choice-title,
+html.light .maya-preparation-area p:first-of-type,
+html[data-theme="light"] .maya-preparation-area p:first-of-type {
+  color: #1f2937 !important;
+}
+
+html.light .maya-target-choice-detail,
+html[data-theme="light"] .maya-target-choice-detail,
+html.light .maya-preparation-area p:last-of-type,
+html[data-theme="light"] .maya-preparation-area p:last-of-type,
+html.light .maya-preparation-copy,
+html[data-theme="light"] .maya-preparation-copy {
+  color: #64748b !important;
+}
+
+html.light .maya-baseline-duration,
+html[data-theme="light"] .maya-baseline-duration,
+html.light .maya-baseline-prompt,
+html[data-theme="light"] .maya-baseline-prompt,
+html.light .maya-baseline-check p:first-of-type,
+html[data-theme="light"] .maya-baseline-check p:first-of-type,
+html.light .maya-skill-profile-card p,
+html[data-theme="light"] .maya-skill-profile-card p {
+  color: #1f2937 !important;
+}
+
+html.light .maya-baseline-check,
+html[data-theme="light"] .maya-baseline-check,
+html.light .maya-skill-profile-card,
+html[data-theme="light"] .maya-skill-profile-card {
+  border-color: transparent !important;
+  background: rgba(15, 23, 42, 0.035) !important;
+  box-shadow: none !important;
+}
+
+html.light .maya-baseline-check p:last-of-type,
+html[data-theme="light"] .maya-baseline-check p:last-of-type,
+html.light .maya-baseline-note,
+html[data-theme="light"] .maya-baseline-note,
+html.light .maya-skill-topic,
+html[data-theme="light"] .maya-skill-topic {
+  color: #64748b !important;
+}
+
+html.light .maya-baseline-choice,
+html[data-theme="light"] .maya-baseline-choice {
+  border-color: transparent !important;
+  background: rgba(15, 23, 42, 0.035) !important;
+  color: #475569 !important;
+}
+
+html.light .maya-baseline-choice:hover,
+html[data-theme="light"] .maya-baseline-choice:hover,
+html.light .maya-baseline-choice[aria-pressed="true"],
+html[data-theme="light"] .maya-baseline-choice[aria-pressed="true"] {
+  border-color: transparent !important;
+  background: color-mix(in srgb, var(--workspace-accent) 11%, #ffffff) !important;
+  color: #1f2937 !important;
+}
+
+html.light .practice-code-viewer,
+html[data-theme="light"] .practice-code-viewer {
+  border-color: transparent !important;
+  background: #f8fafc !important;
+}
+
+/* Interview routes use the live-room palette in a few different entry points.
+   Keep the paper treatment scoped here so other black workspace canvases retain
+   their intentional dark appearance. */
+html.light .interviews-page,
+html[data-theme="light"] .interviews-page,
+html.light .interviews-skeleton,
+html[data-theme="light"] .interviews-skeleton,
+html.light .interview-setup-skeleton,
+html[data-theme="light"] .interview-setup-skeleton,
+html.light .interview-workspace-skeleton,
+html[data-theme="light"] .interview-workspace-skeleton {
+  background:
+    radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--workspace-accent) 8%, transparent), transparent 30rem),
+    #f8f7f5 !important;
+  color: #1f2937;
+}
+
+html.light .interviews-page [class*="text-cream/"],
+html[data-theme="light"] .interviews-page [class*="text-cream/"],
+html.light .interview-setup-page [class*="text-cream/"],
+html[data-theme="light"] .interview-setup-page [class*="text-cream/"],
+html.light .interview-launch-page [class*="text-cream/"],
+html[data-theme="light"] .interview-launch-page [class*="text-cream/"],
+html.light .interview-workspace-page [class*="text-cream/"],
+html[data-theme="light"] .interview-workspace-page [class*="text-cream/"],
+html.light .interview-workspace-skeleton [class*="text-cream/"],
+html[data-theme="light"] .interview-workspace-skeleton [class*="text-cream/"] {
+  color: #64748b !important;
+}
+
+html.light .interviews-page [class~="text-cream"],
+html[data-theme="light"] .interviews-page [class~="text-cream"],
+html.light .interview-setup-page [class~="text-cream"],
+html[data-theme="light"] .interview-setup-page [class~="text-cream"],
+html.light .interview-launch-page [class~="text-cream"],
+html[data-theme="light"] .interview-launch-page [class~="text-cream"],
+html.light .interview-workspace-page [class~="text-cream"],
+html[data-theme="light"] .interview-workspace-page [class~="text-cream"] {
+  color: #1f2937 !important;
+}
+
+html.light .interviews-page .interviews-intro-word,
+html[data-theme="light"] .interviews-page .interviews-intro-word {
+  color: #334155 !important;
+}
+
+html.light .interviews-page [class*="bg-[#17181b]"],
+html[data-theme="light"] .interviews-page [class*="bg-[#17181b]"],
+html.light .interviews-skeleton [class*="bg-[#17181b]"],
+html[data-theme="light"] .interviews-skeleton [class*="bg-[#17181b]"] {
+  background: #ffffff !important;
+  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.32) !important;
+}
+
+html.light .interviews-page .interviews-active-link,
+html[data-theme="light"] .interviews-page .interviews-active-link {
+  background: #ffffff !important;
+  box-shadow: 0 16px 32px -28px rgba(15, 23, 42, 0.36) !important;
+}
+
+html.light .interviews-page .interview-session-card,
+html[data-theme="light"] .interviews-page .interview-session-card {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.28);
+}
+
+html.light .interviews-page .interview-session-card:hover,
+html[data-theme="light"] .interviews-page .interview-session-card:hover {
+  border-color: color-mix(in srgb, var(--workspace-accent) 34%, rgba(15, 23, 42, 0.1));
+  background: #ffffff;
+  box-shadow: 0 22px 42px -32px rgba(15, 23, 42, 0.34);
+}
+
+html.light .interviews-page .interview-session-icon,
+html[data-theme="light"] .interviews-page .interview-session-icon {
+  border-color: color-mix(in srgb, var(--workspace-accent) 28%, rgba(15, 23, 42, 0.1));
+  background: color-mix(in srgb, var(--workspace-accent) 9%, #ffffff);
+  color: var(--workspace-accent);
+  box-shadow: none;
+}
+
+html.light .interviews-page [class*="border-white/"],
+html[data-theme="light"] .interviews-page [class*="border-white/"],
+html.light .interview-setup-page [class*="border-white/"],
+html[data-theme="light"] .interview-setup-page [class*="border-white/"],
+html.light .interview-launch-page [class*="border-cream/"],
+html[data-theme="light"] .interview-launch-page [class*="border-cream/"],
+html.light .interview-workspace-page [class*="border-white/"],
+html[data-theme="light"] .interview-workspace-page [class*="border-white/"] {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+html.light .interview-setup-page .interview-mobile-glass,
+html[data-theme="light"] .interview-setup-page .interview-mobile-glass,
+html.light .interview-workspace-page .interview-mobile-glass,
+html[data-theme="light"] .interview-workspace-page .interview-mobile-glass,
+html.light .interview-workspace-page .interview-live-glass,
+html[data-theme="light"] .interview-workspace-page .interview-live-glass {
+  border-color: rgba(15, 23, 42, 0.09) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 16px 38px -30px rgba(15, 23, 42, 0.28) !important;
+}
+
+/* The live room is one paper workspace in light mode.  These names are kept
+   on the shared panels so assessment, resume and fundamentals rounds cannot
+   silently fall back to the old charcoal recipe. */
+html.light .interview-workspace-page .interview-panel-shell,
+html[data-theme="light"] .interview-workspace-page .interview-panel-shell {
+  border-color: rgba(15, 23, 42, 0.09) !important;
+  background: #ffffff !important;
+  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.3) !important;
+}
+
+html.light .interview-workspace-page .interview-panel-rule,
+html[data-theme="light"] .interview-workspace-page .interview-panel-rule {
+  border-color: rgba(15, 23, 42, 0.09) !important;
+}
+
+html.light .interview-workspace-page .interview-panel-card,
+html[data-theme="light"] .interview-workspace-page .interview-panel-card,
+html.light .interview-workspace-page .interview-answer-option,
+html[data-theme="light"] .interview-workspace-page .interview-answer-option {
+  background: rgba(15, 23, 42, 0.045) !important;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.055) !important;
+}
+
+html.light .interview-workspace-page .interview-answer-option:not(:disabled):hover,
+html[data-theme="light"] .interview-workspace-page .interview-answer-option:not(:disabled):hover {
+  background: #ffffff !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--workspace-accent) 38%, rgba(15, 23, 42, 0.1)) !important;
+}
+
+html.light .interview-workspace-page .interview-code-snippet,
+html[data-theme="light"] .interview-workspace-page .interview-code-snippet {
+  background: #f8fafc !important;
+  color: #334155 !important;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.07) !important;
+}
+
+html.light .interview-workspace-page .interview-answer-composer,
+html[data-theme="light"] .interview-workspace-page .interview-answer-composer {
+  background: #ffffff !important;
+}
+
+html.light .interview-workspace-page .interview-stage-rail,
+html[data-theme="light"] .interview-workspace-page .interview-stage-rail {
+  background: rgba(15, 23, 42, 0.045) !important;
+}
+
+html.light .interview-workspace-page .interview-stage-cell,
+html[data-theme="light"] .interview-workspace-page .interview-stage-cell {
+  background: rgba(15, 23, 42, 0.045) !important;
+}
+
+html.light .interview-workspace-page .interview-stage-cell[aria-current="step"],
+html[data-theme="light"] .interview-workspace-page .interview-stage-cell[aria-current="step"] {
+  background: #ffffff !important;
+}
+
+html.light .interview-workspace-page .interview-stage-label,
+html[data-theme="light"] .interview-workspace-page .interview-stage-label {
+  color: #475569 !important;
+}
+
+html.light .interview-workspace-page .interview-stage-cell[aria-current="step"] .interview-stage-label,
+html[data-theme="light"] .interview-workspace-page .interview-stage-cell[aria-current="step"] .interview-stage-label {
+  color: #1f2937 !important;
+}
+
+html.light .interview-workspace-page .interview-stage-caption,
+html[data-theme="light"] .interview-workspace-page .interview-stage-caption,
+html.light .interview-workspace-page .interview-stage-count,
+html[data-theme="light"] .interview-workspace-page .interview-stage-count {
+  color: #94a3b8 !important;
+}
+
+html.light .interview-workspace-page .interview-teacher-stage,
+html[data-theme="light"] .interview-workspace-page .interview-teacher-stage {
+  background: rgba(15, 23, 42, 0.045) !important;
+}
+
+html.light .interview-workspace-page .interview-teacher-chip,
+html[data-theme="light"] .interview-workspace-page .interview-teacher-chip {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: #475569 !important;
+  box-shadow: 0 8px 18px -14px rgba(15, 23, 42, 0.3) !important;
+}
+
+html.light .interview-workspace-page .interview-live-header,
+html[data-theme="light"] .interview-workspace-page .interview-live-header {
+  background: rgba(255, 255, 255, 0.92) !important;
+}
+
+html.light .interview-workspace-page .interview-live-timer,
+html[data-theme="light"] .interview-workspace-page .interview-live-timer {
+  background: rgba(15, 23, 42, 0.045) !important;
+  color: #475569 !important;
+}
+
+/* Video pixels remain unmodified. Only its chrome becomes readable on the
+   light workspace, avoiding a pale overlay that would wash out the camera. */
+html.light .interview-workspace-page .interview-camera-preview,
+html[data-theme="light"] .interview-workspace-page .interview-camera-preview {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  box-shadow: 0 14px 30px -24px rgba(15, 23, 42, 0.38) !important;
+}
+
+html.light .interview-workspace-page .interview-camera-chip,
+html[data-theme="light"] .interview-workspace-page .interview-camera-chip,
+html.light .interview-workspace-page .interview-camera-control,
+html[data-theme="light"] .interview-workspace-page .interview-camera-control {
+  border-color: rgba(255, 255, 255, 0.45) !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  color: #334155 !important;
+}
+
+/* Media setup has an intentionally quiet preview before a camera stream is
+   present. Replace the inherited black scrim with a pale, informative stage
+   in light mode, while preserving the live-video layout once permission is
+   granted. */
+html.light .interview-workspace-page .interview-media-preview,
+html[data-theme="light"] .interview-workspace-page .interview-media-preview {
+  background: rgba(15, 23, 42, 0.045) !important;
+}
+
+html.light .interview-workspace-page .interview-media-preview-scrim,
+html[data-theme="light"] .interview-workspace-page .interview-media-preview-scrim {
+  background: linear-gradient(180deg, transparent 42%, rgba(226, 232, 240, 0.52) 100%) !important;
+}
+
+html.light .interview-workspace-page .interview-media-privacy-chip,
+html[data-theme="light"] .interview-workspace-page .interview-media-privacy-chip {
+  border: 1px solid rgba(15, 23, 42, 0.09);
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #64748b !important;
+  box-shadow: 0 8px 18px -14px rgba(15, 23, 42, 0.22);
+}
+
+html.light .interview-workspace-page .interview-media-permissions,
+html[data-theme="light"] .interview-workspace-page .interview-media-permissions {
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  background: rgba(15, 23, 42, 0.025) !important;
+}
+
+html.light .interview-setup-page [class*="bg-white/"],
+html[data-theme="light"] .interview-setup-page [class*="bg-white/"],
+html.light .interview-launch-page [class*="bg-white/"],
+html[data-theme="light"] .interview-launch-page [class*="bg-white/"],
+html.light .interview-workspace-page [class*="bg-white/"],
+html[data-theme="light"] .interview-workspace-page [class*="bg-white/"] {
+  background-color: rgba(15, 23, 42, 0.045) !important;
+}
+
+html.light .interview-setup-page textarea,
+html[data-theme="light"] .interview-setup-page textarea,
+html.light .interview-workspace-page textarea,
+html[data-theme="light"] .interview-workspace-page textarea {
+  background: #ffffff !important;
+  color: #1f2937 !important;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+
+html.light .interview-setup-page .interview-primary-action,
+html[data-theme="light"] .interview-setup-page .interview-primary-action,
+html.light .interview-workspace-page a[class*="bg-cream"],
+html[data-theme="light"] .interview-workspace-page a[class*="bg-cream"],
+html.light .interview-workspace-page button[class*="bg-cream"],
+html[data-theme="light"] .interview-workspace-page button[class*="bg-cream"] {
+  border-color: #111827 !important;
+  background: #111827 !important;
+  color: #ffffff !important;
+}
+
+html.light .interview-setup-page .interview-primary-action *,
+html[data-theme="light"] .interview-setup-page .interview-primary-action *,
+html.light .interview-workspace-page a[class*="bg-cream"] *,
+html[data-theme="light"] .interview-workspace-page a[class*="bg-cream"] *,
+html.light .interview-workspace-page button[class*="bg-cream"] *,
+html[data-theme="light"] .interview-workspace-page button[class*="bg-cream"] * {
+  color: inherit !important;
+}
+
+html.light .interview-workspace-page [class*="bg-[#111215]"],
+html[data-theme="light"] .interview-workspace-page [class*="bg-[#111215]"],
+html.light .interview-workspace-page [class*="bg-black/"],
+html[data-theme="light"] .interview-workspace-page [class*="bg-black/"] {
+  background-color: #ffffff !important;
+}
+
+/* These are deliberately neutral containers, not white cards. This comes
+   after the legacy dark-token fallback above so the shared room keeps its
+   hierarchy instead of flattening every dark utility to pure white. */
+html.light .interview-workspace-page .interview-code-snippet,
+html[data-theme="light"] .interview-workspace-page .interview-code-snippet {
+  background-color: #f8fafc !important;
+}
+
+html.light .interview-workspace-page .interview-teacher-stage,
+html[data-theme="light"] .interview-workspace-page .interview-teacher-stage,
+html.light .interview-workspace-page .interview-live-timer,
+html[data-theme="light"] .interview-workspace-page .interview-live-timer {
+  background-color: rgba(15, 23, 42, 0.045) !important;
+}
+
+/* Custom microphone menu used by the live-room header. */
+html.light .interview-workspace-page .interview-microphone-trigger,
+html[data-theme="light"] .interview-workspace-page .interview-microphone-trigger {
+  border: 1px solid rgba(15, 23, 42, 0.09);
+  background-color: rgba(15, 23, 42, 0.045) !important;
+  color: #334155 !important;
+}
+
+html.light .interview-workspace-page .interview-microphone-trigger:hover,
+html[data-theme="light"] .interview-workspace-page .interview-microphone-trigger:hover,
+html.light .interview-workspace-page .interview-microphone-trigger:focus-visible,
+html[data-theme="light"] .interview-workspace-page .interview-microphone-trigger:focus-visible {
+  border-color: color-mix(in srgb, var(--workspace-accent) 48%, rgba(15, 23, 42, 0.12));
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--workspace-accent) 13%, transparent);
+}
+
+html.light .interview-workspace-page .interview-microphone-menu,
+html[data-theme="light"] .interview-workspace-page .interview-microphone-menu {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: #ffffff;
+  color: #334155;
+  box-shadow: 0 18px 38px -20px rgba(15, 23, 42, 0.3);
+}
+
+html.light .interview-workspace-page .interview-microphone-option,
+html[data-theme="light"] .interview-workspace-page .interview-microphone-option {
+  color: #475569;
+}
+
+html.light .interview-workspace-page .interview-microphone-option:hover,
+html[data-theme="light"] .interview-workspace-page .interview-microphone-option:hover,
+html.light .interview-workspace-page .interview-microphone-option[aria-selected="true"],
+html[data-theme="light"] .interview-workspace-page .interview-microphone-option[aria-selected="true"] {
+  background: rgba(15, 23, 42, 0.045);
+  color: #1f2937;
+}
+
+/* DSA interviews use a denser three-pane workspace. Give its specific chrome
+   the same paper hierarchy rather than inheriting the older charcoal shell. */
+html.light .interview-workspace-page .dsa-live-question-header,
+html[data-theme="light"] .interview-workspace-page .dsa-live-question-header {
+  background: #ffffff !important;
+  color: #475569 !important;
+  box-shadow: 0 8px 16px -18px rgba(15, 23, 42, 0.22);
+}
+
+html.light .interview-workspace-page .dsa-live-question-header [class*="text-cream"],
+html[data-theme="light"] .interview-workspace-page .dsa-live-question-header [class*="text-cream"] {
+  color: #64748b !important;
+}
+
+html.light .interview-workspace-page .dsa-live-example,
+html[data-theme="light"] .interview-workspace-page .dsa-live-example,
+html.light .interview-workspace-page .dsa-live-test-case,
+html[data-theme="light"] .interview-workspace-page .dsa-live-test-case {
+  background: rgba(15, 23, 42, 0.045) !important;
+  box-shadow: none !important;
+}
+
+html.light .interview-workspace-page .dsa-live-example-code,
+html[data-theme="light"] .interview-workspace-page .dsa-live-example-code {
+  background: #ffffff !important;
+  color: #475569 !important;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+
+html.light .interview-workspace-page .dsa-live-pane-divider span:first-child,
+html[data-theme="light"] .interview-workspace-page .dsa-live-pane-divider span:first-child {
+  background: rgba(15, 23, 42, 0.1) !important;
+}
+
+html.light .interview-workspace-page .dsa-live-editor-header,
+html[data-theme="light"] .interview-workspace-page .dsa-live-editor-header,
+html.light .interview-workspace-page .dsa-live-output,
+html[data-theme="light"] .interview-workspace-page .dsa-live-output,
+html.light .interview-workspace-page .dsa-live-editor-composer,
+html[data-theme="light"] .interview-workspace-page .dsa-live-editor-composer {
+  background: #ffffff !important;
+}
+
+html.light .interview-workspace-page .dsa-live-editor-canvas,
+html[data-theme="light"] .interview-workspace-page .dsa-live-editor-canvas {
+  background: #ffffff !important;
+}
+
+html.light .interview-workspace-page .dsa-live-language-picker,
+html[data-theme="light"] .interview-workspace-page .dsa-live-language-picker {
+  color-scheme: light;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(15, 23, 42, 0.045) !important;
+  color: #475569 !important;
+  box-shadow: none !important;
+}
+
+html.light .interview-workspace-page .dsa-live-language-picker:focus,
+html[data-theme="light"] .interview-workspace-page .dsa-live-language-picker:focus {
+  border-color: color-mix(in srgb, var(--workspace-accent) 45%, rgba(15, 23, 42, 0.1));
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--workspace-accent) 12%, transparent) !important;
+}
+
+html.light .interview-workspace-page [class*="shadow-[inset_0_1px_0_rgba(255,255,255"],
+html[data-theme="light"] .interview-workspace-page [class*="shadow-[inset_0_1px_0_rgba(255,255,255"] {
+  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.32) !important;
+}
+
+html.light .interview-workspace-skeleton [class*="bg-[#111215]"],
+html[data-theme="light"] .interview-workspace-skeleton [class*="bg-[#111215]"],
+html.light .interview-workspace-skeleton [class*="bg-white/"],
+html[data-theme="light"] .interview-workspace-skeleton [class*="bg-white/"] {
+  background-color: rgba(15, 23, 42, 0.07) !important;
+}
+
+html.light .interview-setup-skeleton [class*="bg-white/"],
+html[data-theme="light"] .interview-setup-skeleton [class*="bg-white/"],
+html.light .interviews-skeleton [class*="bg-white/"],
+html[data-theme="light"] .interviews-skeleton [class*="bg-white/"] {
+  background-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Practice is a dense reading and coding surface. In light mode its cards,
+   question panes, preparation dialog, and route fallbacks share one paper
+   palette while the scoped code editor supplies its own syntax theme. */
+html.light .practice-page,
+html[data-theme="light"] .practice-page,
+html.light .practice-question-page,
+html[data-theme="light"] .practice-question-page,
+html.light .practice-skeleton,
+html[data-theme="light"] .practice-skeleton {
+  background:
+    radial-gradient(circle at 54% 12%, color-mix(in srgb, var(--workspace-accent) 7%, transparent), transparent 34rem),
+    #f8f7f5 !important;
+  color: #1f2937;
+}
+
+html.light .practice-page [class*="text-cream/"],
+html[data-theme="light"] .practice-page [class*="text-cream/"],
+html.light .practice-question-page [class*="text-cream/"],
+html[data-theme="light"] .practice-question-page [class*="text-cream/"] {
+  color: #64748b !important;
+}
+
+html.light .practice-page [class~="text-cream"],
+html[data-theme="light"] .practice-page [class~="text-cream"],
+html.light .practice-question-page [class~="text-cream"],
+html[data-theme="light"] .practice-question-page [class~="text-cream"] {
+  color: #1f2937 !important;
+}
+
+html.light .practice-page [class*="border-white/"],
+html[data-theme="light"] .practice-page [class*="border-white/"],
+html.light .practice-question-page [class*="border-white/"],
+html[data-theme="light"] .practice-question-page [class*="border-white/"] {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+html.light .practice-page [class*="bg-[#17181b]"],
+html[data-theme="light"] .practice-page [class*="bg-[#17181b]"],
+html.light .practice-page [class*="bg-[#1b1c20]"],
+html[data-theme="light"] .practice-page [class*="bg-[#1b1c20]"],
+html.light .practice-page [class*="bg-[#24252a]"],
+html[data-theme="light"] .practice-page [class*="bg-[#24252a]"],
+html.light .practice-page [class*="bg-[#202226]"],
+html[data-theme="light"] .practice-page [class*="bg-[#202226]"],
+html.light .practice-page [class*="bg-[#141619]"],
+html[data-theme="light"] .practice-page [class*="bg-[#141619]"],
+html.light .practice-page [class*="bg-[#111214]"],
+html[data-theme="light"] .practice-page [class*="bg-[#111214]"],
+html.light .practice-page [class*="bg-[#101214]"],
+html[data-theme="light"] .practice-page [class*="bg-[#101214]"],
+html.light .practice-question-page [class*="bg-[#141619]"],
+html[data-theme="light"] .practice-question-page [class*="bg-[#141619]"],
+html.light .practice-question-page [class*="bg-[#111214]"],
+html[data-theme="light"] .practice-question-page [class*="bg-[#111214]"],
+html.light .practice-question-page [class*="bg-[#101214]"],
+html[data-theme="light"] .practice-question-page [class*="bg-[#101214]"],
+html.light .practice-question-page [class*="bg-[#0b0d10]"],
+html[data-theme="light"] .practice-question-page [class*="bg-[#0b0d10]"],
+html.light .practice-question-page [class*="bg-[#0e0f11]"],
+html[data-theme="light"] .practice-question-page [class*="bg-[#0e0f11]"] {
+  background-color: #ffffff !important;
+}
+
+html.light .practice-page .interview-session-card,
+html[data-theme="light"] .practice-page .interview-session-card {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.3);
+}
+
+html.light .practice-page .interview-session-card:hover,
+html[data-theme="light"] .practice-page .interview-session-card:hover {
+  border-color: color-mix(in srgb, var(--workspace-accent) 34%, rgba(15, 23, 42, 0.1));
+  background: #ffffff;
+  box-shadow: 0 22px 42px -32px rgba(15, 23, 42, 0.34);
+}
+
+html.light .practice-page .interview-session-icon,
+html[data-theme="light"] .practice-page .interview-session-icon {
+  border-color: color-mix(in srgb, var(--workspace-accent) 28%, rgba(15, 23, 42, 0.1));
+  background: color-mix(in srgb, var(--workspace-accent) 9%, #ffffff);
+  color: var(--workspace-accent);
+  box-shadow: none;
+}
+
+html.light .practice-page [class*="bg-white/"],
+html[data-theme="light"] .practice-page [class*="bg-white/"],
+html.light .practice-question-page [class*="bg-white/"],
+html[data-theme="light"] .practice-question-page [class*="bg-white/"] {
+  background-color: rgba(15, 23, 42, 0.045) !important;
+}
+
+html.light .practice-question-page [class*="bg-black/"],
+html[data-theme="light"] .practice-question-page [class*="bg-black/"] {
+  background-color: rgba(15, 23, 42, 0.035) !important;
+}
+
+/* The sketchbook's grid is an affordance, not decoration. The original white
+   grid became nearly invisible once the drawing paper switched to white. */
+html.light .practice-question-page .dsa-notes-drawing,
+html[data-theme="light"] .practice-question-page .dsa-notes-drawing {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  background-color: #ffffff !important;
+}
+
+html.light .practice-question-page .dsa-notes-grid,
+html[data-theme="light"] .practice-question-page .dsa-notes-grid {
+  background-color: #ffffff !important;
+  background-image:
+    linear-gradient(rgba(71, 85, 105, 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(71, 85, 105, 0.14) 1px, transparent 1px) !important;
+}
+
+/* Problem tabs and sketchbook controls are navigation, so they sit directly
+   on the paper rather than becoming a row of pale filled cards. */
+html.light .practice-question-page .dsa-problem-tabs,
+html[data-theme="light"] .practice-question-page .dsa-problem-tabs,
+html.light .practice-question-page .dsa-problem-tab,
+html[data-theme="light"] .practice-question-page .dsa-problem-tab {
+  background: transparent !important;
+}
+
+html.light .practice-question-page .dsa-problem-tab:hover,
+html[data-theme="light"] .practice-question-page .dsa-problem-tab:hover {
+  background: transparent !important;
+  color: #1f2937 !important;
+}
+
+html.light .practice-question-page .dsa-notes-drawing,
+html[data-theme="light"] .practice-question-page .dsa-notes-drawing,
+html.light .practice-question-page .dsa-notes-toolbar,
+html[data-theme="light"] .practice-question-page .dsa-notes-toolbar,
+html.light .practice-question-page .dsa-notes-page-controls,
+html[data-theme="light"] .practice-question-page .dsa-notes-page-controls {
+  background: transparent !important;
+}
+
+html.light .practice-question-page .dsa-notes-page-controls,
+html[data-theme="light"] .practice-question-page .dsa-notes-page-controls,
+html.light .practice-question-page .dsa-notes-add-page,
+html[data-theme="light"] .practice-question-page .dsa-notes-add-page,
+html.light .practice-question-page .dsa-notes-tool,
+html[data-theme="light"] .practice-question-page .dsa-notes-tool,
+html.light .practice-question-page .dsa-notes-toolbar [aria-label="Pen colors"] > button,
+html[data-theme="light"] .practice-question-page .dsa-notes-toolbar [aria-label="Pen colors"] > button {
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  background: transparent !important;
+}
+
+html.light .practice-question-page .dsa-notes-tool[aria-pressed="true"],
+html[data-theme="light"] .practice-question-page .dsa-notes-tool[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--workspace-accent) 34%, rgba(15, 23, 42, 0.1)) !important;
+  background: color-mix(in srgb, var(--workspace-accent) 10%, #ffffff) !important;
+}
+
+/* Coding-question controls need the same decisive action and menu treatment
+   as the rest of the light workspace, not their inherited graphite palette. */
+html.light .practice-question-page a[class*="bg-cream"],
+html[data-theme="light"] .practice-question-page a[class*="bg-cream"],
+html.light .practice-question-page button[class*="bg-cream"]:not(.practice-run-code):not(.practice-language-trigger),
+html[data-theme="light"] .practice-question-page button[class*="bg-cream"]:not(.practice-run-code):not(.practice-language-trigger) {
+  background: #111827 !important;
+  color: #ffffff !important;
+}
+
+html.light .practice-question-page a[class*="bg-cream"] *,
+html[data-theme="light"] .practice-question-page a[class*="bg-cream"] *,
+html.light .practice-question-page button[class*="bg-cream"]:not(.practice-run-code):not(.practice-language-trigger) *,
+html[data-theme="light"] .practice-question-page button[class*="bg-cream"]:not(.practice-run-code):not(.practice-language-trigger) * {
+  color: inherit !important;
+}
+
+html.light .practice-question-page .practice-language-trigger,
+html[data-theme="light"] .practice-question-page .practice-language-trigger,
+html.light .practice-question-page .practice-run-code,
+html[data-theme="light"] .practice-question-page .practice-run-code {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: rgba(15, 23, 42, 0.045) !important;
+  color: #475569 !important;
+  box-shadow: none !important;
+}
+
+html.light .practice-question-page .practice-run-code *,
+html[data-theme="light"] .practice-question-page .practice-run-code * {
+  color: inherit !important;
+}
+
+html.light .practice-language-menu,
+html[data-theme="light"] .practice-language-menu {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 22px 55px -24px rgba(15, 23, 42, 0.32) !important;
+}
+
+html.light .practice-language-menu [role="option"],
+html[data-theme="light"] .practice-language-menu [role="option"] {
+  color: #64748b !important;
+}
+
+html.light .practice-language-menu [role="option"]:hover,
+html.light .practice-language-menu [role="option"]:focus,
+html.light .practice-language-menu [role="option"][aria-selected="true"],
+html[data-theme="light"] .practice-language-menu [role="option"]:hover,
+html[data-theme="light"] .practice-language-menu [role="option"]:focus,
+html[data-theme="light"] .practice-language-menu [role="option"][aria-selected="true"] {
+  background: rgba(15, 23, 42, 0.055) !important;
+  color: #1f2937 !important;
+}
+
+html.light .practice-question-page .skeleton,
+html[data-theme="light"] .practice-question-page .skeleton {
+  background: rgba(15, 23, 42, 0.075) !important;
+}
+
+html.light .practice-question-page .skeleton::after,
+html[data-theme="light"] .practice-question-page .skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.78) 48%, transparent) !important;
+}
+
+html.light .practice-page textarea,
+html[data-theme="light"] .practice-page textarea,
+html.light .practice-question-page textarea,
+html[data-theme="light"] .practice-question-page textarea {
+  background: #ffffff !important;
+  color: #1f2937 !important;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+
+html.light .practice-page.practice-mobile-overlay,
+html[data-theme="light"] .practice-page.practice-mobile-overlay {
+  background: rgba(248, 247, 245, 0.84) !important;
+}
+
+html.light .practice-page.practice-mobile-overlay > section,
+html[data-theme="light"] .practice-page.practice-mobile-overlay > section {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: #ffffff !important;
+  box-shadow: 0 28px 70px -40px rgba(15, 23, 42, 0.34) !important;
+}
+
+html.light .practice-skeleton [class*="bg-[#17181b]"],
+html[data-theme="light"] .practice-skeleton [class*="bg-[#17181b]"],
+html.light .practice-skeleton [class*="bg-[#141619]"],
+html[data-theme="light"] .practice-skeleton [class*="bg-[#141619]"],
+html.light .practice-skeleton [class*="bg-[#101214]"],
+html[data-theme="light"] .practice-skeleton [class*="bg-[#101214]"],
+html.light .practice-skeleton [class*="bg-[#0b0d10]"],
+html[data-theme="light"] .practice-skeleton [class*="bg-[#0b0d10]"] {
+  background-color: #ffffff !important;
+}
+
+html.light .practice-skeleton [class*="bg-white/"],
+html[data-theme="light"] .practice-skeleton [class*="bg-white/"],
+html.light .practice-skeleton [class*="bg-black/"],
+html[data-theme="light"] .practice-skeleton [class*="bg-black/"] {
+  background-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+/* DSA's overview uses additional graphite shades for its block cards and
+   stepper. Its cream buttons were designed as dark-mode CTAs; in light mode
+   they become the decisive ink actions used throughout the workspace. */
+html.light .dsa-practice-page [class*="bg-[#0e1011]"],
+html[data-theme="light"] .dsa-practice-page [class*="bg-[#0e1011]"],
+html.light .dsa-practice-page [class*="bg-[#191a1d]"],
+html[data-theme="light"] .dsa-practice-page [class*="bg-[#191a1d]"],
+html.light .dsa-practice-page [class*="bg-[#1a1b1e]"],
+html[data-theme="light"] .dsa-practice-page [class*="bg-[#1a1b1e]"],
+html.light .dsa-practice-page [class*="bg-[#141518]"],
+html[data-theme="light"] .dsa-practice-page [class*="bg-[#141518]"],
+html.light .dsa-practice-page [class*="bg-[#1a1c20]"],
+html[data-theme="light"] .dsa-practice-page [class*="bg-[#1a1c20]"],
+html.light .dsa-practice-page [class*="bg-[#202226]"],
+html[data-theme="light"] .dsa-practice-page [class*="bg-[#202226]"] {
+  background-color: #ffffff !important;
+}
+
+html.light .dsa-practice-page .dsa-chapter-details,
+html[data-theme="light"] .dsa-practice-page .dsa-chapter-details,
+html.light .dsa-practice-page .dsa-assessment-card,
+html[data-theme="light"] .dsa-practice-page .dsa-assessment-card {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.3) !important;
+}
+
+html.light .dsa-practice-page a[class*="bg-cream"],
+html[data-theme="light"] .dsa-practice-page a[class*="bg-cream"],
+html.light .dsa-practice-page button[class*="bg-cream"],
+html[data-theme="light"] .dsa-practice-page button[class*="bg-cream"] {
+  background: #111827 !important;
+  color: #ffffff !important;
+  box-shadow: 0 14px 26px -20px rgba(15, 23, 42, 0.5) !important;
+}
+
+html.light .dsa-practice-page a[class*="bg-cream"] *,
+html[data-theme="light"] .dsa-practice-page a[class*="bg-cream"] *,
+html.light .dsa-practice-page button[class*="bg-cream"] *,
+html[data-theme="light"] .dsa-practice-page button[class*="bg-cream"] * {
+  color: inherit !important;
+}
+
+html.light .dsa-practice-page [class*="bg-[#303236]"],
+html[data-theme="light"] .dsa-practice-page [class*="bg-[#303236]"] {
+  background-color: #cbd5e1 !important;
+}
+
+/* The roadmap needs room for its progress rail and its hover labels. The dark
+   glow reads as a spill on paper, so the current step gets a crisp accent
+   instead and rows lift with a restrained border/shadow treatment. */
+html.light .dsa-practice-page .dsa-chapter-details,
+html[data-theme="light"] .dsa-practice-page .dsa-chapter-details {
+  overflow: visible !important;
+}
+
+html.light .dsa-practice-page .dsa-chapter-details[open]::details-content,
+html[data-theme="light"] .dsa-practice-page .dsa-chapter-details[open]::details-content {
+  overflow: visible;
+}
+
+html.light .dsa-practice-page .dsa-chapter-body,
+html[data-theme="light"] .dsa-practice-page .dsa-chapter-body,
+html.light .dsa-practice-page .dsa-chapter-stepper-wrap,
+html[data-theme="light"] .dsa-practice-page .dsa-chapter-stepper-wrap {
+  position: relative;
+  z-index: 10;
+}
+
+html.light .dsa-practice-page .dsa-chapter-stepper-wrap,
+html[data-theme="light"] .dsa-practice-page .dsa-chapter-stepper-wrap {
+  border-top: 1px solid rgba(15, 23, 42, 0.07);
+}
+
+html.light .dsa-practice-page .dsa-question-step .workspace-accent-indicator,
+html[data-theme="light"] .dsa-practice-page .dsa-question-step .workspace-accent-indicator {
+  box-shadow: none !important;
+}
+
+html.light .dsa-practice-page .dsa-question-step-bar,
+html[data-theme="light"] .dsa-practice-page .dsa-question-step-bar {
+  box-shadow: none !important;
+}
+
+html.light .dsa-practice-page .dsa-question-step:hover .dsa-question-step-bar,
+html[data-theme="light"] .dsa-practice-page .dsa-question-step:hover .dsa-question-step-bar {
+  filter: none !important;
+  transform: none !important;
+}
+
+html.light .dsa-practice-page .dsa-question-step-tooltip,
+html[data-theme="light"] .dsa-practice-page .dsa-question-step-tooltip {
+  z-index: 60 !important;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.98) !important;
+  color: #64748b !important;
+  box-shadow: 0 16px 34px -18px rgba(15, 23, 42, 0.28) !important;
+}
+
+html.light .dsa-practice-page .dsa-question-step-tooltip strong,
+html[data-theme="light"] .dsa-practice-page .dsa-question-step-tooltip strong {
+  color: #1f2937 !important;
+}
+
+html.light .dsa-practice-page .dsa-question-row,
+html[data-theme="light"] .dsa-practice-page .dsa-question-row {
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  background: rgba(255, 255, 255, 0.68) !important;
+}
+
+html.light .dsa-practice-page .dsa-question-row:hover,
+html[data-theme="light"] .dsa-practice-page .dsa-question-row:hover {
+  border-color: color-mix(in srgb, var(--workspace-accent) 34%, rgba(15, 23, 42, 0.1)) !important;
+  background: #ffffff !important;
+  box-shadow: 0 16px 28px -24px rgba(15, 23, 42, 0.38) !important;
+}
+
+/* Light portrait variants carry their own paper background; retain the stage
+   underneath for dark mode and replace only the inherited dark photo washes. */
+html.light .dsa-practice-page .dsa-assessment-portrait,
+html[data-theme="light"] .dsa-practice-page .dsa-assessment-portrait {
+  background: #f8f7f5 !important;
+}
+
+html.light .dsa-practice-page .dsa-assessment-portrait-vignette,
+html[data-theme="light"] .dsa-practice-page .dsa-assessment-portrait-vignette {
+  background: radial-gradient(circle at 50% 28%, transparent 42%, rgba(148, 163, 184, 0.08) 100%) !important;
+}
+
+html.light .dsa-practice-page .dsa-assessment-portrait-fade,
+html[data-theme="light"] .dsa-practice-page .dsa-assessment-portrait-fade {
+  background: linear-gradient(180deg, transparent 58%, rgba(248, 247, 245, 0.52) 100%) !important;
+}
+
+html.light .dsa-practice-page .dsa-assessment-portrait-label,
+html[data-theme="light"] .dsa-practice-page .dsa-assessment-portrait-label {
+  color: #ffffff !important;
+}
+
+/* The three story-practice routes share this assessment surface. Their coach
+   photos need the generated light portraits and paper-safe overlays just like
+   DSA, rather than carrying a dark scene into an otherwise light workspace. */
+html.light .practice-page .story-assessment-preview,
+html[data-theme="light"] .practice-page .story-assessment-preview,
+html.light .practice-page .story-assessment-frame,
+html[data-theme="light"] .practice-page .story-assessment-frame {
+  border-color: rgba(15, 23, 42, 0.09) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.3) !important;
+}
+
+html.light .practice-page .story-assessment-portrait,
+html[data-theme="light"] .practice-page .story-assessment-portrait,
+html.light .practice-page .story-assessment-portrait-image,
+html[data-theme="light"] .practice-page .story-assessment-portrait-image {
+  background: #f8f7f5 !important;
+}
+
+html.light .practice-page .story-assessment-portrait-vignette,
+html[data-theme="light"] .practice-page .story-assessment-portrait-vignette {
+  background: radial-gradient(circle at 50% 28%, transparent 42%, rgba(148, 163, 184, 0.08) 100%) !important;
+}
+
+html.light .practice-page .story-assessment-portrait-fade,
+html[data-theme="light"] .practice-page .story-assessment-portrait-fade {
+  background: linear-gradient(180deg, transparent 58%, rgba(248, 247, 245, 0.52) 100%) !important;
+}
+
+html.light .practice-page .story-assessment-portrait-label,
+html[data-theme="light"] .practice-page .story-assessment-portrait-label {
+  color: #ffffff !important;
+}
+
+html.light .practice-page .practice-intro-stage,
+html[data-theme="light"] .practice-page .practice-intro-stage {
+  border-color: rgba(15, 23, 42, 0.09) !important;
+  background: #ffffff !important;
+  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.3) !important;
+}
+
+html.light .practice-page .practice-intro-dialogue,
+html[data-theme="light"] .practice-page .practice-intro-dialogue,
+html.light .practice-page .practice-intro-listen,
+html[data-theme="light"] .practice-page .practice-intro-listen {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: #475569 !important;
+  box-shadow: 0 16px 36px -22px rgba(15, 23, 42, 0.28) !important;
+}
+
+html.light .practice-page .practice-intro-dialogue-tail,
+html[data-theme="light"] .practice-page .practice-intro-dialogue-tail {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: #ffffff !important;
+}
+
+html.light .practice-page .story-practice-intro-dialogue,
+html[data-theme="light"] .practice-page .story-practice-intro-dialogue,
+html.light .practice-page .story-practice-intro-listen,
+html[data-theme="light"] .practice-page .story-practice-intro-listen {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  color: #475569 !important;
+  box-shadow: 0 16px 36px -22px rgba(15, 23, 42, 0.28) !important;
+}
+
+html.light .practice-page .story-practice-intro-dialogue-tail,
+html[data-theme="light"] .practice-page .story-practice-intro-dialogue-tail {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: #ffffff !important;
+}
+
+html.light .practice-page .story-practice-intro-dialogue p,
+html[data-theme="light"] .practice-page .story-practice-intro-dialogue p {
+  color: #475569 !important;
+}
+
+html.light .practice-page .practice-intro-cta,
+html[data-theme="light"] .practice-page .practice-intro-cta,
+html.light .practice-page a[class*="bg-cream"],
+html[data-theme="light"] .practice-page a[class*="bg-cream"],
+html.light .practice-page button[class*="bg-cream"],
+html[data-theme="light"] .practice-page button[class*="bg-cream"] {
+  background: #111827 !important;
+  color: #ffffff !important;
+}
+
+html.light .practice-page .practice-intro-cta *,
+html[data-theme="light"] .practice-page .practice-intro-cta *,
+html.light .practice-page a[class*="bg-cream"] *,
+html[data-theme="light"] .practice-page a[class*="bg-cream"] *,
+html.light .practice-page button[class*="bg-cream"] *,
+html[data-theme="light"] .practice-page button[class*="bg-cream"] * {
+  color: inherit !important;
+}
+
+html.light .practice-question-page .story-practice-artifact,
+html[data-theme="light"] .practice-question-page .story-practice-artifact {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: #ffffff !important;
+  box-shadow: 0 16px 36px -24px rgba(15, 23, 42, 0.24) !important;
+}
+
+html.light .practice-question-page .story-practice-artifact-header,
+html[data-theme="light"] .practice-question-page .story-practice-artifact-header {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  background: #f8fafc !important;
+}
+
+/* Tabs are navigation, not cards. Keep the active underline as the selected
+   affordance and let the surrounding paper show through. */
+html.light .practice-question-page .story-practice-tabs,
+html[data-theme="light"] .practice-question-page .story-practice-tabs,
+html.light .practice-question-page .story-practice-tab,
+html[data-theme="light"] .practice-question-page .story-practice-tab {
+  background: transparent !important;
+}
+
+html.light .practice-question-page .story-practice-tab:hover,
+html[data-theme="light"] .practice-question-page .story-practice-tab:hover {
+  background: transparent !important;
+  color: #1f2937 !important;
+}
+
+/* This notification is portalled to body, so it requires its own theme scope. */
+html.light .dsa-assessment-notice,
+html[data-theme="light"] .dsa-assessment-notice {
+  border: 1px solid rgba(15, 23, 42, 0.09);
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 28px 90px -26px rgba(15, 23, 42, 0.34) !important;
+}
+
+html.light .dsa-assessment-notice [class~="text-cream"],
+html[data-theme="light"] .dsa-assessment-notice [class~="text-cream"] {
+  color: #1f2937 !important;
+}
+
+html.light .dsa-assessment-notice [class*="text-cream/"],
+html[data-theme="light"] .dsa-assessment-notice [class*="text-cream/"] {
+  color: #64748b !important;
+}
+
+/* Teacher feedback is portalled outside the question workspace, so its paper
+   treatment must be explicitly scoped rather than inherited from the route. */
+html.light .teacher-feedback-backdrop,
+html[data-theme="light"] .teacher-feedback-backdrop {
+  background: rgba(15, 23, 42, 0.28) !important;
+}
+
+html.light .teacher-feedback-modal,
+html[data-theme="light"] .teacher-feedback-modal {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: #ffffff !important;
+  box-shadow: 0 32px 120px rgba(15, 23, 42, 0.3) !important;
+}
+
+html.light .teacher-feedback-stage,
+html[data-theme="light"] .teacher-feedback-stage {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  background:
+    radial-gradient(circle at 50% 34%, color-mix(in srgb, var(--workspace-accent) 10%, transparent), transparent 13rem),
+    linear-gradient(180deg, #f8fafc, #eef3f7) !important;
+}
+
+html.light .teacher-feedback-stage-header,
+html[data-theme="light"] .teacher-feedback-stage-header {
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(248, 250, 252, 0)) !important;
+}
+
+html.light .teacher-feedback-stage-footer,
+html[data-theme="light"] .teacher-feedback-stage-footer {
+  background: linear-gradient(180deg, transparent 18%, rgba(238, 243, 247, 0.76) 100%) !important;
+}
+
+html.light .teacher-feedback-stage button,
+html[data-theme="light"] .teacher-feedback-stage button {
+  background: rgba(15, 23, 42, 0.06) !important;
+  color: #475569 !important;
+}
+
+html.light .teacher-feedback-stage-footer > span,
+html[data-theme="light"] .teacher-feedback-stage-footer > span {
+  background: rgba(255, 255, 255, 0.78) !important;
+  color: #475569 !important;
+}
+
+html.light .teacher-feedback-content,
+html[data-theme="light"] .teacher-feedback-content {
+  background: #ffffff !important;
+}
+
+html.light .teacher-feedback-modal [class~="text-cream"],
+html[data-theme="light"] .teacher-feedback-modal [class~="text-cream"] {
+  color: #1f2937 !important;
+}
+
+html.light .teacher-feedback-modal [class*="text-cream/"],
+html[data-theme="light"] .teacher-feedback-modal [class*="text-cream/"] {
+  color: #64748b !important;
+}
+
+html.light .teacher-feedback-code,
+html[data-theme="light"] .teacher-feedback-code {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: #f8fafc !important;
+}
+
+html.light .teacher-feedback-follow-up,
+html[data-theme="light"] .teacher-feedback-follow-up {
+  border-color: color-mix(in srgb, var(--workspace-accent) 20%, rgba(15, 23, 42, 0.08)) !important;
+  background: color-mix(in srgb, var(--workspace-accent) 7%, #ffffff) !important;
+}
+
+/* Signed-in Home / Overview dashboard. The teacher media remains expressive,
+   while the surrounding coaching, momentum, and summary cards become paper. */
+html.light .dashboard-page,
+html[data-theme="light"] .dashboard-page,
+html.light .dashboard-skeleton,
+html[data-theme="light"] .dashboard-skeleton {
+  background:
+    radial-gradient(circle at 52% 18%, color-mix(in srgb, var(--workspace-accent) 8%, transparent), transparent 34rem),
+    #f8f7f5 !important;
+  color: #1f2937;
+}
+
+html.light .dashboard-page [class*="text-cream/"],
+html[data-theme="light"] .dashboard-page [class*="text-cream/"] {
+  color: #64748b !important;
+}
+
+html.light .dashboard-page [class~="text-cream"],
+html[data-theme="light"] .dashboard-page [class~="text-cream"] {
+  color: #1f2937 !important;
+}
+
+html.light .dashboard-page [class*="border-cream/"],
+html[data-theme="light"] .dashboard-page [class*="border-cream/"],
+html.light .dashboard-page [class*="border-white/"],
+html[data-theme="light"] .dashboard-page [class*="border-white/"] {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+html.light .dashboard-page [class*="bg-[#17181b]"],
+html[data-theme="light"] .dashboard-page [class*="bg-[#17181b]"],
+html.light .dashboard-page [class*="bg-[#151619]"],
+html[data-theme="light"] .dashboard-page [class*="bg-[#151619]"],
+html.light .dashboard-page [class*="bg-[#141619]"],
+html[data-theme="light"] .dashboard-page [class*="bg-[#141619]"] {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.3) !important;
+}
+
+html.light .dashboard-page [class*="bg-black/"],
+html[data-theme="light"] .dashboard-page [class*="bg-black/"] {
+  background-color: rgba(15, 23, 42, 0.035) !important;
+}
+
+html.light .dashboard-page [class*="bg-cream/"],
+html[data-theme="light"] .dashboard-page [class*="bg-cream/"] {
+  background-color: rgba(15, 23, 42, 0.045) !important;
+}
+
+html.light .dashboard-page a[class*="bg-cream"],
+html[data-theme="light"] .dashboard-page a[class*="bg-cream"] {
+  background: #111827 !important;
+  color: #ffffff !important;
+  box-shadow: 0 14px 26px -20px rgba(15, 23, 42, 0.5) !important;
+}
+
+html.light .dashboard-page a[class*="bg-cream"] *,
+html[data-theme="light"] .dashboard-page a[class*="bg-cream"] * {
+  color: inherit !important;
+}
+
+/* Keep data visualisations legible on the paper dashboard. Their dark-theme
+   tracks intentionally use very low opacity, which is too faint on white. */
+html.light .dashboard-page .dashboard-score-ring-track,
+html[data-theme="light"] .dashboard-page .dashboard-score-ring-track {
+  stroke: #cbd5e1;
+  stroke-width: 13;
+}
+
+html.light .dashboard-page .dashboard-score-ring-highlight,
+html[data-theme="light"] .dashboard-page .dashboard-score-ring-highlight {
+  stroke: rgba(255, 255, 255, 0.82);
+}
+
+html.light .dashboard-page .dashboard-readiness-insight,
+html[data-theme="light"] .dashboard-page .dashboard-readiness-insight {
+  background: rgba(15, 23, 42, 0.018) !important;
+}
+
+html.light .dashboard-page .dashboard-readiness-chip,
+html[data-theme="light"] .dashboard-page .dashboard-readiness-chip {
+  border-color: transparent !important;
+  background: rgba(15, 23, 42, 0.03) !important;
+}
+
+html.light .dashboard-page .practice-weekly-activity-bar,
+html[data-theme="light"] .dashboard-page .practice-weekly-activity-bar {
+  border: 0;
+  background: rgba(15, 23, 42, 0.035) !important;
+  box-shadow: none;
+}
+
+html.light .dashboard-page .practice-weekly-activity-fill,
+html[data-theme="light"] .dashboard-page .practice-weekly-activity-fill {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--workspace-accent) 36%, transparent);
+}
+
+html.light .dashboard-page .dashboard-progress-track,
+html[data-theme="light"] .dashboard-page .dashboard-progress-track {
+  border: 0;
+  background: rgba(15, 23, 42, 0.035) !important;
+  box-shadow: none;
+}
+
+html.light .dashboard-page .dashboard-progress-track > span,
+html[data-theme="light"] .dashboard-page .dashboard-progress-track > span {
+  background: var(--workspace-accent) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--workspace-accent) 36%, transparent);
+}
+
+html.light .dashboard-skeleton [class*="bg-[#17181b]"],
+html[data-theme="light"] .dashboard-skeleton [class*="bg-[#17181b]"],
+html.light .dashboard-skeleton [class*="bg-[#151619]"],
+html[data-theme="light"] .dashboard-skeleton [class*="bg-[#151619]"],
+html.light .dashboard-skeleton [class*="bg-black/"],
+html[data-theme="light"] .dashboard-skeleton [class*="bg-black/"] {
+  background-color: rgba(15, 23, 42, 0.07) !important;
+}
+
+/* The root loading boundary is shared by public and workspace routes. Its
+   blueprint base stays dark for marketing, while this explicit scope follows
+   the selected app theme so route transitions never flash graphite in light
+   mode. */
+html.light .app-root-loader,
+html[data-theme="light"] .app-root-loader {
+  background:
+    radial-gradient(42rem 28rem at 92% 108%, color-mix(in srgb, var(--workspace-accent, #f26e01) 9%, transparent), transparent 70%),
+    radial-gradient(34rem 26rem at 4% 92%, rgba(242, 110, 1, 0.05), transparent 70%),
+    #f8f7f5 !important;
+  color: #1f2937;
+}
+
+html.light .app-root-loader .blueprint-glow,
+html[data-theme="light"] .app-root-loader .blueprint-glow {
+  background:
+    radial-gradient(42rem 30rem at 92% 108%, rgba(15, 23, 42, 0.035), transparent 70%),
+    radial-gradient(34rem 26rem at 4% 92%, rgba(242, 110, 1, 0.055), transparent 70%);
+}
+
+html.light .app-root-loader .wave-bar,
+html[data-theme="light"] .app-root-loader .wave-bar {
+  background-color: var(--workspace-accent, #f26e01) !important;
+}
+
+@media (hover: none), (pointer: coarse) {
+  html.light .maya-welcome-backdrop,
+  html[data-theme="light"] .maya-welcome-backdrop {
+    background:
+      radial-gradient(56rem 28rem at 50% 104%, rgba(242, 110, 1, 0.14), transparent 72%),
+      #f8f7f5 !important;
+  }
+
+  html.light .maya-welcome-panel,
+  html[data-theme="light"] .maya-welcome-panel {
+    background: rgba(255, 255, 255, 0.94) !important;
+  }
 }

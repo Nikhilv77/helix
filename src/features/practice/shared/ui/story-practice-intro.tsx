@@ -139,10 +139,10 @@ export function StoryPracticeIntro({ block, terminalCount, experience }: StoryPr
           <MayaStage speaking={speaking} transparent performanceProfile="practice" />
         </div>
 
-        <div className="absolute right-5 top-5 z-20 hidden w-[clamp(14.5rem,22vw,17rem)] max-w-[40%] rounded-xl border border-white/[0.07] bg-[#1a1c20]/95 px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.28)] lg:block">
+        <div className="story-practice-intro-dialogue absolute right-5 top-5 z-20 hidden w-[clamp(14.5rem,22vw,17rem)] max-w-[40%] rounded-xl border border-white/[0.07] bg-[#1a1c20]/95 px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.28)] lg:block">
           <span
             aria-hidden
-            className="absolute -left-2 top-8 h-4 w-4 rotate-45 border-b border-l border-white/[0.07] bg-[#1a1c20]"
+            className="story-practice-intro-dialogue-tail absolute -left-2 top-8 h-4 w-4 rotate-45 border-b border-l border-white/[0.07] bg-[#1a1c20]"
           />
           <div className="relative flex gap-3">
             <AudioLines
@@ -160,15 +160,16 @@ export function StoryPracticeIntro({ block, terminalCount, experience }: StoryPr
         <button
           type="button"
           onClick={say}
-          className="absolute bottom-4 right-5 z-20 hidden h-10 items-center gap-2 rounded-lg border border-white/[0.055] bg-[#1a1c20] px-3.5 text-[13px] font-semibold text-cream/76 transition hover:bg-[#202226] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] lg:inline-flex"
+          className="story-practice-intro-listen absolute bottom-4 right-5 z-20 hidden h-10 items-center gap-2 rounded-lg border border-white/[0.055] bg-[#1a1c20] px-3.5 text-[13px] font-semibold text-cream/76 transition hover:bg-[#202226] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)] lg:inline-flex"
         >
           {state === "loading" ? (
             <Loader2 size={14} aria-hidden="true" className="motion-safe:animate-spin" />
           ) : (
             <Volume2 size={14} aria-hidden="true" />
           )}
-          Hear {teacher.name}
+          Listen
         </button>
+
       </section>
     </div>
   );
