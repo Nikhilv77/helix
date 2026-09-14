@@ -3,7 +3,12 @@ import { Logger } from "@/server/common/logger";
 import { BadRequestErrorException } from "@/server/common/exceptions/bad-request-error.exception";
 import { ConflictErrorException } from "@/server/common/exceptions/conflict-error.exception";
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
-import { InterviewDecider, normaliseMissing } from "./decider";
+import {
+  candidateConversationFallback,
+  classifyCandidateTurn,
+  InterviewDecider,
+  normaliseMissing
+} from "./decider";
 import { InterviewPlanner } from "./planner";
 import {
   SessionStore,
@@ -61,11 +66,22 @@ import {
   storyPracticeAssessmentOpening
 } from "./story-practice-assessment-dialogue";
 import { storyPracticeAssessmentIdentityFromSetup } from "@/features/practice/shared/server/contracts";
+import {
+  answerTexts,
+  evaluationAnswerHash,
+  type EvaluationRecoveryMutation,
+  type EvaluationRecoveryPayload
+} from "./evaluation-recovery";
+import { INTERVIEW_DECIDER_PROMPT_VERSION, INTERVIEW_ENGINE_VERSION } from "./runtime-version";
+import {
+  LIVE_DECISION_DEADLINE_MS,
+  LIVE_EVALUATION_DEADLINE_MS
+} from "../domain/voice-turn-timing";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** A spoken conversation should never wait on the model's full provider timeout. */
-const DECIDER_BUDGET_MS = 4_000;
-const EVALUATOR_BUDGET_MS = 3_500;
+const DECIDER_BUDGET_MS = LIVE_DECISION_DEADLINE_MS;
+const EVALUATOR_BUDGET_MS = LIVE_EVALUATION_DEADLINE_MS;
 
 export interface StartResult {
   state: InterviewState;
@@ -417,12 +433,26 @@ export class InterviewService {
       );
     }
 
+    const candidateNeedsBreak =
+      mode === "answer" &&
+      !isResumableBlockAssessment(existing.setup) &&
+      candidateNeedsInterviewBreak(answer.text);
+    const candidateEndedInterview =
+      mode === "answer" &&
+      !isResumableBlockAssessment(existing.setup) &&
+      !candidateNeedsBreak &&
+      candidateRequestsInterviewEnd(answer.text);
     const withAnswer = appendTurn(existing, {
       speaker: "user",
       text: answer.text,
       startMs: answer.startMs,
       endMs: answer.endMs,
-      questionIndex: existing.questionIndex,
+      ...(candidateEndedInterview || candidateNeedsBreak
+        ? {
+            ...(candidateEndedInterview ? { endedInterview: true } : {}),
+            ...(candidateNeedsBreak ? { assessmentExcluded: true } : {})
+          }
+        : { questionIndex: existing.questionIndex }),
       ...(mode === "skip-block-assessment-code" ? { skipped: true } : {})
     });
 
@@ -436,6 +466,22 @@ export class InterviewService {
       );
     }
 
+    if (candidateEndedInterview) {
+      return this.completeCandidateEndedInterview(withAnswer, now, session.version, turnId);
+    }
+
+    if (candidateNeedsBreak) {
+      return this.completeCandidateBreakSupport(withAnswer, now, session.version, turnId);
+    }
+
+    const conversationHistory = withAnswer.turns
+      .slice(0, -1)
+      .slice(-8)
+      .map((turn) => ({ speaker: turn.speaker, text: turn.text.slice(0, 600) }));
+    const candidateTurnMode = classifyCandidateTurn(answer.text, conversationHistory);
+    const isDialogueRepair =
+      candidateTurnMode === "conversation" && !question.acceptsCandidateQuestions;
+
     // A multiple choice answer is decided by comparison, not by the model. The
     // correct option and its explanation were written when the resume was read.
     if (question.dsaAssessmentReviewItemId && !this.blockAssessmentMcqGrader) {
@@ -445,15 +491,18 @@ export class InterviewService {
         { sessionId }
       );
     }
-    const assessmentGrade = question.dsaAssessmentReviewItemId
-      ? await this.blockAssessmentMcqGrader!.gradeReviewAnswer(
-          ownerId,
-          withAnswer.setup,
-          question.dsaAssessmentReviewItemId,
-          answer.text
-        )
-      : null;
-    const graded = assessmentGrade ?? gradeMultipleChoice(question, answer.text);
+    const assessmentGrade =
+      !isDialogueRepair && question.dsaAssessmentReviewItemId
+        ? await this.blockAssessmentMcqGrader!.gradeReviewAnswer(
+            ownerId,
+            withAnswer.setup,
+            question.dsaAssessmentReviewItemId,
+            answer.text
+          )
+        : null;
+    const graded = isDialogueRepair
+      ? null
+      : (assessmentGrade ?? gradeMultipleChoice(question, answer.text));
     if (graded) {
       return this.completeGradedAnswer(
         withAnswer,
@@ -467,7 +516,8 @@ export class InterviewService {
       );
     }
 
-    const [raw, evaluation] = await Promise.all([
+    const turnStartedAt = Date.now();
+    const [raw, evaluationResult] = await Promise.all([
       this.decideWithFallback({
         setup: withAnswer.setup,
         questionAsked: question.text,
@@ -482,6 +532,7 @@ export class InterviewService {
         userAnswer: answer.text,
         followUpCount: withAnswer.followUpCount,
         maxFollowUps: question.maxFollowUps,
+        interviewStage: question.stage,
         topicLabel: topicLabelFor(withAnswer.setup, question),
         blueprintDifficulty: question.blueprintDifficulty,
         rubric: rubricFor(withAnswer.setup, question),
@@ -491,45 +542,86 @@ export class InterviewService {
         dsaInterviewerGuide: question.dsaInterviewerGuide,
         coreTechnicalInterviewerGuide: question.coreTechnicalInterviewerGuide,
         storyPracticeInterviewerGuide: question.storyPracticeInterviewerGuide,
-        conversationHistory: withAnswer.turns
-          .slice(0, -1)
-          .slice(-8)
-          .map((turn) => ({ speaker: turn.speaker, text: turn.text.slice(0, 600) }))
+        acceptsCandidateQuestions: question.acceptsCandidateQuestions,
+        candidateTurnMode,
+        conversationHistory
       }),
-      this.evaluateAnswer(withAnswer, question, now)
+      isDialogueRepair
+        ? Promise.resolve({ evaluation: undefined, recovery: undefined })
+        : this.evaluateAnswer(withAnswer, question, now)
     ]);
 
-    const result = advance(withAnswer, raw.action, now);
-    const questionEvidence = recordEvidence(
-      withAnswer.evidence?.[String(withAnswer.questionIndex)],
-      answer.text,
-      raw.missing,
-      question,
-      withAnswer.setup
-    );
-    const withEvidence: InterviewState = {
-      ...result.state,
-      evidence: {
-        ...withAnswer.evidence,
-        [String(withAnswer.questionIndex)]: questionEvidence
-      },
-      questionEvaluations: evaluation
-        ? {
-            ...result.state.questionEvaluations,
-            [String(withAnswer.questionIndex)]: evaluation
-          }
-        : result.state.questionEvaluations
+    const requestedAction =
+      question.acceptsCandidateQuestions && raw.action === "respond" ? "move_on" : raw.action;
+    const result = advance(withAnswer, requestedAction, now);
+    const decisionRuntime = raw.runtime ?? {
+      engineVersion: INTERVIEW_ENGINE_VERSION,
+      promptVersion: INTERVIEW_DECIDER_PROMPT_VERSION,
+      durationMs: Date.now() - turnStartedAt,
+      usedFallback: false,
+      calls: []
     };
+    const withEvidence: InterviewState =
+      result.action === "respond"
+        ? result.state
+        : {
+            ...result.state,
+            evidence: {
+              ...withAnswer.evidence,
+              [String(withAnswer.questionIndex)]: recordEvidence(
+                withAnswer.evidence?.[String(withAnswer.questionIndex)],
+                answer.text,
+                raw.missing,
+                question,
+                withAnswer.setup
+              )
+            },
+            questionEvaluations: evaluationResult.evaluation
+              ? {
+                  ...result.state.questionEvaluations,
+                  [String(withAnswer.questionIndex)]: evaluationResult.evaluation
+                }
+              : result.state.questionEvaluations
+          };
     const acknowledgement = naturalAcknowledgement(
       raw.acknowledgement,
       result.action,
       withAnswer.turns,
-      result.state.followUpCount
+      result.state.followUpCount,
+      answer.text
     );
+    // The state machine can override a requested follow-up when its budget or
+    // the round time is exhausted. Never carry the rejected model question
+    // into a move-on response: doing so makes James ask that stale follow-up
+    // and the next planned question in the same breath.
+    const generatedLine = singleQuestion(stripGenericLead(raw.line?.trim() ?? ""));
+    const approvedLine =
+      result.action === "move_on"
+        ? ""
+        : result.action === "respond"
+          ? conversationalReturnQuestion(generatedLine, question.text)
+          : qualityCheckedFollowUp(
+              generatedLine,
+              question.text,
+              withAnswer.turns,
+              fallbackProbeFor({
+                setup: withAnswer.setup,
+                interviewStage: question.stage,
+                followUpCount: withAnswer.followUpCount,
+                fallbackProbe: question.probeIfMissing
+              })
+            );
+    const candidateResponse =
+      result.action === "respond"
+        ? safeConversationalResponse(raw.candidateResponse)
+        : question.acceptsCandidateQuestions
+          ? safeCandidateResponse(raw.candidateResponse)
+          : "";
+    const spokenBridge = joinSpoken(acknowledgement, candidateResponse);
     const utterance = this.composeUtterance(
       withEvidence,
       result.action,
-      joinSpoken(acknowledgement, singleQuestion(stripGenericLead(raw.line?.trim() ?? "")))
+      joinSpoken(spokenBridge, approvedLine)
     );
 
     const spokenAt = elapsedMs(result.state, now);
@@ -540,7 +632,8 @@ export class InterviewService {
       endMs: spokenAt,
       action: result.action,
       forcedBy: result.forcedBy,
-      questionIndex: result.state.questionIndex
+      questionIndex: result.state.questionIndex,
+      runtime: decisionRuntime
     });
 
     const finalState = withReply;
@@ -552,7 +645,13 @@ export class InterviewService {
       forcedBy: result.forcedBy
     };
     const response = answerResponse(finalState, decision, now);
-    await this.persistAnswer(finalState, session.version, turnId, response);
+    await this.persistAnswer(
+      finalState,
+      session.version,
+      turnId,
+      response,
+      evaluationResult.recovery
+    );
 
     this.logger.log(
       JSON.stringify({
@@ -564,6 +663,91 @@ export class InterviewService {
         missing: decision.missing,
         questionIndex: finalState.questionIndex,
         followUpCount: finalState.followUpCount,
+        elapsedMs: elapsedMs(finalState, now),
+        turnDurationMs: Date.now() - turnStartedAt,
+        decisionDurationMs: decisionRuntime.durationMs,
+        evaluationDurationMs: evaluationResult.evaluation?.runtime?.durationMs ?? null,
+        evaluationStatus: evaluationResult.recovery
+          ? "queued"
+          : (evaluationResult.evaluation?.source ?? "not-required"),
+        engineVersion: INTERVIEW_ENGINE_VERSION,
+        deciderPromptVersion: INTERVIEW_DECIDER_PROMPT_VERSION
+      })
+    );
+
+    return { state: finalState, decision, response };
+  }
+
+  private async completeCandidateEndedInterview(
+    state: InterviewState,
+    now: number,
+    expectedVersion: number,
+    turnId?: string
+  ): Promise<AnswerResult> {
+    const closed = finish(state);
+    const utterance = candidateEndUtterance();
+    const spokenAt = elapsedMs(closed, now);
+    const finalState = appendTurn(closed, {
+      speaker: "agent",
+      text: utterance,
+      startMs: spokenAt,
+      endMs: spokenAt,
+      action: "move_on"
+    });
+    const decision: Decision = {
+      action: "move_on",
+      missing: "none",
+      reason: "candidate explicitly ended the interview",
+      utterance,
+      forcedBy: null
+    };
+    const response = answerResponse(finalState, decision, now);
+    await this.persistAnswer(finalState, expectedVersion, turnId, response);
+
+    this.logger.log(
+      JSON.stringify({
+        event: "interview.candidate-ended",
+        sessionId: finalState.id,
+        questionIndex: finalState.questionIndex,
+        elapsedMs: elapsedMs(finalState, now)
+      })
+    );
+
+    return { state: finalState, decision, response };
+  }
+
+  private async completeCandidateBreakSupport(
+    state: InterviewState,
+    now: number,
+    expectedVersion: number,
+    turnId?: string
+  ): Promise<AnswerResult> {
+    const utterance =
+      "It sounds like you need some rest. Take a short break if you need one. If you want to stop now, say “end the interview”; otherwise, we can continue when you're ready.";
+    const spokenAt = elapsedMs(state, now);
+    const finalState = appendTurn(state, {
+      speaker: "agent",
+      text: utterance,
+      startMs: spokenAt,
+      endMs: spokenAt,
+      action: "respond",
+      questionIndex: state.questionIndex
+    });
+    const decision: Decision = {
+      action: "respond",
+      missing: "none",
+      reason: "candidate expressed fatigue and needs a supportive choice",
+      utterance,
+      forcedBy: null
+    };
+    const response = answerResponse(finalState, decision, now);
+    await this.persistAnswer(finalState, expectedVersion, turnId, response);
+
+    this.logger.log(
+      JSON.stringify({
+        event: "interview.break-suggested",
+        sessionId: finalState.id,
+        questionIndex: finalState.questionIndex,
         elapsedMs: elapsedMs(finalState, now)
       })
     );
@@ -721,13 +905,14 @@ export class InterviewService {
     state: InterviewState,
     expectedVersion: number,
     turnId: string | undefined,
-    response: InterviewAnswerResponse
+    response: InterviewAnswerResponse,
+    evaluationRecovery?: EvaluationRecoveryMutation
   ): Promise<void> {
     if (turnId) {
-      await this.store.completeAnswer(state, expectedVersion, turnId, response);
+      await this.store.completeAnswer(state, expectedVersion, turnId, response, evaluationRecovery);
       return;
     }
-    await this.store.save(state, expectedVersion);
+    await this.store.save(state, expectedVersion, evaluationRecovery);
   }
 
   private async resolveAnswerClaim(
@@ -799,30 +984,45 @@ export class InterviewService {
     state: InterviewState,
     question: PlannedQuestion,
     now: number
-  ): Promise<QuestionEvaluation | null> {
+  ): Promise<{
+    evaluation: QuestionEvaluation | null;
+    recovery?: EvaluationRecoveryMutation;
+  }> {
     if (!shouldEvaluateTechnicalAnswer(state.setup, question)) {
-      return null;
+      return { evaluation: null };
     }
-    if (!this.answerEvaluator) return unavailableTechnicalEvaluation(state, question, now);
 
     const questionIndex = state.questionIndex;
-    const answers = state.turns
-      .filter((turn) => turn.speaker === "user" && turn.questionIndex === questionIndex)
-      .map((turn) => turn.text);
+    const answers = answerTexts(state, questionIndex);
+    const input = {
+      setup: state.setup,
+      question,
+      answers,
+      rubric: rubricFor(state.setup, question) ?? [],
+      execution: executionForEvaluation(state, questionIndex, answers),
+      evaluatedAt: now
+    };
+    const recoveryPayload: EvaluationRecoveryPayload = {
+      ...input,
+      sessionId: state.id,
+      questionIndex,
+      answerHash: evaluationAnswerHash(answers),
+      queuedAt: now
+    };
+    if (!this.answerEvaluator) {
+      return {
+        evaluation: unavailableTechnicalEvaluation(state, question, now),
+        recovery: { action: "enqueue", payload: recoveryPayload }
+      };
+    }
 
     try {
-      return await within(
-        this.answerEvaluator.evaluate({
-          setup: state.setup,
-          question,
-          answers,
-          rubric: rubricFor(state.setup, question) ?? [],
-          execution: executionForEvaluation(state, questionIndex, answers),
-          evaluatedAt: now
-        }),
+      const evaluation = await withinAbortable(
+        (signal) => this.answerEvaluator!.evaluate({ ...input, signal }),
         EVALUATOR_BUDGET_MS,
         "Interview answer evaluator"
       );
+      return { evaluation, recovery: { action: "resolve", questionIndex } };
     } catch (error) {
       this.logger.warn(
         JSON.stringify({
@@ -832,7 +1032,10 @@ export class InterviewService {
           reason: error instanceof Error ? error.name : "unknown"
         })
       );
-      return unavailableTechnicalEvaluation(state, question, now);
+      return {
+        evaluation: unavailableTechnicalEvaluation(state, question, now),
+        recovery: { action: "enqueue", payload: recoveryPayload }
+      };
     }
   }
 
@@ -854,6 +1057,7 @@ export class InterviewService {
     userAnswer: string;
     followUpCount: number;
     maxFollowUps?: number;
+    interviewStage?: PlannedQuestion["stage"];
     topicLabel?: string;
     blueprintDifficulty?: PlannedQuestion["blueprintDifficulty"];
     rubric?: NonNullable<InterviewSetup["personalizedBlueprint"]>["rubric"];
@@ -864,9 +1068,15 @@ export class InterviewService {
     dsaInterviewerGuide?: PlannedQuestion["dsaInterviewerGuide"];
     coreTechnicalInterviewerGuide?: PlannedQuestion["coreTechnicalInterviewerGuide"];
     storyPracticeInterviewerGuide?: PlannedQuestion["storyPracticeInterviewerGuide"];
+    acceptsCandidateQuestions?: boolean;
+    candidateTurnMode?: "answer" | "conversation";
   }) {
     try {
-      return await within(this.decider.decide(input), DECIDER_BUDGET_MS, "Interview decider");
+      return await withinAbortable(
+        (signal) => this.decider.decide({ ...input, signal }),
+        DECIDER_BUDGET_MS,
+        "Interview decider"
+      );
     } catch (error) {
       this.logger.warn(
         JSON.stringify({
@@ -875,7 +1085,28 @@ export class InterviewService {
         })
       );
 
-      const shouldMove = input.followUpCount >= Math.min(1, input.maxFollowUps ?? 2);
+      if (input.candidateTurnMode === "conversation" && !input.acceptsCandidateQuestions) {
+        return {
+          action: "respond" as const,
+          missing: "none" as const,
+          reason: "candidate initiated a conversational turn; used local dialogue repair",
+          acknowledgement: "",
+          line: input.questionAsked,
+          candidateResponse: candidateConversationFallback(
+            input.userAnswer,
+            input.conversationHistory
+          ),
+          runtime: {
+            engineVersion: INTERVIEW_ENGINE_VERSION,
+            promptVersion: INTERVIEW_DECIDER_PROMPT_VERSION,
+            durationMs: 0,
+            usedFallback: true,
+            calls: []
+          }
+        };
+      }
+
+      const shouldMove = input.followUpCount >= Math.max(0, input.maxFollowUps ?? 2);
       return {
         action: shouldMove ? ("move_on" as const) : ("probe" as const),
         missing: "specificity",
@@ -885,7 +1116,18 @@ export class InterviewService {
               input.followUpCount % 3
             ]
           : "",
-        line: shouldMove ? "" : input.fallbackProbe
+        line: shouldMove ? "" : fallbackProbeFor(input),
+        candidateResponse:
+          input.acceptsCandidateQuestions && soundsLikeCandidateQuestion(input.userAnswer)
+            ? simulatedCandidateQuestionFallback(input.setup.role)
+            : "",
+        runtime: {
+          engineVersion: INTERVIEW_ENGINE_VERSION,
+          promptVersion: INTERVIEW_DECIDER_PROMPT_VERSION,
+          durationMs: 0,
+          usedFallback: true,
+          calls: []
+        }
       };
     }
   }
@@ -935,14 +1177,46 @@ export class InterviewService {
   }
 }
 
-async function within<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+function fallbackProbeFor(input: {
+  setup: InterviewSetup;
+  interviewStage?: PlannedQuestion["stage"];
+  followUpCount: number;
+  fallbackProbe: string;
+}): string {
+  if (input.setup.roundType !== "hiring-manager" || input.followUpCount === 0) {
+    return input.fallbackProbe;
+  }
+
+  if (input.interviewStage === "career") {
+    return input.followUpCount === 1
+      ? "How did that turning point change what you wanted from your next role?"
+      : "Which part of that journey best explains the move you want to make now?";
+  }
+  if (input.interviewStage === "current-role") {
+    return "What trade-off would you accept to protect that priority?";
+  }
+  if (input.interviewStage === "project") {
+    return "Looking back, what would you handle differently, and why?";
+  }
+  return "What did that experience change about how you work now?";
+}
+
+async function withinAbortable<T>(
+  operation: (signal: AbortSignal) => Promise<T>,
+  timeoutMs: number,
+  label: string
+): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const controller = new AbortController();
 
   try {
     return await Promise.race([
-      promise,
+      operation(controller.signal),
       new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(() => reject(new Error(`${label} timed out`)), timeoutMs);
+        timer = setTimeout(() => {
+          controller.abort();
+          reject(new Error(`${label} timed out`));
+        }, timeoutMs);
       })
     ]);
   } finally {
@@ -1038,16 +1312,59 @@ function unavailableTechnicalEvaluation(
 
 function joinSpoken(bridge: string, sentence: string): string {
   if (bridge.length === 0) return sentence;
+  if (sentence.length === 0) return bridge;
   return /[.!?]$/.test(bridge) ? `${bridge} ${sentence}` : `${bridge}. ${sentence}`;
+}
+
+function safeCandidateResponse(value: string | undefined): string {
+  const normalized = value?.replace(/\s+/g, " ").trim() ?? "";
+  if (!normalized) return "";
+  const transparent = /\b(?:simulation|specific employer|speaking generally)\b/i.test(normalized)
+    ? normalized
+    : `Speaking generally for this simulation, ${normalized}`;
+  if (transparent.length <= 360) return transparent;
+  const prefix = transparent.slice(0, 359);
+  const lastSpace = prefix.lastIndexOf(" ");
+  return `${prefix.slice(0, lastSpace > 180 ? lastSpace : prefix.length).trimEnd()}…`;
+}
+
+function safeConversationalResponse(value: string | undefined): string {
+  const normalized = value?.replace(/\s+/g, " ").trim() ?? "";
+  if (!normalized) return "Let me answer that directly.";
+  if (normalized.length <= 360) return normalized;
+  const prefix = normalized.slice(0, 359);
+  const lastSpace = prefix.lastIndexOf(" ");
+  return `${prefix.slice(0, lastSpace > 180 ? lastSpace : prefix.length).trimEnd()}…`;
+}
+
+function conversationalReturnQuestion(candidate: string, questionAsked: string): string {
+  const question = singleQuestion(candidate.trim());
+  return question.includes("?") ? question : singleQuestion(questionAsked.trim());
+}
+
+function soundsLikeCandidateQuestion(value: string): boolean {
+  const normalized = value.toLowerCase();
+  return (
+    normalized.includes("?") ||
+    /\b(?:i(?:'d| would) like to ask|my question|can you|could you|would you|what (?:is|are|does|do)|how (?:is|are|does|do)|tell me about)\b/.test(
+      normalized
+    )
+  );
+}
+
+function simulatedCandidateQuestionFallback(role: InterviewSetup["role"]): string {
+  const roleLabel = role === "ai-ml" ? "AI and ML" : role;
+  return `I can’t represent a specific employer, but in this ${roleLabel} simulation I’d look for clear ownership, sound judgement, and reliable collaboration. Confirm the real team’s expectations with your interviewer.`;
 }
 
 const NATURAL_BRIDGES: Record<DecisionAction, string[]> = {
   clarify: ["Let me rephrase that.", "I want to make sure I’m following."],
+  respond: [],
   probe: [
-    "That gives me a useful thread.",
-    "I want to stay with that part.",
-    "Let’s unpack that a little.",
-    "That’s the part I want to understand better."
+    "I hear what drew you there.",
+    "That gives me a useful starting point.",
+    "I can see the direction you took.",
+    "I’m following the reason behind that."
   ],
   challenge: [
     "Let me pressure-test that decision.",
@@ -1062,12 +1379,12 @@ const NATURAL_BRIDGES: Record<DecisionAction, string[]> = {
 };
 
 const GENERIC_ACKNOWLEDGEMENT =
-  /^(?:got it|gotcha|understood|i understand|makes sense|okay|ok|right|great|excellent|good answer|thanks for sharing)(?:[.!?,\s]|$)/i;
+  /^(?:got it|gotcha|understood|i understand|i see|makes sense|okay|ok|right|that helps|that gives me (?:a useful thread|a clearer picture)|great|excellent|good answer|thanks for sharing|i (?:want to|wanna) (?:stay|stick) (?:with|to) (?:that|this) part)(?:[.!?,\s]|$)/i;
 
 function stripGenericLead(text: string): string {
   return text
     .replace(
-      /^(?:got it|gotcha|understood|i understand|makes sense|okay|ok|right|great|excellent|good answer|thanks for sharing)(?:[.!?,\s]+)+/i,
+      /^(?:got it|gotcha|understood|i understand|makes sense|okay|ok|right|great|excellent|good answer|thanks for sharing|i (?:want to|wanna) (?:stay|stick) (?:with|to) (?:that|this) part)(?:[.!?,\s]+)+/i,
       ""
     )
     .trim();
@@ -1078,18 +1395,60 @@ function singleQuestion(text: string): string {
   return firstQuestionEnd >= 0 ? text.slice(0, firstQuestionEnd + 1).trim() : text;
 }
 
+/**
+ * Deterministic last-mile guard for model output. A live interviewer must not
+ * repeat the current/recent question or fall back to generic filler even when
+ * a provider returns schema-valid but poor conversational text.
+ */
+export function qualityCheckedFollowUp(
+  candidate: string,
+  questionAsked: string,
+  turns: InterviewState["turns"],
+  fallback: string
+): string {
+  const normalized = normalizeQuestion(candidate);
+  const recentQuestions = [
+    questionAsked,
+    ...turns
+      .filter((turn) => turn.speaker === "agent")
+      .slice(-4)
+      .map((turn) => turn.text)
+  ].map(normalizeQuestion);
+  const generic = /^(?:can you (?:elaborate|expand)|tell me more|could you be more specific)\??$/i;
+
+  if (
+    !candidate.includes("?") ||
+    generic.test(candidate.trim()) ||
+    recentQuestions.some((question) => question && question === normalized)
+  ) {
+    return singleQuestion(fallback.trim());
+  }
+  return candidate;
+}
+
+function normalizeQuestion(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 function naturalAcknowledgement(
   acknowledgement: string | undefined,
   action: DecisionAction,
   turns: InterviewState["turns"],
-  sequence: number
+  sequence: number,
+  answer: string
 ): string {
+  if (action === "clarify" || action === "respond") return "";
+
   const candidate = acknowledgement?.trim() ?? "";
   if (candidate && !GENERIC_ACKNOWLEDGEMENT.test(candidate) && !recentlyUsed(candidate, turns)) {
     return candidate;
   }
 
-  if (!candidate) return "";
+  const contextual = contextualAcknowledgement(answer);
+  if (contextual && !recentlyUsed(contextual, turns)) return contextual;
 
   const options = NATURAL_BRIDGES[action];
   for (let offset = 0; offset < options.length; offset += 1) {
@@ -1097,7 +1456,26 @@ function naturalAcknowledgement(
     if (option && !recentlyUsed(option, turns)) return option;
   }
 
-  return "";
+  return answer.trim() ? "I’m following what you’re saying." : "I’m with you.";
+}
+
+function contextualAcknowledgement(answer: string): string | null {
+  const normalized = answer.replace(/\s+/g, " ").trim();
+  if (!normalized) return null;
+
+  const reason = normalized.match(/\b(?:because|since)\s+(.+)/i)?.[1] ?? normalized;
+  const reflected = reason
+    .replace(/\bi(?:'ve| have)\b/gi, "you have")
+    .replace(/\bi(?:'m| am)\b/gi, "you are")
+    .replace(/\bi(?:'d| would)\b/gi, "you would")
+    .replace(/\bmy\b/gi, "your")
+    .replace(/\bme\b/gi, "you")
+    .replace(/\bi\b/gi, "you")
+    .replace(/[.!?]+$/, "")
+    .trim();
+  const words = reflected.split(/\s+/).filter(Boolean).slice(0, 7);
+  if (words.length < 3) return null;
+  return `I hear that ${words.join(" ")}.`;
 }
 
 function recentlyUsed(acknowledgement: string, turns: InterviewState["turns"]): boolean {
@@ -1318,6 +1696,58 @@ function answerPayloadHash(answer: { text: string; startMs: number; endMs: numbe
   return createHash("sha256").update(answer.text).digest("hex");
 }
 
+/**
+ * Ends only on an unambiguous withdrawal. Vague or weak interview answers such
+ * as “I don't know” must continue through the normal conversational decider.
+ */
+export function candidateRequestsInterviewEnd(value: string): boolean {
+  const normalized = value
+    .toLowerCase()
+    .replace(/[’]/g, "'")
+    .replace(/[^a-z0-9'\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!normalized) return false;
+
+  const explicitMeetingEnd =
+    /\b(?:end|stop|finish|quit|exit|cancel|leave|wrap up)\b(?:\s+(?:the|this|our))?\s+(?:interview|meeting|session|call)\b/.test(
+      normalized
+    ) ||
+    /^(?:can|could|would) we (?:please )?(?:end|stop|finish|wrap up|call it)(?: here| now)?$/.test(
+      normalized
+    ) ||
+    /^(?:let's|lets) (?:please )?(?:end|stop|finish|wrap up)(?: here| now)?$/.test(normalized) ||
+    /^i (?:do not|don't|cannot|can't|won't) want to (?:continue|go on|do this)(?: anymore)?$/.test(
+      normalized
+    );
+
+  return explicitMeetingEnd;
+}
+
+/** Fatigue and reluctance need support and a choice, not an automatic exit. */
+export function candidateNeedsInterviewBreak(value: string): boolean {
+  const normalized = value
+    .toLowerCase()
+    .replace(/[’]/g, "'")
+    .replace(/[^a-z0-9'\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!normalized || normalized.split(" ").length > 14) return false;
+
+  return (
+    /^i (?:just )?(?:(?:want|need|would like) to|wanna) (?:sleep|go to sleep)(?: now)?$/.test(
+      normalized
+    ) ||
+    /^i (?:just )?need (?:some )?sleep$/.test(normalized) ||
+    /^i(?:'m| am) (?:too |really )?(?:tired|exhausted|sleepy)(?: to continue)?$/.test(normalized) ||
+    /^i (?:do not|don't|cannot|can't|won't) want to (?:explain|talk)(?: anymore)?$/.test(normalized)
+  );
+}
+
+function candidateEndUtterance(): string {
+  return "Of course, we'll end the interview here. I'll save what we covered, and your feedback will be ready shortly.";
+}
+
 function concurrentTurnError(sessionId: string): ConflictErrorException {
   return new ConflictErrorException(
     "SESSION_VERSION_CONFLICT",
@@ -1351,12 +1781,12 @@ function introUtterance(state: InterviewState): string {
             storyPracticeAssessmentDialogue(storyPracticeIdentity.practice)
           )
         : state.setup.templateTitle === "DSA practice interview"
-          ? "Hi, I'm Maya. Welcome to your DSA interview. I picked a few problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful."
+          ? "Hi, I'm James. Welcome to your DSA interview. I picked a few problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful."
           : state.setup.fundamentalsRound
-            ? "Hi, I'm Maya. This is a computer fundamentals round, in three parts. A few quick checks first, then I'll ask you to explain the mechanism behind some of them, and we'll finish by diagnosing something real. After each answer I'll show you what I was listening for."
+            ? "Hi, I'm James. This is a computer fundamentals round, in three parts. A few quick checks first, then I'll ask you to explain the mechanism behind some of them, and we'll finish by diagnosing something real. After each answer I'll show you what I was listening for."
             : isResumeRound(state.setup)
-              ? "Hi, I'm Maya. Let's have a relaxed conversation about the work on your resume. I'll pick a few threads and ask about what actually happened, what you did, and what changed. Take your time."
-              : `Hi, I'm Maya, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
+              ? "Hi, I'm James. Let's have a relaxed conversation about the work on your resume. I'll pick a few threads and ask about what actually happened, what you did, and what changed. Take your time."
+              : `Hi, I'm James, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
 
   if (isResumableBlockAssessment(state.setup)) return intro;
   return first ? `${intro} ${first.text}` : intro;

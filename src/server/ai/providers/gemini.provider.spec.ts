@@ -52,7 +52,6 @@ describe("GeminiProvider", () => {
       retrievalMinSimilarity: 0.2,
       interviewDailyLimit: 2,
       groqDeciderModel: "test-groq-model",
-      livekitAgentName: "test-agent",
       judge0Url: "https://judge0.example.com",
       rapidApiKey: undefined,
       rapidApiHost: "judge0.example.com"
@@ -102,6 +101,28 @@ describe("GeminiProvider", () => {
         required: ["ok", "message"]
       }
     });
+  });
+
+  it("emits content-free provider telemetry", async () => {
+    const onTrace = vi.fn();
+    const generateContent = vi
+      .fn()
+      .mockResolvedValue({ text: JSON.stringify({ ok: true, message: "done" }) });
+    const provider = new GeminiProvider(createConfig(), createClient(generateContent));
+
+    await provider.generateStructured(createRequest({ onTrace }));
+
+    expect(onTrace).toHaveBeenCalledWith({
+      provider: "gemini",
+      operation: "test.operation",
+      model: "gemini-fast-test",
+      modelClass: "fast",
+      attempt: 1,
+      maxAttempts: 1,
+      durationMs: expect.any(Number),
+      outcome: "success"
+    });
+    expect(JSON.stringify(onTrace.mock.calls)).not.toContain("Return structured data");
   });
 
   it("sends a response schema stripped of the bounds Gemini rejects", async () => {

@@ -1,11 +1,22 @@
 import { InterviewDecider } from "./decider";
 import { buildFundamentalsPlan } from "./fundamentals-round";
 import { InterviewPlanner } from "./planner";
-import { executionForEvaluation, InterviewService, rubricFor } from "./interview.service";
+import {
+  candidateNeedsInterviewBreak,
+  candidateRequestsInterviewEnd,
+  executionForEvaluation,
+  InterviewService,
+  qualityCheckedFollowUp,
+  rubricFor
+} from "./interview.service";
 import { codeFingerprint } from "./code-fingerprint";
 import { MemorySessionStore, SESSION_TTL_MS } from "./session-store";
 import type { TechnicalAnswerEvaluator } from "./technical-answer-evaluator";
 import type { InterviewSetup, PlannedQuestion, QuestionEvaluation } from "./types";
+import {
+  LIVE_DECISION_DEADLINE_MS,
+  LIVE_EVALUATION_DEADLINE_MS
+} from "../domain/voice-turn-timing";
 
 const setup: InterviewSetup = {
   role: "frontend",
@@ -62,6 +73,260 @@ const mcqQuestion: PlannedQuestion = {
 };
 
 describe("InterviewService resume round", () => {
+  it("recognizes explicit candidate withdrawal without confusing weak answers for an exit", () => {
+    expect(candidateRequestsInterviewEnd("Can we end here?")).toBe(true);
+    expect(candidateRequestsInterviewEnd("Let's stop here.")).toBe(true);
+    expect(candidateRequestsInterviewEnd("I don't want to continue anymore.")).toBe(true);
+
+    expect(candidateRequestsInterviewEnd("I just want to sleep.")).toBe(false);
+    expect(candidateRequestsInterviewEnd("I'm too tired to continue.")).toBe(false);
+    expect(candidateRequestsInterviewEnd("I don't want to explain anymore.")).toBe(false);
+    expect(candidateRequestsInterviewEnd("I'm not really sure.")).toBe(false);
+    expect(candidateRequestsInterviewEnd("I don't know.")).toBe(false);
+    expect(candidateRequestsInterviewEnd("I want to stop duplicate requests.")).toBe(false);
+    expect(candidateRequestsInterviewEnd("I was tired, but I completed the migration.")).toBe(
+      false
+    );
+    expect(candidateRequestsInterviewEnd("I couldn't explain the cache invalidation.")).toBe(false);
+  });
+
+  it("recognizes fatigue as a request for support rather than an explicit exit", () => {
+    expect(candidateNeedsInterviewBreak("I just want to sleep.")).toBe(true);
+    expect(candidateNeedsInterviewBreak("I'm too tired to continue.")).toBe(true);
+    expect(candidateNeedsInterviewBreak("I just wanna sleep.")).toBe(true);
+    expect(candidateNeedsInterviewBreak("I need some sleep.")).toBe(true);
+    expect(candidateNeedsInterviewBreak("I don't want to explain anymore.")).toBe(true);
+
+    expect(candidateNeedsInterviewBreak("Can we end here?")).toBe(false);
+    expect(candidateNeedsInterviewBreak("I was tired, but I completed the migration.")).toBe(false);
+  });
+
+  it("offers a break without ending or assessing the interview when the candidate is tired", async () => {
+    const { service, decide, evaluate } = harness([questions[0]!]);
+    const started = await service.start(
+      { ...setup, roundType: "hiring-manager", resumeRound: true },
+      "user-1",
+      1_000,
+      [questions[0]!]
+    );
+
+    const result = await service.answer(
+      started.state.id,
+      { text: "I just want to sleep.", startMs: 500, endMs: 1_000 },
+      2_000
+    );
+    const report = await service.report("user-1", started.state.id, 3_000);
+
+    expect(decide).not.toHaveBeenCalled();
+    expect(evaluate).not.toHaveBeenCalled();
+    expect(result.state.phase).toBe("questioning");
+    expect(result.response.phase).toBe("questioning");
+    expect(result.decision.utterance).toBe(
+      "It sounds like you need some rest. Take a short break if you need one. If you want to stop now, say “end the interview”; otherwise, we can continue when you're ready."
+    );
+    const supportRequest = result.state.turns.find((turn) => turn.assessmentExcluded);
+    expect(supportRequest).toMatchObject({
+      speaker: "user",
+      text: "I just want to sleep.",
+      assessmentExcluded: true
+    });
+    expect(supportRequest).not.toHaveProperty("questionIndex");
+    expect(report.answerCount).toBe(0);
+    expect(report.questionsCovered).toBe(0);
+    expect(report.competencies[0]?.answered).toBe(false);
+  });
+
+  it("still ends immediately after an unambiguous stop command", async () => {
+    const { service, decide, evaluate } = harness([questions[0]!]);
+    const started = await service.start(
+      { ...setup, roundType: "hiring-manager", resumeRound: true },
+      "user-1",
+      1_000,
+      [questions[0]!]
+    );
+
+    const result = await service.answer(
+      started.state.id,
+      { text: "End the interview.", startMs: 500, endMs: 1_000 },
+      2_000
+    );
+
+    expect(decide).not.toHaveBeenCalled();
+    expect(evaluate).not.toHaveBeenCalled();
+    expect(result.state.phase).toBe("done");
+    expect(result.decision.utterance).toBe(
+      "Of course, we'll end the interview here. I'll save what we covered, and your feedback will be ready shortly."
+    );
+  });
+
+  it("answers a candidate clarification and keeps the pending question active", async () => {
+    const evaluation: QuestionEvaluation = {
+      source: "semantic-evaluator",
+      score: 70,
+      verdict: "mostly-correct",
+      confidence: 0.8,
+      summary: "Placeholder that must not be used for a conversational turn.",
+      strengths: [],
+      gaps: [],
+      rubricScores: [],
+      answerExcerpts: [],
+      execution: null,
+      evaluatedAt: 2_000
+    };
+    const careerQuestion = {
+      ...questions[0]!,
+      text: "Which role or transition was most meaningful to you?",
+      stage: "career" as const,
+      maxFollowUps: 3
+    };
+    const { service, decide, evaluate } = harness([careerQuestion], evaluation);
+    decide.mockResolvedValue({
+      action: "respond",
+      missing: "none",
+      reason: "candidate asked what role means",
+      acknowledgement: "",
+      candidateResponse:
+        "By role, I mean a job or position you held and the responsibilities you had.",
+      line: "Which job or career change mattered most to you?"
+    });
+    const started = await service.start(
+      { ...setup, roundType: "hiring-manager", resumeRound: true },
+      "user-1",
+      1_000,
+      [careerQuestion]
+    );
+
+    const result = await service.answer(
+      started.state.id,
+      { text: "What do you mean by role?", startMs: 500, endMs: 1_000 },
+      2_000
+    );
+
+    expect(decide).toHaveBeenCalledWith(
+      expect.objectContaining({ candidateTurnMode: "conversation" })
+    );
+    expect(evaluate).not.toHaveBeenCalled();
+    expect(result.decision.action).toBe("respond");
+    expect(result.decision.utterance).toBe(
+      "By role, I mean a job or position you held and the responsibilities you had. Which job or career change mattered most to you?"
+    );
+    expect(result.state.questionIndex).toBe(0);
+    expect(result.state.followUpCount).toBe(0);
+    expect(result.state.evidence).toEqual({});
+  });
+
+  it("falls back locally for candidate small talk instead of asking an interview probe", async () => {
+    const { service, decide } = harness([questions[0]!]);
+    decide.mockRejectedValue(new Error("provider unavailable"));
+    const started = await service.start(setup, "user-1", 1_000, [questions[0]!]);
+
+    const result = await service.answer(
+      started.state.id,
+      { text: "How are you doing today?", startMs: 500, endMs: 1_000 },
+      2_000
+    );
+
+    expect(result.decision.action).toBe("respond");
+    expect(result.decision.utterance).toBe(
+      "I'm doing well, thanks for asking. What part of the editor did you personally own?"
+    );
+    expect(result.state.questionIndex).toBe(0);
+    expect(result.state.followUpCount).toBe(0);
+  });
+
+  it("replaces generic or repeated follow-ups with the authored grounded probe", () => {
+    const turns = [
+      {
+        speaker: "agent" as const,
+        text: "What did you personally own?",
+        startMs: 0,
+        endMs: 0
+      }
+    ];
+
+    expect(
+      qualityCheckedFollowUp(
+        "Can you elaborate?",
+        "What did you personally own?",
+        turns,
+        "Which implementation decision was yours alone?"
+      )
+    ).toBe("Which implementation decision was yours alone?");
+    expect(
+      qualityCheckedFollowUp(
+        "What did you personally own?",
+        "What did you personally own?",
+        turns,
+        "Which implementation decision was yours alone?"
+      )
+    ).toBe("Which implementation decision was yours alone?");
+  });
+
+  it("freezes runtime versions on new sessions and decision turns", async () => {
+    const { service, decide } = harness();
+    decide.mockResolvedValue({
+      action: "move_on",
+      missing: "none",
+      reason: "answered",
+      acknowledgement: "That helps",
+      line: ""
+    });
+
+    const started = await service.start(setup, "user-1", 1_000);
+    const answered = await service.answer(
+      started.state.id,
+      { text: "I owned the sync layer and its rollout.", startMs: 0, endMs: 900 },
+      2_000
+    );
+
+    expect(started.state.runtimeVersion).toMatchObject({
+      engine: expect.any(String),
+      deciderPrompt: expect.any(String),
+      evaluatorPrompt: expect.any(String)
+    });
+    expect(answered.state.turns.at(-1)?.runtime).toMatchObject({
+      engineVersion: expect.any(String),
+      promptVersion: expect.any(String),
+      durationMs: expect.any(Number)
+    });
+  });
+
+  it("queues a failed semantic evaluation without counting it as a score", async () => {
+    const placeholder: QuestionEvaluation = {
+      source: "semantic-evaluator",
+      score: 70,
+      verdict: "mostly-correct",
+      confidence: 0.8,
+      summary: "Placeholder",
+      strengths: [],
+      gaps: [],
+      rubricScores: [],
+      answerExcerpts: [],
+      execution: null,
+      evaluatedAt: 2_000
+    };
+    const { service, store, decide, evaluate } = harness([questions[0]!], placeholder);
+    decide.mockResolvedValue({
+      action: "move_on",
+      missing: "none",
+      reason: "answered",
+      acknowledgement: "",
+      line: ""
+    });
+    evaluate.mockRejectedValue(new Error("provider unavailable"));
+    const started = await service.start(setup, "user-1", 1_000, [questions[0]!]);
+
+    const answered = await service.answer(
+      started.state.id,
+      { text: "I owned the conflict resolver.", startMs: 0, endMs: 900 },
+      2_000,
+      "99999999-9999-4999-8999-999999999999"
+    );
+
+    expect(answered.state.questionEvaluations?.["0"]?.source).toBe("evaluation-unavailable");
+    expect(store.evaluationRecoveryCount()).toBe(1);
+  });
+
   it("uses the frozen five-metric rubric and excludes stale block execution from evaluation", () => {
     const blockSetup: InterviewSetup = {
       ...setup,
@@ -308,7 +573,7 @@ describe("InterviewService resume round", () => {
     );
 
     expect(started.utterance).toContain(reviewQuestion.text);
-    expect(started.utterance).not.toContain("I'm Maya");
+    expect(started.utterance).not.toContain("I'm James");
 
     const result = await service.answerOwned(
       "user-1",
@@ -363,7 +628,7 @@ describe("InterviewService resume round", () => {
     expect(decide).not.toHaveBeenCalled();
     expect(decision.action).toBe("move_on");
     expect(decision.utterance).toContain("That's right");
-    // Maya moves straight into the next question, as she does after any move_on.
+    // James moves straight into the next question, as he does after any move_on.
     expect(decision.utterance).toContain(questions[0]!.text);
     expect(state.questionIndex).toBe(1);
     expect(state.questionEvaluations?.["0"]).toMatchObject({
@@ -413,6 +678,107 @@ describe("InterviewService resume round", () => {
     );
 
     expect(decide).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-scores the complete answer together with its saved follow-up", async () => {
+    const evaluation: QuestionEvaluation = {
+      source: "semantic-evaluator",
+      score: 72,
+      verdict: "mostly-correct",
+      confidence: 0.9,
+      summary: "The follow-up supplied the missing outcome.",
+      strengths: ["Explains personal ownership."],
+      gaps: [],
+      rubricScores: [],
+      answerExcerpts: [],
+      execution: null,
+      evaluatedAt: 3_000
+    };
+    const followUpQuestion = { ...questions[0]!, maxFollowUps: 1 };
+    const { service, decide, evaluate } = harness([followUpQuestion], evaluation);
+    decide
+      .mockResolvedValueOnce({
+        action: "probe",
+        missing: "outcome",
+        reason: "the result is missing",
+        acknowledgement: "",
+        line: "What changed after you shipped it?"
+      })
+      .mockResolvedValueOnce({
+        action: "move_on",
+        missing: "none",
+        reason: "the result is now clear",
+        acknowledgement: "That helps",
+        line: ""
+      });
+    const started = await service.start(
+      { ...setup, resumeRound: true, roundType: "hiring-manager" },
+      "user-1",
+      1_000,
+      [followUpQuestion]
+    );
+
+    await service.answer(
+      started.state.id,
+      { text: "I owned the retry flow.", startMs: 0, endMs: 1_000 },
+      2_000
+    );
+    await service.answer(
+      started.state.id,
+      { text: "It reduced failed checkouts by 18 percent.", startMs: 1_500, endMs: 2_500 },
+      3_000
+    );
+
+    expect(evaluate).toHaveBeenCalledTimes(2);
+    expect(evaluate.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        answers: ["I owned the retry flow.", "It reduced failed checkouts by 18 percent."]
+      })
+    );
+  });
+
+  it("speaks a server-approved answer to the candidate's final HR question before closing", async () => {
+    const closingQuestion = {
+      ...questions[0]!,
+      text: "What matters to you in a manager, and what would you like to ask me?",
+      stage: "behavioral" as const,
+      maxFollowUps: 0,
+      acceptsCandidateQuestions: true
+    };
+    const { service, decide } = harness([closingQuestion]);
+    decide.mockResolvedValue({
+      action: "move_on",
+      missing: "none",
+      reason: "candidate asked a closing question",
+      acknowledgement: "That’s a useful question",
+      line: "",
+      candidateResponse:
+        "Success means taking clear ownership while working constructively with the team."
+    });
+    const started = await service.start(
+      { ...setup, roundType: "hiring-manager", resumeRound: true },
+      "user-1",
+      1_000,
+      [closingQuestion]
+    );
+
+    const result = await service.answer(
+      started.state.id,
+      {
+        text: "I value direct feedback. What does success look like in this role?",
+        startMs: 500,
+        endMs: 2_000
+      },
+      3_000
+    );
+
+    expect(decide).toHaveBeenCalledWith(
+      expect.objectContaining({ acceptsCandidateQuestions: true })
+    );
+    expect(result.decision.utterance).toContain("Success means taking clear ownership");
+    expect(result.decision.utterance).toContain("Speaking generally for this simulation");
+    expect(result.decision.utterance).toContain("Thanks for the conversation");
+    expect(result.state.phase).toBe("done");
   });
 });
 
@@ -757,11 +1123,89 @@ describe("InterviewService personalized blueprint evidence", () => {
 });
 
 describe("InterviewService conversation", () => {
+  it("falls back inside the conversational deadline when the decider stalls", async () => {
+    vi.useFakeTimers();
+    try {
+      const { service, decide } = harness();
+      decide.mockImplementation(
+        ({ signal }: { signal?: AbortSignal }) =>
+          new Promise((_resolve, reject) => {
+            signal?.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+          })
+      );
+      const started = await service.start(setup, "user-latency", 1_000);
+      const pending = service.answer(
+        started.state.id,
+        {
+          text: "I chose React because I wanted to build interactive products.",
+          startMs: 0,
+          endMs: 1_000
+        },
+        2_000
+      );
+
+      await vi.advanceTimersByTimeAsync(LIVE_DECISION_DEADLINE_MS);
+      const result = await pending;
+
+      expect(result.decision.utterance).toContain("Which implementation decision was yours alone?");
+      expect(result.decision.utterance).toContain(".");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("queues slow evaluation without extending the decision deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      const seedEvaluation: QuestionEvaluation = {
+        source: "semantic-evaluator",
+        score: 70,
+        verdict: "mostly-correct",
+        confidence: 0.8,
+        summary: "Evidence supplied.",
+        strengths: [],
+        gaps: [],
+        rubricScores: [],
+        answerExcerpts: [],
+        execution: null,
+        evaluatedAt: 2_000
+      };
+      const { service, decide, evaluate } = harness([questions[0]!], seedEvaluation);
+      decide.mockResolvedValue({
+        action: "move_on",
+        missing: "none",
+        reason: "answered",
+        acknowledgement: "React was the entry point",
+        line: ""
+      });
+      evaluate.mockImplementation(
+        ({ signal }: { signal?: AbortSignal }) =>
+          new Promise((_resolve, reject) => {
+            signal?.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+          })
+      );
+      const started = await service.start(setup, "user-evaluation-latency", 1_000, [questions[0]!]);
+      const pending = service.answer(
+        started.state.id,
+        { text: "I owned the sync layer.", startMs: 0, endMs: 1_000 },
+        2_000
+      );
+
+      await vi.advanceTimersByTimeAsync(LIVE_EVALUATION_DEADLINE_MS);
+      const result = await pending;
+
+      expect(result.state.questionEvaluations?.["0"]?.source).toBe("evaluation-unavailable");
+      expect(result.decision.utterance).toContain("React was the entry point");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("opens as a calm, named interviewer", async () => {
     const { service } = harness();
     const result = await service.start(setup, "user-1", 1_000);
 
-    expect(result.utterance).toContain("I'm Maya, your Trailgrad interviewer");
+    expect(result.utterance).toContain("I'm James, your Trailgrad interviewer");
     expect(result.utterance).toContain(questions[0]?.text);
     expect(result.utterance).toContain("pause to think");
   });
@@ -783,7 +1227,7 @@ describe("InterviewService conversation", () => {
     expect(result.utterance).not.toContain("Ready? Let's begin.");
   });
 
-  it("opens DSA rounds with a dedicated Maya introduction", async () => {
+  it("opens DSA rounds with a dedicated James introduction", async () => {
     const { service } = harness([questions[0]!, questions[1]!, questions[0]!]);
     const result = await service.start(
       {
@@ -907,10 +1351,123 @@ describe("InterviewService conversation", () => {
       3_000
     );
 
-    expect(result.decision.utterance).toBe(
+    expect(result.decision.utterance).toContain(
       "Can you walk me through the specific decision you made?"
     );
+    expect(result.decision.utterance).toContain("I hear that you worked on the sync layer.");
+    expect(result.decision.utterance.split("?")[0]).not.toBe(
+      "Can you walk me through the specific decision you made"
+    );
     expect(result.decision.utterance.toLowerCase()).not.toContain("got it");
+  });
+
+  it("acknowledges the candidate's detail before a connected follow-up", async () => {
+    const careerQuestion = {
+      ...questions[0]!,
+      text: "Why did you choose this career?",
+      stage: "career" as const,
+      probeIfMissing: "What made React the right place for you to begin?"
+    };
+    const { service, decide } = harness([careerQuestion]);
+    decide.mockResolvedValue({
+      action: "probe",
+      missing: "specificity",
+      reason: "the motivation needs one more layer",
+      acknowledgement: "React was the entry point for you",
+      line: "What about React made programming feel worth pursuing?"
+    });
+    const started = await service.start(
+      { ...setup, roundType: "hiring-manager", resumeRound: true },
+      "user-1",
+      1_000,
+      [careerQuestion]
+    );
+
+    const result = await service.answer(
+      started.state.id,
+      {
+        text: "I wanted to learn React and other programming languages.",
+        startMs: 500,
+        endMs: 2_000
+      },
+      3_000
+    );
+
+    expect(result.decision.utterance).toBe(
+      "React was the entry point for you. What about React made programming feel worth pursuing?"
+    );
+    expect(result.decision.utterance).not.toContain("Why did you choose this career?");
+  });
+
+  it("discards a stale model follow-up when the state machine forces move on", async () => {
+    const followUpQuestion = { ...questions[0]!, maxFollowUps: 1 };
+    const { service, decide } = harness([followUpQuestion, questions[1]!]);
+    decide
+      .mockResolvedValueOnce({
+        action: "probe",
+        missing: "outcome",
+        reason: "the outcome is missing",
+        acknowledgement: "",
+        line: "What measurable impact did it have?"
+      })
+      .mockResolvedValueOnce({
+        action: "probe",
+        missing: "specificity",
+        reason: "the follow-up is still vague",
+        acknowledgement: "I see",
+        line: "Which exact metric changed after that?"
+      });
+    const started = await service.start(setup, "user-1", 1_000);
+
+    const first = await service.answer(
+      started.state.id,
+      { text: "I owned the synchronization work.", startMs: 500, endMs: 2_000 },
+      3_000
+    );
+    const second = await service.answer(
+      first.state.id,
+      { text: "It made the experience faster.", startMs: 3_500, endMs: 5_000 },
+      6_000
+    );
+
+    expect(second.decision.action).toBe("move_on");
+    expect(second.decision.forcedBy).toBe("follow-up-budget");
+    expect(second.decision.utterance).toContain(questions[1]!.text);
+    expect(second.decision.utterance).not.toContain("Which exact metric changed");
+  });
+
+  it("preserves a multi-turn HR follow-up budget when the decider is unavailable", async () => {
+    const deepQuestion = {
+      ...questions[0]!,
+      stage: "career" as const,
+      maxFollowUps: 3,
+      probeIfMissing: "What was the most important turning point?"
+    };
+    const { service, decide } = harness([deepQuestion, questions[1]!]);
+    decide.mockRejectedValue(new Error("provider unavailable"));
+    const started = await service.start(
+      { ...setup, roundType: "hiring-manager", resumeRound: true },
+      "user-1",
+      1_000,
+      [deepQuestion, questions[1]!]
+    );
+
+    const first = await service.answer(
+      started.state.id,
+      { text: "I moved from frontend into backend.", startMs: 500, endMs: 2_000 },
+      3_000
+    );
+    const second = await service.answer(
+      first.state.id,
+      { text: "The payment work was the turning point.", startMs: 2_500, endMs: 4_000 },
+      5_000
+    );
+
+    expect(first.decision.action).toBe("probe");
+    expect(first.decision.utterance).toContain("What was the most important turning point?");
+    expect(second.decision.action).toBe("probe");
+    expect(second.state.followUpCount).toBe(2);
+    expect(second.decision.utterance).toContain("change what you wanted from your next role");
   });
 
   it("records answer evidence and carries it into the next decision", async () => {
@@ -989,7 +1546,7 @@ describe("InterviewService conversation", () => {
       3_000
     );
 
-    expect(result.decision.utterance).toBe("What changed for users?");
+    expect(result.decision.utterance).toContain("What changed for users?");
   });
 
   it("only exposes durable reports to the session owner", async () => {

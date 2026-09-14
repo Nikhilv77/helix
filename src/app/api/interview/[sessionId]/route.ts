@@ -4,7 +4,11 @@ import { getAppContainer } from "@/server/app-container";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
 import { currentQuestion } from "@/features/interviews/server/state-machine";
-import { roundCaps, type InterviewState } from "@/features/interviews/server/types";
+import {
+  roundCaps,
+  type InterviewStage,
+  type InterviewState
+} from "@/features/interviews/server/types";
 import { findFundamentalsQuestion } from "@/lib/fundamentals/fundamentals";
 import { authorizeInterviewSession } from "@/features/interviews/server/session-access";
 
@@ -63,12 +67,14 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
 export function serialiseInterviewState(state: InterviewState) {
   const question = currentQuestion(state);
+  const visibleStage = publicStage(state, state.questionIndex);
 
   return {
     sessionId: state.id,
     phase: state.phase,
     questionIndex: state.questionIndex,
     questionCount: state.plan.length,
+    skippedQuestionIndexes: state.skippedQuestionIndexes ?? [],
     followUpCount: state.followUpCount,
     startedAt: state.startedAt,
     /** This round's own time budget, which is longer for a resume round. */
@@ -76,7 +82,7 @@ export function serialiseInterviewState(state: InterviewState) {
     setup: state.setup,
     // Stage labels only, so the workspace can draw the round's shape without
     // learning anything about the questions it has not reached yet.
-    stages: state.plan.map((question) => question.stage ?? null),
+    stages: state.plan.map((_question, index) => publicStage(state, index)),
     /**
      * The concept card for the question just finished. Resolved here rather
      * than in the browser, because the bank it comes from also holds the
@@ -84,7 +90,7 @@ export function serialiseInterviewState(state: InterviewState) {
      */
     answeredConcept: answeredConcept(state),
     evidence: state.evidence ?? null,
-    turns: state.turns,
+    turns: state.turns.map(publicTurn),
     currentQuestion: question
       ? {
           text: question.text,
@@ -98,7 +104,7 @@ export function serialiseInterviewState(state: InterviewState) {
           // assessment snapshot's answer keys, rationales, hints and hidden
           // runner material never leave the server before completion.
           dsaTransferQuestion: question.dsaTransferQuestion ?? null,
-          stage: question.stage ?? null,
+          stage: visibleStage,
           skill: question.skill || null,
           // `answerIndex` stays on the server. Grading happens there, so the
           // browser never receives the correct option.
@@ -109,6 +115,35 @@ export function serialiseInterviewState(state: InterviewState) {
         }
       : null
   };
+}
+
+function publicTurn(turn: InterviewState["turns"][number]) {
+  const publicValue = { ...turn };
+  Reflect.deleteProperty(publicValue, "runtime");
+  return publicValue;
+}
+
+const HIRING_MANAGER_PUBLIC_STAGES: InterviewStage[] = [
+  "career",
+  "current-role",
+  "project",
+  "project",
+  "project",
+  "behavioral",
+  "behavioral",
+  "behavioral"
+];
+
+/**
+ * Earlier frozen HR sessions contain two swapped stage tags. The questions are
+ * still present and in the right order, so normalize only their public section
+ * metadata instead of mutating durable interview state.
+ */
+function publicStage(state: InterviewState, index: number): InterviewStage | null {
+  if (state.setup.roundType === "hiring-manager") {
+    return HIRING_MANAGER_PUBLIC_STAGES[index] ?? state.plan[index]?.stage ?? null;
+  }
+  return state.plan[index]?.stage ?? null;
 }
 
 /** The teaching card for the last completed question, or null before the first. */

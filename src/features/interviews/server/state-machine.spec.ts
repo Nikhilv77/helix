@@ -1,5 +1,13 @@
 import { advance, appendTurn, createState, currentQuestion } from "./state-machine";
-import { HARD_CAP_MS, InterviewSetup, PlannedQuestion, SOFT_WRAP_MS, roundCaps } from "./types";
+import {
+  HARD_CAP_MS,
+  HIRING_MANAGER_HARD_CAP_MS,
+  HIRING_MANAGER_SOFT_WRAP_MS,
+  InterviewSetup,
+  PlannedQuestion,
+  SOFT_WRAP_MS,
+  roundCaps
+} from "./types";
 
 const setup: InterviewSetup = {
   role: "backend",
@@ -93,6 +101,16 @@ describe("interview state machine", () => {
     expect(result.state.questionIndex).toBe(0);
   });
 
+  it("answers candidate conversation without spending a follow-up or advancing", () => {
+    const state = stateWith({ questionIndex: 0, followUpCount: 1 });
+    const result = advance(state, "respond", 1_000);
+
+    expect(result.action).toBe("respond");
+    expect(result.state.questionIndex).toBe(0);
+    expect(result.state.followUpCount).toBe(1);
+    expect(result.forcedBy).toBeNull();
+  });
+
   it("ends the session at the hard cap regardless of the requested action", () => {
     const result = advance(stateWith(), "probe", HARD_CAP_MS + 1);
 
@@ -121,6 +139,13 @@ describe("per-round time caps", () => {
     expect(roundCaps({ ...setup, durationMinutes: 35 })).toEqual({
       softWrapMs: 33 * 60 * 1000,
       hardCapMs: 35 * 60 * 1000
+    });
+  });
+
+  it("gives the deeper hiring-manager conversation a thirty-minute window", () => {
+    expect(roundCaps({ ...setup, roundType: "hiring-manager", resumeRound: true })).toEqual({
+      softWrapMs: HIRING_MANAGER_SOFT_WRAP_MS,
+      hardCapMs: HIRING_MANAGER_HARD_CAP_MS
     });
   });
 
@@ -192,5 +217,58 @@ describe("per-round time caps", () => {
 
   it("does not extend a default round past the shared hard cap", () => {
     expect(advance(stateWith(), "probe", HARD_CAP_MS + 1).forcedBy).toBe("hard-time");
+  });
+
+  it("skips support questions when their time would put later core sections at risk", () => {
+    const pacedPlan = [
+      { ...question("Introduction"), requiredForPacing: true, pacingSection: "introduction" },
+      { ...question("Role fit"), requiredForPacing: true, pacingSection: "role-fit" },
+      { ...question("Work anchor"), requiredForPacing: true, pacingSection: "how-you-work" },
+      { ...question("Work support one"), pacingSection: "how-you-work" },
+      { ...question("Work support two"), pacingSection: "how-you-work" },
+      {
+        ...question("Final anchor"),
+        requiredForPacing: true,
+        pacingSection: "final-conversation"
+      },
+      { ...question("Final support"), pacingSection: "final-conversation" },
+      { ...question("Candidate close"), requiredForPacing: true, pacingSection: "close" }
+    ];
+    const result = advance(
+      stateWith({
+        setup: { ...setup, roundType: "hiring-manager", resumeRound: true },
+        plan: pacedPlan,
+        questionIndex: 2
+      }),
+      "move_on",
+      20 * 60 * 1000
+    );
+
+    expect(result.state.questionIndex).toBe(5);
+    expect(result.state.skippedQuestionIndexes).toEqual([3, 4]);
+    expect(result.state.phase).toBe("questioning");
+    expect(result.forcedBy).toBe("pacing");
+  });
+
+  it("keeps advancing through protected section anchors after soft wrap", () => {
+    const pacedPlan = [
+      { ...question("Opening"), requiredForPacing: true, pacingSection: "opening" },
+      { ...question("Optional detail"), pacingSection: "opening" },
+      { ...question("Core close"), requiredForPacing: true, pacingSection: "close" }
+    ];
+    const late = stateWith({
+      setup: { ...setup, roundType: "hiring-manager", resumeRound: true },
+      plan: pacedPlan,
+      questionIndex: 0
+    });
+
+    const moved = advance(late, "move_on", HIRING_MANAGER_SOFT_WRAP_MS + 1);
+    expect(moved.state.questionIndex).toBe(2);
+    expect(moved.state.phase).toBe("questioning");
+    expect(moved.state.skippedQuestionIndexes).toEqual([1]);
+
+    const completed = advance(moved.state, "move_on", HIRING_MANAGER_SOFT_WRAP_MS + 30_000);
+    expect(completed.state.phase).toBe("done");
+    expect(completed.state.questionIndex).toBe(3);
   });
 });

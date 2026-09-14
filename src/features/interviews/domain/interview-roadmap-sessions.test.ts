@@ -117,7 +117,7 @@ function historyItem(
 }
 
 describe("personalized interview roadmap sessions", () => {
-  it("presents Core and Applied as one Technical Deep Dive in the five-session path", () => {
+  it("keeps the four permanent candidate-facing interview rounds", () => {
     const sessions = interviewRoadmapSessions({
       personalizedPlan: plan(),
       roadmap: null,
@@ -125,29 +125,23 @@ describe("personalized interview roadmap sessions", () => {
     });
 
     expect(sessions.map((session) => session.id)).toEqual([
-      "dsa",
-      "technical-deep-dive",
-      "blueprint-architecture-system-design",
       "resume-behavioral-defense",
-      "blueprint-final-mock"
+      "technical-deep-dive",
+      "dsa",
+      "hiring-manager-final"
     ]);
-    expect(sessions.map((session) => session.order)).toEqual([1, 2, 3, 4, 5]);
+    expect(sessions.map((session) => session.order)).toEqual([1, 2, 3, 4]);
     expect(sessions.map((session) => session.title)).toEqual([
-      "DSA · Java",
-      "Technical Deep Dive",
-      "Full Stack System Design",
       "Resume & Behavioral Defense",
-      "Full Stack Mock"
+      "Core Technical & Projects",
+      "DSA & Design",
+      "Hiring Manager & Final Behavioural"
     ]);
 
-    expect(roadmapSessionHref(sessions[0]!)).toBe("/interview/dsa");
-    expect(roadmapSessionHref(sessions[1]!)).toBe(
-      "/interview?plan=plan-java-fullstack&coreBlueprint=blueprint-core-technical&appliedBlueprint=blueprint-applied-engineering"
-    );
-    expect(roadmapSessionHref(sessions[3]!)).toBe("/interview/resume");
-    expect(roadmapSessionHref(sessions[4]!)).toBe(
-      "/interview?plan=plan-java-fullstack&blueprint=blueprint-final-mock"
-    );
+    expect(roadmapSessionHref(sessions[0]!)).toBe("/interview/resume");
+    expect(roadmapSessionHref(sessions[1]!)).toBeNull();
+    expect(roadmapSessionHref(sessions[2]!)).toBe("/interview/dsa");
+    expect(roadmapSessionHref(sessions[3]!)).toBe("/interview/hiring-manager");
   });
 
   it("uses dedicated DSA and resume history to restore their visible progress", () => {
@@ -169,12 +163,12 @@ describe("personalized interview roadmap sessions", () => {
       ]
     });
 
-    expect(sessions[0]).toMatchObject({
+    expect(sessions[2]).toMatchObject({
       totalQuestions: 3,
       completedQuestions: 2,
       progressPercent: 67
     });
-    expect(sessions[3]).toMatchObject({
+    expect(sessions[0]).toMatchObject({
       totalQuestions: 8,
       completedQuestions: 8,
       progressPercent: 100
@@ -222,9 +216,7 @@ describe("personalized interview roadmap sessions", () => {
       attemptStatus: "not_started",
       updatedPracticeAvailable: true
     });
-    expect(roadmapSessionHref(technical!)).toBe(
-      "/interview?plan=plan-java-fullstack-revision-2&coreBlueprint=revision-2-core-technical&appliedBlueprint=revision-2-applied-engineering"
-    );
+    expect(roadmapSessionHref(technical!)).toBeNull();
   });
 
   it("resumes an in-progress stable slot even after its plan is superseded", () => {
@@ -268,7 +260,7 @@ describe("personalized interview roadmap sessions", () => {
       attemptStatus: "in_progress",
       resumeSessionId: "live-old-plan-session"
     });
-    expect(roadmapSessionHref(technical!)).toBe("/interview/voice?session=live-old-plan-session");
+    expect(roadmapSessionHref(technical!)).toBeNull();
   });
 
   it("counts a story-driven Core Technical assessment in the Core Technical interview slot", () => {
@@ -290,6 +282,6 @@ describe("personalized interview roadmap sessions", () => {
       attemptStatus: "in_progress",
       resumeSessionId: "core-technical:assessment-1"
     });
-    expect(roadmapSessionHref(technical!)).toBe("/practice/core-technical");
+    expect(roadmapSessionHref(technical!)).toBeNull();
   });
 });

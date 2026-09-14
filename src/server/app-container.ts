@@ -42,6 +42,15 @@ import { ResumeService } from "@/features/onboarding/server/resume/service";
 import { PersonalizedPlanningStore } from "@/features/interviews/server/personalized-planning-store";
 import { PersonalizedPerformanceStore } from "@/features/interviews/server/personalized-performance-store";
 import { TechnicalAnswerEvaluator } from "@/features/interviews/server/technical-answer-evaluator";
+import {
+  InterviewEvaluationRecoveryService,
+  PrismaEvaluationRecoveryRepository
+} from "@/features/interviews/server/evaluation-recovery";
+import { InterviewQualityRunner } from "@/features/interviews/quality/interview-quality";
+import {
+  InterviewOperationsService,
+  PrismaInterviewOperationsRepository
+} from "@/features/interviews/server/interview-operations";
 import { PracticeRoadmapService } from "@/features/practice/shared/server/practice-roadmap.service";
 import { PracticeEvidenceStore } from "@/features/practice/shared/server/practice-evidence-store";
 import { WorkspaceSearchService } from "@/features/search/server/workspace-search.service";
@@ -115,6 +124,9 @@ export interface AppContainer {
   config: AppConfigService;
   healthService: HealthService;
   interviewService: InterviewService;
+  interviewEvaluationRecoveryService: InterviewEvaluationRecoveryService;
+  interviewQualityRunner: InterviewQualityRunner;
+  interviewOperationsService: InterviewOperationsService;
   profileService: ProfileService;
   curriculumService: CurriculumService;
   resumeService: ResumeService;
@@ -219,6 +231,14 @@ export function getAppContainer(): AppContainer {
   const interviewAi = config.groqApiKey
     ? new AiService(new GroqProvider(config, config.groqApiKey, config.groqDeciderModel))
     : geminiAi;
+  // Keep separate cooldowns so an evaluator formatting failure cannot move the
+  // latency-sensitive decider off Groq. Each path falls back to Gemini after
+  // its single live Groq attempt fails.
+  const resilientInterviewAi = () =>
+    interviewAi === geminiAi ? geminiAi : new FallbackAiService(interviewAi, geminiAi);
+  const interviewPlanningAi = resilientInterviewAi();
+  const interviewDecisionAi = resilientInterviewAi();
+  const interviewEvaluationAi = resilientInterviewAi();
   const generationAi =
     interviewAi === geminiAi ? geminiAi : new FallbackAiService(geminiAi, interviewAi);
 
@@ -273,12 +293,32 @@ export function getAppContainer(): AppContainer {
   const frontendRoadmapService = new FrontendRoadmapService(prisma);
   const dsaPracticeBlockStore = new DsaPracticeBlockStore(prisma);
   const dsaBlockAssessmentPreparationService = new DsaBlockAssessmentPreparationService(prisma);
+  const interviewAnswerEvaluator = new TechnicalAnswerEvaluator(interviewEvaluationAi);
+  const interviewDecider = new InterviewDecider(interviewDecisionAi);
   const interviewService = new InterviewService(
-    new InterviewPlanner(interviewAi),
-    new InterviewDecider(interviewAi),
+    new InterviewPlanner(interviewPlanningAi),
+    interviewDecider,
     new PrismaSessionStore(prisma),
     config.interviewDailyLimit,
-    new TechnicalAnswerEvaluator(interviewAi)
+    interviewAnswerEvaluator
+  );
+  const interviewEvaluationRecoveryService = new InterviewEvaluationRecoveryService(
+    new PrismaEvaluationRecoveryRepository(prisma),
+    interviewAnswerEvaluator
+  );
+  const interviewQualityRunner = new InterviewQualityRunner(
+    interviewDecider,
+    interviewAnswerEvaluator
+  );
+  const interviewOperationsService = new InterviewOperationsService(
+    new PrismaInterviewOperationsRepository(prisma),
+    {
+      authenticatedDays: config.interviewAuthenticatedRetentionDays,
+      anonymousDays: config.interviewAnonymousRetentionDays,
+      operationalDays: config.interviewOperationalRetentionDays,
+      batchSize: config.interviewRetentionBatchSize
+    },
+    config.interviewMetricsSampleLimit
   );
   const coreTechnicalAssessmentRuntimeService = new CoreTechnicalAssessmentRuntimeService(
     prisma,
@@ -586,7 +626,10 @@ export function getAppContainer(): AppContainer {
     // Written once per resume and read by every later resume round, so the
     // round itself never spends a model call on planning.
     resumeInterviewKitService: new ResumeInterviewKitService(geminiAi, profileService),
-    interviewService
+    interviewService,
+    interviewEvaluationRecoveryService,
+    interviewQualityRunner,
+    interviewOperationsService
   };
 
   return container;

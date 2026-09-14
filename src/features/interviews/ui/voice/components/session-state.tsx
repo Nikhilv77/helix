@@ -1,18 +1,19 @@
 import Link from "next/link";
-import type { CSSProperties } from "react";
+import { useCallback, useEffect, useRef, type CSSProperties } from "react";
 import {
   ArrowRight,
-  CheckCircle2,
   Clock3,
   FileText,
   Loader2,
-  MessageSquareText,
   RefreshCw,
+  Volume2,
+  VolumeX,
   WifiOff
 } from "lucide-react";
 import { workspaceAccentCssVariables, type WorkspaceAccent } from "@/lib/workspace/accent";
-import { formatClock } from "../utils/voice-interview";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
+import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
+import { ReportMayaAvatar } from "@/features/reports/ui/report-maya-avatar";
 
 export function VoiceShell({
   children,
@@ -115,12 +116,12 @@ export function SessionLoadingScreen({
 
 export function SessionStateScreen({
   kind,
-  duration = 0,
-  answers = 0,
   workspaceAccent,
   blockAssessmentBlockId = null,
   coreTechnicalBlockId = null,
-  storyPracticeAssessment = null
+  storyPracticeAssessment = null,
+  evaluationLabel = "interview",
+  evaluationParameters = []
 }: {
   kind: "expired" | "complete";
   duration?: number;
@@ -133,6 +134,8 @@ export function SessionStateScreen({
     routeBase: string;
     label: string;
   } | null;
+  evaluationLabel?: string;
+  evaluationParameters?: string[];
 }) {
   const teacher = useWorkspaceTeacher();
   const complete = kind === "complete";
@@ -140,111 +143,13 @@ export function SessionStateScreen({
   if (complete) {
     return (
       <VoiceShell workspaceAccent={workspaceAccent}>
-        <section className="flex flex-1 items-center justify-center py-8 sm:py-12">
-          <div className="w-full max-w-xl">
-            <div className="text-center">
-              <CheckCircle2
-                size={36}
-                strokeWidth={1.65}
-                className="mx-auto text-[var(--workspace-accent)] drop-shadow-[0_0_18px_var(--workspace-accent)]"
-                aria-hidden="true"
-              />
-              <p className="mt-5 text-sm font-semibold uppercase tracking-[0.18em] text-cream/45">
-                Session saved
-              </p>
-              <h1 className="mt-3 text-balance font-display text-4xl font-semibold tracking-tight text-cream sm:text-6xl">
-                Interview complete.
-              </h1>
-              <p className="mx-auto mt-4 max-w-2xl text-pretty text-sm leading-7 text-cream/62 sm:text-base">
-                {blockAssessmentBlockId || coreTechnicalBlockId || storyPracticeAssessment
-                  ? `Your assessment is saved. Review the five scores and feedback ${teacher.name} recorded for this block.`
-                  : `Your conversation is safely recorded. Take a breath, then review the signals ${teacher.name} found or begin another focused round.`}
-              </p>
-            </div>
-
-            <div className="interview-mobile-glass mt-8 rounded-3xl bg-[rgba(28,29,33,0.52)] px-6 py-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_24px_70px_rgba(0,0,0,0.2)] backdrop-blur-2xl sm:px-8 sm:py-7">
-              <div className="space-y-5">
-                <CompletionMetric
-                  icon={<Clock3 size={17} aria-hidden="true" />}
-                  label="Time practised"
-                  value={formatClock(duration)}
-                />
-                <CompletionMetric
-                  icon={<MessageSquareText size={17} aria-hidden="true" />}
-                  label="Responses captured"
-                  value={String(answers)}
-                />
-              </div>
-
-              <div className="mt-6">
-                <p className="text-sm font-semibold text-cream">Keep the momentum useful.</p>
-                <p className="mt-1 text-sm leading-6 text-cream/48">
-                  Review this round before repeating it, or switch focus for the next interview.
-                </p>
-              </div>
-            </div>
-
-            <div className="mx-auto mt-5 flex max-w-xs flex-col gap-2.5">
-              {blockAssessmentBlockId || coreTechnicalBlockId || storyPracticeAssessment ? (
-                <>
-                  <Link
-                    href={
-                      blockAssessmentBlockId
-                        ? `/practice/dsa?block=${encodeURIComponent(blockAssessmentBlockId)}`
-                        : storyPracticeAssessment
-                          ? `${storyPracticeAssessment.routeBase}?block=${encodeURIComponent(storyPracticeAssessment.blockId)}`
-                          : `/practice/core-technical?block=${encodeURIComponent(coreTechnicalBlockId!)}`
-                    }
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white"
-                  >
-                    <FileText size={15} aria-hidden="true" />
-                    View block results
-                    <ArrowRight size={15} aria-hidden="true" />
-                  </Link>
-                  <Link
-                    href={
-                      blockAssessmentBlockId
-                        ? "/practice/dsa"
-                        : (storyPracticeAssessment?.routeBase ?? "/practice/core-technical")
-                    }
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-cream/58 transition hover:bg-white/[0.04] hover:text-cream"
-                  >
-                    Return to current{" "}
-                    {blockAssessmentBlockId
-                      ? "DSA"
-                      : (storyPracticeAssessment?.label ?? "Core Technical")}{" "}
-                    practice
-                    <ArrowRight size={15} aria-hidden="true" />
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/reports"
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white"
-                  >
-                    <FileText size={15} aria-hidden="true" />
-                    View report
-                    <ArrowRight size={15} aria-hidden="true" />
-                  </Link>
-                  <Link
-                    href="/interview?resume=1"
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-cream/58 transition hover:bg-white/[0.04] hover:text-cream"
-                  >
-                    Practice another round
-                    <ArrowRight size={15} aria-hidden="true" />
-                  </Link>
-                </>
-              )}
-              <Link
-                href="/"
-                className="py-1 text-center text-sm font-medium text-cream/36 transition hover:text-cream/70"
-              >
-                Return to Trailgrad
-              </Link>
-            </div>
-          </div>
-        </section>
+        <CompletionDebrief
+          blockAssessmentBlockId={blockAssessmentBlockId}
+          coreTechnicalBlockId={coreTechnicalBlockId}
+          storyPracticeAssessment={storyPracticeAssessment}
+          evaluationLabel={evaluationLabel}
+          evaluationParameters={evaluationParameters}
+        />
       </VoiceShell>
     );
   }
@@ -268,7 +173,7 @@ export function SessionStateScreen({
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/interview?resume=1"
+              href="/interviews"
               className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-cream px-5 text-sm font-semibold text-[#10131a] transition hover:bg-white"
             >
               Start a new interview
@@ -287,22 +192,131 @@ export function SessionStateScreen({
   );
 }
 
-function CompletionMetric({
-  icon,
-  label,
-  value
+function CompletionDebrief({
+  blockAssessmentBlockId,
+  coreTechnicalBlockId,
+  storyPracticeAssessment,
+  evaluationLabel,
+  evaluationParameters
 }: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
+  blockAssessmentBlockId: string | null;
+  coreTechnicalBlockId: string | null;
+  storyPracticeAssessment: {
+    blockId: string;
+    routeBase: string;
+    label: string;
+  } | null;
+  evaluationLabel: string;
+  evaluationParameters: string[];
 }) {
+  const teacher = useWorkspaceTeacher();
+  const { state, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
+  const spoken = useRef(false);
+  const parameterLead = evaluationParameters.slice(0, 3).join(", ");
+  const voiceLine = `James has reported back to me about your ${evaluationLabel} interview. I’ll walk you through ${parameterLead || "the relevant evaluation parameters"}, what worked, and what to improve next. Finishing the interview is progress by itself—keep going.`;
+  const speaking = state === "speaking" || state === "loading";
+  const speakDebrief = useCallback(() => {
+    if (spoken.current && !speaking) spoken.current = false;
+    void speak(voiceLine).then((result) => {
+      if (result === "started" || result === "unavailable") spoken.current = true;
+    });
+  }, [speak, speaking, voiceLine]);
+
+  useEffect(() => {
+    if (awaitingGesture || spoken.current) return;
+    const timer = window.setTimeout(speakDebrief, 420);
+    return () => window.clearTimeout(timer);
+  }, [awaitingGesture, speakDebrief]);
+
+  useEffect(() => {
+    if (!awaitingGesture) return;
+    const unlock = () => {
+      setAwaitingGesture(false);
+      speakDebrief();
+    };
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, [awaitingGesture, setAwaitingGesture, speakDebrief]);
+
+  const blockHref = blockAssessmentBlockId
+    ? `/practice/dsa?block=${encodeURIComponent(blockAssessmentBlockId)}`
+    : storyPracticeAssessment
+      ? `${storyPracticeAssessment.routeBase}?block=${encodeURIComponent(storyPracticeAssessment.blockId)}`
+      : coreTechnicalBlockId
+        ? `/practice/core-technical?block=${encodeURIComponent(coreTechnicalBlockId)}`
+        : null;
+
   return (
-    <div className="flex items-center gap-4">
-      <span className="shrink-0 text-[var(--workspace-accent)]">{icon}</span>
-      <div>
-        <p className="text-sm font-medium text-cream/42">{label}</p>
-        <p className="mt-1 text-xl font-semibold tabular-nums text-cream">{value}</p>
+    <section className="flex flex-1 items-center justify-center overflow-y-auto py-6 sm:py-10">
+      <div className="grid w-full max-w-5xl items-center gap-4 lg:grid-cols-[minmax(18rem,0.78fr)_minmax(0,1fr)] lg:gap-10">
+        <div className="mx-auto w-full max-w-[30rem]">
+          <ReportMayaAvatar speaking={state === "speaking"} transparent size="compact" />
+        </div>
+
+        <div className="text-center lg:text-left">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--workspace-accent)]">
+            Report ready with {teacher.name}
+          </p>
+          <h1 className="mt-3 text-balance font-display text-4xl font-semibold tracking-tight text-cream sm:text-5xl">
+            James has reported back to me.
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-pretty text-base leading-7 text-cream/66 lg:mx-0">
+            I reviewed your {evaluationLabel} performance. I’ll explain what your scores mean, show
+            the evidence behind them, and give you one practical next step. You completed the
+            interview—now we turn it into progress.
+          </p>
+
+          {evaluationParameters.length ? (
+            <div className="mt-6 flex flex-wrap justify-center gap-2 lg:justify-start">
+              {evaluationParameters.map((parameter) => (
+                <span
+                  key={parameter}
+                  className="rounded-full border border-white/[0.1] bg-white/[0.035] px-3 py-1.5 text-xs font-medium text-cream/62"
+                >
+                  {parameter}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => (speaking ? stop() : speakDebrief())}
+            className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[var(--workspace-accent)] transition hover:brightness-110"
+          >
+            {speaking ? (
+              <VolumeX size={16} aria-hidden="true" />
+            ) : (
+              <Volume2 size={16} aria-hidden="true" />
+            )}
+            {speaking ? `Stop ${teacher.name}` : `Hear ${teacher.name}`}
+          </button>
+
+          <div className="mx-auto mt-7 flex max-w-sm flex-col gap-2.5 lg:mx-0">
+            <Link
+              href="/reports"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#101113] transition hover:bg-white"
+            >
+              <FileText size={15} aria-hidden="true" />
+              Review my report with {teacher.name}
+              <ArrowRight size={15} aria-hidden="true" />
+            </Link>
+            {blockHref ? (
+              <Link
+                href={blockHref}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-cream/58 transition hover:bg-white/[0.04] hover:text-cream"
+              >
+                View block details
+                <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+            ) : null}
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

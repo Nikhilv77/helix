@@ -85,6 +85,17 @@ export class GroqProvider implements SystemDesignerAIProvider {
           })
         );
 
+        request.onTrace?.({
+          provider: PROVIDER_NAME,
+          operation: request.operation,
+          model: this.model,
+          modelClass: request.modelClass,
+          attempt,
+          maxAttempts,
+          durationMs: Date.now() - startedAt,
+          outcome: "success"
+        });
+
         return parsed;
       } catch (error) {
         const mapped = this.mapError(error, request.operation);
@@ -104,6 +115,19 @@ export class GroqProvider implements SystemDesignerAIProvider {
             retryAfterMs: mapped.retryAfterMs
           })
         );
+
+        request.onTrace?.({
+          provider: PROVIDER_NAME,
+          operation: request.operation,
+          model: this.model,
+          modelClass: request.modelClass,
+          attempt,
+          maxAttempts,
+          durationMs: Date.now() - startedAt,
+          outcome: "failure",
+          errorCode: mapped.code,
+          retryable: mapped.retryable
+        });
 
         if (!shouldRetry) throw mapped;
         if (mapped.code === "AI_PROVIDER_ERROR") {

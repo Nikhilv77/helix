@@ -4,7 +4,8 @@ import type {
   BlueprintRubricDimension,
   SessionBlueprint
 } from "@/features/interviews/domain/personalized-plan";
-import { AiService } from "@/server/ai/ai.service";
+import type { AiService } from "@/server/ai/ai.service";
+import type { AiCallTrace } from "@/server/ai/interfaces/system-designer-ai-provider.interface";
 import {
   describeLevel,
   describeRole,
@@ -20,6 +21,7 @@ import {
   MissingDimension,
   PlannedQuestion
 } from "./types";
+import { INTERVIEW_DECIDER_PROMPT_VERSION, INTERVIEW_ENGINE_VERSION } from "./runtime-version";
 
 /**
  * Flat schema on purpose. A discriminated union serialises to `oneOf`, which
@@ -30,16 +32,28 @@ import {
  * planned question without asking the model to rewrite it.
  */
 const decisionSchema = z.object({
-  action: z.enum(["clarify", "probe", "challenge", "move_on"]),
+  action: z.enum(["clarify", "probe", "challenge", "respond", "move_on"]),
   missing: z.enum(["clarity", "structure", "specificity", "ownership", "outcome", "none"]),
   reason: z.string().min(1).max(200),
   acknowledgement: z.string().max(80),
-  line: z.string().max(240)
+  line: z.string().max(240),
+  candidateResponse: z.string().max(360).optional()
 });
 
 export type RawDecision = z.infer<typeof decisionSchema>;
+export type InterviewDecisionResult = RawDecision & {
+  runtime: {
+    engineVersion: string;
+    promptVersion: string;
+    durationMs: number;
+    usedFallback: boolean;
+    calls: AiCallTrace[];
+  };
+};
 
-const SYSTEM_INSTRUCTION = `You are Maya, a perceptive senior interviewer conducting a live job interview. Return only JSON matching the requested schema.
+export type CandidateTurnMode = "answer" | "conversation";
+
+const SYSTEM_INSTRUCTION = `You are James, a perceptive senior interviewer conducting a live job interview. Return only JSON matching the requested schema.
 
 Listen like a person: remember earlier evidence, notice what is new, and follow the most consequential thread. Be concise and conversational. Use relaxed everyday English, as two people would speak, not interview-form language. Never score, flatter, lecture, or expose your internal evaluation. Ask exactly one thing at a time.`;
 
@@ -57,6 +71,7 @@ export interface DecideInput {
   userAnswer: string;
   followUpCount: number;
   maxFollowUps?: number;
+  interviewStage?: PlannedQuestion["stage"];
   topicLabel?: string;
   blueprintDifficulty?: BlueprintDifficulty;
   rubric?: BlueprintRubricDimension[];
@@ -66,6 +81,10 @@ export interface DecideInput {
   dsaInterviewerGuide?: PlannedQuestion["dsaInterviewerGuide"];
   coreTechnicalInterviewerGuide?: PlannedQuestion["coreTechnicalInterviewerGuide"];
   storyPracticeInterviewerGuide?: PlannedQuestion["storyPracticeInterviewerGuide"];
+  acceptsCandidateQuestions?: boolean;
+  candidateTurnMode?: CandidateTurnMode;
+  /** Live-turn deadline propagated to the provider; never persisted. */
+  signal?: AbortSignal;
 }
 
 function buildPrompt(input: DecideInput): string {
@@ -92,9 +111,21 @@ function buildPrompt(input: DecideInput): string {
         .map((turn) => `${turn.speaker === "agent" ? "Interviewer" : "Candidate"}: ${turn.text}`)
         .join("\n")
     : "No earlier turns.";
-  const resumeGuidance = isResumeRound(setup)
-    ? `This is a resume-defense conversation. The resume is only a lead. Stay with the candidate's story when it becomes interesting: ask about a concrete moment, their own decision, the trade-off, or the result. A counter-question is useful when a claim is vague, inflated, contradictory, or unclear about personal ownership. Do not counter every answer; move on when the answer is credible and complete.`
-    : "";
+  const resumeGuidance =
+    setup.roundType === "hiring-manager"
+      ? `This is a hiring-manager and behavioural conversation, not a technical screen or resume interrogation. Listen for motivation, self-awareness, judgement, collaboration, accountability, personal action, and meaningful outcomes.
+
+${hiringManagerFollowUpGuidance(input.interviewStage, followUpCount, maxFollowUps)}
+
+Respond to what the candidate actually said. If the answer is vague, narrow it to one concrete moment without sounding accusatory. If it is genuine and specific, acknowledge the important detail and ask about the judgement, alternative, consequence, or reflection behind it. Never default mechanically to measurable impact, never repeat a detail already established, and never drift into technical trivia or a new topic.`
+      : isResumeRound(setup)
+        ? `This is a resume-defense conversation. The resume is only a lead. Stay with the candidate's story when it becomes interesting: ask about a concrete moment, their own decision, the trade-off, or the result. A counter-question is useful when a claim is vague, inflated, contradictory, or unclear about personal ownership. Do not counter every answer; move on when the answer is credible and complete.`
+        : "";
+  const candidateQuestionGuidance = input.acceptsCandidateQuestions
+    ? `This is the final candidate-question turn. If the candidate asks a question, choose move_on and put a concise, useful answer in candidateResponse. You are a simulated interviewer, not a real employer: never invent company policies, compensation, benefits, team facts, hiring decisions, or role guarantees. For employer-specific questions, say you cannot represent a particular employer and explain what the candidate should clarify with the real interviewer. For general questions about success, teamwork, management, or growth, answer from the perspective of this ${describeRole(setup.role)} interview simulation. Use one to three short sentences and do not ask another question. If the candidate did not ask anything, return an empty candidateResponse.`
+    : input.candidateTurnMode === "conversation"
+      ? `The candidate's latest turn is primarily a question, clarification request, or brief social aside—not an interview answer. You MUST choose respond. Answer what they asked directly in candidateResponse, then use line to return naturally to the still-pending interview question. If they ask what one of your words means, define it plainly; never ask them to explain what they mean. If they ask you to repeat or rephrase, do that. Keep the exchange warm and brief. Do not expose hidden rubrics or invent employer-specific facts.`
+      : `Candidate questions and brief conversation are allowed throughout the interview. If the latest turn is actually a question, clarification request, or social aside rather than an answer, choose respond, answer it directly in candidateResponse, and then return to the pending question in line. Otherwise return an empty candidateResponse.`;
   const blueprintGuidance = input.topicLabel
     ? `This question belongs to the persisted personalized blueprint.
 Assigned topic: ${input.topicLabel}
@@ -168,6 +199,8 @@ ${formatEvidenceLedger(evidenceLedger)}
 
 ${resumeGuidance}
 
+${candidateQuestionGuidance}
+
 ${blueprintGuidance}
 
 ${dsaAssessmentGuidance}
@@ -180,11 +213,13 @@ Follow-ups already used on this question: ${followUpCount} of ${maxFollowUps}
 
 Choose exactly one action:
 
-clarify — the transcript is fragmentary, nonsensical, clearly misheard, unrelated to the question, or the candidate asks you to repeat/rephrase. Briefly restate one clear question without blaming them.
+clarify — the transcript is fragmentary, nonsensical, clearly misheard, unrelated to the question, or the candidate asks you to repeat/rephrase. Briefly restate or rephrase the current planned question without blaming them. If audio cut out, re-ask the question; never ask whether they can hear you or whether their audio works.
+
+respond — the candidate asks you a question, asks what your wording means, requests a repeat/rephrase, or starts a brief social exchange. Answer them directly in candidateResponse. Then use line for one concise, natural return to the still-pending planned question. Never respond to a candidate's question by asking them the same question back.
 
 probe — the answer is relevant but misses the most important evidence. Follow the strongest thread and ask for ${probeFocus}.
 
-challenge — use sparingly, only for ${challengeBasis}. This is Maya's counter-question: make it curious and specific, never adversarial.
+challenge — use sparingly, only for ${challengeBasis}. Make the counter-question curious and specific, never adversarial.
 
 move_on — the answer supplied enough credible evidence for this question. It need not be perfect.
 
@@ -192,42 +227,106 @@ Decision balance:
 - Prefer move_on when the candidate answered the actual question with a concrete story and credible evidence.
 - Prefer probe when one high-value detail is missing and asking for it would materially improve the story.
 - Prefer challenge only when there is a real inconsistency, unsupported claim, or ownership gap worth testing.
+- In a hiring-manager round, follow the section-specific depth guidance above before moving on; a credible answer can still deserve one thoughtful deeper question.
 - Never manufacture a follow-up just to keep talking. The conversation should breathe like a real interview.
 - Before choosing probe or challenge, identify the single missing link in this evidence chain: ${evidenceChain}.
 - Do not ask for a detail the candidate just supplied. If an earlier follow-up was answered, move to the next missing link or move on.
 - When the answer is complete but compressed, move on rather than interrogating for more detail.
 
 Rules for "acknowledgement":
-- Zero to seven spoken words before the next question.
-- Sound attentive, not evaluative: "That helps", "Right, I see the thread", "That gives me a clearer picture", or a similarly natural variation.
-- Acknowledgement is optional. Use it only when it makes the transition feel natural.
+- For probe, challenge, and move_on, always provide a brief acknowledgement before the next question. Use an empty string for clarify and respond.
+- Use two to ten spoken words and reflect one specific detail or motivation from the candidate's latest answer. For example: "React was the entry point for you" or "Reliability drove that decision".
+- Sound attentive, not evaluative. Show that you heard the answer without approving or grading it.
 - Rotate the wording across the interview. Never use "Got it" more than once, and do not repeat the same acknowledgement from recent turns.
 - Do not use praise such as "great", "excellent", "impressive", "good answer", or "I love that".
+- Do not restate the planned question or summarize the whole answer.
+- Never say "I want to stay with that part", "I want to stick to this part", or mention managing the interview topic. Just respond to the candidate naturally.
 - Avoid repeating the same acknowledgement visible in the recent conversation.
-- Use an empty string for clarify, or when an acknowledgement would feel forced.
 
 Rules for "line":
-- If action is clarify, probe, or challenge: one natural question, under 22 words. Reference specifics without mechanically quoting the candidate. Use contractions and simple spoken phrasing where natural.
+- If action is clarify, probe, challenge, or respond: one natural question, under 22 words. For respond, this returns to or plainly rephrases the pending planned question after answering the candidate. Reference specifics without mechanically quoting the candidate. Use contractions and simple spoken phrasing where natural.
 - If action is move_on: an empty string. The next planned question is appended by the application.
 - Never ask two questions, give advice, summarize the full answer, or say "can you elaborate" or "tell me more".
 
-"missing" is clarity for clarify; otherwise whichever of structure, specificity, ownership, or outcome is weakest; use none when moving on.
+Rules for "candidateResponse":
+- Use it for respond, or for the final candidate-question turn described above; otherwise return an empty string.
+- It is spoken before line or the closing line, so do not include a goodbye or another question.
+- Never pretend to know facts about a real company, team, manager, salary, benefit, or hiring decision.
+
+"missing" is clarity for clarify; use none for respond and move_on; otherwise use whichever of structure, specificity, ownership, or outcome is weakest.
 "reason" is one clause explaining your choice. It is never spoken.`;
 }
 
-export class InterviewDecider {
-  constructor(private readonly ai: AiService) {}
+function hiringManagerFollowUpGuidance(
+  stage: PlannedQuestion["stage"],
+  followUpCount: number,
+  maxFollowUps: number
+): string {
+  const remaining = Math.max(0, maxFollowUps - followUpCount);
+  const budget = `There ${remaining === 1 ? "is" : "are"} ${remaining} follow-up${remaining === 1 ? "" : "s"} left for this question.`;
 
-  async decide(input: DecideInput): Promise<RawDecision> {
-    return this.ai.generateStructured({
+  if (stage === "career") {
+    return `Introduction depth: after the opening answer, normally ask two connected follow-ups. Stay on the candidate's career journey; do not switch to a project or delivery-impact example. If the opening is only a generic list of education or companies, ask which company, role, or transition was the meaningful turning point and why. Then explore how it connects to what the candidate wants now. Use a third follow-up only when it adds a genuinely new layer or resolves vagueness; move on sooner only when continuing would be repetitive or unnatural. ${budget}`;
+  }
+  if (stage === "current-role") {
+    return `Role-fit depth: use up to two connected follow-ups. Use the first to understand why the stated preferences matter. If one follow-up has already been used, do not ask for a project example and do not switch to delivery impact; test the stated preference with one realistic trade-off, sacrifice, or deal-breaker, or move on if that would add nothing. ${budget}`;
+  }
+  if (stage === "project") {
+    return `How-you-work depth: use up to two connected follow-ups. Use the first to establish the candidate's personal decision or action; use the second when useful to explore the consequence, trade-off, learning, or what they would change. Do not demand a number when a credible qualitative outcome fits better. ${budget}`;
+  }
+  return `Final-conversation depth: keep the tone warm and lighter. Ask at most one natural follow-up only when a central piece of accountability, growth, or values is genuinely missing; otherwise move on cleanly. A specific mistake plus personal ownership, repair, and a concrete change afterward is already complete—do not ask for ancillary coordination or process detail. ${budget}`;
+}
+
+export class InterviewDecider {
+  constructor(private readonly ai: Pick<AiService, "generateStructured">) {}
+
+  async decide(input: DecideInput): Promise<InterviewDecisionResult> {
+    const calls: AiCallTrace[] = [];
+    const startedAt = Date.now();
+    const candidateTurnMode =
+      input.candidateTurnMode ?? classifyCandidateTurn(input.userAnswer, input.conversationHistory);
+    const decision = await this.ai.generateStructured({
       operation: "interview.decide",
       systemInstruction: SYSTEM_INSTRUCTION,
-      prompt: buildPrompt(input),
+      prompt: buildPrompt({ ...input, candidateTurnMode }),
       schema: decisionSchema,
       // Gemini Flash: this runs on every turn and sits in the latency path.
       modelClass: "fast",
-      temperature: 0.3
+      temperature: 0.3,
+      // Retrying one provider several times consumes the entire spoken-turn
+      // budget. The resilient interview AI falls through to Gemini instead.
+      maxAttempts: 1,
+      signal: input.signal,
+      onTrace: (trace) => calls.push(trace)
     });
+    const forceConversationResponse =
+      candidateTurnMode === "conversation" && !input.acceptsCandidateQuestions;
+    const action = forceConversationResponse ? ("respond" as const) : decision.action;
+    const providerHandledConversation =
+      decision.action === "respond" && Boolean(decision.candidateResponse?.trim());
+    return {
+      ...decision,
+      // Clarification should sound immediate. A bridge before re-asking the
+      // question makes James repeat himself and feel scripted.
+      action,
+      missing: action === "respond" ? "none" : decision.missing,
+      acknowledgement: action === "clarify" || action === "respond" ? "" : decision.acknowledgement,
+      line:
+        forceConversationResponse && decision.action !== "respond"
+          ? input.questionAsked
+          : decision.line,
+      candidateResponse:
+        action === "respond" && !providerHandledConversation
+          ? candidateConversationFallback(input.userAnswer, input.conversationHistory)
+          : decision.candidateResponse,
+      runtime: {
+        engineVersion: INTERVIEW_ENGINE_VERSION,
+        promptVersion: INTERVIEW_DECIDER_PROMPT_VERSION,
+        durationMs: Date.now() - startedAt,
+        usedFallback: calls.some((call) => call.operation.endsWith("-fallback")),
+        calls
+      }
+    };
   }
 }
 
@@ -305,7 +404,87 @@ function formatDsaInterviewerGuide(
 }
 
 export function isDecisionAction(value: string): value is DecisionAction {
-  return value === "clarify" || value === "probe" || value === "challenge" || value === "move_on";
+  return (
+    value === "clarify" ||
+    value === "probe" ||
+    value === "challenge" ||
+    value === "respond" ||
+    value === "move_on"
+  );
+}
+
+/**
+ * Cheap intent routing before the model call. It deliberately targets short,
+ * explicit candidate questions and dialogue repair—not rhetorical questions
+ * embedded in a substantive interview answer.
+ */
+export function classifyCandidateTurn(
+  value: string,
+  history: Array<{ speaker: "agent" | "user"; text: string }> = []
+): CandidateTurnMode {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (!normalized) return "answer";
+
+  const lower = normalized.toLowerCase();
+  const wordCount = normalized.split(/\s+/).length;
+  const explicitRepair =
+    /\b(?:what do you mean|what does .+ mean|could you|can you)\b.*\b(?:clarify|explain|repeat|rephrase|say that again|mean)\b/i.test(
+      normalized
+    ) || /\b(?:i (?:do not|don't) understand|i'm asking you|i am asking you)\b/i.test(normalized);
+  const socialAside =
+    /\b(?:how are you|nice to meet you|can i (?:have|take) (?:a )?(?:moment|second|minute)|give me (?:a )?(?:moment|second|minute))\b/i.test(
+      normalized
+    ) ||
+    (wordCount <= 15 &&
+      /^(?:hi|hello|hey|thanks|thank you|sorry|good (?:morning|afternoon|evening)|i(?:'m| am) (?:a bit )?(?:nervous|excited|anxious))\b/i.test(
+        normalized
+      )) ||
+    /\b(?:i have a question|may i ask|i wanted to ask|i(?:'d| would) like to ask)\b/i.test(
+      normalized
+    );
+  const shortQuestion =
+    wordCount <= 28 &&
+    (normalized.endsWith("?") ||
+      /^(?:what|why|how|when|where|who|which|can|could|would|will|do|does|did|is|are|am|should)\b/i.test(
+        normalized
+      ));
+  const previousCandidateAsked = [...history]
+    .reverse()
+    .find((turn) => turn.speaker === "user")
+    ?.text.trim()
+    .endsWith("?");
+
+  return explicitRepair ||
+    socialAside ||
+    shortQuestion ||
+    (lower === "i'm asking you" && previousCandidateAsked)
+    ? "conversation"
+    : "answer";
+}
+
+export function candidateConversationFallback(
+  value: string,
+  history: Array<{ speaker: "agent" | "user"; text: string }> = []
+): string {
+  if (/^i(?:'m| am) asking you[.!?]?$/i.test(value.trim())) {
+    const previousQuestion = [...history]
+      .reverse()
+      .find((turn) => turn.speaker === "user" && turn.text.trim() !== value.trim())?.text;
+    if (previousQuestion) return candidateConversationFallback(previousQuestion);
+  }
+  const term = value.match(/what do you mean by\s+["“']?([^?"”']+)/i)?.[1]?.trim();
+  if (/^(?:the )?role$/i.test(term ?? "")) {
+    return "By role, I mean a job or position you held and the responsibilities you had.";
+  }
+  if (/^(?:the )?transition$/i.test(term ?? "")) {
+    return "By transition, I mean a meaningful change between roles, companies, or types of work.";
+  }
+  if (/\bhow are you\b/i.test(value)) return "I'm doing well, thanks for asking.";
+  if (/\b(?:moment|second|minute)\b/i.test(value)) return "Of course—take a moment.";
+  if (/\b(?:repeat|rephrase|say that again)\b/i.test(value)) {
+    return "Of course—let me put it another way.";
+  }
+  return "That's fair—let me answer that briefly.";
 }
 
 export function normaliseMissing(value: string): MissingDimension {

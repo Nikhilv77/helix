@@ -4,13 +4,6 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Room, RoomEvent, Track } from "livekit-client";
-import type {
-  AudioCaptureOptions,
-  RemoteParticipant,
-  RemoteTrack,
-  TranscriptionSegment
-} from "livekit-client";
 import {
   Code2,
   GripVertical,
@@ -23,8 +16,7 @@ import {
   Play,
   RefreshCw,
   Send,
-  Square,
-  Volume2
+  Square
 } from "lucide-react";
 import { DsaCodeEditor } from "@/features/interviews/ui/dsa/dsa-code-editor";
 import { DsaQuestionNotes } from "@/features/interviews/ui/dsa/dsa-question-notes";
@@ -61,13 +53,7 @@ import { FundamentalsLiveWorkspace } from "./components/fundamentals-live-worksp
 import { BlockAssessmentReviewWorkspace } from "./components/block-assessment-review-workspace";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 import type { AgentState, DsaLanguage, DsaRunResult, VoiceStatus } from "./types";
-import {
-  describeVoiceState,
-  formatClock,
-  formatTypedAnswer,
-  isAgentState,
-  updateLiveTranscript
-} from "./utils/voice-interview";
+import { describeVoiceState, formatClock, formatTypedAnswer } from "./utils/voice-interview";
 import { SessionLoadingScreen, SessionStateScreen, VoiceShell } from "./components/session-state";
 import { MicrophonePicker } from "./components/microphone-picker";
 import { TypedAnswerPanel } from "./components/typed-answer-panel";
@@ -75,6 +61,8 @@ import { ConversationTranscript } from "./components/conversation-transcript";
 import { CandidateCameraPreview } from "./components/candidate-camera-preview";
 import { MediaPermissionGate, type MediaSetupResult } from "./components/media-permission-gate";
 import { useInterviewClock } from "./hooks/use-interview-clock";
+import { GeminiLiveInterviewer, type GeminiLiveInterviewerHandle } from "./gemini-live-interviewer";
+import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
 
 const DEFAULT_HARD_CAP_MS = 15 * 60 * 1000;
 /**
@@ -85,11 +73,8 @@ const DEFAULT_HARD_CAP_MS = 15 * 60 * 1000;
 const AVATAR_OVERRIDE = process.env.NEXT_PUBLIC_AVATAR_URL ?? "";
 const AVATAR_DISABLED = AVATAR_OVERRIDE.toLowerCase() === "off";
 const POLL_MS = 1500;
-const AGENT_STATE_ATTRIBUTE = "lk.agent.state";
-const AGENT_JOIN_TIMEOUT_MS = 15_000;
 const MIC_SILENCE_WARNING_MS = 6_000;
 const MIC_DEVICE_STORAGE_KEY = "trailgrad.preferredMicrophone";
-const TYPED_ANSWER_TOPIC = "trailgrad.typed-answer";
 const LEGACY_CORE_TECHNICAL_ASSESSMENT_STAGES = [
   { id: "rapid" as const, label: "Review", caption: "Your saved path evidence" },
   { id: "explain" as const, label: "Diagnose & repair", caption: "Mechanism transfer" },
@@ -132,8 +117,7 @@ function stopMediaStream(stream: MediaStream | null) {
 export function VoiceInterviewClient({
   sessionId,
   workspaceAccent,
-  resume,
-  teacherId
+  resume
 }: {
   /** Server-resolved durable session identity for this room. */
   sessionId: string;
@@ -144,21 +128,20 @@ export function VoiceInterviewClient({
   teacherId?: string | null;
 }) {
   const router = useRouter();
-  const persona = useMemo(
-    () => personaById(teacherId) ?? personaForSession(sessionId),
-    [sessionId, teacherId]
-  );
+  // Interviews have one consistent presenter. James also matches the fixed
+  // Gemini Live voice, avoiding a voice/avatar mismatch.
+  const persona = useMemo(() => personaById("james") ?? personaForSession(sessionId), [sessionId]);
 
   const [status, setStatus] = useState<VoiceStatus>("connecting");
   const [error, setError] = useState<string | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
-  const [playbackBlocked, setPlaybackBlocked] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [sessionLoadError, setSessionLoadError] = useState<string | null>(null);
   const [sessionUnavailable, setSessionUnavailable] = useState(false);
   const [agentSpeaking, setAgentSpeaking] = useState(false);
   const [agentState, setAgentState] = useState<AgentState | null>(null);
   const [liveTranscript, setLiveTranscript] = useState("");
+  const [liveAgentTranscript, setLiveAgentTranscript] = useState("");
   const [micOn, setMicOn] = useState(true);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [optimisticUserTurn, setOptimisticUserTurn] = useState<Turn | null>(null);
@@ -181,6 +164,7 @@ export function VoiceInterviewClient({
   const [currentQuestion, setCurrentQuestion] = useState<InterviewQuestion | null>(null);
   const [progress, setProgress] = useState({ index: 0, count: 4, followUps: 0 });
   const [planStages, setPlanStages] = useState<Array<InterviewStage | null>>([]);
+  const [skippedQuestionIndexes, setSkippedQuestionIndexes] = useState<number[]>([]);
   const [answeredConcept, setAnsweredConcept] = useState<InterviewConcept | null>(null);
   const [hardCapMs, setHardCapMs] = useState(DEFAULT_HARD_CAP_MS);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -204,20 +188,11 @@ export function VoiceInterviewClient({
   const [mediaSetupComplete, setMediaSetupComplete] = useState(false);
   const [candidateCameraStream, setCandidateCameraStream] = useState<MediaStream | null>(null);
 
-  const roomRef = useRef<Room | null>(null);
-  const agentIdentityRef = useRef<string | null>(null);
-  const agentReadyRef = useRef(false);
-  const agentWaitTimerRef = useRef<number | null>(null);
   const stopPollingRef = useRef(false);
   const sessionCompleteRef = useRef(false);
   const sessionCheckedRef = useRef(false);
-  const intentionalDisconnectRef = useRef(false);
-  const micRetryRef = useRef<(() => void) | null>(null);
-  const audioRetryRef = useRef<(() => void) | null>(null);
-  const teardownRef = useRef<number | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const localTranscriptSegmentsRef = useRef<Map<string, TranscriptionSegment>>(new Map());
+  const geminiInterviewerRef = useRef<GeminiLiveInterviewerHandle | null>(null);
   const turnsRef = useRef<Turn[]>([]);
   const startedAtRef = useRef<number | null>(null);
   const typedUserTurnsRef = useRef(0);
@@ -230,6 +205,9 @@ export function VoiceInterviewClient({
     hardCapMs
   });
   const dsaQuestionSlug = setup?.dsaQuestionSlugs?.[progress.index] ?? null;
+  // Gemini is the only AI-interview transport. LiveKit remains solely in the
+  // peer-help feature, where it connects two humans rather than an AI worker.
+  const usesGeminiLive = setup !== null;
 
   const replaceCandidateCameraStream = useCallback((stream: MediaStream | null) => {
     const previous = candidateCameraStreamRef.current;
@@ -246,6 +224,7 @@ export function VoiceInterviewClient({
     ({ cameraStream, microphoneDeviceId }: MediaSetupResult) => {
       if (microphoneDeviceId) {
         window.localStorage.setItem(MIC_DEVICE_STORAGE_KEY, microphoneDeviceId);
+        setSelectedInputId(microphoneDeviceId);
       }
       replaceCandidateCameraStream(cameraStream);
       setStatus("connecting");
@@ -296,13 +275,23 @@ export function VoiceInterviewClient({
     document.title = pageTitle(title);
   }, [mediaSetupComplete, phase, sessionChecked, status]);
 
-  // Join the room. The token carries the agent dispatch, so connecting is what
-  // summons the interviewer.
-  useEffect(() => {
+  /*
+   * Retired LiveKit interview transport (kept here only as a patch anchor).
+   * Gemini Live owns microphone capture, playback, transcription and the
+   * interviewer connection for every interview type.
+   */
+  /* useEffect(() => {
     // Do not open a media room until the durable interview state has been
     // verified. This prevents an expired session from flashing a live call
     // underneath its recovery message.
-    if (!sessionChecked || !mediaSetupComplete || sessionUnavailable || sessionCompleteRef.current)
+    if (
+      !sessionChecked ||
+      !mediaSetupComplete ||
+      !setup ||
+      sessionUnavailable ||
+      sessionCompleteRef.current ||
+      usesGeminiLive
+    )
       return;
 
     // React Strict Mode mounts, unmounts, then remounts effects in dev. A
@@ -330,7 +319,7 @@ export function VoiceInterviewClient({
       adaptiveStream: true,
       dynacast: true,
       audioCaptureDefaults: microphoneOptions()
-    });
+  });
     roomRef.current = room;
     intentionalDisconnectRef.current = false;
     agentReadyRef.current = false;
@@ -581,12 +570,16 @@ export function VoiceInterviewClient({
     mediaSetupComplete,
     sessionChecked,
     sessionId,
+    setup,
     sessionUnavailable,
-    persona.id
+    persona.id,
+    usesGeminiLive
   ]);
 
-  // The transcript comes from the brain, not from LiveKit — the server already
-  // records every turn with millisecond timings.
+  */
+
+  // The transcript comes from the brain, which records every turn with
+  // millisecond timings.
   const poll = useCallback(async () => {
     if (!sessionId || stopPollingRef.current) return;
     try {
@@ -605,6 +598,7 @@ export function VoiceInterviewClient({
       setSetup(session.setup);
       setCurrentQuestion(session.currentQuestion);
       setPlanStages(session.stages ?? []);
+      setSkippedQuestionIndexes(session.skippedQuestionIndexes ?? []);
       setAnsweredConcept(session.answeredConcept ?? null);
       setHardCapMs(session.hardCapMs ?? DEFAULT_HARD_CAP_MS);
       setStartedAt(session.startedAt);
@@ -633,9 +627,6 @@ export function VoiceInterviewClient({
         setTurns([]);
         setCurrentQuestion(null);
         setAnswerPanelOpen(false);
-        intentionalDisconnectRef.current = true;
-        void roomRef.current?.disconnect().catch(() => null);
-        roomRef.current = null;
         setError(null);
         setStatus("error");
       } else if (!sessionCheckedRef.current) {
@@ -752,13 +743,6 @@ export function VoiceInterviewClient({
   }, [liveTranscript, setup?.templateTitle, turns]);
 
   useEffect(() => {
-    if (agentState === "speaking") {
-      localTranscriptSegmentsRef.current.clear();
-      setLiveTranscript("");
-    }
-  }, [agentState]);
-
-  useEffect(() => {
     if (status !== "live" || !micOn || agentSpeaking || micSignal || liveTranscript) {
       setMicSilent(false);
       return;
@@ -773,53 +757,56 @@ export function VoiceInterviewClient({
     if (hearing) setMicSilent(false);
   }, []);
 
+  const handleLiveTranscript = useCallback(
+    (speaker: "user" | "agent", event: { text: string; finished: boolean }) => {
+      const setDraft = speaker === "user" ? setLiveTranscript : setLiveAgentTranscript;
+      setDraft(event.text);
+      if (!event.finished) return;
+      const text = event.text.trim();
+      if (speaker === "user" && text) {
+        const now = startedAt ? Math.max(0, Date.now() - startedAt) : 0;
+        // Keep the candidate's completed utterance visible while the durable
+        // session refresh catches up. `poll` removes it as soon as the server
+        // returns the matching saved turn.
+        setOptimisticUserTurn({ speaker: "user", text, startMs: now, endMs: now });
+      }
+      setDraft("");
+    },
+    [startedAt]
+  );
+
   async function switchMicrophone(deviceId: string) {
-    const room = roomRef.current;
-    if (!room || !deviceId || switchingMic) return;
-
-    setSwitchingMic(true);
-    setMicError(null);
-    setMicSilent(false);
-    setMicSignal(false);
-
-    try {
-      await room.switchActiveDevice("audioinput", deviceId, true);
-      const publication = room.localParticipant.getTrackPublication(Track.Source.Microphone);
-      const track = publication?.track?.mediaStreamTrack;
-      if (!track) throw new Error("The selected microphone did not start.");
-
-      setLocalTrack(track);
+    if (usesGeminiLive) {
+      if (!deviceId || switchingMic) return;
+      setSwitchingMic(true);
+      setMicError(null);
+      setMicSilent(false);
+      setMicSignal(false);
       setSelectedInputId(deviceId);
-      setMicOn(!publication.isMuted && track.enabled && track.readyState === "live");
       window.localStorage.setItem(MIC_DEVICE_STORAGE_KEY, deviceId);
-    } catch (caught) {
-      setMicError(
-        caught instanceof Error ? caught.message : "Could not switch to that microphone."
-      );
-    } finally {
+      setStatus("connecting");
+      setConnectionAttempt((attempt) => attempt + 1);
       setSwitchingMic(false);
+      return;
     }
+    return;
   }
 
   async function toggleMic() {
-    const room = roomRef.current;
-    if (!room) return;
-
-    if (!micOn) {
-      micRetryRef.current?.();
+    if (usesGeminiLive) {
+      if (!localTrack) return;
+      localTrack.enabled = !micOn;
+      setMicOn(localTrack.enabled);
       return;
     }
-
-    await room.localParticipant.setMicrophoneEnabled(false);
-    setMicOn(false);
+    return;
   }
 
   async function openTypedAnswer() {
-    const room = roomRef.current;
-    if (!room || status !== "live" || typedSending) return;
+    if (status !== "live" || typedSending) return;
 
     if (micOn) {
-      await room.localParticipant.setMicrophoneEnabled(false).catch(() => null);
+      if (localTrack) localTrack.enabled = false;
       setMicOn(false);
     }
 
@@ -832,9 +819,8 @@ export function VoiceInterviewClient({
   }
 
   async function submitTypedAnswer() {
-    const room = roomRef.current;
     const answer = formatTypedAnswer(currentQuestion, typedDraft, typedNotes);
-    if (!room || !sessionId || !startedAt || !answer || typedSending) return;
+    if (!sessionId || !startedAt || !answer || typedSending) return;
 
     const now = Date.now();
     const startMs = Math.max(0, (typedStartedAt ?? now) - startedAt);
@@ -844,12 +830,7 @@ export function VoiceInterviewClient({
     setTypedError(null);
 
     try {
-      await room.localParticipant.publishData(
-        new TextEncoder().encode(
-          JSON.stringify({ text: answer, startMs, endMs, turnId: crypto.randomUUID() })
-        ),
-        { reliable: true, topic: TYPED_ANSWER_TOPIC }
-      );
+      await geminiInterviewerRef.current?.submitTypedAnswer({ text: answer, startMs, endMs });
     } catch (caught) {
       setTypedSending(false);
       setTypedError(
@@ -864,8 +845,7 @@ export function VoiceInterviewClient({
    * model call and still lands in the transcript as something the candidate said.
    */
   async function submitOptionAnswer(option: string) {
-    const room = roomRef.current;
-    if (!room || !sessionId || !startedAt || typedSending || selectedOption) return;
+    if (!sessionId || !startedAt || typedSending || selectedOption) return;
 
     const now = Date.now();
     const startMs = Math.max(0, (typedStartedAt ?? now) - startedAt);
@@ -876,12 +856,7 @@ export function VoiceInterviewClient({
     setTypedError(null);
 
     try {
-      await room.localParticipant.publishData(
-        new TextEncoder().encode(
-          JSON.stringify({ text: option, startMs, endMs, turnId: crypto.randomUUID() })
-        ),
-        { reliable: true, topic: TYPED_ANSWER_TOPIC }
-      );
+      await geminiInterviewerRef.current?.submitTypedAnswer({ text: option, startMs, endMs });
     } catch (caught) {
       setSelectedOption(null);
       setTypedSending(false);
@@ -890,9 +865,8 @@ export function VoiceInterviewClient({
   }
 
   async function submitDsaAnswer() {
-    const room = roomRef.current;
     const code = typedDraft.trim();
-    if (!room || !sessionId || !startedAt || code.length < 10 || typedSending) return;
+    if (!sessionId || !startedAt || code.length < 10 || typedSending) return;
 
     const now = Date.now();
     const startMs = Math.max(0, (typedStartedAt ?? now) - startedAt);
@@ -909,12 +883,7 @@ export function VoiceInterviewClient({
     setTypedError(null);
 
     try {
-      await room.localParticipant.publishData(
-        new TextEncoder().encode(
-          JSON.stringify({ text: answer, startMs, endMs, turnId: crypto.randomUUID() })
-        ),
-        { reliable: true, topic: TYPED_ANSWER_TOPIC }
-      );
+      await geminiInterviewerRef.current?.submitTypedAnswer({ text: answer, startMs, endMs });
     } catch (caught) {
       setTypedSending(false);
       setTypedError(caught instanceof Error ? caught.message : "The solution could not be sent.");
@@ -1036,8 +1005,6 @@ export function VoiceInterviewClient({
     if (dsaBlockId || storyPracticeBlockId) {
       // Leaving never submits a partial block assessment. The same frozen
       // session stays resumable until every prompt is answered or skipped.
-      intentionalDisconnectRef.current = true;
-      await roomRef.current?.disconnect().catch(() => null);
       router.push(
         dsaBlockId
           ? `/practice/dsa?block=${encodeURIComponent(dsaBlockId)}`
@@ -1050,8 +1017,6 @@ export function VoiceInterviewClient({
     setError(null);
     setStatus("ended");
     await endInterview(sessionId).catch(() => null);
-    intentionalDisconnectRef.current = true;
-    await roomRef.current?.disconnect();
   }, [router, sessionId, setup?.dsaBlockAssessment?.blockId, storyPracticeAssessment]);
 
   useEffect(() => {
@@ -1072,28 +1037,14 @@ export function VoiceInterviewClient({
   ]);
 
   async function reconnect() {
-    if (agentWaitTimerRef.current !== null) {
-      window.clearTimeout(agentWaitTimerRef.current);
-      agentWaitTimerRef.current = null;
-    }
-
     setError(null);
-    setPlaybackBlocked(false);
     setStatus("connecting");
-    agentReadyRef.current = false;
-    agentIdentityRef.current = null;
     setAgentState(null);
     setAgentSpeaking(false);
     setAgentTrack(null);
     setLocalTrack(null);
-    localTranscriptSegmentsRef.current.clear();
     setLiveTranscript("");
-
-    const existing = roomRef.current;
-    roomRef.current = null;
-    intentionalDisconnectRef.current = true;
-    await existing?.disconnect().catch(() => null);
-    intentionalDisconnectRef.current = false;
+    geminiInterviewerRef.current?.reconnect();
     setConnectionAttempt((attempt) => attempt + 1);
   }
 
@@ -1106,6 +1057,10 @@ export function VoiceInterviewClient({
     : false;
   const displayTurns =
     optimisticUserTurn && !optimisticAlreadyPersisted ? [...turns, optimisticUserTurn] : turns;
+  // Completed rows always come from the interview session. Live captions are
+  // rendered separately, so a provider fragment can never replace a saved
+  // candidate answer or become a second James turn.
+  const voiceProviderTurns = displayTurns;
 
   const presence: PresenceState =
     status === "ended"
@@ -1149,8 +1104,18 @@ export function VoiceInterviewClient({
   const isAnyBlockAssessment = isBlockAssessment || isStoryPracticeAssessment;
   const isResumeRound = setup?.resumeRound === true;
   const isFundamentalsRound = setup?.fundamentalsRound === true;
+  const usesSupportedRoundWorkspace =
+    isResumeRound || isFundamentalsRound || isDsaInterview || isAnyBlockAssessment;
 
-  const stageProgress = stageCounts(planStages, progress.index);
+  // Old generic sessions can still exist in persistence. They must not keep
+  // reviving the retired role/setup wizard or its legacy room layout.
+  useEffect(() => {
+    if (sessionChecked && setup && !usesSupportedRoundWorkspace) {
+      router.replace("/interviews");
+    }
+  }, [router, sessionChecked, setup, usesSupportedRoundWorkspace]);
+
+  const stageProgress = stageCounts(planStages, progress.index, skippedQuestionIndexes);
   // Maya's reply to a graded answer carries the verdict, so the panel can mark
   // the chosen option without a second request.
   const lastGrade = (() => {
@@ -1175,6 +1140,7 @@ export function VoiceInterviewClient({
       ? (currentQuestion.dsaTransferQuestion ?? null)
       : null;
   const activeDsaQuestion: DsaWorkspaceQuestion | null = dsaQuestion ?? frozenTransferQuestion;
+  const evaluationProfile = setup ? evaluationProfileForSetup(setup) : null;
 
   if (sessionUnavailable) {
     return <SessionStateScreen kind="expired" workspaceAccent={workspaceAccent} />;
@@ -1198,8 +1164,8 @@ export function VoiceInterviewClient({
       <SessionStateScreen
         workspaceAccent={workspaceAccent}
         kind="complete"
-        duration={Math.min(elapsed, hardCapMs)}
-        answers={turns.filter((turn) => turn.speaker === "user").length}
+        evaluationLabel={evaluationProfile?.label}
+        evaluationParameters={evaluationProfile?.parameters.map((parameter) => parameter.label)}
         blockAssessmentBlockId={setup?.dsaBlockAssessment?.blockId ?? null}
         storyPracticeAssessment={
           storyPracticeAssessment
@@ -1229,8 +1195,36 @@ export function VoiceInterviewClient({
 
   return (
     <VoiceShell workspaceAccent={workspaceAccent} wide>
-      <audio ref={audioRef} autoPlay />
-
+      {usesGeminiLive ? (
+        <GeminiLiveInterviewer
+          ref={geminiInterviewerRef}
+          key={`gemini-live-${connectionAttempt}`}
+          sessionId={sessionId}
+          onStatus={setStatus}
+          onAgentState={setAgentState}
+          onAgentSpeaking={setAgentSpeaking}
+          onAgentTrack={setAgentTrack}
+          onLocalTrack={(track) => {
+            setLocalTrack(track);
+            setMicOn(Boolean(track?.enabled));
+            setMicError(null);
+            if (!track) return;
+            const activeId = track.getSettings().deviceId ?? "";
+            if (activeId) setSelectedInputId(activeId);
+            void navigator.mediaDevices
+              .enumerateDevices()
+              .then((devices) =>
+                setAudioInputs(devices.filter((device) => device.kind === "audioinput"))
+              )
+              .catch(() => null);
+          }}
+          onError={setError}
+          onInputTranscript={(event) => handleLiveTranscript("user", event)}
+          onOutputTranscript={(event) => handleLiveTranscript("agent", event)}
+          onAnswerPersisted={poll}
+          microphoneDeviceId={selectedInputId}
+        />
+      ) : null}
       <header className="interview-live-header interview-live-glass mb-3 flex shrink-0 flex-col gap-2 rounded-2xl border border-white/[0.08] bg-[rgba(25,26,29,0.58)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:min-h-14 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
         <div className="thin-scroll w-full min-w-0 overflow-x-auto py-1 sm:flex-1">
           <PathRail
@@ -1297,7 +1291,7 @@ export function VoiceInterviewClient({
           counts={stageProgress}
           grade={lastGrade}
           concept={answeredConcept}
-          turns={displayTurns}
+          turns={voiceProviderTurns}
           spokenAgentTurnKeys={spokenAgentTurnKeys}
           liveUserText={liveTranscript}
           startedAt={startedAt}
@@ -1386,9 +1380,11 @@ export function VoiceInterviewClient({
           questionCount={progress.count}
           counts={stageProgress}
           grade={lastGrade}
-          turns={displayTurns}
+          turns={voiceProviderTurns}
           spokenAgentTurnKeys={spokenAgentTurnKeys}
           liveUserText={liveTranscript}
+          liveAgentText={liveAgentTranscript}
+          teacherName={persona.name}
           startedAt={startedAt}
           setup={setup}
           thinking={agentState === "thinking"}
@@ -1506,30 +1502,10 @@ export function VoiceInterviewClient({
                         Reconnect
                       </button>
                     ) : null}
-                    <Link
-                      href="/interview?resume=1"
-                      className="text-sm text-cream/62 hover:text-cream"
-                    >
+                    <Link href="/interviews" className="text-sm text-cream/62 hover:text-cream">
                       Start over
                     </Link>
                   </div>
-                </div>
-              ) : null}
-
-              {playbackBlocked ? (
-                <div className="rounded-xl border border-white/[0.07] bg-white/[0.035] px-4 py-3">
-                  <p className="text-sm leading-6 text-cream/78">
-                    Your browser paused call audio. Enable it once and the conversation will
-                    continue.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => audioRetryRef.current?.()}
-                    className="mt-2 inline-flex min-h-9 items-center gap-2 rounded-lg bg-white/[0.06] px-3 text-sm font-semibold text-cream transition hover:bg-white/10"
-                  >
-                    <Volume2 size={14} aria-hidden="true" />
-                    Enable audio
-                  </button>
                 </div>
               ) : null}
 
@@ -1538,7 +1514,7 @@ export function VoiceInterviewClient({
                   <p className="text-sm leading-6 text-cream/78">{micError}</p>
                   <button
                     type="button"
-                    onClick={() => micRetryRef.current?.()}
+                    onClick={() => void reconnect()}
                     className="mt-2 inline-flex min-h-9 items-center rounded-lg bg-white/[0.06] px-3 text-sm font-semibold text-cream transition hover:bg-white/10"
                   >
                     Retry microphone
@@ -1564,9 +1540,11 @@ export function VoiceInterviewClient({
               ) : null}
 
               <ConversationTranscript
-                turns={displayTurns}
+                turns={voiceProviderTurns}
                 spokenAgentTurnKeys={spokenAgentTurnKeys}
                 liveUserText={liveTranscript}
+                liveAgentText={liveAgentTranscript}
+                teacherName={persona.name}
                 startedAt={startedAt}
                 setup={setup}
                 question={currentQuestion}
@@ -2023,7 +2001,9 @@ function DsaLiveWorkspace({
             result={runResult}
             running={running}
           />
-          <div className={`dsa-live-editor-composer shrink-0 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 p-4 sm:p-5`}>
+          <div
+            className={`dsa-live-editor-composer shrink-0 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 p-4 sm:p-5`}
+          >
             <label htmlFor="dsa-approach" className="text-sm font-semibold text-cream/82">
               Explain your approach to {teacher.name}
               <span className="ml-2 hidden font-normal text-cream/38 xl:inline">
@@ -2259,14 +2239,4 @@ function DsaMetaPill({ children }: { children: React.ReactNode }) {
       {children}
     </span>
   );
-}
-
-function microphoneOptions(deviceId = ""): AudioCaptureOptions {
-  return {
-    autoGainControl: true,
-    echoCancellation: true,
-    noiseSuppression: true,
-    channelCount: 1,
-    ...(deviceId ? { deviceId: { exact: deviceId } } : {})
-  };
 }

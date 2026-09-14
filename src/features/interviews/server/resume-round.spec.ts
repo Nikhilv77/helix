@@ -1,9 +1,5 @@
-import type { ResumeInterviewKit } from "@/lib/shared/types";
-import {
-  buildResumePlan,
-  gradeMultipleChoice,
-  multipleChoiceReply
-} from "./resume-round";
+import type { CandidateResume, ResumeInterviewKit } from "@/lib/shared/types";
+import { buildResumePlan, gradeMultipleChoice, multipleChoiceReply } from "./resume-round";
 
 const kit: ResumeInterviewKit = {
   skillQuestions: [
@@ -81,7 +77,53 @@ const kit: ResumeInterviewKit = {
   ]
 };
 
+const resume = {
+  experience: [
+    {
+      organization: "Acme",
+      role: "Frontend Engineer",
+      summary: "Owned the billing rewrite."
+    }
+  ],
+  projects: [{ name: "Checkout", summary: "Rebuilt checkout reliability." }]
+} as CandidateResume;
+
 describe("buildResumePlan", () => {
+  it("keeps the real resume and behavioural round to eight balanced questions", () => {
+    const plan = buildResumePlan(kit, { resume, shuffle: (items) => items });
+
+    expect(plan).toHaveLength(8);
+    expect(plan.map((question) => question.stage)).toEqual([
+      "career",
+      "current-role",
+      "project",
+      "experience",
+      "experience",
+      "behavioral",
+      "skills",
+      "code"
+    ]);
+    expect(
+      plan
+        .filter((question) => question.requiredForPacing)
+        .map((question) => question.pacingSection)
+    ).toEqual(["about-you", "your-work", "how-you-work", "technical"]);
+  });
+
+  it("replaces a missing coding task with a second skill and stays at eight questions", () => {
+    const plan = buildResumePlan(
+      { ...kit, codingTask: null },
+      { resume, shuffle: (items) => items }
+    );
+
+    expect(plan).toHaveLength(8);
+    expect(plan.filter((question) => question.stage === "skills")).toHaveLength(2);
+    expect(plan.some((question) => question.stage === "code")).toBe(false);
+    expect(
+      plan.filter((question) => question.requiredForPacing).map((question) => question.stage)
+    ).toEqual(["career", "project", "behavioral", "skills"]);
+  });
+
   it("lays the round out as skills, then code, then experience", () => {
     const plan = buildResumePlan(kit, { shuffle: (items) => items });
 
@@ -127,9 +169,9 @@ describe("buildResumePlan", () => {
     const experience = plan.filter((question) => question.stage === "experience");
 
     expect(experience).toHaveLength(3);
-    expect(experience.every((question) => question.evidenceAnchor === "Billing rewrite at Acme")).toBe(
-      true
-    );
+    expect(
+      experience.every((question) => question.evidenceAnchor === "Billing rewrite at Acme")
+    ).toBe(true);
   });
 
   it("varies the skills asked between rounds", () => {
@@ -139,10 +181,7 @@ describe("buildResumePlan", () => {
   });
 
   it("still builds a round when the resume produced no coding task", () => {
-    const plan = buildResumePlan(
-      { ...kit, codingTask: null },
-      { shuffle: (items) => items }
-    );
+    const plan = buildResumePlan({ ...kit, codingTask: null }, { shuffle: (items) => items });
 
     expect(plan.some((question) => question.stage === "code")).toBe(false);
     expect(plan).toHaveLength(7);
@@ -157,7 +196,10 @@ describe("gradeMultipleChoice", () => {
   });
 
   it("rejects any other option", () => {
-    expect(gradeMultipleChoice(question!, "useMemo")).toEqual({ correct: false, chosen: "useMemo" });
+    expect(gradeMultipleChoice(question!, "useMemo")).toEqual({
+      correct: false,
+      chosen: "useMemo"
+    });
   });
 
   it("ignores case and surrounding space", () => {

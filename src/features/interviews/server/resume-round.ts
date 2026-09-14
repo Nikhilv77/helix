@@ -3,6 +3,8 @@ import type { InterviewSetup, PlannedQuestion } from "./types";
 
 export const RESUME_SKILL_QUESTIONS = 4;
 export const RESUME_EXPERIENCE_QUESTIONS = 3;
+const LIVE_RESUME_SKILL_QUESTIONS = 2;
+const LIVE_RESUME_EXPERIENCE_QUESTIONS = 2;
 
 /**
  * Turns the stored kit into the round's plan.
@@ -14,16 +16,73 @@ export const RESUME_EXPERIENCE_QUESTIONS = 3;
  */
 export function buildResumePlan(
   kit: ResumeInterviewKit,
-  options: { shuffle?: <T>(items: T[]) => T[] } = {}
+  options: { shuffle?: <T>(items: T[]) => T[]; resume?: CandidateResume } = {}
 ): PlannedQuestion[] {
   const shuffle = options.shuffle ?? shuffleInPlace;
 
   // Skills are drawn at random so the same resume does not produce the same
   // round twice, while each stage keeps its fixed position in the arc.
-  const skills = shuffle([...kit.skillQuestions]).slice(0, RESUME_SKILL_QUESTIONS);
-  const experience = kit.experienceQuestions.slice(0, RESUME_EXPERIENCE_QUESTIONS);
+  // Keep one practical skill check when there is a coding task and use the
+  // freed slot for a second skill when there is not. Together with the career,
+  // project, behavioural and experience sections this keeps a full round at
+  // eight questions instead of the previous twelve-question sprint.
+  const skillQuestionCount = options.resume
+    ? kit.codingTask
+      ? 1
+      : LIVE_RESUME_SKILL_QUESTIONS
+    : RESUME_SKILL_QUESTIONS;
+  const skills = shuffle([...kit.skillQuestions]).slice(0, skillQuestionCount);
+  const experience = kit.experienceQuestions.slice(
+    0,
+    options.resume ? LIVE_RESUME_EXPERIENCE_QUESTIONS : RESUME_EXPERIENCE_QUESTIONS
+  );
+  const role = options.resume?.experience[0];
+  const project = options.resume?.projects[0];
+  const openingQuestions: PlannedQuestion[] = options.resume
+    ? [
+        conversationalQuestion(
+          "Before we get into your resume, give me a concise overview of your background and the work you are doing now.",
+          "Career narrative",
+          "Learn the candidate's current scope and the thread they believe matters most.",
+          ["a concise career story", "current responsibilities", "one relevant example"],
+          "career",
+          "about-you",
+          true
+        ),
+        conversationalQuestion(
+          role
+            ? `At ${role.organization || "your current company"}, what were you personally responsible for as ${role.role || "part of the team"}, and what was the hardest problem you worked on?`
+            : "What kind of work have you been doing most recently, and what has been the hardest problem?",
+          role?.summary || "Current role",
+          "Establish personal ownership, constraints, and impact in the candidate's recent work.",
+          ["specific responsibility", "a difficult problem", "personal action or decision"],
+          "current-role",
+          "about-you"
+        ),
+        conversationalQuestion(
+          project
+            ? `Let's go deeper on ${project.name}. Walk me through the problem, the design you chose, a trade-off you made, and the result.`
+            : "Choose one project you are proud of. Walk me through the problem, your design, a difficult trade-off, and the result.",
+          project?.summary || "Project deep dive",
+          "Test project ownership, technical judgement, and measurable outcomes.",
+          ["problem and constraints", "candidate's design decision", "trade-off", "outcome"],
+          "project",
+          "your-work",
+          true
+        ),
+        conversationalQuestion(
+          "Tell me about a time a project did not go as planned. What happened, what did you do, and what changed afterward?",
+          "Behavioural evidence",
+          "Collect evidence of ownership, judgement, and learning under pressure.",
+          ["specific situation", "personal action", "result", "lesson learned"],
+          "behavioral",
+          "how-you-work",
+          true
+        )
+      ]
+    : [];
 
-  const skillQuestions: PlannedQuestion[] = skills.map((question) => ({
+  const skillQuestions: PlannedQuestion[] = skills.map((question, index) => ({
     text: question.prompt,
     evidenceAnchor: question.skill,
     kind: question.format === "mcq" ? "mcq" : "conversation",
@@ -42,7 +101,11 @@ export function buildResumePlan(
       `concrete use of ${question.skill || "the skill"}`,
       "reasoning behind the choice"
     ]),
-    probeIfMissing: `Where exactly did you use ${question.skill || "that"} in your own work?`
+    maxFollowUps: 1,
+    probeIfMissing: `Where exactly did you use ${question.skill || "that"} in your own work?`,
+    pacingSection: "technical",
+    requiredForPacing: !kit.codingTask && index === 0,
+    estimatedDurationMs: 2 * 60 * 1000
   }));
 
   const codeQuestions: PlannedQuestion[] = kit.codingTask
@@ -63,7 +126,11 @@ export function buildResumePlan(
             "a working implementation",
             "an explanation of the approach"
           ]),
-          probeIfMissing: "Walk me through what your version does, line by line."
+          maxFollowUps: 1,
+          probeIfMissing: "Walk me through what your version does, line by line.",
+          pacingSection: "technical",
+          requiredForPacing: true,
+          estimatedDurationMs: 4 * 60 * 1000
         }
       ]
     : [];
@@ -80,11 +147,58 @@ export function buildResumePlan(
     competency: question.competency,
     intent: "Collect concrete evidence of what the candidate personally did and what changed.",
     mustHit: withMinimum(question.expects, ["what they personally did", "why it mattered"]),
+    maxFollowUps: 1,
     probeIfMissing:
-      question.probeIfMissing || "Which part would not have happened without your contribution?"
+      question.probeIfMissing || "Which part would not have happened without your contribution?",
+    pacingSection: "your-work",
+    estimatedDurationMs: 2.5 * 60 * 1000
   }));
 
-  return [...skillQuestions, ...codeQuestions, ...experienceQuestions];
+  return options.resume
+    ? [
+        ...openingQuestions.slice(0, 3),
+        ...experienceQuestions,
+        ...openingQuestions.slice(3),
+        ...skillQuestions,
+        ...codeQuestions
+      ]
+    : [...skillQuestions, ...codeQuestions, ...experienceQuestions];
+}
+
+function conversationalQuestion(
+  text: string,
+  evidenceAnchor: string,
+  intent: string,
+  mustHit: string[],
+  stage: "career" | "current-role" | "project" | "behavioral",
+  pacingSection: string,
+  requiredForPacing = false
+): PlannedQuestion {
+  const competency = {
+    career: "Career overview",
+    "current-role": "Current role",
+    project: "Project deep-dive",
+    behavioral: "Behavioural evidence"
+  }[stage];
+
+  return {
+    text,
+    evidenceAnchor,
+    kind: "conversation",
+    stage,
+    language: "",
+    codeTask: "",
+    codeSnippet: "",
+    answerFormat: "spoken",
+    competency,
+    intent,
+    mustHit,
+    maxFollowUps: 1,
+    probeIfMissing: "What did you personally do, and what changed as a result?",
+    pacingSection,
+    requiredForPacing,
+    estimatedDurationMs: 2.5 * 60 * 1000
+  };
 }
 
 /** The spoken opener, so the candidate knows how the round is laid out. */
@@ -92,7 +206,7 @@ export function resumeRoundContext(resume: CandidateResume, kit: ResumeInterview
   const skills = kit.skillQuestions.map((question) => question.skill).filter(Boolean);
 
   return [
-    "This is a resume and behavioural round in three stages: skills the candidate claims, one small coding task, then their actual work experience.",
+    "This is a resume and behavioural round. Start with the candidate's background, then examine their work and project claims, discuss one behavioural example, and finish with technical judgement.",
     skills.length ? `Skills under test: ${skills.join(", ")}.` : "",
     resume.experience.length
       ? `Roles on the resume: ${resume.experience
@@ -124,7 +238,10 @@ export function gradeMultipleChoice(
   );
   if (chosenIndex === -1) return { correct: false, chosen: null };
 
-  return { correct: chosenIndex === (question.answerIndex ?? 0), chosen: question.options[chosenIndex] ?? null };
+  return {
+    correct: chosenIndex === (question.answerIndex ?? 0),
+    chosen: question.options[chosenIndex] ?? null
+  };
 }
 
 /** What Maya says after grading, in place of a decision call. */
@@ -138,9 +255,7 @@ export function multipleChoiceReply(question: PlannedQuestion, correct: boolean)
   const answer = question.options?.[question.answerIndex ?? 0];
   if (!answer) return "Not quite, but let's keep going.";
 
-  return explanation
-    ? `Not quite — it's ${answer}. ${explanation}`
-    : `Not quite — it's ${answer}.`;
+  return explanation ? `Not quite — it's ${answer}. ${explanation}` : `Not quite — it's ${answer}.`;
 }
 
 export function isResumeRoundSetup(setup: InterviewSetup): boolean {

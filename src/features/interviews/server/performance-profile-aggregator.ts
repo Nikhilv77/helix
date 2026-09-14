@@ -95,7 +95,7 @@ export function performanceSourceFingerprint(sessions: StoredInterviewSession[])
     blueprintId: state.setup.personalizedBlueprint?.id,
     dsaQuestionSlugs: state.setup.dsaQuestionSlugs ?? [],
     answers: state.turns
-      .filter((turn) => turn.speaker === "user")
+      .filter((turn) => turn.speaker === "user" && !turn.endedInterview && !turn.assessmentExcluded)
       .map((turn) => ({
         questionIndex: turn.questionIndex ?? null,
         endMs: turn.endMs,

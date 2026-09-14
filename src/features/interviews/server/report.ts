@@ -21,7 +21,9 @@ export function createHistoryItem(
   now = Date.now()
 ): InterviewHistoryItem {
   const { state, touchedAt } = session;
-  const userTurns = state.turns.filter((turn) => turn.speaker === "user");
+  const userTurns = state.turns.filter(
+    (turn) => turn.speaker === "user" && !turn.endedInterview && !turn.assessmentExcluded
+  );
   const covered = new Set(
     userTurns
       .map((turn) => turn.questionIndex)
@@ -50,7 +52,11 @@ export function createInterviewReport(
   const agentTurns = state.turns.filter((turn) => turn.speaker === "agent");
   const competencies: InterviewCompetencyReport[] = state.plan.map((question, index) => {
     const answers = state.turns.filter(
-      (turn) => turn.speaker === "user" && turn.questionIndex === index
+      (turn) =>
+        turn.speaker === "user" &&
+        !turn.endedInterview &&
+        !turn.assessmentExcluded &&
+        turn.questionIndex === index
     );
     const answer = answers[0];
     const heuristicAssessment = assessAnswer(
@@ -133,8 +139,14 @@ export function createInterviewReport(
       nextStep:
         recommended?.nextStep ?? "Complete an interview to generate a targeted practice step."
     },
-    transcript: state.turns
+    transcript: state.turns.map(publicTranscriptTurn)
   };
+}
+
+function publicTranscriptTurn(stateTurn: StoredInterviewSession["state"]["turns"][number]) {
+  const turn = { ...stateTurn };
+  Reflect.deleteProperty(turn, "runtime");
+  return turn;
 }
 
 /**
@@ -358,6 +370,14 @@ function assessedTechnicalAnswer(
   evaluation: QuestionEvaluation
 ): ReturnType<typeof assessAnswer> & Pick<InterviewCompetencyReport, "technicalEvaluation"> {
   const gap = evaluation.gaps[0] ?? evaluation.summary;
+  const fallbackBreakdown = heuristic.evidenceBreakdown ?? {
+    ownership: heuristic.evidenceScore,
+    decision: heuristic.evidenceScore,
+    specificity: heuristic.evidenceScore,
+    outcome: heuristic.evidenceScore
+  };
+  const rubricScore = (key: string, fallback: number) =>
+    evaluation.rubricScores.find((item) => item.rubricKey === key)?.score ?? fallback;
   return {
     ...heuristic,
     evidenceScore: evaluation.score,
@@ -370,8 +390,14 @@ function assessedTechnicalAnswer(
     signals: evaluation.strengths,
     gap,
     nextStep: evaluation.gaps.length
-      ? `Correct this technical gap: ${gap}`
-      : "Practice explaining the same correct mechanism more concisely.",
+      ? `Work on this next: ${gap}`
+      : "Keep using this same clear, evidence-based way of answering.",
+    evidenceBreakdown: {
+      ownership: rubricScore("ownership", fallbackBreakdown.ownership),
+      decision: rubricScore("decision", fallbackBreakdown.decision),
+      specificity: rubricScore("specificity", fallbackBreakdown.specificity),
+      outcome: rubricScore("outcome", fallbackBreakdown.outcome)
+    },
     technicalEvaluation: {
       source: evaluation.source,
       score: evaluation.score,
@@ -381,6 +407,7 @@ function assessedTechnicalAnswer(
       strengths: evaluation.strengths,
       gaps: evaluation.gaps,
       rubricScores: evaluation.rubricScores,
+      evidenceQuotes: evaluation.evidenceQuotes,
       execution: evaluation.execution
         ? {
             status: evaluation.execution.status,

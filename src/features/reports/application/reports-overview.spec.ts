@@ -76,9 +76,93 @@ describe("createReportsOverview", () => {
     expect(overview.trend).toEqual([]);
     expect(overview.competencies).toEqual([]);
     expect(overview.matrix.rounds).toEqual([]);
+    expect(overview.families).toHaveLength(4);
+    expect(overview.families.every((family) => family.averageScore === null)).toBe(true);
     expect(overview.latest).toBeNull();
     expect(overview.best).toBeNull();
     expect(overview.generatedAt).toBe(5_000);
+  });
+
+  it("keeps separate overall scores for the four permanent interview families", () => {
+    const overview = createReportsOverview([
+      report({
+        sessionId: "hr",
+        setup: { roundType: "hiring-manager", resumeRound: true } as InterviewReport["setup"],
+        competencies: [competency("Accountability", 81)]
+      }),
+      report({
+        sessionId: "resume",
+        setup: {
+          roundType: "behavioral",
+          resumeRound: true,
+          templateId: "resume-behavioral-defense"
+        } as InterviewReport["setup"],
+        competencies: [competency("Resume claim", 67)]
+      }),
+      report({
+        sessionId: "dsa",
+        setup: { roundType: "technical", templateId: "dsa" } as InterviewReport["setup"],
+        competencies: [competency("Correctness", 74)]
+      }),
+      report({
+        sessionId: "core",
+        setup: {
+          roundType: "technical",
+          templateId: "technical-deep-dive"
+        } as InterviewReport["setup"],
+        competencies: [competency("Concept depth", 88)]
+      })
+    ]);
+
+    expect(
+      Object.fromEntries(overview.families.map((family) => [family.family, family.averageScore]))
+    ).toEqual({
+      "dsa-design": 74,
+      "core-technical-projects": 88,
+      "hr-behavioral": 81,
+      "resume-behavioral": 67
+    });
+  });
+
+  it("uses stored round-specific parameter scores and marks legacy fallbacks as derived", () => {
+    const direct = competency("Accountability", 70);
+    direct.technicalEvaluation = {
+      source: "semantic-evaluator",
+      score: 70,
+      verdict: "mostly-correct",
+      confidence: 0.9,
+      summary: "Owned the mistake.",
+      strengths: [],
+      gaps: [],
+      rubricScores: [
+        { rubricKey: "accountability", score: 84, rationale: "Clear repair and change." }
+      ],
+      execution: null
+    };
+    const overview = createReportsOverview([
+      report({
+        sessionId: "legacy",
+        startedAt: DAY,
+        setup: { roundType: "hiring-manager", resumeRound: true } as InterviewReport["setup"],
+        competencies: [competency("Accountability", 60)]
+      }),
+      report({
+        sessionId: "direct",
+        startedAt: 2 * DAY,
+        setup: { roundType: "hiring-manager", resumeRound: true } as InterviewReport["setup"],
+        competencies: [direct]
+      })
+    ]);
+    const accountability = overview.families
+      .find((family) => family.family === "hr-behavioral")
+      ?.parameters.find((parameter) => parameter.key === "accountability");
+
+    expect(accountability).toMatchObject({
+      latestScore: 84,
+      averageScore: 72,
+      rounds: 2,
+      evaluatedRounds: 1
+    });
   });
 
   it("orders the trend chronologically regardless of input order", () => {

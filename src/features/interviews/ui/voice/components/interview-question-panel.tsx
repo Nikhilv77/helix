@@ -10,13 +10,62 @@ export interface InterviewStageDef {
   id: InterviewStage;
   label: string;
   caption: string;
+  /** Internal stages grouped under this deliberately broad, candidate-facing section. */
+  stageIds?: InterviewStage[];
 }
 
 /** The resume round's three acts. */
 export const RESUME_STAGES: InterviewStageDef[] = [
-  { id: "skills", label: "Skills", caption: "What your resume claims" },
-  { id: "code", label: "Code", caption: "A task in your own stack" },
-  { id: "experience", label: "Experience", caption: "The work you shipped" }
+  {
+    id: "career",
+    label: "About you",
+    caption: "Background and current work",
+    stageIds: ["career", "current-role"]
+  },
+  {
+    id: "project",
+    label: "Your work",
+    caption: "Projects and experience",
+    stageIds: ["project", "experience"]
+  },
+  {
+    id: "behavioral",
+    label: "How you work",
+    caption: "Challenges and judgement"
+  },
+  {
+    id: "skills",
+    label: "Technical",
+    caption: "Skills and problem-solving",
+    stageIds: ["skills", "code"]
+  }
+];
+
+/** Candidate-facing phases for the final HR / hiring-manager conversation. */
+export const HIRING_MANAGER_STAGES: InterviewStageDef[] = [
+  {
+    id: "career",
+    label: "Introduction",
+    caption: "Your story and next move",
+    stageIds: ["career"]
+  },
+  {
+    id: "current-role",
+    label: "Role fit",
+    caption: "What you want from the role",
+    stageIds: ["current-role"]
+  },
+  {
+    id: "project",
+    label: "How you work",
+    caption: "Decisions and real examples",
+    stageIds: ["project"]
+  },
+  {
+    id: "behavioral",
+    label: "Final conversation",
+    caption: "People, growth and questions"
+  }
 ];
 
 /** The fundamentals round's three acts. */
@@ -36,12 +85,14 @@ export interface InterviewGrade {
 /** How far the round has moved through each of its stages. */
 export function stageCounts(
   stages: Array<InterviewStage | null>,
-  answeredIndex: number
+  answeredIndex: number,
+  skippedQuestionIndexes: number[] = []
 ): StageCounts {
   const counts: StageCounts = {};
+  const skipped = new Set(skippedQuestionIndexes);
 
   stages.forEach((stage, index) => {
-    if (!stage) return;
+    if (!stage || skipped.has(index)) return;
     const entry = counts[stage] ?? { total: 0, done: 0 };
     entry.total += 1;
     if (index < answeredIndex) entry.done += 1;
@@ -75,6 +126,7 @@ export function InterviewQuestionPanel({
   draft,
   notes,
   selectedOption,
+  teacherName,
   onDraftChange,
   onNotesChange,
   onSelectOption,
@@ -98,6 +150,8 @@ export function InterviewQuestionPanel({
   draft: string;
   notes: string;
   selectedOption: string | null;
+  /** The actual live interviewer, which can differ from the workspace default teacher. */
+  teacherName?: string;
   onDraftChange: (value: string) => void;
   onNotesChange: (value: string) => void;
   onSelectOption: (option: string) => void;
@@ -105,7 +159,10 @@ export function InterviewQuestionPanel({
   onRequestMic: () => void;
 }) {
   const teacher = useWorkspaceTeacher();
+  const interviewerName = teacherName ?? teacher.name;
   const stage = question?.stage ?? stages[0]?.id ?? "skills";
+  const currentStage = stages.find((item) => includesStage(item, stage)) ?? stages[0];
+  const currentStageCounts = countForStage(currentStage, counts);
   const format = question?.answerFormat ?? (question?.kind === "code" ? "typed" : "spoken");
   const graded = grade && grade.questionIndex === questionIndex ? grade : null;
 
@@ -119,8 +176,15 @@ export function InterviewQuestionPanel({
         {question ? (
           <>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+              {currentStage ? (
+                <span className="font-medium text-[var(--workspace-accent)]">
+                  {currentStage.label}
+                </span>
+              ) : null}
               <span className="text-cream/44">
-                Question {Math.min(questionIndex + 1, questionCount)} of {questionCount}
+                {currentStageCounts.total > 0
+                  ? `Section progress · ${Math.min(currentStageCounts.done + 1, currentStageCounts.total)}/${currentStageCounts.total}`
+                  : `Question ${Math.min(questionIndex + 1, questionCount)} of ${questionCount}`}
               </span>
               {question.skill ? (
                 <>
@@ -240,7 +304,7 @@ export function InterviewQuestionPanel({
                   />
                   <p className="text-sm font-medium text-cream/76">
                     {micOn
-                      ? `Answer out loud — ${teacher.name} is listening`
+                      ? `Answer out loud — ${interviewerName} is listening`
                       : "Your microphone is off"}
                   </p>
                   {!micOn ? (
@@ -267,8 +331,8 @@ export function InterviewQuestionPanel({
         ) : (
           <p className={`${INTERVIEW_PANEL_CARD} p-5 text-sm leading-7 text-cream/50`}>
             {thinking
-              ? `${teacher.name} is thinking…`
-              : `Waiting for ${teacher.name}'s next question.`}
+              ? `${interviewerName} is thinking…`
+              : `Waiting for ${interviewerName}'s next question.`}
           </p>
         )}
       </div>
@@ -278,7 +342,7 @@ export function InterviewQuestionPanel({
           className={`interview-answer-composer shrink-0 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 px-4 py-3.5 sm:px-5`}
         >
           <label htmlFor="resume-answer" className="text-sm font-semibold text-cream/80">
-            {question.codeTask ? `Explain your code to ${teacher.name}` : "Or write your answer"}
+            {question.codeTask ? `Explain your code to ${interviewerName}` : "Or write your answer"}
           </label>
           <div className="mt-2.5 flex flex-col gap-2.5 sm:flex-row sm:items-end">
             <ResizableTextarea
@@ -312,7 +376,7 @@ export function InterviewQuestionPanel({
                 <Send size={15} aria-hidden="true" />
               )}
               {sending
-                ? `${teacher.name} is reading`
+                ? `${interviewerName} is reading`
                 : question.codeTask
                   ? "Send solution"
                   : "Send answer"}
@@ -346,8 +410,8 @@ function StageRail({
       style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(0, 1fr))` }}
     >
       {stages.map((stage) => {
-        const { total, done } = counts[stage.id] ?? { total: 0, done: 0 };
-        const active = stage.id === current;
+        const { total, done } = countForStage(stage, counts);
+        const active = includesStage(stage, current);
         const complete = total > 0 && done >= total;
 
         return (
@@ -384,7 +448,6 @@ function StageRail({
                 </span>
               ) : null}
             </div>
-            <p className="interview-stage-caption mt-0.5 truncate text-[11px] leading-5 text-cream/32">{stage.caption}</p>
             {active ? (
               <span
                 aria-hidden="true"
@@ -395,5 +458,20 @@ function StageRail({
         );
       })}
     </div>
+  );
+}
+
+function includesStage(definition: InterviewStageDef, stage: InterviewStage): boolean {
+  return (definition.stageIds ?? [definition.id]).includes(stage);
+}
+
+function countForStage(definition: InterviewStageDef | undefined, counts: StageCounts) {
+  if (!definition) return { total: 0, done: 0 };
+  return (definition.stageIds ?? [definition.id]).reduce(
+    (total, stage) => {
+      const count = counts[stage] ?? { total: 0, done: 0 };
+      return { total: total.total + count.total, done: total.done + count.done };
+    },
+    { total: 0, done: 0 }
   );
 }

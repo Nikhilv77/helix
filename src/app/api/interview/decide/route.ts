@@ -12,9 +12,9 @@ export const dynamic = "force-dynamic";
 /**
  * The single home of the interview decision logic.
  *
- * Phase 2's LiveKit agent calls this after every user turn and speaks the
- * `utterance` it gets back. The agent does not own any state — everything it
- * needs is derived here from the session id.
+ * The Gemini Live browser client calls this after every user turn and speaks
+ * the `utterance` it gets back. The client does not own any business state —
+ * everything it needs is derived here from the session id.
  */
 const decideSchema = z.object({
   sessionId: z.string().uuid(),
@@ -84,6 +84,9 @@ export async function POST(request: NextRequest) {
               parsed.data.turnId
             );
       const { response } = answerResult;
+      // Recovery runs outside the spoken-turn response. The job itself was
+      // persisted with the answer, so a serverless shutdown only delays it.
+      after(() => app.interviewEvaluationRecoveryService.runBatch(2));
       if (response.phase === "done") {
         after(async () => {
           await Promise.allSettled([

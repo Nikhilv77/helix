@@ -39,6 +39,9 @@ describe("validateEnvironment", () => {
       geminiReasoningModel: "gemini-reasoning-test",
       geminiEmbeddingModel: "gemini-embedding-test",
       geminiEmbeddingModelVersion: "test-version",
+      geminiLiveInterviewsEnabled: true,
+      geminiLiveModel: "gemini-3.1-flash-live-preview",
+      geminiLiveTranscriptionModel: "gemini-3.5-transcribe-live",
       aiTimeoutMs: 5000,
       aiMaxRetries: 1,
       knowledgeChunkMaxTokens: 500,
@@ -53,9 +56,15 @@ describe("validateEnvironment", () => {
       groqDeciderModel: "openai/gpt-oss-20b",
       groqApiKey: undefined,
       interviewDailyLimit: 2,
+      interviewAuthenticatedRetentionDays: 365,
+      interviewAnonymousRetentionDays: 30,
+      interviewOperationalRetentionDays: 30,
+      interviewRetentionBatchSize: 250,
+      interviewMetricsSampleLimit: 5000,
       // Defaults to an empty list rather than undefined: the report queue is
       // closed to everyone until somebody is explicitly named.
       operatorUserIds: [],
+      interviewOperationsAdminUserId: undefined,
       resendApiKey: undefined,
       notificationEmailEnabled: false,
       notificationFromEmail: undefined,
@@ -64,7 +73,6 @@ describe("validateEnvironment", () => {
       livekitUrl: undefined,
       livekitApiKey: undefined,
       livekitApiSecret: undefined,
-      livekitAgentName: "helix-interviewer-v2",
       deepgramApiKey: undefined,
       deepgramTtsModel: "aura-2-asteria-en",
       judge0Url: "https://judge0-ce.p.rapidapi.com",
@@ -84,6 +92,43 @@ describe("validateEnvironment", () => {
         NEXT_PUBLIC_APP_URL: "https://app.trailgrad.com"
       }).notificationEmailEnabled
     ).toBe(true);
+  });
+
+  it("parses bounded interview retention and dashboard controls", () => {
+    const config = validateEnvironment({
+      ...validEnvironment,
+      INTERVIEW_AUTHENTICATED_RETENTION_DAYS: "730",
+      INTERVIEW_ANONYMOUS_RETENTION_DAYS: "14",
+      INTERVIEW_OPERATIONAL_RETENTION_DAYS: "7",
+      INTERVIEW_RETENTION_BATCH_SIZE: "100",
+      INTERVIEW_METRICS_SAMPLE_LIMIT: "2000"
+    });
+
+    expect(config).toMatchObject({
+      interviewAuthenticatedRetentionDays: 730,
+      interviewAnonymousRetentionDays: 14,
+      interviewOperationalRetentionDays: 7,
+      interviewRetentionBatchSize: 100,
+      interviewMetricsSampleLimit: 2000
+    });
+  });
+
+  it("parses the single interview operations admin Clerk user id", () => {
+    const config = validateEnvironment({
+      ...validEnvironment,
+      INTERVIEW_OPERATIONS_ADMIN_USER_ID: " user_admin "
+    });
+
+    expect(config.interviewOperationsAdminUserId).toBe("user_admin");
+  });
+
+  it("rejects an unbounded anonymous interview retention window", () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        INTERVIEW_ANONYMOUS_RETENTION_DAYS: "366"
+      })
+    ).toThrow("INTERVIEW_ANONYMOUS_RETENTION_DAYS");
   });
 
   it("refuses to enable email without its sender and actionable app origin", () => {

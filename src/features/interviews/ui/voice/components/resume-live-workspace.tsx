@@ -13,6 +13,7 @@ import { INTERVIEW_PANEL_RULE, INTERVIEW_PANEL_SHELL } from "./panel-surface";
 import { ResumeDocumentPreview } from "./resume-document-preview";
 import {
   InterviewQuestionPanel,
+  HIRING_MANAGER_STAGES,
   RESUME_STAGES,
   type InterviewGrade,
   type StageCounts
@@ -39,6 +40,8 @@ export function ResumeLiveWorkspace({
   turns,
   spokenAgentTurnKeys,
   liveUserText,
+  liveAgentText = "",
+  teacherName,
   startedAt,
   setup,
   thinking,
@@ -70,6 +73,8 @@ export function ResumeLiveWorkspace({
   turns: Turn[];
   spokenAgentTurnKeys: ReadonlySet<string>;
   liveUserText: string;
+  liveAgentText?: string;
+  teacherName?: string;
   startedAt: number | null;
   setup: InterviewSetup | null;
   thinking: boolean;
@@ -94,6 +99,8 @@ export function ResumeLiveWorkspace({
   onDisableCamera: () => void;
 }) {
   const codingStage = question?.stage === "code";
+  const isHiringManagerRound = setup?.roundType === "hiring-manager";
+  const stages = isHiringManagerRound ? HIRING_MANAGER_STAGES : RESUME_STAGES;
 
   return (
     <div className="thin-scroll flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 xl:grid xl:grid-cols-[minmax(0,23rem)_minmax(0,1fr)_19rem] xl:overflow-hidden xl:pb-0">
@@ -149,8 +156,8 @@ export function ResumeLiveWorkspace({
         question={question}
         questionIndex={questionIndex}
         questionCount={questionCount}
-        stages={RESUME_STAGES}
-        anchorLabel="From your resume"
+        stages={stages}
+        anchorLabel={isHiringManagerRound ? null : "From your resume"}
         counts={counts}
         grade={grade}
         liveTranscript={liveUserText}
@@ -161,6 +168,7 @@ export function ResumeLiveWorkspace({
         draft={draft}
         notes={notes}
         selectedOption={selectedOption}
+        teacherName={teacherName}
         onDraftChange={onDraftChange}
         onNotesChange={onNotesChange}
         onSelectOption={onSelectOption}
@@ -173,6 +181,8 @@ export function ResumeLiveWorkspace({
         turns={turns}
         spokenAgentTurnKeys={spokenAgentTurnKeys}
         liveUserText={liveUserText}
+        liveAgentText={liveAgentText}
+        teacherName={teacherName}
         startedAt={startedAt}
         setup={setup}
         question={question}

@@ -46,7 +46,9 @@ const sessionIcons: Record<string, LucideIcon> = {
   "applied-engineering": Cpu,
   "architecture-system-design": CircleGauge,
   "resume-behavioral-defense": BadgeCheck,
-  "final-mock": Rocket
+  "technical-project": Cpu,
+  "dsa-design": CodeXml,
+  "hiring-manager-final": Rocket
 };
 
 export function InterviewsView({
@@ -58,7 +60,11 @@ export function InterviewsView({
 }: InterviewsViewProps) {
   const remaining = Math.max(0, quota.limit - quota.used);
   const exhausted = remaining === 0;
-  const active = sessions.find((session) => session.status === "in_progress");
+  // Old generic sessions remain in history for reporting, but they no longer
+  // have a valid room. Only the permanent round engines can be resumed.
+  const active = sessions.find(
+    (session) => session.status === "in_progress" && supportsResume(session)
+  );
   const activeHref = active
     ? active.sessionId.startsWith("core-technical:")
       ? "/practice/core-technical"
@@ -136,7 +142,10 @@ export function InterviewsView({
               <RoadmapSessionCard
                 key={session.id}
                 session={session}
-                disabled={exhausted && !session.resumeSessionId}
+                disabled={
+                  (exhausted && !session.resumeSessionId) ||
+                  session.id === "technical-project"
+                }
                 delay={index * 70}
               />
             ))
@@ -151,6 +160,16 @@ export function InterviewsView({
   );
 }
 
+function supportsResume(session: InterviewHistoryItem): boolean {
+  return Boolean(
+    session.setup.resumeRound ||
+      session.setup.fundamentalsRound ||
+      session.setup.dsaQuestionSlugs?.length ||
+      session.setup.dsaBlockAssessment ||
+      session.setup.storyPracticeAssessment
+  );
+}
+
 function RoadmapSessionCard({
   session,
   disabled,
@@ -160,6 +179,8 @@ function RoadmapSessionCard({
   disabled: boolean;
   delay: number;
 }) {
+  const href = roadmapSessionHref(session);
+  const unavailable = disabled || !href;
   const SessionIcon = sessionIcons[session.kind ?? session.id] ?? FileCode2;
   const statusLabel =
     session.attemptStatus === "in_progress"
@@ -171,7 +192,9 @@ function RoadmapSessionCard({
           : session.attemptStatus === "expired"
             ? "Previous attempt saved"
             : null;
-  const actionLabel = session.resumeSessionId
+  const actionLabel = unavailable
+    ? "Coming soon"
+    : session.resumeSessionId
     ? "Resume session"
     : session.updatedPracticeAvailable
       ? "Try updated session"
@@ -179,11 +202,13 @@ function RoadmapSessionCard({
         ? "Practice again"
         : session.attemptStatus === "expired"
           ? "Start again"
-          : "Start session";
+          : session.id === "technical-project"
+            ? "Coming soon"
+            : "Start session";
 
   return (
     <SharedRoadmapSessionCard
-      href={disabled ? null : roadmapSessionHref(session)}
+      href={unavailable ? null : href}
       icon={SessionIcon}
       title={session.title}
       purpose={session.purpose}
@@ -192,7 +217,7 @@ function RoadmapSessionCard({
       actionLabel={actionLabel}
       durationMinutes={session.durationMinutes}
       difficulty={session.difficulty}
-      disabled={disabled}
+      disabled={unavailable}
       delay={delay}
     />
   );

@@ -5,6 +5,7 @@ import type {
   Role,
   RoundType
 } from "@/lib/shared/types";
+import type { InterviewReportFamily } from "@/features/interviews/domain/evaluation-profile";
 
 /**
  * The read model behind /reports.
@@ -37,6 +38,8 @@ export interface ReportsOverview {
   competencies: ReportCompetencyRow[];
   matrix: ReportMatrix;
   roundTypes: ReportRoundTypeRow[];
+  /** The four permanent interview families, including empty families. */
+  families: ReportFamilySummary[];
   pressure: ReportPressure;
   recurringGaps: ReportGap[];
   rounds: ReportRoundRow[];
@@ -44,6 +47,30 @@ export interface ReportsOverview {
   best: ReportRoundRow | null;
   /** Full data for the most recent interview with answer evidence. */
   latestCompletedReport?: InterviewReport | null;
+}
+
+export interface ReportFamilyParameter {
+  key: string;
+  label: string;
+  description: string;
+  averageScore: number | null;
+  latestScore: number | null;
+  rounds: number;
+  /** New reports are evaluated directly; legacy reports use transparent derived fallbacks. */
+  evaluatedRounds: number;
+}
+
+export interface ReportFamilySummary {
+  family: InterviewReportFamily;
+  label: string;
+  shortLabel: string;
+  rounds: number;
+  completedRounds: number;
+  averageScore: number | null;
+  latestScore: number | null;
+  latestSessionId: string | null;
+  latestStartedAt: number | null;
+  parameters: ReportFamilyParameter[];
 }
 
 export interface ReportTrendPoint {

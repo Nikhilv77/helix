@@ -67,6 +67,14 @@ export const environmentSchema = z
       })
       .min(1, "GEMINI_EMBEDDING_MODEL is required"),
     GEMINI_EMBEDDING_MODEL_VERSION: z.string().min(1).default("v1"),
+    // Gemini Live is deliberately scoped to conversational resume and
+    // behavioral rounds. Keep a kill switch because the Live API is preview.
+    GEMINI_LIVE_INTERVIEWS_ENABLED: z
+      .enum(["true", "false"])
+      .default("true")
+      .transform((value) => value === "true"),
+    GEMINI_LIVE_MODEL: z.string().min(1).default("gemini-3.1-flash-live-preview"),
+    GEMINI_LIVE_TRANSCRIPTION_MODEL: z.string().min(1).default("gemini-3.5-transcribe-live"),
     AI_TIMEOUT_MS: z.coerce.number().int().min(100).max(120000).default(30000),
     AI_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
     KNOWLEDGE_CHUNK_MAX_TOKENS: z.coerce.number().int().min(100).max(4000).default(800),
@@ -80,6 +88,16 @@ export const environmentSchema = z
     // interview authorization independent from any third-party credential.
     INTERVIEW_AUTH_SECRET: z.string().min(32).optional(),
     INTERVIEW_DAILY_LIMIT: z.coerce.number().int().min(1).max(100).default(2),
+    // Interview transcripts and reports contain candidate-provided personal
+    // data. Retention is explicit, bounded, and independently configurable for
+    // signed-in and anonymous sessions.
+    INTERVIEW_AUTHENTICATED_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(365),
+    INTERVIEW_ANONYMOUS_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+    // Terminal idempotency and evaluation-recovery rows are operational data,
+    // not candidate history. Pending work is never removed by this policy.
+    INTERVIEW_OPERATIONAL_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+    INTERVIEW_RETENTION_BATCH_SIZE: z.coerce.number().int().min(1).max(1000).default(250),
+    INTERVIEW_METRICS_SAMPLE_LIMIT: z.coerce.number().int().min(100).max(20000).default(5000),
     UPSTASH_REDIS_REST_URL: z.string().url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
     GROQ_API_KEY: z.string().optional(),
@@ -95,6 +113,13 @@ export const environmentSchema = z
           .map((entry) => entry.trim())
           .filter(Boolean)
       ),
+    /// Single Clerk user id allowed to read interview production operations.
+    /// This is deliberately separate from the multi-user moderation allowlist.
+    INTERVIEW_OPERATIONS_ADMIN_USER_ID: z
+      .string()
+      .trim()
+      .default("")
+      .transform((value) => value || undefined),
     /// Resend API key. Unset means notifications are recorded in-app only.
     RESEND_API_KEY: z.string().optional(),
     /// Deliberate launch switch. Credentials may be present while email remains
@@ -113,11 +138,6 @@ export const environmentSchema = z
     LIVEKIT_URL: z.string().optional(),
     LIVEKIT_API_KEY: z.string().optional(),
     LIVEKIT_API_SECRET: z.string().optional(),
-    // Kept as "helix-…" through the Trailgrad rename: this name is registered
-    // with LiveKit by the Python worker, and the two must change in the same
-    // deploy or new calls dispatch to an agent that is not listening. Rename it
-    // together with `agent_name` in agent/config.py when you next ship both.
-    LIVEKIT_AGENT_NAME: z.string().min(1).default("helix-interviewer-v2"),
     DEEPGRAM_API_KEY: z.string().optional(),
     // Maya's voice. Matches TRAILGRAD_TTS_MODEL in the agent so the coach in the
     // workspace and the interviewer in the room sound like the same person.
@@ -165,6 +185,9 @@ export const environmentSchema = z
     geminiReasoningModel: env.GEMINI_REASONING_MODEL,
     geminiEmbeddingModel: env.GEMINI_EMBEDDING_MODEL,
     geminiEmbeddingModelVersion: env.GEMINI_EMBEDDING_MODEL_VERSION,
+    geminiLiveInterviewsEnabled: env.GEMINI_LIVE_INTERVIEWS_ENABLED,
+    geminiLiveModel: env.GEMINI_LIVE_MODEL,
+    geminiLiveTranscriptionModel: env.GEMINI_LIVE_TRANSCRIPTION_MODEL,
     aiTimeoutMs: env.AI_TIMEOUT_MS,
     aiMaxRetries: env.AI_MAX_RETRIES,
     knowledgeChunkMaxTokens: env.KNOWLEDGE_CHUNK_MAX_TOKENS,
@@ -175,11 +198,17 @@ export const environmentSchema = z
     clerkSecretKey: env.CLERK_SECRET_KEY,
     interviewAuthSecret: env.INTERVIEW_AUTH_SECRET,
     interviewDailyLimit: env.INTERVIEW_DAILY_LIMIT,
+    interviewAuthenticatedRetentionDays: env.INTERVIEW_AUTHENTICATED_RETENTION_DAYS,
+    interviewAnonymousRetentionDays: env.INTERVIEW_ANONYMOUS_RETENTION_DAYS,
+    interviewOperationalRetentionDays: env.INTERVIEW_OPERATIONAL_RETENTION_DAYS,
+    interviewRetentionBatchSize: env.INTERVIEW_RETENTION_BATCH_SIZE,
+    interviewMetricsSampleLimit: env.INTERVIEW_METRICS_SAMPLE_LIMIT,
     upstashRedisRestUrl: env.UPSTASH_REDIS_REST_URL,
     upstashRedisRestToken: env.UPSTASH_REDIS_REST_TOKEN,
     groqApiKey: env.GROQ_API_KEY,
     groqDeciderModel: env.GROQ_DECIDER_MODEL,
     operatorUserIds: env.OPERATOR_USER_IDS,
+    interviewOperationsAdminUserId: env.INTERVIEW_OPERATIONS_ADMIN_USER_ID,
     resendApiKey: env.RESEND_API_KEY,
     notificationEmailEnabled: env.NOTIFICATION_EMAIL_ENABLED,
     notificationFromEmail: env.NOTIFICATION_FROM_EMAIL,
@@ -188,7 +217,6 @@ export const environmentSchema = z
     livekitUrl: env.LIVEKIT_URL,
     livekitApiKey: env.LIVEKIT_API_KEY,
     livekitApiSecret: env.LIVEKIT_API_SECRET,
-    livekitAgentName: env.LIVEKIT_AGENT_NAME,
     deepgramApiKey: env.DEEPGRAM_API_KEY,
     deepgramTtsModel: env.DEEPGRAM_TTS_MODEL,
     judge0Url: env.JUDGE0_URL,

@@ -7,6 +7,24 @@ export interface AiInlineAttachment {
   data: string;
 }
 
+/**
+ * Provider-safe telemetry for one AI attempt. It intentionally contains no
+ * prompt, response, candidate text, or credentials, so it can be persisted and
+ * exported to production observability without leaking interview content.
+ */
+export interface AiCallTrace {
+  provider: string;
+  operation: string;
+  model: string;
+  modelClass: AiModelClass;
+  attempt: number;
+  maxAttempts: number;
+  durationMs: number;
+  outcome: "success" | "failure";
+  errorCode?: string;
+  retryable?: boolean;
+}
+
 export interface GenerateStructuredRequest<T> {
   operation: string;
   systemInstruction: string;
@@ -22,6 +40,8 @@ export interface GenerateStructuredRequest<T> {
   maxAttempts?: number;
   /** Cancels this request without retrying or exposing provider details. */
   signal?: AbortSignal;
+  /** Receives metadata only; providers must never include prompt or response content. */
+  onTrace?: (trace: AiCallTrace) => void;
 }
 
 export interface SystemDesignerAIProvider {

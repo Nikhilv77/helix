@@ -8,13 +8,17 @@ const mocks = vi.hoisted(() => ({
   reconcileStale: vi.fn(),
   dispatch: vi.fn(),
   purgeAllExpiredHelpRequestNotifications: vi.fn(),
-  retryPending: vi.fn()
+  retryPending: vi.fn(),
+  runEvaluationRecovery: vi.fn(),
+  enforceInterviewRetention: vi.fn()
 }));
 
 vi.mock("@/server/app-container", () => ({
   getAppContainer: () => ({
     config: { cronSecret: mocks.secret },
     teacherNotificationService: { dispatchDaily: mocks.dispatchDaily },
+    interviewEvaluationRecoveryService: { runBatch: mocks.runEvaluationRecovery },
+    interviewOperationsService: { enforceRetention: mocks.enforceInterviewRetention },
     helpRequestService: { expireStaleAndReport: mocks.expireStaleAndReport },
     helpSessionService: { reconcileStale: mocks.reconcileStale },
     notificationService: {
@@ -44,6 +48,28 @@ describe("GET /api/cron/teacher-notifications", () => {
     mocks.dispatch.mockResolvedValue({ recorded: true, emailed: false });
     mocks.purgeAllExpiredHelpRequestNotifications.mockResolvedValue(4);
     mocks.retryPending.mockResolvedValue({ attempted: 1, emailed: 1 });
+    mocks.runEvaluationRecovery.mockResolvedValue({
+      claimed: 2,
+      recovered: 1,
+      superseded: 0,
+      retried: 1,
+      deadLettered: 0
+    });
+    mocks.enforceInterviewRetention.mockResolvedValue({
+      cutoff: {
+        authenticatedBefore: "2025-09-14T00:00:00.000Z",
+        anonymousBefore: "2026-08-15T00:00:00.000Z",
+        operationalBefore: "2026-08-15T00:00:00.000Z"
+      },
+      deleted: {
+        authenticatedSessions: 1,
+        anonymousSessions: 2,
+        terminalAnswerRequests: 3,
+        terminalEvaluationJobs: 4
+      },
+      batchLimit: 250,
+      batchSaturated: false
+    });
   });
 
   it("rejects calls without the scheduler bearer token", async () => {
@@ -69,10 +95,33 @@ describe("GET /api/cron/teacher-notifications", () => {
           failedLifecycleNotifications: 0,
           purgedInvitations: 4,
           emailRetry: { attempted: 1, emailed: 1 }
+        },
+        interviewEvaluations: {
+          claimed: 2,
+          recovered: 1,
+          superseded: 0,
+          retried: 1,
+          deadLettered: 0
+        },
+        interviewRetention: {
+          cutoff: {
+            authenticatedBefore: "2025-09-14T00:00:00.000Z",
+            anonymousBefore: "2026-08-15T00:00:00.000Z",
+            operationalBefore: "2026-08-15T00:00:00.000Z"
+          },
+          deleted: {
+            authenticatedSessions: 1,
+            anonymousSessions: 2,
+            terminalAnswerRequests: 3,
+            terminalEvaluationJobs: 4
+          },
+          batchLimit: 250,
+          batchSaturated: false
         }
       }
     });
     expect(mocks.dispatchDaily).toHaveBeenCalledTimes(1);
+    expect(mocks.enforceInterviewRetention).toHaveBeenCalledTimes(1);
     expect(mocks.dispatch).toHaveBeenCalledWith(
       expect.objectContaining({
         ownerId: "learner-1",

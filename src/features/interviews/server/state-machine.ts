@@ -8,6 +8,10 @@ import {
   roundCaps,
   Turn
 } from "./types";
+import { CURRENT_INTERVIEW_RUNTIME } from "./runtime-version";
+
+const DEFAULT_QUESTION_RESERVE_MS = 2.5 * 60 * 1000;
+const PACING_TRANSITION_RESERVE_MS = 45 * 1000;
 
 /**
  * The model proposes, the machine disposes.
@@ -38,7 +42,8 @@ export function createState(params: {
     followUpCount: 0,
     startedAt: params.startedAt,
     turns: [],
-    evidence: {}
+    evidence: {},
+    runtimeVersion: { ...CURRENT_INTERVIEW_RUNTIME }
   };
 }
 
@@ -78,6 +83,17 @@ export function advance(state: InterviewState, requested: DecisionAction, now: n
   let action = requested;
   let forcedBy: ForcedReason | null = null;
 
+  // Answering a candidate's clarification or brief conversational question is
+  // not an interview follow-up. Keep the current planned question and its
+  // budget exactly where they were so dialogue repair never penalizes them.
+  if (action === "respond") {
+    return {
+      state: { ...state, phase: "questioning" },
+      action,
+      forcedBy
+    };
+  }
+
   if (action !== "move_on" && state.followUpCount >= followUpLimit(state)) {
     action = "move_on";
     forcedBy = "follow-up-budget";
@@ -96,20 +112,78 @@ export function advance(state: InterviewState, requested: DecisionAction, now: n
     };
   }
 
-  const questionIndex = state.questionIndex + 1;
+  const sequentialQuestionIndex = state.questionIndex + 1;
+  const questionIndex = pacedNextQuestionIndex(state, sequentialQuestionIndex, elapsed, softWrapMs);
+  const skippedQuestionIndexes =
+    questionIndex > sequentialQuestionIndex
+      ? [
+          ...(state.skippedQuestionIndexes ?? []),
+          ...indexesBetween(sequentialQuestionIndex, questionIndex)
+        ]
+      : state.skippedQuestionIndexes;
   const outOfQuestions = questionIndex >= state.plan.length;
   const outOfTime = !isBlockAssessment && elapsed >= softWrapMs;
+  const protectedCoreQuestionRemains = hasRequiredPacingQuestion(state.plan, questionIndex);
 
   return {
     state: {
       ...state,
-      phase: outOfQuestions || outOfTime ? "done" : "questioning",
+      phase:
+        outOfQuestions || (outOfTime && !protectedCoreQuestionRemains) ? "done" : "questioning",
       questionIndex,
+      skippedQuestionIndexes,
       followUpCount: 0
     },
     action,
-    forcedBy: forcedBy ?? (outOfTime ? "soft-time" : null)
+    forcedBy:
+      forcedBy ??
+      (questionIndex > sequentialQuestionIndex ? "pacing" : outOfTime ? "soft-time" : null)
   };
+}
+
+/**
+ * Skip supporting prompts only when their reserved time would put a later
+ * section anchor at risk. Once soft wrap is reached, jump directly to the next
+ * required anchor and keep the interview alive until every core section has
+ * run (or the hard cap wins).
+ */
+function pacedNextQuestionIndex(
+  state: InterviewState,
+  sequentialIndex: number,
+  elapsed: number,
+  softWrapMs: number
+): number {
+  const remaining = state.plan.slice(sequentialIndex);
+  const required = remaining
+    .map((question, offset) => ({ question, index: sequentialIndex + offset }))
+    .filter(({ question }) => question.requiredForPacing);
+  if (!required.length) return sequentialIndex;
+
+  const next = state.plan[sequentialIndex];
+  if (!next || next.requiredForPacing) return sequentialIndex;
+  if (elapsed >= softWrapMs) return required[0]!.index;
+
+  const remainingBudgetMs = softWrapMs - elapsed;
+  const requiredBudgetMs = required.reduce(
+    (total, { question }) => total + questionReserveMs(question),
+    0
+  );
+  const keepNextBudgetMs =
+    requiredBudgetMs + questionReserveMs(next) + PACING_TRANSITION_RESERVE_MS;
+
+  return remainingBudgetMs < keepNextBudgetMs ? required[0]!.index : sequentialIndex;
+}
+
+function questionReserveMs(question: PlannedQuestion): number {
+  return Math.max(60_000, question.estimatedDurationMs ?? DEFAULT_QUESTION_RESERVE_MS);
+}
+
+function hasRequiredPacingQuestion(plan: PlannedQuestion[], fromIndex: number): boolean {
+  return plan.slice(fromIndex).some((question) => question.requiredForPacing);
+}
+
+function indexesBetween(start: number, end: number): number[] {
+  return Array.from({ length: Math.max(0, end - start) }, (_value, offset) => start + offset);
 }
 
 /** Moves an interview out of `intro` and into the first question. */

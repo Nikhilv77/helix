@@ -18,6 +18,8 @@ export function MayaAside({
   turns,
   spokenAgentTurnKeys,
   liveUserText,
+  liveAgentText = "",
+  teacherName,
   startedAt,
   setup,
   question,
@@ -31,6 +33,8 @@ export function MayaAside({
   turns: Turn[];
   spokenAgentTurnKeys: ReadonlySet<string>;
   liveUserText: string;
+  liveAgentText?: string;
+  teacherName?: string;
   startedAt: number | null;
   setup: InterviewSetup | null;
   question: InterviewQuestion | null;
@@ -51,7 +55,7 @@ export function MayaAside({
       transcript.scrollTop = transcript.scrollHeight;
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [liveUserText, thinking, turns]);
+  }, [liveAgentText, liveUserText, thinking, turns]);
 
   return (
     <aside
@@ -63,7 +67,7 @@ export function MayaAside({
         <div className="absolute inset-x-[-24%] bottom-[-12%] top-0">{agentSlot}</div>
         <div className="interview-teacher-chip interview-live-chip absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full border border-white/[0.07] bg-black/45 px-2.5 py-1.5 text-[11px] font-medium text-cream/72 backdrop-blur-xl">
           <span className="h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)]" />
-          {teacher.name}
+          {teacherName ?? teacher.name}
         </div>
       </div>
       <div
@@ -83,6 +87,8 @@ export function MayaAside({
           turns={turns}
           spokenAgentTurnKeys={spokenAgentTurnKeys}
           liveUserText={liveUserText}
+          liveAgentText={liveAgentText}
+          teacherName={teacherName}
           startedAt={startedAt}
           setup={setup}
           question={question}

@@ -2,6 +2,7 @@ import { formatShortDate, roundShortLabel } from "@/lib/shared/labels";
 import {
   evidenceLevel,
   type ReportCompetencyRow,
+  type ReportFamilySummary,
   type ReportGap,
   type ReportMatrix,
   type ReportRoundRow,
@@ -10,6 +11,11 @@ import {
   type ReportsOverview
 } from "@/features/reports/contracts/reports";
 import type { InterviewReport, RoundType } from "@/lib/shared/types";
+import {
+  allInterviewEvaluationProfiles,
+  evaluationProfileForSetup,
+  type EvaluationParameterDefinition
+} from "@/features/interviews/domain/evaluation-profile";
 
 /** Competencies wide enough to read across, before the matrix gets unwieldy. */
 const MATRIX_ROWS = 10;
@@ -83,6 +89,7 @@ export function createReportsOverview(
     competencies,
     matrix: buildMatrix(scored, competencies),
     roundTypes: buildRoundTypes(scored),
+    families: buildFamilies(scored),
     pressure: buildPressure(scored),
     recurringGaps: buildRecurringGaps(competencies, scored),
     rounds,
@@ -90,6 +97,123 @@ export function createReportsOverview(
     best: bestRound ? toRoundRow(bestRound) : null,
     latestCompletedReport
   };
+}
+
+function buildFamilies(scored: InterviewReport[]): ReportFamilySummary[] {
+  return allInterviewEvaluationProfiles().map((profile) => {
+    const reports = scored.filter(
+      (report) => evaluationProfileForSetup(report.setup).family === profile.family
+    );
+    const latest = reports.at(-1) ?? null;
+    const reportScores = reports.map((report) => report.summary.evidenceScore);
+
+    return {
+      family: profile.family,
+      label: profile.label,
+      shortLabel: profile.shortLabel,
+      rounds: reports.length,
+      completedRounds: reports.filter((report) => report.status === "completed").length,
+      averageScore: reportScores.length ? Math.round(mean(reportScores)) : null,
+      latestScore: latest?.summary.evidenceScore ?? null,
+      latestSessionId: latest?.sessionId ?? null,
+      latestStartedAt: latest?.startedAt ?? null,
+      parameters: profile.parameters.map((parameter) => {
+        const values = reports.map((report) => reportParameterScore(report, parameter));
+        const latestValue = latest ? reportParameterScore(latest, parameter) : null;
+        return {
+          key: parameter.key,
+          label: parameter.label,
+          description: parameter.description,
+          averageScore: values.length ? Math.round(mean(values.map((value) => value.score))) : null,
+          latestScore: latestValue?.score ?? null,
+          rounds: values.length,
+          evaluatedRounds: values.filter((value) => value.evaluated).length
+        };
+      })
+    };
+  });
+}
+
+/** Round-specific parameter values for the latest-report explanation UI. */
+export function parameterScoresForReport(report: InterviewReport) {
+  const profile = evaluationProfileForSetup(report.setup);
+  return profile.parameters.map((parameter) => ({
+    ...parameter,
+    ...reportParameterScore(report, parameter)
+  }));
+}
+
+function reportParameterScore(
+  report: InterviewReport,
+  parameter: EvaluationParameterDefinition
+): { score: number; evaluated: boolean } {
+  const answered = report.competencies.filter((item) => item.answered);
+  const direct = answered
+    .flatMap((item) => item.technicalEvaluation?.rubricScores ?? [])
+    .filter((score) => score.rubricKey === parameter.key)
+    .map((score) => score.score);
+  if (direct.length) return { score: Math.round(mean(direct)), evaluated: true };
+
+  const keywordMatches = answered.filter((item) =>
+    parameterKeywords(parameter.key).some((keyword) => item.label.toLowerCase().includes(keyword))
+  );
+  if (keywordMatches.length) {
+    return {
+      score: Math.round(mean(keywordMatches.map((item) => item.evidenceScore))),
+      evaluated: false
+    };
+  }
+
+  const fallback = answered.length
+    ? mean(answered.map((item) => fallbackParameterValue(item, parameter.key)))
+    : report.summary.evidenceScore;
+  return { score: Math.round(fallback), evaluated: false };
+}
+
+function fallbackParameterValue(
+  item: InterviewReport["competencies"][number],
+  parameterKey: string
+): number {
+  const breakdown = item.evidenceBreakdown;
+  const technical = item.technicalEvaluation?.score ?? item.evidenceScore;
+  if (/ownership|accountability/.test(parameterKey)) {
+    return breakdown
+      ? Math.round((breakdown.ownership + breakdown.outcome) / 2)
+      : item.evidenceScore;
+  }
+  if (/impact|learning|reliability|edge-case/.test(parameterKey)) {
+    return breakdown?.outcome ?? technical;
+  }
+  if (/decision|reasoning|approach|tradeoff|complexity|scalability|judgement/.test(parameterKey)) {
+    return breakdown?.decision ?? technical;
+  }
+  if (
+    /specificity|credibility|understanding|communication|motivation|collaboration|self-awareness/.test(
+      parameterKey
+    )
+  ) {
+    return breakdown?.specificity ?? item.evidenceScore;
+  }
+  return technical;
+}
+
+function parameterKeywords(parameterKey: string): string[] {
+  const keywords: Record<string, string[]> = {
+    "motivation-fit": ["motivation", "fit", "career", "current role"],
+    judgement: ["judgement", "uncertainty", "decision"],
+    collaboration: ["collaboration", "conflict", "disagreement"],
+    accountability: ["accountability", "mistake", "setback"],
+    "self-awareness": ["self-awareness", "feedback", "growth"],
+    "claim-credibility": ["resume", "claim", "experience"],
+    "personal-ownership": ["ownership", "contribution"],
+    "project-ownership": ["project", "ownership"],
+    "impact-learning": ["impact", "outcome", "learning"],
+    "problem-understanding": ["problem", "understanding"],
+    correctness: ["correctness", "implementation"],
+    "concept-depth": ["concept", "technical depth", "mechanism"],
+    "practical-execution": ["execution", "implementation", "delivery"]
+  };
+  return keywords[parameterKey] ?? [];
 }
 
 function toRoundRow(report: InterviewReport): ReportRoundRow {

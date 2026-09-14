@@ -63,4 +63,104 @@ describe("interview public state serializer", () => {
     expect(payload).not.toContain("PRIVATE_EXPECTED_ANSWER");
     expect(payload).not.toContain("PRIVATE_RUBRIC");
   });
+
+  it("normalizes section metadata for existing hiring-manager sessions", () => {
+    const legacyStages = [
+      "career",
+      "current-role",
+      "project",
+      "project",
+      "behavioral",
+      "project",
+      "behavioral",
+      "behavioral"
+    ] as const;
+    const state = {
+      id: "11111111-1111-4111-8111-111111111111",
+      setup: {
+        role: "frontend",
+        level: "3-5",
+        roundType: "hiring-manager",
+        intensity: "realistic",
+        context: "Final conversation",
+        resumeRound: true
+      },
+      plan: legacyStages.map((stage, index) => ({
+        text: `Question ${index + 1}`,
+        stage,
+        mustHit: ["a concrete example"],
+        probeIfMissing: "What did you personally do?"
+      })),
+      phase: "questioning",
+      questionIndex: 4,
+      skippedQuestionIndexes: [3],
+      followUpCount: 0,
+      startedAt: 1,
+      turns: []
+    } satisfies InterviewState;
+
+    const serialized = serialiseInterviewState(state);
+
+    expect(serialized.stages).toEqual([
+      "career",
+      "current-role",
+      "project",
+      "project",
+      "project",
+      "behavioral",
+      "behavioral",
+      "behavioral"
+    ]);
+    expect(serialized.currentQuestion?.stage).toBe("project");
+    expect(serialized.skippedQuestionIndexes).toEqual([3]);
+  });
+
+  it("keeps provider telemetry server-side", () => {
+    const state = {
+      id: "11111111-1111-4111-8111-111111111111",
+      setup: {
+        role: "frontend",
+        level: "3-5",
+        roundType: "hiring-manager",
+        intensity: "realistic",
+        context: "Final conversation"
+      },
+      plan: [],
+      phase: "done",
+      questionIndex: 0,
+      followUpCount: 0,
+      startedAt: 1,
+      turns: [
+        {
+          speaker: "agent",
+          text: "Thanks for the conversation.",
+          startMs: 1,
+          endMs: 1,
+          runtime: {
+            engineVersion: "engine-test",
+            promptVersion: "prompt-test",
+            durationMs: 50,
+            usedFallback: false,
+            calls: [
+              {
+                provider: "groq",
+                operation: "interview.decide",
+                model: "private-model-route",
+                modelClass: "fast",
+                attempt: 1,
+                maxAttempts: 1,
+                durationMs: 40,
+                outcome: "success"
+              }
+            ]
+          }
+        }
+      ]
+    } satisfies InterviewState;
+
+    const serialized = serialiseInterviewState(state);
+
+    expect(serialized.turns[0]).not.toHaveProperty("runtime");
+    expect(JSON.stringify(serialized)).not.toContain("private-model-route");
+  });
 });

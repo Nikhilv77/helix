@@ -1,10 +1,9 @@
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
-import InterviewSetupClient from "@/features/interviews/ui/interview-setup-client";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function InterviewSetupPage() {
-  const { profile } = await requireOnboardedProfile();
-
-  return <InterviewSetupClient workspaceAccent={profile.workspaceAccent} />;
+  await requireOnboardedProfile();
+  redirect("/interviews");
 }

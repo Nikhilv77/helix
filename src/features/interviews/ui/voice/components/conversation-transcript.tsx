@@ -1,4 +1,4 @@
-import { useEffect, useState, type RefObject } from "react";
+import type { RefObject } from "react";
 import { BriefcaseBusiness, Code2, Loader2 } from "lucide-react";
 import type { InterviewQuestion, InterviewSetup, Turn } from "@/lib/shared/types";
 import { formatClock, roleLabel, roundLabel } from "../utils/voice-interview";
@@ -8,6 +8,8 @@ export function ConversationTranscript({
   turns,
   spokenAgentTurnKeys,
   liveUserText,
+  liveAgentText = "",
+  teacherName,
   startedAt,
   setup,
   question,
@@ -19,6 +21,10 @@ export function ConversationTranscript({
   turns: Turn[];
   spokenAgentTurnKeys: ReadonlySet<string>;
   liveUserText: string;
+  /** Native-live output, shown before the server has stored a completed turn. */
+  liveAgentText?: string;
+  /** Allows the interview room to pin a presenter independently of workspace teacher. */
+  teacherName?: string;
   startedAt: number | null;
   setup: InterviewSetup | null;
   question: InterviewQuestion | null;
@@ -28,18 +34,20 @@ export function ConversationTranscript({
   hideHeader?: boolean;
 }) {
   const teacher = useWorkspaceTeacher();
-  const visibleTurns = mergeConsecutiveUserTurns(
-    turns.filter(
-      (turn) =>
-        turn.text.trim().length > 0 &&
-        (turn.speaker === "user" || spokenAgentTurnKeys.has(turnKey(turn)))
-    )
+  const visibleTurns = turns.filter(
+    (turn) =>
+      turn.text.trim().length > 0 &&
+      (turn.speaker === "user" || spokenAgentTurnKeys.has(turnKey(turn)) || Boolean(teacherName))
   );
   const normalizedLiveUserText = liveUserText.trim();
+  const normalizedLiveAgentText = liveAgentText.trim();
   const hasLiveUserTurn = visibleTurns.some(
     (turn) => turn.speaker === "user" && turn.text.trim() === normalizedLiveUserText
   );
-  const displayTurns =
+  const hasLiveAgentTurn = visibleTurns.some(
+    (turn) => turn.speaker === "agent" && turn.text.trim() === normalizedLiveAgentText
+  );
+  const withLiveUser =
     normalizedLiveUserText && !hasLiveUserTurn
       ? [
           ...visibleTurns,
@@ -51,6 +59,18 @@ export function ConversationTranscript({
           }
         ]
       : visibleTurns;
+  const displayTurns =
+    normalizedLiveAgentText && !hasLiveAgentTurn
+      ? [
+          ...withLiveUser,
+          {
+            speaker: "agent" as const,
+            text: normalizedLiveAgentText,
+            startMs: startedAt ? Math.max(0, Date.now() - startedAt) : 0,
+            endMs: startedAt ? Math.max(0, Date.now() - startedAt) : 0
+          }
+        ]
+      : withLiveUser;
   const isCode = question?.kind === "code" && question.codeSnippet;
   let latestAgentIndex = -1;
   for (let index = displayTurns.length - 1; index >= 0; index -= 1) {
@@ -92,8 +112,8 @@ export function ConversationTranscript({
             }
           >
             {question
-              ? `${teacher.name} is getting ready to speak.`
-              : `${teacher.name} is preparing your first question.`}
+              ? `${teacherName ?? teacher.name} is getting ready to speak.`
+              : `${teacherName ?? teacher.name} is preparing your first question.`}
           </p>
           {question?.codeTask ? (
             <p className="mt-4 text-sm leading-6 text-cream/60">{question.codeTask}</p>
@@ -125,15 +145,14 @@ export function ConversationTranscript({
                         isAgent ? "text-cream/60" : "text-cream/38"
                       }`}
                     >
-                      {isAgent ? teacher.name : "You"}
+                      {isAgent ? (teacherName ?? teacher.name) : "You"}
                     </span>
                     <span className="font-mono text-[9px] text-cream/25">
                       {formatClock(turn.startMs)}
                     </span>
                   </div>
 
-                  <TypewriterText
-                    active={isLatestAgent}
+                  <p
                     className={
                       compact
                         ? isAgent
@@ -145,8 +164,9 @@ export function ConversationTranscript({
                             ? "text-base leading-7 text-cream/82"
                             : "text-sm leading-6 text-cream/68"
                     }
-                    text={turn.text}
-                  />
+                  >
+                    {turn.text}
+                  </p>
                 </div>
               </article>
             );
@@ -170,88 +190,11 @@ function turnKey(turn: Turn): string {
   return `${turn.speaker}-${turn.startMs}-${turn.endMs}-${turn.text}`;
 }
 
-function mergeConsecutiveUserTurns(turns: Turn[]): Turn[] {
-  return turns.reduce<Turn[]>((merged, turn) => {
-    const previous = merged.at(-1);
-    if (turn.speaker !== "user" || previous?.speaker !== "user") {
-      merged.push({ ...turn });
-      return merged;
-    }
-
-    previous.text = mergeTranscriptText(previous.text, turn.text);
-    previous.endMs = Math.max(previous.endMs, turn.endMs);
-    return merged;
-  }, []);
-}
-
-function mergeTranscriptText(existing: string, incoming: string): string {
-  const current = existing.trim();
-  const next = incoming.trim();
-
-  if (!current || next.startsWith(current)) return next;
-  if (current.startsWith(next)) return current;
-  return `${current} ${next}`;
-}
-
-function TypewriterText({
-  text,
-  active,
-  className
-}: {
-  text: string;
-  active: boolean;
-  className: string;
-}) {
-  const [visibleText, setVisibleText] = useState(active ? "" : text);
-
-  useEffect(() => {
-    if (!active) {
-      setVisibleText(text);
-      return;
-    }
-
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const device = navigator as Navigator & { connection?: { saveData?: boolean } };
-    if (reducedMotion || device.connection?.saveData) {
-      setVisibleText(text);
-      return;
-    }
-
-    setVisibleText("");
-    let nextLength = 0;
-    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
-    // Keep the same reading duration on touch hardware while halving React
-    // commits. Revealing two characters every 84ms looks the same at phone
-    // sizes as one character every 42ms, especially alongside spoken audio.
-    const charactersPerStep = coarsePointer ? 2 : 1;
-    const stepMs = coarsePointer ? 84 : 42;
-    const timer = window.setInterval(() => {
-      nextLength += charactersPerStep;
-      setVisibleText(text.slice(0, nextLength));
-
-      if (nextLength >= text.length) {
-        window.clearInterval(timer);
-      }
-    }, stepMs);
-
-    return () => window.clearInterval(timer);
-  }, [active, text]);
-
-  return (
-    <p className={className}>
-      {visibleText}
-      {active && visibleText.length < text.length ? (
-        <span className="ml-0.5 animate-pulse text-cream/55">|</span>
-      ) : null}
-    </p>
-  );
-}
-
 function ThinkingLine() {
   return (
     <p className="mt-4 flex items-center gap-2 text-xs text-cream/40">
       <Loader2 size={12} className="animate-spin" aria-hidden="true" />
-      Following the strongest thread in your answer
+      James is responding
     </p>
   );
 }

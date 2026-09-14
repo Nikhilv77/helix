@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { findQuestion } from "@/features/practice/dsa/domain/dsa";
-import { AiService } from "@/server/ai/ai.service";
+import type { AiService } from "@/server/ai/ai.service";
 import { Logger } from "@/server/common/logger";
 import {
   describeLevel,
@@ -144,7 +144,7 @@ export class InterviewPlanner {
   private readonly logger = new Logger(InterviewPlanner.name);
 
   constructor(
-    private readonly ai: AiService,
+    private readonly ai: Pick<AiService, "generateStructured">,
     private readonly planningBudgetMs = DEFAULT_PLANNING_BUDGET_MS
   ) {}
 

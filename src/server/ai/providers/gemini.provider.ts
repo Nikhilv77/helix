@@ -76,6 +76,17 @@ export class GeminiProvider implements SystemDesignerAIProvider {
           })
         );
 
+        request.onTrace?.({
+          provider: PROVIDER_NAME,
+          operation: request.operation,
+          model,
+          modelClass: request.modelClass,
+          attempt,
+          maxAttempts,
+          durationMs: Date.now() - startedAt,
+          outcome: "success"
+        });
+
         return result;
       } catch (error) {
         const mappedError = this.mapError(error, request.operation);
@@ -99,6 +110,19 @@ export class GeminiProvider implements SystemDesignerAIProvider {
             status: providerStatus
           })
         );
+
+        request.onTrace?.({
+          provider: PROVIDER_NAME,
+          operation: request.operation,
+          model,
+          modelClass: request.modelClass,
+          attempt,
+          maxAttempts,
+          durationMs: Date.now() - startedAt,
+          outcome: "failure",
+          errorCode: mappedError.code,
+          retryable: mappedError.retryable
+        });
 
         if (!shouldRetry) {
           throw mappedError;

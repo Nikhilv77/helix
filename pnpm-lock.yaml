@@ -15,8 +15,8 @@ importers:
         specifier: ^7.6.3
         version: 7.6.3(next@16.2.12(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@google/genai':
-        specifier: ^2.13.0
-        version: 2.13.0
+        specifier: ^2.22.0
+        version: 2.22.0
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.56.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -491,8 +491,8 @@ packages:
   '@gltf-transform/functions@4.4.2':
     resolution: {integrity: sha512-dclXgv9TshMaWBqPDUYd4xTwBQ2PpuR8p0Y9pokrRzGQDUPXRP6lTDzbqT0UmEmxFSvRyPJjvOWUmzeiRafpvw==}
 
-  '@google/genai@2.13.0':
-    resolution: {integrity: sha512-GM7C8Kaomvjz05x5JEO6+l3d/pciL9LxAG9dUjJLD7nTPZ9X0Cfsf2Z7eET6UjgWyUmxXCHtYnQoQ77F9+ZIOQ==}
+  '@google/genai@2.22.0':
+    resolution: {integrity: sha512-NE90Nl0AP75YZ2tGxXjQQs6Gkunma7a1JmPCx5g5CxvjHXshmuI2aNoPJ1xLrRixjkNxog898oylM+MyNudUQw==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
       '@modelcontextprotocol/sdk': ^1.25.2
@@ -3290,7 +3290,7 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
 
-  '@google/genai@2.13.0':
+  '@google/genai@2.22.0':
     dependencies:
       google-auth-library: 10.9.1
       p-retry: 4.6.2

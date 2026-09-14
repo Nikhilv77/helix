@@ -14,10 +14,16 @@ export async function GET(request: NextRequest) {
     return Response.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const [teacherNotifications, maintenance] = await Promise.all([
-    app.teacherNotificationService.dispatchDaily(),
-    runGlobalHelpMaintenance(app)
-  ]);
+  const [teacherNotifications, maintenance, interviewEvaluations, interviewRetention] =
+    await Promise.all([
+      app.teacherNotificationService.dispatchDaily(),
+      runGlobalHelpMaintenance(app),
+      app.interviewEvaluationRecoveryService.runBatch(5),
+      app.interviewOperationsService.enforceRetention()
+    ]);
 
-  return Response.json({ success: true, data: { teacherNotifications, maintenance } });
+  return Response.json({
+    success: true,
+    data: { teacherNotifications, maintenance, interviewEvaluations, interviewRetention }
+  });
 }

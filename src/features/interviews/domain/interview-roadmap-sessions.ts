@@ -3,8 +3,7 @@ import type {
   PersonalizedInterviewPlan,
   SessionBlueprint
 } from "@/features/interviews/domain/personalized-plan";
-import { PREP_SESSIONS, type PrepSession } from "@/lib/roadmap/frontend-plan";
-import type { FrontendRoadmapHome, FrontendRoadmapSession } from "@/lib/roadmap/roadmap";
+import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
 import type { InterviewHistoryItem } from "@/lib/shared/types";
 import {
   TECHNICAL_DEEP_DIVE_DURATION_MINUTES,
@@ -39,65 +38,99 @@ export interface InterviewRoadmapSession {
 /**
  * Builds the candidate-facing interview path.
  *
- * The personalized plan retains its five stable internal blueprint kinds. The
- * first kind is presented through the product's dedicated DSA round, and a
- * dedicated resume/behavioral round is inserted before the final mock. This
- * keeps the specialized interview engines while preserving the personalized
- * technical deep dives generated from the resume.
+ * Planning can use many internal blueprints, but the product always presents
+ * the same four interview rounds. This keeps the candidate journey stable as
+ * we add richer content inside each round.
  */
-export function interviewRoadmapSessions({
-  personalizedPlan,
-  roadmap,
-  history
-}: {
+export function interviewRoadmapSessions(input: {
   personalizedPlan: PersonalizedInterviewPlan | null;
   roadmap: FrontendRoadmapHome | null;
   history: InterviewHistoryItem[];
 }): InterviewRoadmapSession[] {
-  if (personalizedPlan) return personalizedRoadmapSessions(personalizedPlan, history);
-  if (roadmap?.sessions.length) return legacyRoadmapSessions(roadmap);
-  return fallbackRoadmapSessions();
+  return permanentInterviewRounds(input.personalizedPlan, input.history);
 }
 
-export function roadmapSessionHref(session: InterviewRoadmapSession): string {
-  if (session.resumeSessionId?.startsWith("core-technical:")) {
-    return "/practice/core-technical";
-  }
-  if (session.resumeSessionId?.startsWith("applied-engineering:")) {
-    return "/practice/applied-engineering";
-  }
-  if (session.resumeSessionId) {
+export function roadmapSessionHref(session: InterviewRoadmapSession): string | null {
+  if (session.id === "hiring-manager-final") return "/interview/hiring-manager";
+  if (
+    session.resumeSessionId &&
+    (session.id === "resume-behavioral-defense" ||
+      session.id === "dsa" ||
+      session.id === "hiring-manager-final")
+  ) {
     return `/interview/voice?session=${encodeURIComponent(session.resumeSessionId)}`;
-  }
-  if (session.planId && session.technicalDeepDive) {
-    const params = new URLSearchParams({
-      plan: session.planId,
-      coreBlueprint: session.technicalDeepDive.coreBlueprintId,
-      appliedBlueprint: session.technicalDeepDive.appliedBlueprintId
-    });
-    return `/interview?${params.toString()}`;
-  }
-  if (session.planId) {
-    const params = new URLSearchParams({ plan: session.planId, blueprint: session.id });
-    return `/interview?${params.toString()}`;
   }
   if (session.id === "dsa") return "/interview/dsa";
   if (session.id === "resume-behavioral-defense") return "/interview/resume";
-  if (session.id === "applied-engineering") return "/interview/fundamentals";
-  const params = new URLSearchParams({ roadmapSession: session.id });
-  return `/interview?${params.toString()}`;
+  // The old generic interview wizard is retired. New content gets a dedicated
+  // entry route before it is made available from the four-round roadmap.
+  return null;
 }
 
-function fallbackRoadmapSessions(): InterviewRoadmapSession[] {
-  return candidateFacingPrepSessions().map((session) => ({
-    id: session.id,
+/** The permanent candidate-facing loop; detailed round content is added independently. */
+function permanentInterviewRounds(
+  plan: PersonalizedInterviewPlan | null,
+  history: InterviewHistoryItem[]
+): InterviewRoadmapSession[] {
+  const core = plan?.sessions.find((session) => session.kind === "core-technical");
+  const applied = plan?.sessions.find((session) => session.kind === "applied-engineering");
+  const dsa = plan?.sessions.find((session) => session.kind === "problem-solving");
+  const technical = core && applied && plan
+    ? technicalDeepDiveRoadmapSession(plan.id, core, applied, history)
+    : upcomingRound({
+        id: "technical-project",
+        order: 2,
+        title: "Core Technical & Projects",
+        purpose: "Core technical knowledge, project deep-dives, and practical coding.",
+        covers: ["Core concepts", "Project decisions", "Practical coding"]
+      });
+  const problemSolving = dsa
+    ? dsaRoadmapSession(dsa, history)
+    : upcomingRound({
+        id: "dsa-design",
+        order: 3,
+        title: "DSA & Design",
+        purpose: "Problem-solving and design questions calibrated to your experience level.",
+        covers: ["DSA problems", "Complexity and edge cases", "Design judgement"]
+      });
+
+  return [
+    { ...resumeRoadmapSession(history), order: 1 },
+    { ...technical, order: 2, title: "Core Technical & Projects" },
+    {
+      ...problemSolving,
+      id: "dsa",
+      order: 3,
+      title: "DSA & Design",
+      purpose: "DSA and design questions calibrated to your experience level.",
+      covers: ["Problem-solving", "Complexity and edge cases", "Design judgement"]
+    },
+    upcomingRound({
+      id: "hiring-manager-final",
+      order: 4,
+      title: "Hiring Manager & Final Behavioural",
+      purpose: "A final conversation round for communication, motivation, judgement, and fit.",
+      covers: ["Career motivation", "Leadership and judgement", "Candidate questions"]
+    })
+  ];
+}
+
+function upcomingRound({
+  id,
+  order,
+  title,
+  purpose,
+  covers
+}: Pick<InterviewRoadmapSession, "id" | "order" | "title" | "purpose" | "covers">): InterviewRoadmapSession {
+  return {
+    id,
     planId: null,
     kind: null,
-    order: session.order,
-    title: session.title,
-    purpose: session.purpose,
-    covers: session.covers,
-    totalQuestions: session.id === "dsa" ? 123 : 0,
+    order,
+    title,
+    purpose,
+    covers,
+    totalQuestions: 0,
     completedQuestions: 0,
     progressPercent: 0,
     attemptStatus: "not_started",
@@ -105,87 +138,7 @@ function fallbackRoadmapSessions(): InterviewRoadmapSession[] {
     updatedPracticeAvailable: false,
     durationMinutes: null,
     difficulty: null
-  }));
-}
-
-function legacyRoadmapSessions(roadmap: FrontendRoadmapHome): InterviewRoadmapSession[] {
-  const core = roadmap.sessions.find((session) => session.id === "core-technical");
-  const applied = roadmap.sessions.find((session) => session.id === "applied-engineering");
-  const technicalTotal = (core?.totalQuestions ?? 0) + (applied?.totalQuestions ?? 0);
-  const technicalCompleted = (core?.completedQuestions ?? 0) + (applied?.completedQuestions ?? 0);
-  const sessions = roadmap.sessions.flatMap<FrontendRoadmapSession>((session) => {
-    if (session.id === "applied-engineering") return [];
-    if (session.id !== "core-technical") return [{ ...session, order: visibleOrder(session.id) }];
-    return [
-      {
-        ...session,
-        id: TECHNICAL_DEEP_DIVE_ID,
-        order: TECHNICAL_DEEP_DIVE_PREP_SESSION.order,
-        title: TECHNICAL_DEEP_DIVE_PREP_SESSION.title,
-        purpose: TECHNICAL_DEEP_DIVE_PREP_SESSION.purpose,
-        covers: TECHNICAL_DEEP_DIVE_PREP_SESSION.covers,
-        totalQuestions: technicalTotal,
-        completedQuestions: technicalCompleted,
-        progressPercent: technicalTotal
-          ? Math.round((technicalCompleted / technicalTotal) * 100)
-          : 0
-      }
-    ];
-  });
-
-  return sessions.map((session) => ({
-    ...session,
-    planId: null,
-    kind: null,
-    attemptStatus:
-      session.progressPercent >= 100
-        ? "completed"
-        : session.progressPercent > 0
-          ? "in_progress"
-          : "not_started",
-    resumeSessionId: null,
-    updatedPracticeAvailable: false,
-    durationMinutes: null,
-    difficulty: null
-  }));
-}
-
-function personalizedRoadmapSessions(
-  plan: PersonalizedInterviewPlan,
-  history: InterviewHistoryItem[]
-): InterviewRoadmapSession[] {
-  const visibleSessions: InterviewRoadmapSession[] = [];
-  const core = plan.sessions.find((session) => session.kind === "core-technical");
-  const applied = plan.sessions.find((session) => session.kind === "applied-engineering");
-
-  for (const blueprint of plan.sessions) {
-    if (blueprint.kind === "problem-solving") {
-      visibleSessions.push(dsaRoadmapSession(blueprint, history));
-      continue;
-    }
-
-    if (blueprint.kind === "core-technical" && core && applied) {
-      visibleSessions.push(technicalDeepDiveRoadmapSession(plan.id, core, applied, history));
-      continue;
-    }
-
-    if (blueprint.kind === "applied-engineering" && core && applied) continue;
-
-    if (blueprint.kind === "architecture-system-design") {
-      visibleSessions.push(personalizedBlueprintSession(plan.id, blueprint, history, 3));
-      continue;
-    }
-
-    if (blueprint.kind === "final-mock") {
-      visibleSessions.push(resumeRoadmapSession(history));
-      visibleSessions.push(personalizedBlueprintSession(plan.id, blueprint, history, 5));
-      continue;
-    }
-
-    visibleSessions.push(personalizedBlueprintSession(plan.id, blueprint, history));
-  }
-
-  return visibleSessions;
+  };
 }
 
 function technicalDeepDiveRoadmapSession(
@@ -302,58 +255,8 @@ function resumeRoadmapSession(history: InterviewHistoryItem[]): InterviewRoadmap
       "Behavioral stories and resume claims"
     ],
     ...progress,
-    durationMinutes: 24,
+    durationMinutes: 30,
     difficulty: "adaptive"
-  };
-}
-
-function personalizedBlueprintSession(
-  planId: string,
-  blueprint: SessionBlueprint,
-  history: InterviewHistoryItem[],
-  order = blueprint.order
-): InterviewRoadmapSession {
-  const totalQuestions = blueprint.structure.reduce(
-    (total, stage) => total + stage.questionCount,
-    0
-  );
-  const belongsToStableSlot = (session: InterviewHistoryItem) =>
-    session.setup.templateId === blueprint.id ||
-    session.setup.personalizedBlueprint?.kind === blueprint.kind ||
-    (blueprint.kind === "core-technical" && session.setup.templateId === "core-technical");
-  const latestActive = findLatestSession(
-    history,
-    (session) => belongsToStableSlot(session) && session.status === "in_progress"
-  );
-  const completedCurrentBlueprint = findLatestSession(
-    history,
-    (session) => session.setup.templateId === blueprint.id && session.status === "completed"
-  );
-  const latestCompletedSlot = findLatestSession(
-    history,
-    (session) => belongsToStableSlot(session) && session.status === "completed"
-  );
-  const latestSlotAttempt = findLatestSession(history, belongsToStableSlot);
-  const progressSession =
-    latestActive ?? completedCurrentBlueprint ?? latestCompletedSlot ?? latestSlotAttempt;
-  const updatedPracticeAvailable = Boolean(
-    latestCompletedSlot &&
-    latestCompletedSlot.setup.templateId !== blueprint.id &&
-    !completedCurrentBlueprint
-  );
-
-  return {
-    id: blueprint.id,
-    planId,
-    kind: blueprint.kind,
-    order,
-    title: blueprint.title,
-    purpose: blueprint.subtitle,
-    covers: blueprint.topics.map((topic) => topic.label),
-    ...sessionProgress(progressSession, totalQuestions),
-    updatedPracticeAvailable,
-    durationMinutes: blueprint.durationMinutes,
-    difficulty: blueprint.difficulty
   };
 }
 
@@ -395,21 +298,6 @@ function findLatestSession(
       (latest, session) => (!latest || session.updatedAt > latest.updatedAt ? session : latest),
       undefined
     );
-}
-
-function candidateFacingPrepSessions(): PrepSession[] {
-  return PREP_SESSIONS.flatMap((session) => {
-    if (session.id === "applied-engineering") return [];
-    if (session.id === "core-technical") return [TECHNICAL_DEEP_DIVE_PREP_SESSION];
-    return [{ ...session, order: visibleOrder(session.id) }];
-  });
-}
-
-function visibleOrder(id: string): number {
-  if (id === "architecture-system-design") return 3;
-  if (id === "resume-behavioral-defense") return 4;
-  if (id === "final-mock") return 5;
-  return id === "dsa" ? 1 : 2;
 }
 
 function harderDifficulty(left: string, right: string): string {

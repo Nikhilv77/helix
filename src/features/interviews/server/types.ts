@@ -8,6 +8,8 @@ import {
   storyPracticeAssessmentIdentityFromSetup,
   type StoryPracticeAssessmentIdentity
 } from "@/features/practice/shared/server/contracts";
+import type { AiCallTrace } from "@/server/ai/interfaces/system-designer-ai-provider.interface";
+import type { InterviewRuntimeVersion } from "./runtime-version";
 
 export const ROLES = ["backend", "frontend", "fullstack", "data", "ai-ml", "pm"] as const;
 export const LEVELS = ["fresher", "0-2", "3-5", "5-plus"] as const;
@@ -99,6 +101,11 @@ export interface InterviewSetup {
 }
 
 export type InterviewStage =
+  /** Resume + behavioural interview: career story, current role, and project evidence. */
+  | "career"
+  | "current-role"
+  | "project"
+  | "behavioral"
   | "skills"
   | "code"
   | "experience"
@@ -189,11 +196,23 @@ export interface PlannedQuestion {
   mustHit: string[];
   /** Fallback probe used when the decider call fails or times out. */
   probeIfMissing: string;
+  /** Lets the closing turn return one safe, simulated hiring-manager answer. */
+  acceptsCandidateQuestions?: boolean;
+  /**
+   * Questions sharing a value belong to one candidate-facing section. The
+   * state machine uses this only for pacing; it is never shown as hidden
+   * evaluation guidance.
+   */
+  pacingSection?: string;
+  /** This anchor must be reached before a soft-time wrap may finish the round. */
+  requiredForPacing?: boolean;
+  /** Conservative time reservation used when deciding whether to skip support questions. */
+  estimatedDurationMs?: number;
 }
 
 export type Phase = "intro" | "questioning" | "wrap" | "done";
 export type Speaker = "agent" | "user";
-export type DecisionAction = "clarify" | "probe" | "challenge" | "move_on";
+export type DecisionAction = "clarify" | "probe" | "challenge" | "respond" | "move_on";
 export type MissingDimension =
   "clarity" | "structure" | "specificity" | "ownership" | "outcome" | "none";
 
@@ -253,9 +272,19 @@ export interface QuestionEvaluation {
   strengths: string[];
   gaps: string[];
   rubricScores: QuestionRubricEvaluation[];
+  /** Short exact excerpts from the saved answer that support the judgement. */
+  evidenceQuotes?: string[];
   answerExcerpts: string[];
   execution: CodeExecutionEvidence | null;
   evaluatedAt: number;
+  /** Reproducibility and provider telemetry; absent on legacy sessions. */
+  runtime?: {
+    engineVersion: string;
+    promptVersion: string;
+    durationMs: number;
+    recovered: boolean;
+    calls: AiCallTrace[];
+  };
 }
 
 /** Timestamps are offsets in milliseconds from the session start. */
@@ -279,6 +308,18 @@ export interface Turn {
   gradedQuestionIndex?: number;
   /** Explicit candidate opt-out for an assessment prompt; scored as zero. */
   skipped?: boolean;
+  /** Candidate explicitly ended the interview; shown in transcript but never scored as an answer. */
+  endedInterview?: boolean;
+  /** Conversational request (for example, needing a break); never assessed as an answer. */
+  assessmentExcluded?: boolean;
+  /** Safe operational metadata for the decision that produced an agent turn. */
+  runtime?: {
+    engineVersion: string;
+    promptVersion: string;
+    durationMs: number;
+    usedFallback: boolean;
+    calls: AiCallTrace[];
+  };
 }
 
 export type TurnAction = DecisionAction | "interrupt" | "intro";
@@ -289,6 +330,8 @@ export interface InterviewState {
   plan: PlannedQuestion[];
   phase: Phase;
   questionIndex: number;
+  /** Optional questions bypassed to preserve later core sections when pace slips. */
+  skippedQuestionIndexes?: number[];
   /** Probes and challenges share one budget per question. */
   followUpCount: number;
   /** Epoch milliseconds. */
@@ -300,6 +343,8 @@ export interface InterviewState {
   questionEvaluations?: Record<string, QuestionEvaluation>;
   /** Latest Judge0 result per code question, recorded before answer submission. */
   codeExecutions?: Record<string, CodeExecutionEvidence>;
+  /** Frozen with the session so historical decisions remain attributable. */
+  runtimeVersion?: InterviewRuntimeVersion;
 }
 
 export interface Decision {
@@ -326,7 +371,7 @@ export interface InterviewAnswerResponse {
   elapsedMs: number;
 }
 
-export type ForcedReason = "follow-up-budget" | "soft-time" | "hard-time";
+export type ForcedReason = "follow-up-budget" | "pacing" | "soft-time" | "hard-time";
 
 export const MAX_FOLLOW_UPS = 2;
 export const QUESTION_COUNT = 4;
@@ -335,12 +380,14 @@ export const HARD_CAP_MS = 15 * 60 * 1000;
 export const SOFT_WRAP_MS = 13 * 60 * 1000;
 
 /**
- * The resume round runs three stages across eight questions, one of which is
- * written at the keyboard. The default caps would wrap it up somewhere in the
- * middle of the experience stage, so it gets its own budget.
+ * The resume round runs a conversational arc across at most eight questions,
+ * one of which may be written at the keyboard. It gets a little more room than
+ * a default four-question interview without turning into a long technical screen.
  */
 export const RESUME_HARD_CAP_MS = 24 * 60 * 1000;
 export const RESUME_SOFT_WRAP_MS = 21 * 60 * 1000;
+export const HIRING_MANAGER_HARD_CAP_MS = 30 * 60 * 1000;
+export const HIRING_MANAGER_SOFT_WRAP_MS = 27 * 60 * 1000;
 const PERSONALIZED_WRAP_BUFFER_MS = 2 * 60 * 1000;
 
 export interface RoundCaps {
@@ -349,6 +396,12 @@ export interface RoundCaps {
 }
 
 export function roundCaps(setup: InterviewSetup | undefined): RoundCaps {
+  if (setup?.roundType === "hiring-manager") {
+    return {
+      softWrapMs: HIRING_MANAGER_SOFT_WRAP_MS,
+      hardCapMs: HIRING_MANAGER_HARD_CAP_MS
+    };
+  }
   if (setup?.resumeRound) {
     return { softWrapMs: RESUME_SOFT_WRAP_MS, hardCapMs: RESUME_HARD_CAP_MS };
   }

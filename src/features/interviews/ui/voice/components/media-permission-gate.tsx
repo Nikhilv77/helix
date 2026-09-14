@@ -2,7 +2,6 @@
 
 import { ArrowRight, Camera, CameraOff, Check, Loader2, Mic, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
 type PermissionState = "idle" | "requesting" | "ready" | "skipped" | "error";
 
@@ -38,7 +37,9 @@ export function MediaPermissionGate({
   cameraOptional: boolean;
   onComplete: (result: MediaSetupResult) => void;
 }) {
-  const teacher = useWorkspaceTeacher();
+  // James conducts every live interview. The selected workspace coach only
+  // speaks on the preceding preparation screen, so setup must not imply otherwise.
+  const interviewerName = "James";
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const microphoneStreamRef = useRef<MediaStream | null>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
@@ -218,8 +219,8 @@ export function MediaPermissionGate({
                 {requesting
                   ? "Your browser may ask you to confirm access now."
                   : cameraOptional
-                    ? `Check your voice and framing before ${teacher.name} joins.`
-                    : `Check your voice before ${teacher.name} joins.`}
+                    ? `Check your voice and framing before ${interviewerName} joins.`
+                    : `Check your voice before ${interviewerName} joins.`}
               </p>
             </div>
           )}
@@ -232,7 +233,7 @@ export function MediaPermissionGate({
 
         <div className="flex min-w-0 flex-col p-5 sm:p-8 lg:p-10">
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-cream/42">
-            Before {teacher.name} joins
+            Before {interviewerName} joins
           </p>
           <h1
             id="media-setup-title"
@@ -243,7 +244,7 @@ export function MediaPermissionGate({
           <p className="mt-3 text-[0.9375rem] leading-6 text-cream/58 sm:mt-4 sm:text-base sm:leading-7">
             {cameraOptional
               ? "Your microphone is required for the conversation. Your camera is an optional local self view and is never uploaded."
-              : `Your microphone is required for the conversation. We’ll check it here before ${teacher.name} joins.`}
+              : `Your microphone is required for the conversation. We’ll check it here before ${interviewerName} joins.`}
           </p>
 
           <div className="interview-media-permissions mt-5 min-w-0 overflow-hidden rounded-2xl bg-black/15 sm:mt-7">

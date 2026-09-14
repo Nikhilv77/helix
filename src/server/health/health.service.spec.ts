@@ -25,7 +25,6 @@ describe("HealthService", () => {
     retrievalMinSimilarity: 0.2,
     interviewDailyLimit: 2,
     groqDeciderModel: "test-groq-model",
-    livekitAgentName: "test-agent",
     judge0Url: "https://judge0.example.com",
     rapidApiKey: undefined,
     rapidApiHost: "judge0.example.com"

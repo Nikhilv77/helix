@@ -111,6 +111,42 @@ describe("interview report", () => {
     expect(report.summary.evidenceScore).toBeGreaterThan(0);
   });
 
+  it("does not expose internal decision telemetry in report transcripts", () => {
+    const traced: InterviewState = {
+      ...state,
+      turns: state.turns.map((turn, index) =>
+        index === 0
+          ? {
+              ...turn,
+              runtime: {
+                engineVersion: "engine-test",
+                promptVersion: "prompt-test",
+                durationMs: 25,
+                usedFallback: false,
+                calls: [
+                  {
+                    provider: "groq",
+                    operation: "interview.decide",
+                    model: "internal-model",
+                    modelClass: "fast",
+                    attempt: 1,
+                    maxAttempts: 1,
+                    durationMs: 20,
+                    outcome: "success"
+                  }
+                ]
+              }
+            }
+          : turn
+      )
+    };
+
+    const report = createInterviewReport({ state: traced, touchedAt: 14_000 }, 20_000);
+
+    expect(report.transcript[0]).not.toHaveProperty("runtime");
+    expect(JSON.stringify(report)).not.toContain("internal-model");
+  });
+
   it("marks an unfinished room expired without discarding its history", () => {
     const history = createHistoryItem(
       { state: { ...state, phase: "questioning" }, touchedAt: 1_000 },

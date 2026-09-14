@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         targetRole: profile.targetRole ?? "frontend",
         level: profile.level ?? "0-2"
       });
-      const plan = buildResumePlan(kit);
+      const plan = buildResumePlan(kit, { resume });
 
       if (!plan.length) {
         throw new ApiRouteError(

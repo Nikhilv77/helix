@@ -87,8 +87,8 @@ export function describeVoiceState(
   if (status === "connecting") return "Connecting securely";
   if (status === "waiting") return "Interviewer is joining";
   if (agentState === "initializing") return "Interviewer is getting ready";
-  if (agentState === "thinking") return "Trailgrad is thinking";
-  if (agentState === "speaking" || activeSpeakerFallback) return "Trailgrad is speaking";
+  if (agentState === "thinking") return "James is thinking";
+  if (agentState === "speaking" || activeSpeakerFallback) return "James is speaking";
   if (!micOn) return "Microphone muted";
   if (micSignal) return "Hearing you";
   if (micSilent) return "No microphone signal";

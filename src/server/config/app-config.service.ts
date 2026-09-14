@@ -11,6 +11,7 @@ type AppConfigInput = Omit<
   | "livekitApiKey"
   | "livekitApiSecret"
   | "operatorUserIds"
+  | "interviewOperationsAdminUserId"
   | "resendApiKey"
   | "notificationEmailEnabled"
   | "notificationFromEmail"
@@ -18,6 +19,14 @@ type AppConfigInput = Omit<
   | "appOrigin"
   | "deepgramApiKey"
   | "deepgramTtsModel"
+  | "geminiLiveInterviewsEnabled"
+  | "geminiLiveModel"
+  | "geminiLiveTranscriptionModel"
+  | "interviewAuthenticatedRetentionDays"
+  | "interviewAnonymousRetentionDays"
+  | "interviewOperationalRetentionDays"
+  | "interviewRetentionBatchSize"
+  | "interviewMetricsSampleLimit"
 > & {
   clerkSecretKey?: EnvironmentConfig["clerkSecretKey"];
   interviewAuthSecret?: EnvironmentConfig["interviewAuthSecret"];
@@ -28,6 +37,7 @@ type AppConfigInput = Omit<
   livekitApiKey?: EnvironmentConfig["livekitApiKey"];
   livekitApiSecret?: EnvironmentConfig["livekitApiSecret"];
   operatorUserIds?: EnvironmentConfig["operatorUserIds"];
+  interviewOperationsAdminUserId?: EnvironmentConfig["interviewOperationsAdminUserId"];
   resendApiKey?: EnvironmentConfig["resendApiKey"];
   notificationEmailEnabled?: EnvironmentConfig["notificationEmailEnabled"];
   notificationFromEmail?: EnvironmentConfig["notificationFromEmail"];
@@ -35,6 +45,14 @@ type AppConfigInput = Omit<
   appOrigin?: EnvironmentConfig["appOrigin"];
   deepgramApiKey?: EnvironmentConfig["deepgramApiKey"];
   deepgramTtsModel?: EnvironmentConfig["deepgramTtsModel"];
+  geminiLiveInterviewsEnabled?: EnvironmentConfig["geminiLiveInterviewsEnabled"];
+  geminiLiveModel?: EnvironmentConfig["geminiLiveModel"];
+  geminiLiveTranscriptionModel?: EnvironmentConfig["geminiLiveTranscriptionModel"];
+  interviewAuthenticatedRetentionDays?: EnvironmentConfig["interviewAuthenticatedRetentionDays"];
+  interviewAnonymousRetentionDays?: EnvironmentConfig["interviewAnonymousRetentionDays"];
+  interviewOperationalRetentionDays?: EnvironmentConfig["interviewOperationalRetentionDays"];
+  interviewRetentionBatchSize?: EnvironmentConfig["interviewRetentionBatchSize"];
+  interviewMetricsSampleLimit?: EnvironmentConfig["interviewMetricsSampleLimit"];
 };
 
 export class AppConfigService {
@@ -88,6 +106,18 @@ export class AppConfigService {
     return this.config.geminiEmbeddingModelVersion;
   }
 
+  get geminiLiveInterviewsEnabled(): boolean {
+    return this.config.geminiLiveInterviewsEnabled ?? true;
+  }
+
+  get geminiLiveModel(): string {
+    return this.config.geminiLiveModel ?? "gemini-3.1-flash-live-preview";
+  }
+
+  get geminiLiveTranscriptionModel(): string {
+    return this.config.geminiLiveTranscriptionModel ?? "gemini-3.5-transcribe-live";
+  }
+
   get aiTimeoutMs(): EnvironmentConfig["aiTimeoutMs"] {
     return this.config.aiTimeoutMs;
   }
@@ -118,6 +148,26 @@ export class AppConfigService {
 
   get interviewDailyLimit(): EnvironmentConfig["interviewDailyLimit"] {
     return this.config.interviewDailyLimit;
+  }
+
+  get interviewAuthenticatedRetentionDays(): number {
+    return this.config.interviewAuthenticatedRetentionDays ?? 365;
+  }
+
+  get interviewAnonymousRetentionDays(): number {
+    return this.config.interviewAnonymousRetentionDays ?? 30;
+  }
+
+  get interviewOperationalRetentionDays(): number {
+    return this.config.interviewOperationalRetentionDays ?? 30;
+  }
+
+  get interviewRetentionBatchSize(): number {
+    return this.config.interviewRetentionBatchSize ?? 250;
+  }
+
+  get interviewMetricsSampleLimit(): number {
+    return this.config.interviewMetricsSampleLimit ?? 5000;
   }
 
   get upstashRedisRestUrl(): EnvironmentConfig["upstashRedisRestUrl"] {
@@ -159,10 +209,6 @@ export class AppConfigService {
     return this.config.livekitApiSecret;
   }
 
-  get livekitAgentName(): EnvironmentConfig["livekitAgentName"] {
-    return this.config.livekitAgentName;
-  }
-
   get deepgramApiKey(): string | undefined {
     return this.config.deepgramApiKey;
   }
@@ -170,6 +216,10 @@ export class AppConfigService {
   /** Empty means the report queue is closed to everyone — the safe default. */
   get operatorUserIds(): string[] {
     return this.config.operatorUserIds ?? [];
+  }
+
+  get interviewOperationsAdminUserId(): string | undefined {
+    return this.config.interviewOperationsAdminUserId;
   }
 
   get resendApiKey(): string | undefined {

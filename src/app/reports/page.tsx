@@ -30,6 +30,7 @@ function emptyOverview(now: number): ReportsOverview {
     competencies: [],
     matrix: { rounds: [], rows: [] },
     roundTypes: [],
+    families: [],
     pressure: { probes: 0, challenges: 0, clarifications: 0, interruptions: 0, perRound: 0 },
     recurringGaps: [],
     rounds: [],

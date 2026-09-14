@@ -38,7 +38,6 @@ describe("GroqProvider", () => {
       retrievalMinSimilarity: 0.2,
       interviewDailyLimit: 2,
       groqDeciderModel: "test-groq-model",
-      livekitAgentName: "test-agent",
       judge0Url: "https://judge0.example.com",
       rapidApiKey: undefined,
       rapidApiHost: "judge0.example.com",
@@ -67,6 +66,32 @@ describe("GroqProvider", () => {
 
     await expect(provider.generateStructured(createRequest())).resolves.toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("emits content-free provider telemetry", async () => {
+    const onTrace = vi.fn();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ choices: [{ message: { content: '{"ok":true}' } }] })
+      })
+    );
+    const provider = new GroqProvider(createConfig(), "test-key", "test-model");
+
+    await provider.generateStructured(createRequest({ onTrace }));
+
+    expect(onTrace).toHaveBeenCalledWith({
+      provider: "groq",
+      operation: "test.operation",
+      model: "test-model",
+      modelClass: "fast",
+      attempt: 1,
+      maxAttempts: 1,
+      durationMs: expect.any(Number),
+      outcome: "success"
+    });
+    expect(JSON.stringify(onTrace.mock.calls)).not.toContain("Return { ok: true }");
   });
 
   it("falls back to best-effort schema generation after Groq constrained decoding fails", async () => {

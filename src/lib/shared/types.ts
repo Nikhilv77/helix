@@ -292,10 +292,10 @@ export interface ResumeCollectionChange {
 
 export type Phase = "intro" | "questioning" | "wrap" | "done";
 export type Speaker = "agent" | "user";
-export type DecisionAction = "clarify" | "probe" | "challenge" | "move_on";
+export type DecisionAction = "clarify" | "probe" | "challenge" | "respond" | "move_on";
 export type MissingDimension =
   "clarity" | "structure" | "specificity" | "ownership" | "outcome" | "none";
-export type ForcedReason = "follow-up-budget" | "soft-time" | "hard-time";
+export type ForcedReason = "follow-up-budget" | "pacing" | "soft-time" | "hard-time";
 
 export type TurnAction = DecisionAction | "interrupt" | "intro";
 
@@ -313,6 +313,10 @@ export interface Turn {
   correct?: boolean;
   /** The question `correct` refers to. */
   gradedQuestionIndex?: number;
+  /** Candidate explicitly ended the interview; informational, not an assessed answer. */
+  endedInterview?: boolean;
+  /** Conversational request (for example, needing a break); informational, not assessed. */
+  assessmentExcluded?: boolean;
 }
 
 /** The model a fundamentals question was testing, shown once it is answered. */
@@ -327,6 +331,10 @@ export interface InterviewConcept {
 export type InterviewQuestionKind = "conversation" | "code" | "mcq";
 /** Which stage of a resume round a question belongs to. */
 export type InterviewStage =
+  | "career"
+  | "current-role"
+  | "project"
+  | "behavioral"
   | "skills"
   | "code"
   | "experience"
@@ -395,6 +403,8 @@ export interface SessionResponse {
   phase: Phase;
   questionIndex: number;
   questionCount: number;
+  /** Optional plan slots intentionally bypassed by server-side pacing. */
+  skippedQuestionIndexes?: number[];
   followUpCount: number;
   startedAt: number;
   setup: InterviewSetup;
@@ -450,6 +460,7 @@ export interface InterviewCompetencyReport {
     strengths: string[];
     gaps: string[];
     rubricScores: Array<{ rubricKey: string; score: number; rationale: string }>;
+    evidenceQuotes?: string[];
     execution: {
       status: string;
       accepted: boolean;

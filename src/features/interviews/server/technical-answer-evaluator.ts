@@ -7,10 +7,16 @@ import type {
   QuestionEvaluation,
   TechnicalVerdict
 } from "./types";
-import { AiService } from "@/server/ai/ai.service";
+import type { AiService } from "@/server/ai/ai.service";
+import type { AiCallTrace } from "@/server/ai/interfaces/system-designer-ai-provider.interface";
+import { INTERVIEW_ENGINE_VERSION, INTERVIEW_EVALUATOR_PROMPT_VERSION } from "./runtime-version";
+import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
 
 const evaluationSchema = z.object({
-  score: z.number().int().min(0).max(100),
+  // Keep the provider boundary tolerant and normalize below. Sparse answers
+  // often make models return one extra gap or a decimal score; neither should
+  // turn a valid judgement into an unavailable evaluation.
+  score: z.number().min(0).max(100),
   verdict: z.enum([
     "correct",
     "mostly-correct",
@@ -19,18 +25,19 @@ const evaluationSchema = z.object({
     "insufficient-evidence"
   ]),
   confidence: z.number().min(0).max(1),
-  summary: z.string().min(1).max(260),
-  strengths: z.array(z.string().min(1).max(140)).max(3),
-  gaps: z.array(z.string().min(1).max(140)).max(3),
+  summary: z.string().min(1).max(600),
+  strengths: z.array(z.string().min(1).max(300)).max(6),
+  gaps: z.array(z.string().min(1).max(300)).max(6),
   rubricScores: z
     .array(
       z.object({
         rubricKey: z.string().trim().min(1).max(120),
-        score: z.number().int().min(0).max(100),
-        rationale: z.string().min(1).max(180)
+        score: z.number().min(0).max(100),
+        rationale: z.string().min(1).max(400)
       })
     )
-    .max(5)
+    .max(12),
+  evidenceQuotes: z.array(z.string().min(1).max(400)).max(4).optional()
 });
 
 type RawTechnicalEvaluation = z.infer<typeof evaluationSchema>;
@@ -42,25 +49,52 @@ export interface TechnicalAnswerEvaluationInput {
   rubric: BlueprintRubricDimension[];
   execution: CodeExecutionEvidence | null;
   evaluatedAt: number;
+  /** Live-turn deadline propagated to the provider; never persisted. */
+  signal?: AbortSignal;
 }
 
 const SYSTEM_INSTRUCTION = `You are a strict senior technical evaluator. Return only JSON matching the schema.
 
 Judge factual and implementation correctness before clarity or confidence. A fluent, well-structured answer that contains a material technical error must score below a correct but less polished answer. Do not reward terminology by itself. Never invent missing evidence or claim code passed tests that were not provided.`;
 
+const RESUME_SYSTEM_INSTRUCTION = `You are a thoughtful, fair interviewer reviewing a resume and behavioural answer. Return only JSON matching the schema.
+
+Judge only what the candidate actually said. Do not reward confidence, length, buzzwords, or numbers without context. Do not invent achievements or personal ownership. Use short, plain English that a candidate can understand. If the answer lacks enough detail, say so clearly instead of guessing.`;
+
 export class TechnicalAnswerEvaluator {
-  constructor(private readonly ai: AiService) {}
+  constructor(private readonly ai: Pick<AiService, "generateStructured">) {}
 
   async evaluate(input: TechnicalAnswerEvaluationInput): Promise<QuestionEvaluation> {
+    const calls: AiCallTrace[] = [];
+    const startedAt = Date.now();
     const raw = await this.ai.generateStructured({
-      operation: "interview.answer.evaluate",
-      systemInstruction: SYSTEM_INSTRUCTION,
-      prompt: buildTechnicalEvaluationPrompt(input),
+      operation: input.setup.resumeRound
+        ? "interview.resume-answer.evaluate"
+        : "interview.answer.evaluate",
+      systemInstruction: input.setup.resumeRound ? RESUME_SYSTEM_INSTRUCTION : SYSTEM_INSTRUCTION,
+      prompt: input.setup.resumeRound
+        ? buildResumeAnswerEvaluationPrompt(input)
+        : buildTechnicalEvaluationPrompt(input),
       schema: evaluationSchema,
       modelClass: "fast",
-      temperature: 0.1
+      temperature: 0.1,
+      // A second Groq attempt used to finish after the live evaluator deadline
+      // and overwrite the question with `evaluation-unavailable`. Fail over to
+      // Gemini after one attempt while there is still latency budget left.
+      maxAttempts: 1,
+      signal: input.signal,
+      onTrace: (trace) => calls.push(trace)
     });
-    return normalizeTechnicalEvaluation(raw, input);
+    return {
+      ...normalizeTechnicalEvaluation(raw, input),
+      runtime: {
+        engineVersion: INTERVIEW_ENGINE_VERSION,
+        promptVersion: INTERVIEW_EVALUATOR_PROMPT_VERSION,
+        durationMs: Date.now() - startedAt,
+        recovered: false,
+        calls
+      }
+    };
   }
 }
 
@@ -70,7 +104,10 @@ export function shouldEvaluateTechnicalAnswer(
 ): boolean {
   if (question.kind === "mcq") return false;
   if (question.topicKey?.startsWith("adaptive-behavioral-")) return false;
-  if (setup.resumeRound) return question.stage === "skills" || question.stage === "code";
+  // Every resume answer is scored from its evidence. This deliberately
+  // replaces the old report-time keyword heuristic for career and behavioural
+  // answers as well as technical resume claims.
+  if (setup.resumeRound) return true;
   if (setup.fundamentalsRound) return question.stage === "explain" || question.stage === "scenario";
   if (setup.templateId === "dsa" || setup.templateTitle === "DSA practice interview") {
     return true;
@@ -78,26 +115,49 @@ export function shouldEvaluateTechnicalAnswer(
   return setup.roundType === "technical" || Boolean(setup.personalizedBlueprint);
 }
 
+/** Clear name for new callers; retained alias keeps existing callers stable. */
+export const shouldEvaluateAnswer = shouldEvaluateTechnicalAnswer;
+
 export function normalizeTechnicalEvaluation(
   raw: RawTechnicalEvaluation,
   input: TechnicalAnswerEvaluationInput
 ): QuestionEvaluation {
-  const semanticScore = verdictBoundedScore(raw.score, raw.verdict);
+  const semanticScore = verdictBoundedScore(Math.round(raw.score), raw.verdict);
   const score = executionBoundedScore(semanticScore, raw.verdict, input.execution);
   const verdict = boundedVerdict(raw.verdict, score);
+  const profile = evaluationProfileForSetup(input.setup);
+  const rawRubricScores = new Map(
+    uniqueBy(raw.rubricScores, (item) => item.rubricKey.trim().toLowerCase()).map((item) => [
+      item.rubricKey.trim().toLowerCase(),
+      item
+    ])
+  );
 
   return {
     source: "semantic-evaluator",
     score,
     verdict,
     confidence: Math.round(raw.confidence * 1_000) / 1_000,
-    summary: raw.summary.trim(),
-    strengths: unique(raw.strengths),
-    gaps: unique(raw.gaps),
-    rubricScores: uniqueBy(raw.rubricScores, (item) => item.rubricKey).map((item) => ({
-      ...item,
-      rationale: item.rationale.trim()
-    })),
+    summary: truncate(raw.summary, 260),
+    strengths: unique(raw.strengths)
+      .slice(0, 3)
+      .map((value) => truncate(value, 140)),
+    gaps: unique(raw.gaps)
+      .slice(0, 3)
+      .map((value) => truncate(value, 140)),
+    rubricScores: profile.parameters.map((parameter) => {
+      const item = rawRubricScores.get(parameter.key);
+      return {
+        rubricKey: parameter.key,
+        score: Math.round(item?.score ?? score),
+        rationale: truncate(
+          item?.rationale ??
+            `The provider did not separate this parameter from the overall answer.`,
+          180
+        )
+      };
+    }),
+    evidenceQuotes: groundedEvidenceQuotes(raw.evidenceQuotes ?? [], input.answers),
     answerExcerpts: input.answers
       .map((answer) => answer.replace(/\s+/g, " ").trim().slice(0, 240))
       .filter(Boolean)
@@ -107,8 +167,80 @@ export function normalizeTechnicalEvaluation(
   };
 }
 
+function groundedEvidenceQuotes(quotes: string[], answers: string[]): string[] {
+  const evidence = answers.join(" ").replace(/\s+/g, " ").trim().toLowerCase();
+  return unique(quotes)
+    .filter((quote) => evidence.includes(quote.replace(/\s+/g, " ").trim().toLowerCase()))
+    .slice(0, 2)
+    .map((quote) => truncate(quote, 220));
+}
+
+function truncate(value: string, limit: number): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (normalized.length <= limit) return normalized;
+  const prefix = normalized.slice(0, limit - 1);
+  const lastSpace = prefix.lastIndexOf(" ");
+  return `${prefix.slice(0, lastSpace > limit / 2 ? lastSpace : prefix.length).trimEnd()}…`;
+}
+
+/**
+ * Resume answers are judged like an interviewer would take notes: based on
+ * personal ownership, judgement, useful detail, and what happened afterwards.
+ * The model receives the immutable answer saved for the question, never a
+ * summary generated for the report.
+ */
+export function buildResumeAnswerEvaluationPrompt(input: TechnicalAnswerEvaluationInput): string {
+  const { setup, question, answers } = input;
+  const profile = evaluationProfileForSetup(setup);
+
+  return `Review this resume or behavioural interview answer fairly.
+
+Target role: ${setup.role}
+Candidate level: ${setup.level}
+Interview type: ${setup.roundType === "hiring-manager" ? "Hiring manager and final behavioural" : "Resume and behavioural"}
+Interview section: ${resumeSectionName(question.stage)}
+Question: ${question.text}
+Resume claim or topic: ${question.evidenceAnchor ?? question.competency ?? "Not specified"}
+What this question was trying to learn: ${question.intent ?? "The candidate's real experience and judgement."}
+Useful details to listen for:
+${question.mustHit.map((item) => `- ${item}`).join("\n")}
+
+Candidate's saved answer${answers.length > 1 ? "s" : ""}:
+${answers.map((answer, index) => `Answer ${index + 1}:\n"""\n${answer.trim()}\n"""`).join("\n\n")}
+
+This ${profile.label} session uses these six judgement parameters. Score every one from 0 to 100 using only supported evidence:
+${formatEvaluationParameters(profile.parameters)}
+
+Overall score guide:
+- 85-100: clear, concrete, personal answer with strong evidence across the answer.
+- 70-84: good answer with one meaningful missing detail.
+- 45-69: some useful information, but important parts are vague or missing.
+- 0-44: too vague, generic, off-topic, or unsupported to assess.
+
+Return rubricScores with exactly these keys: ${profile.parameters.map((parameter) => parameter.key).join(", ")}.
+For evidenceQuotes, copy up to two short exact phrases from the candidate's answer that support your judgement. If there is no useful quote, return an empty list.
+Keep summary, strengths, gaps, and rationales short, specific, and human. Never say the candidate is good or bad as a person.`;
+}
+
+function resumeSectionName(stage: PlannedQuestion["stage"]): string {
+  const labels: Record<NonNullable<PlannedQuestion["stage"]>, string> = {
+    career: "Career story",
+    "current-role": "Current role",
+    project: "Project deep-dive",
+    behavioral: "Behavioural evidence",
+    experience: "Resume claim",
+    skills: "Technical skill",
+    code: "Coding exercise",
+    rapid: "Quick check",
+    explain: "Concept explanation",
+    scenario: "Real-world scenario"
+  };
+  return labels[stage ?? "experience"];
+}
+
 export function buildTechnicalEvaluationPrompt(input: TechnicalAnswerEvaluationInput): string {
   const { setup, question, answers, rubric, execution } = input;
+  const profile = evaluationProfileForSetup(setup);
   const executionEvidence = execution
     ? [
         `Status: ${execution.status}`,
@@ -140,8 +272,11 @@ ${question.mustHit.map((item) => `- ${item}`).join("\n")}
 
 ${storyPracticeGuide ? `Authoritative expected mechanism and evidence (server-only):\n${storyPracticeGuide.expectedAnswer}` : ""}
 
-Rubric:
+Question-specific rubric (use it as supporting evidence inside the session parameters below):
 ${formatRubric(rubric)}
+
+This ${profile.label} session uses these six judgement parameters:
+${formatEvaluationParameters(profile.parameters)}
 
 ${question.kind === "code" ? `Code task: ${question.codeTask || question.text}\nLanguage: ${question.language || "not specified"}\nStarter code: ${question.codeSnippet || "none"}` : ""}
 
@@ -161,7 +296,14 @@ Scoring rules:
 - Compilation or execution without tests is not proof of correctness.
 - Failed supplied tests or compilation must be reflected in the score and gaps.
 
-Return one overall score plus rubric-specific scores. The summary and gaps must identify concrete technical evidence, not writing style.`;
+Return one overall score plus rubricScores with exactly these keys: ${profile.parameters.map((parameter) => parameter.key).join(", ")}.
+Use up to two short evidenceQuotes copied exactly from the candidate's answer. The summary and gaps must identify concrete evidence, not writing style.`;
+}
+
+function formatEvaluationParameters(
+  parameters: ReturnType<typeof evaluationProfileForSetup>["parameters"]
+): string {
+  return parameters.map((parameter) => `- ${parameter.key}: ${parameter.description}`).join("\n");
 }
 
 function formatRubric(rubric: BlueprintRubricDimension[]): string {

@@ -7,17 +7,19 @@ import {
   Download,
   ListChecks,
   MessageSquareText,
-  Timer,
   UserRoundCheck,
   Volume2,
   VolumeX
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import type { ReportPdfBriefing } from "@/features/reports/application/report-pdf";
-import type { ReportsOverview } from "@/features/reports/contracts/reports";
-import { formatDuration, formatShortDate, roundShortLabel } from "@/lib/shared/labels";
+import type { ReportFamilySummary, ReportsOverview } from "@/features/reports/contracts/reports";
+import { formatShortDate, roundShortLabel } from "@/lib/shared/labels";
 import type { InterviewReport } from "@/lib/shared/types";
+import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
+import { parameterScoresForReport } from "@/features/reports/application/reports-overview";
 import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { ReportEmptyStage } from "./report-briefing-stage";
@@ -29,10 +31,10 @@ type Candidate = {
 };
 
 type Signal = {
-  id: "clarity" | "structure" | "ownership" | "impact";
+  id: string;
   label: string;
   score: number;
-  icon: typeof MessageSquareText;
+  icon: LucideIcon;
   observation: string;
   evidence: string;
   nextMove: string;
@@ -51,7 +53,6 @@ export function InterviewReportDashboard({
   candidate: Candidate;
   quota: { used: number; limit: number };
 }) {
-  const teacher = useWorkspaceTeacher();
   const router = useRouter();
   const ownerReconciled = useRef(false);
 
@@ -76,9 +77,24 @@ export function InterviewReportDashboard({
     );
   }
 
+  return <InterviewReportContent report={report} overview={overview} candidate={candidate} />;
+}
+
+function InterviewReportContent({
+  report,
+  overview,
+  candidate
+}: {
+  report: InterviewReport;
+  overview: ReportsOverview;
+  candidate: Candidate;
+}) {
+  const teacher = useWorkspaceTeacher();
+
   const briefing = buildPdfBriefing(report, overview, candidate);
   const signals = buildSignals(report);
   const feedback = groupSignals(signals);
+  const evaluationProfile = evaluationProfileForSetup(report.setup);
   const strongest = report.summary.strongest ?? "Your interview signal";
   const gap = report.summary.recommendedFocus ?? "Answer endings";
   const mayaMessage = mayaSummary(report, candidate.name, strongest, gap);
@@ -179,7 +195,6 @@ export function InterviewReportDashboard({
               value={roundShortLabel(report.setup.roundType)}
             />
             <Meta icon={CalendarDays} label="Date" value={formatShortDate(report.startedAt)} />
-            <Meta icon={Timer} label="Duration" value={formatDuration(report.durationMs)} />
             <Meta
               icon={ArrowUpRight}
               label="Difficulty"
@@ -189,11 +204,18 @@ export function InterviewReportDashboard({
         </div>
       </header>
 
+      <FamilyPerformance families={overview.families} latestFamily={evaluationProfile.family} />
+
       <article
         className="report-latest-strip mx-auto w-full max-w-4xl"
         style={{ "--report-delay": "420ms" } as CSSProperties}
       >
-        <ReportQuickRead report={report} strongest={strongest} gap={gap} />
+        <ReportQuickRead
+          report={report}
+          profileLabel={evaluationProfile.label}
+          strongest={strongest}
+          gap={gap}
+        />
         <FeedbackSection
           title="What needs work"
           description="These are the parts of your answer that need a little more evidence."
@@ -224,19 +246,125 @@ export function InterviewReportDashboard({
   );
 }
 
+function FamilyPerformance({
+  families,
+  latestFamily
+}: {
+  families: ReportFamilySummary[];
+  latestFamily: ReportFamilySummary["family"];
+}) {
+  if (!families.length) return null;
+  const hasDerivedScores = families.some((family) =>
+    family.parameters.some((parameter) => parameter.rounds > parameter.evaluatedRounds)
+  );
+
+  return (
+    <section className="mb-10" aria-labelledby="interview-family-performance">
+      <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+            Overall performance
+          </p>
+          <h2
+            id="interview-family-performance"
+            className="mt-2 text-2xl font-semibold tracking-tight text-cream"
+          >
+            One scorecard for each interview family
+          </h2>
+        </div>
+        <p className="max-w-xl text-sm leading-6 text-cream/48 sm:text-right">
+          Each family uses six parameters designed for the judgement that round requires.
+        </p>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {families.map((family) => {
+          const isLatest = family.family === latestFamily;
+          return (
+            <article
+              key={family.family}
+              className={`report-glass-card rounded-2xl p-5 ${
+                isLatest ? "ring-1 ring-[var(--workspace-accent)]" : ""
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold leading-5 text-cream">{family.label}</p>
+                  <p className="mt-1 text-xs text-cream/42">
+                    {family.rounds
+                      ? `${family.rounds} scored ${family.rounds === 1 ? "interview" : "interviews"}`
+                      : "No scored interview yet"}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-3xl font-semibold tabular-nums text-cream">
+                    {family.averageScore ?? "—"}
+                  </span>
+                  {family.averageScore !== null ? (
+                    <span className="ml-1 text-xs text-cream/42">/100</span>
+                  ) : null}
+                  {isLatest ? (
+                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--workspace-accent)]">
+                      Latest report
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {family.parameters.map((parameter) => (
+                  <div key={parameter.key}>
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <span className="truncate text-cream/58">{parameter.label}</span>
+                      <span className="shrink-0 font-semibold tabular-nums text-cream/76">
+                        {parameter.averageScore ?? "—"}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
+                      <span
+                        className="block h-full rounded-full bg-[var(--workspace-accent)]"
+                        style={{ width: `${parameter.averageScore ?? 0}%` }}
+                        role="img"
+                        aria-label={`${parameter.label}: ${parameter.averageScore ?? "not scored"}${
+                          parameter.averageScore === null ? "" : " out of 100"
+                        }`}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {hasDerivedScores ? (
+        <p className="mt-3 text-xs leading-5 text-cream/38">
+          Some older interviews predate round-specific parameters; their family bars are derived
+          from saved question evidence until you complete a new interview in that family.
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 function ReportQuickRead({
   report,
+  profileLabel,
   strongest,
   gap
 }: {
   report: InterviewReport;
+  profileLabel: string;
   strongest: string;
   gap: string;
 }) {
   return (
     <section className="mb-6 grid gap-3 sm:grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)]">
       <div className="report-glass-card rounded-2xl px-5 py-4">
-        <p className="text-xs font-medium uppercase tracking-[0.13em] text-cream/42">Round score</p>
+        <p className="text-xs font-medium uppercase tracking-[0.13em] text-cream/42">
+          {profileLabel} score
+        </p>
         <div className="mt-3 flex items-end gap-2">
           <span className="text-4xl font-semibold leading-none tracking-tight text-cream">
             {report.summary.evidenceScore}
@@ -362,7 +490,7 @@ function SignalNote({
   );
 }
 
-function Meta({ icon: Icon, label, value }: { icon: typeof Timer; label: string; value: string }) {
+function Meta({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
     <span className="inline-flex items-center gap-2">
       <Icon size={16} className="text-[var(--workspace-accent)]" aria-hidden="true" />
@@ -375,64 +503,37 @@ function Meta({ icon: Icon, label, value }: { icon: typeof Timer; label: string;
 }
 
 function buildSignals(report: InterviewReport): Signal[] {
-  const answered = report.competencies.filter((item) => item.answered);
-  const average = (pick: (item: (typeof answered)[number]) => number) =>
-    answered.length
-      ? Math.round(answered.reduce((total, item) => total + pick(item), 0) / answered.length)
-      : 0;
-  const specificity = average((item) => item.evidenceBreakdown?.specificity ?? item.evidenceScore);
-  const clarity = Math.max(0, specificity - report.interaction.clarifications * 4);
-
-  return [
-    signal("clarity", "Clarity", clarity, MessageSquareText, report),
-    signal(
-      "structure",
-      "Structure",
-      average((item) => item.evidenceBreakdown?.decision ?? item.evidenceScore),
-      ListChecks,
-      report
-    ),
-    signal(
-      "ownership",
-      "Ownership",
-      average((item) => item.evidenceBreakdown?.ownership ?? item.evidenceScore),
-      UserRoundCheck,
-      report
-    ),
-    signal(
-      "impact",
-      "Impact",
-      average((item) => item.evidenceBreakdown?.outcome ?? item.evidenceScore),
-      CheckCircle2,
-      report
-    )
+  const icons: LucideIcon[] = [
+    ListChecks,
+    MessageSquareText,
+    CheckCircle2,
+    ListChecks,
+    UserRoundCheck,
+    MessageSquareText
   ];
-}
 
-function signal(
-  id: Signal["id"],
-  label: Signal["label"],
-  score: number,
-  icon: Signal["icon"],
-  report: InterviewReport
-): Signal {
-  const competency = findSignalCompetency(report, id);
-  const observation =
-    score >= 75
-      ? `Your ${label.toLowerCase()} came through clearly.`
-      : score >= 45
-        ? `Your ${label.toLowerCase()} is taking shape.`
-        : `Your ${label.toLowerCase()} needs a clearer signal.`;
+  return parameterScoresForReport(report).map((parameter, index) => {
+    const rationale = report.competencies
+      .filter((competency) => competency.answered)
+      .flatMap((competency) => competency.technicalEvaluation?.rubricScores ?? [])
+      .find((score) => score.rubricKey === parameter.key)?.rationale;
+    const observation =
+      parameter.score >= 75
+        ? `Your ${parameter.label.toLowerCase()} came through clearly.`
+        : parameter.score >= 45
+          ? `Your ${parameter.label.toLowerCase()} is taking shape.`
+          : `Your ${parameter.label.toLowerCase()} needs a clearer signal.`;
 
-  return {
-    id,
-    label,
-    score,
-    icon,
-    observation,
-    evidence: competency?.signals[0] ?? positiveSignalDetail(id),
-    nextMove: competency?.nextStep ?? signalNextMove(id)
-  };
+    return {
+      id: parameter.key,
+      label: parameter.label,
+      score: parameter.score,
+      icon: icons[index] ?? MessageSquareText,
+      observation,
+      evidence: rationale ?? parameter.description,
+      nextMove: parameter.nextStep
+    };
+  });
 }
 
 function groupSignals(signals: Signal[]) {
@@ -447,43 +548,6 @@ function groupSignals(signals: Signal[]) {
   };
 }
 
-function findSignalCompetency(report: InterviewReport, signalId: Signal["id"]) {
-  const keywords: Record<Signal["id"], string[]> = {
-    clarity: ["clarity", "communication", "explain"],
-    structure: ["structure", "decision", "approach"],
-    ownership: ["ownership", "leadership", "responsibility"],
-    impact: ["impact", "outcome", "result"]
-  };
-
-  return report.competencies.find((competency) =>
-    keywords[signalId].some((keyword) => competency.label.toLowerCase().includes(keyword))
-  );
-}
-
-function signalNextMove(signalId: Signal["id"]) {
-  const nextMoves: Record<Signal["id"], string> = {
-    clarity:
-      "Lead with the point, then support it with one concrete detail so your interviewer never has to ask what you mean.",
-    structure:
-      "Use a simple context → decision → result flow to make the path through your answer easy to follow.",
-    ownership:
-      "Name the part you personally owned, the choice you made, and why that choice mattered.",
-    impact:
-      "Close each answer with the outcome, a metric, or the learning that changed what happened next."
-  };
-  return nextMoves[signalId];
-}
-
-function positiveSignalDetail(signalId: Signal["id"]) {
-  const details: Record<Signal["id"], string> = {
-    clarity: "Your main point was easy to follow without extra explanation.",
-    structure: "The path from context to decision was clear enough to stay with.",
-    ownership: "You made your contribution and decision-making easy to understand.",
-    impact: "You connected your work to a clear outcome."
-  };
-  return details[signalId];
-}
-
 function summaryFor(report: InterviewReport, strongest: string, gap: string) {
   return `Your strongest signal was ${strongest}. For the next round, focus on ${gap.toLowerCase()} and make every answer land with a concrete result.`;
 }
@@ -496,16 +560,17 @@ function mayaSummary(
 ) {
   const firstName = candidateName.split(/\s+/)[0] || "there";
   const nextStep = report.summary.nextStep || `focus on ${gap.toLowerCase()}`;
+  const profile = evaluationProfileForSetup(report.setup);
 
   if (report.summary.evidenceScore >= 75) {
-    return `Well done, ${firstName}. Your ${strongest.toLowerCase()} really came through. Keep that same clarity in your next round.`;
+    return `James reported back to me, ${firstName}. In your ${profile.label} interview, your ${strongest.toLowerCase()} really came through. You are building a strong signal—keep that same clarity in your next round.`;
   }
 
   if (report.summary.evidenceScore >= 45) {
-    return `Nice work, ${firstName}. Your ${strongest.toLowerCase()} is starting to show. Next time, ${lowercaseFirst(nextStep)}`;
+    return `James reported back to me, ${firstName}. I reviewed your ${profile.label} parameters, and your ${strongest.toLowerCase()} is starting to show. Next time, ${lowercaseFirst(nextStep)} Keep going—you are making real progress.`;
   }
 
-  return `Next time, ${firstName}, start with ${gap.toLowerCase()}. ${uppercaseFirst(nextStep)} You are building the right foundation.`;
+  return `James reported back to me, ${firstName}. This ${profile.label} attempt gives us a useful starting point. Begin with ${gap.toLowerCase()}. ${uppercaseFirst(nextStep)} Do not be discouraged—this is exactly what practice is for.`;
 }
 
 function strongestMessage(report: InterviewReport) {
@@ -551,9 +616,13 @@ function buildPdfBriefing(
           `${roundShortLabel(round.roundType)} · ${round.evidenceScore ?? 0}/100 · ${formatShortDate(round.startedAt)}`
       ),
     readinessScore: overview.readinessScore,
-    competencyBars: overview.competencies
-      .slice(0, 4)
-      .map((item) => ({ label: item.label, score: item.averageScore, level: item.level })),
+    competencyBars: parameterScoresForReport(report)
+      .slice(0, 6)
+      .map((item) => ({
+        label: item.label,
+        score: item.score,
+        level: item.score >= 75 ? "strong" : item.score >= 45 ? "developing" : "missing"
+      })),
     candidateName: candidate.name,
     candidateDiscipline: candidate.discipline
   };

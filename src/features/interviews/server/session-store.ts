@@ -9,6 +9,7 @@ import {
 } from "./report";
 import { SESSION_TTL_MS } from "./session-constants";
 import type { InterviewAnswerResponse, InterviewState } from "./types";
+import type { EvaluationRecoveryMutation } from "./evaluation-recovery";
 
 const ANSWER_LEASE_MS = 20_000;
 const ANSWER_PROCESSING = "PROCESSING";
@@ -47,7 +48,11 @@ export interface SessionStore {
   listReportsByOwner(ownerId: string, limit: number, now?: number): Promise<InterviewReport[]>;
   /** Moves sessions proven by a signed anonymous-browser identity to its account. */
   reassignOwner(fromOwnerId: string, toOwnerId: string): Promise<number>;
-  save(state: InterviewState, expectedVersion: number): Promise<number>;
+  save(
+    state: InterviewState,
+    expectedVersion: number,
+    evaluationRecovery?: EvaluationRecoveryMutation
+  ): Promise<number>;
   beginAnswer(
     sessionId: string,
     turnId: string,
@@ -59,7 +64,8 @@ export interface SessionStore {
     state: InterviewState,
     expectedVersion: number,
     turnId: string,
-    response: InterviewAnswerResponse
+    response: InterviewAnswerResponse,
+    evaluationRecovery?: EvaluationRecoveryMutation
   ): Promise<number>;
   failAnswer(sessionId: string, turnId: string): Promise<void>;
   conflictAnswer(sessionId: string, turnId: string): Promise<void>;
@@ -98,6 +104,7 @@ export class MemorySessionStore implements SessionStore {
   private readonly sessions = new Map<string, StoredSession>();
   private readonly durableSessions = new Map<string, StoredSession>();
   private readonly answerRequests = new Map<string, MemoryAnswerRequest>();
+  private readonly evaluationRecoveries = new Map<string, EvaluationRecoveryMutation>();
   /** Start times per owner, kept beyond session lifetime for the daily cap. */
   private readonly startsByOwner = new Map<string, number[]>();
 
@@ -151,10 +158,7 @@ export class MemorySessionStore implements SessionStore {
     return storedView(stored);
   }
 
-  async reactivateOwned(
-    id: string,
-    ownerId: string
-  ): Promise<VersionedInterviewSession | null> {
+  async reactivateOwned(id: string, ownerId: string): Promise<VersionedInterviewSession | null> {
     const stored = this.durableSessions.get(id);
     if (!stored || stored.ownerId !== ownerId) return null;
 
@@ -198,7 +202,11 @@ export class MemorySessionStore implements SessionStore {
     return moved;
   }
 
-  async save(state: InterviewState, expectedVersion: number): Promise<number> {
+  async save(
+    state: InterviewState,
+    expectedVersion: number,
+    evaluationRecovery?: EvaluationRecoveryMutation
+  ): Promise<number> {
     const stored = this.durableSessions.get(state.id);
     if (!stored || stored.version !== expectedVersion) {
       throw new SessionVersionConflictError(state.id);
@@ -209,6 +217,7 @@ export class MemorySessionStore implements SessionStore {
     if (this.sessions.has(state.id)) {
       this.sessions.set(state.id, updated);
     }
+    this.recordEvaluationRecovery(state.id, evaluationRecovery);
     return version;
   }
 
@@ -257,14 +266,15 @@ export class MemorySessionStore implements SessionStore {
     state: InterviewState,
     expectedVersion: number,
     turnId: string,
-    response: InterviewAnswerResponse
+    response: InterviewAnswerResponse,
+    evaluationRecovery?: EvaluationRecoveryMutation
   ): Promise<number> {
     const key = answerRequestKey(state.id, turnId);
     const request = this.answerRequests.get(key);
     if (!request || request.status !== ANSWER_PROCESSING) {
       throw new Error("Interview answer request is not processing");
     }
-    const version = await this.save(state, expectedVersion);
+    const version = await this.save(state, expectedVersion, evaluationRecovery);
     this.answerRequests.set(key, {
       ...request,
       status: ANSWER_COMPLETED,
@@ -312,6 +322,21 @@ export class MemorySessionStore implements SessionStore {
     if (request?.status === ANSWER_PROCESSING) {
       this.answerRequests.set(key, { ...request, status, leaseUntil: Date.now() });
     }
+  }
+
+  /** Test seam for proving failed live evaluations are durably scheduled. */
+  evaluationRecoveryCount(): number {
+    return this.evaluationRecoveries.size;
+  }
+
+  private recordEvaluationRecovery(
+    sessionId: string,
+    mutation: EvaluationRecoveryMutation | undefined
+  ): void {
+    if (!mutation) return;
+    const key = `${sessionId}:${mutation.action === "enqueue" ? mutation.payload.questionIndex : mutation.questionIndex}`;
+    if (mutation.action === "resolve") this.evaluationRecoveries.delete(key);
+    else this.evaluationRecoveries.set(key, mutation);
   }
 }
 
@@ -381,10 +406,7 @@ export class PrismaSessionStore implements SessionStore {
     };
   }
 
-  async reactivateOwned(
-    id: string,
-    ownerId: string
-  ): Promise<VersionedInterviewSession | null> {
+  async reactivateOwned(id: string, ownerId: string): Promise<VersionedInterviewSession | null> {
     const reactivatedAt = new Date();
     const result = await this.prisma.interviewSession.updateMany({
       where: { id, ownerId },
@@ -472,23 +494,30 @@ export class PrismaSessionStore implements SessionStore {
     return result.count;
   }
 
-  async save(state: InterviewState, expectedVersion: number): Promise<number> {
+  async save(
+    state: InterviewState,
+    expectedVersion: number,
+    evaluationRecovery?: EvaluationRecoveryMutation
+  ): Promise<number> {
     const touchedAt = new Date();
-    const result = await this.prisma.interviewSession.updateMany({
-      where: { id: state.id, version: expectedVersion },
-      data: {
-        state: toJson(state),
-        reportSnapshot: toJsonValue(
-          createInterviewReportSnapshot(
-            { state, touchedAt: touchedAt.getTime() },
-            touchedAt.getTime()
-          )
-        ),
-        touchedAt,
-        version: { increment: 1 }
-      }
+    await this.prisma.$transaction(async (transaction) => {
+      const result = await transaction.interviewSession.updateMany({
+        where: { id: state.id, version: expectedVersion },
+        data: {
+          state: toJson(state),
+          reportSnapshot: toJsonValue(
+            createInterviewReportSnapshot(
+              { state, touchedAt: touchedAt.getTime() },
+              touchedAt.getTime()
+            )
+          ),
+          touchedAt,
+          version: { increment: 1 }
+        }
+      });
+      if (result.count !== 1) throw new SessionVersionConflictError(state.id);
+      await applyEvaluationRecoveryMutation(transaction, state.id, evaluationRecovery);
     });
-    if (result.count !== 1) throw new SessionVersionConflictError(state.id);
     return expectedVersion + 1;
   }
 
@@ -548,7 +577,8 @@ export class PrismaSessionStore implements SessionStore {
     state: InterviewState,
     expectedVersion: number,
     turnId: string,
-    response: InterviewAnswerResponse
+    response: InterviewAnswerResponse,
+    evaluationRecovery?: EvaluationRecoveryMutation
   ): Promise<number> {
     const touchedAt = new Date();
     await this.prisma.$transaction(async (transaction) => {
@@ -577,6 +607,7 @@ export class PrismaSessionStore implements SessionStore {
         }
       });
       if (completed.count !== 1) throw new Error("Interview answer request is not processing");
+      await applyEvaluationRecoveryMutation(transaction, state.id, evaluationRecovery);
     });
     return expectedVersion + 1;
   }
@@ -608,6 +639,60 @@ export class PrismaSessionStore implements SessionStore {
       data: { status, leaseUntil: new Date() }
     });
   }
+}
+
+async function applyEvaluationRecoveryMutation(
+  transaction: Prisma.TransactionClient,
+  sessionId: string,
+  mutation: EvaluationRecoveryMutation | undefined
+): Promise<void> {
+  if (!mutation) return;
+  const questionIndex =
+    mutation.action === "enqueue" ? mutation.payload.questionIndex : mutation.questionIndex;
+
+  if (mutation.action === "resolve") {
+    await transaction.interviewEvaluationJob.updateMany({
+      where: { sessionId, questionIndex, status: { in: ["PENDING", "PROCESSING"] } },
+      data: { status: "SUPERSEDED", leaseUntil: null, completedAt: new Date() }
+    });
+    return;
+  }
+
+  await transaction.interviewEvaluationJob.updateMany({
+    where: {
+      sessionId,
+      questionIndex,
+      answerHash: { not: mutation.payload.answerHash },
+      status: { in: ["PENDING", "PROCESSING"] }
+    },
+    data: { status: "SUPERSEDED", leaseUntil: null, completedAt: new Date() }
+  });
+  await transaction.interviewEvaluationJob.upsert({
+    where: {
+      sessionId_questionIndex_answerHash: {
+        sessionId,
+        questionIndex,
+        answerHash: mutation.payload.answerHash
+      }
+    },
+    create: {
+      sessionId,
+      questionIndex,
+      answerHash: mutation.payload.answerHash,
+      payload: toJsonValue(mutation.payload),
+      status: "PENDING",
+      availableAt: new Date()
+    },
+    update: {
+      payload: toJsonValue(mutation.payload),
+      status: "PENDING",
+      attempts: 0,
+      availableAt: new Date(),
+      leaseUntil: null,
+      lastError: null,
+      completedAt: null
+    }
+  });
 }
 
 function toJson(state: InterviewState): Prisma.InputJsonValue {

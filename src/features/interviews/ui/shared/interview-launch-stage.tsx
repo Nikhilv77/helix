@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { Loader2, Volume2, VolumeX } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
@@ -14,12 +14,12 @@ export interface InterviewLaunchCopy {
   headline: string;
   body: string;
   /** What Maya says out loud. Defaults to the body copy. */
-  script?: string;
+  script?: string | string[];
 }
 
 /**
  * The screen that stands between a workspace card and a live interview room:
- * Maya introduces the round out loud while the session is created in the
+ * The candidate's selected workspace coach introduces the round out loud while the session is created in the
  * background, then the browser is sent straight into the room.
  *
  * `ready` decides whether that start actually happens, so the same screen also
@@ -30,21 +30,70 @@ export function InterviewLaunchStage({
   startPath,
   copy,
   workspaceAccent,
-  startingLabel = "Maya is preparing your round…"
+  startingLabel,
+  waitForVoiceBeforeNavigate = false,
+  briefingPlaybackRate,
+  navigateToInterview
 }: {
   ready: boolean;
   startPath: string;
   copy: InterviewLaunchCopy;
   workspaceAccent: WorkspaceAccent;
   startingLabel?: string;
+  /** Use the spoken handoff as the gate before entering a live room. */
+  waitForVoiceBeforeNavigate?: boolean;
+  briefingPlaybackRate?: number;
+  /** Test seam; production navigation uses a hard replace into the live room. */
+  navigateToInterview?: (sessionId: string) => void;
 }) {
   const teacher = useWorkspaceTeacher();
   const [error, setError] = useState<string | null>(null);
   const [startAttempt, setStartAttempt] = useState(0);
   const [starting, setStarting] = useState(false);
+  const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
+  const briefingStartedRef = useRef(false);
+  const navigatingRef = useRef(false);
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const { state, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
-  const script = copy.script ?? copy.body;
+  const scriptLines = useMemo(
+    () => (Array.isArray(copy.script) ? copy.script : [copy.script ?? copy.body]),
+    [copy.body, copy.script]
+  );
+  const script = scriptLines.join(" ");
+  const continueToInterview = useCallback(() => {
+    if (!pendingSessionId || navigatingRef.current) return;
+    navigatingRef.current = true;
+    if (navigateToInterview) {
+      navigateToInterview(pendingSessionId);
+    } else {
+      window.location.replace(`/interview/voice?session=${pendingSessionId}`);
+    }
+  }, [navigateToInterview, pendingSessionId]);
+  const playBriefing = useCallback(
+    (lineIndex: number) => {
+      const line = scriptLines[lineIndex];
+      if (!line) {
+        continueToInterview();
+        return;
+      }
+      void speak(line, undefined, {
+        playbackRate: briefingPlaybackRate,
+        onEnded: () => {
+          const next = lineIndex + 1;
+          if (next < scriptLines.length) {
+            playBriefing(next);
+          } else {
+            continueToInterview();
+          }
+        },
+        onError: continueToInterview
+      }).then((result) => {
+        if (result === "unavailable") continueToInterview();
+        if (result === "blocked") briefingStartedRef.current = false;
+      });
+    },
+    [briefingPlaybackRate, continueToInterview, scriptLines, speak]
+  );
 
   useEffect(() => {
     if (!ready || error || !isLoaded || !isSignedIn) return;
@@ -77,8 +126,12 @@ export function InterviewLaunchStage({
           );
         }
 
-        if (!cancelled) {
-          window.location.assign(`/interview/voice?session=${payload.data.sessionId}`);
+        if (cancelled) return;
+        if (waitForVoiceBeforeNavigate) {
+          setPendingSessionId(payload.data.sessionId);
+          setStarting(false);
+        } else {
+          window.location.replace(`/interview/voice?session=${payload.data.sessionId}`);
         }
       } catch (caught) {
         if (!cancelled) {
@@ -101,16 +154,30 @@ export function InterviewLaunchStage({
       controller.abort();
       window.clearTimeout(timeout);
     };
-  }, [error, getToken, isLoaded, isSignedIn, ready, startAttempt, startPath, teacher.name]);
+  }, [
+    error,
+    getToken,
+    isLoaded,
+    isSignedIn,
+    ready,
+    startAttempt,
+    startPath,
+    teacher.name,
+    waitForVoiceBeforeNavigate
+  ]);
 
   useEffect(() => {
-    if (awaitingGesture) return;
-    const timer = window.setTimeout(() => void speak(script), 120);
+    if (waitForVoiceBeforeNavigate && !pendingSessionId) return;
+    if (awaitingGesture || briefingStartedRef.current) return;
+    const timer = window.setTimeout(() => {
+      briefingStartedRef.current = true;
+      playBriefing(0);
+    }, 0);
     return () => {
       window.clearTimeout(timer);
       stop();
     };
-  }, [awaitingGesture, script, speak, stop]);
+  }, [awaitingGesture, pendingSessionId, playBriefing, script, stop, waitForVoiceBeforeNavigate]);
 
   useEffect(() => {
     if (!awaitingGesture) return;
@@ -126,11 +193,13 @@ export function InterviewLaunchStage({
   function toggleMayaVoice() {
     if (state === "speaking" || state === "loading") {
       stop();
+      if (pendingSessionId) continueToInterview();
       return;
     }
 
     setAwaitingGesture(false);
-    void speak(script);
+    briefingStartedRef.current = true;
+    playBriefing(0);
   }
 
   return (
@@ -178,7 +247,7 @@ export function InterviewLaunchStage({
                 className="animate-spin text-[var(--workspace-accent)]"
                 aria-hidden="true"
               />
-              {startingLabel.replaceAll("Maya", teacher.name)}
+              {startingLabel ?? `${teacher.name} is preparing your round…`}
             </p>
           ) : null}
 
@@ -217,14 +286,28 @@ export function InterviewLaunchStage({
               ) : (
                 <Volume2 size={16} className="text-[var(--workspace-accent)]" aria-hidden="true" />
               )}
-              {state === "loading"
-                ? `Starting ${teacher.name}`
-                : state === "speaking"
-                  ? `Stop ${teacher.name}`
-                  : state === "unavailable"
-                    ? "Voice unavailable"
-                    : `Hear ${teacher.name}`}
+              {pendingSessionId && (state === "loading" || state === "speaking")
+                ? "Skip intro"
+                : state === "loading"
+                  ? `Starting ${teacher.name}`
+                  : state === "speaking"
+                    ? `Stop ${teacher.name}`
+                    : state === "unavailable"
+                      ? "Voice unavailable"
+                      : `Hear ${teacher.name}`}
             </button>
+            {pendingSessionId ? (
+              <button
+                type="button"
+                onClick={() => {
+                  stop();
+                  continueToInterview();
+                }}
+                className="rounded-full bg-cream px-5 py-2.5 text-sm font-semibold text-[#101113] transition hover:bg-cream-soft"
+              >
+                Continue to interview
+              </button>
+            ) : null}
             {awaitingGesture ? (
               <span className="text-xs text-cream/42">Tap to hear {teacher.name}</span>
             ) : null}
