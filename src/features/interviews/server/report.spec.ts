@@ -217,6 +217,50 @@ describe("interview report", () => {
     expect(report.codeExercise?.correctnessScore).toBe(18);
   });
 
+  it("calculates the headline from the six visible round parameters", () => {
+    const rubricScores = [10, 20, 30, 40, 50, 60].map((score, index) => ({
+      rubricKey: [
+        "motivation-fit",
+        "judgement",
+        "collaboration",
+        "accountability",
+        "self-awareness",
+        "communication"
+      ][index]!,
+      score,
+      rationale: "Grounded parameter evidence."
+    }));
+    const hiringManagerState: InterviewState = {
+      ...state,
+      setup: { ...state.setup, roundType: "hiring-manager", resumeRound: true },
+      plan: [state.plan[0]!],
+      questionIndex: 1,
+      turns: state.turns.filter((turn) => turn.questionIndex === 0),
+      questionEvaluations: {
+        "0": {
+          source: "semantic-evaluator",
+          score: 92,
+          verdict: "mostly-correct",
+          confidence: 0.9,
+          summary: "The hidden overall score must not become the headline.",
+          strengths: [],
+          gaps: [],
+          rubricScores,
+          answerExcerpts: ["I owned the conflict resolver."],
+          execution: null,
+          evaluatedAt: 13_000
+        }
+      }
+    };
+
+    const report = createInterviewReport(
+      { state: hiringManagerState, touchedAt: 14_000 },
+      20_000
+    );
+
+    expect(report.summary.evidenceScore).toBe(35);
+  });
+
   it("aggregates answer evidence into a workspace competency map", () => {
     const insights = createWorkspaceInsights([{ state, touchedAt: 14_000 }], 20_000);
 

@@ -111,16 +111,9 @@ function buildPrompt(input: DecideInput): string {
         .map((turn) => `${turn.speaker === "agent" ? "Interviewer" : "Candidate"}: ${turn.text}`)
         .join("\n")
     : "No earlier turns.";
-  const resumeGuidance =
-    setup.roundType === "hiring-manager"
-      ? `This is a hiring-manager and behavioural conversation, not a technical screen or resume interrogation. Listen for motivation, self-awareness, judgement, collaboration, accountability, personal action, and meaningful outcomes.
-
-${hiringManagerFollowUpGuidance(input.interviewStage, followUpCount, maxFollowUps)}
-
-Respond to what the candidate actually said. If the answer is vague, narrow it to one concrete moment without sounding accusatory. If it is genuine and specific, acknowledge the important detail and ask about the judgement, alternative, consequence, or reflection behind it. Never default mechanically to measurable impact, never repeat a detail already established, and never drift into technical trivia or a new topic.`
-      : isResumeRound(setup)
-        ? `This is a resume-defense conversation. The resume is only a lead. Stay with the candidate's story when it becomes interesting: ask about a concrete moment, their own decision, the trade-off, or the result. A counter-question is useful when a claim is vague, inflated, contradictory, or unclear about personal ownership. Do not counter every answer; move on when the answer is credible and complete.`
-        : "";
+  const resumeGuidance = isResumeRound(setup)
+    ? `This is a resume-defense conversation. The resume is only a lead. Stay with the candidate's story when it becomes interesting: ask about a concrete moment, their own decision, the trade-off, or the result. A counter-question is useful when a claim is vague, inflated, contradictory, or unclear about personal ownership. Do not counter every answer; move on when the answer is credible and complete.`
+    : "";
   const candidateQuestionGuidance = input.acceptsCandidateQuestions
     ? `This is the final candidate-question turn. If the candidate asks a question, choose move_on and put a concise, useful answer in candidateResponse. You are a simulated interviewer, not a real employer: never invent company policies, compensation, benefits, team facts, hiring decisions, or role guarantees. For employer-specific questions, say you cannot represent a particular employer and explain what the candidate should clarify with the real interviewer. For general questions about success, teamwork, management, or growth, answer from the perspective of this ${describeRole(setup.role)} interview simulation. Use one to three short sentences and do not ask another question. If the candidate did not ask anything, return an empty candidateResponse.`
     : input.candidateTurnMode === "conversation"
@@ -227,7 +220,6 @@ Decision balance:
 - Prefer move_on when the candidate answered the actual question with a concrete story and credible evidence.
 - Prefer probe when one high-value detail is missing and asking for it would materially improve the story.
 - Prefer challenge only when there is a real inconsistency, unsupported claim, or ownership gap worth testing.
-- In a hiring-manager round, follow the section-specific depth guidance above before moving on; a credible answer can still deserve one thoughtful deeper question.
 - Never manufacture a follow-up just to keep talking. The conversation should breathe like a real interview.
 - Before choosing probe or challenge, identify the single missing link in this evidence chain: ${evidenceChain}.
 - Do not ask for a detail the candidate just supplied. If an earlier follow-up was answered, move to the next missing link or move on.
@@ -255,26 +247,6 @@ Rules for "candidateResponse":
 
 "missing" is clarity for clarify; use none for respond and move_on; otherwise use whichever of structure, specificity, ownership, or outcome is weakest.
 "reason" is one clause explaining your choice. It is never spoken.`;
-}
-
-function hiringManagerFollowUpGuidance(
-  stage: PlannedQuestion["stage"],
-  followUpCount: number,
-  maxFollowUps: number
-): string {
-  const remaining = Math.max(0, maxFollowUps - followUpCount);
-  const budget = `There ${remaining === 1 ? "is" : "are"} ${remaining} follow-up${remaining === 1 ? "" : "s"} left for this question.`;
-
-  if (stage === "career") {
-    return `Introduction depth: after the opening answer, normally ask two connected follow-ups. Stay on the candidate's career journey; do not switch to a project or delivery-impact example. If the opening is only a generic list of education or companies, ask which company, role, or transition was the meaningful turning point and why. Then explore how it connects to what the candidate wants now. Use a third follow-up only when it adds a genuinely new layer or resolves vagueness; move on sooner only when continuing would be repetitive or unnatural. ${budget}`;
-  }
-  if (stage === "current-role") {
-    return `Role-fit depth: use up to two connected follow-ups. Use the first to understand why the stated preferences matter. If one follow-up has already been used, do not ask for a project example and do not switch to delivery impact; test the stated preference with one realistic trade-off, sacrifice, or deal-breaker, or move on if that would add nothing. ${budget}`;
-  }
-  if (stage === "project") {
-    return `How-you-work depth: use up to two connected follow-ups. Use the first to establish the candidate's personal decision or action; use the second when useful to explore the consequence, trade-off, learning, or what they would change. Do not demand a number when a credible qualitative outcome fits better. ${budget}`;
-  }
-  return `Final-conversation depth: keep the tone warm and lighter. Ask at most one natural follow-up only when a central piece of accountability, growth, or values is genuinely missing; otherwise move on cleanly. A specific mistake plus personal ownership, repair, and a concrete change afterward is already complete—do not ask for ancillary coordination or process detail. ${budget}`;
 }
 
 export class InterviewDecider {

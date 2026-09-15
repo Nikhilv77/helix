@@ -126,6 +126,61 @@ describe("technical answer evaluator", () => {
     expect(result.evidenceQuotes).toEqual([]);
   });
 
+  it("keeps only answer-grounded evidence for each scored parameter", () => {
+    const result = normalizeTechnicalEvaluation(
+      {
+        ...rawEvaluation,
+        rubricScores: [
+          {
+            rubricKey: "concept-depth",
+            score: 31,
+            rationale: "The answer did not explain the mechanism.",
+            evidenceQuotes: ["return true", "this was never said"]
+          }
+        ]
+      },
+      input(null)
+    );
+
+    expect(result.rubricScores[0]).toMatchObject({
+      rubricKey: "concept-depth",
+      score: 31,
+      evidenceQuotes: ["return true"]
+    });
+  });
+
+  it("preserves low scores because the evaluator contract already uses a 0-100 scale", () => {
+    const hrInput: TechnicalAnswerEvaluationInput = {
+      ...input(null),
+      setup: { ...setup, roundType: "hiring-manager", resumeRound: true },
+      question: { ...question, kind: "conversation", stage: "career" },
+      answers: ["I chose this role because I wanted to build reliable products."]
+    };
+    const rubricKeys = [
+      "motivation-fit",
+      "judgement",
+      "collaboration",
+      "accountability",
+      "self-awareness",
+      "communication"
+    ];
+    const result = normalizeTechnicalEvaluation(
+      {
+        ...rawEvaluation,
+        score: 3,
+        rubricScores: rubricKeys.map((rubricKey, index) => ({
+          rubricKey,
+          score: index + 1,
+          rationale: "Limited evidence on the hundred-point scale."
+        }))
+      },
+      hrInput
+    );
+
+    expect(result.score).toBe(3);
+    expect(result.rubricScores.map((item) => item.score)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
   it("requires the model to prioritize factual correctness over fluent delivery", async () => {
     const generateStructured = vi.fn().mockResolvedValue(rawEvaluation);
     const evaluator = new TechnicalAnswerEvaluator({ generateStructured } as unknown as AiService);

@@ -42,6 +42,7 @@ const report = {
   answerCount: 1,
   competencies: [
     {
+      questionIndex: 0,
       label: "Accountability",
       question: "Tell me about a mistake.",
       answered: true,
@@ -66,7 +67,12 @@ const report = {
           "accountability",
           "self-awareness",
           "communication"
-        ].map((rubricKey) => ({ rubricKey, score: 76, rationale: "Supported evidence." })),
+        ].map((rubricKey) => ({
+          rubricKey,
+          score: 76,
+          rationale: "This showed direct personal ownership.",
+          evidenceQuotes: ["I owned it"]
+        })),
         execution: null
       }
     }
@@ -79,7 +85,15 @@ const report = {
     recommendedFocus: "Collaboration",
     nextStep: "Explain the repair and what changed next."
   },
-  transcript: []
+  transcript: [
+    {
+      speaker: "user",
+      text: "I owned it and repaired it.",
+      startMs: 81_000,
+      endMs: 84_000,
+      questionIndex: 0
+    }
+  ]
 } satisfies InterviewReport;
 
 describe("InterviewReportDashboard", () => {
@@ -96,15 +110,45 @@ describe("InterviewReportDashboard", () => {
     );
 
     expect(screen.getByLabelText(/james reported back to me/i)).toBeVisible();
-    expect(
-      screen.getByRole("heading", { name: /one scorecard for each interview family/i })
-    ).toBeVisible();
+    expect(screen.getByText("Overall performance")).toBeVisible();
     expect(screen.getAllByText("DSA & Design").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Core Technical & Projects").length).toBeGreaterThan(0);
     expect(screen.getAllByText("HR & Behavioural").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Resume & Behavioural").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Motivation & fit").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Accountability").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/At 1:21, you said “I owned it”/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Average of the six scores/i)).toBeNull();
+    expect(screen.getAllByText("Not yet").length).toBeGreaterThan(0);
     expect(screen.queryByText(/duration:/i)).toBeNull();
+  });
+
+  it("does not invent a what-went-well section when every signal is weak", () => {
+    const weak = {
+      ...report,
+      competencies: report.competencies.map((competency) => ({
+        ...competency,
+        technicalEvaluation: competency.technicalEvaluation
+          ? {
+              ...competency.technicalEvaluation,
+              rubricScores: competency.technicalEvaluation.rubricScores.map((item, index) => ({
+                ...item,
+                score: 11 + index
+              }))
+            }
+          : undefined
+      }))
+    } satisfies InterviewReport;
+
+    render(
+      <InterviewReportDashboard
+        report={weak}
+        overview={createReportsOverview([weak])}
+        candidate={{ name: "Nikhil", discipline: "Backend Engineering" }}
+        quota={{ used: 1, limit: 2 }}
+      />
+    );
+
+    expect(screen.queryByRole("heading", { name: "What went well" })).toBeNull();
   });
 });

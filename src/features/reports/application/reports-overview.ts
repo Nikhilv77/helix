@@ -38,28 +38,28 @@ export function createReportsOverview(
   const ordered = [...reports].sort((left, right) => left.startedAt - right.startedAt);
   // An abandoned round has no evidence, only a zero. Including it would read as
   // a crash in your scores rather than a session you closed.
-  const scored = ordered.filter((report) => report.answerCount > 0);
+  const scored = ordered.filter((report) => report.questionsCovered > 0);
 
   const rounds = ordered.map(toRoundRow).reverse();
   const trend = scored.map((report, index): ReportTrendPoint => ({
     sessionId: report.sessionId,
     index: index + 1,
     label: formatShortDate(report.startedAt),
-    score: report.summary.evidenceScore,
+    score: roundParameterScore(report),
     roundType: report.setup.roundType,
     startedAt: report.startedAt,
     href: "/reports"
   }));
 
   const competencies = buildCompetencies(scored);
-  const scores = scored.map((report) => report.summary.evidenceScore);
+  const scores = scored.map(roundParameterScore);
   const latestScore = scores.at(-1) ?? null;
   const firstScore = scores[0] ?? null;
   const recent = scores.slice(-READINESS_WINDOW);
 
   const bestRound = scored.reduce<InterviewReport | null>(
     (best, report) =>
-      !best || report.summary.evidenceScore > best.summary.evidenceScore ? report : best,
+      !best || roundParameterScore(report) > roundParameterScore(best) ? report : best,
     null
   );
   const latestRound = scored.at(-1) ?? null;
@@ -105,7 +105,27 @@ function buildFamilies(scored: InterviewReport[]): ReportFamilySummary[] {
       (report) => evaluationProfileForSetup(report.setup).family === profile.family
     );
     const latest = reports.at(-1) ?? null;
-    const reportScores = reports.map((report) => report.summary.evidenceScore);
+    const reportParameters = reports.map((report) => parameterScoresForReport(report));
+    const latestParameters = reportParameters.at(-1) ?? [];
+    const parameters = profile.parameters.map((parameter) => {
+      const values = reportParameters.flatMap((items) => {
+        const value = items.find((item) => item.key === parameter.key);
+        return value ? [value] : [];
+      });
+      const latestValue = latestParameters.find((item) => item.key === parameter.key) ?? null;
+      return {
+        key: parameter.key,
+        label: parameter.label,
+        description: parameter.description,
+        averageScore: values.length ? Math.round(mean(values.map((value) => value.score))) : null,
+        latestScore: latestValue?.score ?? null,
+        rounds: values.length,
+        evaluatedRounds: values.filter((value) => value.evaluated).length
+      };
+    });
+    const familyParameterScores = parameters.flatMap((parameter) =>
+      parameter.averageScore === null ? [] : [parameter.averageScore]
+    );
 
     return {
       family: profile.family,
@@ -113,23 +133,11 @@ function buildFamilies(scored: InterviewReport[]): ReportFamilySummary[] {
       shortLabel: profile.shortLabel,
       rounds: reports.length,
       completedRounds: reports.filter((report) => report.status === "completed").length,
-      averageScore: reportScores.length ? Math.round(mean(reportScores)) : null,
-      latestScore: latest?.summary.evidenceScore ?? null,
+      averageScore: familyParameterScores.length ? Math.round(mean(familyParameterScores)) : null,
+      latestScore: latest ? roundParameterScore(latest) : null,
       latestSessionId: latest?.sessionId ?? null,
       latestStartedAt: latest?.startedAt ?? null,
-      parameters: profile.parameters.map((parameter) => {
-        const values = reports.map((report) => reportParameterScore(report, parameter));
-        const latestValue = latest ? reportParameterScore(latest, parameter) : null;
-        return {
-          key: parameter.key,
-          label: parameter.label,
-          description: parameter.description,
-          averageScore: values.length ? Math.round(mean(values.map((value) => value.score))) : null,
-          latestScore: latestValue?.score ?? null,
-          rounds: values.length,
-          evaluatedRounds: values.filter((value) => value.evaluated).length
-        };
-      })
+      parameters
     };
   });
 }
@@ -137,10 +145,27 @@ function buildFamilies(scored: InterviewReport[]): ReportFamilySummary[] {
 /** Round-specific parameter values for the latest-report explanation UI. */
 export function parameterScoresForReport(report: InterviewReport) {
   const profile = evaluationProfileForSetup(report.setup);
-  return profile.parameters.map((parameter) => ({
+  const parameters = profile.parameters.map((parameter) => ({
     ...parameter,
     ...reportParameterScore(report, parameter)
   }));
+  const isConversationFamily =
+    profile.family === "hr-behavioral" || profile.family === "resume-behavioral";
+  const usesCompactScale =
+    isConversationFamily &&
+    parameters.some((parameter) => parameter.score > 0) &&
+    parameters.every((parameter) => parameter.score >= 0 && parameter.score <= 10);
+
+  return parameters.map((parameter) => ({
+    ...parameter,
+    score: Math.min(100, Math.round(parameter.score * (usesCompactScale ? 10 : 1)))
+  }));
+}
+
+/** Headline score on the same 0–100 scale as the six visible parameters. */
+export function roundParameterScore(report: InterviewReport): number {
+  const scores = parameterScoresForReport(report).map((parameter) => parameter.score);
+  return scores.length ? Math.round(mean(scores)) : 0;
 }
 
 function reportParameterScore(
@@ -148,10 +173,12 @@ function reportParameterScore(
   parameter: EvaluationParameterDefinition
 ): { score: number; evaluated: boolean } {
   const answered = report.competencies.filter((item) => item.answered);
-  const direct = answered
-    .flatMap((item) => item.technicalEvaluation?.rubricScores ?? [])
-    .filter((score) => score.rubricKey === parameter.key)
-    .map((score) => score.score);
+  const direct = answered.flatMap((item) => {
+    const rubricScores = item.technicalEvaluation?.rubricScores ?? [];
+    return rubricScores
+      .filter((score) => score.rubricKey === parameter.key)
+      .map((score) => Math.round(score.score));
+  });
   if (direct.length) return { score: Math.round(mean(direct)), evaluated: true };
 
   const keywordMatches = answered.filter((item) =>
@@ -233,7 +260,7 @@ function toRoundRow(report: InterviewReport): ReportRoundRow {
     questionCount: report.questionCount,
     questionsCovered: report.questionsCovered,
     answerCount: report.answerCount,
-    evidenceScore: report.answerCount > 0 ? report.summary.evidenceScore : null,
+    evidenceScore: report.answerCount > 0 ? roundParameterScore(report) : null,
     strongest: report.summary.strongest,
     recommendedFocus: report.summary.recommendedFocus,
     nextStep: report.summary.nextStep,
@@ -389,7 +416,7 @@ function buildRoundTypes(scored: InterviewReport[]): ReportRoundTypeRow[] {
 
   for (const report of scored) {
     const scores = groups.get(report.setup.roundType) ?? [];
-    scores.push(report.summary.evidenceScore);
+    scores.push(roundParameterScore(report));
     groups.set(report.setup.roundType, scores);
   }
 

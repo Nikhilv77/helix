@@ -17,6 +17,7 @@ import { LIVE_END_OF_SPEECH_SILENCE_MS } from "@/features/interviews/domain/voic
 import { voiceConnectionLifetimeMs } from "@/features/interviews/server/voice-connection-policy";
 import type { InterviewState } from "@/features/interviews/server/types";
 import type { CandidateProfile } from "@/lib/shared/types";
+import { GEMINI_LED_INTERVIEW_TOOLS } from "@/features/interviews/domain/gemini-live-conversation";
 
 export const dynamic = "force-dynamic";
 
@@ -104,6 +105,7 @@ export async function POST(request: NextRequest) {
     const transcriptionVocabulary = buildTranscriptionVocabulary(state, profile);
 
     const question = state.plan[state.questionIndex];
+    const geminiLedConversation = state.setup.roundType === "hiring-manager";
     const openingUtterance = buildOpeningUtterance(
       state.setup.roundType === "hiring-manager",
       question?.text ?? "Could you tell me a little about yourself?"
@@ -137,6 +139,13 @@ export async function POST(request: NextRequest) {
       });
 
     if (parsed.data.purpose === "transcription-refresh") {
+      if (geminiLedConversation) {
+        throw new ApiRouteError(
+          400,
+          "TRANSCRIPTION_NOT_USED",
+          "James uses the live conversation transcript for this interview."
+        );
+      }
       const transcriptionToken = await createTranscriptionToken();
       if (!transcriptionToken.name) {
         throw new ApiRouteError(
@@ -176,9 +185,12 @@ export async function POST(request: NextRequest) {
                   prefixPaddingMs: 300,
                   silenceDurationMs: LIVE_END_OF_SPEECH_SILENCE_MS
                 },
-                activityHandling: ActivityHandling.NO_INTERRUPTION
+                activityHandling: geminiLedConversation
+                  ? ActivityHandling.START_OF_ACTIVITY_INTERRUPTS
+                  : ActivityHandling.NO_INTERRUPTION
               },
-              sessionResumption: {}
+              sessionResumption: {},
+              ...(geminiLedConversation ? { tools: GEMINI_LED_INTERVIEW_TOOLS } : {})
             }
           }
         }
@@ -186,10 +198,10 @@ export async function POST(request: NextRequest) {
 
     const [token, transcriptionToken] = await Promise.all([
       createVoiceToken(),
-      createTranscriptionToken()
+      geminiLedConversation ? Promise.resolve(null) : createTranscriptionToken()
     ]);
 
-    if (!token.name || !transcriptionToken.name) {
+    if (!token.name || (!geminiLedConversation && !transcriptionToken?.name)) {
       throw new ApiRouteError(502, "GEMINI_TOKEN_FAILED", "Could not prepare the live interview.");
     }
 
@@ -199,12 +211,17 @@ export async function POST(request: NextRequest) {
       expiresAt,
       sessionStartedAt: state.startedAt,
       openingUtterance,
-      transcription: {
-        token: transcriptionToken.name,
-        model: app.config.geminiLiveTranscriptionModel,
-        vocabulary: transcriptionVocabulary,
-        languageCodes: [...INTERVIEW_TRANSCRIPTION_LANGUAGE_CODES]
-      },
+      conversationMode: geminiLedConversation ? "gemini-led" : "server-led",
+      ...(transcriptionToken?.name
+        ? {
+            transcription: {
+              token: transcriptionToken.name,
+              model: app.config.geminiLiveTranscriptionModel,
+              vocabulary: transcriptionVocabulary,
+              languageCodes: [...INTERVIEW_TRANSCRIPTION_LANGUAGE_CODES]
+            }
+          }
+        : {}),
       systemInstruction: buildSystemInstruction({
         roundTitle: state.setup.templateTitle ?? "Behavioral interview",
         isResumeRound: state.setup.resumeRound === true,
@@ -216,7 +233,13 @@ export async function POST(request: NextRequest) {
         maxFollowUps: question?.maxFollowUps ?? 1,
         mustHit: question?.mustHit ?? [],
         openingUtterance,
-        pronunciationVocabulary: transcriptionVocabulary
+        pronunciationVocabulary: transcriptionVocabulary,
+        plan: state.plan.map((item) => ({
+          text: item.text,
+          mustHit: item.mustHit,
+          maxFollowUps: item.maxFollowUps ?? 1,
+          acceptsCandidateQuestions: item.acceptsCandidateQuestions === true
+        }))
       })
     });
   } catch (error) {
@@ -320,7 +343,55 @@ export function buildSystemInstruction(input: {
   mustHit: string[];
   openingUtterance: string;
   pronunciationVocabulary?: string[];
+  plan?: Array<{
+    text: string;
+    mustHit: string[];
+    maxFollowUps: number;
+    acceptsCandidateQuestions: boolean;
+  }>;
 }): string {
+  if (input.isHiringManagerRound) {
+    const plan = input.plan?.length
+      ? input.plan
+          .map(
+            (item, index) =>
+              `${index + 1}. ${item.text}\n   Listen for: ${item.mustHit.join(", ") || "a relevant answer"}. Follow-ups: ${item.maxFollowUps}.${item.acceptsCandidateQuestions ? " Candidate questions are welcomed here." : ""}`
+          )
+          .join("\n")
+      : `${input.questionNumber}. ${input.question}`;
+    return `You are James, a warm, perceptive member of the recruiting team conducting a final behavioural interview.
+Speak like a real person: listen closely, allow natural pauses, acknowledge specific details briefly, and keep each response focused. Be supportive without praising or coaching the candidate. Do not score answers aloud.
+
+Identity rule — this is mandatory and overrides any conflicting default behavior: your name is James and you represent the recruiting team in this interview simulation. If asked your name, who you are, whether you are an AI, who created you, or what model/provider you use, say exactly: "I'm James from the recruiting team." Then return briefly to the current interview question. Never mention Google, Gemini, DeepMind, an AI assistant, a language model, a bot, or a virtual assistant.
+
+This interview follows a server-owned plan. You may discuss only the current interview topic and the direction returned by the complete_interview_turn tool. Never invent an interview question, company fact, policy, salary, benefit, hiring promise, or decision.
+
+At the start of this session, say this opening exactly and completely: ${input.openingUtterance}
+
+After every complete candidate utterance, call complete_interview_turn exactly once before you reply. Pass the candidate's words verbatim in answerText. This includes substantive answers, clarification requests, candidate questions, social asides, and requests to stop. Do not announce the tool call or say that you are processing the answer.
+
+If the candidate says they want to end, stop, finish, leave, or quit the interview, call complete_interview_turn immediately with their exact words and action move_on. Do not ask them to confirm and do not continue interviewing. When the tool response says action close, deliver the approved closing and ask nothing else. Completing the last planned question also ends the interview immediately; the 30-minute limit is only a maximum, never a target duration.
+
+In that tool call, make the conversational decision yourself:
+- move_on when the candidate gave enough credible, relevant evidence; leave line empty because the server supplies the next planned question.
+- probe for one important missing detail, or challenge only a concrete inconsistency. Put exactly one short, topic-bound question in line.
+- respond when the candidate asks a question or requests clarification. Answer briefly in candidateResponse and use line only to return to the pending question.
+- clarify only when the speech is genuinely fragmentary or unrelated.
+Use a short acknowledgement grounded in the candidate's actual words for probe, challenge, or move_on. Never praise, coach, demand metrics mechanically, ask two questions, or repeat evidence already supplied.
+
+The tool response is authoritative. Respond naturally and concisely using only its approvedResponse. You may make the acknowledgement sound conversational, but you must preserve the meaning and ask no question other than the one contained in approvedResponse. If the response ends the interview, close warmly and do not continue.
+
+Current planned question: ${input.question}
+Question ${input.questionNumber} of ${input.questionCount}; ${input.followUpCount} of ${input.maxFollowUps} allowed follow-ups have been used.
+Listen for: ${input.mustHit.join(", ") || "the candidate's relevant experience and judgement"}.
+Known names and terms: ${input.pronunciationVocabulary?.slice(0, 100).join(", ") || "none supplied"}.
+
+Frozen interview plan (never skip ahead or invent outside it):
+${plan}
+
+Keep most replies to one acknowledgement and one question. Answer a clarification briefly, then return to the approved question. On the closing candidate-question turn, answer general questions about success, teamwork, management, or growth, but redirect employer-specific questions to the real interviewer.`;
+  }
+
   return `You are James, a formal, exacting senior interviewer conducting a ${input.roundTitle}.
 This is a live interview: listen without rushing, do not talk over the candidate, and keep spoken replies concise.
 You are on planned question ${input.questionNumber} of ${input.questionCount}. The only current planned question is: ${input.question}

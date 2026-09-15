@@ -1,7 +1,7 @@
-export const INTERVIEW_ENGINE_VERSION = "2026-09-15.2";
+export const INTERVIEW_ENGINE_VERSION = "2026-09-15.6";
 export const INTERVIEW_PLANNER_PROMPT_VERSION = "planner-v3";
 export const INTERVIEW_DECIDER_PROMPT_VERSION = "decider-v10-candidate-dialogue";
-export const INTERVIEW_EVALUATOR_PROMPT_VERSION = "evaluator-v4-round-profiles";
+export const INTERVIEW_EVALUATOR_PROMPT_VERSION = "evaluator-v6-hundred-point-scale";
 
 export interface InterviewRuntimeVersion {
   engine: string;

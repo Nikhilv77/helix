@@ -22,7 +22,17 @@ const decideSchema = z.object({
   userAnswer: z.string().trim().min(1).max(8000),
   /** Milliseconds from session start. Voice fills these from real audio timings. */
   startMs: z.number().int().min(0).optional(),
-  endMs: z.number().int().min(0).optional()
+  endMs: z.number().int().min(0).optional(),
+  liveProposal: z
+    .object({
+      action: z.enum(["clarify", "probe", "challenge", "respond", "move_on"]),
+      missing: z.enum(["clarity", "structure", "specificity", "ownership", "outcome", "none"]),
+      reason: z.string().trim().min(1).max(200),
+      acknowledgement: z.string().trim().max(120),
+      line: z.string().trim().max(300),
+      candidateResponse: z.string().trim().max(400).optional()
+    })
+    .optional()
 });
 
 export async function POST(request: NextRequest) {
@@ -61,6 +71,13 @@ export async function POST(request: NextRequest) {
         access.kind === "owner"
           ? await app.interviewService.getOwnedActive(access.ownerId, parsed.data.sessionId)
           : await app.interviewService.get(parsed.data.sessionId);
+      if (existing.setup.roundType === "hiring-manager" && !parsed.data.liveProposal) {
+        throw new ApiRouteError(
+          400,
+          "LIVE_PROPOSAL_REQUIRED",
+          "James must complete the live interview turn before it can be saved."
+        );
+      }
       const defaultEnd = Math.max(0, now - existing.startedAt);
 
       const answer = {
@@ -75,13 +92,15 @@ export async function POST(request: NextRequest) {
               parsed.data.sessionId,
               answer,
               now,
-              parsed.data.turnId
+              parsed.data.turnId,
+              parsed.data.liveProposal
             )
           : await app.interviewService.answer(
               parsed.data.sessionId,
               answer,
               now,
-              parsed.data.turnId
+              parsed.data.turnId,
+              parsed.data.liveProposal
             );
       const { response } = answerResult;
       // Recovery runs outside the spoken-turn response. The job itself was

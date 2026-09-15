@@ -99,6 +99,16 @@ function buildBriefingCopy(
     }));
 
   return {
+    overallFamilies: overview.families.map((family) => ({
+      label: family.label,
+      aggregateScore: family.averageScore,
+      rounds: family.rounds
+    })),
+    roundScore: score,
+    scoreExplanation:
+      score === null
+        ? "Complete an interview to establish this score."
+        : "This readiness score is the average of your recent scored interview rounds.",
     verdict,
     trend,
     summaryText,

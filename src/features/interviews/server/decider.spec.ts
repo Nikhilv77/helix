@@ -103,63 +103,6 @@ describe("resume interview decider prompt", () => {
     expect(prompt).toContain("React was the entry point for you");
   });
 
-  it("keeps hiring-manager follow-ups behavioural and evidence based", () => {
-    const prompt = buildDecidePrompt({
-      ...input,
-      setup: {
-        ...input.setup,
-        roundType: "hiring-manager",
-        resumeRound: true,
-        templateId: "hiring-manager-final",
-        templateTitle: "Hiring Manager & Final Behavioural"
-      },
-      interviewStage: "career",
-      maxFollowUps: 3
-    });
-
-    expect(prompt).toContain("hiring-manager and behavioural conversation");
-    expect(prompt).toContain("normally ask two connected follow-ups");
-    expect(prompt).toContain("acknowledge the important detail");
-    expect(prompt).toContain("never drift into technical trivia");
-    expect(prompt).not.toContain("resume-defense conversation");
-  });
-
-  it("uses different human follow-up strategies across HR sections", () => {
-    const setup = {
-      ...input.setup,
-      roundType: "hiring-manager" as const,
-      resumeRound: true
-    };
-    const roleFit = buildDecidePrompt({
-      ...input,
-      setup,
-      interviewStage: "current-role",
-      followUpCount: 1,
-      maxFollowUps: 2
-    });
-    const work = buildDecidePrompt({
-      ...input,
-      setup,
-      interviewStage: "project",
-      followUpCount: 0,
-      maxFollowUps: 2
-    });
-    const finalConversation = buildDecidePrompt({
-      ...input,
-      setup,
-      interviewStage: "behavioral",
-      followUpCount: 0,
-      maxFollowUps: 1
-    });
-
-    expect(roleFit).toContain("do not ask for a project example");
-    expect(roleFit).toContain("realistic trade-off, sacrifice, or deal-breaker");
-    expect(work).toContain("personal decision or action");
-    expect(work).toContain("credible qualitative outcome");
-    expect(finalConversation).toContain("keep the tone warm and lighter");
-    expect(finalConversation).toContain("personal ownership, repair, and a concrete change");
-  });
-
   it("lets only the final HR turn answer candidate questions without inventing employer facts", () => {
     const prompt = buildDecidePrompt({
       ...input,

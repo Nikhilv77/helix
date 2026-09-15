@@ -5,9 +5,20 @@ export type ReportPdfCompetency = {
   label: string;
   score: number;
   level: "strong" | "developing" | "missing";
+  evidence?: string;
+  nextAction?: string;
+};
+
+export type ReportPdfFamily = {
+  label: string;
+  aggregateScore: number | null;
+  rounds: number;
 };
 
 export type ReportPdfBriefing = {
+  overallFamilies: ReportPdfFamily[];
+  roundScore: number | null;
+  scoreExplanation: string;
   verdict: string;
   trend: string;
   summaryText: string;
@@ -143,24 +154,67 @@ class ReportWriter {
   }
 
   scoreRow(scores: ReportPdfCompetency[]) {
-    const items = scores.length ? scores.slice(0, 4) : fallbackScores();
-    const width = contentWidth() / 4;
-    this.ensure(66);
+    const items = scores.length ? scores.slice(0, 6) : fallbackScores();
+    const width = contentWidth() / 2;
+    const rows = Math.ceil(items.length / 2);
+    this.ensure(rows * 44 + 8);
     items.forEach((item, index) => {
-      const x = PAGE.margin + index * width;
-      this.draw(String(Math.round(item.score)), x, this.y, 23, this.bold, palette.cream);
-      this.draw(item.label.toUpperCase(), x, this.y - 34, 8.25, this.bold, palette.muted);
+      const column = index % 2;
+      const row = Math.floor(index / 2);
+      const x = PAGE.margin + column * width;
+      const y = this.y - row * 44;
+      this.draw(String(Math.round(item.score)), x, y, 21, this.bold, palette.cream);
+      this.draw(item.label.toUpperCase(), x + 38, y - 3, 8.25, this.bold, palette.muted);
     });
-    this.gap(55);
+    this.gap(rows * 44 + 2);
+  }
+
+  familyScoreRow(families: ReportPdfFamily[]) {
+    const width = contentWidth() / 2;
+    const rows = Math.ceil(families.length / 2);
+    this.ensure(rows * 54 + 8);
+    families.forEach((family, index) => {
+      const column = index % 2;
+      const row = Math.floor(index / 2);
+      const x = PAGE.margin + column * width;
+      const y = this.y - row * 54;
+      const score = family.aggregateScore === null ? "Not yet" : `${family.aggregateScore}/100`;
+      this.draw(family.label.toUpperCase(), x, y, 8.25, this.bold, palette.muted);
+      this.draw(score, x, y - 17, family.aggregateScore === null ? 12 : 19, this.bold, palette.cream);
+      if (family.rounds > 0) {
+        this.draw(
+          `${family.rounds} scored ${family.rounds === 1 ? "interview" : "interviews"} aggregated`,
+          x + 76,
+          y - 20,
+          8.25,
+          this.regular,
+          palette.muted
+        );
+      }
+    });
+    this.gap(rows * 54 + 2);
+  }
+
+  bigScore(score: number | null, explanation: string) {
+    this.ensure(78);
+    const scoreText = score === null ? "Not attempted yet" : String(score);
+    this.draw(scoreText, PAGE.margin, this.y, score === null ? 22 : 38, this.bold, palette.cream);
+    if (score !== null) {
+      const scoreWidth = this.bold.widthOfTextAtSize(scoreText, 38);
+      this.draw("/ 100", PAGE.margin + scoreWidth + 10, this.y - 15, 11, this.bold, palette.muted);
+    }
+    this.gap(49);
+    this.paragraph(explanation, { size: 9.5, leading: 14, color: palette.muted, after: 12 });
   }
 
   finding(index: number, label: string, title: string, body: string, accent: PdfColor) {
+    const titleLines = wrap(title, this.bold, 15.5, contentWidth());
     const bodyLines = wrap(body, this.regular, 11.25, contentWidth());
-    this.ensure(20 + 25 + bodyLines.length * 16 + 13);
+    this.ensure(20 + titleLines.length * 21 + bodyLines.length * 16 + 13);
     this.draw(`${String(index).padStart(2, "0")} · ${label.toUpperCase()}`, PAGE.margin, this.y, 8.5, this.bold, accent);
     this.gap(18);
-    this.draw(title, PAGE.margin, this.y, 15.5, this.bold, palette.cream);
-    this.gap(24);
+    this.lines(titleLines, 15.5, 21, this.bold, palette.cream);
+    this.gap(3);
     this.lines(bodyLines, 11.25, 16, this.regular, palette.body);
     this.gap(13);
   }
@@ -234,6 +288,15 @@ function drawReport(writer: ReportWriter, briefing: ReportPdfBriefing) {
     `A detailed review of how effectively your interview answers communicate reasoning, ownership, and measurable value for ${displayName(briefing.candidateName)}${briefing.candidateDiscipline ? ` in ${briefing.candidateDiscipline}` : ""}.`,
     { size: 12, leading: 18, after: 28 }
   );
+  writer.heading("Overall performance");
+  writer.label("Aggregated score in each interview family");
+  writer.familyScoreRow(briefing.overallFamilies);
+  writer.rule();
+
+  writer.heading("Detailed latest report");
+  writer.label("Latest round score");
+  writer.bigScore(briefing.roundScore, briefing.scoreExplanation);
+  writer.label("Six evaluation parameters");
   writer.scoreRow(briefing.competencyBars);
   writer.rule();
 
@@ -244,6 +307,20 @@ function drawReport(writer: ReportWriter, briefing: ReportPdfBriefing) {
 
   writer.heading("Key findings");
   findings.forEach((finding, index) => writer.finding(index + 1, finding.label, finding.title, finding.body, finding.accent));
+  writer.rule();
+
+  writer.heading("Parameter evidence");
+  briefing.competencyBars.forEach((parameter, index) =>
+    writer.finding(
+      index + 1,
+      `${parameter.label} · ${Math.round(parameter.score)}/100`,
+      `${parameter.label}: ${signalLabel(parameter.score)}.`,
+      [parameter.evidence, parameter.nextAction ? `Next: ${parameter.nextAction}` : ""]
+        .filter(Boolean)
+        .join(" ") || "No grounded explanation was recorded for this parameter.",
+      palette.muted
+    )
+  );
   writer.rule();
 
   // Keep both closing sections together when they need a second page.
@@ -309,6 +386,12 @@ function findingTitle(label: string) {
 function practiceCopy(label: string, score: number) {
   const level = score >= 75 ? "already shows up consistently" : score >= 50 ? "is starting to develop" : "needs a more deliberate practice loop";
   return `Your ${label.toLowerCase()} signal ${level}. Use one concise example and end by naming the result, trade-off, or learning that mattered.`;
+}
+
+function signalLabel(score: number) {
+  if (score >= 75) return "strong evidence";
+  if (score >= 45) return "developing evidence";
+  return "limited evidence";
 }
 
 function fallbackScores(): ReportPdfCompetency[] {

@@ -7,7 +7,7 @@ import {
 } from "./route";
 
 describe("Gemini Live interview instruction", () => {
-  it("uses browser-owned finalized transcript submission without a tool-call round trip", () => {
+  it("lets Gemini lead the hiring-manager conversation through an authoritative tool", () => {
     const instruction = buildSystemInstruction({
       roundTitle: "Hiring Manager & Final Behavioural",
       isResumeRound: true,
@@ -22,11 +22,34 @@ describe("Gemini Live interview instruction", () => {
       pronunciationVocabulary: ["NovaCart", "React.js"]
     });
 
+    expect(instruction).toContain("call complete_interview_turn exactly once");
+    expect(instruction).toContain("Respond naturally and concisely");
+    expect(instruction).toContain("must preserve the meaning");
+    expect(instruction).toContain("NovaCart, React.js");
+    expect(instruction).toContain("Never invent an interview question");
+    expect(instruction).toContain(`say exactly: "I'm James from the recruiting team."`);
+    expect(instruction).toContain("Never mention Google, Gemini, DeepMind");
+    expect(instruction).toContain("the 30-minute limit is only a maximum");
+    expect(instruction).toContain("Do not ask them to confirm");
+  });
+
+  it("keeps non-hiring-manager rounds on the existing server-led contract", () => {
+    const instruction = buildSystemInstruction({
+      roundTitle: "Core Technical",
+      isResumeRound: false,
+      isHiringManagerRound: false,
+      question: "How does event-loop scheduling work?",
+      questionNumber: 1,
+      questionCount: 4,
+      followUpCount: 0,
+      maxFollowUps: 1,
+      mustHit: ["microtasks"],
+      openingUtterance: "Hi. How does event-loop scheduling work?"
+    });
+
     expect(instruction).toContain("browser submits the finalized transcript directly");
     expect(instruction).toContain("Wait silently for the server's next text instruction");
-    expect(instruction).toContain("speak it exactly once");
-    expect(instruction).toContain("NovaCart, React.js");
-    expect(instruction).not.toContain("call submit_answer");
+    expect(instruction).not.toContain("call complete_interview_turn exactly once");
   });
 });
 

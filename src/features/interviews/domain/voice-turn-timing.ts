@@ -5,7 +5,7 @@
  * allowed a little longer than evaluation because speech cannot continue
  * without it; evaluation can be recovered after the response.
  */
-export const LIVE_END_OF_SPEECH_SILENCE_MS = 1_200;
+export const LIVE_END_OF_SPEECH_SILENCE_MS = 900;
 /**
  * Gemini can finalize transcription at a natural pause even when the candidate
  * is still answering. Keep those final segments private for one more beat so

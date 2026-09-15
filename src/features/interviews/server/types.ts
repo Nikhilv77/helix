@@ -216,6 +216,16 @@ export type DecisionAction = "clarify" | "probe" | "challenge" | "respond" | "mo
 export type MissingDimension =
   "clarity" | "structure" | "specificity" | "ownership" | "outcome" | "none";
 
+/** Decision authored by Gemini Live; the server still validates it through the state machine. */
+export interface LiveConversationProposal {
+  action: DecisionAction;
+  missing: MissingDimension;
+  reason: string;
+  acknowledgement: string;
+  line: string;
+  candidateResponse?: string;
+}
+
 export type EvidenceDimension = "ownership" | "decision" | "specificity" | "outcome";
 
 export interface EvidenceLedger {
@@ -244,6 +254,8 @@ export interface QuestionRubricEvaluation {
   rubricKey: string;
   score: number;
   rationale: string;
+  /** Exact, evaluator-grounded excerpts that support this parameter score. */
+  evidenceQuotes?: string[];
 }
 
 /** Durable Judge0 evidence. Compilation alone is never treated as correctness. */

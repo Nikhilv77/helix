@@ -19,7 +19,10 @@ import type { ReportFamilySummary, ReportsOverview } from "@/features/reports/co
 import { formatShortDate, roundShortLabel } from "@/lib/shared/labels";
 import type { InterviewReport } from "@/lib/shared/types";
 import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
-import { parameterScoresForReport } from "@/features/reports/application/reports-overview";
+import {
+  parameterScoresForReport,
+  roundParameterScore
+} from "@/features/reports/application/reports-overview";
 import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { ReportEmptyStage } from "./report-briefing-stage";
@@ -91,12 +94,15 @@ function InterviewReportContent({
 }) {
   const teacher = useWorkspaceTeacher();
 
-  const briefing = buildPdfBriefing(report, overview, candidate);
   const signals = buildSignals(report);
   const feedback = groupSignals(signals);
   const evaluationProfile = evaluationProfileForSetup(report.setup);
-  const strongest = report.summary.strongest ?? "Your interview signal";
-  const gap = report.summary.recommendedFocus ?? "Answer endings";
+  const rankedSignals = [...signals].sort((left, right) => right.score - left.score);
+  const strongestSignal = rankedSignals[0];
+  const gapSignal = rankedSignals.at(-1);
+  const strongest = strongestSignal?.label ?? "Your interview signal";
+  const gap = gapSignal?.label ?? "Answer endings";
+  const briefing = buildPdfBriefing(report, overview, candidate);
   const mayaMessage = mayaSummary(report, candidate.name, strongest, gap);
   const { state: voiceState, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
   const spokenMessage = useRef<string | null>(null);
@@ -214,6 +220,7 @@ function InterviewReportContent({
           report={report}
           profileLabel={evaluationProfile.label}
           strongest={strongest}
+          strongestScore={strongestSignal?.score ?? 0}
           gap={gap}
         />
         <FeedbackSection
@@ -254,58 +261,52 @@ function FamilyPerformance({
   latestFamily: ReportFamilySummary["family"];
 }) {
   if (!families.length) return null;
-  const hasDerivedScores = families.some((family) =>
-    family.parameters.some((parameter) => parameter.rounds > parameter.evaluatedRounds)
-  );
 
   return (
     <section className="mb-10" aria-labelledby="interview-family-performance">
       <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]">
+          <p
+            id="interview-family-performance"
+            className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--workspace-accent)]"
+          >
             Overall performance
           </p>
-          <h2
-            id="interview-family-performance"
-            className="mt-2 text-2xl font-semibold tracking-tight text-cream"
-          >
-            One scorecard for each interview family
-          </h2>
         </div>
-        <p className="max-w-xl text-sm leading-6 text-cream/48 sm:text-right">
-          Each family uses six parameters designed for the judgement that round requires.
-        </p>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {families.map((family) => {
           const isLatest = family.family === latestFamily;
+          const displayedScore = family.averageScore;
           return (
             <article
               key={family.family}
-              className={`report-glass-card rounded-2xl p-5 ${
+              className={`report-glass-card rounded-2xl p-6 ${
                 isLatest ? "ring-1 ring-[var(--workspace-accent)]" : ""
               }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold leading-5 text-cream">{family.label}</p>
-                  <p className="mt-1 text-xs text-cream/42">
+                  <p className="text-base font-semibold leading-5 text-cream">{family.label}</p>
+                  <p className="mt-1 text-sm text-cream/42">
                     {family.rounds
-                      ? `${family.rounds} scored ${family.rounds === 1 ? "interview" : "interviews"}`
+                      ? `${family.rounds} ${family.rounds === 1 ? "interview" : "interviews"} aggregated`
                       : "No scored interview yet"}
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="text-3xl font-semibold tabular-nums text-cream">
-                    {family.averageScore ?? "—"}
+                  <span
+                    className={`${displayedScore === null ? "text-sm" : "text-4xl"} font-semibold tabular-nums text-cream`}
+                  >
+                    {displayedScore ?? "Not yet"}
                   </span>
-                  {family.averageScore !== null ? (
-                    <span className="ml-1 text-xs text-cream/42">/100</span>
+                  {displayedScore !== null ? (
+                    <span className="ml-1 text-sm text-cream/42">/100</span>
                   ) : null}
                   {isLatest ? (
-                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--workspace-accent)]">
-                      Latest report
+                    <p className="mt-1 text-sm font-semibold uppercase tracking-[0.12em] text-[var(--workspace-accent)]">
+                      Current report family
                     </p>
                   ) : null}
                 </div>
@@ -314,10 +315,10 @@ function FamilyPerformance({
               <div className="mt-5 space-y-3">
                 {family.parameters.map((parameter) => (
                   <div key={parameter.key}>
-                    <div className="flex items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center justify-between gap-3 text-sm">
                       <span className="truncate text-cream/58">{parameter.label}</span>
                       <span className="shrink-0 font-semibold tabular-nums text-cream/76">
-                        {parameter.averageScore ?? "—"}
+                        {parameter.averageScore ?? "Not yet"}
                       </span>
                     </div>
                     <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
@@ -337,13 +338,6 @@ function FamilyPerformance({
           );
         })}
       </div>
-
-      {hasDerivedScores ? (
-        <p className="mt-3 text-xs leading-5 text-cream/38">
-          Some older interviews predate round-specific parameters; their family bars are derived
-          from saved question evidence until you complete a new interview in that family.
-        </p>
-      ) : null}
     </section>
   );
 }
@@ -352,37 +346,43 @@ function ReportQuickRead({
   report,
   profileLabel,
   strongest,
+  strongestScore,
   gap
 }: {
   report: InterviewReport;
   profileLabel: string;
   strongest: string;
+  strongestScore: number;
   gap: string;
 }) {
+  const overallScore = roundParameterScore(report);
+
   return (
-    <section className="mb-6 grid gap-3 sm:grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)]">
-      <div className="report-glass-card rounded-2xl px-5 py-4">
+    <section className="mb-6 grid gap-3 sm:grid-cols-[15rem_minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="report-glass-card rounded-2xl px-6 py-5">
         <p className="text-xs font-medium uppercase tracking-[0.13em] text-cream/42">
           {profileLabel} score
         </p>
         <div className="mt-3 flex items-end gap-2">
-          <span className="text-4xl font-semibold leading-none tracking-tight text-cream">
-            {report.summary.evidenceScore}
+          <span className="text-5xl font-semibold leading-none tracking-tight text-cream">
+            {overallScore}
           </span>
           <span className="pb-0.5 text-sm text-cream/58">/100</span>
         </div>
         <p className="mt-2 text-sm font-medium text-cream/72">
-          {signalStatus(report.summary.evidenceScore)}
+          {signalStatus(overallScore)}
         </p>
       </div>
 
       <div className="report-glass-card rounded-2xl px-5 py-4">
         <p className="text-xs font-medium uppercase tracking-[0.13em] text-cream/42">
-          Strongest signal
+          {strongestScore >= 70 ? "Strongest signal" : "Highest current signal"}
         </p>
         <p className="mt-3 text-lg font-semibold leading-6 text-cream">{strongest}</p>
         <p className="mt-2 text-sm leading-6 text-cream/58">
-          Keep using this as the anchor for your answers.
+          {strongestScore >= 70
+            ? "Keep using this as the anchor for your answers."
+            : "This was your clearest area, but it still needs stronger evidence."}
         </p>
       </div>
 
@@ -426,6 +426,8 @@ function FeedbackSection({
   mode: FeedbackMode;
   delay: number;
 }) {
+  if (!signals.length) return null;
+
   return (
     <section className="border-t border-white/[0.07] py-7 first:border-t-0 first:pt-0">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
@@ -459,7 +461,12 @@ function SignalNote({
   const status = signalStatus(signal.score);
   const title =
     mode === "next-step" ? `Start with ${signal.label.toLowerCase()}.` : signal.observation;
-  const copy = mode === "working" ? signal.evidence : signal.nextMove;
+  const copy =
+    mode === "next-step"
+      ? signal.nextMove
+      : mode === "needs-work"
+        ? `${signal.evidence} Next: ${signal.nextMove}`
+        : signal.evidence;
   return (
     <article
       className="report-glass-card report-latest-strip rounded-2xl p-5"
@@ -513,10 +520,38 @@ function buildSignals(report: InterviewReport): Signal[] {
   ];
 
   return parameterScoresForReport(report).map((parameter, index) => {
-    const rationale = report.competencies
+    const evaluated = report.competencies
       .filter((competency) => competency.answered)
-      .flatMap((competency) => competency.technicalEvaluation?.rubricScores ?? [])
-      .find((score) => score.rubricKey === parameter.key)?.rationale;
+      .flatMap((competency) =>
+        (competency.technicalEvaluation?.rubricScores ?? [])
+          .filter((score) => score.rubricKey === parameter.key)
+          .map((score) => ({ competency, score }))
+      );
+    const representative = [...evaluated].sort((left, right) => {
+      const leftHasQuote = Boolean(left.score.evidenceQuotes?.length);
+      const rightHasQuote = Boolean(right.score.evidenceQuotes?.length);
+      if (leftHasQuote !== rightHasQuote) return leftHasQuote ? -1 : 1;
+      return (
+        Math.abs(left.score.score - parameter.score) -
+        Math.abs(right.score.score - parameter.score)
+      );
+    })[0];
+    const quote = representative?.score.evidenceQuotes?.[0];
+    const questionIndex = representative?.competency.questionIndex;
+    const evidenceTurn =
+      typeof questionIndex === "number"
+        ? report.transcript.find(
+            (turn) =>
+              turn.speaker === "user" &&
+              !turn.assessmentExcluded &&
+              turn.questionIndex === questionIndex &&
+              (!quote || normalizedEvidence(turn.text).includes(normalizedEvidence(quote)))
+          )
+        : undefined;
+    const rationale = representative?.score.rationale;
+    const evidence = quote
+      ? `${evidenceTurn ? `At ${formatEvidenceTime(evidenceTurn.startMs)}, ` : ""}you said “${quote}”.${rationale ? ` ${rationale}` : ""}`
+      : rationale;
     const observation =
       parameter.score >= 75
         ? `Your ${parameter.label.toLowerCase()} came through clearly.`
@@ -530,20 +565,30 @@ function buildSignals(report: InterviewReport): Signal[] {
       score: parameter.score,
       icon: icons[index] ?? MessageSquareText,
       observation,
-      evidence: rationale ?? parameter.description,
+      evidence: evidence ?? parameter.description,
       nextMove: parameter.nextStep
     };
   });
 }
 
+function formatEvidenceTime(milliseconds: number): string {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1_000));
+  const minutes = Math.floor(totalSeconds / 60);
+  return `${minutes}:${String(totalSeconds % 60).padStart(2, "0")}`;
+}
+
+function normalizedEvidence(value: string): string {
+  return value.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+}
+
 function groupSignals(signals: Signal[]) {
   const sorted = [...signals].sort((left, right) => left.score - right.score);
-  const needsWork = signals.filter((signal) => signal.score < 55);
-  const working = signals.filter((signal) => signal.score >= 55);
+  const needsWork = signals.filter((signal) => signal.score < 70);
+  const working = signals.filter((signal) => signal.score >= 70);
 
   return {
-    needsWork: needsWork.length ? needsWork : sorted.slice(0, 1),
-    working: working.length ? working : sorted.slice(-1),
+    needsWork,
+    working,
     nextSteps: sorted.slice(0, Math.min(2, sorted.length))
   };
 }
@@ -561,21 +606,17 @@ function mayaSummary(
   const firstName = candidateName.split(/\s+/)[0] || "there";
   const nextStep = report.summary.nextStep || `focus on ${gap.toLowerCase()}`;
   const profile = evaluationProfileForSetup(report.setup);
+  const overallScore = roundParameterScore(report);
 
-  if (report.summary.evidenceScore >= 75) {
+  if (overallScore >= 75) {
     return `James reported back to me, ${firstName}. In your ${profile.label} interview, your ${strongest.toLowerCase()} really came through. You are building a strong signal—keep that same clarity in your next round.`;
   }
 
-  if (report.summary.evidenceScore >= 45) {
+  if (overallScore >= 45) {
     return `James reported back to me, ${firstName}. I reviewed your ${profile.label} parameters, and your ${strongest.toLowerCase()} is starting to show. Next time, ${lowercaseFirst(nextStep)} Keep going—you are making real progress.`;
   }
 
   return `James reported back to me, ${firstName}. This ${profile.label} attempt gives us a useful starting point. Begin with ${gap.toLowerCase()}. ${uppercaseFirst(nextStep)} Do not be discouraged—this is exactly what practice is for.`;
-}
-
-function strongestMessage(report: InterviewReport) {
-  const competency = report.competencies.find((item) => item.label === report.summary.strongest);
-  return competency?.signals[0] ?? "You gave evidence that made your contribution easy to follow.";
 }
 
 function pressureMessage(report: InterviewReport) {
@@ -590,11 +631,24 @@ function buildPdfBriefing(
   overview: ReportsOverview,
   candidate: Candidate
 ): ReportPdfBriefing {
-  const gap = report.summary.recommendedFocus ?? "Answer endings";
-  const strongest = report.summary.strongest ?? "Your interview signal";
+  const signals = buildSignals(report);
+  const rankedSignals = [...signals].sort((left, right) => right.score - left.score);
+  const strongestSignal = rankedSignals[0];
+  const gapSignal = rankedSignals.at(-1);
+  const strongest = strongestSignal?.label ?? "Your interview signal";
+  const gap = gapSignal?.label ?? "Answer endings";
+  const roundScore = roundParameterScore(report);
   return {
+    overallFamilies: overview.families.map((family) => ({
+      label: family.label,
+      aggregateScore: family.averageScore,
+      rounds: family.rounds
+    })),
+    roundScore,
+    scoreExplanation:
+      "This is the saved overall judgement for the latest interview. The six parameters below provide the supporting evidence.",
     verdict:
-      report.summary.evidenceScore >= 75
+      roundScore >= 75
         ? "Your interview signal is getting strong."
         : "Your interview signal is developing.",
     trend:
@@ -603,12 +657,14 @@ function buildPdfBriefing(
         : "Keep building on the evidence from this round.",
     summaryText: summaryFor(report, strongest, gap),
     strongestLabel: strongest,
-    strongestText: strongestMessage(report),
+    strongestText:
+      strongestSignal?.evidence ??
+      "You gave evidence that made your contribution easier to follow.",
     gapLabel: gap,
-    gapText: report.summary.nextStep,
+    gapText: gapSignal?.nextMove ?? report.summary.nextStep,
     pressureText: pressureMessage(report),
-    nextAction: report.summary.nextStep,
-    latestText: `${roundShortLabel(report.setup.roundType)} · ${report.summary.evidenceScore}/100 · ${formatShortDate(report.startedAt)}`,
+    nextAction: gapSignal?.nextMove ?? report.summary.nextStep,
+    latestText: `${roundShortLabel(report.setup.roundType)} · ${roundScore}/100 · ${formatShortDate(report.startedAt)}`,
     history: overview.rounds
       .slice(0, 4)
       .map(
@@ -616,13 +672,13 @@ function buildPdfBriefing(
           `${roundShortLabel(round.roundType)} · ${round.evidenceScore ?? 0}/100 · ${formatShortDate(round.startedAt)}`
       ),
     readinessScore: overview.readinessScore,
-    competencyBars: parameterScoresForReport(report)
-      .slice(0, 6)
-      .map((item) => ({
-        label: item.label,
-        score: item.score,
-        level: item.score >= 75 ? "strong" : item.score >= 45 ? "developing" : "missing"
-      })),
+    competencyBars: signals.slice(0, 6).map((signal) => ({
+      label: signal.label,
+      score: signal.score,
+      level: signal.score >= 75 ? "strong" : signal.score >= 45 ? "developing" : "missing",
+      evidence: signal.evidence,
+      nextAction: signal.nextMove
+    })),
     candidateName: candidate.name,
     candidateDiscipline: candidate.discipline
   };

@@ -42,6 +42,7 @@ import {
   InterviewSetup,
   InterviewAnswerResponse,
   InterviewState,
+  LiveConversationProposal,
   MissingDimension,
   PlannedQuestion,
   QuestionEvaluation,
@@ -327,9 +328,10 @@ export class InterviewService {
     sessionId: string,
     answer: { text: string; startMs: number; endMs: number },
     now = Date.now(),
-    turnId?: string
+    turnId?: string,
+    liveProposal?: LiveConversationProposal
   ): Promise<AnswerResult> {
-    return this.answerInternal(sessionId, answer, now, undefined, turnId);
+    return this.answerInternal(sessionId, answer, now, undefined, turnId, "answer", liveProposal);
   }
 
   async answerOwned(
@@ -337,9 +339,10 @@ export class InterviewService {
     sessionId: string,
     answer: { text: string; startMs: number; endMs: number },
     now = Date.now(),
-    turnId?: string
+    turnId?: string,
+    liveProposal?: LiveConversationProposal
   ): Promise<AnswerResult> {
-    return this.answerInternal(sessionId, answer, now, ownerId, turnId);
+    return this.answerInternal(sessionId, answer, now, ownerId, turnId, "answer", liveProposal);
   }
 
   async skipBlockAssessmentCodeOwned(
@@ -365,7 +368,8 @@ export class InterviewService {
     now: number,
     ownerId?: string,
     turnId?: string,
-    mode: AnswerMode = "answer"
+    mode: AnswerMode = "answer",
+    liveProposal?: LiveConversationProposal
   ): Promise<AnswerResult> {
     // Establish ownership/capability-backed access before creating an
     // idempotency row, so a guessed UUID cannot cause writes to another user.
@@ -378,7 +382,16 @@ export class InterviewService {
     }
 
     try {
-      return await this.processAnswer(session, sessionId, answer, now, ownerId, turnId, mode);
+      return await this.processAnswer(
+        session,
+        sessionId,
+        answer,
+        now,
+        ownerId,
+        turnId,
+        mode,
+        liveProposal
+      );
     } catch (error) {
       if (turnId) {
         if (error instanceof SessionVersionConflictError) {
@@ -402,9 +415,18 @@ export class InterviewService {
     now: number,
     ownerId?: string,
     turnId?: string,
-    mode: AnswerMode = "answer"
+    mode: AnswerMode = "answer",
+    liveProposal?: LiveConversationProposal
   ): Promise<AnswerResult> {
     const existing = session.state;
+
+    if (liveProposal && existing.setup.roundType !== "hiring-manager") {
+      throw new BadRequestErrorException(
+        "LIVE_PROPOSAL_NOT_ALLOWED",
+        "Gemini-led decisions are only enabled for the hiring-manager round.",
+        { sessionId }
+      );
+    }
 
     if (existing.phase === "done") {
       throw new BadRequestErrorException("SESSION_COMPLETE", "This interview has ended", {
@@ -518,37 +540,58 @@ export class InterviewService {
 
     const turnStartedAt = Date.now();
     const [raw, evaluationResult] = await Promise.all([
-      this.decideWithFallback({
-        setup: withAnswer.setup,
-        questionAsked: question.text,
-        evidenceAnchor: question.evidenceAnchor,
-        competency: question.competency,
-        intent: question.intent,
-        questionKind: question.kind === "mcq" ? "code" : question.kind,
-        language: question.language,
-        codeTask: question.codeTask,
-        codeSnippet: question.codeSnippet,
-        mustHit: question.mustHit,
-        userAnswer: answer.text,
-        followUpCount: withAnswer.followUpCount,
-        maxFollowUps: question.maxFollowUps,
-        interviewStage: question.stage,
-        topicLabel: topicLabelFor(withAnswer.setup, question),
-        blueprintDifficulty: question.blueprintDifficulty,
-        rubric: rubricFor(withAnswer.setup, question),
-        followUpPolicy: withAnswer.setup.personalizedBlueprint?.followUpPolicy,
-        fallbackProbe: question.probeIfMissing,
-        evidenceLedger: withAnswer.evidence?.[String(withAnswer.questionIndex)],
-        dsaInterviewerGuide: question.dsaInterviewerGuide,
-        coreTechnicalInterviewerGuide: question.coreTechnicalInterviewerGuide,
-        storyPracticeInterviewerGuide: question.storyPracticeInterviewerGuide,
-        acceptsCandidateQuestions: question.acceptsCandidateQuestions,
-        candidateTurnMode,
-        conversationHistory
-      }),
+      liveProposal
+        ? Promise.resolve({
+            ...liveProposal,
+            action:
+              isDialogueRepair && liveProposal.action !== "respond"
+                ? ("respond" as const)
+                : liveProposal.action,
+            missing: isDialogueRepair ? ("none" as const) : liveProposal.missing,
+            acknowledgement: isDialogueRepair ? "" : liveProposal.acknowledgement,
+            candidateResponse:
+              isDialogueRepair && !liveProposal.candidateResponse?.trim()
+                ? candidateConversationFallback(answer.text, conversationHistory)
+                : liveProposal.candidateResponse,
+            runtime: {
+              engineVersion: INTERVIEW_ENGINE_VERSION,
+              promptVersion: "gemini-live-conversation-v1",
+              durationMs: 0,
+              usedFallback: false,
+              calls: []
+            }
+          })
+        : this.decideWithFallback({
+            setup: withAnswer.setup,
+            questionAsked: question.text,
+            evidenceAnchor: question.evidenceAnchor,
+            competency: question.competency,
+            intent: question.intent,
+            questionKind: question.kind === "mcq" ? "code" : question.kind,
+            language: question.language,
+            codeTask: question.codeTask,
+            codeSnippet: question.codeSnippet,
+            mustHit: question.mustHit,
+            userAnswer: answer.text,
+            followUpCount: withAnswer.followUpCount,
+            maxFollowUps: question.maxFollowUps,
+            interviewStage: question.stage,
+            topicLabel: topicLabelFor(withAnswer.setup, question),
+            blueprintDifficulty: question.blueprintDifficulty,
+            rubric: rubricFor(withAnswer.setup, question),
+            followUpPolicy: withAnswer.setup.personalizedBlueprint?.followUpPolicy,
+            fallbackProbe: question.probeIfMissing,
+            evidenceLedger: withAnswer.evidence?.[String(withAnswer.questionIndex)],
+            dsaInterviewerGuide: question.dsaInterviewerGuide,
+            coreTechnicalInterviewerGuide: question.coreTechnicalInterviewerGuide,
+            storyPracticeInterviewerGuide: question.storyPracticeInterviewerGuide,
+            acceptsCandidateQuestions: question.acceptsCandidateQuestions,
+            candidateTurnMode,
+            conversationHistory
+          }),
       isDialogueRepair
         ? Promise.resolve({ evaluation: undefined, recovery: undefined })
-        : this.evaluateAnswer(withAnswer, question, now)
+        : this.evaluateAnswer(withAnswer, question, now, Boolean(liveProposal))
     ]);
 
     const requestedAction =
@@ -983,7 +1026,8 @@ export class InterviewService {
   private async evaluateAnswer(
     state: InterviewState,
     question: PlannedQuestion,
-    now: number
+    now: number,
+    defer = false
   ): Promise<{
     evaluation: QuestionEvaluation | null;
     recovery?: EvaluationRecoveryMutation;
@@ -1009,6 +1053,16 @@ export class InterviewService {
       answerHash: evaluationAnswerHash(answers),
       queuedAt: now
     };
+    // Gemini-led Hiring Manager turns must not wait for a second model before
+    // James can speak. Persist an unavailable placeholder and a durable job in
+    // the same transaction as the answer; the route starts recovery after the
+    // response has been returned.
+    if (defer) {
+      return {
+        evaluation: unavailableTechnicalEvaluation(state, question, now),
+        recovery: { action: "enqueue", payload: recoveryPayload }
+      };
+    }
     if (!this.answerEvaluator) {
       return {
         evaluation: unavailableTechnicalEvaluation(state, question, now),
@@ -1319,6 +1373,7 @@ function joinSpoken(bridge: string, sentence: string): string {
 function safeCandidateResponse(value: string | undefined): string {
   const normalized = value?.replace(/\s+/g, " ").trim() ?? "";
   if (!normalized) return "";
+  if (disclosesProviderIdentity(normalized)) return jamesRecruitingIdentity();
   const transparent = /\b(?:simulation|specific employer|speaking generally)\b/i.test(normalized)
     ? normalized
     : `Speaking generally for this simulation, ${normalized}`;
@@ -1331,10 +1386,23 @@ function safeCandidateResponse(value: string | undefined): string {
 function safeConversationalResponse(value: string | undefined): string {
   const normalized = value?.replace(/\s+/g, " ").trim() ?? "";
   if (!normalized) return "Let me answer that directly.";
+  if (disclosesProviderIdentity(normalized)) return jamesRecruitingIdentity();
   if (normalized.length <= 360) return normalized;
   const prefix = normalized.slice(0, 359);
   const lastSpace = prefix.lastIndexOf(" ");
   return `${prefix.slice(0, lastSpace > 180 ? lastSpace : prefix.length).trimEnd()}…`;
+}
+
+function disclosesProviderIdentity(value: string): boolean {
+  return (
+    /\b(?:google|gemini|deepmind)\b/i.test(value) ||
+    /\b(?:ai|artificial intelligence|language)\s+(?:assistant|model|bot)\b/i.test(value) ||
+    /\b(?:chatbot|virtual assistant|large language model|llm)\b/i.test(value)
+  );
+}
+
+function jamesRecruitingIdentity(): string {
+  return "I'm James from the recruiting team.";
 }
 
 function conversationalReturnQuestion(candidate: string, questionAsked: string): string {
@@ -1718,6 +1786,12 @@ export function candidateRequestsInterviewEnd(value: string): boolean {
     ) ||
     /^(?:let's|lets) (?:please )?(?:end|stop|finish|wrap up)(?: here| now)?$/.test(normalized) ||
     /^i (?:do not|don't|cannot|can't|won't) want to (?:continue|go on|do this)(?: anymore)?$/.test(
+      normalized
+    ) ||
+    /^(?:james )?(?:please )?(?:end|stop|finish|quit|exit)(?: it| this)?(?: here| now)?$/.test(
+      normalized
+    ) ||
+    /^i (?:want|would like|need) to (?:end|stop|finish|quit|leave)(?: the| this| our)?(?: interview|meeting|session|call)?(?: here| now)?$/.test(
       normalized
     );
 

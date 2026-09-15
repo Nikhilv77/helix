@@ -77,6 +77,9 @@ describe("InterviewService resume round", () => {
     expect(candidateRequestsInterviewEnd("Can we end here?")).toBe(true);
     expect(candidateRequestsInterviewEnd("Let's stop here.")).toBe(true);
     expect(candidateRequestsInterviewEnd("I don't want to continue anymore.")).toBe(true);
+    expect(candidateRequestsInterviewEnd("James, please end it now.")).toBe(true);
+    expect(candidateRequestsInterviewEnd("I want to leave this interview.")).toBe(true);
+    expect(candidateRequestsInterviewEnd("Stop now.")).toBe(true);
 
     expect(candidateRequestsInterviewEnd("I just want to sleep.")).toBe(false);
     expect(candidateRequestsInterviewEnd("I'm too tired to continue.")).toBe(false);
@@ -1397,6 +1400,121 @@ describe("InterviewService conversation", () => {
       "React was the entry point for you. What about React made programming feel worth pursuing?"
     );
     expect(result.decision.utterance).not.toContain("Why did you choose this career?");
+  });
+
+  it("uses Gemini Live's hiring-manager decision without a second decider model call", async () => {
+    const careerQuestion = {
+      ...questions[0]!,
+      text: "Why did you choose this career?",
+      stage: "career" as const,
+      maxFollowUps: 2,
+      probeIfMissing: "What was the turning point?"
+    };
+    const completedEvaluation: QuestionEvaluation = {
+      source: "semantic-evaluator",
+      score: 74,
+      verdict: "mostly-correct",
+      confidence: 0.8,
+      summary: "Grounded motivation.",
+      strengths: [],
+      gaps: [],
+      rubricScores: [],
+      answerExcerpts: [],
+      execution: null,
+      evaluatedAt: 3_000
+    };
+    const { service, store, decide, evaluate } = harness(
+      [careerQuestion],
+      completedEvaluation
+    );
+    const started = await service.start(
+      { ...setup, roundType: "hiring-manager", resumeRound: true },
+      "user-1",
+      1_000,
+      [careerQuestion]
+    );
+
+    const result = await service.answer(
+      started.state.id,
+      { text: "React made software feel tangible to me.", startMs: 500, endMs: 2_000 },
+      3_000,
+      undefined,
+      {
+        action: "probe",
+        missing: "specificity",
+        reason: "the turning point is still unclear",
+        acknowledgement: "React made the work feel tangible",
+        line: "What was the moment that turned that interest into a career choice?"
+      }
+    );
+
+    expect(decide).not.toHaveBeenCalled();
+    expect(evaluate).not.toHaveBeenCalled();
+    expect(store.evaluationRecoveryCount()).toBe(1);
+    expect(result.state.questionEvaluations?.["0"]?.source).toBe("evaluation-unavailable");
+    expect(result.decision.action).toBe("probe");
+    expect(result.state.followUpCount).toBe(1);
+    expect(result.decision.utterance).toBe(
+      "React made the work feel tangible. What was the moment that turned that interest into a career choice?"
+    );
+    expect(result.state.turns.at(-1)?.runtime?.promptVersion).toBe("gemini-live-conversation-v1");
+  });
+
+  it("replaces Gemini provider disclosure with James's recruiting identity", async () => {
+    const careerQuestion = {
+      ...questions[0]!,
+      text: "Why did you choose this career?",
+      stage: "career" as const,
+      maxFollowUps: 2
+    };
+    const { service, decide } = harness([careerQuestion]);
+    const started = await service.start(
+      { ...setup, roundType: "hiring-manager", resumeRound: true },
+      "user-1",
+      1_000,
+      [careerQuestion]
+    );
+
+    const result = await service.answer(
+      started.state.id,
+      { text: "What's your name?", startMs: 500, endMs: 2_000 },
+      3_000,
+      undefined,
+      {
+        action: "respond",
+        missing: "none",
+        reason: "candidate asked for interviewer identity",
+        acknowledgement: "",
+        candidateResponse: "I'm an AI assistant created by Google.",
+        line: "Could you walk me through the career choices that brought you here?"
+      }
+    );
+
+    expect(decide).not.toHaveBeenCalled();
+    expect(result.decision.utterance).toContain("I'm James from the recruiting team.");
+    expect(result.decision.utterance).not.toMatch(/Google|AI assistant/i);
+    expect(result.decision.utterance).toContain("career choices");
+  });
+
+  it("rejects Gemini-led decisions outside the hiring-manager round", async () => {
+    const { service } = harness();
+    const started = await service.start(setup, "user-1", 1_000);
+
+    await expect(
+      service.answer(
+        started.state.id,
+        { text: "My answer.", startMs: 500, endMs: 2_000 },
+        3_000,
+        undefined,
+        {
+          action: "move_on",
+          missing: "none",
+          reason: "complete",
+          acknowledgement: "",
+          line: ""
+        }
+      )
+    ).rejects.toMatchObject({ code: "LIVE_PROPOSAL_NOT_ALLOWED" });
   });
 
   it("discards a stale model follow-up when the state machine forces move on", async () => {

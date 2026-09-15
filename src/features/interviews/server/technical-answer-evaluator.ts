@@ -33,7 +33,8 @@ const evaluationSchema = z.object({
       z.object({
         rubricKey: z.string().trim().min(1).max(120),
         score: z.number().min(0).max(100),
-        rationale: z.string().min(1).max(400)
+        rationale: z.string().min(1).max(400),
+        evidenceQuotes: z.array(z.string().min(1).max(400)).max(2).optional()
       })
     )
     .max(12),
@@ -122,10 +123,10 @@ export function normalizeTechnicalEvaluation(
   raw: RawTechnicalEvaluation,
   input: TechnicalAnswerEvaluationInput
 ): QuestionEvaluation {
+  const profile = evaluationProfileForSetup(input.setup);
   const semanticScore = verdictBoundedScore(Math.round(raw.score), raw.verdict);
   const score = executionBoundedScore(semanticScore, raw.verdict, input.execution);
   const verdict = boundedVerdict(raw.verdict, score);
-  const profile = evaluationProfileForSetup(input.setup);
   const rawRubricScores = new Map(
     uniqueBy(raw.rubricScores, (item) => item.rubricKey.trim().toLowerCase()).map((item) => [
       item.rubricKey.trim().toLowerCase(),
@@ -154,7 +155,8 @@ export function normalizeTechnicalEvaluation(
           item?.rationale ??
             `The provider did not separate this parameter from the overall answer.`,
           180
-        )
+        ),
+        evidenceQuotes: groundedEvidenceQuotes(item?.evidenceQuotes ?? [], input.answers)
       };
     }),
     evidenceQuotes: groundedEvidenceQuotes(raw.evidenceQuotes ?? [], input.answers),
@@ -211,6 +213,8 @@ ${answers.map((answer, index) => `Answer ${index + 1}:\n"""\n${answer.trim()}\n"
 This ${profile.label} session uses these six judgement parameters. Score every one from 0 to 100 using only supported evidence:
 ${formatEvaluationParameters(profile.parameters)}
 
+Scale requirement: every score is out of 100, never out of 5 or 10. For example, a six-out-of-ten assessment must be returned as 60, not 6.
+
 Overall score guide:
 - 85-100: clear, concrete, personal answer with strong evidence across the answer.
 - 70-84: good answer with one meaningful missing detail.
@@ -218,7 +222,8 @@ Overall score guide:
 - 0-44: too vague, generic, off-topic, or unsupported to assess.
 
 Return rubricScores with exactly these keys: ${profile.parameters.map((parameter) => parameter.key).join(", ")}.
-For evidenceQuotes, copy up to two short exact phrases from the candidate's answer that support your judgement. If there is no useful quote, return an empty list.
+For every rubric score, include evidenceQuotes containing up to two short exact phrases from the candidate's answer that explain that specific score. A low score must cite the concerning phrase when one exists; when the problem is missing evidence, use an empty list and say exactly what was missing in the rationale.
+For the top-level evidenceQuotes, copy up to two short exact phrases that best support the overall judgement.
 Keep summary, strengths, gaps, and rationales short, specific, and human. Never say the candidate is good or bad as a person.`;
 }
 

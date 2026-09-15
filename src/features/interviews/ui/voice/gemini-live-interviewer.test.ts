@@ -3,8 +3,10 @@ import {
   bufferCandidateInterimTranscript,
   buildCandidateTranscriptionConfig,
   finishAuthoritativeInputTranscript,
+  liveConversationProposalFromToolArgs,
   mergeFinalizedCandidateTranscript,
-  resampleToPcm16
+  resampleToPcm16,
+  selectGeminiLedCandidateTranscript
 } from "./gemini-live-interviewer";
 
 describe("Gemini Live candidate transcript finalization", () => {
@@ -100,6 +102,49 @@ describe("Gemini Live candidate transcript finalization", () => {
     ).toBe(
       "The main trade-off was consistency over latency because orders could not be duplicated."
     );
+  });
+});
+
+describe("Gemini-led interview tool decisions", () => {
+  it("uses one transcript source instead of concatenating recognizer variants", () => {
+    expect(
+      selectGeminiLedCandidateTranscript(
+        "Yeah, I've been an engineering student and wanted to work at NovaCart.",
+        "Yeah, I've been engineering student and wanted to work at Nova cars."
+      )
+    ).toBe("Yeah, I've been an engineering student and wanted to work at NovaCart.");
+  });
+
+  it("accepts the bounded conversational proposal sent by Gemini Live", () => {
+    expect(
+      liveConversationProposalFromToolArgs({
+        action: "probe",
+        missing: "specificity",
+        acknowledgement: "Reliability shaped that decision",
+        line: "What trade-off did you accept to get that reliability?",
+        candidateResponse: "",
+        reason: "the trade-off is missing"
+      })
+    ).toEqual({
+      action: "probe",
+      missing: "specificity",
+      acknowledgement: "Reliability shaped that decision",
+      line: "What trade-off did you accept to get that reliability?",
+      candidateResponse: undefined,
+      reason: "the trade-off is missing"
+    });
+  });
+
+  it("rejects an action outside the server's state-machine vocabulary", () => {
+    expect(() =>
+      liveConversationProposalFromToolArgs({
+        action: "ask_anything",
+        missing: "none",
+        acknowledgement: "",
+        line: "Tell me about a new topic.",
+        reason: "change topic"
+      })
+    ).toThrow("invalid interview decision");
   });
 });
 

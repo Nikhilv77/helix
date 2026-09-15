@@ -102,6 +102,14 @@ export function submitAnswer(params: {
   userAnswer: string;
   startMs: number;
   endMs: number;
+  liveProposal?: {
+    action: "clarify" | "probe" | "challenge" | "respond" | "move_on";
+    missing: "clarity" | "structure" | "specificity" | "ownership" | "outcome" | "none";
+    reason: string;
+    acknowledgement: string;
+    line: string;
+    candidateResponse?: string;
+  };
 }): Promise<DecideResponse> {
   return request<DecideResponse>("/api/interview/decide", {
     method: "POST",

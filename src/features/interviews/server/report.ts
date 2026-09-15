@@ -9,6 +9,7 @@ import type {
 import { SESSION_TTL_MS } from "./session-constants";
 import type { StoredInterviewSession } from "./session-store";
 import type { QuestionEvaluation } from "./types";
+import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
 
 export interface InterviewReportSnapshot {
   report: Omit<InterviewReport, "transcript">;
@@ -70,6 +71,7 @@ export function createInterviewReport(
       : heuristicAssessment;
 
     return {
+      questionIndex: index,
       label: question.competency?.trim() || `Question ${index + 1}`,
       question: question.text,
       evidenceAnchor: question.evidenceAnchor ?? null,
@@ -97,12 +99,31 @@ export function createInterviewReport(
   );
   const strongest = ordered[0] ?? null;
   const recommended = ordered.at(-1) ?? competencies[0] ?? null;
-  const evidenceScore = scoredCompetencies.length
+  const profile = evaluationProfileForSetup(state.setup);
+  const parameterScores = profile.parameters.flatMap((parameter) => {
+    const values = scoredCompetencies.flatMap((item) => {
+      const rubricScores = item.technicalEvaluation?.rubricScores ?? [];
+      return rubricScores
+        .filter((score) => score.rubricKey === parameter.key)
+        .map((score) => score.score);
+    });
+    return values.length
+      ? [values.reduce((total, value) => total + value, 0) / values.length]
+      : [];
+  });
+  // The headline is the arithmetic mean of the six visible round-specific
+  // parameters. Fall back to legacy per-question scores only when an older
+  // evaluation did not persist the parameter rubric.
+  const evidenceScore = parameterScores.length
     ? Math.round(
-        scoredCompetencies.reduce((total, item) => total + item.evidenceScore, 0) /
-          scoredCompetencies.length
+        parameterScores.reduce((total, value) => total + value, 0) / parameterScores.length
       )
-    : 0;
+    : scoredCompetencies.length
+      ? Math.round(
+          scoredCompetencies.reduce((total, item) => total + item.evidenceScore, 0) /
+            scoredCompetencies.length
+        )
+      : 0;
 
   return {
     ...history,
@@ -376,15 +397,18 @@ function assessedTechnicalAnswer(
     specificity: heuristic.evidenceScore,
     outcome: heuristic.evidenceScore
   };
-  const rubricScore = (key: string, fallback: number) =>
-    evaluation.rubricScores.find((item) => item.rubricKey === key)?.score ?? fallback;
+  const evaluationScore = Math.round(evaluation.score);
+  const rubricScore = (key: string, fallback: number) => {
+    const item = evaluation.rubricScores.find((score) => score.rubricKey === key);
+    return item ? Math.round(item.score) : fallback;
+  };
   return {
     ...heuristic,
-    evidenceScore: evaluation.score,
+    evidenceScore: evaluationScore,
     evidenceLevel:
       evaluation.verdict === "insufficient-evidence"
         ? "missing"
-        : evaluation.score >= 75
+        : evaluationScore >= 75
           ? "strong"
           : "developing",
     signals: evaluation.strengths,
@@ -400,13 +424,13 @@ function assessedTechnicalAnswer(
     },
     technicalEvaluation: {
       source: evaluation.source,
-      score: evaluation.score,
+      score: evaluationScore,
       verdict: evaluation.verdict,
       confidence: evaluation.confidence,
       summary: evaluation.summary,
       strengths: evaluation.strengths,
       gaps: evaluation.gaps,
-      rubricScores: evaluation.rubricScores,
+      rubricScores: evaluation.rubricScores.map((item) => ({ ...item, score: Math.round(item.score) })),
       evidenceQuotes: evaluation.evidenceQuotes,
       execution: evaluation.execution
         ? {

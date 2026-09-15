@@ -1,4 +1,4 @@
-import { createReportsOverview } from "./reports-overview";
+import { createReportsOverview, roundParameterScore } from "./reports-overview";
 import type { InterviewCompetencyReport, InterviewReport } from "@/lib/shared/types";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -156,6 +156,7 @@ describe("createReportsOverview", () => {
     const accountability = overview.families
       .find((family) => family.family === "hr-behavioral")
       ?.parameters.find((parameter) => parameter.key === "accountability");
+    const hrFamily = overview.families.find((family) => family.family === "hr-behavioral");
 
     expect(accountability).toMatchObject({
       latestScore: 84,
@@ -163,6 +164,55 @@ describe("createReportsOverview", () => {
       rounds: 2,
       evaluatedRounds: 1
     });
+    expect(hrFamily?.latestScore).toBe(72);
+  });
+
+  it("normalizes a complete compact conversation rubric at report level", () => {
+    const direct = competency("Career motivation", 3);
+    direct.technicalEvaluation = {
+      source: "semantic-evaluator",
+      score: 3,
+      verdict: "incorrect",
+      confidence: 0.8,
+      summary: "The answer had very limited evidence.",
+      strengths: [],
+      gaps: [],
+      rubricScores: [
+        "motivation-fit",
+        "judgement",
+        "collaboration",
+        "accountability",
+        "self-awareness",
+        "communication"
+      ].map((rubricKey, index) => ({
+        rubricKey,
+        score: index + 1,
+        rationale: "Limited evidence on the hundred-point rubric."
+      })),
+      execution: null
+    };
+    const legacy = report({
+      sessionId: "legacy-ten-point",
+      setup: { roundType: "hiring-manager", resumeRound: true } as InterviewReport["setup"],
+      competencies: [direct]
+    });
+
+    expect(roundParameterScore(legacy)).toBe(35);
+  });
+
+  it("does not score an end-interview utterance that answered no planned question", () => {
+    const endedOnly = report({
+      sessionId: "ended-only",
+      answerCount: 1,
+      questionsCovered: 0,
+      competencies: [competency("Career story", 0, false)]
+    });
+
+    const overview = createReportsOverview([endedOnly]);
+
+    expect(overview.scoredRounds).toBe(0);
+    expect(overview.latestCompletedReport).toBeNull();
+    expect(overview.families.every((family) => family.latestScore === null)).toBe(true);
   });
 
   it("orders the trend chronologically regardless of input order", () => {

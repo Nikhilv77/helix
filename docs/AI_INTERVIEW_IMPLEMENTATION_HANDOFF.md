@@ -30,17 +30,22 @@ James is always the live interviewer. His Gemini voice is locked to the male
 briefing before Resume and Hiring Manager rounds; that coach is not the live
 interviewer.
 
+James's candidate-facing identity is always: "I'm James from the recruiting
+team." The Hiring Manager system instruction and server response guard both
+enforce this. He must never identify himself as Google, Gemini, an AI assistant,
+a language model, a bot, or a virtual assistant.
+
 ## Provider responsibilities
 
-| Provider          | Current responsibility                                                                                                             |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Gemini Live agent | James's native-audio listening context and streamed `Charon` voice output                                                          |
-| Gemini Transcribe | Dedicated bilingual verbatim candidate transcription with resume, target-job, and planned-question vocabulary biasing              |
-| Groq              | Fast server-side interview planning, answer decision, follow-up selection, and answer evaluation when `GROQ_API_KEY` is configured |
-| Gemini text API   | Fallback for the server-side AI work when Groq is unavailable; also used by other generation features                              |
-| Deepgram          | Scripted workspace-coach speech outside the Gemini Live interview                                                                  |
-| LiveKit           | Human-to-human peer-help calls only                                                                                                |
-| Supabase/Postgres | Durable profiles, interview sessions, answers, evaluations, and reports                                                            |
+| Provider          | Current responsibility                                                                                                  |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Gemini Live agent | James's native-audio listening context and streamed `Charon` voice output                                               |
+| Gemini Transcribe | Dedicated bilingual verbatim transcription for interview families that remain server-led                              |
+| Groq              | Fast server-side planning, non-Hiring-Manager answer decisions, and answer evaluation when `GROQ_API_KEY` is configured |
+| Gemini text API   | Fallback for the server-side AI work when Groq is unavailable; also used by other generation features                   |
+| Deepgram          | Scripted workspace-coach speech outside the Gemini Live interview                                                       |
+| LiveKit           | Human-to-human peer-help calls only                                                                                     |
+| Supabase/Postgres | Durable profiles, interview sessions, answers, evaluations, and reports                                                 |
 
 There is no Python or LiveKit AI-interviewer worker anymore. Do not add LiveKit
 back to an AI interview. The LiveKit packages and environment variables remain
@@ -68,11 +73,12 @@ screen.
 ## Live interview architecture
 
 ```text
-                         +-> Gemini Live agent -> James audio
-Browser microphone -----|
-                         +-> Gemini 3.5 Transcribe Live
+Browser microphone -----+-> Gemini Live agent -> James audio
                                       |
-                                      | buffered final segments
+                                      | required answerText + decision tool call
+                                      v
+                    Gemini complete_interview_turn tool
+                                      |
                                       v
                             POST /api/interview/decide
                            |
@@ -80,50 +86,63 @@ Browser microphone -----|
              InterviewService (source of truth)
                   |                    |
                   |                    +-> semantic evaluator
-                  +-> answer decider       (six family-specific scores)
-                      (follow up/move on)
+                  +-> validates action     (six family-specific scores)
+                      and applies limits
                            |
                            v
-                persisted state + approved utterance
+               persisted state + approved direction
                            |
                            v
-                 Gemini speaks as James
+              tool result -> Gemini speaks as James
 ```
 
-The browser receives two one-use, short-lived Gemini credentials from
-`POST /api/interview/gemini-live/token`: one constrained to the native-audio
-agent model and one constrained to `gemini-3.5-transcribe-live`. The long-lived
-Google API key never goes to the browser. A single 16 kHz browser microphone
-capture is sent directly to both constrained sessions in approximately 32 ms
-packets; audio does not pass through the Trailgrad server.
+For Hiring Manager sessions, the browser receives one short-lived credential
+constrained to the native-audio agent model. Its required
+`complete_interview_turn` call supplies the saved candidate transcript, so the
+old parallel transcription token and WebSocket are not created. Server-led
+families still receive a second credential constrained to
+`gemini-3.5-transcribe-live`. The long-lived Google API key never goes to the
+browser, and audio does not pass through the Trailgrad server.
 
 The transcription session uses bilingual Verbatim mode (`en-IN` and `hi-IN`)
 and a maximum of 100 vocabulary hints assembled from the active resume, company
 names, projects, skills, target role, and frozen interview plan. Interim
-hypotheses stay private. Provider-final segments are buffered and deduplicated
-for an additional one-second commit window so natural pauses inside a one- or
-two-minute explanation remain one candidate turn. Only the assembled final
-answer is rendered and submitted. The browser rotates this connection before
-the provider's ten-minute live-transcription limit; the agent's auxiliary input
-transcript remains a disconnection and end-of-speech fallback.
+hypotheses stay private. This separate transcription path now applies only to
+server-led rounds. In the Hiring Manager round, the verbatim `answerText` on
+Gemini's `complete_interview_turn` call is the single saved transcript source,
+so parallel recognizers cannot concatenate near-duplicate wording. The browser
+rotates the separate connection before the provider's ten-minute limit only
+when that server-led connection exists.
 
-Gemini is the voice transport and conversational renderer. It is not allowed
-to choose arbitrary questions, advance progress, assign scores, or write state.
-`InterviewService` and the persisted plan remain authoritative.
+In the Hiring Manager round Gemini owns listening, acknowledgements,
+clarifications, and the choice to probe or move on. It submits that bounded
+decision through a blocking tool. `InterviewService` validates the action,
+enforces the frozen plan, follow-up budgets, pacing and hard cap, persists the
+turn, and runs scoring. Gemini cannot advance progress, assign scores, or write
+state directly. Other interview families remain on the server-led decider path.
+Do not enable `enableAffectiveDialog` while the configured voice model is
+Gemini 3.1 Flash Live; that capability is unsupported and rejects session setup.
 
 ## Turn-taking rules
 
 - James opens with the exact server-approved greeting and first question.
-- The browser coalesces Gemini Transcribe's finalized segments, then submits the
-  single assembled candidate turn directly to `/api/interview/decide`; it does
-  not wait for Gemini to generate a function call. The conversational agent's
-  auxiliary transcript also protects finalization when the dedicated channel
-  is unavailable or its last packet is delayed.
-- The server runs decision and evaluation calls in parallel.
-- While those calls run, the UI briefly shows that James is responding. The
-  browser sends the approved response back through Gemini realtime text and
-  James speaks it directly. For `gemini-3.1-flash-live-preview`, do not regress
-  this to post-opening `sendClientContent` or a `submit_answer` tool round trip.
+- After each complete Hiring Manager candidate turn, Gemini calls
+`complete_interview_turn` exactly once with the verbatim answer and its bounded
+  conversational decision. The call is synchronous: James waits while the
+  server saves the answer and validates the transition.
+- The configured duration is a maximum, not a target. Advancing beyond the
+  final frozen question sets the session to `done` immediately. An explicit
+  request to end, stop, finish, quit, or leave also closes immediately without
+  asking for confirmation.
+- The server writes a durable semantic-evaluation job atomically with the
+  answer, then returns James's validated response without waiting for the
+  evaluator. Recovery processes the score immediately after the response. It
+  does not make a second text-model decider call for Gemini-led Hiring Manager
+  turns.
+- The decide endpoint rejects a Hiring Manager turn without Gemini's live
+  proposal. The legacy server/Groq decider therefore cannot silently take over.
+- The tool result contains the approved response boundary. Gemini resumes in
+  its own native conversation and delivers that content naturally and briefly.
 - Every probe, challenge, or move-on response begins with a short acknowledgement
   of a specific detail from the candidate's answer. Clarification is the only
   action without one, because James should immediately repair a misheard answer.
@@ -135,18 +154,20 @@ to choose arbitrary questions, advance progress, assign scores, or write state.
 - Hiring Manager follow-up depth is section-specific: up to three in the career
   introduction, two for role fit and each how-you-work question, one for the
   first two final-conversation questions, and none for the closing question.
-- On the closing question, the server-side decider may return one concise answer
-  to a candidate question. James is explicitly a simulated hiring manager: he
+- On the closing question, Gemini may return one concise answer to a candidate
+  question through its bounded proposal. James is explicitly a simulated hiring manager: he
   answers general questions about success, teamwork, management, and growth,
   but never invents company facts, compensation, benefits, policies, or hiring
   promises. Employer-specific questions are redirected to the real interviewer.
 - James follows the candidate's actual answer: vague claims receive a narrow,
   concrete counter-question, while credible answers can lead to a deeper question
   about judgement, trade-offs, consequences, or reflection.
-- Unapproved Gemini replies are muted and discarded. Only the server-approved
-  follow-up or next planned question may be heard.
-- Voice activity detection currently uses a two-second end-of-speech window and
-  `NO_INTERRUPTION` so microphone noise does not cut James off mid-sentence.
+- Hiring Manager replies are no longer speculatively muted. Gemini speaks only
+  after its blocking tool returns the server-approved direction. The existing
+  mute-and-replay guard remains for server-led interview families.
+- Hiring Manager voice activity supports barge-in so the candidate can interrupt
+  naturally. Server-led families retain `NO_INTERRUPTION`. Both use the shared
+  900 ms end-of-speech window.
 
 ## Pacing-aware section coverage
 
@@ -412,12 +433,25 @@ performance, previews the active family's evaluation parameters, motivates the
 candidate, and sends them to `/reports`.
 
 `/reports` always shows four overall family scorecards: DSA + Design, Core
-Technical + Projects, HR + Behavioural, and Resume + Behavioural. It shows the
-latest scored interview in detail and aggregates all scored sessions into the
-other family cards. New evaluations persist the exact family-specific rubric
-keys. Older reports that predate those keys receive transparent, evidence-based
-derived parameter values in the overview so historical sessions remain useful;
-the UI labels that fallback instead of presenting it as direct evaluation.
+Technical + Projects, HR + Behavioural, and Resume + Behavioural. Each family
+card aggregates all scored interviews in that family, and the newest scored
+interview is shown in detail below. The detailed headline uses the same 0–100
+scale as its six family-specific parameters.
+Empty families and parameters say `Not yet` instead of showing an unexplained
+dash. New evaluations persist the exact family-specific rubric
+keys. Every new rubric score also persists up to two exact, server-grounded
+candidate quotes. The latest report ties a representative quote and transcript
+timestamp to each parameter explanation (for example, `At 1:21, you said …`),
+followed by the evaluator's short rationale. Compact complete conversation
+rubrics are normalized once at report level so HR and resume scores use the same
+0–100 presentation scale as technical and DSA scores. Low-score cards show this evidence
+before the recommended next step. Older reports that predate those fields fall
+back to their saved rationale or evidence-based derived parameter values so
+historical sessions remain useful.
+
+The downloaded PDF first shows the aggregate score for all four interview families,
+then a detailed latest-report section with all six parameter scores, grounded
+explanations, and next actions.
 
 ## Important files
 
@@ -429,8 +463,8 @@ the UI labels that fallback instead of presenting it as direct evaluation.
   rate limit, lease, and finalisation trigger.
 - `src/features/interviews/server/interview.service.ts` — durable interview
   state, parallel decision/evaluation, progression, and persistence.
-- `src/features/interviews/server/decider.ts` — decide whether to clarify,
-  probe, challenge, or move on.
+- `src/features/interviews/server/decider.ts` — server-side conversational
+  decision for interview families that are not yet Gemini-led.
 - `src/features/interviews/server/technical-answer-evaluator.ts` — semantic
   evaluation against the active interview family's six parameters.
 - `src/features/interviews/domain/evaluation-profile.ts` — the four report
@@ -466,12 +500,15 @@ the UI labels that fallback instead of presenting it as direct evaluation.
 
 1. Keep James's `Charon` voice identical in both token constraints and browser
    connection config; changing only one can cause inconsistent voices.
-2. Do not let Gemini invent or paraphrase the next planned question.
+2. Gemini may author a bounded follow-up, but the server state machine owns the
+   next planned question and all follow-up/time limits. Never allow an arbitrary
+   topic change through the tool result.
 3. Do not send both a tool response and a second direct reply containing the
    same approved utterance; that previously caused duplicate James messages.
 4. Preserve immutable transcript rows and cumulative follow-up evaluation.
 5. Keep the shared 1.2-second VAD window paired with low end-of-speech
-   sensitivity and the one-second candidate commit grace. If either changes,
+   sensitivity. The one-second browser commit grace applies to server-led rooms;
+   Hiring Manager uses the blocking tool call as its boundary. If either changes,
    test candidates who pause mid-answer and update the shared timing contract.
 6. Do not expose scores, evaluator reasoning, or the Gemini API key to the live
    model transcript or browser. Candidate-facing parameter names and completed

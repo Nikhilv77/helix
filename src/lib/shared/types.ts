@@ -433,6 +433,8 @@ export interface InterviewHistoryItem {
 }
 
 export interface InterviewCompetencyReport {
+  /** Planned question index, present on newly generated reports. */
+  questionIndex?: number;
   label: string;
   question: string;
   evidenceAnchor?: string | null;
@@ -459,7 +461,12 @@ export interface InterviewCompetencyReport {
     summary: string;
     strengths: string[];
     gaps: string[];
-    rubricScores: Array<{ rubricKey: string; score: number; rationale: string }>;
+    rubricScores: Array<{
+      rubricKey: string;
+      score: number;
+      rationale: string;
+      evidenceQuotes?: string[];
+    }>;
     evidenceQuotes?: string[];
     execution: {
       status: string;
