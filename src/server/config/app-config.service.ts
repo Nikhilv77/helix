@@ -243,7 +243,7 @@ export class AppConfigService {
   }
 
   get deepgramTtsModel(): string {
-    return this.config.deepgramTtsModel ?? "aura-2-asteria-en";
+    return this.config.deepgramTtsModel ?? "aura-asteria-en";
   }
 
   get judge0Url(): string {

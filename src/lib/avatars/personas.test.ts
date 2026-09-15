@@ -18,9 +18,8 @@ import {
 /**
  * Gender of every Deepgram voice the cast uses, taken from the `feminine` /
  * `masculine` tags on Deepgram's live model list rather than guessed from the
- * name. Three plausible-sounding ids — `stella`, `perseus`, `angus` — turned
- * out not to exist at all, which is why this table is checked in: a voice that
- * is absent here has not been verified against the provider.
+ * name. Aura-1 and Aura-2 use different model ids, so this checked-in table
+ * also prevents a valid voice from one generation being sent as the other.
  */
 const VOICE_GENDER: Record<string, PersonaGender> = {
   "aura-2-asteria-en": "feminine",
@@ -36,7 +35,15 @@ const VOICE_GENDER: Record<string, PersonaGender> = {
   "aura-2-arcas-en": "masculine",
   "aura-2-atlas-en": "masculine",
   "aura-2-orion-en": "masculine",
-  "aura-2-zeus-en": "masculine"
+  "aura-2-zeus-en": "masculine",
+  "aura-asteria-en": "feminine",
+  "aura-stella-en": "feminine",
+  "aura-hera-en": "feminine",
+  "aura-luna-en": "feminine",
+  "aura-orion-en": "masculine",
+  "aura-arcas-en": "masculine",
+  "aura-perseus-en": "masculine",
+  "aura-zeus-en": "masculine"
 };
 
 /**

@@ -28,7 +28,7 @@ The primary cost drivers in Trailgrad fall into three tiers:
 | **Judge0 CE** (RapidAPI) | RapidAPI Tiers | • **Free:** 50 runs/day<br>• **Pro (\$10/mo):** 10,000 runs (~**\$0.001 / run**)<br>• **Ultra (\$35/mo):** 50,000 runs (~**\$0.0007 / run**)<br>• *Self-hosted alternative:* ~**\$10–\$20/mo flat VPS** | DSA practice runs & interview coding challenges (`src/app/api/code/run/route.ts`) |
 | **Vercel Sandbox** | Firecracker MicroVMs (`@vercel/sandbox`) | • ~**\$0.00004 / vCPU-second** (~**\$0.0002–\$0.001 / run**) | Isolated execution for Core Technical code challenges (`vercel-sandbox-executor.ts`) |
 | **Deepgram STT** | Streaming (`flux-general-en`) | • **\$0.0059 – \$0.0077 / audio minute** | Real-time candidate speech-to-text during voice interviews (`agent/config.py`) |
-| **Deepgram TTS** | `aura-2-asteria-en` | • **\$0.015 / 1,000 characters** (~**\$0.000015 / char**) | Maya voice synthesis in interviews & workspace welcome (`src/app/api/voice/speak/route.ts`) |
+| **Deepgram TTS** | `aura-asteria-en` (Aura-1) | • **\$0.015 / 1,000 characters** (~**\$0.000015 / char**) | Maya voice synthesis in interviews & workspace welcome (`src/app/api/voice/speak/route.ts`) |
 | **LiveKit Cloud** | WebRTC Audio & Data Channels | • **\$0.0015 / participant-minute**<br>• **\$0.10 / GB egress bandwidth**<br>*(Free tier: 10,000 participant-mins/mo)* | 1. AI Voice interview room (Agent + User)<br>2. Peer-to-peer help room (Learner + Helper) |
 | **Groq** | `openai/gpt-oss-20b` / Llama | • ~**\$0.10 / 1M input tokens**<br>• ~**\$0.20 / 1M output tokens** | Per-turn low-latency conversational interview decision loop (`src/app/api/interview/decide/route.ts`) |
 | **Google Gemini** | `gemini-flash-lite`<br>`gemini-flash`<br>`gemini-embedding` | • **Flash-Lite:** \$0.075 / 1M in, \$0.30 / 1M out<br>• **Flash:** \$0.10 / 1M in, \$0.40 / 1M out<br>• **PDF Vision:** ~258 tokens/page (~\$0.00003/page)<br>• **Embeddings:** \$0.02 / 1M chars | Resume parsing, Stuck-summary, interview rubric grading, practice feedback evaluations |
@@ -125,7 +125,7 @@ flowchart TD
 
 ### What it eliminates from your current stack:
 * **Deepgram STT (`flux-general-en`):** The live model accepts raw audio directly over WebSockets/WebRTC.
-* **Deepgram TTS (`aura-2-asteria-en`):** The live model streams native audio tokens back.
+* **Deepgram TTS (`aura-asteria-en`):** The live model streams native audio tokens back.
 * **Groq LLM Decider:** The live model acts as both decider and speaker simultaneously.
 * **Turn-taking & Silence Delays:** Native Voice Activity Detection (VAD) handles interruptions and candidate pauses automatically.
 * **Python Agent Server (`agent/agent.py`):** Browser can connect directly to OpenAI via WebRTC using ephemeral tokens.
@@ -163,4 +163,3 @@ flowchart TD
    * Introduce a 3–5 second cooldown before allowing repeated test runs to prevent accidental spamming of execution engines.
 5. **Keep `INTERVIEW_DAILY_LIMIT=2`:**
    * Retaining the daily interview limit protects against runaway Deepgram and LiveKit media charges.
-
