@@ -241,6 +241,18 @@ export function getAppContainer(): AppContainer {
   const interviewEvaluationAi = resilientInterviewAi();
   const generationAi =
     interviewAi === geminiAi ? geminiAi : new FallbackAiService(geminiAi, interviewAi);
+  // Resume Roast responses are sizeable, but a wedged provider must not hold
+  // James on "Almost there" for a full minute. Give Gemini the quick first
+  // attempt, then spend the remaining latency budget on the configured Groq
+  // fallback. One failed failover must not trigger a hidden third request.
+  const resumeRoastAi =
+    interviewAi === geminiAi
+      ? geminiAi
+      : new FallbackAiService(geminiAi, interviewAi, 60_000, Date.now, {
+          primaryTimeoutMs: 15_000,
+          fallbackTimeoutMs: 20_000,
+          recoverPrimaryAfterFallbackFailure: false
+        });
 
   const profileService = new ProfileService(prisma);
   const preparationOnboardingService = new PreparationOnboardingService(prisma);
@@ -347,7 +359,7 @@ export function getAppContainer(): AppContainer {
   const resumeRoastService = new ResumeRoastService(
     profileService,
     resumeRoastStore,
-    new ResumeRoastGenerator(geminiAi)
+    new ResumeRoastGenerator(resumeRoastAi)
   );
   const helpSafety = new HelpSafetyService(prisma);
   const helperEligibility = new HelperEligibilityService(prisma);

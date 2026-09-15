@@ -185,4 +185,43 @@ describe("FallbackAiService", () => {
     await expect(service.generateStructured(request)).rejects.toBe(error);
     expect(fallback.generateStructured).not.toHaveBeenCalled();
   });
+
+  it("uses bounded provider deadlines and can skip a third recovery request", async () => {
+    const primary = provider(
+      new AiProviderException({
+        code: "AI_TIMEOUT",
+        message: "Primary timed out",
+        provider: "primary",
+        operation: request.operation,
+        retryable: true
+      })
+    );
+    const fallbackError = new AiProviderException({
+      code: "AI_PROVIDER_ERROR",
+      message: "Fallback unavailable",
+      provider: "fallback",
+      operation: request.operation,
+      retryable: false
+    });
+    const fallback = provider(fallbackError);
+    const service = new FallbackAiService(primary, fallback, 60_000, Date.now, {
+      primaryTimeoutMs: 15_000,
+      fallbackTimeoutMs: 20_000,
+      recoverPrimaryAfterFallbackFailure: false
+    });
+
+    await expect(service.generateStructured({ ...request, timeoutMs: 60_000 })).rejects.toBe(
+      fallbackError
+    );
+    expect(primary.generateStructured).toHaveBeenCalledOnce();
+    expect(primary.generateStructured).toHaveBeenCalledWith(
+      expect.objectContaining({ timeoutMs: 15_000 })
+    );
+    expect(fallback.generateStructured).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operation: "generate-story-fallback",
+        timeoutMs: 20_000
+      })
+    );
+  });
 });

@@ -6046,6 +6046,29 @@ html[data-theme="light"] .interview-workspace-page [class*="shadow-[inset_0_1px_
   box-shadow: 0 18px 42px -34px rgba(15, 23, 42, 0.32) !important;
 }
 
+/* The structured resume is a sheet inside the workspace panel. Its charcoal
+   surface is useful in dark mode, but generic light-token overrides only
+   recolour its text, leaving dark ink on dark paper. Keep the viewer well
+   distinct from the document and give the sheet a true light paper treatment. */
+html.light .interview-workspace-page .resume-preview-canvas,
+html[data-theme="light"] .interview-workspace-page .resume-preview-canvas {
+  background: #f3f1ee !important;
+}
+
+html.light .interview-workspace-page .resume-sheet,
+html[data-theme="light"] .interview-workspace-page .resume-sheet {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #fffefd !important;
+  box-shadow:
+    0 18px 38px -28px rgba(15, 23, 42, 0.3),
+    0 1px 3px rgba(15, 23, 42, 0.08) !important;
+}
+
+html.light .interview-workspace-page .resume-sheet [class*="bg-cream/"],
+html[data-theme="light"] .interview-workspace-page .resume-sheet [class*="bg-cream/"] {
+  background-color: #94a3b8 !important;
+}
+
 html.light .interview-workspace-skeleton [class*="bg-[#111215]"],
 html[data-theme="light"] .interview-workspace-skeleton [class*="bg-[#111215]"],
 html.light .interview-workspace-skeleton [class*="bg-white/"],

@@ -119,6 +119,7 @@ describe("InterviewReportDashboard", () => {
     expect(screen.getAllByText("Accountability").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/At 1:21, you said “I owned it”/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Average of the six scores/i)).toBeNull();
+    expect(screen.getByText(/Evidence quality · 1\/1 questions answered/i)).toBeVisible();
     expect(screen.getAllByText("Not yet").length).toBeGreaterThan(0);
     expect(screen.queryByText(/duration:/i)).toBeNull();
   });
@@ -150,5 +151,38 @@ describe("InterviewReportDashboard", () => {
     );
 
     expect(screen.queryByRole("heading", { name: "What went well" })).toBeNull();
+  });
+
+  it("shows a separate coding mark and explains an accepted run without tests", () => {
+    const withCode = {
+      ...report,
+      codeExercise: {
+        language: "TypeScript",
+        task: "Implement an async debounce function.",
+        submitted: true,
+        correctnessScore: 10,
+        execution: {
+          status: "Accepted",
+          accepted: true,
+          testsPassed: 0,
+          testCount: 0
+        }
+      }
+    } satisfies InterviewReport;
+
+    render(
+      <InterviewReportDashboard
+        report={withCode}
+        overview={createReportsOverview([withCode])}
+        candidate={{ name: "Nikhil", discipline: "Backend Engineering" }}
+        quota={{ used: 1, limit: 2 }}
+      />
+    );
+
+    expect(screen.getByRole("heading", { name: /coding exercise · typescript/i })).toBeVisible();
+    expect(screen.getByText("Code score")).toBeVisible();
+    expect(screen.getByText("10")).toBeVisible();
+    expect(screen.getByText(/Ran successfully · no automated tests/i)).toBeVisible();
+    expect(screen.getByText(/only confirms the code executed/i)).toBeVisible();
   });
 });

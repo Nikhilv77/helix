@@ -4,6 +4,7 @@ import {
   ArrowUpRight,
   CalendarDays,
   CheckCircle2,
+  Code2,
   Download,
   ListChecks,
   MessageSquareText,
@@ -223,6 +224,7 @@ function InterviewReportContent({
           strongestScore={strongestSignal?.score ?? 0}
           gap={gap}
         />
+        <CodeExerciseSummary exercise={report.codeExercise} />
         <FeedbackSection
           title="What needs work"
           description="These are the parts of your answer that need a little more evidence."
@@ -248,6 +250,59 @@ function InterviewReportContent({
 
       <div className="mt-10 flex justify-center pb-2">
         <DownloadInterviewReportButton briefing={briefing} variant="primary" />
+      </div>
+    </section>
+  );
+}
+
+function CodeExerciseSummary({ exercise }: { exercise: InterviewReport["codeExercise"] }) {
+  if (!exercise) return null;
+
+  const score = exercise.correctnessScore;
+  const execution = exercise.execution;
+  const executionLabel = execution
+    ? execution.testCount > 0
+      ? `${execution.testsPassed}/${execution.testCount} tests passed`
+      : execution.accepted
+        ? "Ran successfully · no automated tests"
+        : execution.status
+    : "Not run";
+
+  return (
+    <section
+      className="report-glass-card mb-6 rounded-2xl px-5 py-5 sm:px-6"
+      aria-labelledby="coding-exercise-result"
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2.5">
+            <Code2 size={18} className="text-[var(--workspace-accent)]" aria-hidden="true" />
+            <h2
+              id="coding-exercise-result"
+              className="text-xs font-semibold uppercase tracking-[0.14em] text-cream/48"
+            >
+              Coding exercise · {exercise.language}
+            </h2>
+          </div>
+          <p className="mt-3 text-base font-semibold leading-6 text-cream">{exercise.task}</p>
+          <p className="mt-2 text-sm leading-6 text-cream/56">
+            {executionLabel}.{" "}
+            {execution?.accepted && execution.testCount === 0
+              ? "This only confirms the code executed; James scored correctness by reviewing the submitted implementation."
+              : "The coding mark is based on the submitted implementation and available execution evidence."}
+          </p>
+        </div>
+        <div className="shrink-0 rounded-xl bg-black/20 px-5 py-3 text-left ring-1 ring-inset ring-white/[0.06] sm:text-right">
+          <p className="text-xs font-medium uppercase tracking-[0.12em] text-cream/42">
+            Code score
+          </p>
+          <p className="mt-1 text-3xl font-semibold tabular-nums text-cream">
+            {score === null || score === undefined ? "Not scored" : score}
+            {score !== null && score !== undefined ? (
+              <span className="ml-1 text-sm text-cream/42">/100</span>
+            ) : null}
+          </p>
+        </div>
       </div>
     </section>
   );
@@ -303,11 +358,6 @@ function FamilyPerformance({
                   </span>
                   {displayedScore !== null ? (
                     <span className="ml-1 text-sm text-cream/42">/100</span>
-                  ) : null}
-                  {isLatest ? (
-                    <p className="mt-1 text-sm font-semibold uppercase tracking-[0.12em] text-[var(--workspace-accent)]">
-                      Current report family
-                    </p>
                   ) : null}
                 </div>
               </div>
@@ -369,8 +419,9 @@ function ReportQuickRead({
           </span>
           <span className="pb-0.5 text-sm text-cream/58">/100</span>
         </div>
-        <p className="mt-2 text-sm font-medium text-cream/72">
-          {signalStatus(overallScore)}
+        <p className="mt-2 text-sm font-medium text-cream/72">{signalStatus(overallScore)}</p>
+        <p className="mt-2 text-xs leading-5 text-cream/44">
+          Evidence quality · {report.questionsCovered}/{report.questionCount} questions answered
         </p>
       </div>
 
@@ -532,8 +583,7 @@ function buildSignals(report: InterviewReport): Signal[] {
       const rightHasQuote = Boolean(right.score.evidenceQuotes?.length);
       if (leftHasQuote !== rightHasQuote) return leftHasQuote ? -1 : 1;
       return (
-        Math.abs(left.score.score - parameter.score) -
-        Math.abs(right.score.score - parameter.score)
+        Math.abs(left.score.score - parameter.score) - Math.abs(right.score.score - parameter.score)
       );
     })[0];
     const quote = representative?.score.evidenceQuotes?.[0];

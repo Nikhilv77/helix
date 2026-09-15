@@ -6,7 +6,7 @@ import {
   resumeExtractionSchema,
   resumeFileSchema
 } from "@/features/onboarding/contracts/resume-extraction";
-import { personaById } from "@/lib/avatars/personas";
+import { selectableTeacherById } from "@/lib/avatars/personas";
 import { getAppContainer } from "@/server/app-container";
 import { Logger } from "@/server/common/logger";
 import { ApiRouteError } from "@/server/http/api-error";
@@ -31,7 +31,7 @@ const completeSchema = z.object({
     .trim()
     .max(60)
     .nullish()
-    .transform((id) => personaById(id)?.id ?? null),
+    .transform((id) => selectableTeacherById(id)?.id ?? null),
   resumeFile: resumeFileSchema,
   extraction: resumeExtractionSchema
 });

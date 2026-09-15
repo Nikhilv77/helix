@@ -131,7 +131,8 @@ export function InterviewQuestionPanel({
   onNotesChange,
   onSelectOption,
   onSubmit,
-  onRequestMic
+  onRequestMic,
+  showCodeSnippet = true
 }: {
   question: InterviewQuestion | null;
   questionIndex: number;
@@ -157,6 +158,7 @@ export function InterviewQuestionPanel({
   onSelectOption: (option: string) => void;
   onSubmit: () => void;
   onRequestMic: () => void;
+  showCodeSnippet?: boolean;
 }) {
   const teacher = useWorkspaceTeacher();
   const interviewerName = teacherName ?? teacher.name;
@@ -218,7 +220,7 @@ export function InterviewQuestionPanel({
               </p>
             ) : null}
 
-            {question.codeSnippet ? (
+            {question.codeSnippet && showCodeSnippet ? (
               <pre className="interview-code-snippet thin-scroll mt-5 max-h-80 overflow-auto rounded-xl bg-black/35 p-4 font-mono text-sm leading-6 text-cream/78 ring-1 ring-inset ring-white/[0.06]">
                 <code>{question.codeSnippet}</code>
               </pre>
@@ -244,51 +246,56 @@ export function InterviewQuestionPanel({
             ) : null}
 
             {format === "mcq" && question.options?.length ? (
-              <ul className="mt-7 space-y-2.5">
-                {question.options.map((option, index) => {
-                  const chosen = selectedOption === option;
-                  const state = graded && chosen ? (graded.correct ? "right" : "wrong") : null;
+              <div className="mt-7">
+                <p className="mb-3 text-sm text-cream/46">
+                  Select an answer, or say the option letter or answer aloud.
+                </p>
+                <ul className="space-y-2.5">
+                  {question.options.map((option, index) => {
+                    const chosen = selectedOption === option;
+                    const state = graded && chosen ? (graded.correct ? "right" : "wrong") : null;
 
-                  return (
-                    <li key={option}>
-                      <button
-                        type="button"
-                        disabled={sending || Boolean(selectedOption)}
-                        onClick={() => onSelectOption(option)}
-                        className={`interview-answer-option group flex w-full items-start gap-3.5 rounded-xl px-4 py-3.5 text-left transition disabled:cursor-default ${
-                          state === "right"
-                            ? "bg-[var(--workspace-accent)]/[0.14] ring-1 ring-inset ring-[var(--workspace-accent)]/55"
-                            : state === "wrong"
-                              ? "bg-[#dd5f5f]/[0.1] ring-1 ring-inset ring-[#dd5f5f]/40"
-                              : chosen
-                                ? "bg-white/[0.07] ring-1 ring-inset ring-white/[0.14]"
-                                : "bg-white/[0.03] ring-1 ring-inset ring-white/[0.05] enabled:hover:bg-white/[0.06] enabled:hover:ring-white/[0.1]"
-                        }`}
-                      >
-                        <span
-                          aria-hidden="true"
-                          className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold ${
+                    return (
+                      <li key={option}>
+                        <button
+                          type="button"
+                          disabled={sending || Boolean(selectedOption)}
+                          onClick={() => onSelectOption(option)}
+                          className={`interview-answer-option group flex w-full items-start gap-3.5 rounded-xl px-4 py-3.5 text-left transition disabled:cursor-default ${
                             state === "right"
-                              ? "bg-[var(--workspace-accent)] text-[#101113]"
+                              ? "bg-[var(--workspace-accent)]/[0.14] ring-1 ring-inset ring-[var(--workspace-accent)]/55"
                               : state === "wrong"
-                                ? "bg-[#dd5f5f] text-[#101113]"
-                                : "bg-white/[0.06] text-cream/56"
+                                ? "bg-[#dd5f5f]/[0.1] ring-1 ring-inset ring-[#dd5f5f]/40"
+                                : chosen
+                                  ? "bg-white/[0.07] ring-1 ring-inset ring-white/[0.14]"
+                                  : "bg-white/[0.03] ring-1 ring-inset ring-white/[0.05] enabled:hover:bg-white/[0.06] enabled:hover:ring-white/[0.1]"
                           }`}
                         >
-                          {state === "right" ? (
-                            <Check size={13} strokeWidth={2.5} />
-                          ) : state === "wrong" ? (
-                            <X size={13} strokeWidth={2.5} />
-                          ) : (
-                            String.fromCharCode(65 + index)
-                          )}
-                        </span>
-                        <span className="text-[15px] leading-6 text-cream/82">{option}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+                          <span
+                            aria-hidden="true"
+                            className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold ${
+                              state === "right"
+                                ? "bg-[var(--workspace-accent)] text-[#101113]"
+                                : state === "wrong"
+                                  ? "bg-[#dd5f5f] text-[#101113]"
+                                  : "bg-white/[0.06] text-cream/56"
+                            }`}
+                          >
+                            {state === "right" ? (
+                              <Check size={13} strokeWidth={2.5} />
+                            ) : state === "wrong" ? (
+                              <X size={13} strokeWidth={2.5} />
+                            ) : (
+                              String.fromCharCode(65 + index)
+                            )}
+                          </span>
+                          <span className="text-[15px] leading-6 text-cream/82">{option}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             ) : null}
 
             {format === "spoken" && !question.codeTask ? (
@@ -341,9 +348,18 @@ export function InterviewQuestionPanel({
         <div
           className={`interview-answer-composer shrink-0 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 px-4 py-3.5 sm:px-5`}
         >
-          <label htmlFor="resume-answer" className="text-sm font-semibold text-cream/80">
-            {question.codeTask ? `Explain your code to ${interviewerName}` : "Or write your answer"}
-          </label>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <label htmlFor="resume-answer" className="text-sm font-semibold text-cream/80">
+              {question.codeTask
+                ? `Explain your code to ${interviewerName}`
+                : "Or write your answer"}
+            </label>
+            {question.codeTask ? (
+              <p className="text-xs text-cream/42">
+                Running is optional. Submit when you are ready for {interviewerName}&apos;s review.
+              </p>
+            ) : null}
+          </div>
           <div className="mt-2.5 flex flex-col gap-2.5 sm:flex-row sm:items-end">
             <ResizableTextarea
               id="resume-answer"
@@ -378,7 +394,7 @@ export function InterviewQuestionPanel({
               {sending
                 ? `${interviewerName} is reading`
                 : question.codeTask
-                  ? "Send solution"
+                  ? `Submit to ${interviewerName}`
                   : "Send answer"}
             </button>
           </div>

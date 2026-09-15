@@ -3,11 +3,13 @@ import {
   type ResumeRoastResult,
   type ResumeRoastTarget
 } from "@/features/resume-roast/contracts/resume-roast";
+import { AiProviderException } from "@/server/ai/ai-provider.exception";
 import type { AiService } from "@/server/ai/ai.service";
 import { buildResumeRoastPrompt, RESUME_ROAST_SYSTEM_INSTRUCTION } from "./resume-roast.prompt";
 import type { ResumeRoastEvidenceItem, ResumeRoastSnapshot } from "./resume-signals";
 
 export const RESUME_ROAST_TIMEOUT_MS = 60_000;
+const RESUME_ROAST_VALIDATION_ATTEMPTS = 2;
 
 /** Safe error: it deliberately contains no resume or model-produced text. */
 export class ResumeRoastGenerationError extends Error {
@@ -33,29 +35,40 @@ export class ResumeRoastGenerator {
     if (input.snapshot.evidence.length === 0) throw new ResumeRoastGenerationError();
 
     const signalAnchorIds = getResumeRoastSignalAnchorIds(input.snapshot);
-    const result = await this.ai.generateStructured({
-      operation: "resume.roast.generate",
-      systemInstruction: RESUME_ROAST_SYSTEM_INSTRUCTION,
-      prompt: buildResumeRoastPrompt(input.snapshot, input.target, signalAnchorIds),
-      schema: ResumeRoastResultSchema,
-      modelClass: "fast",
-      temperature: 0.3,
-      // A complete, evidence-grounded roast is larger than the shared fast
-      // request workload, so it gets its own deadline without changing other
-      // AI operations.
-      timeoutMs: RESUME_ROAST_TIMEOUT_MS,
-      // One complete roast is a single cost-controlled operation, never a
-      // provider retry loop that could produce divergent feedback.
-      maxAttempts: 1,
-      ...(input.signal ? { signal: input.signal } : {})
-    });
+    for (let attempt = 1; attempt <= RESUME_ROAST_VALIDATION_ATTEMPTS; attempt += 1) {
+      try {
+        const result = await this.ai.generateStructured({
+          operation: "resume.roast.generate",
+          systemInstruction: RESUME_ROAST_SYSTEM_INSTRUCTION,
+          prompt: buildResumeRoastPrompt(input.snapshot, input.target, signalAnchorIds),
+          schema: ResumeRoastResultSchema,
+          modelClass: "fast",
+          temperature: 0.3,
+          // A complete, evidence-grounded roast is larger than the shared fast
+          // request workload, so it gets its own deadline without changing other
+          // AI operations.
+          timeoutMs: RESUME_ROAST_TIMEOUT_MS,
+          // Provider retries stay disabled here. The bounded outer retry covers
+          // invalid JSON/schema as well as Roast-specific grounding failures.
+          maxAttempts: 1,
+          ...(input.signal ? { signal: input.signal } : {})
+        });
+        const validated = validateResumeRoastResult(result, input.snapshot, signalAnchorIds);
+        // The public schema keeps this optional so older saved roasts remain
+        // readable, but every new generation must include its purpose-written
+        // uninterrupted voice script.
+        if (!validated.spokenSummary) throw new ResumeRoastGenerationError();
+        return validated;
+      } catch (error) {
+        const invalidResponse =
+          error instanceof ResumeRoastGenerationError ||
+          (error instanceof AiProviderException && error.code === "AI_INVALID_RESPONSE");
+        if (!invalidResponse) throw error;
+        if (attempt === RESUME_ROAST_VALIDATION_ATTEMPTS) throw error;
+      }
+    }
 
-    const validated = validateResumeRoastResult(result, input.snapshot, signalAnchorIds);
-    // The public schema keeps this optional so older saved roasts remain
-    // readable, but every new generation must include its purpose-written
-    // uninterrupted voice script.
-    if (!validated.spokenSummary) throw new ResumeRoastGenerationError();
-    return validated;
+    throw new ResumeRoastGenerationError();
   }
 }
 

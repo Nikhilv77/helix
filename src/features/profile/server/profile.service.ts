@@ -821,7 +821,15 @@ function resumeInterviewKitFromJson(
     : [];
 
   if (!skillQuestions.length && !codingTask && !experienceQuestions.length) return null;
-  return { skillQuestions, codingTask, experienceQuestions };
+  return {
+    version:
+      typeof record.version === "number" && Number.isInteger(record.version)
+        ? record.version
+        : undefined,
+    skillQuestions,
+    codingTask,
+    experienceQuestions
+  };
 }
 
 function resumeExperienceFromJson(value: Prisma.JsonValue | undefined): ResumeExperienceEntry[] {

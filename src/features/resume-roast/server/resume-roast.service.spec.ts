@@ -172,7 +172,7 @@ describe("ResumeRoastService", () => {
       id: ROAST_ID,
       ownerId: "user-a",
       resumeProfileVersionId: VERSION_ID,
-      promptVersion: "resume-roast-v5",
+      promptVersion: "resume-roast-v6",
       ...target,
       status: "READY" as const,
       result,
@@ -205,7 +205,7 @@ describe("ResumeRoastService", () => {
       expect.objectContaining({
         ownerId: "user-a",
         resumeProfileVersionId: VERSION_ID,
-        promptVersion: "resume-roast-v5"
+        promptVersion: "resume-roast-v6"
       })
     );
   });

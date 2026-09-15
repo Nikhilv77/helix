@@ -10,7 +10,6 @@ describe("Gemini Live interview instruction", () => {
   it("lets Gemini lead the hiring-manager conversation through an authoritative tool", () => {
     const instruction = buildSystemInstruction({
       roundTitle: "Hiring Manager & Final Behavioural",
-      isResumeRound: true,
       isHiringManagerRound: true,
       question: "Why did you choose this career?",
       questionNumber: 1,
@@ -23,8 +22,12 @@ describe("Gemini Live interview instruction", () => {
     });
 
     expect(instruction).toContain("call complete_interview_turn exactly once");
-    expect(instruction).toContain("Respond naturally and concisely");
-    expect(instruction).toContain("must preserve the meaning");
+    expect(instruction).toContain("Speak approvedResponse exactly once, word for word");
+    expect(instruction).toContain('for example, "no idea", "I have no clue"');
+    expect(instruction).toContain("This rule overrides the normal probe rules");
+    expect(instruction).toContain("not merely because the answer was specific");
+    expect(instruction).toContain("If an answer describes violence");
+    expect(instruction).toContain("ask one concise question about accountability");
     expect(instruction).toContain("NovaCart, React.js");
     expect(instruction).toContain("Never invent an interview question");
     expect(instruction).toContain(`say exactly: "I'm James from the recruiting team."`);
@@ -33,10 +36,68 @@ describe("Gemini Live interview instruction", () => {
     expect(instruction).toContain("Do not ask them to confirm");
   });
 
+  it("lets Gemini lead a resume interview while keeping the frozen resume plan", () => {
+    const instruction = buildSystemInstruction({
+      roundTitle: "Resume and Behavioral Defense",
+      isHiringManagerRound: false,
+      isResumeBehaviouralRound: true,
+      question: "What outcome did you own at NovaCart?",
+      questionNumber: 1,
+      questionCount: 8,
+      followUpCount: 0,
+      maxFollowUps: 1,
+      mustHit: ["personal ownership", "evidence of impact"],
+      openingUtterance: "Hi. What outcome did you own at NovaCart?",
+      plan: [
+        {
+          text: "Which diagnostic step comes first?",
+          kind: "mcq",
+          answerFormat: "mcq",
+          options: ["Add an index", "Run ANALYZE"],
+          mustHit: ["personal ownership", "evidence of impact"],
+          maxFollowUps: 1,
+          acceptsCandidateQuestions: false
+        }
+      ]
+    });
+
+    expect(instruction).toContain("call complete_interview_turn exactly once");
+    expect(instruction).toContain("Verify the candidate's own resume claims");
+    expect(instruction).toContain("Frozen interview plan");
+    expect(instruction).toContain("Choices: A. Add an index; B. Run ANALYZE");
+    expect(instruction).toContain("say its letter");
+    expect(instruction).toContain("Speak approvedResponse exactly once, word for word");
+    expect(instruction).toContain(`say exactly: "I'm James from the recruiting team."`);
+  });
+
+  it("continues a reconnected conversation from persisted history", () => {
+    const instruction = buildSystemInstruction({
+      roundTitle: "Hiring Manager & Final Behavioural",
+      isHiringManagerRound: true,
+      question: "What did you personally change?",
+      questionNumber: 4,
+      questionCount: 8,
+      followUpCount: 1,
+      maxFollowUps: 2,
+      mustHit: ["personal action"],
+      openingUtterance: "Welcome back. We'll continue where we left off.",
+      resuming: true,
+      conversationHistory: [
+        { speaker: "agent", text: "Tell me about the incident." },
+        { speaker: "user", text: "I investigated the failed deployment." }
+      ]
+    });
+
+    expect(instruction).toContain("This is a resumed connection to the same interview");
+    expect(instruction).toContain("Continue from planned question 4");
+    expect(instruction).toContain("Candidate: I investigated the failed deployment.");
+    expect(instruction).toContain("do not restart the interview");
+  });
+
   it("keeps non-hiring-manager rounds on the existing server-led contract", () => {
     const instruction = buildSystemInstruction({
       roundTitle: "Core Technical",
-      isResumeRound: false,
+      interviewerName: "Claire",
       isHiringManagerRound: false,
       question: "How does event-loop scheduling work?",
       questionNumber: 1,
@@ -49,6 +110,8 @@ describe("Gemini Live interview instruction", () => {
 
     expect(instruction).toContain("browser submits the finalized transcript directly");
     expect(instruction).toContain("Wait silently for the server's next text instruction");
+    expect(instruction).toContain("You are Claire");
+    expect(instruction).not.toContain("You are James");
     expect(instruction).not.toContain("call complete_interview_turn exactly once");
   });
 });

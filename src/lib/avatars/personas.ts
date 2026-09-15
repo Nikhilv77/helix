@@ -85,8 +85,8 @@ export const DEFAULT_RIG: AvatarRig = {
 };
 
 /**
- * Maya is the default for older profiles and the first onboarding option. Once
- * someone chooses a teacher, that persona follows them throughout the app.
+ * Maya is the safe default for older profiles and remains an onboarding option.
+ * Once someone chooses a teacher, that persona follows them throughout the app.
  */
 export const MAYA: InterviewerPersona = {
   id: "maya",
@@ -283,6 +283,15 @@ export const INTERVIEWERS: InterviewerPersona[] = [
 export const ALL_PERSONAS: InterviewerPersona[] = [MAYA, ...INTERVIEWERS];
 
 /**
+ * Coaches a candidate may choose for everyday practice. James and Claire are
+ * intentionally interview-only: James owns the general interview room, while
+ * Claire owns DSA and Core Technical assessments.
+ */
+export const SELECTABLE_TEACHERS: InterviewerPersona[] = ALL_PERSONAS.filter(
+  (persona) => persona.id !== "james" && persona.id !== "claire"
+);
+
+/**
  * Presentation order for the onboarding carousel. This is intentionally kept
  * separate from `INTERVIEWERS`, whose order participates in the deterministic
  * session fallback for older interview records.
@@ -293,13 +302,11 @@ export const ONBOARDING_PERSONAS: InterviewerPersona[] = [
   "olivia",
   "ethan",
   "ryan",
-  "claire",
   "daniel",
-  "james",
   "sophia",
   "maya"
 ].map((id) => {
-  const persona = ALL_PERSONAS.find((candidate) => candidate.id === id);
+  const persona = SELECTABLE_TEACHERS.find((candidate) => candidate.id === id);
   if (!persona) throw new Error(`Unknown onboarding persona: ${id}`);
   return persona;
 });
@@ -307,6 +314,12 @@ export const ONBOARDING_PERSONAS: InterviewerPersona[] = [
 export function personaById(id: string | null | undefined): InterviewerPersona | null {
   if (!id) return null;
   return ALL_PERSONAS.find((persona) => persona.id === id) ?? null;
+}
+
+/** Rejects interview-only personas when reading or saving a coach choice. */
+export function selectableTeacherById(id: string | null | undefined): InterviewerPersona | null {
+  if (!id) return null;
+  return SELECTABLE_TEACHERS.find((persona) => persona.id === id) ?? null;
 }
 
 /**
@@ -336,7 +349,6 @@ export function personaForSession(sessionId: string | null | undefined): Intervi
   return INTERVIEWERS[hash(sessionId) % INTERVIEWERS.length] ?? MAYA;
 }
 
-
 /**
  * Reads the `?welcome=` parameter that follows onboarding.
  *
@@ -344,6 +356,8 @@ export function personaForSession(sessionId: string | null | undefined): Intervi
  * carries whichever teacher the candidate picked, and `maya` still resolves so
  * links already sent out keep working.
  */
-export function welcomePersonaFromQuery(value: string | null | undefined): InterviewerPersona | null {
+export function welcomePersonaFromQuery(
+  value: string | null | undefined
+): InterviewerPersona | null {
   return personaById(value?.trim().toLowerCase());
 }

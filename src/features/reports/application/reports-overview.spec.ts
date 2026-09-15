@@ -1,4 +1,8 @@
-import { createReportsOverview, roundParameterScore } from "./reports-overview";
+import {
+  createReportsOverview,
+  parameterScoresForReport,
+  roundParameterScore
+} from "./reports-overview";
 import type { InterviewCompetencyReport, InterviewReport } from "@/lib/shared/types";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -198,6 +202,131 @@ describe("createReportsOverview", () => {
     });
 
     expect(roundParameterScore(legacy)).toBe(35);
+  });
+
+  it("weights targeted Resume parameters on one explicit 0-100 scale", () => {
+    const direct = competency("Project deep-dive", 68);
+    direct.technicalEvaluation = {
+      source: "semantic-evaluator",
+      score: 68,
+      verdict: "partially-correct",
+      confidence: 0.9,
+      summary: "Concrete evidence with a weak outcome.",
+      strengths: [],
+      gaps: [],
+      rubricScores: [
+        ["claim-credibility", 80],
+        ["personal-ownership", 80],
+        ["decision-making", 60],
+        ["specificity", 60],
+        ["impact-learning", 40],
+        ["communication", 100]
+      ].map(([rubricKey, score]) => ({
+        rubricKey: String(rubricKey),
+        score: Number(score),
+        rationale: "Transcript-grounded evidence."
+      })),
+      execution: null
+    };
+    const resume = report({
+      sessionId: "weighted-resume",
+      setup: {
+        roundType: "behavioral",
+        resumeRound: true,
+        templateId: "resume-behavioral-defense"
+      } as InterviewReport["setup"],
+      competencies: [direct]
+    });
+
+    expect(roundParameterScore(resume)).toBe(68);
+    expect(
+      createReportsOverview([resume]).families.find(
+        (family) => family.family === "resume-behavioral"
+      )?.averageScore
+    ).toBe(68);
+  });
+
+  it("never treats a new Resume score as an implicit ten-point score", () => {
+    const direct = competency("Resume evidence", 5);
+    direct.technicalEvaluation = {
+      source: "semantic-evaluator",
+      score: 5,
+      verdict: "insufficient-evidence",
+      confidence: 0.9,
+      summary: "Almost no assessable evidence.",
+      strengths: [],
+      gaps: ["The claim was unsupported."],
+      rubricScores: [{ rubricKey: "claim-credibility", score: 5, rationale: "Unsupported claim." }],
+      execution: null
+    };
+    const resume = report({
+      sessionId: "low-resume",
+      setup: {
+        roundType: "behavioral",
+        resumeRound: true,
+        templateId: "resume-behavioral-defense"
+      } as InterviewReport["setup"],
+      competencies: [direct]
+    });
+
+    expect(parameterScoresForReport(resume)[0]?.score).toBe(5);
+    expect(roundParameterScore(resume)).toBe(5);
+  });
+
+  it("does not average unavailable-evaluation placeholder zeros into a round score", () => {
+    const resume = report({
+      sessionId: "unavailable-resume-evaluation",
+      setup: {
+        roundType: "behavioral",
+        resumeRound: true,
+        templateId: "resume-behavioral-defense"
+      } as InterviewReport["setup"],
+      competencies: [
+        {
+          ...competency("Career story", 70),
+          technicalEvaluation: {
+            source: "semantic-evaluator",
+            score: 70,
+            verdict: "mostly-correct",
+            confidence: 0.9,
+            summary: "Credible evidence.",
+            strengths: [],
+            gaps: [],
+            rubricScores: [
+              { rubricKey: "claim-credibility", score: 70, rationale: "Credible evidence." }
+            ],
+            execution: null
+          }
+        },
+        {
+          ...competency("Technical skill", 0),
+          technicalEvaluation: {
+            source: "evaluation-unavailable",
+            score: 0,
+            verdict: "insufficient-evidence",
+            confidence: 0,
+            summary: "Evaluation unavailable.",
+            strengths: [],
+            gaps: ["Retry evaluation."],
+            rubricScores: [
+              {
+                rubricKey: "claim-credibility",
+                score: 0,
+                rationale: "Not scored because evaluation was unavailable."
+              }
+            ],
+            execution: null
+          }
+        }
+      ]
+    });
+
+    expect(
+      parameterScoresForReport(resume).find((item) => item.key === "claim-credibility")
+    ).toMatchObject({
+      score: 70,
+      evaluated: true
+    });
   });
 
   it("does not score an end-interview utterance that answered no planned question", () => {

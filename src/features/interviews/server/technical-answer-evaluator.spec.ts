@@ -1,5 +1,6 @@
 import type { AiService } from "@/server/ai/ai.service";
 import {
+  buildResumeCodeEvaluationPrompt,
   buildTechnicalEvaluationPrompt,
   buildResumeAnswerEvaluationPrompt,
   normalizeTechnicalEvaluation,
@@ -181,6 +182,43 @@ describe("technical answer evaluator", () => {
     expect(result.rubricScores.map((item) => item.score)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
+  it("persists only the report parameters intentionally assessed by a resume question", () => {
+    const resumeInput: TechnicalAnswerEvaluationInput = {
+      ...input(null),
+      setup: {
+        ...setup,
+        roundType: "behavioral",
+        resumeRound: true,
+        templateId: "resume-behavioral-defense"
+      },
+      question: {
+        ...question,
+        kind: "conversation",
+        stage: "career",
+        evaluationParameterKeys: ["claim-credibility", "communication"]
+      }
+    };
+    const result = normalizeTechnicalEvaluation(
+      {
+        ...rawEvaluation,
+        rubricScores: [
+          { rubricKey: "claim-credibility", score: 72, rationale: "Grounded claim." },
+          { rubricKey: "communication", score: 68, rationale: "Mostly direct." },
+          { rubricKey: "impact-learning", score: 5, rationale: "Not targeted." }
+        ]
+      },
+      resumeInput
+    );
+
+    expect(result.rubricScores.map((item) => item.rubricKey)).toEqual([
+      "claim-credibility",
+      "communication"
+    ]);
+    expect(buildResumeAnswerEvaluationPrompt(resumeInput)).toContain(
+      "exactly these keys and no others: claim-credibility, communication"
+    );
+  });
+
   it("requires the model to prioritize factual correctness over fluent delivery", async () => {
     const generateStructured = vi.fn().mockResolvedValue(rawEvaluation);
     const evaluator = new TechnicalAnswerEvaluator({ generateStructured } as unknown as AiService);
@@ -235,10 +273,52 @@ describe("technical answer evaluator", () => {
     expect(prompt).toContain("Redis caching project");
     expect(prompt).toContain("personal-ownership: Makes the candidate's own responsibility");
     expect(prompt).toContain(
-      "exactly these keys: claim-credibility, personal-ownership, decision-making"
+      "exactly these keys and no others: claim-credibility, personal-ownership, decision-making"
     );
     expect(prompt).toContain(resumeInput.answers[0]);
     expect(prompt).toContain("evidenceQuotes");
+  });
+
+  it("reviews resume code with the task and runner evidence, excluding spoken filler", async () => {
+    const resumeCodeInput: TechnicalAnswerEvaluationInput = {
+      ...input(execution({ testCount: 0, testsPassed: 0 })),
+      setup: {
+        ...setup,
+        resumeRound: true,
+        roundType: "behavioral",
+        templateId: "resume-behavioral-defense"
+      },
+      question: {
+        ...question,
+        language: "TypeScript",
+        codeSnippet: "function retry() { throw new Error('Not implemented'); }",
+        evaluationParameterKeys: ["claim-credibility", "specificity", "communication"]
+      },
+      answers: [
+        "Give me a minute.",
+        "```typescript\nfunction retry() { return true; }\n```\n\nReasoning: bounded by the caller."
+      ]
+    };
+    const prompt = buildResumeCodeEvaluationPrompt(resumeCodeInput);
+
+    expect(prompt).toContain("Candidate's submitted code and explanation");
+    expect(prompt).toContain("Tests: none supplied");
+    expect(prompt).toContain(
+      "exactly these keys and no others: claim-credibility, specificity, communication"
+    );
+    expect(prompt).not.toContain("Give me a minute.");
+
+    const generateStructured = vi.fn().mockResolvedValue(rawEvaluation);
+    const evaluator = new TechnicalAnswerEvaluator({ generateStructured } as unknown as AiService);
+    await evaluator.evaluate(resumeCodeInput);
+
+    expect(generateStructured).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operation: "interview.resume-answer.evaluate",
+        systemInstruction: expect.stringContaining("resume-based coding exercise"),
+        prompt: expect.stringContaining("Successful execution with zero tests")
+      })
+    );
   });
 
   it("uses DSA and HR judgement parameters instead of a universal rubric", () => {

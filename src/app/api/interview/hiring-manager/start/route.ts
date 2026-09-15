@@ -19,7 +19,22 @@ export async function POST(request: NextRequest) {
     const app = getAppContainer();
     const owner = await resolveInterviewOwner(request, app.config);
     const guard = getSharedGuard(app.config);
-    await guard.enforce(RATE_LIMIT_POLICIES.interviewCreation, owner.ownerId);
+    const existing = await app.interviewService.findOwnedActiveByTemplate(
+      owner.ownerId,
+      "hiring-manager-final"
+    );
+    if (existing) {
+      return attachInterviewOwnerCookie(
+        apiSuccess({
+          sessionId: existing.id,
+          questionCount: existing.plan.length,
+          utterance: existing.turns.at(-1)?.text ?? ""
+        }),
+        owner,
+        app.config
+      );
+    }
+
     const creationLease = await guard.acquire(
       {
         namespace: "interview-create",
@@ -31,6 +46,23 @@ export async function POST(request: NextRequest) {
     );
 
     try {
+      const activeAfterLease = await app.interviewService.findOwnedActiveByTemplate(
+        owner.ownerId,
+        "hiring-manager-final"
+      );
+      if (activeAfterLease) {
+        return attachInterviewOwnerCookie(
+          apiSuccess({
+            sessionId: activeAfterLease.id,
+            questionCount: activeAfterLease.plan.length,
+            utterance: activeAfterLease.turns.at(-1)?.text ?? ""
+          }),
+          owner,
+          app.config
+        );
+      }
+
+      await guard.enforce(RATE_LIMIT_POLICIES.interviewCreation, owner.ownerId);
       const profile = await app.profileService.get(owner.ownerId);
       const personalization = {
         resume: profile.resume,

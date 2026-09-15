@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 import { auth } from "@clerk/nextjs/server";
+import { GoogleGenAI, Modality } from "@google/genai";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { geminiVoiceForInterviewer } from "@/features/interviews/domain/interviewer-persona";
 import { personaById } from "@/lib/avatars/personas";
 import { getAppContainer } from "@/server/app-container";
 import { Logger } from "@/server/common/logger";
@@ -13,31 +15,33 @@ import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-
 export const dynamic = "force-dynamic";
 
 const DEEPGRAM_SPEAK_ENDPOINT = "https://api.deepgram.com/v1/speak";
+const GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts";
+const JAMES_TTS_STYLE_VERSION = "conversational-v4";
 const SPEECH_TIMEOUT_MS = 15_000;
+const JAMES_SPEECH_TIMEOUT_MS = 30_000;
 
-/**
- * Maya says the same handful of lines to everyone, so identical text is
- * synthesised once per instance instead of on every replay.
- */
+/** Identical lines are synthesised once per instance instead of on every replay. */
 const CACHE_LIMIT = 64;
-const audioCache = new Map<string, Buffer>();
+interface CachedAudio {
+  bytes: Buffer;
+  contentType: string;
+}
+
+const audioCache = new Map<string, CachedAudio>();
 
 const logger = new Logger("VoiceSpeak");
 
 const speakSchema = z.object({
   text: z.string().trim().min(1).max(1_200),
   /**
-   * A persona id, never a raw provider model. The client chooses who speaks;
-   * the mapping to a Deepgram voice stays here, so no caller-supplied string
-   * can reach the provider as a model parameter.
+   * A persona id, never a raw provider model. Provider and voice selection stay
+   * on the server, so no caller-supplied string can reach a model parameter.
    */
   persona: z.string().trim().max(60).optional()
 });
 
 /**
- * GET so the browser can stream and cache it: an <audio> element pointed
- * straight at this URL starts playing on the first chunk, instead of waiting
- * for the whole file to arrive as a blob.
+ * GET lets the browser reuse its normal media loading and caching path.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -57,19 +61,15 @@ export async function GET(request: NextRequest) {
     }
 
     const config = getAppContainer().config;
-    const apiKey = config.deepgramApiKey;
-    if (!apiKey) {
-      throw new ApiRouteError(
-        503,
-        "SPEECH_UNAVAILABLE",
-        "Trailgrad voice is not configured on this environment."
-      );
-    }
-
-    // An unknown id falls back to the configured default rather than failing:
-    // a retired persona should still be able to speak.
-    const model = personaById(parsed.data.persona)?.voice ?? config.deepgramTtsModel;
-    const cacheKey = createHash("sha256").update(`${model}:${parsed.data.text}`).digest("hex");
+    const useJamesVoice = parsed.data.persona === "james";
+    const model = useJamesVoice
+      ? GEMINI_TTS_MODEL
+      : (personaById(parsed.data.persona)?.voice ?? config.deepgramTtsModel);
+    const cacheKey = createHash("sha256")
+      .update(
+        `${useJamesVoice ? `gemini:${JAMES_TTS_STYLE_VERSION}` : "deepgram"}:${model}:${parsed.data.text}`
+      )
+      .digest("hex");
     const cached = audioCache.get(cacheKey);
     if (cached) return audioResponse(cached, "hit");
 
@@ -80,25 +80,50 @@ export async function GET(request: NextRequest) {
     await guard.enforce(RATE_LIMIT_POLICIES.voiceGeneration, ownerId);
     await guard.enforce(RATE_LIMIT_POLICIES.voiceCharacters, ownerId, parsed.data.text.length);
 
-    const upstream = await synthesize({ text: parsed.data.text, model, apiKey });
-    if (!upstream.body) {
-      return audioResponse(Buffer.from(await upstream.arrayBuffer()), "miss");
+    if (useJamesVoice) {
+      try {
+        const generated = await synthesizeJames({
+          text: parsed.data.text,
+          apiKey: config.geminiApiKey
+        });
+        rememberAudio(cacheKey, generated);
+        return audioResponse(generated, "miss");
+      } catch (error) {
+        // Gemini TTS has a small independent quota. James must not become
+        // silent when that quota is temporarily exhausted, so fall back to his
+        // established Deepgram voice while keeping provider details private.
+        const fallbackModel = personaById("james")?.voice ?? config.deepgramTtsModel;
+        const fallbackKey = createHash("sha256")
+          .update(`deepgram-fallback:${fallbackModel}:${parsed.data.text}`)
+          .digest("hex");
+        const fallbackCached = audioCache.get(fallbackKey);
+        if (fallbackCached) return audioResponse(fallbackCached, "hit");
+        if (!config.deepgramApiKey) throw error;
+        logger.warn(
+          JSON.stringify({
+            event: "voice.james.gemini_fallback",
+            reason: error instanceof ApiRouteError ? error.code : "SPEECH_PROVIDER_FAILED"
+          })
+        );
+        const upstream = await synthesizeDeepgram({
+          text: parsed.data.text,
+          model: fallbackModel,
+          apiKey: config.deepgramApiKey
+        });
+        return streamDeepgram(upstream, fallbackKey);
+      }
     }
 
-    // One branch goes to the listener as it arrives, the other fills the cache.
-    const [toClient, toCache] = upstream.body.tee();
-    void collect(toCache)
-      .then((audio) => rememberAudio(cacheKey, audio))
-      .catch(() => undefined);
-
-    return new Response(toClient, {
-      status: 200,
-      headers: {
-        "content-type": "audio/mpeg",
-        "cache-control": "private, max-age=3600",
-        "x-trailgrad-voice-cache": "miss"
-      }
-    });
+    const apiKey = config.deepgramApiKey;
+    if (!apiKey) {
+      throw new ApiRouteError(
+        503,
+        "SPEECH_UNAVAILABLE",
+        "Trailgrad voice is not configured on this environment."
+      );
+    }
+    const upstream = await synthesizeDeepgram({ text: parsed.data.text, model, apiKey });
+    return streamDeepgram(upstream, cacheKey);
   } catch (error) {
     if (!(error instanceof ApiRouteError)) {
       logger.error(
@@ -112,7 +137,31 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function synthesize(input: {
+async function streamDeepgram(upstream: Response, cacheKey: string): Promise<Response> {
+  const contentType = upstream.headers.get("content-type") ?? "audio/mpeg";
+  if (!upstream.body) {
+    const generated = { bytes: Buffer.from(await upstream.arrayBuffer()), contentType };
+    rememberAudio(cacheKey, generated);
+    return audioResponse(generated, "miss");
+  }
+
+  // One branch goes to the listener as it arrives, the other fills the cache.
+  const [toClient, toCache] = upstream.body.tee();
+  void collect(toCache)
+    .then((bytes) => rememberAudio(cacheKey, { bytes, contentType }))
+    .catch(() => undefined);
+
+  return new Response(toClient, {
+    status: 200,
+    headers: {
+      "content-type": contentType,
+      "cache-control": "private, max-age=3600",
+      "x-trailgrad-voice-cache": "miss"
+    }
+  });
+}
+
+async function synthesizeDeepgram(input: {
   text: string;
   model: string;
   apiKey: string;
@@ -164,7 +213,52 @@ async function synthesize(input: {
   }
 }
 
-function rememberAudio(key: string, audio: Buffer): void {
+async function synthesizeJames(input: { text: string; apiKey: string }): Promise<CachedAudio> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), JAMES_SPEECH_TIMEOUT_MS);
+
+  try {
+    const client = new GoogleGenAI({ apiKey: input.apiKey });
+    const response = await client.models.generateContent({
+      model: GEMINI_TTS_MODEL,
+      contents: `Read the transcript exactly as written. James is composed, dryly funny, and conversational. Use a relaxed but responsive natural pace of about 145 words per minute. Pause only where the punctuation calls for it and never sound theatrical.\n\nTranscript:\n${input.text}`,
+      config: {
+        abortSignal: controller.signal,
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: geminiVoiceForInterviewer("james") }
+          }
+        }
+      }
+    });
+    const part = response.candidates?.[0]?.content?.parts?.find((candidate) =>
+      Boolean(candidate.inlineData?.data)
+    );
+    const encoded = part?.inlineData?.data ?? response.data;
+    if (!encoded) throw new Error("Gemini TTS returned no audio");
+
+    const bytes = Buffer.from(encoded, "base64");
+    const mimeType = part?.inlineData?.mimeType?.toLowerCase() ?? "audio/l16;rate=24000";
+    if (mimeType.includes("l16") || mimeType.includes("pcm")) {
+      return { bytes: pcmToWav(bytes, sampleRateFromMimeType(mimeType)), contentType: "audio/wav" };
+    }
+    return { bytes, contentType: mimeType };
+  } catch (error) {
+    if (error instanceof ApiRouteError) throw error;
+    throw new ApiRouteError(
+      controller.signal.aborted ? 504 : 502,
+      controller.signal.aborted ? "SPEECH_TIMEOUT" : "SPEECH_PROVIDER_FAILED",
+      controller.signal.aborted
+        ? "Trailgrad voice took too long to respond. Try again in a moment."
+        : "Trailgrad could not generate the voice line right now."
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function rememberAudio(key: string, audio: CachedAudio): void {
   if (audioCache.size >= CACHE_LIMIT) {
     const oldest = audioCache.keys().next().value;
     if (oldest) audioCache.delete(oldest);
@@ -172,16 +266,44 @@ function rememberAudio(key: string, audio: Buffer): void {
   audioCache.set(key, audio);
 }
 
-function audioResponse(audio: Buffer, cache: "hit" | "miss"): Response {
-  return new Response(new Uint8Array(audio), {
+function audioResponse(audio: CachedAudio, cache: "hit" | "miss"): Response {
+  return new Response(new Uint8Array(audio.bytes), {
     status: 200,
     headers: {
-      "content-type": "audio/mpeg",
-      "content-length": String(audio.byteLength),
+      "content-type": audio.contentType,
+      "content-length": String(audio.bytes.byteLength),
       "cache-control": "private, max-age=3600",
       "x-trailgrad-voice-cache": cache
     }
   });
+}
+
+function sampleRateFromMimeType(mimeType: string): number {
+  const match = /rate=(\d+)/i.exec(mimeType);
+  const sampleRate = Number(match?.[1] ?? 24_000);
+  return Number.isFinite(sampleRate) && sampleRate > 0 ? sampleRate : 24_000;
+}
+
+function pcmToWav(pcm: Buffer, sampleRate: number): Buffer {
+  const header = Buffer.alloc(44);
+  const channels = 1;
+  const bitsPerSample = 16;
+  const blockAlign = (channels * bitsPerSample) / 8;
+
+  header.write("RIFF", 0);
+  header.writeUInt32LE(36 + pcm.length, 4);
+  header.write("WAVE", 8);
+  header.write("fmt ", 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(channels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(sampleRate * blockAlign, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(bitsPerSample, 34);
+  header.write("data", 36);
+  header.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([header, pcm]);
 }
 
 async function collect(stream: ReadableStream<Uint8Array>): Promise<Buffer> {

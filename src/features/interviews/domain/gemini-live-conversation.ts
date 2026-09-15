@@ -1,9 +1,10 @@
 import type { FunctionDeclaration } from "@google/genai";
+import type { InterviewSetup } from "@/features/interviews/server/types";
 
 export const COMPLETE_INTERVIEW_TURN_TOOL = "complete_interview_turn";
 
 /**
- * Gemini owns turn-taking in the hiring-manager room, but it cannot mutate the
+ * Gemini owns turn-taking in selected conversational rooms, but it cannot mutate the
  * interview itself. This blocking tool hands the completed candidate turn to
  * Trailgrad and returns the only interview content James may use next.
  */
@@ -24,11 +25,17 @@ export const GEMINI_LED_INTERVIEW_TOOLS: Array<{
               description:
                 "A verbatim transcript of the candidate's complete latest utterance. Do not summarize, correct, or add words."
             },
+            candidateIntent: {
+              type: "string",
+              enum: ["answer", "decline", "end", "question-or-clarification", "other"],
+              description:
+                "Classify the candidate's communicative intent by meaning, not exact wording. Use decline when they refuse this question or cannot/will not answer it, including no idea, no clue, I don't know, or nothing comes to mind; end only when they explicitly want to end the whole interview; question-or-clarification when they ask James something; answer for an attempted answer; otherwise other."
+            },
             action: {
               type: "string",
               enum: ["clarify", "probe", "challenge", "respond", "move_on"],
               description:
-                "Choose respond for a candidate question or clarification, move_on when evidence is sufficient, otherwise one focused follow-up."
+                "Choose respond for a candidate question or clarification. Choose move_on only when credible evidence is sufficient, not merely specific. Choose challenge for concerning professional conduct, a concrete inconsistency, or missing accountability; otherwise use one focused probe."
             },
             missing: {
               type: "string",
@@ -56,6 +63,7 @@ export const GEMINI_LED_INTERVIEW_TOOLS: Array<{
           },
           required: [
             "answerText",
+            "candidateIntent",
             "action",
             "missing",
             "acknowledgement",
@@ -69,3 +77,14 @@ export const GEMINI_LED_INTERVIEW_TOOLS: Array<{
     ]
   }
 ];
+
+/** Canonical allow-list for interview families where Gemini owns the dialogue. */
+export function usesGeminiLedConversation(
+  setup: Pick<InterviewSetup, "roundType" | "templateId" | "resumeRound">
+): boolean {
+  return (
+    setup.templateId === "hiring-manager-final" ||
+    setup.templateId === "resume-behavioral-defense" ||
+    (setup.roundType === "hiring-manager" && setup.resumeRound === true)
+  );
+}

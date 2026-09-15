@@ -32,14 +32,13 @@ function permissionError(error: unknown, kind: "microphone" | "camera") {
 
 export function MediaPermissionGate({
   cameraOptional,
+  interviewerName,
   onComplete
 }: {
   cameraOptional: boolean;
+  interviewerName: string;
   onComplete: (result: MediaSetupResult) => void;
 }) {
-  // James conducts every live interview. The selected workspace coach only
-  // speaks on the preceding preparation screen, so setup must not imply otherwise.
-  const interviewerName = "James";
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const microphoneStreamRef = useRef<MediaStream | null>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);

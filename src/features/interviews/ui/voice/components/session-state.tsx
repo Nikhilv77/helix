@@ -121,7 +121,8 @@ export function SessionStateScreen({
   coreTechnicalBlockId = null,
   storyPracticeAssessment = null,
   evaluationLabel = "interview",
-  evaluationParameters = []
+  evaluationParameters = [],
+  interviewerName = "James"
 }: {
   kind: "expired" | "complete";
   duration?: number;
@@ -136,6 +137,7 @@ export function SessionStateScreen({
   } | null;
   evaluationLabel?: string;
   evaluationParameters?: string[];
+  interviewerName?: string;
 }) {
   const teacher = useWorkspaceTeacher();
   const complete = kind === "complete";
@@ -149,6 +151,7 @@ export function SessionStateScreen({
           storyPracticeAssessment={storyPracticeAssessment}
           evaluationLabel={evaluationLabel}
           evaluationParameters={evaluationParameters}
+          interviewerName={interviewerName}
         />
       </VoiceShell>
     );
@@ -197,7 +200,8 @@ function CompletionDebrief({
   coreTechnicalBlockId,
   storyPracticeAssessment,
   evaluationLabel,
-  evaluationParameters
+  evaluationParameters,
+  interviewerName
 }: {
   blockAssessmentBlockId: string | null;
   coreTechnicalBlockId: string | null;
@@ -208,12 +212,13 @@ function CompletionDebrief({
   } | null;
   evaluationLabel: string;
   evaluationParameters: string[];
+  interviewerName: string;
 }) {
   const teacher = useWorkspaceTeacher();
   const { state, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
   const spoken = useRef(false);
   const parameterLead = evaluationParameters.slice(0, 3).join(", ");
-  const voiceLine = `James has reported back to me about your ${evaluationLabel} interview. I’ll walk you through ${parameterLead || "the relevant evaluation parameters"}, what worked, and what to improve next. Finishing the interview is progress by itself—keep going.`;
+  const voiceLine = `${interviewerName} has reported back to me about your ${evaluationLabel} interview. I’ll walk you through ${parameterLead || "the relevant evaluation parameters"}, what worked, and what to improve next. Finishing the interview is progress by itself—keep going.`;
   const speaking = state === "speaking" || state === "loading";
   const speakDebrief = useCallback(() => {
     if (spoken.current && !speaking) spoken.current = false;
@@ -262,7 +267,7 @@ function CompletionDebrief({
             Report ready with {teacher.name}
           </p>
           <h1 className="mt-3 text-balance font-display text-4xl font-semibold tracking-tight text-cream sm:text-5xl">
-            James has reported back to me.
+            {interviewerName} has reported back to me.
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-pretty text-base leading-7 text-cream/66 lg:mx-0">
             I reviewed your {evaluationLabel} performance. I’ll explain what your scores mean, show

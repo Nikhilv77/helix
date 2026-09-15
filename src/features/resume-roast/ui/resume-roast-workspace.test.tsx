@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   ResumeRoastResult,
@@ -23,6 +23,7 @@ const voice = vi.hoisted(() => ({
       return "started" as const;
     }
   ),
+  preload: vi.fn(),
   stop: vi.fn(),
   setAwaitingGesture: vi.fn()
 }));
@@ -33,6 +34,7 @@ vi.mock("@/infrastructure/realtime/use-maya-voice", () => ({
     progress: 0,
     speak: voice.speak,
     stop: voice.stop,
+    preload: voice.preload,
     awaitingGesture: false,
     setAwaitingGesture: voice.setAwaitingGesture
   })
@@ -232,16 +234,18 @@ describe("ResumeRoastWorkspace", () => {
     expect(await screen.findByText("james")).toBeVisible();
     expect(await screen.findByText("Nikhil Verma", {}, { timeout: 2_000 })).toBeVisible();
     expect(
-      await screen.findByText(
+      await screen.findAllByText(
         "Okay, I’ve got your resume. Three quick questions, then we’ll get into it."
       )
-    ).toBeVisible();
-    expect(await screen.findByText("What role are you aiming for?")).toBeVisible();
+    ).toHaveLength(2);
+    expect(await screen.findAllByText("What role are you aiming for?")).toHaveLength(2);
 
     fireEvent.click(await screen.findByRole("button", { name: "Backend Engineer" }));
-    expect(await screen.findByText("What kind of company are we trying to impress?")).toBeVisible();
+    expect(
+      await screen.findAllByText("What kind of company are we trying to impress?")
+    ).toHaveLength(2);
     fireEvent.click(await screen.findByRole("button", { name: "Product company" }));
-    expect(await screen.findByText("What level are you applying for?")).toBeVisible();
+    expect(await screen.findAllByText("What level are you applying for?")).toHaveLength(2);
     fireEvent.click(await screen.findByRole("button", { name: "Senior" }));
 
     expect(await screen.findByText((text) => text.includes(result.openingRoast))).toBeVisible();
@@ -256,6 +260,11 @@ describe("ResumeRoastWorkspace", () => {
     expect(screen.getByRole("heading", { name: "Ways to fix it" })).toBeVisible();
     expect(screen.queryByText("James is speaking")).toBeNull();
     expect(screen.queryByRole("button", { name: "Delete roast" })).toBeNull();
+    const transcript = screen.getByLabelText("James transcript");
+    expect(within(transcript).getByText("Backend Engineer")).toBeVisible();
+    expect(within(transcript).getByText("Product company")).toBeVisible();
+    expect(within(transcript).getByText("Senior")).toBeVisible();
+    expect(within(transcript).getByText(/you’ve done useful backend work/i)).toBeVisible();
     expect(notificationChanged).toHaveBeenCalledOnce();
     window.removeEventListener(WORKSPACE_NOTIFICATIONS_CHANGED_EVENT, notificationChanged);
 
@@ -286,9 +295,9 @@ describe("ResumeRoastWorkspace", () => {
     await waitFor(() => expect(voice.speak).toHaveBeenCalled());
     const roastCall = voice.speak.mock.calls.find(([line]) => line.includes(result.spokenSummary!));
     expect(roastCall?.[0]).toContain(
-      "Now check below—I’ve laid out every issue with your resume and exactly how to fix it."
+      "Now check—I’ve laid out every issue with your resume and exactly how to fix it."
     );
-    expect(roastCall?.[2]).toMatchObject({ playbackRate: 0.92 });
+    expect(roastCall?.[2]).toBeUndefined();
     expect(voice.speak.mock.calls.every(([, persona]) => persona === "james")).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "Start a fresh analysis" }));
@@ -304,7 +313,7 @@ describe("ResumeRoastWorkspace", () => {
     expect(JSON.parse(String(vi.mocked(fetch).mock.calls[1]?.[1]?.body))).toEqual({ target });
   });
 
-  it("shows the full resume with generated weak points in the scrolling card", async () => {
+  it("reuses the resume-round document preview beside the generated review", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       jsonResponse({
         data: {
@@ -325,29 +334,28 @@ describe("ResumeRoastWorkspace", () => {
     expect(
       await screen.findByText(result.problems[0]!.issue, {}, { timeout: 5_000 })
     ).toBeVisible();
-    expect(screen.getByLabelText("Resume and weak points")).toBeVisible();
+    expect(screen.getByText("nikhil-resume.pdf")).toBeVisible();
+    expect(screen.getByLabelText("James transcript")).toBeVisible();
   });
 
-  it("keeps the mobile resume compact and allows touch scrolling between both panes", async () => {
+  it("uses the resume-round responsive three-column shell", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(readyState()));
 
     const { container } = render(<ResumeRoastWorkspace resume={resume} />);
 
-    const resumeViewport = await screen.findByLabelText("Resume and weak points");
-    const mobileGrid = resumeViewport.closest("section")?.parentElement;
+    await screen.findByText("nikhil-resume.pdf");
     const workspace = container.querySelector("main");
+    const room = workspace?.querySelector(":scope > div");
 
-    expect(workspace).toHaveClass("touch-pan-y", "overflow-y-scroll", "md:overflow-hidden");
-    expect(resumeViewport).toHaveClass("overscroll-auto", "md:overscroll-contain");
-    expect(screen.getByTestId("resume-roast-chat-scroll")).toHaveClass(
-      "overscroll-auto",
-      "md:overscroll-contain"
+    expect(workspace).toHaveClass("h-[calc(100dvh-4.25rem)]", "overflow-hidden");
+    expect(room).toHaveClass(
+      "flex",
+      "overflow-y-auto",
+      "xl:grid",
+      "xl:grid-cols-[minmax(0,23rem)_minmax(0,1fr)_19rem]",
+      "xl:overflow-hidden"
     );
-    expect(mobileGrid).toHaveClass(
-      "grid-rows-[30rem_minmax(32rem,calc(100dvh-5.25rem))]",
-      "md:h-full",
-      "md:grid-rows-1"
-    );
+    expect(screen.getByTestId("resume-roast-transcript")).toHaveClass("overscroll-contain");
   });
 
   it("uses staged elapsed-time copy without promising a fixed completion time", () => {
@@ -366,7 +374,7 @@ describe("ResumeRoastWorkspace", () => {
     render(<ResumeRoastWorkspace resume={resume} />);
     await chooseTarget();
 
-    expect(await screen.findByText("James is reading your resume…")).toBeVisible();
+    expect(await screen.findAllByText("James is reading your resume…")).toHaveLength(2);
     expect(screen.getByText("Analysing · 0s")).toBeVisible();
   });
 
@@ -425,7 +433,7 @@ describe("ResumeRoastWorkspace", () => {
     render(<ResumeRoastWorkspace resume={resume} />);
     await chooseTarget();
 
-    expect(await screen.findByText(message)).toBeVisible();
+    expect(await screen.findAllByText(message)).toHaveLength(2);
   });
 
   it("shows a rate-limit message from a non-stream API response", async () => {
@@ -439,7 +447,7 @@ describe("ResumeRoastWorkspace", () => {
     await chooseTarget();
 
     expect(
-      await screen.findByText("You’ve requested several roasts. Try again in a few minutes.")
-    ).toBeVisible();
+      await screen.findAllByText("You’ve requested several roasts. Try again in a few minutes.")
+    ).toHaveLength(2);
   });
 });

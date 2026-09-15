@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { after } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
+import ts from "typescript";
 import { findQuestion } from "@/features/practice/dsa/domain/dsa";
 import { dsaFunctionName } from "@/features/practice/dsa/domain/dsa-code-templates";
 import { ApiRouteError } from "@/server/http/api-error";
@@ -24,7 +25,7 @@ const runSchema = z
     /** Required for standalone practice runs so evidence writes are idempotent. */
     requestId: z.string().uuid().optional(),
     code: z.string().trim().min(1).max(20_000),
-    language: z.enum(["python", "javascript", "cpp", "java"]),
+    language: z.enum(["python", "javascript", "typescript", "cpp", "java"]),
     /**
      * A DSA question to check the code against. Omitted by rounds whose task is
      * written for the candidate rather than drawn from the bank, which run the
@@ -59,6 +60,7 @@ const languages: Record<z.infer<typeof runSchema>["language"], { id: number; nam
   cpp: { id: 105, name: "C++ (GCC 14.1.0)" },
   java: { id: 62, name: "Java (OpenJDK 13.0.1)" },
   javascript: { id: 97, name: "JavaScript (Node.js 20.17.0)" },
+  typescript: { id: 97, name: "TypeScript (Node.js 20.17.0)" },
   python: { id: 71, name: "Python (3.8.1)" }
 };
 
@@ -92,6 +94,8 @@ export async function POST(request: NextRequest) {
     let slug = parsed.data.slug;
     let testCases: ReturnType<typeof buildTestCases> = [];
     let sourceCode = parsed.data.code;
+    const runnerLanguage =
+      parsed.data.language === "typescript" ? ("javascript" as const) : parsed.data.language;
 
     // A block assessment is pinned to the immutable assessment record. The
     // browser's slug is ignored entirely for these sessions, so an old tab or
@@ -114,7 +118,7 @@ export async function POST(request: NextRequest) {
         testCases = frozenTransfer.runnerContract.testCases;
         sourceCode = buildTestHarness(
           parsed.data.code,
-          parsed.data.language,
+          runnerLanguage,
           frozenTransfer.runnerContract.functionName,
           testCases
         );
@@ -139,12 +143,7 @@ export async function POST(request: NextRequest) {
       const functionName = dsaFunctionName(question.slug);
       try {
         testCases = buildTestCases(question.examples, slug);
-        sourceCode = buildTestHarness(
-          parsed.data.code,
-          parsed.data.language,
-          functionName,
-          testCases
-        );
+        sourceCode = buildTestHarness(parsed.data.code, runnerLanguage, functionName, testCases);
       } catch (error) {
         throw new ApiRouteError(
           422,
@@ -155,6 +154,14 @@ export async function POST(request: NextRequest) {
     }
 
     const language = languages[parsed.data.language];
+    if (parsed.data.language === "typescript") {
+      sourceCode = ts.transpileModule(sourceCode, {
+        compilerOptions: {
+          module: ts.ModuleKind.CommonJS,
+          target: ts.ScriptTarget.ES2022
+        }
+      }).outputText;
+    }
 
     const guard = getSharedGuard(config);
     await guard.enforce(RATE_LIMIT_POLICIES.codeExecution, ownerId);
@@ -227,7 +234,7 @@ export async function POST(request: NextRequest) {
             .recordCodeRunEvidence(ownerId, {
               idempotencyKey: parsed.data.requestId!,
               dsaQuestionSlug: slug,
-              language: parsed.data.language,
+              language: runnerLanguage,
               // Persist the candidate's editor text, never the generated
               // harness. Later block assessments must review exactly what the
               // candidate wrote alongside the verified runner result.

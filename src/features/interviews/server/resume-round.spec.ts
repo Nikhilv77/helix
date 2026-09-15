@@ -108,6 +108,9 @@ describe("buildResumePlan", () => {
         .filter((question) => question.requiredForPacing)
         .map((question) => question.pacingSection)
     ).toEqual(["about-you", "your-work", "how-you-work", "technical"]);
+    expect(plan.every((question) => question.evaluationParameterKeys?.length)).toBe(true);
+    expect(plan[2]?.evaluationParameterKeys).toContain("decision-making");
+    expect(plan[5]?.evaluationParameterKeys).toContain("impact-learning");
   });
 
   it("replaces a missing coding task with a second skill and stays at eight questions", () => {
@@ -204,6 +207,16 @@ describe("gradeMultipleChoice", () => {
 
   it("ignores case and surrounding space", () => {
     expect(gradeMultipleChoice(question!, "  USEREF ")?.correct).toBe(true);
+  });
+
+  it("accepts a spoken option letter or a sentence containing the option", () => {
+    expect(gradeMultipleChoice(question!, "B")?.correct).toBe(true);
+    expect(gradeMultipleChoice(question!, "option B")?.correct).toBe(true);
+    expect(gradeMultipleChoice(question!, "I think the answer is B")?.correct).toBe(true);
+    expect(
+      gradeMultipleChoice(question!, "I would choose useRef because it does not trigger a render.")
+        ?.correct
+    ).toBe(true);
   });
 
   it("reports an answer that matches no option", () => {

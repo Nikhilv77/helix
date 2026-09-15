@@ -116,6 +116,7 @@ const registerTrailgradTheme: BeforeMount = (monaco) => {
 
 export function DsaCodeEditor({
   language,
+  syntaxLanguage,
   value,
   onChange,
   onRun,
@@ -126,6 +127,8 @@ export function DsaCodeEditor({
   ariaLabel
 }: {
   language: DsaEditorLanguage;
+  /** Monaco language id when display syntax differs from the execution language. */
+  syntaxLanguage?: string;
   value: string;
   onChange?: (value: string) => void;
   onRun?: () => void;
@@ -203,7 +206,7 @@ export function DsaCodeEditor({
   return (
     <Editor
       height="100%"
-      language={language}
+      language={syntaxLanguage ?? language}
       value={value}
       onChange={(next) => {
         if (!readOnly) onChange?.(next ?? "");

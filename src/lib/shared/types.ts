@@ -153,6 +153,8 @@ export interface ResumeProjectEntry {
  * with it. Starting the round then costs no model call at all.
  */
 export interface ResumeInterviewKit {
+  /** Regenerates cached question banks when the interview-quality contract changes. */
+  version?: number;
   skillQuestions: ResumeSkillQuestion[];
   codingTask: ResumeCodingTask | null;
   experienceQuestions: ResumeExperienceQuestion[];

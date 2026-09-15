@@ -39,13 +39,14 @@ describe("Resume Roast prompt", () => {
   it("uses the stable prompt version and exact target labels", () => {
     const prompt = buildResumeRoastPrompt(snapshot, target, ["signal:skill-list-size"]);
 
-    expect(RESUME_ROAST_PROMPT_VERSION).toBe("resume-roast-v5");
+    expect(RESUME_ROAST_PROMPT_VERSION).toBe("resume-roast-v6");
     expect(prompt).toContain("Role: Backend Engineer");
     expect(prompt).toContain("Level: Senior");
     expect(prompt).toContain("Company environment: Product company");
     expect(prompt).toContain("signal:skill-list-size");
     expect(prompt).toContain("targetFitScore");
     expect(prompt).toContain("spokenSummary");
+    expect(prompt).toMatch(/at least two distinct memorable punchlines/i);
   });
 
   it("sets a clear untrusted-data boundary and honest safety rules", () => {

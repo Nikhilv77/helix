@@ -178,7 +178,7 @@ export function ConversationTranscript({
             </div>
           ) : null}
 
-          {thinking ? <ThinkingLine /> : null}
+          {thinking ? <ThinkingLine interviewerName={teacherName ?? teacher.name} /> : null}
           <div ref={bottomRef} />
         </div>
       )}
@@ -190,11 +190,11 @@ function turnKey(turn: Turn): string {
   return `${turn.speaker}-${turn.startMs}-${turn.endMs}-${turn.text}`;
 }
 
-function ThinkingLine() {
+function ThinkingLine({ interviewerName }: { interviewerName: string }) {
   return (
     <p className="mt-4 flex items-center gap-2 text-xs text-cream/40">
       <Loader2 size={12} className="animate-spin" aria-hidden="true" />
-      James is responding
+      {interviewerName} is responding
     </p>
   );
 }

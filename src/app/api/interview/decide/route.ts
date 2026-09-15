@@ -6,6 +6,7 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
 import { authorizeInterviewSession } from "@/features/interviews/server/session-access";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
+import { usesGeminiLedConversation } from "@/features/interviews/domain/gemini-live-conversation";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,9 @@ const decideSchema = z.object({
     .object({
       action: z.enum(["clarify", "probe", "challenge", "respond", "move_on"]),
       missing: z.enum(["clarity", "structure", "specificity", "ownership", "outcome", "none"]),
+      candidateIntent: z
+        .enum(["answer", "decline", "end", "question-or-clarification", "other"])
+        .optional(),
       reason: z.string().trim().min(1).max(200),
       acknowledgement: z.string().trim().max(120),
       line: z.string().trim().max(300),
@@ -71,7 +75,7 @@ export async function POST(request: NextRequest) {
         access.kind === "owner"
           ? await app.interviewService.getOwnedActive(access.ownerId, parsed.data.sessionId)
           : await app.interviewService.get(parsed.data.sessionId);
-      if (existing.setup.roundType === "hiring-manager" && !parsed.data.liveProposal) {
+      if (usesGeminiLedConversation(existing.setup) && !parsed.data.liveProposal) {
         throw new ApiRouteError(
           400,
           "LIVE_PROPOSAL_REQUIRED",

@@ -21,7 +21,12 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ProfileAvatar } from "@/features/profile/ui/profile-avatar";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { ALL_PERSONAS, MAYA, personaById, type InterviewerPersona } from "@/lib/avatars/personas";
+import {
+  MAYA,
+  SELECTABLE_TEACHERS,
+  selectableTeacherById,
+  type InterviewerPersona
+} from "@/lib/avatars/personas";
 import {
   ApiClientError,
   deleteAccount,
@@ -311,24 +316,30 @@ function ManageTeacherPicker({
   onError: (message: string | null) => void;
 }) {
   const router = useRouter();
-  const initialTeacher = personaById(initialTeacherId) ?? MAYA;
+  const initialTeacher = selectableTeacherById(initialTeacherId) ?? MAYA;
   const [index, setIndex] = useState(() => {
-    const initialIndex = ALL_PERSONAS.findIndex((persona) => persona.id === initialTeacher.id);
+    const initialIndex = SELECTABLE_TEACHERS.findIndex(
+      (persona) => persona.id === initialTeacher.id
+    );
     return initialIndex < 0 ? 0 : initialIndex;
   });
   const [savedTeacherId, setSavedTeacherId] = useState(initialTeacher.id);
   const [saving, setSaving] = useState(false);
   const { state, speak, stop } = useMayaVoice();
 
-  const focused = ALL_PERSONAS[index] ?? MAYA;
-  const previous = ALL_PERSONAS[(index - 1 + ALL_PERSONAS.length) % ALL_PERSONAS.length] ?? MAYA;
-  const next = ALL_PERSONAS[(index + 1) % ALL_PERSONAS.length] ?? MAYA;
+  const focused = SELECTABLE_TEACHERS[index] ?? MAYA;
+  const previous =
+    SELECTABLE_TEACHERS[(index - 1 + SELECTABLE_TEACHERS.length) % SELECTABLE_TEACHERS.length] ??
+    MAYA;
+  const next = SELECTABLE_TEACHERS[(index + 1) % SELECTABLE_TEACHERS.length] ?? MAYA;
   const speaking = state === "loading" || state === "speaking";
   const selected = focused.id === savedTeacherId;
 
   const move = (direction: -1 | 1) => {
     stop();
-    setIndex((current) => (current + direction + ALL_PERSONAS.length) % ALL_PERSONAS.length);
+    setIndex(
+      (current) => (current + direction + SELECTABLE_TEACHERS.length) % SELECTABLE_TEACHERS.length
+    );
   };
 
   const saveTeacher = async () => {
@@ -353,7 +364,7 @@ function ManageTeacherPicker({
         <div>
           <h2 className="text-base font-semibold text-cream">Your teacher</h2>
           <p className="mt-1 text-sm leading-6 text-cream/52">
-            Choose who guides your practice and runs your interviews.
+            Choose who guides your everyday practice between interviews.
           </p>
         </div>
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cream/46">
@@ -445,7 +456,7 @@ function ManageTeacherPicker({
           type="button"
           onClick={() => void saveTeacher()}
           disabled={saving || selected}
-          className="manage-teacher-submit inline-flex h-11 min-w-40 items-center justify-center rounded-lg bg-cream px-5 text-sm font-medium text-white transition-colors hover:bg-white disabled:cursor-default disabled:bg-white/[0.07] disabled:text-cream/38"
+          className="manage-teacher-submit inline-flex h-11 min-w-40 items-center justify-center rounded-lg bg-cream px-5 text-sm font-medium text-[#17181b] transition-colors hover:bg-white disabled:cursor-default disabled:bg-white/[0.07] disabled:text-cream/38"
         >
           {saving
             ? "Saving teacher…"

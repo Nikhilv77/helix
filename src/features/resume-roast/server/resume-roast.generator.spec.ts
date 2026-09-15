@@ -2,6 +2,7 @@ import type {
   ResumeRoastResult,
   ResumeRoastTarget
 } from "@/features/resume-roast/contracts/resume-roast";
+import { AiProviderException } from "@/server/ai/ai-provider.exception";
 import {
   ResumeRoastGenerator,
   ResumeRoastGenerationError,
@@ -150,6 +151,42 @@ describe("ResumeRoastGenerator", () => {
     await expect(generator.generate({ snapshot, target })).rejects.toBeInstanceOf(
       ResumeRoastGenerationError
     );
+    expect(generateStructured).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries once when a response fails roast-specific grounding", async () => {
+    const valid = result();
+    const generateStructured = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ...valid,
+        strength: { ...valid.strength, evidenceAnchors: ["invented-anchor"] }
+      })
+      .mockResolvedValueOnce(valid);
+    const generator = new ResumeRoastGenerator({ generateStructured } as never);
+
+    await expect(generator.generate({ snapshot, target })).resolves.toEqual(valid);
+    expect(generateStructured).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries once when the provider returns invalid structured output", async () => {
+    const valid = result();
+    const generateStructured = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new AiProviderException({
+          code: "AI_INVALID_RESPONSE",
+          message: "invalid",
+          provider: "test",
+          operation: "resume.roast.generate",
+          retryable: true
+        })
+      )
+      .mockResolvedValueOnce(valid);
+    const generator = new ResumeRoastGenerator({ generateStructured } as never);
+
+    await expect(generator.generate({ snapshot, target })).resolves.toEqual(valid);
+    expect(generateStructured).toHaveBeenCalledTimes(2);
   });
 
   it("rejects schema-invalid action plans and ungrounded anchors", () => {

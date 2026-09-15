@@ -5,6 +5,15 @@ import type { GenerateStructuredRequest } from "./interfaces/system-designer-ai-
 type StructuredAi = Pick<AiService, "generateStructured">;
 const DEFAULT_PRIMARY_COOLDOWN_MS = 60_000;
 
+export interface FallbackAiServiceOptions {
+  /** Clamp only the primary attempt without shrinking the fallback's budget. */
+  primaryTimeoutMs?: number;
+  /** Clamp the fallback attempt so failover still has a predictable deadline. */
+  fallbackTimeoutMs?: number;
+  /** Disable a third request when a latency-sensitive operation has already failed over. */
+  recoverPrimaryAfterFallbackFailure?: boolean;
+}
+
 export class FallbackAiService {
   private primaryRetryAfter = 0;
 
@@ -12,7 +21,8 @@ export class FallbackAiService {
     private readonly primary: StructuredAi,
     private readonly fallback: StructuredAi,
     private readonly primaryCooldownMs = DEFAULT_PRIMARY_COOLDOWN_MS,
-    private readonly now: () => number = Date.now
+    private readonly now: () => number = Date.now,
+    private readonly options: FallbackAiServiceOptions = {}
   ) {}
 
   async generateStructured<T>(request: GenerateStructuredRequest<T>): Promise<T> {
@@ -21,7 +31,9 @@ export class FallbackAiService {
     }
 
     try {
-      return await this.primary.generateStructured(request);
+      return await this.primary.generateStructured(
+        this.withTimeout(request, this.options.primaryTimeoutMs)
+      );
     } catch (error) {
       if (
         !(error instanceof AiProviderException) ||
@@ -34,7 +46,7 @@ export class FallbackAiService {
       try {
         return await this.generateWithFallback(request);
       } catch (fallbackError) {
-        if (!this.shouldRecoverPrimary(fallbackError)) throw fallbackError;
+        if (!this.canRecoverPrimary(fallbackError)) throw fallbackError;
         return this.generateWithPrimaryRecovery(request);
       }
     }
@@ -46,23 +58,21 @@ export class FallbackAiService {
     try {
       return await this.generateWithFallback(request);
     } catch (fallbackError) {
-      if (!this.shouldRecoverPrimary(fallbackError)) throw fallbackError;
+      if (!this.canRecoverPrimary(fallbackError)) throw fallbackError;
       return this.generateWithPrimaryRecovery(request);
     }
   }
 
   private generateWithFallback<T>(request: GenerateStructuredRequest<T>): Promise<T> {
     return this.fallback.generateStructured({
-      ...request,
+      ...this.withTimeout(request, this.options.fallbackTimeoutMs),
       operation: request.operation + "-fallback"
     });
   }
 
-  private async generateWithPrimaryRecovery<T>(
-    request: GenerateStructuredRequest<T>
-  ): Promise<T> {
+  private async generateWithPrimaryRecovery<T>(request: GenerateStructuredRequest<T>): Promise<T> {
     const result = await this.primary.generateStructured({
-      ...request,
+      ...this.withTimeout(request, this.options.primaryTimeoutMs),
       operation: request.operation + "-primary-recovery"
     });
     this.primaryRetryAfter = 0;
@@ -71,9 +81,24 @@ export class FallbackAiService {
 
   private shouldRecoverPrimary(error: unknown): boolean {
     return (
-      error instanceof AiProviderException &&
-      !error.retryable &&
-      error.code !== "AI_CANCELLED"
+      error instanceof AiProviderException && !error.retryable && error.code !== "AI_CANCELLED"
     );
+  }
+
+  private canRecoverPrimary(error: unknown): boolean {
+    return (
+      this.options.recoverPrimaryAfterFallbackFailure !== false && this.shouldRecoverPrimary(error)
+    );
+  }
+
+  private withTimeout<T>(
+    request: GenerateStructuredRequest<T>,
+    timeoutMs: number | undefined
+  ): GenerateStructuredRequest<T> {
+    if (timeoutMs === undefined) return request;
+    return {
+      ...request,
+      timeoutMs: Math.min(request.timeoutMs ?? timeoutMs, timeoutMs)
+    };
   }
 }

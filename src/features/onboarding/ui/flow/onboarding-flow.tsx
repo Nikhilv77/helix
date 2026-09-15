@@ -25,7 +25,7 @@ import {
   confirmResumeUpdate,
   uploadResume
 } from "@/lib/api/api-client";
-import { personaById } from "@/lib/avatars/personas";
+import { selectableTeacherById } from "@/lib/avatars/personas";
 import { pageTitle } from "@/lib/shared/seo";
 import type { CandidateProfile, Level, ResumeExtractionResponse } from "@/lib/shared/types";
 import { shouldAutoRetryResumeAnalysis } from "./resume-analysis-retry";
@@ -73,7 +73,8 @@ export function OnboardingFlow({
   const [retryingAnalysis, setRetryingAnalysis] = useState(false);
   const [result, setResult] = useState<ResumeExtractionResponse | null>(initialResult);
   const [error, setError] = useState<string | null>(null);
-  const selectedTeacherName = personaById(teacherId ?? DEFAULT_TEACHER_ID)?.name ?? "Your teacher";
+  const selectedTeacherName =
+    selectableTeacherById(teacherId ?? DEFAULT_TEACHER_ID)?.name ?? "Your teacher";
 
   const cancelReplacement = useCallback(() => {
     if (onCancel) onCancel();

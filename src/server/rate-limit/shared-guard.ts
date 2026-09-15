@@ -55,7 +55,11 @@ export const RATE_LIMIT_POLICIES = {
   },
   livekitToken: {
     namespace: "livekit-token",
-    limit: 3,
+    // Voice credentials are one-use. A refresh, BFCache restoration, device
+    // switch, or transient Gemini reconnect each legitimately needs a fresh
+    // token, so three attempts could lock a healthy interview during normal
+    // recovery. The session-scoped key and five-minute window still bound use.
+    limit: 12,
     windowMs: 5 * 60_000,
     code: "VOICE_CONNECTION_RATE_LIMITED",
     message: "Too many voice connection attempts were made. Try again shortly."

@@ -78,6 +78,9 @@ import {
   LIVE_DECISION_DEADLINE_MS,
   LIVE_EVALUATION_DEADLINE_MS
 } from "../domain/voice-turn-timing";
+import { usesGeminiLedConversation } from "../domain/gemini-live-conversation";
+import { interviewerNameForSetup } from "../domain/interviewer-persona";
+import { SESSION_TTL_MS } from "./session-constants";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** A spoken conversation should never wait on the model's full provider timeout. */
@@ -209,6 +212,26 @@ export class InterviewService {
     const boundedLimit = Math.max(1, Math.min(limit, 50));
     const sessions = await this.store.listByOwner(ownerId, boundedLimit);
     return sessions.map((session) => createHistoryItem(session, now));
+  }
+
+  /**
+   * Returns the unfinished room for a permanent interview family. Launch
+   * routes call this while holding their creation lease so revisiting a round
+   * resumes the durable session instead of consuming quota and starting over.
+   */
+  async findOwnedActiveByTemplate(
+    ownerId: string,
+    templateId: string,
+    now = Date.now()
+  ): Promise<InterviewState | null> {
+    const sessions = await this.store.listByOwner(ownerId, 50);
+    const active = sessions.find(
+      (session) =>
+        session.state.phase !== "done" &&
+        session.state.setup.templateId === templateId &&
+        now - session.touchedAt <= SESSION_TTL_MS
+    );
+    return active?.state ?? null;
   }
 
   /** Claims sessions created by the same browser before Clerk auth was resolved. */
@@ -420,10 +443,10 @@ export class InterviewService {
   ): Promise<AnswerResult> {
     const existing = session.state;
 
-    if (liveProposal && existing.setup.roundType !== "hiring-manager") {
+    if (liveProposal && !usesGeminiLedConversation(existing.setup)) {
       throw new BadRequestErrorException(
         "LIVE_PROPOSAL_NOT_ALLOWED",
-        "Gemini-led decisions are only enabled for the hiring-manager round.",
+        "Gemini-led decisions are not enabled for this interview family.",
         { sessionId }
       );
     }
@@ -463,7 +486,13 @@ export class InterviewService {
       mode === "answer" &&
       !isResumableBlockAssessment(existing.setup) &&
       !candidateNeedsBreak &&
-      candidateRequestsInterviewEnd(answer.text);
+      (liveProposal?.candidateIntent === "end" || candidateRequestsInterviewEnd(answer.text));
+    const candidateDeclinedQuestion =
+      mode === "answer" &&
+      usesGeminiLedConversation(existing.setup) &&
+      !candidateNeedsBreak &&
+      !candidateEndedInterview &&
+      (liveProposal?.candidateIntent === "decline" || candidateDeclinesQuestion(answer.text));
     const withAnswer = appendTurn(existing, {
       speaker: "user",
       text: answer.text,
@@ -475,7 +504,10 @@ export class InterviewService {
             ...(candidateNeedsBreak ? { assessmentExcluded: true } : {})
           }
         : { questionIndex: existing.questionIndex }),
-      ...(mode === "skip-block-assessment-code" ? { skipped: true } : {})
+      ...(mode === "skip-block-assessment-code" || candidateDeclinedQuestion
+        ? { skipped: true }
+        : {}),
+      ...(candidateDeclinedQuestion ? { assessmentExcluded: true } : {})
     });
 
     if (mode === "skip-block-assessment-code") {
@@ -494,6 +526,10 @@ export class InterviewService {
 
     if (candidateNeedsBreak) {
       return this.completeCandidateBreakSupport(withAnswer, now, session.version, turnId);
+    }
+
+    if (candidateDeclinedQuestion) {
+      return this.completeDeclinedQuestion(withAnswer, now, session.version, turnId);
     }
 
     const conversationHistory = withAnswer.turns
@@ -555,7 +591,7 @@ export class InterviewService {
                 : liveProposal.candidateResponse,
             runtime: {
               engineVersion: INTERVIEW_ENGINE_VERSION,
-              promptVersion: "gemini-live-conversation-v1",
+              promptVersion: "gemini-live-conversation-v2",
               durationMs: 0,
               usedFallback: false,
               calls: []
@@ -626,13 +662,15 @@ export class InterviewService {
                 }
               : result.state.questionEvaluations
           };
-    const acknowledgement = naturalAcknowledgement(
-      raw.acknowledgement,
-      result.action,
-      withAnswer.turns,
-      result.state.followUpCount,
-      answer.text
-    );
+    const acknowledgement = liveProposal
+      ? liveAcknowledgement(raw.acknowledgement, result.action, withAnswer.turns)
+      : naturalAcknowledgement(
+          raw.acknowledgement,
+          result.action,
+          withAnswer.turns,
+          result.state.followUpCount,
+          answer.text
+        );
     // The state machine can override a requested follow-up when its budget or
     // the round time is exhausted. Never carry the rejected model question
     // into a move-on response: doing so makes James ask that stale follow-up
@@ -790,6 +828,64 @@ export class InterviewService {
       JSON.stringify({
         event: "interview.break-suggested",
         sessionId: finalState.id,
+        questionIndex: finalState.questionIndex,
+        elapsedMs: elapsedMs(finalState, now)
+      })
+    );
+
+    return { state: finalState, decision, response };
+  }
+
+  /**
+   * A refusal is consent, not weak interview evidence. Respect it immediately,
+   * exclude it from scoring, and never let an LLM turn it into praise or a
+   * follow-up. Repeated refusals close the interview instead of interrogating
+   * the candidate through every remaining prompt.
+   */
+  private async completeDeclinedQuestion(
+    state: InterviewState,
+    now: number,
+    expectedVersion: number,
+    turnId?: string
+  ): Promise<AnswerResult> {
+    const refusalCount = consecutiveQuestionDeclines(state);
+    const shouldEnd = refusalCount >= 3;
+    const result = shouldEnd
+      ? { state: finish(state), action: "move_on" as const, forcedBy: null }
+      : advance(state, "move_on", now);
+    const acknowledgement = shouldEnd
+      ? "Understood. Since you'd prefer not to answer these questions, I'll end the interview here. Thank you for your time."
+      : "Understood — we'll skip that one.";
+    const utterance = shouldEnd
+      ? acknowledgement
+      : this.composeUtterance(result.state, result.action, acknowledgement);
+    const spokenAt = elapsedMs(result.state, now);
+    const finalState = appendTurn(result.state, {
+      speaker: "agent",
+      text: utterance,
+      startMs: spokenAt,
+      endMs: spokenAt,
+      action: "move_on",
+      forcedBy: result.forcedBy,
+      questionIndex: result.state.questionIndex
+    });
+    const decision: Decision = {
+      action: "move_on",
+      missing: "none",
+      reason: shouldEnd
+        ? "candidate repeatedly declined interview questions"
+        : "candidate declined the current question",
+      utterance,
+      forcedBy: result.forcedBy
+    };
+    const response = answerResponse(finalState, decision, now);
+    await this.persistAnswer(finalState, expectedVersion, turnId, response);
+
+    this.logger.log(
+      JSON.stringify({
+        event: shouldEnd ? "interview.declined-ended" : "interview.question-declined",
+        sessionId: finalState.id,
+        refusalCount,
         questionIndex: finalState.questionIndex,
         elapsedMs: elapsedMs(finalState, now)
       })
@@ -1053,7 +1149,7 @@ export class InterviewService {
       answerHash: evaluationAnswerHash(answers),
       queuedAt: now
     };
-    // Gemini-led Hiring Manager turns must not wait for a second model before
+    // Gemini-led conversational turns must not wait for a second model before
     // James can speak. Persist an unavailable placeholder and a durable job in
     // the same transaction as the answer; the route starts recovery after the
     // response has been returned.
@@ -1215,7 +1311,7 @@ export class InterviewService {
     if (state.phase === "done" || state.phase === "wrap") {
       return joinSpoken(
         acknowledgement,
-        "That covers everything I wanted to explore. Thanks for the conversation. Your feedback will be ready shortly."
+        "That covers everything I wanted to explore, so we'll end the interview here. Thanks for the conversation. Your feedback will be ready shortly."
       );
     }
 
@@ -1223,11 +1319,11 @@ export class InterviewService {
     if (!next) {
       return joinSpoken(
         acknowledgement,
-        "That covers everything I wanted to explore. Thanks for the conversation."
+        "That covers everything I wanted to explore, so we'll end the interview here. Thanks for the conversation."
       );
     }
 
-    return joinSpoken(acknowledgement, next.text);
+    return joinSpoken(acknowledgement, candidateFacingQuestion(next, state.setup));
   }
 }
 
@@ -1287,7 +1383,11 @@ function multipleChoiceEvaluation(
   const answer = state.turns
     .filter((turn) => turn.speaker === "user" && turn.questionIndex === state.questionIndex)
     .at(-1)?.text;
-  const rubricKey = question.rubricKeys?.[0] ?? question.competency ?? "technical-correctness";
+  const rubricKeys = question.evaluationParameterKeys?.length
+    ? question.evaluationParameterKeys
+    : question.rubricKeys?.length
+      ? question.rubricKeys
+      : [question.competency ?? "technical-correctness"];
 
   return {
     source: "local-mcq",
@@ -1299,15 +1399,13 @@ function multipleChoiceEvaluation(
       : "The selected answer does not match the authored correct option.",
     strengths: correct ? ["Selected the technically correct option."] : [],
     gaps: correct ? [] : ["Review the underlying concept and the authored correct option."],
-    rubricScores: [
-      {
-        rubricKey,
-        score: correct ? 100 : 0,
-        rationale: correct
-          ? "Matched the authored answer key."
-          : "Did not match the authored answer key."
-      }
-    ],
+    rubricScores: rubricKeys.map((rubricKey) => ({
+      rubricKey,
+      score: correct ? 100 : 0,
+      rationale: correct
+        ? "Matched the authored answer key."
+        : "Did not match the authored answer key."
+    })),
     answerExcerpts: answer ? [answer.replace(/\s+/g, " ").trim().slice(0, 240)] : [],
     execution: null,
     evaluatedAt
@@ -1323,11 +1421,13 @@ function skippedCodeEvaluation(question: PlannedQuestion, evaluatedAt: number): 
     summary: "The candidate explicitly skipped this coding problem.",
     strengths: [],
     gaps: ["No solution evidence was submitted for this coding problem."],
-    rubricScores: (question.rubricKeys ?? []).map((rubricKey) => ({
-      rubricKey,
-      score: 0,
-      rationale: "The candidate explicitly skipped this coding problem."
-    })),
+    rubricScores: (question.evaluationParameterKeys ?? question.rubricKeys ?? []).map(
+      (rubricKey) => ({
+        rubricKey,
+        score: 0,
+        rationale: "The candidate explicitly skipped this coding problem."
+      })
+    ),
     answerExcerpts: [],
     execution: null,
     evaluatedAt
@@ -1353,11 +1453,13 @@ function unavailableTechnicalEvaluation(
     summary: "Technical correctness could not be verified for this answer.",
     strengths: [],
     gaps: ["Retry evaluation before using this answer as a performance signal."],
-    rubricScores: (question.rubricKeys ?? []).map((rubricKey) => ({
-      rubricKey,
-      score: 0,
-      rationale: "Not scored because the correctness evaluator was unavailable."
-    })),
+    rubricScores: (question.evaluationParameterKeys ?? question.rubricKeys ?? []).map(
+      (rubricKey) => ({
+        rubricKey,
+        score: 0,
+        rationale: "Not scored because the correctness evaluator was unavailable."
+      })
+    ),
     answerExcerpts: answers,
     execution: state.codeExecutions?.[String(state.questionIndex)] ?? null,
     evaluatedAt
@@ -1447,7 +1549,7 @@ const NATURAL_BRIDGES: Record<DecisionAction, string[]> = {
 };
 
 const GENERIC_ACKNOWLEDGEMENT =
-  /^(?:got it|gotcha|understood|i understand|i see|makes sense|okay|ok|right|that helps|that gives me (?:a useful thread|a clearer picture)|great|excellent|good answer|thanks for sharing|i (?:want to|wanna) (?:stay|stick) (?:with|to) (?:that|this) part)(?:[.!?,\s]|$)/i;
+  /^(?:yeah|yes|got it|gotcha|understood|i understand|i see|i hear that|you said|makes sense|okay|ok|right|that's fair|that is fair|that helps|that gives me (?:a useful thread|a useful starting point|a clear picture|a clearer picture)|great|excellent|good answer|thank(?:s| you) for sharing(?: that)?|i appreciate (?:you )?sharing(?: that)?|i (?:want to|wanna) (?:stay|stick) (?:with|to) (?:that|this) part)(?:[.!?,\s]|$)/i;
 
 function stripGenericLead(text: string): string {
   return text
@@ -1527,9 +1629,33 @@ function naturalAcknowledgement(
   return answer.trim() ? "I’m following what you’re saying." : "I’m with you.";
 }
 
+/**
+ * Gemini owns the conversational bridge in Live rounds. The server removes
+ * generic praise and repeated filler but does not invent a replacement.
+ */
+function liveAcknowledgement(
+  acknowledgement: string | undefined,
+  action: DecisionAction,
+  turns: InterviewState["turns"]
+): string {
+  if (action === "clarify" || action === "respond") return "";
+  const candidate = acknowledgement?.replace(/\s+/g, " ").trim() ?? "";
+  if (!candidate || GENERIC_ACKNOWLEDGEMENT.test(candidate) || recentlyUsed(candidate, turns)) {
+    return "";
+  }
+  return candidate.slice(0, 120);
+}
+
 function contextualAcknowledgement(answer: string): string | null {
   const normalized = answer.replace(/\s+/g, " ").trim();
   if (!normalized) return null;
+  if (
+    !/\b(?:because|since|chose|decided|implemented|designed|built|reduced|increased|improved|measured|trade[- ]?off)\b|\b\d+(?:\.\d+)?%?\b/i.test(
+      normalized
+    )
+  ) {
+    return null;
+  }
 
   const reason = normalized.match(/\b(?:because|since)\s+(.+)/i)?.[1] ?? normalized;
   const reflected = reason
@@ -1818,6 +1944,76 @@ export function candidateNeedsInterviewBreak(value: string): boolean {
   );
 }
 
+/**
+ * Recognises a refusal or explicit inability to answer a conversational
+ * interview question. It intentionally rejects compound answers such as
+ * “No, I did not add an index; I ran ANALYZE first.”
+ */
+export function candidateDeclinesQuestion(value: string): boolean {
+  const normalized = value
+    .toLowerCase()
+    .replace(/[’]/g, "'")
+    .replace(/[^a-z0-9'\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!normalized || normalized.split(" ").length > 18) return false;
+
+  if (/^(?:no|nope|nah|pass|skip)(?: thanks| thank you| please)?$/.test(normalized)) {
+    return true;
+  }
+
+  // Remove conversational lead-ins only after preserving the full text above.
+  // This lets “No, I don't want to answer this” match the same refusal as
+  // “I don't want to answer this” without treating substantive “No, ...” answers as refusals.
+  const withoutLeadIns = normalized.replace(
+    /^(?:(?:well|actually|honestly|sorry)(?: thanks| thank you)?\s+){1,3}/,
+    ""
+  );
+  const statement = withoutLeadIns.replace(
+    /^(?:no|nope|nah)(?: thanks| thank you)?\s+(?=(?:i|nothing|not much)\b)/,
+    ""
+  );
+
+  return (
+    /^(?:i )?(?:do not|don't|cannot|can't|won't|will not) (?:answer|share|discuss|tell)(?: this| that| it| you)?(?: question)?(?: thanks| thank you| please)?$/.test(
+      statement
+    ) ||
+    /^(?:i )?(?:do not|don't|won't|will not) want to (?:answer|share|discuss|talk about|tell you)(?: this| that| it)?(?: question)?$/.test(
+      statement
+    ) ||
+    /^i(?:'m| am) not comfortable (?:answering|sharing|discussing|talking about)(?: this| that| it)?$/.test(
+      statement
+    ) ||
+    /^i(?: prefer not to|(?:'d| would) rather not(?: to)?) (?:answer|share|discuss|talk about)(?: this| that| it)?$/.test(
+      statement
+    ) ||
+    /^(?:i )?(?:do not|don't) know(?: the answer)?$/.test(statement) ||
+    /^(?:i (?:have|got) )?(?:absolutely )?no (?:idea|clue)(?: about (?:this|that))?$/.test(
+      statement
+    ) ||
+    /^(?:i )?(?:cannot|can't) (?:think of anything|remember|recall)(?: right now)?$/.test(
+      statement
+    ) ||
+    /^(?:nothing|not much) (?:comes|is coming) to mind$/.test(statement) ||
+    /^i(?:'m| am) not sure(?: about this| about that| of the answer)?$/.test(statement) ||
+    /\bi (?:will not|won't) tell you\b/.test(statement)
+  );
+}
+
+function consecutiveQuestionDeclines(state: InterviewState): number {
+  let count = 0;
+  for (let index = state.turns.length - 1; index >= 0; index -= 1) {
+    const turn = state.turns[index];
+    if (!turn || turn.speaker !== "user") continue;
+    if (turn.skipped && turn.assessmentExcluded && typeof turn.questionIndex === "number") {
+      count += 1;
+      continue;
+    }
+    break;
+  }
+  return count;
+}
+
 function candidateEndUtterance(): string {
   return "Of course, we'll end the interview here. I'll save what we covered, and your feedback will be ready shortly.";
 }
@@ -1846,6 +2042,7 @@ function introUtterance(state: InterviewState): string {
   const first = state.plan[0];
   const minutes = Math.round(roundCaps(state.setup).hardCapMs / 60000);
   const storyPracticeIdentity = storyPracticeAssessmentIdentityFromSetup(state.setup);
+  const interviewerName = interviewerNameForSetup(state.setup);
   const intro =
     state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment"
       ? dsaBlockAssessmentOpening(state)
@@ -1855,15 +2052,21 @@ function introUtterance(state: InterviewState): string {
             storyPracticeAssessmentDialogue(storyPracticeIdentity.practice)
           )
         : state.setup.templateTitle === "DSA practice interview"
-          ? "Hi, I'm James. Welcome to your DSA interview. I picked a few problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful."
+          ? `Hi, I'm ${interviewerName}. Welcome to your DSA interview. I picked a few problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful.`
           : state.setup.fundamentalsRound
-            ? "Hi, I'm James. This is a computer fundamentals round, in three parts. A few quick checks first, then I'll ask you to explain the mechanism behind some of them, and we'll finish by diagnosing something real. After each answer I'll show you what I was listening for."
+            ? `Hi, I'm ${interviewerName}. This is a computer fundamentals round, in three parts. A few quick checks first, then I'll ask you to explain the mechanism behind some of them, and we'll finish by diagnosing something real. After each answer I'll show you what I was listening for.`
             : isResumeRound(state.setup)
-              ? "Hi, I'm James. Let's have a relaxed conversation about the work on your resume. I'll pick a few threads and ask about what actually happened, what you did, and what changed. Take your time."
-              : `Hi, I'm James, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
+              ? `Hi, I'm ${interviewerName}. Let's have a relaxed conversation about the work on your resume. I'll pick a few threads and ask about what actually happened, what you did, and what changed. Take your time.`
+              : `Hi, I'm ${interviewerName}, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
 
   if (isResumableBlockAssessment(state.setup)) return intro;
-  return first ? `${intro} ${first.text}` : intro;
+  return first ? `${intro} ${candidateFacingQuestion(first, state.setup)}` : intro;
+}
+
+function candidateFacingQuestion(question: PlannedQuestion, setup: InterviewSetup): string {
+  if (question.kind !== "code") return question.text;
+  const interviewerName = interviewerNameForSetup(setup);
+  return `${question.text} Use Run whenever you want to check the code. When you're ready, click Submit to ${interviewerName} and I'll review it.`;
 }
 
 export function closingDecision(): Decision {
@@ -1871,7 +2074,8 @@ export function closingDecision(): Decision {
     action: "move_on",
     missing: "none",
     reason: "interview complete",
-    utterance: "That's time. Thanks for doing this.",
+    utterance:
+      "We've reached the end of the interview, so we'll finish here. Thank you for your time.",
     forcedBy: null
   };
 }

@@ -62,7 +62,7 @@ export function ResumeDocumentPreview({
         ) : null}
       </header>
 
-      <div className="thin-scroll min-h-0 flex-1 overflow-y-auto bg-black/[0.22] p-3.5">
+      <div className="resume-preview-canvas thin-scroll min-h-0 flex-1 overflow-y-auto bg-black/[0.22] p-3.5">
         <article className="resume-sheet mx-auto flex min-h-full w-full max-w-[34rem] flex-col gap-6 rounded-xl bg-[#141518] px-6 py-7 shadow-[0_18px_50px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.04)] sm:px-8 sm:py-9">
           {pageIndex === 0 ? (
             <header className="border-b border-white/[0.07] pb-5">

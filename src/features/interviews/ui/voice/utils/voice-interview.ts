@@ -79,7 +79,8 @@ export function describeVoiceState(
   micOn: boolean,
   activeSpeakerFallback: boolean,
   micSignal: boolean,
-  micSilent: boolean
+  micSilent: boolean,
+  interviewerName = "James"
 ): string {
   if (status === "ended") return "Interview complete";
   if (status === "error") return "Connection needs attention";
@@ -87,8 +88,8 @@ export function describeVoiceState(
   if (status === "connecting") return "Connecting securely";
   if (status === "waiting") return "Interviewer is joining";
   if (agentState === "initializing") return "Interviewer is getting ready";
-  if (agentState === "thinking") return "James is thinking";
-  if (agentState === "speaking" || activeSpeakerFallback) return "James is speaking";
+  if (agentState === "thinking") return `${interviewerName} is thinking`;
+  if (agentState === "speaking" || activeSpeakerFallback) return `${interviewerName} is speaking`;
   if (!micOn) return "Microphone muted";
   if (micSignal) return "Hearing you";
   if (micSilent) return "No microphone signal";

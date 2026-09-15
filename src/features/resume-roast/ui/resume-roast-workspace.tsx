@@ -9,21 +9,7 @@ import {
   useState,
   type KeyboardEvent as ReactKeyboardEvent
 } from "react";
-import {
-  Award,
-  Briefcase,
-  CircleAlert,
-  Code2,
-  FileText,
-  Flame,
-  Gauge,
-  GraduationCap,
-  Sparkles,
-  Target,
-  TrendingUp,
-  Wrench,
-  type LucideIcon
-} from "lucide-react";
+import { CircleAlert, FileText, Flame, Gauge, Wrench, type LucideIcon } from "lucide-react";
 import { DocumentTitle } from "@/components/document-title";
 import { ReportMayaAvatar } from "@/features/reports/ui/report-maya-avatar";
 import {
@@ -45,6 +31,11 @@ import {
 import { notifyWorkspaceNotificationsChanged } from "@/features/notifications/ui/notification-ui-events";
 import type { CandidateResume } from "@/lib/shared/types";
 import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
+import { ResumeDocumentPreview } from "@/features/interviews/ui/voice/components/resume-document-preview";
+import {
+  INTERVIEW_PANEL_RULE,
+  INTERVIEW_PANEL_SHELL
+} from "@/features/interviews/ui/voice/components/panel-surface";
 
 interface RoastRecord {
   id: string;
@@ -65,29 +56,13 @@ interface RoastState {
 
 type ScreenState = "loading" | "selecting" | "streaming" | "ready" | "failed";
 
-interface FlaggedLine {
-  id: string;
-  text: string;
-  reason: string;
-}
-
-interface ResumeRevealItem {
-  id: string;
-  icon: LucideIcon | null;
-  label: string | null;
-  text: string;
-  detail?: string;
-  reason?: string;
-}
-
 const INTRO = "Okay, I’ve got your resume. Three quick questions, then we’ll get into it.";
 const ROLE_QUESTION = "What role are you aiming for?";
 const COMPANY_QUESTION = "What kind of company are we trying to impress?";
 const LEVEL_QUESTION = "What level are you applying for?";
-const READING_LINE =
-  "Nice. Give me a second—I’m checking where the confidence got ahead of the evidence.";
+const READING_LINE = "Nice. Give me a second—I’m checking what the confidence forgot to prove.";
 const ROAST_CLOSING =
-  "Now check below—I’ve laid out every issue with your resume and exactly how to fix it.";
+  "Now check—I’ve laid out every issue with your resume and exactly how to fix it.";
 const PROVIDER_FAILURE_MESSAGE = "James is temporarily unavailable. Try again.";
 const TIMEOUT_MESSAGE = "James took too long. Try again.";
 const INVALID_RESPONSE_MESSAGE = "James couldn’t safely prepare that feedback. Try again.";
@@ -120,6 +95,7 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
   const roastController = useRef<AbortController | null>(null);
   const spokenLine = useRef("");
   const spokenRoast = useRef("");
+  const spokenRoastAttempts = useRef({ roastId: "", count: 0 });
   const [state, setState] = useState<RoastState | null>(null);
   const [screen, setScreen] = useState<ScreenState>("loading");
   const [target, setTarget] = useState<Partial<ResumeRoastTarget>>({});
@@ -127,6 +103,7 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
   const [showingPrevious, setShowingPrevious] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [analysisElapsedSeconds, setAnalysisElapsedSeconds] = useState(0);
+  const [roastVoiceRetry, setRoastVoiceRetry] = useState(0);
   const { state: voiceState, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
 
   const complete = events.some((event) => event.type === "done");
@@ -181,11 +158,29 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
     )
       return;
     if (spokenRoast.current === roastSessionId) return;
+    if (spokenRoastAttempts.current.roastId !== roastSessionId) {
+      spokenRoastAttempts.current = { roastId: roastSessionId, count: 0 };
+    }
     spokenRoast.current = roastSessionId;
-    void speak(roastSpeech, "james", { playbackRate: 0.92 }).then((result) => {
-      if (result === "blocked") spokenRoast.current = "";
+    spokenRoastAttempts.current.count += 1;
+    void speak(roastSpeech, "james").then((result) => {
+      if (result === "blocked") {
+        spokenRoast.current = "";
+        return;
+      }
+      if (
+        result === "unavailable" &&
+        mounted.current &&
+        spokenRoastAttempts.current.roastId === roastSessionId &&
+        spokenRoastAttempts.current.count < 2
+      ) {
+        spokenRoast.current = "";
+        window.setTimeout(() => {
+          if (mounted.current) setRoastVoiceRetry((current) => current + 1);
+        }, 800);
+      }
     });
-  }, [awaitingGesture, complete, roastSessionId, roastSpeech, speak, voiceState]);
+  }, [awaitingGesture, complete, roastSessionId, roastSpeech, roastVoiceRetry, speak, voiceState]);
 
   useEffect(() => {
     if (!awaitingGesture) return;
@@ -385,13 +380,11 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
     return <LoadFailure message={failure} onRetry={requestState} />;
   if (!state?.hasResume || !resume) return <MissingResume />;
 
-  const flagged = flaggedResumeLines(resume, events);
-
   return (
-    <main className="resume-roast-page h-[calc(100dvh-4.25rem)] w-full touch-pan-y overflow-y-scroll overscroll-y-auto bg-black px-3 py-2 text-cream md:overflow-hidden md:overscroll-none sm:px-5 sm:py-3">
+    <main className="resume-roast-page interview-workspace-page workspace-black h-[calc(100dvh-4.25rem)] w-full overflow-hidden bg-black px-3 py-3 text-cream sm:px-5">
       <DocumentTitle title="Resume Roast" />
-      <div className="mx-auto grid w-full max-w-[78rem] grid-rows-[30rem_minmax(32rem,calc(100dvh-5.25rem))] gap-3 md:h-full md:min-h-0 md:grid-cols-[minmax(20rem,0.86fr)_minmax(22rem,1.14fr)] md:grid-rows-1 md:gap-7 lg:gap-10">
-        <ResumeStage resume={resume} flagged={flagged} speaking={voiceState === "speaking"} />
+      <div className="thin-scroll mx-auto flex h-full w-full max-w-[96rem] min-h-0 flex-col gap-3 overflow-y-auto pb-3 xl:grid xl:grid-cols-[minmax(0,23rem)_minmax(0,1fr)_19rem] xl:overflow-hidden xl:pb-0">
+        <ResumeDocumentPreview resume={resume} />
         <JamesChat
           target={target}
           events={events}
@@ -421,222 +414,16 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
           history={state.history ?? []}
           onShowHistory={showHistoricalRoast}
         />
+        <JamesAside
+          target={target}
+          events={events}
+          loading={screen === "streaming"}
+          failure={failure}
+          speaking={voiceState === "speaking" || voiceState === "loading"}
+          analysisElapsedSeconds={analysisElapsedSeconds}
+        />
       </div>
     </main>
-  );
-}
-
-function ResumeStage({
-  resume,
-  flagged,
-  speaking
-}: {
-  resume: CandidateResume;
-  flagged: FlaggedLine[];
-  speaking: boolean;
-}) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const items = useMemo(() => resumeRevealItems(resume, flagged), [flagged, resume]);
-  const [visibleCount, setVisibleCount] = useState(0);
-
-  useEffect(() => {
-    if (visibleCount >= items.length) return;
-    const delay = visibleCount === 0 ? 480 : 1_050;
-    const timer = window.setTimeout(() => setVisibleCount((count) => count + 1), delay);
-    return () => window.clearTimeout(timer);
-  }, [items.length, visibleCount]);
-
-  useEffect(() => {
-    const viewport = scrollRef.current;
-    if (!viewport || visibleCount === 0) return;
-    const timer = window.setTimeout(() => {
-      if (viewport.scrollHeight <= viewport.clientHeight + 4) return;
-      viewport.scrollTo?.({ top: viewport.scrollHeight, behavior: "smooth" });
-    }, 90);
-    return () => window.clearTimeout(timer);
-  }, [items.length, visibleCount]);
-
-  return (
-    <section className="resume-roast-resume-stage flex min-h-0 flex-col items-center overflow-hidden">
-      <div className="relative z-0 w-full max-w-[28rem] shrink-0">
-        <span
-          aria-hidden
-          className="report-maya-glow-a pointer-events-none absolute left-1/2 top-[46%] h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--workspace-accent-soft)] blur-[72px]"
-        />
-        <span
-          aria-hidden
-          className="report-maya-glow-b pointer-events-none absolute bottom-4 left-1/2 h-28 w-60 -translate-x-1/2 rounded-full bg-[var(--workspace-accent)] opacity-30 blur-[64px]"
-        />
-        <div className="relative z-10">
-          <ReportMayaAvatar
-            delay={0}
-            size="compact"
-            transparent
-            speaking={speaking}
-            personaId="james"
-          />
-        </div>
-      </div>
-
-      <div className="progress-maya-bubble relative z-10 -mt-8 min-h-0 w-full flex-1 overflow-hidden rounded-2xl sm:-mt-10">
-        <span
-          aria-hidden
-          className="progress-maya-tail absolute -top-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-[#1b1c20]/70"
-        />
-        <div
-          ref={scrollRef}
-          aria-label="Resume and weak points"
-          className="thin-scroll h-full overflow-y-auto overscroll-auto px-5 py-5 md:overscroll-contain sm:px-7 sm:py-6"
-        >
-          <div className="mx-auto max-w-lg space-y-5 pb-8">
-            {items.slice(0, visibleCount).map((item) => (
-              <ResumeRevealBlock key={item.id} item={item} />
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function resumeRevealItems(resume: CandidateResume, flagged: FlaggedLine[]): ResumeRevealItem[] {
-  const reasons = new Map(flagged.map((line) => [normalizeText(line.text), line.reason]));
-  const items: ResumeRevealItem[] = [
-    {
-      id: "identity",
-      icon: null,
-      label: null,
-      text: resume.fullName
-    }
-  ];
-
-  if (resume.skills.length) {
-    items.push({
-      id: "skills",
-      icon: Sparkles,
-      label: "Skills",
-      text: resume.skills.join(" · ")
-    });
-  }
-
-  for (const [experienceIndex, entry] of resume.experience.entries()) {
-    items.push({
-      id: `experience-${experienceIndex}`,
-      icon: Briefcase,
-      label: entry.role,
-      text: [entry.organization, entry.period, entry.location].filter(Boolean).join(" · "),
-      detail: entry.summary,
-      reason: reasons.get(normalizeText(entry.summary))
-    });
-    entry.achievements.forEach((achievement, achievementIndex) => {
-      items.push({
-        id: `experience-${experienceIndex}-achievement-${achievementIndex}`,
-        icon: TrendingUp,
-        label: "Impact",
-        text: achievement,
-        reason: reasons.get(normalizeText(achievement))
-      });
-    });
-  }
-
-  for (const [projectIndex, project] of resume.projects.entries()) {
-    items.push({
-      id: `project-${projectIndex}`,
-      icon: Code2,
-      label: project.name,
-      text: project.summary,
-      detail: project.skills.length ? project.skills.join(" · ") : undefined,
-      reason: reasons.get(normalizeText(project.summary))
-    });
-    if (project.outcome.trim()) {
-      items.push({
-        id: `project-${projectIndex}-outcome`,
-        icon: Target,
-        label: "Outcome",
-        text: project.outcome,
-        reason: reasons.get(normalizeText(project.outcome))
-      });
-    }
-  }
-
-  for (const [educationIndex, education] of resume.education.entries()) {
-    items.push({
-      id: `education-${educationIndex}`,
-      icon: GraduationCap,
-      label: education.credential,
-      text: [education.field, education.institution, education.period].filter(Boolean).join(" · ")
-    });
-  }
-
-  resume.achievements.forEach((achievement, achievementIndex) => {
-    items.push({
-      id: `achievement-${achievementIndex}`,
-      icon: Award,
-      label: "Achievement",
-      text: achievement,
-      reason: reasons.get(normalizeText(achievement))
-    });
-  });
-
-  const matchedWeakPoints = new Set(
-    items.filter((item) => item.reason).map((item) => normalizeText(item.text))
-  );
-  flagged.forEach((line, index) => {
-    if (matchedWeakPoints.has(normalizeText(line.text))) return;
-    items.push({
-      id: `weak-point-${index}-${line.id}`,
-      icon: CircleAlert,
-      label: "Weak point",
-      text: line.text,
-      reason: line.reason
-    });
-  });
-
-  return items;
-}
-
-function ResumeRevealBlock({ item }: { item: ResumeRevealItem }) {
-  const Icon = item.icon;
-  if (!Icon) {
-    return (
-      <div className="identity-stage-in">
-        <p className="text-base font-semibold leading-7 text-cream sm:text-lg sm:leading-8">
-          {item.text}
-        </p>
-        {item.detail ? (
-          <p className="mt-2 text-base leading-7 text-cream/68 sm:text-lg sm:leading-8">
-            {item.detail}
-          </p>
-        ) : null}
-      </div>
-    );
-  }
-
-  return (
-    <div className="identity-stage-in flex gap-3">
-      <Icon
-        size={18}
-        strokeWidth={1.8}
-        aria-hidden="true"
-        className="mt-[0.35rem] shrink-0 text-[var(--workspace-accent)]"
-      />
-      <div className="min-w-0">
-        <p className="text-base leading-7 text-cream sm:text-lg sm:leading-8">
-          {item.label ? <span className="font-semibold text-cream">{item.label}. </span> : null}
-          {item.text}
-        </p>
-        {item.detail ? (
-          <p className="mt-2 text-base leading-7 text-cream/68 sm:text-lg sm:leading-8">
-            {item.detail}
-          </p>
-        ) : null}
-        {item.reason ? (
-          <p className="mt-2 text-base font-medium leading-7 text-orange-100/72 sm:text-lg sm:leading-8">
-            {item.reason}
-          </p>
-        ) : null}
-      </div>
-    </div>
   );
 }
 
@@ -730,7 +517,24 @@ function JamesChat({
   }, [roastComplete, scrollToLatest, showingPrevious]);
 
   return (
-    <section className="resume-roast-chat-stage progress-maya-bubble min-h-0 overflow-hidden rounded-2xl">
+    <section
+      className={`${INTERVIEW_PANEL_SHELL} resume-roast-chat-stage flex min-h-[32rem] min-w-0 flex-col overflow-hidden xl:min-h-0`}
+    >
+      <header
+        className={`flex shrink-0 items-center justify-between gap-4 border-b ${INTERVIEW_PANEL_RULE} px-5 py-3.5`}
+      >
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--workspace-accent)]">
+            Resume Roast
+          </p>
+          <h1 className="mt-1 text-base font-semibold text-cream">
+            {roastComplete ? "Your review" : "Set the target"}
+          </h1>
+        </div>
+        <span className="rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1.5 text-xs font-medium text-cream/48">
+          {loading ? "Analysing" : roastComplete ? "Complete" : "With James"}
+        </span>
+      </header>
       <div
         ref={scrollRef}
         data-testid="resume-roast-chat-scroll"
@@ -739,7 +543,7 @@ function JamesChat({
         onTouchMove={cancelCompletionAutoScroll}
         onPointerDown={cancelCompletionAutoScroll}
         onKeyDown={cancelCompletionAutoScrollForKey}
-        className="thin-scroll h-full overflow-y-auto overscroll-auto px-5 py-7 md:overscroll-contain sm:px-8 sm:py-9"
+        className="thin-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-7 sm:px-8 sm:py-9"
       >
         <div className="mx-auto max-w-2xl space-y-8 pb-10">
           {!roastComplete ? <JamesLine text={INTRO} /> : null}
@@ -847,6 +651,163 @@ function JamesChat({
   );
 }
 
+interface RoastTranscriptEntry {
+  id: string;
+  speaker: "James" | "You";
+  text: string;
+}
+
+function JamesAside({
+  target,
+  events,
+  loading,
+  failure,
+  speaking,
+  analysisElapsedSeconds
+}: {
+  target: Partial<ResumeRoastTarget>;
+  events: ResumeRoastStreamEvent[];
+  loading: boolean;
+  failure: string | null;
+  speaking: boolean;
+  analysisElapsedSeconds: number;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const transcript = roastTranscriptEntries({
+    target,
+    events,
+    loading,
+    failure,
+    analysisElapsedSeconds
+  });
+  const latestText = transcript.at(-1)?.text;
+
+  useEffect(() => {
+    const viewport = scrollRef.current;
+    if (!viewport) return;
+    const frame = window.requestAnimationFrame(() => {
+      viewport.scrollTop = viewport.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [latestText]);
+
+  return (
+    <aside
+      className={`${INTERVIEW_PANEL_SHELL} flex min-h-[28rem] shrink-0 flex-col overflow-hidden xl:min-h-0 xl:shrink`}
+    >
+      <div
+        className={`interview-teacher-stage relative h-40 shrink-0 overflow-hidden border-b ${INTERVIEW_PANEL_RULE} bg-black/20`}
+      >
+        <div className="absolute inset-x-[-16%] top-0 flex justify-center">
+          <ReportMayaAvatar
+            delay={0}
+            size="roast"
+            transparent
+            speaking={speaking}
+            personaId="james"
+          />
+        </div>
+        <div className="interview-teacher-chip interview-live-chip absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full border border-white/[0.07] bg-black/45 px-2.5 py-1.5 text-[11px] font-medium text-cream/72 backdrop-blur-xl">
+          <span
+            className={`h-1.5 w-1.5 rounded-full bg-[var(--workspace-accent)] ${speaking ? "animate-pulse" : ""}`}
+          />
+          James
+        </div>
+      </div>
+
+      <div
+        ref={scrollRef}
+        data-testid="resume-roast-transcript"
+        aria-label="James transcript"
+        className="interview-transcript thin-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-3.5"
+      >
+        <div className="space-y-4">
+          {transcript.map((entry) => {
+            const james = entry.speaker === "James";
+            return (
+              <article
+                key={entry.id}
+                className={`rounded-xl px-3 py-2.5 ${james ? "bg-white/[0.035]" : "bg-black/15"}`}
+              >
+                <p
+                  className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                    james ? "text-[var(--workspace-accent)]" : "text-cream/34"
+                  }`}
+                >
+                  {entry.speaker}
+                </p>
+                <p
+                  className={`mt-1.5 text-sm leading-6 ${james ? "text-cream/82" : "text-cream/62"}`}
+                >
+                  {entry.text}
+                </p>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function roastTranscriptEntries(input: {
+  target: Partial<ResumeRoastTarget>;
+  events: ResumeRoastStreamEvent[];
+  loading: boolean;
+  failure: string | null;
+  analysisElapsedSeconds: number;
+}): RoastTranscriptEntry[] {
+  const entries: RoastTranscriptEntry[] = [
+    { id: "intro", speaker: "James", text: INTRO },
+    { id: "role-question", speaker: "James", text: ROLE_QUESTION }
+  ];
+
+  if (input.target.role) {
+    entries.push({
+      id: "role-answer",
+      speaker: "You",
+      text: RESUME_ROAST_ROLE_LABELS[input.target.role]
+    });
+    entries.push({ id: "company-question", speaker: "James", text: COMPANY_QUESTION });
+  }
+  if (input.target.companyEnvironment) {
+    entries.push({
+      id: "company-answer",
+      speaker: "You",
+      text: RESUME_ROAST_COMPANY_ENVIRONMENT_LABELS[input.target.companyEnvironment]
+    });
+    entries.push({ id: "level-question", speaker: "James", text: LEVEL_QUESTION });
+  }
+  if (input.target.level) {
+    entries.push({
+      id: "level-answer",
+      speaker: "You",
+      text: RESUME_ROAST_LEVEL_LABELS[input.target.level]
+    });
+  }
+  if (input.loading) {
+    entries.push({
+      id: "reading",
+      speaker: "James",
+      text: resumeRoastProgressMessage(input.analysisElapsedSeconds)
+    });
+  }
+
+  const summary = roastSpokenSummary(input.events);
+  if (input.events.some((event) => event.type === "done") && summary) {
+    entries.push({
+      id: "roast-summary",
+      speaker: "James",
+      text: `${summary} ${ROAST_CLOSING}`
+    });
+  }
+  if (input.failure) {
+    entries.push({ id: "failure", speaker: "James", text: input.failure });
+  }
+
+  return entries;
+}
+
 function Question<T extends string>({
   text,
   selected,
@@ -937,9 +898,9 @@ function RoastCards({
   const selectedTarget = completeTarget(target);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <section aria-labelledby="roast-weak-points">
-        <div className="mb-4 flex items-center gap-2 text-orange-100">
+        <div className="mb-5 flex items-center gap-2 text-orange-100">
           <Flame size={19} aria-hidden="true" />
           <h2 id="roast-weak-points" className="text-lg font-bold text-cream">
             Weak points
@@ -950,16 +911,14 @@ function RoastCards({
             {opening.openingRoast}
           </p>
         ) : null}
-        <div className="grid gap-3">
+        <div className="divide-y divide-white/[0.08] border-y border-white/[0.08]">
           {problems.length ? (
             problems.map((event, index) => (
               <article
                 key={`${event.problem.evidenceAnchors.join("-")}-${index}`}
-                className="rounded-2xl border border-red-400/35 bg-white/[0.035] p-5"
+                className="relative py-5 pl-5 pr-1 before:absolute before:bottom-5 before:left-0 before:top-5 before:w-0.5 before:rounded-full before:bg-red-300/60"
               >
-                <p className="text-base font-bold leading-7 text-cream">
-                  {event.problem.joke}
-                </p>
+                <p className="text-base font-bold leading-7 text-cream">{event.problem.joke}</p>
                 <p className="mt-2 text-sm leading-6 text-cream/78">{event.problem.issue}</p>
                 <p className="mt-2 text-sm leading-6 text-cream/55">
                   {event.problem.recruiterImpact}
@@ -967,7 +926,7 @@ function RoastCards({
               </article>
             ))
           ) : (
-            <article className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[0.05] p-5">
+            <article className="relative py-5 pl-5 pr-1 before:absolute before:bottom-5 before:left-0 before:top-5 before:w-0.5 before:rounded-full before:bg-emerald-300/60">
               <p className="font-bold text-emerald-100">Annoyingly hard to roast.</p>
               <p className="mt-2 text-sm leading-6 text-cream/65">
                 {strength?.strength.explanation ??
@@ -981,10 +940,10 @@ function RoastCards({
       {verdict ? (
         <section
           aria-label={`Target fit score: ${verdict.verdict.targetFitScore} out of 100`}
-          className="rounded-2xl border border-white/10 bg-white/[0.045] p-5"
+          className="border-y border-white/[0.1] bg-gradient-to-r from-[var(--workspace-accent-soft)] via-transparent to-transparent py-6 pl-5 pr-1"
         >
-          <div className="flex items-end justify-between gap-4">
-            <div>
+          <div className="flex items-center justify-between gap-5">
+            <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-cream/48">
                 Target fit
               </p>
@@ -993,9 +952,16 @@ function RoastCards({
                 <span className="text-lg font-semibold text-cream/45">/100</span>
               </p>
             </div>
-            <Gauge size={34} className="text-[var(--workspace-accent)]" aria-hidden="true" />
+            <Gauge
+              size={38}
+              strokeWidth={1.7}
+              className="shrink-0 text-[var(--workspace-accent)]"
+              aria-hidden="true"
+            />
           </div>
-          <p className="mt-4 text-sm leading-6 text-cream/68">{verdict.verdict.explanation}</p>
+          <p className="mt-4 max-w-xl text-sm leading-6 text-cream/68">
+            {verdict.verdict.explanation}
+          </p>
           {selectedTarget ? (
             <p className="mt-3 text-xs leading-5 text-cream/42">
               For {RESUME_ROAST_LEVEL_LABELS[selectedTarget.level]}{" "}
@@ -1013,7 +979,7 @@ function RoastCards({
             Ways to fix it
           </h2>
         </div>
-        <div className="grid gap-3">
+        <div className="divide-y divide-white/[0.08] border-y border-white/[0.08]">
           {problems.map((event, index) => (
             <FixCard
               key={`problem-fix-${index}`}
@@ -1022,7 +988,7 @@ function RoastCards({
             />
           ))}
           {rewrite ? (
-            <article className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+            <article className="py-6 pl-12 pr-1">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-cream/42">
                 Rewrite this
               </p>
@@ -1051,7 +1017,7 @@ function RoastCards({
 
 function FixCard({ number, text, detail }: { number: number; text: string; detail?: string }) {
   return (
-    <article className="flex gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+    <article className="flex gap-4 py-5 pr-1">
       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--workspace-accent-soft)] text-sm font-black text-[var(--workspace-accent)]">
         {number}
       </span>
@@ -1103,14 +1069,12 @@ export function ResumeRoastLoading() {
     <main
       aria-busy="true"
       aria-label="Loading Resume Roast"
-      className="resume-roast-skeleton h-[calc(100dvh-4.25rem)] touch-pan-y overflow-y-scroll overscroll-y-auto bg-black px-5 py-3 md:overflow-hidden md:overscroll-none"
+      className="resume-roast-skeleton h-[calc(100dvh-4.25rem)] overflow-hidden bg-black px-3 py-3 sm:px-5"
     >
-      <div className="mx-auto grid max-w-[78rem] grid-rows-[30rem_minmax(32rem,calc(100dvh-5.25rem))] gap-3 md:h-full md:min-h-0 md:grid-cols-[0.86fr_1.14fr] md:grid-rows-1 md:gap-10">
-        <div className="resume-roast-skeleton-stage flex min-h-0 flex-col items-center">
-          <div className="h-[20rem] w-[20rem] animate-pulse rounded-full bg-white/[0.025]" />
-          <div className="progress-maya-bubble -mt-10 min-h-0 w-full flex-1 rounded-2xl" />
-        </div>
-        <div className="resume-roast-skeleton-chat progress-maya-bubble animate-pulse rounded-2xl" />
+      <div className="thin-scroll mx-auto flex h-full w-full max-w-[96rem] min-h-0 flex-col gap-3 overflow-y-auto pb-3 xl:grid xl:grid-cols-[minmax(0,23rem)_minmax(0,1fr)_19rem] xl:overflow-hidden xl:pb-0">
+        <div className={`${INTERVIEW_PANEL_SHELL} min-h-[24rem] animate-pulse`} />
+        <div className={`${INTERVIEW_PANEL_SHELL} min-h-[32rem] animate-pulse`} />
+        <div className={`${INTERVIEW_PANEL_SHELL} min-h-[28rem] animate-pulse`} />
       </div>
     </main>
   );
@@ -1120,83 +1084,6 @@ function completeTarget(value: Partial<ResumeRoastTarget>): ResumeRoastTarget | 
   return value.role && value.companyEnvironment && value.level
     ? { role: value.role, companyEnvironment: value.companyEnvironment, level: value.level }
     : null;
-}
-
-function flaggedResumeLines(
-  resume: CandidateResume,
-  events: ResumeRoastStreamEvent[]
-): FlaggedLine[] {
-  const evidence = resumeEvidence(resume);
-  const problems = events.filter((event) => event.type === "problem");
-  const flagged: FlaggedLine[] = [];
-  const seen = new Set<string>();
-
-  for (const event of problems) {
-    if (event.type !== "problem") continue;
-    const anchors = event.problem.evidenceAnchors.filter((anchor) => !anchor.startsWith("signal:"));
-    for (const anchor of anchors) {
-      const text = evidence.get(anchor);
-      const key = normalizeText(text ?? "");
-      if (!text || seen.has(key)) continue;
-      flagged.push({ id: anchor, text, reason: event.problem.issue });
-      seen.add(key);
-    }
-  }
-  if (problems.length) return flagged.slice(0, 6);
-
-  const candidates = [
-    ...resume.warnings.map((text, index) => ({
-      id: `warning-${index}`,
-      text,
-      reason: "The parser could not trust this part."
-    })),
-    ...resume.experience.flatMap((entry, experienceIndex) =>
-      entry.achievements
-        .map((text, achievementIndex) => ({
-          id: `experience-${experienceIndex + 1}-achievement-${achievementIndex + 1}`,
-          text,
-          reason: "No measurable proof attached."
-        }))
-        .filter((line) => !hasConcreteProof(line.text))
-    ),
-    ...resume.projects
-      .map((project, index) => ({
-        id: `project-${index + 1}-outcome`,
-        text: project.outcome || project.summary,
-        reason: "The outcome or ownership is unclear."
-      }))
-      .filter((line) => line.text && !hasConcreteProof(line.text))
-  ];
-
-  for (const candidate of candidates) {
-    const key = normalizeText(candidate.text);
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    flagged.push(candidate);
-    if (flagged.length === 6) break;
-  }
-  return flagged;
-}
-
-function resumeEvidence(resume: CandidateResume): Map<string, string> {
-  const evidence = new Map<string, string>();
-  resume.experience.forEach((entry, experienceIndex) => {
-    evidence.set(`experience-${experienceIndex + 1}-summary`, entry.summary);
-    entry.achievements.forEach((achievement, achievementIndex) => {
-      evidence.set(
-        `experience-${experienceIndex + 1}-achievement-${achievementIndex + 1}`,
-        achievement
-      );
-    });
-  });
-  resume.projects.forEach((project, projectIndex) => {
-    evidence.set(`project-${projectIndex + 1}-summary`, project.summary);
-    evidence.set(`project-${projectIndex + 1}-outcome`, project.outcome);
-  });
-  resume.achievements.forEach((achievement, index) => {
-    evidence.set(`achievement-${index + 1}`, achievement);
-  });
-  return evidence;
 }
 
 function roastSpokenSummary(events: ResumeRoastStreamEvent[]): string {
@@ -1210,16 +1097,6 @@ function roastSpokenSummary(events: ResumeRoastStreamEvent[]): string {
     .filter((event) => event.type === "problem")
     .map((event) => event.problem.joke);
   return [opening?.openingRoast, ...jokes].filter(Boolean).join(" ");
-}
-
-function normalizeText(text: string): string {
-  return text.trim().replace(/\s+/g, " ").toLocaleLowerCase("en");
-}
-
-function hasConcreteProof(text: string): boolean {
-  return /(?:\d|%|[$€£₹]|\b(?:users?|customers?|requests?|services?|countries|teams?)\b)/i.test(
-    text
-  );
 }
 
 function isAbort(error: unknown) {

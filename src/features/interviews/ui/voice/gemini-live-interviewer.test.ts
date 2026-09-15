@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   bufferCandidateInterimTranscript,
   buildCandidateTranscriptionConfig,
+  candidateAnswerWasRecentlySubmitted,
   finishAuthoritativeInputTranscript,
   liveConversationProposalFromToolArgs,
   mergeFinalizedCandidateTranscript,
@@ -106,6 +107,31 @@ describe("Gemini Live candidate transcript finalization", () => {
 });
 
 describe("Gemini-led interview tool decisions", () => {
+  it("recognizes only an immediate retried candidate turn", () => {
+    const completed = {
+      fingerprint: "i chose postgres because consistency mattered.",
+      completedAtMs: 10_000
+    };
+
+    expect(
+      candidateAnswerWasRecentlySubmitted(
+        "  I CHOSE Postgres   because consistency mattered. ",
+        completed,
+        11_000
+      )
+    ).toBe(true);
+    expect(
+      candidateAnswerWasRecentlySubmitted("I chose Redis for lower latency.", completed, 11_000)
+    ).toBe(false);
+    expect(
+      candidateAnswerWasRecentlySubmitted(
+        "I chose Postgres because consistency mattered.",
+        completed,
+        13_000
+      )
+    ).toBe(false);
+  });
+
   it("uses one transcript source instead of concatenating recognizer variants", () => {
     expect(
       selectGeminiLedCandidateTranscript(
@@ -120,6 +146,7 @@ describe("Gemini-led interview tool decisions", () => {
       liveConversationProposalFromToolArgs({
         action: "probe",
         missing: "specificity",
+        candidateIntent: "answer",
         acknowledgement: "Reliability shaped that decision",
         line: "What trade-off did you accept to get that reliability?",
         candidateResponse: "",
@@ -128,6 +155,7 @@ describe("Gemini-led interview tool decisions", () => {
     ).toEqual({
       action: "probe",
       missing: "specificity",
+      candidateIntent: "answer",
       acknowledgement: "Reliability shaped that decision",
       line: "What trade-off did you accept to get that reliability?",
       candidateResponse: undefined,

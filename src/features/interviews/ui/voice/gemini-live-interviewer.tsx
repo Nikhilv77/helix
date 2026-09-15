@@ -24,6 +24,7 @@ const INPUT_SAMPLE_RATE = 16_000;
 const OUTPUT_SAMPLE_RATE = 24_000;
 const TRANSCRIPTION_ROTATION_MS = 8 * 60 * 1000;
 const TRANSCRIPTION_RETRY_MS = 15_000;
+const DUPLICATE_TURN_WINDOW_MS = 2_500;
 
 type TranscriptionConnection = {
   token: string;
@@ -35,6 +36,7 @@ type TranscriptionConnection = {
 type LiveTokenResponse = {
   token: string;
   model: string;
+  voiceName: string;
   systemInstruction: string;
   openingUtterance: string;
   sessionStartedAt: number;
@@ -65,6 +67,7 @@ type AuthoritativeResponse = {
 type LiveConversationProposal = {
   action: "clarify" | "probe" | "challenge" | "respond" | "move_on";
   missing: "clarity" | "structure" | "specificity" | "ownership" | "outcome" | "none";
+  candidateIntent: "answer" | "decline" | "end" | "question-or-clarification" | "other";
   acknowledgement: string;
   line: string;
   candidateResponse?: string;
@@ -85,6 +88,7 @@ export interface GeminiLiveInterviewerHandle {
 
 interface GeminiLiveInterviewerProps {
   sessionId: string;
+  interviewerName: string;
   onStatus: (status: VoiceStatus) => void;
   onAgentState: (state: AgentState | null) => void;
   onAgentSpeaking: (speaking: boolean) => void;
@@ -93,7 +97,8 @@ interface GeminiLiveInterviewerProps {
   onError: (message: string | null) => void;
   onInputTranscript: (event: { text: string; finished: boolean }) => void;
   onOutputTranscript: (event: { text: string; finished: boolean }) => void;
-  onAnswerPersisted: () => void | Promise<void>;
+  onAnswerPersisted: (response?: AuthoritativeResponse) => void | Promise<void>;
+  onFinalResponseSpoken: () => void;
   microphoneDeviceId: string;
 }
 
@@ -104,6 +109,7 @@ export const GeminiLiveInterviewer = forwardRef<
   (
     {
       sessionId,
+      interviewerName,
       onStatus,
       onAgentState,
       onAgentSpeaking,
@@ -113,6 +119,7 @@ export const GeminiLiveInterviewer = forwardRef<
       onInputTranscript,
       onOutputTranscript,
       onAnswerPersisted,
+      onFinalResponseSpoken,
       microphoneDeviceId
     },
     ref
@@ -126,7 +133,8 @@ export const GeminiLiveInterviewer = forwardRef<
       onError,
       onInputTranscript,
       onOutputTranscript,
-      onAnswerPersisted
+      onAnswerPersisted,
+      onFinalResponseSpoken
     });
     const microphoneDeviceIdRef = useRef(microphoneDeviceId);
     const submitTypedAnswerRef = useRef<GeminiLiveInterviewerHandle["submitTypedAnswer"]>(
@@ -146,7 +154,8 @@ export const GeminiLiveInterviewer = forwardRef<
       onError,
       onInputTranscript,
       onOutputTranscript,
-      onAnswerPersisted
+      onAnswerPersisted,
+      onFinalResponseSpoken
     };
     microphoneDeviceIdRef.current = microphoneDeviceId;
 
@@ -172,11 +181,18 @@ export const GeminiLiveInterviewer = forwardRef<
       let nextPlaybackTime = 0;
       let openingTurnPending = true;
       let openingTurnStarted = false;
+      let approvedGeminiTurnPending = false;
+      let approvedGeminiTurnStarted = false;
       let decisionPending = false;
       let authoritativePromptSent = false;
       let authoritativeTurnStarted = false;
       let suppressCurrentModelTurn = false;
-      const submittedAnswers = new Set<string>();
+      let closingResponsePending = false;
+      let closingResponseStarted = false;
+      let closingResponseFallbackTimer: number | null = null;
+      const answersInFlight = new Set<string>();
+      const completedToolCalls = new Set<string>();
+      let lastCompletedCandidateTurn: { fingerprint: string; completedAtMs: number } | null = null;
       let lastAuthoritativeResponse: AuthoritativeResponse | null = null;
       let pendingTypedSubmission: {
         resolve: () => void;
@@ -184,6 +200,26 @@ export const GeminiLiveInterviewer = forwardRef<
         timeout: number;
       } | null = null;
       const scheduled = new Set<AudioBufferSourceNode>();
+
+      const completeClosingResponse = () => {
+        if (!closingResponsePending) return;
+        closingResponsePending = false;
+        closingResponseStarted = false;
+        if (closingResponseFallbackTimer !== null) {
+          window.clearTimeout(closingResponseFallbackTimer);
+          closingResponseFallbackTimer = null;
+        }
+        callbacksRef.current.onFinalResponseSpoken();
+      };
+
+      const updatePlaybackState = (speaking: boolean) => {
+        callbacksRef.current.onAgentSpeaking(speaking);
+        callbacksRef.current.onAgentState(speaking ? "speaking" : "listening");
+        if (closingResponsePending && speaking) closingResponseStarted = true;
+        if (closingResponsePending && closingResponseStarted && !speaking) {
+          completeClosingResponse();
+        }
+      };
 
       const stopPlayback = () => {
         scheduled.forEach((source) => source.stop());
@@ -201,6 +237,10 @@ export const GeminiLiveInterviewer = forwardRef<
         if (transcriptionRefreshTimer !== null) {
           window.clearTimeout(transcriptionRefreshTimer);
           transcriptionRefreshTimer = null;
+        }
+        if (closingResponseFallbackTimer !== null) {
+          window.clearTimeout(closingResponseFallbackTimer);
+          closingResponseFallbackTimer = null;
         }
         if (pendingTypedSubmission) {
           window.clearTimeout(pendingTypedSubmission.timeout);
@@ -248,8 +288,13 @@ export const GeminiLiveInterviewer = forwardRef<
         const answer = input.text.trim();
         if (!answer) return;
         const fingerprint = answerFingerprint(answer);
-        if (submittedAnswers.has(fingerprint)) return lastAuthoritativeResponse;
-        submittedAnswers.add(fingerprint);
+        if (
+          answersInFlight.has(fingerprint) ||
+          candidateAnswerWasRecentlySubmitted(answer, lastCompletedCandidateTurn)
+        ) {
+          return lastAuthoritativeResponse;
+        }
+        answersInFlight.add(fingerprint);
         callbacksRef.current.onAgentState("thinking");
         try {
           const decision = await submitAnswer({
@@ -267,13 +312,25 @@ export const GeminiLiveInterviewer = forwardRef<
             phase: decision.phase,
             questionIndex: decision.questionIndex
           };
-          void callbacksRef.current.onAnswerPersisted();
+          lastCompletedCandidateTurn = { fingerprint, completedAtMs: Date.now() };
+          answersInFlight.delete(fingerprint);
+          if (lastAuthoritativeResponse.phase === "done") {
+            closingResponsePending = true;
+            closingResponseStarted = false;
+            if (closingResponseFallbackTimer !== null) {
+              window.clearTimeout(closingResponseFallbackTimer);
+            }
+            // If the provider completes the turn without playable audio, do
+            // not leave the candidate trapped in the finished interview.
+            closingResponseFallbackTimer = window.setTimeout(completeClosingResponse, 20_000);
+          }
+          void callbacksRef.current.onAnswerPersisted(lastAuthoritativeResponse);
           if (options.announce !== false) {
             announceAuthoritativeResponse(lastAuthoritativeResponse);
           }
           return lastAuthoritativeResponse;
         } catch (error) {
-          submittedAnswers.delete(fingerprint);
+          answersInFlight.delete(fingerprint);
           throw error;
         }
       };
@@ -326,7 +383,7 @@ export const GeminiLiveInterviewer = forwardRef<
 
       const scheduleCandidateTurnCommit = () => {
         clearCandidateCommitTimer();
-        // In the hiring-manager round Gemini's blocking tool call is the turn
+        // In Gemini-led conversational rounds, Gemini's blocking tool call is the turn
         // boundary. The dedicated transcriber remains an accuracy source, but
         // no longer races the conversational model or forces it to stay mute.
         if (geminiLedConversation) return;
@@ -375,6 +432,24 @@ export const GeminiLiveInterviewer = forwardRef<
         args?: Record<string, unknown>;
       }) => {
         if (!session || call.name !== COMPLETE_INTERVIEW_TURN_TOOL) return;
+        if (call.id && completedToolCalls.has(call.id)) {
+          session.sendToolResponse({
+            functionResponses: [
+              {
+                id: call.id,
+                name: call.name,
+                response: {
+                  saved: true,
+                  duplicate: true,
+                  approvedResponse: "",
+                  instruction:
+                    "This tool call was already completed. Do not repeat the previous response; listen for the candidate's next turn."
+                }
+              }
+            ]
+          });
+          return;
+        }
         if (decisionPending) {
           session.sendToolResponse({
             functionResponses: [
@@ -396,12 +471,49 @@ export const GeminiLiveInterviewer = forwardRef<
           if (!candidateTurn)
             throw new Error("I couldn't capture that answer. Please say it again.");
 
+          // Gemini can retry a completed candidate turn with a fresh tool-call
+          // ID after a network delay. Persistence already rejects the same
+          // fingerprint, but returning the previous approved utterance here
+          // would make James speak that response a second time.
+          if (candidateAnswerWasRecentlySubmitted(candidateTurn.text, lastCompletedCandidateTurn)) {
+            if (call.id) completedToolCalls.add(call.id);
+            decisionPending = false;
+            session.sendToolResponse({
+              functionResponses: [
+                {
+                  id: call.id,
+                  name: call.name,
+                  response: {
+                    saved: true,
+                    duplicate: true,
+                    approvedResponse: "",
+                    instruction:
+                      "This candidate turn was already completed. Produce no audio or text; listen for the candidate's next turn."
+                  }
+                }
+              ]
+            });
+            if (pendingTypedSubmission) {
+              window.clearTimeout(pendingTypedSubmission.timeout);
+              pendingTypedSubmission.resolve();
+              pendingTypedSubmission = null;
+            }
+            callbacksRef.current.onAgentState("listening");
+            return;
+          }
+
           const response = await persistAnswer(candidateTurn, {
             announce: false,
-            liveProposal: liveConversationProposalFromToolArgs(call.args)
+            liveProposal: liveConversationProposalFromToolArgs(call.args, interviewerName)
           });
           if (!response) throw new Error("The interview turn was not saved.");
+          if (call.id) completedToolCalls.add(call.id);
           decisionPending = false;
+          // Only the model continuation caused by this authoritative tool
+          // response may be heard. Any model audio produced before the tool
+          // call is speculative and remains muted.
+          approvedGeminiTurnPending = true;
+          approvedGeminiTurnStarted = false;
           session.sendToolResponse({
             functionResponses: [
               {
@@ -412,11 +524,11 @@ export const GeminiLiveInterviewer = forwardRef<
                   action: response.phase === "done" ? "close" : response.action,
                   questionIndex: response.questionIndex,
                   approvedResponse: response.utterance,
-                  identity: "I'm James from the recruiting team.",
+                  identity: `I'm ${interviewerName} from the recruiting team.`,
                   instruction:
                     response.phase === "done"
-                      ? "Close the interview warmly using only the approved response."
-                      : "Reply naturally and briefly using only the approved response. Never identify yourself as Google, Gemini, an AI, a model, a bot, or an assistant."
+                      ? "Speak approvedResponse exactly once, word for word. Finish the complete closing before stopping."
+                      : "Speak approvedResponse exactly once, word for word, without adding or paraphrasing anything. Never identify yourself as Google, Gemini, an AI, a model, a bot, or an assistant."
                 }
               }
             ]
@@ -498,6 +610,7 @@ export const GeminiLiveInterviewer = forwardRef<
           const connection = payload.data as LiveTokenResponse;
           interviewStartedAt = connection.sessionStartedAt;
           geminiLedConversation = connection.conversationMode === "gemini-led";
+          if (closed) return;
 
           const requestedDeviceId = microphoneDeviceIdRef.current;
           const audioConstraints: MediaTrackConstraints = {
@@ -516,7 +629,11 @@ export const GeminiLiveInterviewer = forwardRef<
               audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
             });
           }
-          if (closed) return;
+          if (closed) {
+            stream.getTracks().forEach((track) => track.stop());
+            stream = null;
+            return;
+          }
           const microphone = stream.getAudioTracks()[0];
           if (!microphone) throw new Error("No microphone was found.");
           callbacksRef.current.onLocalTrack(microphone);
@@ -660,11 +777,11 @@ export const GeminiLiveInterviewer = forwardRef<
             model: connection.model,
             config: {
               responseModalities: [Modality.AUDIO],
-              // One fixed, firm interviewer voice for every session. Do not
-              // select dynamically from the avatar or resume.
-              // Charon is a deep, informative male voice. The same choice is
-              // locked into the ephemeral token on the server.
-              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Charon" } } },
+              // The server derives this from the reserved interviewer persona
+              // and locks the same value into the ephemeral token.
+              speechConfig: {
+                voiceConfig: { prebuiltVoiceConfig: { voiceName: connection.voiceName } }
+              },
               realtimeInputConfig: {
                 automaticActivityDetection: {
                   disabled: false,
@@ -703,6 +820,19 @@ export const GeminiLiveInterviewer = forwardRef<
                 const content = message.serverContent;
                 if (content?.interrupted) {
                   stopPlayback();
+                  if (geminiLedConversation) {
+                    // Barge-in ends the previously authorized spoken turn. Do
+                    // not let that stale authorization make the next
+                    // pre-tool model response audible.
+                    if (openingTurnStarted) {
+                      openingTurnPending = false;
+                      openingTurnStarted = false;
+                    }
+                    if (approvedGeminiTurnStarted) {
+                      approvedGeminiTurnPending = false;
+                      approvedGeminiTurnStarted = false;
+                    }
+                  }
                   // Realtime text can interrupt the speculative response. The
                   // next model content belongs to the authoritative prompt.
                   if (authoritativePromptSent) suppressCurrentModelTurn = false;
@@ -715,23 +845,29 @@ export const GeminiLiveInterviewer = forwardRef<
                 }
                 if (content?.modelTurn?.parts) {
                   if (geminiLedConversation) {
-                    if (openingTurnPending) openingTurnStarted = true;
-                    for (const part of content.modelTurn.parts) {
-                      if (!part.inlineData?.data || !outputContext) continue;
-                      schedulePcmAudio(
-                        outputContext,
-                        avatarDestination,
-                        part.inlineData.data,
-                        scheduled,
-                        (speaking) => {
-                          callbacksRef.current.onAgentSpeaking(speaking);
-                          callbacksRef.current.onAgentState(speaking ? "speaking" : "listening");
-                        },
-                        (time) => {
-                          nextPlaybackTime = Math.max(nextPlaybackTime, time);
-                          return nextPlaybackTime;
-                        }
-                      );
+                    const audibleTurn = openingTurnPending || approvedGeminiTurnPending;
+                    if (!audibleTurn) {
+                      // A reply before complete_interview_turn, or a
+                      // continuation caused by a duplicate tool response, is
+                      // not an approved spoken turn.
+                      outputTranscriptRef.current = "";
+                    } else {
+                      if (openingTurnPending) openingTurnStarted = true;
+                      if (approvedGeminiTurnPending) approvedGeminiTurnStarted = true;
+                      for (const part of content.modelTurn.parts) {
+                        if (!part.inlineData?.data || !outputContext) continue;
+                        schedulePcmAudio(
+                          outputContext,
+                          avatarDestination,
+                          part.inlineData.data,
+                          scheduled,
+                          updatePlaybackState,
+                          (time) => {
+                            nextPlaybackTime = Math.max(nextPlaybackTime, time);
+                            return nextPlaybackTime;
+                          }
+                        );
+                      }
                     }
                   } else {
                     // If Gemini begins replying while there is an uncommitted
@@ -774,10 +910,7 @@ export const GeminiLiveInterviewer = forwardRef<
                           avatarDestination,
                           part.inlineData.data,
                           scheduled,
-                          (speaking) => {
-                            callbacksRef.current.onAgentSpeaking(speaking);
-                            callbacksRef.current.onAgentState(speaking ? "speaking" : "listening");
-                          },
+                          updatePlaybackState,
                           (time) => {
                             nextPlaybackTime = Math.max(nextPlaybackTime, time);
                             return nextPlaybackTime;
@@ -795,7 +928,20 @@ export const GeminiLiveInterviewer = forwardRef<
                       openingTurnPending = false;
                       openingTurnStarted = false;
                     }
-                    callbacksRef.current.onAgentState("listening");
+                    const completedApprovedTurn =
+                      approvedGeminiTurnPending && approvedGeminiTurnStarted;
+                    if (completedApprovedTurn) {
+                      approvedGeminiTurnPending = false;
+                      approvedGeminiTurnStarted = false;
+                    }
+                    if (closingResponsePending && completedApprovedTurn) {
+                      // Playback completion normally closes the room. This
+                      // also handles a provider turn that completes without a
+                      // playable audio packet.
+                      completeClosingResponse();
+                    } else if (!closingResponsePending && !decisionPending) {
+                      callbacksRef.current.onAgentState("listening");
+                    }
                     return;
                   }
                   const approvedOpeningTurn = openingTurnPending && openingTurnStarted;
@@ -836,6 +982,11 @@ export const GeminiLiveInterviewer = forwardRef<
               }
             }
           });
+          if (closed) {
+            session.close();
+            session = null;
+            return;
+          }
 
           // Do not hold James's opening on a second WebSocket handshake. The
           // fallback transcript remains active until this promise resolves.
@@ -868,7 +1019,7 @@ export const GeminiLiveInterviewer = forwardRef<
                 role: "user",
                 parts: [
                   {
-                    text: `Start now. Your entire first spoken response must be this exact server-approved question, with no greeting or extra words: "${connection.openingUtterance}"`
+                    text: `Start now. Your entire first spoken response must be this exact server-approved opening, with no additional words: ${JSON.stringify(connection.openingUtterance)}`
                   }
                 ]
               }
@@ -901,7 +1052,7 @@ export const GeminiLiveInterviewer = forwardRef<
               return;
             }
             if (!session || pendingTypedSubmission) {
-              throw new Error("James is still responding to the previous answer.");
+              throw new Error(`${interviewerName} is still responding to the previous answer.`);
             }
             candidateFinalizedTranscript = input.text.trim();
             candidateStartedAtMs = input.startMs;
@@ -909,7 +1060,11 @@ export const GeminiLiveInterviewer = forwardRef<
             await new Promise<void>((resolve, reject) => {
               const timeout = window.setTimeout(() => {
                 pendingTypedSubmission = null;
-                reject(new Error("James did not receive the typed answer. Please try again."));
+                reject(
+                  new Error(
+                    `${interviewerName} did not receive the typed answer. Please try again.`
+                  )
+                );
               }, 15_000);
               pendingTypedSubmission = { resolve, reject, timeout };
               session?.sendClientContent({
@@ -933,12 +1088,16 @@ export const GeminiLiveInterviewer = forwardRef<
         }
       };
 
-      void connect();
+      // React Strict Mode mounts and immediately cleans up an effect once in
+      // development. Deferring the connection prevents that discarded mount
+      // from consuming a one-use token or acquiring and leaking the microphone.
+      const connectTimer = window.setTimeout(() => void connect(), 0);
       return () => {
         closed = true;
+        window.clearTimeout(connectTimer);
         teardown();
       };
-    }, [sessionId]);
+    }, [interviewerName, sessionId]);
 
     useImperativeHandle(
       ref,
@@ -1028,12 +1187,15 @@ export function selectGeminiLedCandidateTranscript(
 }
 
 export function liveConversationProposalFromToolArgs(
-  args: Record<string, unknown> | undefined
+  args: Record<string, unknown> | undefined,
+  interviewerName = "James"
 ): LiveConversationProposal {
   const action = args?.action;
   const missing = args?.missing;
   if (!isLiveAction(action) || !isMissingDimension(missing)) {
-    throw new Error("James returned an invalid interview decision. Please try that answer again.");
+    throw new Error(
+      `${interviewerName} returned an invalid interview decision. Please try that answer again.`
+    );
   }
 
   const text = (key: string, limit: number) => {
@@ -1041,16 +1203,23 @@ export function liveConversationProposalFromToolArgs(
     return typeof value === "string" ? value.trim().slice(0, limit) : "";
   };
   const reason = text("reason", 200);
-  if (!reason) throw new Error("James did not finish the interview decision.");
+  if (!reason) throw new Error(`${interviewerName} did not finish the interview decision.`);
 
   return {
     action,
     missing,
+    candidateIntent: isLiveCandidateIntent(args?.candidateIntent) ? args.candidateIntent : "other",
     acknowledgement: text("acknowledgement", 120),
     line: text("line", 300),
     candidateResponse: text("candidateResponse", 400) || undefined,
     reason
   };
+}
+
+function isLiveCandidateIntent(
+  value: unknown
+): value is LiveConversationProposal["candidateIntent"] {
+  return ["answer", "decline", "end", "question-or-clarification", "other"].includes(String(value));
 }
 
 function isLiveAction(value: unknown): value is LiveConversationProposal["action"] {
@@ -1065,6 +1234,19 @@ function isMissingDimension(value: unknown): value is LiveConversationProposal["
 
 function answerFingerprint(answer: string): string {
   return answer.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+}
+
+export function candidateAnswerWasRecentlySubmitted(
+  answer: string,
+  lastCompletedTurn: { fingerprint: string; completedAtMs: number } | null,
+  nowMs = Date.now()
+): boolean {
+  return Boolean(
+    lastCompletedTurn &&
+    nowMs - lastCompletedTurn.completedAtMs >= 0 &&
+    nowMs - lastCompletedTurn.completedAtMs <= DUPLICATE_TURN_WINDOW_MS &&
+    lastCompletedTurn.fingerprint === answerFingerprint(answer)
+  );
 }
 
 function finishTranscript(

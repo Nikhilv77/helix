@@ -1,13 +1,12 @@
 "use client";
 
-import { Loader2, Play } from "lucide-react";
-import type {
-  CandidateResume,
-  InterviewQuestion,
-  InterviewSetup,
-  Turn
-} from "@/lib/shared/types";
-import { DsaCodeEditor, type DsaEditorLanguage } from "@/features/interviews/ui/dsa/dsa-code-editor";
+import { CheckCircle2, CircleAlert, Loader2, Play, Terminal } from "lucide-react";
+import type { CandidateResume, InterviewQuestion, InterviewSetup, Turn } from "@/lib/shared/types";
+import {
+  DsaCodeEditor,
+  type DsaEditorLanguage
+} from "@/features/interviews/ui/dsa/dsa-code-editor";
+import type { DsaRunResult } from "../types";
 import { MayaAside } from "./maya-aside";
 import { INTERVIEW_PANEL_RULE, INTERVIEW_PANEL_SHELL } from "./panel-surface";
 import { ResumeDocumentPreview } from "./resume-document-preview";
@@ -49,12 +48,14 @@ export function ResumeLiveWorkspace({
   agentSlot,
   micOn,
   language,
+  syntaxLanguage,
   sending,
   error,
   draft,
   notes,
   selectedOption,
   running,
+  runResult,
   onDraftChange,
   onNotesChange,
   onSelectOption,
@@ -83,12 +84,14 @@ export function ResumeLiveWorkspace({
   agentSlot: React.ReactNode;
   micOn: boolean;
   language: DsaEditorLanguage;
+  syntaxLanguage: string;
   sending: boolean;
   error: string | null;
   draft: string;
   notes: string;
   selectedOption: string | null;
   running: boolean;
+  runResult: DsaRunResult | null;
   onDraftChange: (value: string) => void;
   onNotesChange: (value: string) => void;
   onSelectOption: (option: string) => void;
@@ -103,12 +106,20 @@ export function ResumeLiveWorkspace({
   const stages = isHiringManagerRound ? HIRING_MANAGER_STAGES : RESUME_STAGES;
 
   return (
-    <div className="thin-scroll flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 xl:grid xl:grid-cols-[minmax(0,23rem)_minmax(0,1fr)_19rem] xl:overflow-hidden xl:pb-0">
+    <div
+      className={`thin-scroll flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 xl:grid xl:overflow-hidden xl:pb-0 ${
+        codingStage
+          ? "xl:grid-cols-[minmax(31rem,0.95fr)_minmax(29rem,1.15fr)_19rem]"
+          : "xl:grid-cols-[minmax(0,23rem)_minmax(0,1fr)_19rem]"
+      }`}
+    >
       {codingStage ? (
         <section
           className={`${INTERVIEW_PANEL_SHELL} flex min-h-[26rem] min-w-0 flex-col overflow-hidden xl:min-h-0`}
         >
-          <header className={`flex shrink-0 items-center justify-between gap-3 border-b ${INTERVIEW_PANEL_RULE} px-4 py-2.5`}>
+          <header
+            className={`flex shrink-0 items-center justify-between gap-3 border-b ${INTERVIEW_PANEL_RULE} px-4 py-2.5`}
+          >
             <div className="flex min-w-0 items-center gap-2.5">
               <span
                 aria-hidden="true"
@@ -116,7 +127,7 @@ export function ResumeLiveWorkspace({
               />
               <p className="truncate text-sm font-medium text-cream/72">Your editor</p>
               <span className="shrink-0 rounded-md bg-white/[0.05] px-1.5 py-0.5 text-[11px] font-medium text-cream/48">
-                {language}
+                {syntaxLanguage}
               </span>
             </div>
             <button
@@ -137,10 +148,12 @@ export function ResumeLiveWorkspace({
             <DsaCodeEditor
               value={draft}
               language={language}
+              syntaxLanguage={syntaxLanguage}
               onChange={onDraftChange}
               onRun={onRun}
             />
           </div>
+          <ResumeRunOutput result={runResult} running={running} />
         </section>
       ) : resume ? (
         <ResumeDocumentPreview resume={resume} highlightSkill={question?.skill} />
@@ -174,6 +187,7 @@ export function ResumeLiveWorkspace({
         onSelectOption={onSelectOption}
         onSubmit={onSubmit}
         onRequestMic={onRequestMic}
+        showCodeSnippet={!codingStage}
       />
 
       <MayaAside
@@ -198,6 +212,7 @@ export function ResumeLiveWorkspace({
 const EDITOR_LANGUAGES: Record<string, DsaEditorLanguage> = {
   javascript: "javascript",
   typescript: "javascript",
+  ts: "javascript",
   jsx: "javascript",
   tsx: "javascript",
   python: "python",
@@ -213,4 +228,64 @@ const EDITOR_LANGUAGES: Record<string, DsaEditorLanguage> = {
  */
 export function resumeEditorLanguage(language: string | null): DsaEditorLanguage {
   return EDITOR_LANGUAGES[(language ?? "").trim().toLowerCase()] ?? "javascript";
+}
+
+export function resumeSyntaxLanguage(language: string | null): string {
+  const normalized = (language ?? "").trim().toLowerCase();
+  return normalized === "typescript" || normalized === "ts" || normalized === "tsx"
+    ? "typescript"
+    : resumeEditorLanguage(normalized);
+}
+
+export function resumeExecutionLanguage(language: string | null): DsaEditorLanguage | "typescript" {
+  return resumeSyntaxLanguage(language) === "typescript"
+    ? "typescript"
+    : resumeEditorLanguage(language);
+}
+
+function ResumeRunOutput({ result, running }: { result: DsaRunResult | null; running: boolean }) {
+  const output = result?.compileOutput || result?.stderr || result?.stdout;
+  const failed = Boolean(result && !result.accepted);
+
+  return (
+    <div className={`max-h-52 shrink-0 border-t ${INTERVIEW_PANEL_RULE} bg-black/15`}>
+      <div className="flex min-h-11 items-center justify-between gap-3 px-4 py-2.5">
+        <div className="flex items-center gap-2 text-sm font-semibold text-cream/72">
+          <Terminal size={14} aria-hidden="true" />
+          Output
+        </div>
+        {running ? (
+          <span className="inline-flex items-center gap-1.5 text-xs text-cream/48">
+            <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+            Running
+          </span>
+        ) : result ? (
+          <span
+            className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
+              failed ? "text-[#ffb4b4]" : "text-[var(--workspace-accent)]"
+            }`}
+          >
+            {failed ? (
+              <CircleAlert size={13} aria-hidden="true" />
+            ) : (
+              <CheckCircle2 size={13} aria-hidden="true" />
+            )}
+            {result.status}
+          </span>
+        ) : (
+          <span className="text-xs text-cream/34">⌘/Ctrl + Enter to run</span>
+        )}
+      </div>
+      {result ? (
+        <pre
+          aria-live="polite"
+          className={`thin-scroll max-h-36 overflow-auto border-t ${INTERVIEW_PANEL_RULE} px-4 py-3 whitespace-pre-wrap font-mono text-[12.5px] leading-5 ${
+            failed ? "text-[#ffb4b4]" : "text-cream/68"
+          }`}
+        >
+          {output || "Ran successfully. No console output."}
+        </pre>
+      ) : null}
+    </div>
+  );
 }

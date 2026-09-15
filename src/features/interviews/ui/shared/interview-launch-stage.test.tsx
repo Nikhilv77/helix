@@ -60,4 +60,41 @@ describe("InterviewLaunchStage", () => {
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("session-1"));
     expect(mocks.speak).toHaveBeenCalledOnce();
   });
+
+  it("waits through an in-progress creation lease instead of showing an error", async () => {
+    const navigate = vi.fn();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json(
+          {
+            success: false,
+            error: {
+              code: "INTERVIEW_CREATION_IN_PROGRESS",
+              message: "An interview is already being prepared for you.",
+              details: { retryAfterMs: 1 }
+            }
+          },
+          { status: 409 }
+        )
+      )
+      .mockResolvedValueOnce(
+        Response.json({ success: true, data: { sessionId: "session-after-race" } })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <InterviewLaunchStage
+        ready
+        startPath="/api/interview/resume/start"
+        copy={{ eyebrow: "Resume interview", headline: "Ready", body: "Prepare", script: "Go" }}
+        workspaceAccent="ember"
+        waitForVoiceBeforeNavigate
+        navigateToInterview={navigate}
+      />
+    );
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith("session-after-race"));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

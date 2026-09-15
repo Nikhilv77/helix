@@ -47,7 +47,12 @@ import type {
 } from "@/lib/shared/types";
 import { MayaAside } from "./components/maya-aside";
 import { INTERVIEW_PANEL_RULE, INTERVIEW_PANEL_SHELL } from "./components/panel-surface";
-import { ResumeLiveWorkspace, resumeEditorLanguage } from "./components/resume-live-workspace";
+import {
+  ResumeLiveWorkspace,
+  resumeEditorLanguage,
+  resumeExecutionLanguage,
+  resumeSyntaxLanguage
+} from "./components/resume-live-workspace";
 import { stageCounts } from "./components/interview-question-panel";
 import { FundamentalsLiveWorkspace } from "./components/fundamentals-live-workspace";
 import { BlockAssessmentReviewWorkspace } from "./components/block-assessment-review-workspace";
@@ -59,10 +64,12 @@ import { MicrophonePicker } from "./components/microphone-picker";
 import { TypedAnswerPanel } from "./components/typed-answer-panel";
 import { ConversationTranscript } from "./components/conversation-transcript";
 import { CandidateCameraPreview } from "./components/candidate-camera-preview";
+import { ConnectionRecoveryToast } from "./components/connection-recovery-toast";
 import { MediaPermissionGate, type MediaSetupResult } from "./components/media-permission-gate";
 import { useInterviewClock } from "./hooks/use-interview-clock";
 import { GeminiLiveInterviewer, type GeminiLiveInterviewerHandle } from "./gemini-live-interviewer";
 import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
+import { interviewerPersonaIdForSetup } from "@/features/interviews/domain/interviewer-persona";
 
 const DEFAULT_HARD_CAP_MS = 15 * 60 * 1000;
 /**
@@ -128,10 +135,6 @@ export function VoiceInterviewClient({
   teacherId?: string | null;
 }) {
   const router = useRouter();
-  // Interviews have one consistent presenter. James also matches the fixed
-  // Gemini Live voice, avoiding a voice/avatar mismatch.
-  const persona = useMemo(() => personaById("james") ?? personaForSession(sessionId), [sessionId]);
-
   const [status, setStatus] = useState<VoiceStatus>("connecting");
   const [error, setError] = useState<string | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
@@ -161,6 +164,8 @@ export function VoiceInterviewClient({
         : null),
     [setup?.coreTechnicalAssessment, setup?.storyPracticeAssessment]
   );
+  const persona =
+    personaById(interviewerPersonaIdForSetup(setup)) ?? personaForSession(sessionId);
   const [currentQuestion, setCurrentQuestion] = useState<InterviewQuestion | null>(null);
   const [progress, setProgress] = useState({ index: 0, count: 4, followUps: 0 });
   const [planStages, setPlanStages] = useState<Array<InterviewStage | null>>([]);
@@ -190,6 +195,7 @@ export function VoiceInterviewClient({
 
   const stopPollingRef = useRef(false);
   const sessionCompleteRef = useRef(false);
+  const liveTurnPendingRef = useRef(false);
   const sessionCheckedRef = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const geminiInterviewerRef = useRef<GeminiLiveInterviewerHandle | null>(null);
@@ -245,6 +251,60 @@ export function VoiceInterviewClient({
     if (status !== "ended" && !sessionUnavailable) return;
     replaceCandidateCameraStream(null);
   }, [replaceCandidateCameraStream, sessionUnavailable, status]);
+
+  useEffect(() => {
+    if (!mediaSetupComplete || !navigator.mediaDevices) return;
+    let cancelled = false;
+    const refreshAudioInputs = async () => {
+      const devices = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+      if (cancelled) return;
+      const inputs = devices.filter((device) => device.kind === "audioinput");
+      setAudioInputs(inputs);
+      setSelectedInputId((current) =>
+        current && inputs.some((device) => device.deviceId === current)
+          ? current
+          : (inputs[0]?.deviceId ?? "")
+      );
+    };
+    void refreshAudioInputs();
+    navigator.mediaDevices.addEventListener?.("devicechange", refreshAudioInputs);
+    return () => {
+      cancelled = true;
+      navigator.mediaDevices.removeEventListener?.("devicechange", refreshAudioInputs);
+    };
+  }, [mediaSetupComplete]);
+
+  useEffect(() => {
+    const restoreFromPageCache = (event: PageTransitionEvent) => {
+      if (!event.persisted || !mediaSetupComplete || sessionCompleteRef.current) return;
+      setError(null);
+      setMicError(null);
+      setLocalTrack(null);
+      setAgentTrack(null);
+      setMicOn(false);
+      setStatus("connecting");
+      setConnectionAttempt((attempt) => attempt + 1);
+    };
+    window.addEventListener("pageshow", restoreFromPageCache);
+    return () => window.removeEventListener("pageshow", restoreFromPageCache);
+  }, [mediaSetupComplete]);
+
+  useEffect(() => {
+    if (!mediaSetupComplete) return;
+    const markConnectionOffline = () => {
+      if (sessionCompleteRef.current) return;
+      setError(
+        "Your internet connection is offline. Restore it, then reconnect to continue from the same question."
+      );
+      setAgentSpeaking(false);
+      setMicOn(false);
+      setStatus("error");
+    };
+
+    window.addEventListener("offline", markConnectionOffline);
+    if (!navigator.onLine) markConnectionOffline();
+    return () => window.removeEventListener("offline", markConnectionOffline);
+  }, [mediaSetupComplete]);
 
   const revealAgentTurn = useCallback((turn: Turn | null | undefined) => {
     if (!turn || turn.speaker !== "agent") return;
@@ -615,7 +675,9 @@ export function VoiceInterviewClient({
         sessionCompleteRef.current = true;
         stopPollingRef.current = true;
         setError(null);
-        setStatus("ended");
+        // The server finishes before the provider finishes playing James's
+        // closing line. Keep the Live component mounted until that audio ends.
+        if (!liveTurnPendingRef.current) setStatus("ended");
       }
     } catch (caught) {
       if (caught instanceof ApiClientError && caught.code === "SESSION_NOT_FOUND") {
@@ -937,7 +999,7 @@ export function VoiceInterviewClient({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           code: typedDraft,
-          language: resumeEditorLanguage(currentQuestion?.language ?? null),
+          language: resumeExecutionLanguage(currentQuestion?.language ?? null),
           stdin: "",
           sessionId,
           questionIndex: progress.index
@@ -1048,6 +1110,14 @@ export function VoiceInterviewClient({
     setConnectionAttempt((attempt) => attempt + 1);
   }
 
+  function requestMicrophone() {
+    if (status === "error" || !localTrack) {
+      void reconnect();
+      return;
+    }
+    void toggleMic();
+  }
+
   const overCap = elapsed >= hardCapMs;
   const latestAgentTurn = [...turns].reverse().find((turn) => turn.speaker === "agent") ?? null;
   const optimisticAlreadyPersisted = optimisticUserTurn
@@ -1087,13 +1157,15 @@ export function VoiceInterviewClient({
       />
     );
   const micAvailable = status === "waiting" || status === "live" || status === "reconnecting";
+  const micControlAvailable = micAvailable || status === "error";
   const statusLabel = describeVoiceState(
     status,
     agentState,
     micOn,
     agentSpeaking,
     micSignal,
-    micSilent
+    micSilent,
+    persona.name
   );
   const selectedInputLabel =
     audioInputs.find((device) => device.deviceId === selectedInputId)?.label ||
@@ -1166,6 +1238,7 @@ export function VoiceInterviewClient({
         kind="complete"
         evaluationLabel={evaluationProfile?.label}
         evaluationParameters={evaluationProfile?.parameters.map((parameter) => parameter.label)}
+        interviewerName={persona.name}
         blockAssessmentBlockId={setup?.dsaBlockAssessment?.blockId ?? null}
         storyPracticeAssessment={
           storyPracticeAssessment
@@ -1188,7 +1261,11 @@ export function VoiceInterviewClient({
   if (!mediaSetupComplete) {
     return (
       <VoiceShell workspaceAccent={workspaceAccent} wide>
-        <MediaPermissionGate cameraOptional onComplete={completeMediaSetup} />
+        <MediaPermissionGate
+          cameraOptional
+          interviewerName={persona.name}
+          onComplete={completeMediaSetup}
+        />
       </VoiceShell>
     );
   }
@@ -1198,17 +1275,21 @@ export function VoiceInterviewClient({
       {usesGeminiLive ? (
         <GeminiLiveInterviewer
           ref={geminiInterviewerRef}
-          key={`gemini-live-${connectionAttempt}`}
+          key={`gemini-live-${persona.id}-${connectionAttempt}`}
           sessionId={sessionId}
+          interviewerName={persona.name}
           onStatus={setStatus}
-          onAgentState={setAgentState}
+          onAgentState={(nextState) => {
+            if (nextState === "thinking") liveTurnPendingRef.current = true;
+            setAgentState(nextState);
+          }}
           onAgentSpeaking={setAgentSpeaking}
           onAgentTrack={setAgentTrack}
           onLocalTrack={(track) => {
             setLocalTrack(track);
             setMicOn(Boolean(track?.enabled));
-            setMicError(null);
             if (!track) return;
+            setMicError(null);
             const activeId = track.getSettings().deviceId ?? "";
             if (activeId) setSelectedInputId(activeId);
             void navigator.mediaDevices
@@ -1218,11 +1299,36 @@ export function VoiceInterviewClient({
               )
               .catch(() => null);
           }}
-          onError={setError}
+          onError={(message) => {
+            setError(message);
+            if (
+              message &&
+              /microphone|audio input|device.*(?:not found|unavailable)/i.test(message)
+            ) {
+              setMicError(message);
+            }
+          }}
           onInputTranscript={(event) => handleLiveTranscript("user", event)}
           onOutputTranscript={(event) => handleLiveTranscript("agent", event)}
-          onAnswerPersisted={poll}
+          onAnswerPersisted={(response) => {
+            if (response?.phase !== "done") liveTurnPendingRef.current = false;
+            return poll();
+          }}
+          onFinalResponseSpoken={() => {
+            liveTurnPendingRef.current = false;
+            sessionCompleteRef.current = true;
+            stopPollingRef.current = true;
+            setError(null);
+            setStatus("ended");
+          }}
           microphoneDeviceId={selectedInputId}
+        />
+      ) : null}
+      {status === "error" ? (
+        <ConnectionRecoveryToast
+          interviewerName={persona.name}
+          message={error}
+          onReconnect={() => void reconnect()}
         />
       ) : null}
       <header className="interview-live-header interview-live-glass mb-3 flex shrink-0 flex-col gap-2 rounded-2xl border border-white/[0.08] bg-[rgba(25,26,29,0.58)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:min-h-14 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
@@ -1239,8 +1345,8 @@ export function VoiceInterviewClient({
         <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:ml-auto sm:w-auto">
           <button
             type="button"
-            onClick={() => void toggleMic()}
-            disabled={!micAvailable}
+            onClick={requestMicrophone}
+            disabled={!micControlAvailable}
             className={`inline-flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold transition disabled:opacity-30 ${
               micOn
                 ? "bg-white/[0.06] text-cream hover:bg-white/[0.09]"
@@ -1249,9 +1355,19 @@ export function VoiceInterviewClient({
             aria-label={micOn ? "Mute microphone" : "Unmute microphone"}
             title={micOn ? "Mute microphone" : "Unmute microphone"}
           >
-            {micOn ? <Mic size={14} aria-hidden="true" /> : <MicOff size={14} aria-hidden="true" />}
+            {status === "error" ? (
+              <RefreshCw size={14} aria-hidden="true" />
+            ) : micOn ? (
+              <Mic size={14} aria-hidden="true" />
+            ) : (
+              <MicOff size={14} aria-hidden="true" />
+            )}
             <span className="hidden xl:inline">
-              {micOn && micSignal && status === "live" ? "Mic ready" : statusLabel}
+              {status === "error"
+                ? "Reconnect"
+                : micOn && micSignal && status === "live"
+                  ? "Mic ready"
+                  : statusLabel}
             </span>
           </button>
 
@@ -1307,7 +1423,7 @@ export function VoiceInterviewClient({
           onDraftChange={setTypedDraft}
           onSelectOption={(option) => void submitOptionAnswer(option)}
           onSubmit={() => void submitTypedAnswer()}
-          onRequestMic={() => void toggleMic()}
+          onRequestMic={requestMicrophone}
           candidateCameraStream={candidateCameraStream}
           onDisableCamera={disableCandidateCamera}
         />
@@ -1334,7 +1450,7 @@ export function VoiceInterviewClient({
           onDraftChange={setTypedDraft}
           onSelectOption={(option) => void submitOptionAnswer(option)}
           onSubmit={() => void submitTypedAnswer()}
-          onRequestMic={() => void toggleMic()}
+          onRequestMic={requestMicrophone}
           candidateCameraStream={candidateCameraStream}
           onDisableCamera={disableCandidateCamera}
           stages={
@@ -1368,7 +1484,7 @@ export function VoiceInterviewClient({
           onDraftChange={setTypedDraft}
           onSelectOption={(option) => void submitOptionAnswer(option)}
           onSubmit={() => void submitTypedAnswer()}
-          onRequestMic={() => void toggleMic()}
+          onRequestMic={requestMicrophone}
           candidateCameraStream={candidateCameraStream}
           onDisableCamera={disableCandidateCamera}
         />
@@ -1392,18 +1508,20 @@ export function VoiceInterviewClient({
           agentSlot={interviewerSlot()}
           micOn={micOn}
           language={resumeEditorLanguage(currentQuestion?.language ?? null)}
+          syntaxLanguage={resumeSyntaxLanguage(currentQuestion?.language ?? null)}
           sending={typedSending}
           error={typedError}
           draft={typedDraft}
           notes={typedNotes}
           selectedOption={selectedOption}
           running={dsaRunning}
+          runResult={dsaRunResult}
           onDraftChange={setTypedDraft}
           onNotesChange={setTypedNotes}
           onSelectOption={(option) => void submitOptionAnswer(option)}
           onSubmit={() => void submitTypedAnswer()}
           onRun={() => void runResumeCode()}
-          onRequestMic={() => void toggleMic()}
+          onRequestMic={requestMicrophone}
           candidateCameraStream={candidateCameraStream}
           onDisableCamera={disableCandidateCamera}
         />
@@ -1488,7 +1606,7 @@ export function VoiceInterviewClient({
                 </p>
               ) : null}
 
-              {error ? (
+              {error && status !== "error" ? (
                 <div className="rounded-xl border border-[color-mix(in_srgb,var(--workspace-accent)_18%,transparent)] bg-[color-mix(in_srgb,var(--workspace-accent)_7%,transparent)] px-4 py-3">
                   <p className="text-sm leading-6 text-cream">{error}</p>
                   <div className="mt-3 flex flex-wrap items-center gap-3">

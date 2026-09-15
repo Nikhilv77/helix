@@ -185,6 +185,8 @@ export interface PlannedQuestion {
   topicKey?: string;
   skillKeys?: string[];
   rubricKeys?: string[];
+  /** Round-level report parameters this question is intentionally capable of assessing. */
+  evaluationParameterKeys?: string[];
   /** Original Core/Applied provenance for a derived Technical Deep Dive slot. */
   sourceBlueprintId?: string;
   sourceBlueprintKind?: "core-technical" | "applied-engineering";
@@ -215,11 +217,15 @@ export type Speaker = "agent" | "user";
 export type DecisionAction = "clarify" | "probe" | "challenge" | "respond" | "move_on";
 export type MissingDimension =
   "clarity" | "structure" | "specificity" | "ownership" | "outcome" | "none";
+export type LiveCandidateIntent =
+  "answer" | "decline" | "end" | "question-or-clarification" | "other";
 
 /** Decision authored by Gemini Live; the server still validates it through the state machine. */
 export interface LiveConversationProposal {
   action: DecisionAction;
   missing: MissingDimension;
+  /** Semantic intent reported by Gemini Live; optional for older connected clients. */
+  candidateIntent?: LiveCandidateIntent;
   reason: string;
   acknowledgement: string;
   line: string;

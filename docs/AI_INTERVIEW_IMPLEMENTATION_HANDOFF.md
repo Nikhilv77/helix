@@ -1,10 +1,14 @@
 # AI Interview Implementation Handoff
 
-Last updated: 14 September 2026
+Last updated: 15 September 2026
 
 This is the short source of context for future AI agents working on Trailgrad's
 interview experience. It describes the implementation that exists now, not the
 older migration proposal.
+
+For the implementation-ready plan that brings Resume + Behavioural onto the
+same Gemini-led architecture as Hiring Manager + Final Behavioural, see
+[`RESUME_BEHAVIOURAL_GEMINI_LIVE_BLUEPRINT.md`](./RESUME_BEHAVIOURAL_GEMINI_LIVE_BLUEPRINT.md).
 
 ## Product decisions
 
@@ -37,15 +41,15 @@ a language model, a bot, or a virtual assistant.
 
 ## Provider responsibilities
 
-| Provider          | Current responsibility                                                                                                  |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Gemini Live agent | James's native-audio listening context and streamed `Charon` voice output                                               |
-| Gemini Transcribe | Dedicated bilingual verbatim transcription for interview families that remain server-led                              |
-| Groq              | Fast server-side planning, non-Hiring-Manager answer decisions, and answer evaluation when `GROQ_API_KEY` is configured |
-| Gemini text API   | Fallback for the server-side AI work when Groq is unavailable; also used by other generation features                   |
-| Deepgram          | Scripted workspace-coach speech outside the Gemini Live interview                                                       |
-| LiveKit           | Human-to-human peer-help calls only                                                                                     |
-| Supabase/Postgres | Durable profiles, interview sessions, answers, evaluations, and reports                                                 |
+| Provider          | Current responsibility                                                                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Gemini Live agent | James's native-audio listening context and streamed `Charon` voice output                                                              |
+| Gemini Transcribe | Dedicated bilingual verbatim transcription for interview families that remain server-led                                               |
+| Groq              | Fast server-side planning, answer decisions for server-led interview families, and answer evaluation when `GROQ_API_KEY` is configured |
+| Gemini text API   | Fallback for the server-side AI work when Groq is unavailable; also used by other generation features                                  |
+| Deepgram          | Scripted workspace-coach speech outside the Gemini Live interview                                                                      |
+| LiveKit           | Human-to-human peer-help calls only                                                                                                    |
+| Supabase/Postgres | Durable profiles, interview sessions, answers, evaluations, and reports                                                                |
 
 There is no Python or LiveKit AI-interviewer worker anymore. Do not add LiveKit
 back to an AI interview. The LiveKit packages and environment variables remain
@@ -96,7 +100,7 @@ Browser microphone -----+-> Gemini Live agent -> James audio
               tool result -> Gemini speaks as James
 ```
 
-For Hiring Manager sessions, the browser receives one short-lived credential
+For Hiring Manager and Resume + Behavioural sessions, the browser receives one short-lived credential
 constrained to the native-audio agent model. Its required
 `complete_interview_turn` call supplies the saved candidate transcript, so the
 old parallel transcription token and WebSocket are not created. Server-led
@@ -108,13 +112,13 @@ The transcription session uses bilingual Verbatim mode (`en-IN` and `hi-IN`)
 and a maximum of 100 vocabulary hints assembled from the active resume, company
 names, projects, skills, target role, and frozen interview plan. Interim
 hypotheses stay private. This separate transcription path now applies only to
-server-led rounds. In the Hiring Manager round, the verbatim `answerText` on
+server-led rounds. In Gemini-led rounds, the verbatim `answerText` on
 Gemini's `complete_interview_turn` call is the single saved transcript source,
 so parallel recognizers cannot concatenate near-duplicate wording. The browser
 rotates the separate connection before the provider's ten-minute limit only
 when that server-led connection exists.
 
-In the Hiring Manager round Gemini owns listening, acknowledgements,
+In Hiring Manager and Resume + Behavioural rounds Gemini owns listening, acknowledgements,
 clarifications, and the choice to probe or move on. It submits that bounded
 decision through a blocking tool. `InterviewService` validates the action,
 enforces the frozen plan, follow-up budgets, pacing and hard cap, persists the
@@ -126,8 +130,8 @@ Gemini 3.1 Flash Live; that capability is unsupported and rejects session setup.
 ## Turn-taking rules
 
 - James opens with the exact server-approved greeting and first question.
-- After each complete Hiring Manager candidate turn, Gemini calls
-`complete_interview_turn` exactly once with the verbatim answer and its bounded
+- After each complete Gemini-led candidate turn, Gemini calls
+  `complete_interview_turn` exactly once with the verbatim answer and its bounded
   conversational decision. The call is synchronous: James waits while the
   server saves the answer and validates the transition.
 - The configured duration is a maximum, not a target. Advancing beyond the
@@ -137,9 +141,9 @@ Gemini 3.1 Flash Live; that capability is unsupported and rejects session setup.
 - The server writes a durable semantic-evaluation job atomically with the
   answer, then returns James's validated response without waiting for the
   evaluator. Recovery processes the score immediately after the response. It
-  does not make a second text-model decider call for Gemini-led Hiring Manager
+  does not make a second text-model decider call for Gemini-led
   turns.
-- The decide endpoint rejects a Hiring Manager turn without Gemini's live
+- The decide endpoint rejects a Gemini-led turn without Gemini's live
   proposal. The legacy server/Groq decider therefore cannot silently take over.
 - The tool result contains the approved response boundary. Gemini resumes in
   its own native conversation and delivers that content naturally and briefly.

@@ -17,6 +17,67 @@ export interface InterviewLaunchCopy {
   script?: string | string[];
 }
 
+interface InterviewStartPayload {
+  success?: boolean;
+  data?: { sessionId: string };
+  error?: {
+    code?: string;
+    message?: string;
+    details?: { retryAfterMs?: number };
+  };
+}
+
+/**
+ * A start request is idempotent from the candidate's perspective. If another
+ * mount is already preparing it, wait for that request to publish the durable
+ * session instead of exposing the internal creation lease as a page error.
+ */
+export async function startInterviewWhenReady(
+  startPath: string,
+  token: string,
+  signal: AbortSignal
+): Promise<{ sessionId: string }> {
+  while (!signal.aborted) {
+    const response = await fetch(startPath, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      signal
+    });
+    const payload = (await response.json()) as InterviewStartPayload;
+    if (response.ok && payload.success && payload.data?.sessionId) return payload.data;
+
+    if (response.status === 409 && payload.error?.code === "INTERVIEW_CREATION_IN_PROGRESS") {
+      const requestedDelay = payload.error.details?.retryAfterMs;
+      await abortableDelay(Math.min(1_000, Math.max(150, requestedDelay ?? 500)), signal);
+      continue;
+    }
+
+    throw new Error(payload.error?.message || "Could not start this interview.");
+  }
+
+  throw new DOMException("The interview start was cancelled.", "AbortError");
+}
+
+function abortableDelay(durationMs: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) {
+    return Promise.reject(new DOMException("The interview start was cancelled.", "AbortError"));
+  }
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(done, durationMs);
+    signal.addEventListener("abort", aborted, { once: true });
+
+    function done() {
+      signal.removeEventListener("abort", aborted);
+      resolve();
+    }
+
+    function aborted() {
+      window.clearTimeout(timer);
+      reject(new DOMException("The interview start was cancelled.", "AbortError"));
+    }
+  });
+}
+
 /**
  * The screen that stands between a workspace card and a live interview room:
  * The candidate's selected workspace coach introduces the round out loud while the session is created in the
@@ -103,35 +164,21 @@ export function InterviewLaunchStage({
     const timeout = window.setTimeout(() => controller.abort(), 45_000);
     setStarting(true);
 
-    void (async () => {
+    const launch = async () => {
       try {
         const token = await getToken();
         if (!token) {
           throw new Error("Your sign-in session is not ready. Refresh the page and try again.");
         }
 
-        const response = await fetch(startPath, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          signal: controller.signal
-        });
-        const payload = (await response.json()) as {
-          success?: boolean;
-          data?: { sessionId: string };
-          error?: { message?: string };
-        };
-        if (!response.ok || !payload.success || !payload.data?.sessionId) {
-          throw new Error(
-            payload.error?.message || `${teacher.name} could not start this interview.`
-          );
-        }
+        const payload = await startInterviewWhenReady(startPath, token, controller.signal);
 
         if (cancelled) return;
         if (waitForVoiceBeforeNavigate) {
-          setPendingSessionId(payload.data.sessionId);
+          setPendingSessionId(payload.sessionId);
           setStarting(false);
         } else {
-          window.location.replace(`/interview/voice?session=${payload.data.sessionId}`);
+          window.location.replace(`/interview/voice?session=${payload.sessionId}`);
         }
       } catch (caught) {
         if (!cancelled) {
@@ -147,11 +194,17 @@ export function InterviewLaunchStage({
       } finally {
         window.clearTimeout(timeout);
       }
-    })();
+    };
+
+    // Development Strict Mode mounts and immediately discards one effect.
+    // Deferring prevents that synthetic mount from starting server work that
+    // its replacement would race against.
+    const launchTimer = window.setTimeout(() => void launch(), 0);
 
     return () => {
       cancelled = true;
       controller.abort();
+      window.clearTimeout(launchTimer);
       window.clearTimeout(timeout);
     };
   }, [

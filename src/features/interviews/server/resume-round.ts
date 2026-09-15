@@ -6,6 +6,40 @@ export const RESUME_EXPERIENCE_QUESTIONS = 3;
 const LIVE_RESUME_SKILL_QUESTIONS = 2;
 const LIVE_RESUME_EXPERIENCE_QUESTIONS = 2;
 
+const RESUME_PARAMETERS = {
+  career: ["claim-credibility", "specificity", "communication"],
+  ownership: [
+    "claim-credibility",
+    "personal-ownership",
+    "specificity",
+    "impact-learning",
+    "communication"
+  ],
+  decision: [
+    "claim-credibility",
+    "personal-ownership",
+    "decision-making",
+    "specificity",
+    "impact-learning",
+    "communication"
+  ],
+  behavioural: [
+    "personal-ownership",
+    "decision-making",
+    "specificity",
+    "impact-learning",
+    "communication"
+  ],
+  skill: ["claim-credibility", "decision-making", "specificity", "communication"],
+  code: [
+    "claim-credibility",
+    "personal-ownership",
+    "decision-making",
+    "specificity",
+    "communication"
+  ]
+} as const;
+
 /**
  * Turns the stored kit into the round's plan.
  *
@@ -41,43 +75,48 @@ export function buildResumePlan(
   const openingQuestions: PlannedQuestion[] = options.resume
     ? [
         conversationalQuestion(
-          "Before we get into your resume, give me a concise overview of your background and the work you are doing now.",
+          "Give me the two-minute version of your career so far: the choices you made, the work you own now, and why it prepares you for this role.",
           "Career narrative",
           "Learn the candidate's current scope and the thread they believe matters most.",
           ["a concise career story", "current responsibilities", "one relevant example"],
           "career",
           "about-you",
-          true
+          true,
+          RESUME_PARAMETERS.career
         ),
         conversationalQuestion(
           role
-            ? `At ${role.organization || "your current company"}, what were you personally responsible for as ${role.role || "part of the team"}, and what was the hardest problem you worked on?`
-            : "What kind of work have you been doing most recently, and what has been the hardest problem?",
+            ? `At ${role.organization || "your current company"}, what outcome were you personally accountable for as ${role.role || "part of the team"}, and which difficult decision best demonstrates your level?`
+            : "In your most recent work, what outcome were you personally accountable for, and which difficult decision best demonstrates your level?",
           role?.summary || "Current role",
           "Establish personal ownership, constraints, and impact in the candidate's recent work.",
           ["specific responsibility", "a difficult problem", "personal action or decision"],
           "current-role",
-          "about-you"
+          "about-you",
+          false,
+          RESUME_PARAMETERS.ownership
         ),
         conversationalQuestion(
           project
-            ? `Let's go deeper on ${project.name}. Walk me through the problem, the design you chose, a trade-off you made, and the result.`
-            : "Choose one project you are proud of. Walk me through the problem, your design, a difficult trade-off, and the result.",
+            ? `Let's examine ${project.name}. What constraint shaped the design, which alternative did you reject, what did you personally implement, and what evidence showed it worked?`
+            : "Choose your strongest project. What constraint shaped the design, which alternative did you reject, what did you personally implement, and what evidence showed it worked?",
           project?.summary || "Project deep dive",
           "Test project ownership, technical judgement, and measurable outcomes.",
           ["problem and constraints", "candidate's design decision", "trade-off", "outcome"],
           "project",
           "your-work",
-          true
+          true,
+          RESUME_PARAMETERS.decision
         ),
         conversationalQuestion(
-          "Tell me about a time a project did not go as planned. What happened, what did you do, and what changed afterward?",
+          "Tell me about a meaningful project setback or mistake. How did you diagnose your part in it, repair the impact, and change how you worked afterward?",
           "Behavioural evidence",
           "Collect evidence of ownership, judgement, and learning under pressure.",
           ["specific situation", "personal action", "result", "lesson learned"],
           "behavioral",
           "how-you-work",
-          true
+          true,
+          RESUME_PARAMETERS.behavioural
         )
       ]
     : [];
@@ -96,6 +135,8 @@ export function buildResumePlan(
     explanation: question.explanation || undefined,
     answerFormat: question.format,
     competency: question.competency,
+    evaluationParameterKeys:
+      question.format === "mcq" ? ["claim-credibility"] : [...RESUME_PARAMETERS.skill],
     intent: `Establish whether the candidate really uses ${question.skill || "this skill"} rather than listing it.`,
     mustHit: withMinimum(question.expects, [
       `concrete use of ${question.skill || "the skill"}`,
@@ -121,6 +162,7 @@ export function buildResumePlan(
           codeSnippet: kit.codingTask.starterCode,
           answerFormat: "typed",
           competency: "Practical engineering",
+          evaluationParameterKeys: [...RESUME_PARAMETERS.code],
           intent: "Test whether the candidate can write the code their resume claims they write.",
           mustHit: withMinimum(kit.codingTask.expects, [
             "a working implementation",
@@ -145,6 +187,7 @@ export function buildResumePlan(
     codeSnippet: "",
     answerFormat: "spoken",
     competency: question.competency,
+    evaluationParameterKeys: [...experienceParameterKeys(question.competency)],
     intent: "Collect concrete evidence of what the candidate personally did and what changed.",
     mustHit: withMinimum(question.expects, ["what they personally did", "why it mattered"]),
     maxFollowUps: 1,
@@ -172,7 +215,8 @@ function conversationalQuestion(
   mustHit: string[],
   stage: "career" | "current-role" | "project" | "behavioral",
   pacingSection: string,
-  requiredForPacing = false
+  requiredForPacing = false,
+  evaluationParameterKeys: readonly string[] = RESUME_PARAMETERS.decision
 ): PlannedQuestion {
   const competency = {
     career: "Career overview",
@@ -191,6 +235,7 @@ function conversationalQuestion(
     codeSnippet: "",
     answerFormat: "spoken",
     competency,
+    evaluationParameterKeys: [...evaluationParameterKeys],
     intent,
     mustHit,
     maxFollowUps: 1,
@@ -199,6 +244,15 @@ function conversationalQuestion(
     requiredForPacing,
     estimatedDurationMs: 2.5 * 60 * 1000
   };
+}
+
+function experienceParameterKeys(competency: string): readonly string[] {
+  const normalized = competency.toLowerCase();
+  if (/impact|outcome|result|learning/.test(normalized)) {
+    return ["claim-credibility", "specificity", "impact-learning", "communication"];
+  }
+  if (/owner|responsib|leadership/.test(normalized)) return RESUME_PARAMETERS.ownership;
+  return RESUME_PARAMETERS.decision;
 }
 
 /** The spoken opener, so the candidate knows how the round is laid out. */
@@ -232,16 +286,48 @@ export function gradeMultipleChoice(
 ): { correct: boolean; chosen: string | null } | null {
   if (question.kind !== "mcq" || !question.options?.length) return null;
 
-  const normalized = answer.trim().toLowerCase();
-  const chosenIndex = question.options.findIndex(
-    (option) => option.trim().toLowerCase() === normalized
+  const normalized = normalizeChoiceText(answer);
+  let chosenIndex = question.options.findIndex(
+    (option) => normalizeChoiceText(option) === normalized
   );
+  if (chosenIndex === -1) {
+    chosenIndex = spokenChoiceIndex(answer, question.options);
+  }
   if (chosenIndex === -1) return { correct: false, chosen: null };
 
   return {
     correct: chosenIndex === (question.answerIndex ?? 0),
     chosen: question.options[chosenIndex] ?? null
   };
+}
+
+function spokenChoiceIndex(answer: string, options: string[]): number {
+  const normalized = normalizeChoiceText(answer);
+  const letterOnly = normalized.match(/^([a-z])$/i);
+  const labelled = [
+    /^(?:option|answer)\s+([a-z])\b/i,
+    /^(?:i (?:choose|pick)|i(?:'ll| will) go with|my answer is|the answer is)\s+(?:option\s+)?([a-z])\b/i,
+    /^i (?:think|believe)(?: (?:it|the answer) is)?\s+(?:option\s+)?([a-z])\b/i
+  ]
+    .map((pattern) => normalized.match(pattern))
+    .find(Boolean);
+  const letter = letterOnly?.[1] ?? labelled?.[1];
+  if (letter) {
+    const index = letter.toLowerCase().charCodeAt(0) - 97;
+    if (index >= 0 && index < options.length) return index;
+  }
+
+  const contained = options
+    .map((option, index) => ({ option: normalizeChoiceText(option), index }))
+    .filter(({ option }) => option.length >= 4 && normalized.includes(option));
+  return contained.length === 1 ? contained[0]!.index : -1;
+}
+
+function normalizeChoiceText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9+#./-]+/g, " ")
+    .trim();
 }
 
 /** What Maya says after grading, in place of a decision call. */

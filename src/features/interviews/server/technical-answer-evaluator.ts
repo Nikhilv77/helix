@@ -62,20 +62,31 @@ const RESUME_SYSTEM_INSTRUCTION = `You are a thoughtful, fair interviewer review
 
 Judge only what the candidate actually said. Do not reward confidence, length, buzzwords, or numbers without context. Do not invent achievements or personal ownership. Use short, plain English that a candidate can understand. If the answer lacks enough detail, say so clearly instead of guessing.`;
 
+const RESUME_CODE_SYSTEM_INSTRUCTION = `You are a strict but fair senior engineer reviewing a resume-based coding exercise. Return only JSON matching the schema.
+
+Judge the submitted implementation against the task. Treat successful execution without tests only as evidence that the program compiled and ran, not that it is correct. Do not score conversational filler such as requests for more time. Use short, specific explanations grounded in the submitted code.`;
+
 export class TechnicalAnswerEvaluator {
   constructor(private readonly ai: Pick<AiService, "generateStructured">) {}
 
   async evaluate(input: TechnicalAnswerEvaluationInput): Promise<QuestionEvaluation> {
     const calls: AiCallTrace[] = [];
     const startedAt = Date.now();
+    const resumeCode = input.setup.resumeRound && input.question.kind === "code";
     const raw = await this.ai.generateStructured({
       operation: input.setup.resumeRound
         ? "interview.resume-answer.evaluate"
         : "interview.answer.evaluate",
-      systemInstruction: input.setup.resumeRound ? RESUME_SYSTEM_INSTRUCTION : SYSTEM_INSTRUCTION,
-      prompt: input.setup.resumeRound
-        ? buildResumeAnswerEvaluationPrompt(input)
-        : buildTechnicalEvaluationPrompt(input),
+      systemInstruction: resumeCode
+        ? RESUME_CODE_SYSTEM_INSTRUCTION
+        : input.setup.resumeRound
+          ? RESUME_SYSTEM_INSTRUCTION
+          : SYSTEM_INSTRUCTION,
+      prompt: resumeCode
+        ? buildResumeCodeEvaluationPrompt(input)
+        : input.setup.resumeRound
+          ? buildResumeAnswerEvaluationPrompt(input)
+          : buildTechnicalEvaluationPrompt(input),
       schema: evaluationSchema,
       modelClass: "fast",
       temperature: 0.1,
@@ -97,6 +108,50 @@ export class TechnicalAnswerEvaluator {
       }
     };
   }
+}
+
+export function buildResumeCodeEvaluationPrompt(input: TechnicalAnswerEvaluationInput): string {
+  const { setup, question } = input;
+  const profile = evaluationProfileForSetup(setup);
+  const targetedParameters = question.evaluationParameterKeys?.length
+    ? profile.parameters.filter((parameter) =>
+        question.evaluationParameterKeys?.includes(parameter.key)
+      )
+    : profile.parameters;
+  const submittedAnswers = submittedCodeAnswers(input.answers);
+
+  return `Evaluate this resume-based coding exercise fairly.
+
+Target role: ${setup.role}
+Candidate level: ${setup.level}
+Task: ${question.codeTask || question.text}
+Language: ${question.language || "not specified"}
+Starter code (do not mistake this for completed candidate work):
+${question.codeSnippet || "none"}
+
+Candidate's submitted code and explanation:
+${submittedAnswers.map((answer, index) => `Submission ${index + 1}:\n"""\n${answer.trim()}\n"""`).join("\n\n") || "No code submission was found."}
+
+Execution evidence:
+${formatExecutionEvidence(input.execution)}
+
+Score the overall implementation from 0 to 100:
+- 85-100: correct and complete for the task, with sound handling of important edge cases.
+- 70-84: mostly correct, with only minor omissions.
+- 45-69: useful partial implementation with a material correctness gap.
+- 0-44: incorrect, placeholder-only, non-working, or too incomplete to meet the task.
+- Successful execution with zero tests proves only that the submitted file ran.
+
+Interpret the round parameters specifically for this coding exercise:
+${formatEvaluationParameters(targetedParameters)}
+
+Return rubricScores with exactly these keys and no others: ${targetedParameters.map((parameter) => parameter.key).join(", ")}.
+Every score must be out of 100. Ground evidenceQuotes in the submitted code or explanation, never in the starter code or conversational filler.`;
+}
+
+function submittedCodeAnswers(answers: string[]): string[] {
+  const submissions = answers.filter((answer) => /```[\s\S]*```/.test(answer));
+  return submissions.length ? submissions : answers;
 }
 
 export function shouldEvaluateTechnicalAnswer(
@@ -124,6 +179,11 @@ export function normalizeTechnicalEvaluation(
   input: TechnicalAnswerEvaluationInput
 ): QuestionEvaluation {
   const profile = evaluationProfileForSetup(input.setup);
+  const targetedParameterKeys = new Set(
+    input.question.evaluationParameterKeys?.length
+      ? input.question.evaluationParameterKeys
+      : profile.parameters.map((parameter) => parameter.key)
+  );
   const semanticScore = verdictBoundedScore(Math.round(raw.score), raw.verdict);
   const score = executionBoundedScore(semanticScore, raw.verdict, input.execution);
   const verdict = boundedVerdict(raw.verdict, score);
@@ -146,19 +206,21 @@ export function normalizeTechnicalEvaluation(
     gaps: unique(raw.gaps)
       .slice(0, 3)
       .map((value) => truncate(value, 140)),
-    rubricScores: profile.parameters.map((parameter) => {
-      const item = rawRubricScores.get(parameter.key);
-      return {
-        rubricKey: parameter.key,
-        score: Math.round(item?.score ?? score),
-        rationale: truncate(
-          item?.rationale ??
-            `The provider did not separate this parameter from the overall answer.`,
-          180
-        ),
-        evidenceQuotes: groundedEvidenceQuotes(item?.evidenceQuotes ?? [], input.answers)
-      };
-    }),
+    rubricScores: profile.parameters
+      .filter((parameter) => targetedParameterKeys.has(parameter.key))
+      .map((parameter) => {
+        const item = rawRubricScores.get(parameter.key);
+        return {
+          rubricKey: parameter.key,
+          score: Math.round(item?.score ?? score),
+          rationale: truncate(
+            item?.rationale ??
+              `The provider did not separate this parameter from the overall answer.`,
+            180
+          ),
+          evidenceQuotes: groundedEvidenceQuotes(item?.evidenceQuotes ?? [], input.answers)
+        };
+      }),
     evidenceQuotes: groundedEvidenceQuotes(raw.evidenceQuotes ?? [], input.answers),
     answerExcerpts: input.answers
       .map((answer) => answer.replace(/\s+/g, " ").trim().slice(0, 240))
@@ -194,6 +256,11 @@ function truncate(value: string, limit: number): string {
 export function buildResumeAnswerEvaluationPrompt(input: TechnicalAnswerEvaluationInput): string {
   const { setup, question, answers } = input;
   const profile = evaluationProfileForSetup(setup);
+  const targetedParameters = question.evaluationParameterKeys?.length
+    ? profile.parameters.filter((parameter) =>
+        question.evaluationParameterKeys?.includes(parameter.key)
+      )
+    : profile.parameters;
 
   return `Review this resume or behavioural interview answer fairly.
 
@@ -210,18 +277,21 @@ ${question.mustHit.map((item) => `- ${item}`).join("\n")}
 Candidate's saved answer${answers.length > 1 ? "s" : ""}:
 ${answers.map((answer, index) => `Answer ${index + 1}:\n"""\n${answer.trim()}\n"""`).join("\n\n")}
 
-This ${profile.label} session uses these six judgement parameters. Score every one from 0 to 100 using only supported evidence:
-${formatEvaluationParameters(profile.parameters)}
+This question intentionally assesses only the following ${profile.label} parameters. Score each from 0 to 100 using only supported evidence:
+${formatEvaluationParameters(targetedParameters)}
 
 Scale requirement: every score is out of 100, never out of 5 or 10. For example, a six-out-of-ten assessment must be returned as 60, not 6.
 
 Overall score guide:
-- 85-100: clear, concrete, personal answer with strong evidence across the answer.
-- 70-84: good answer with one meaningful missing detail.
-- 45-69: some useful information, but important parts are vague or missing.
-- 0-44: too vague, generic, off-topic, or unsupported to assess.
+- 90-100: exceptional, independently credible evidence with precise ownership, judgement, and demonstrated impact.
+- 75-89: strong, concrete, personally owned evidence with only minor omissions.
+- 60-74: adequate and credible, but one meaningful part of the evidence chain is missing.
+- 40-59: developing evidence; important context, ownership, reasoning, or outcome is unclear.
+- 20-39: very weak evidence whose central claim remains unsupported.
+- 0-19: absent, refused, unrelated, or provides no assessable evidence.
 
-Return rubricScores with exactly these keys: ${profile.parameters.map((parameter) => parameter.key).join(", ")}.
+Return rubricScores with exactly these keys and no others: ${targetedParameters.map((parameter) => parameter.key).join(", ")}.
+Do not score parameters that this question does not target. Missing evidence for a targeted parameter is a genuine low score, not an omitted score.
 For every rubric score, include evidenceQuotes containing up to two short exact phrases from the candidate's answer that explain that specific score. A low score must cite the concerning phrase when one exists; when the problem is missing evidence, use an empty list and say exactly what was missing in the rationale.
 For the top-level evidenceQuotes, copy up to two short exact phrases that best support the overall judgement.
 Keep summary, strengths, gaps, and rationales short, specific, and human. Never say the candidate is good or bad as a person.`;
@@ -246,19 +316,7 @@ function resumeSectionName(stage: PlannedQuestion["stage"]): string {
 export function buildTechnicalEvaluationPrompt(input: TechnicalAnswerEvaluationInput): string {
   const { setup, question, answers, rubric, execution } = input;
   const profile = evaluationProfileForSetup(setup);
-  const executionEvidence = execution
-    ? [
-        `Status: ${execution.status}`,
-        `Execution accepted: ${execution.accepted ? "yes" : "no"}`,
-        execution.testCount
-          ? `Tests: ${execution.testsPassed}/${execution.testCount} passed`
-          : "Tests: none supplied; successful execution proves only that the program ran",
-        execution.compileOutput ? `Compiler output: ${execution.compileOutput}` : "",
-        execution.stderr ? `Runtime error output: ${execution.stderr}` : ""
-      ]
-        .filter(Boolean)
-        .join("\n")
-    : "No execution evidence was recorded. Judge code semantically and state uncertainty.";
+  const executionEvidence = formatExecutionEvidence(execution);
 
   const storyPracticeGuide =
     question.storyPracticeInterviewerGuide ?? question.coreTechnicalInterviewerGuide;
@@ -303,6 +361,22 @@ Scoring rules:
 
 Return one overall score plus rubricScores with exactly these keys: ${profile.parameters.map((parameter) => parameter.key).join(", ")}.
 Use up to two short evidenceQuotes copied exactly from the candidate's answer. The summary and gaps must identify concrete evidence, not writing style.`;
+}
+
+function formatExecutionEvidence(execution: CodeExecutionEvidence | null): string {
+  return execution
+    ? [
+        `Status: ${execution.status}`,
+        `Execution accepted: ${execution.accepted ? "yes" : "no"}`,
+        execution.testCount
+          ? `Tests: ${execution.testsPassed}/${execution.testCount} passed`
+          : "Tests: none supplied; successful execution proves only that the program ran",
+        execution.compileOutput ? `Compiler output: ${execution.compileOutput}` : "",
+        execution.stderr ? `Runtime error output: ${execution.stderr}` : ""
+      ]
+        .filter(Boolean)
+        .join("\n")
+    : "No execution evidence was recorded. Judge code semantically and state uncertainty.";
 }
 
 function formatEvaluationParameters(

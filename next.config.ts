@@ -12,6 +12,11 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // Keep this legacy route out of the React Server Component renderer.
+      // A page-level redirect can be aborted during rapid back/forward
+      // navigation, which triggers React's development-only negative
+      // performance timestamp bug.
+      { source: "/interview", destination: "/interviews", permanent: false },
       // Trailmate moved from /help. Notification rows persist their href, so
       // links already sent to users still point at the old path — this keeps
       // them working. `/help/:path*` cannot catch `/api/help/*`, which is

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 
-import { MAYA, personaById, type InterviewerPersona } from "./personas";
+import { MAYA, selectableTeacherById, type InterviewerPersona } from "./personas";
 
 const TeacherContext = createContext<InterviewerPersona>(MAYA);
 
@@ -14,7 +14,7 @@ export function WorkspaceTeacherProvider({
   teacherId: string | null;
   children: ReactNode;
 }) {
-  const teacher = useMemo(() => personaById(teacherId) ?? MAYA, [teacherId]);
+  const teacher = useMemo(() => selectableTeacherById(teacherId) ?? MAYA, [teacherId]);
   return <TeacherContext.Provider value={teacher}>{children}</TeacherContext.Provider>;
 }
 

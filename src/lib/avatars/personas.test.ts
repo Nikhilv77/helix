@@ -7,8 +7,10 @@ import {
   INTERVIEWERS,
   MAYA,
   ONBOARDING_PERSONAS,
+  SELECTABLE_TEACHERS,
   personaById,
   personaForSession,
+  selectableTeacherById,
   welcomePersonaFromQuery,
   type PersonaGender
 } from "./personas";
@@ -86,12 +88,19 @@ describe("interviewer personas", () => {
       "olivia",
       "ethan",
       "ryan",
-      "claire",
       "daniel",
-      "james",
       "sophia",
       "maya"
     ]);
+  });
+
+  it("keeps James and Claire available only as interviewers", () => {
+    expect(SELECTABLE_TEACHERS.map((persona) => persona.id)).not.toContain("james");
+    expect(SELECTABLE_TEACHERS.map((persona) => persona.id)).not.toContain("claire");
+    expect(selectableTeacherById("james")).toBeNull();
+    expect(selectableTeacherById("claire")).toBeNull();
+    expect(personaById("james")?.name).toBe("James");
+    expect(personaById("claire")?.name).toBe("Claire");
   });
 
   it("gives every persona a distinct voice", () => {

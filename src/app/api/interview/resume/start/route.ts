@@ -2,7 +2,10 @@ import type { NextRequest } from "next/server";
 import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
-import { attachInterviewOwnerCookie, resolveInterviewOwner } from "@/features/interviews/server/owner";
+import {
+  attachInterviewOwnerCookie,
+  resolveInterviewOwner
+} from "@/features/interviews/server/owner";
 import { buildResumePlan, resumeRoundContext } from "@/features/interviews/server/resume-round";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
@@ -21,7 +24,22 @@ export async function POST(request: NextRequest) {
     const owner = await resolveInterviewOwner(request, app.config);
     const { ownerId } = owner;
     const guard = getSharedGuard(app.config);
-    await guard.enforce(RATE_LIMIT_POLICIES.interviewCreation, ownerId);
+    const existing = await app.interviewService.findOwnedActiveByTemplate(
+      ownerId,
+      "resume-behavioral-defense"
+    );
+    if (existing) {
+      return attachInterviewOwnerCookie(
+        apiSuccess({
+          sessionId: existing.id,
+          questionCount: existing.plan.length,
+          utterance: existing.turns.at(-1)?.text ?? ""
+        }),
+        owner,
+        app.config
+      );
+    }
+
     const creationLease = await guard.acquire(
       {
         namespace: "interview-create",
@@ -33,6 +51,23 @@ export async function POST(request: NextRequest) {
     );
 
     try {
+      const activeAfterLease = await app.interviewService.findOwnedActiveByTemplate(
+        ownerId,
+        "resume-behavioral-defense"
+      );
+      if (activeAfterLease) {
+        return attachInterviewOwnerCookie(
+          apiSuccess({
+            sessionId: activeAfterLease.id,
+            questionCount: activeAfterLease.plan.length,
+            utterance: activeAfterLease.turns.at(-1)?.text ?? ""
+          }),
+          owner,
+          app.config
+        );
+      }
+
+      await guard.enforce(RATE_LIMIT_POLICIES.interviewCreation, ownerId);
       const profile = await app.profileService.get(ownerId);
       const resume = profile.resume;
 

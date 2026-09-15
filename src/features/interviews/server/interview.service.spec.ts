@@ -2,6 +2,7 @@ import { InterviewDecider } from "./decider";
 import { buildFundamentalsPlan } from "./fundamentals-round";
 import { InterviewPlanner } from "./planner";
 import {
+  candidateDeclinesQuestion,
   candidateNeedsInterviewBreak,
   candidateRequestsInterviewEnd,
   executionForEvaluation,
@@ -73,6 +74,29 @@ const mcqQuestion: PlannedQuestion = {
 };
 
 describe("InterviewService resume round", () => {
+  it("recognizes clear question refusals without swallowing substantive negative answers", () => {
+    expect(candidateDeclinesQuestion("No.")).toBe(true);
+    expect(candidateDeclinesQuestion("Pass, thanks.")).toBe(true);
+    expect(candidateDeclinesQuestion("I don't know.")).toBe(true);
+    expect(candidateDeclinesQuestion("I'm not comfortable sharing this.")).toBe(true);
+    expect(candidateDeclinesQuestion("I will not tell you.")).toBe(true);
+    expect(candidateDeclinesQuestion("I want answer. I will not tell you.")).toBe(true);
+    expect(candidateDeclinesQuestion("No, I don't want to answer this.")).toBe(true);
+    expect(candidateDeclinesQuestion("Well, I'd rather not discuss that.")).toBe(true);
+    expect(candidateDeclinesQuestion("No idea.")).toBe(true);
+    expect(candidateDeclinesQuestion("I have no idea.")).toBe(true);
+    expect(candidateDeclinesQuestion("I have absolutely no clue about that.")).toBe(true);
+    expect(candidateDeclinesQuestion("Nothing comes to mind.")).toBe(true);
+    expect(candidateDeclinesQuestion("I can't recall right now.")).toBe(true);
+
+    expect(candidateDeclinesQuestion("No, I did not add an index; I ran ANALYZE first.")).toBe(
+      false
+    );
+    expect(candidateDeclinesQuestion("I'm not sure, but I would inspect the query plan.")).toBe(
+      false
+    );
+  });
+
   it("recognizes explicit candidate withdrawal without confusing weak answers for an exit", () => {
     expect(candidateRequestsInterviewEnd("Can we end here?")).toBe(true);
     expect(candidateRequestsInterviewEnd("Let's stop here.")).toBe(true);
@@ -137,6 +161,109 @@ describe("InterviewService resume round", () => {
     expect(report.answerCount).toBe(0);
     expect(report.questionsCovered).toBe(0);
     expect(report.competencies[0]?.answered).toBe(false);
+  });
+
+  it("acknowledges a refusal, skips the question, and excludes it from scoring", async () => {
+    const { service, decide, evaluate } = harness(questions);
+    const started = await service.start(
+      { ...setup, roundType: "hiring-manager", resumeRound: true },
+      "user-1",
+      1_000,
+      questions
+    );
+
+    const result = await service.answer(
+      started.state.id,
+      { text: "I have no idea.", startMs: 500, endMs: 1_000 },
+      2_000
+    );
+    const report = await service.report("user-1", started.state.id, 3_000);
+
+    expect(decide).not.toHaveBeenCalled();
+    expect(evaluate).not.toHaveBeenCalled();
+    expect(result.state.phase).toBe("questioning");
+    expect(result.state.questionIndex).toBe(1);
+    expect(result.decision.utterance).toBe(
+      `Understood — we'll skip that one. ${questions[1]!.text}`
+    );
+    expect(result.state.turns.find((turn) => turn.text === "I have no idea.")).toMatchObject({
+      speaker: "user",
+      questionIndex: 0,
+      skipped: true,
+      assessmentExcluded: true
+    });
+    expect(report.answerCount).toBe(0);
+    expect(report.questionsCovered).toBe(0);
+    expect(report.competencies[0]?.answered).toBe(false);
+  });
+
+  it("uses Gemini's semantic intent for refusals that are not fixed phrases", async () => {
+    const { service, decide, evaluate } = harness(questions);
+    const started = await service.start(
+      { ...setup, roundType: "hiring-manager", resumeRound: true },
+      "user-1",
+      1_000,
+      questions
+    );
+    const candidateWords = "I'd prefer to keep that part of my background private, if that's okay.";
+
+    expect(candidateDeclinesQuestion(candidateWords)).toBe(false);
+    const result = await service.answer(
+      started.state.id,
+      { text: candidateWords, startMs: 500, endMs: 1_000 },
+      2_000,
+      undefined,
+      {
+        action: "move_on",
+        missing: "none",
+        candidateIntent: "decline",
+        acknowledgement: "",
+        line: "",
+        reason: "The candidate declined the current question."
+      }
+    );
+
+    expect(decide).not.toHaveBeenCalled();
+    expect(evaluate).not.toHaveBeenCalled();
+    expect(result.state.questionIndex).toBe(1);
+    expect(result.decision.utterance).toBe(
+      `Understood — we'll skip that one. ${questions[1]!.text}`
+    );
+  });
+
+  it("ends respectfully after three consecutive question refusals", async () => {
+    const plan = [
+      ...questions,
+      { ...questions[0]!, text: "What did you learn from that decision?" },
+      { ...questions[1]!, text: "What would you do differently now?" }
+    ];
+    const { service, decide, evaluate } = harness(plan);
+    const started = await service.start(
+      { ...setup, roundType: "hiring-manager", resumeRound: true },
+      "user-1",
+      1_000,
+      plan
+    );
+
+    await service.answer(started.state.id, { text: "No.", startMs: 500, endMs: 1_000 }, 2_000);
+    await service.answer(
+      started.state.id,
+      { text: "I prefer not to answer.", startMs: 1_500, endMs: 2_000 },
+      3_000
+    );
+    const result = await service.answer(
+      started.state.id,
+      { text: "I will not tell you.", startMs: 2_500, endMs: 3_000 },
+      4_000
+    );
+
+    expect(decide).not.toHaveBeenCalled();
+    expect(evaluate).not.toHaveBeenCalled();
+    expect(result.state.phase).toBe("done");
+    expect(result.decision.utterance).toBe(
+      "Understood. Since you'd prefer not to answer these questions, I'll end the interview here. Thank you for your time."
+    );
+    expect(result.decision.utterance).not.toContain(plan[3]!.text);
   });
 
   it("still ends immediately after an unambiguous stop command", async () => {
@@ -1357,7 +1484,7 @@ describe("InterviewService conversation", () => {
     expect(result.decision.utterance).toContain(
       "Can you walk me through the specific decision you made?"
     );
-    expect(result.decision.utterance).toContain("I hear that you worked on the sync layer.");
+    expect(result.decision.utterance.toLowerCase()).not.toContain("you worked on the sync layer");
     expect(result.decision.utterance.split("?")[0]).not.toBe(
       "Can you walk me through the specific decision you made"
     );
@@ -1423,10 +1550,7 @@ describe("InterviewService conversation", () => {
       execution: null,
       evaluatedAt: 3_000
     };
-    const { service, store, decide, evaluate } = harness(
-      [careerQuestion],
-      completedEvaluation
-    );
+    const { service, store, decide, evaluate } = harness([careerQuestion], completedEvaluation);
     const started = await service.start(
       { ...setup, roundType: "hiring-manager", resumeRound: true },
       "user-1",
@@ -1457,7 +1581,97 @@ describe("InterviewService conversation", () => {
     expect(result.decision.utterance).toBe(
       "React made the work feel tangible. What was the moment that turned that interest into a career choice?"
     );
-    expect(result.state.turns.at(-1)?.runtime?.promptVersion).toBe("gemini-live-conversation-v1");
+    expect(result.state.turns.at(-1)?.runtime?.promptVersion).toBe("gemini-live-conversation-v2");
+  });
+
+  it("lets Gemini challenge concerning conduct without adding validating filler", async () => {
+    const conflictQuestion = {
+      ...questions[0]!,
+      text: "Tell me about a disagreement with a teammate or manager.",
+      stage: "project" as const,
+      maxFollowUps: 2,
+      probeIfMissing: "What responsibility did you take for how the situation escalated?"
+    };
+    const { service, decide } = harness([conflictQuestion, questions[1]!]);
+    const started = await service.start(
+      { ...setup, roundType: "hiring-manager", resumeRound: true },
+      "user-1",
+      1_000,
+      [conflictQuestion, questions[1]!]
+    );
+
+    const result = await service.answer(
+      started.state.id,
+      {
+        text: "The disagreement escalated and I punched him.",
+        startMs: 500,
+        endMs: 2_000
+      },
+      3_000,
+      undefined,
+      {
+        action: "challenge",
+        missing: "outcome",
+        candidateIntent: "answer",
+        reason: "the answer describes violence without accountability or repair",
+        acknowledgement: "Thank you for sharing that specific example.",
+        line: "What responsibility did you take, and what would you do differently now?"
+      }
+    );
+
+    expect(decide).not.toHaveBeenCalled();
+    expect(result.decision.action).toBe("challenge");
+    expect(result.state.questionIndex).toBe(0);
+    expect(result.state.followUpCount).toBe(1);
+    expect(result.decision.utterance).toBe(
+      "What responsibility did you take, and what would you do differently now?"
+    );
+    expect(result.decision.utterance).not.toContain("Thank you");
+  });
+
+  it("uses Gemini Live's resume decision without a second decider model call", async () => {
+    const resumeQuestion = {
+      ...questions[0]!,
+      text: "What outcome did you personally own at NovaCart?",
+      stage: "current-role" as const,
+      maxFollowUps: 1,
+      evaluationParameterKeys: ["personal-ownership", "impact-learning"]
+    };
+    const { service, decide, evaluate } = harness([resumeQuestion]);
+    const started = await service.start(
+      {
+        ...setup,
+        roundType: "behavioral",
+        resumeRound: true,
+        templateId: "resume-behavioral-defense"
+      },
+      "user-1",
+      1_000,
+      [resumeQuestion]
+    );
+
+    const result = await service.answer(
+      started.state.id,
+      {
+        text: "I owned checkout reliability and reduced failed payments by 20 percent.",
+        startMs: 500,
+        endMs: 2_000
+      },
+      3_000,
+      undefined,
+      {
+        action: "move_on",
+        missing: "none",
+        reason: "the answer contains ownership and impact",
+        acknowledgement: "You owned checkout reliability and tied it to failed payments",
+        line: ""
+      }
+    );
+
+    expect(decide).not.toHaveBeenCalled();
+    expect(evaluate).not.toHaveBeenCalled();
+    expect(result.state.phase).toBe("done");
+    expect(result.state.turns.at(-1)?.runtime?.promptVersion).toBe("gemini-live-conversation-v2");
   });
 
   it("replaces Gemini provider disclosure with James's recruiting identity", async () => {

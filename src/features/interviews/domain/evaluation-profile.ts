@@ -14,6 +14,7 @@ export interface EvaluationParameterDefinition {
   label: string;
   description: string;
   nextStep: string;
+  weightPercent?: number;
 }
 
 export interface InterviewEvaluationProfile {
@@ -152,37 +153,43 @@ const profiles: Record<InterviewReportFamily, InterviewEvaluationProfile> = {
         "claim-credibility",
         "Claim credibility",
         "Supports resume claims with verifiable context and detail.",
-        "Anchor the claim in a specific project, constraint, and result."
+        "Anchor the claim in a specific project, constraint, and result.",
+        20
       ),
       parameter(
         "personal-ownership",
         "Personal ownership",
         "Makes the candidate's own responsibility and contribution explicit.",
-        "Separate what you personally did from what the team did."
+        "Separate what you personally did from what the team did.",
+        20
       ),
       parameter(
         "decision-making",
         "Decision-making",
         "Explains choices, alternatives, and trade-offs from real work.",
-        "Name the decision, why you made it, and the alternative you rejected."
+        "Name the decision, why you made it, and the alternative you rejected.",
+        15
       ),
       parameter(
         "specificity",
         "Specificity",
         "Uses concrete implementation, situation, and action details.",
-        "Replace broad claims with one precise example."
+        "Replace broad claims with one precise example.",
+        15
       ),
       parameter(
         "impact-learning",
         "Impact & learning",
         "Shows what changed and what the candidate learned afterward.",
-        "Close with a measured result or a durable change in behavior."
+        "Close with a measured result or a durable change in behavior.",
+        20
       ),
       parameter(
         "communication",
         "Communication",
         "Presents resume evidence clearly without unnecessary detail.",
-        "Lead with the claim, then give evidence and the result."
+        "Lead with the claim, then give evidence and the result.",
+        10
       )
     ]
   )
@@ -249,7 +256,8 @@ function parameter(
   key: string,
   label: string,
   description: string,
-  nextStep: string
+  nextStep: string,
+  weightPercent?: number
 ): EvaluationParameterDefinition {
-  return { key, label, description, nextStep };
+  return { key, label, description, nextStep, weightPercent };
 }

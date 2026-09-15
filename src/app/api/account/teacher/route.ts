@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 
-import { personaById } from "@/lib/avatars/personas";
+import { selectableTeacherById } from "@/lib/avatars/personas";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { ApiRouteError } from "@/server/http/api-error";
@@ -15,7 +15,7 @@ const teacherSchema = z.object({
     .string()
     .trim()
     .max(60)
-    .refine((value) => personaById(value) !== null, "Teacher is unavailable")
+    .refine((value) => selectableTeacherById(value) !== null, "Teacher is unavailable")
 });
 
 export async function PUT(request: NextRequest) {

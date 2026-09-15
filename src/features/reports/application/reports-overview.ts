@@ -123,17 +123,13 @@ function buildFamilies(scored: InterviewReport[]): ReportFamilySummary[] {
         evaluatedRounds: values.filter((value) => value.evaluated).length
       };
     });
-    const familyParameterScores = parameters.flatMap((parameter) =>
-      parameter.averageScore === null ? [] : [parameter.averageScore]
-    );
-
     return {
       family: profile.family,
       label: profile.label,
       shortLabel: profile.shortLabel,
       rounds: reports.length,
       completedRounds: reports.filter((report) => report.status === "completed").length,
-      averageScore: familyParameterScores.length ? Math.round(mean(familyParameterScores)) : null,
+      averageScore: reports.length ? Math.round(mean(reports.map(roundParameterScore))) : null,
       latestScore: latest ? roundParameterScore(latest) : null,
       latestSessionId: latest?.sessionId ?? null,
       latestStartedAt: latest?.startedAt ?? null,
@@ -149,8 +145,9 @@ export function parameterScoresForReport(report: InterviewReport) {
     ...parameter,
     ...reportParameterScore(report, parameter)
   }));
-  const isConversationFamily =
-    profile.family === "hr-behavioral" || profile.family === "resume-behavioral";
+  // Compact-scale compatibility is HR-only legacy behavior. New Resume
+  // evaluations have a versioned, explicit 0-100 contract.
+  const isConversationFamily = profile.family === "hr-behavioral";
   const usesCompactScale =
     isConversationFamily &&
     parameters.some((parameter) => parameter.score > 0) &&
@@ -164,8 +161,17 @@ export function parameterScoresForReport(report: InterviewReport) {
 
 /** Headline score on the same 0–100 scale as the six visible parameters. */
 export function roundParameterScore(report: InterviewReport): number {
-  const scores = parameterScoresForReport(report).map((parameter) => parameter.score);
-  return scores.length ? Math.round(mean(scores)) : 0;
+  const parameters = parameterScoresForReport(report);
+  const directlyEvaluated = parameters.filter((parameter) => parameter.evaluated);
+  const isTargetedResumeEvaluation =
+    evaluationProfileForSetup(report.setup).family === "resume-behavioral" &&
+    directlyEvaluated.length > 0;
+  const scored = isTargetedResumeEvaluation ? directlyEvaluated : parameters;
+  const totalWeight = sum(scored, (parameter) => parameter.weightPercent ?? 1);
+  if (!scored.length || totalWeight <= 0) return 0;
+  return Math.round(
+    sum(scored, (parameter) => parameter.score * (parameter.weightPercent ?? 1)) / totalWeight
+  );
 }
 
 function reportParameterScore(
@@ -173,7 +179,14 @@ function reportParameterScore(
   parameter: EvaluationParameterDefinition
 ): { score: number; evaluated: boolean } {
   const answered = report.competencies.filter((item) => item.answered);
-  const direct = answered.flatMap((item) => {
+  // An unavailable evaluation stores zero-valued placeholder rubrics so a
+  // recovery job can replace them later. They are not a judgement and must
+  // never lower the candidate's report score while recovery is pending or has
+  // failed. Legacy heuristic evidence remains available as the fallback.
+  const evaluatedAnswers = answered.filter(
+    (item) => item.technicalEvaluation?.source !== "evaluation-unavailable"
+  );
+  const direct = evaluatedAnswers.flatMap((item) => {
     const rubricScores = item.technicalEvaluation?.rubricScores ?? [];
     return rubricScores
       .filter((score) => score.rubricKey === parameter.key)
@@ -181,7 +194,7 @@ function reportParameterScore(
   });
   if (direct.length) return { score: Math.round(mean(direct)), evaluated: true };
 
-  const keywordMatches = answered.filter((item) =>
+  const keywordMatches = evaluatedAnswers.filter((item) =>
     parameterKeywords(parameter.key).some((keyword) => item.label.toLowerCase().includes(keyword))
   );
   if (keywordMatches.length) {
@@ -191,8 +204,8 @@ function reportParameterScore(
     };
   }
 
-  const fallback = answered.length
-    ? mean(answered.map((item) => fallbackParameterValue(item, parameter.key)))
+  const fallback = evaluatedAnswers.length
+    ? mean(evaluatedAnswers.map((item) => fallbackParameterValue(item, parameter.key)))
     : report.summary.evidenceScore;
   return { score: Math.round(fallback), evaluated: false };
 }

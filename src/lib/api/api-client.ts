@@ -105,6 +105,7 @@ export function submitAnswer(params: {
   liveProposal?: {
     action: "clarify" | "probe" | "challenge" | "respond" | "move_on";
     missing: "clarity" | "structure" | "specificity" | "ownership" | "outcome" | "none";
+    candidateIntent?: "answer" | "decline" | "end" | "question-or-clarification" | "other";
     reason: string;
     acknowledgement: string;
     line: string;

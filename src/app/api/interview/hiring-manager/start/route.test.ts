@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   acquire: vi.fn(),
   release: vi.fn(),
   getProfile: vi.fn(),
+  findActive: vi.fn(),
   start: vi.fn()
 }));
 
@@ -22,7 +23,7 @@ vi.mock("@/server/app-container", () => ({
   getAppContainer: () => ({
     config: {},
     profileService: { get: mocks.getProfile },
-    interviewService: { start: mocks.start }
+    interviewService: { start: mocks.start, findOwnedActiveByTemplate: mocks.findActive }
   })
 }));
 
@@ -33,6 +34,7 @@ describe("POST /api/interview/hiring-manager/start", () => {
     vi.clearAllMocks();
     mocks.resolveOwner.mockResolvedValue({ ownerId: "user:test" });
     mocks.acquire.mockResolvedValue({ release: mocks.release });
+    mocks.findActive.mockResolvedValue(null);
     mocks.getProfile.mockResolvedValue({
       targetRole: "backend",
       level: "3-5",
@@ -73,5 +75,29 @@ describe("POST /api/interview/hiring-manager/start", () => {
       data: { questionCount: 8 }
     });
     expect(mocks.release).toHaveBeenCalledOnce();
+  });
+
+  it("returns the unfinished final interview instead of starting it again", async () => {
+    mocks.findActive.mockResolvedValue({
+      id: "22222222-2222-4222-8222-222222222222",
+      plan: [{ text: "Current question" }, { text: "Next question" }],
+      turns: [{ speaker: "agent", text: "Current question" }]
+    });
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/interview/hiring-manager/start", { method: "POST" })
+    );
+
+    await expect(response.json()).resolves.toMatchObject({
+      data: {
+        sessionId: "22222222-2222-4222-8222-222222222222",
+        questionCount: 2
+      }
+    });
+    expect(mocks.enforce).not.toHaveBeenCalled();
+    expect(mocks.getProfile).not.toHaveBeenCalled();
+    expect(mocks.start).not.toHaveBeenCalled();
+    expect(mocks.acquire).not.toHaveBeenCalled();
+    expect(mocks.release).not.toHaveBeenCalled();
   });
 });
