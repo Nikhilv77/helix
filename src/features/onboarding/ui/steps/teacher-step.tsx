@@ -4,7 +4,11 @@ import dynamic from "next/dynamic";
 import { ChevronLeft, ChevronRight, Loader2, Volume2, VolumeX } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 
-import { ONBOARDING_PERSONAS, type InterviewerPersona } from "@/lib/avatars/personas";
+import {
+  DEFAULT_TEACHER_SELECTION_ID,
+  ONBOARDING_PERSONAS,
+  type InterviewerPersona
+} from "@/lib/avatars/personas";
 import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
 import { PRIMARY_BUTTON } from "../flow/onboarding-data";
 
@@ -22,7 +26,7 @@ const AvatarStage = dynamic(
 
 const headingWords = ["Who", "should", "teach", "you?"];
 
-export const DEFAULT_TEACHER_ID = "pooja";
+export const DEFAULT_TEACHER_ID = DEFAULT_TEACHER_SELECTION_ID;
 const FRAMING = "default" as const;
 
 /** Only the centre stage plus its two neighbours are ever mounted. */

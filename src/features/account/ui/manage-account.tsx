@@ -22,6 +22,7 @@ import { createPortal } from "react-dom";
 import { ProfileAvatar } from "@/features/profile/ui/profile-avatar";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import {
+  DEFAULT_TEACHER_SELECTION_ID,
   MAYA,
   SELECTABLE_TEACHERS,
   selectableTeacherById,
@@ -319,7 +320,7 @@ function ManageTeacherPicker({
   const initialTeacher = selectableTeacherById(initialTeacherId) ?? MAYA;
   const [index, setIndex] = useState(() => {
     const initialIndex = SELECTABLE_TEACHERS.findIndex(
-      (persona) => persona.id === initialTeacher.id
+      (persona) => persona.id === DEFAULT_TEACHER_SELECTION_ID
     );
     return initialIndex < 0 ? 0 : initialIndex;
   });

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ALL_PERSONAS,
+  DEFAULT_TEACHER_SELECTION_ID,
   INTERVIEWERS,
   MAYA,
   ONBOARDING_PERSONAS,
@@ -90,15 +91,26 @@ describe("interviewer personas", () => {
 
   it("keeps the intended onboarding carousel order", () => {
     expect(ONBOARDING_PERSONAS.map((persona) => persona.id)).toEqual([
-      "alex",
-      "pooja",
-      "olivia",
-      "ethan",
       "ryan",
-      "daniel",
       "sophia",
-      "maya"
+      "maya",
+      "olivia",
+      "daniel",
+      "ethan",
+      "pooja",
+      "alex"
     ]);
+    expect(SELECTABLE_TEACHERS).toEqual(ONBOARDING_PERSONAS);
+
+    const centre = ONBOARDING_PERSONAS.findIndex(
+      (persona) => persona.id === DEFAULT_TEACHER_SELECTION_ID
+    );
+    expect(ONBOARDING_PERSONAS[centre]?.id).toBe("sophia");
+    expect(
+      ONBOARDING_PERSONAS[(centre - 1 + ONBOARDING_PERSONAS.length) % ONBOARDING_PERSONAS.length]
+        ?.id
+    ).toBe("ryan");
+    expect(ONBOARDING_PERSONAS[(centre + 1) % ONBOARDING_PERSONAS.length]?.id).toBe("maya");
   });
 
   it("keeps James and Claire available only as interviewers", () => {
@@ -110,9 +122,19 @@ describe("interviewer personas", () => {
     expect(personaById("claire")?.name).toBe("Claire");
   });
 
-  it("gives every persona a distinct voice", () => {
-    const voices = ALL_PERSONAS.map((persona) => persona.voice);
-    expect(new Set(voices).size).toBe(voices.length);
+  it("only shares a voice for the intentionally separated Pooja and Olivia pair", () => {
+    const personasByVoice = new Map<string, string[]>();
+    for (const persona of ALL_PERSONAS) {
+      const ids = personasByVoice.get(persona.voice) ?? [];
+      ids.push(persona.id);
+      personasByVoice.set(persona.voice, ids);
+    }
+
+    const sharedVoices = [...personasByVoice.entries()]
+      .filter(([, ids]) => ids.length > 1)
+      .map(([voice, ids]) => ({ voice, ids: ids.sort() }));
+
+    expect(sharedVoices).toEqual([{ voice: "aura-luna-en", ids: ["olivia", "pooja"] }]);
   });
 
   it.each(ALL_PERSONAS)("$name ships a model the rig can drive", (persona) => {

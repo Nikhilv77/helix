@@ -147,7 +147,8 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     portrait: "/images/teacher-portraits/olivia.jpg",
     gender: "feminine",
     voice: "aura-luna-en",
-    manner: "Friendly and naturally engaging. Keeps practice conversational without losing the point.",
+    manner:
+      "Friendly and naturally engaging. Keeps practice conversational without losing the point.",
     tagline: "Friendly, natural, keeps you engaged",
     bio: "I like practice to feel like a real conversation, not a lecture. We'll stay curious, keep the energy easy, and still get to the useful detail.",
     greeting: "Hey, I'm Olivia. Let's make this feel like a real conversation.",
@@ -184,7 +185,7 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     model: "/avatars/pooja.glb",
     portrait: "/images/teacher-portraits/pooja.jpg",
     gender: "feminine",
-    voice: "aura-hera-en",
+    voice: "aura-luna-en",
     manner: "Warm and professional. Gives polished guidance without making it feel formal.",
     tagline: "Warm, polished, quietly reassuring",
     bio: "I bring a warm, professional rhythm to practice. We'll work carefully, communicate clearly, and turn rough answers into polished ones.",
@@ -225,7 +226,8 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     portrait: "/images/teacher-portraits/sophia.jpg",
     gender: "feminine",
     voice: "aura-stella-en",
-    manner: "Clear and professional. Keeps you engaged while turning vague ideas into precise ones.",
+    manner:
+      "Clear and professional. Keeps you engaged while turning vague ideas into precise ones.",
     tagline: "Clear, professional, keeps you sharp",
     bio: "I keep the conversation focused and engaging. Bring me the rough version of an idea and we'll sharpen it until it is precise and convincing.",
     greeting: "Hi, I'm Sophia. Let's sharpen the idea until it holds up.",
@@ -285,29 +287,31 @@ export const ALL_PERSONAS: InterviewerPersona[] = [MAYA, ...INTERVIEWERS];
  * intentionally interview-only: James owns the general interview room, while
  * Claire owns DSA and Core Technical assessments.
  */
-export const SELECTABLE_TEACHERS: InterviewerPersona[] = ALL_PERSONAS.filter(
-  (persona) => persona.id !== "james" && persona.id !== "claire"
-);
+export const DEFAULT_TEACHER_SELECTION_ID = "sophia";
+
+const TEACHER_SELECTION_ORDER = [
+  "ryan",
+  "sophia",
+  "maya",
+  "olivia",
+  "daniel",
+  "ethan",
+  "pooja",
+  "alex"
+] as const;
 
 /**
- * Presentation order for the onboarding carousel. This is intentionally kept
- * separate from `INTERVIEWERS`, whose order participates in the deterministic
- * session fallback for older interview records.
+ * Shared presentation order for every teacher picker. `INTERVIEWERS` keeps its
+ * stable fallback order for historical interview records; selection surfaces
+ * instead use the same intentional presentation order in onboarding and Settings.
  */
-export const ONBOARDING_PERSONAS: InterviewerPersona[] = [
-  "alex",
-  "pooja",
-  "olivia",
-  "ethan",
-  "ryan",
-  "daniel",
-  "sophia",
-  "maya"
-].map((id) => {
-  const persona = SELECTABLE_TEACHERS.find((candidate) => candidate.id === id);
-  if (!persona) throw new Error(`Unknown onboarding persona: ${id}`);
+export const SELECTABLE_TEACHERS: InterviewerPersona[] = TEACHER_SELECTION_ORDER.map((id) => {
+  const persona = ALL_PERSONAS.find((candidate) => candidate.id === id);
+  if (!persona) throw new Error(`Unknown selectable teacher: ${id}`);
   return persona;
 });
+
+export const ONBOARDING_PERSONAS: InterviewerPersona[] = SELECTABLE_TEACHERS;
 
 export function personaById(id: string | null | undefined): InterviewerPersona | null {
   if (!id) return null;
