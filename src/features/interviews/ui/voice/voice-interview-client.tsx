@@ -73,6 +73,7 @@ import { interviewerPersonaIdForSetup } from "@/features/interviews/domain/inter
 import { isDsaDesignRound } from "@/features/interviews/domain/dsa-design-round";
 import { isTechnicalProjectsRound } from "@/features/interviews/domain/technical-deep-dive";
 import { TechnicalProjectsLiveWorkspace } from "./components/technical-projects-live-workspace";
+import { notifyWorkspaceNotificationsChanged } from "@/features/notifications/ui/notification-ui-events";
 
 const DEFAULT_HARD_CAP_MS = 15 * 60 * 1000;
 /**
@@ -197,6 +198,7 @@ export function VoiceInterviewClient({
 
   const stopPollingRef = useRef(false);
   const sessionCompleteRef = useRef(false);
+  const reportNotificationRef = useRef(false);
   const liveTurnPendingRef = useRef(false);
   const sessionCheckedRef = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -674,6 +676,10 @@ export function VoiceInterviewClient({
         followUps: session.followUpCount
       });
       if (session.phase === "done") {
+        if (!reportNotificationRef.current) {
+          reportNotificationRef.current = true;
+          notifyWorkspaceNotificationsChanged();
+        }
         sessionCompleteRef.current = true;
         stopPollingRef.current = true;
         setError(null);
@@ -1107,7 +1113,11 @@ export function VoiceInterviewClient({
     sessionCompleteRef.current = true;
     setError(null);
     setStatus("ended");
-    await endInterview(sessionId).catch(() => null);
+    const ended = await endInterview(sessionId).catch(() => null);
+    if (ended?.phase === "done" && !reportNotificationRef.current) {
+      reportNotificationRef.current = true;
+      notifyWorkspaceNotificationsChanged();
+    }
   }, [router, sessionId, setup?.dsaBlockAssessment?.blockId, storyPracticeAssessment]);
 
   useEffect(() => {

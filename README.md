@@ -17,20 +17,31 @@ the browser; LiveKit is used only for human peer-help calls.
 
 ```bash
 pnpm install
-cp .env.example .env
+cp .env.example .env.local # only on a fresh checkout; otherwise edit .env.local
+pnpm db:verify:dev
 pnpm prisma generate
-pnpm prisma migrate deploy
+pnpm db:init:dev
 pnpm dev
 ```
+
+`.env.local` must contain the `DATABASE_URL` for a separate development database. Local startup and
+database-writing scripts fail closed when it is missing or matches `.env` or the locally pulled
+Vercel production environment. Next.js and Prisma both prefer this file; explicit process variables
+still take precedence for CI and Vercel. Runtime queries use `DATABASE_URL`; Prisma CLI commands
+prefer `DIRECT_URL` when supplied. Existing production environments without `DIRECT_URL` retain
+their current `DATABASE_URL` behavior.
 
 The app runs at [http://localhost:3001](http://localhost:3001).
 
 ## Required environment
 
-The root `.env` needs:
+`DATABASE_URL` and `DIRECT_URL` must be in `.env.local` for the safest Neon setup. Use the pooled
+development URL for `DATABASE_URL` and the matching non-pooled URL for `DIRECT_URL`. The remaining
+required variables may also be placed there; Next.js falls back to `.env` for keys not overridden:
 
 ```text
 DATABASE_URL
+DIRECT_URL
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 CLERK_SECRET_KEY
 GEMINI_API_KEY
@@ -80,8 +91,11 @@ Vercel's Git `patchBuild` step incorrectly rejects this project after a successf
 database migrations when a release includes schema changes:
 
 ```bash
-pnpm prisma migrate deploy
+npx --yes vercel@59.14.0 env run -e production -- pnpm exec prisma migrate deploy
 ```
+
+That command injects the Vercel Production environment explicitly. Do not use `.env.local` for a
+production migration.
 
 ## Verification
 

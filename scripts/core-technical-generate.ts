@@ -1,4 +1,4 @@
-import "dotenv/config";
+import { config as loadEnvFile } from "dotenv";
 
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -11,6 +11,9 @@ import {
 } from "../src/features/practice/core-technical/domain/review-artifact-contracts";
 import { NODEJS_CORE_TECHNICAL_PRACTICE_PATH_BLUEPRINTS } from "../src/features/practice/core-technical/domain/practice-path-blueprints";
 import { getAppContainer } from "../src/server/app-container";
+
+loadEnvFile({ path: ".env.local" });
+loadEnvFile();
 
 const REVIEW_ARTIFACT_DIRECTORY = path.resolve(
   process.cwd(),

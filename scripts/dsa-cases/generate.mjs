@@ -215,7 +215,7 @@ for (const [slug, reference] of Object.entries(REFERENCES)) {
  * example into a hidden case.
  */
 function writeCases(slug, existing, generated) {
-  const dir = "src/data/dsa";
+  const dir = "src/features/practice/dsa/content";
   for (const file of readdirSync(dir).filter((name) => name.startsWith("test-cases-batch"))) {
     const path = join(dir, file);
     const source = readFileSync(path, "utf8");

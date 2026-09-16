@@ -10,6 +10,8 @@ import {
 import { SESSION_TTL_MS } from "./session-constants";
 import type { InterviewAnswerResponse, InterviewState } from "./types";
 import type { EvaluationRecoveryMutation } from "./evaluation-recovery";
+import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
+import { NotificationKind } from "@/features/notifications/server/notification.service";
 
 const ANSWER_LEASE_MS = 20_000;
 const ANSWER_PROCESSING = "PROCESSING";
@@ -500,23 +502,23 @@ export class PrismaSessionStore implements SessionStore {
     evaluationRecovery?: EvaluationRecoveryMutation
   ): Promise<number> {
     const touchedAt = new Date();
+    const reportSnapshot = createInterviewReportSnapshot(
+      { state, touchedAt: touchedAt.getTime() },
+      touchedAt.getTime()
+    );
     await this.prisma.$transaction(async (transaction) => {
       const result = await transaction.interviewSession.updateMany({
         where: { id: state.id, version: expectedVersion },
         data: {
           state: toJson(state),
-          reportSnapshot: toJsonValue(
-            createInterviewReportSnapshot(
-              { state, touchedAt: touchedAt.getTime() },
-              touchedAt.getTime()
-            )
-          ),
+          reportSnapshot: toJsonValue(reportSnapshot),
           touchedAt,
           version: { increment: 1 }
         }
       });
       if (result.count !== 1) throw new SessionVersionConflictError(state.id);
       await applyEvaluationRecoveryMutation(transaction, state.id, evaluationRecovery);
+      await recordInterviewReportNotification(transaction, state, reportSnapshot);
     });
     return expectedVersion + 1;
   }
@@ -581,17 +583,16 @@ export class PrismaSessionStore implements SessionStore {
     evaluationRecovery?: EvaluationRecoveryMutation
   ): Promise<number> {
     const touchedAt = new Date();
+    const reportSnapshot = createInterviewReportSnapshot(
+      { state, touchedAt: touchedAt.getTime() },
+      touchedAt.getTime()
+    );
     await this.prisma.$transaction(async (transaction) => {
       const updated = await transaction.interviewSession.updateMany({
         where: { id: state.id, version: expectedVersion },
         data: {
           state: toJson(state),
-          reportSnapshot: toJsonValue(
-            createInterviewReportSnapshot(
-              { state, touchedAt: touchedAt.getTime() },
-              touchedAt.getTime()
-            )
-          ),
+          reportSnapshot: toJsonValue(reportSnapshot),
           touchedAt,
           version: { increment: 1 }
         }
@@ -608,6 +609,7 @@ export class PrismaSessionStore implements SessionStore {
       });
       if (completed.count !== 1) throw new Error("Interview answer request is not processing");
       await applyEvaluationRecoveryMutation(transaction, state.id, evaluationRecovery);
+      await recordInterviewReportNotification(transaction, state, reportSnapshot);
     });
     return expectedVersion + 1;
   }
@@ -639,6 +641,61 @@ export class PrismaSessionStore implements SessionStore {
       data: { status, leaseUntil: new Date() }
     });
   }
+}
+
+async function recordInterviewReportNotification(
+  transaction: Prisma.TransactionClient,
+  state: InterviewState,
+  snapshot: InterviewReportSnapshot
+): Promise<void> {
+  if (state.phase !== "done") return;
+
+  const session = await transaction.interviewSession.findUnique({
+    where: { id: state.id },
+    select: { ownerId: true }
+  });
+  if (!session?.ownerId.startsWith("user:")) return;
+
+  // Notification rows belong to candidate profiles. An authenticated session
+  // can briefly outlive a deleted/incomplete profile, so absence is a normal
+  // no-delivery outcome rather than a reason to roll back the interview.
+  const recipient = await transaction.candidateProfile.findUnique({
+    where: { ownerId: session.ownerId },
+    select: { ownerId: true }
+  });
+  if (!recipient) return;
+
+  const copy = interviewReportNotificationCopy(state, snapshot);
+  await transaction.notification.createMany({
+    data: {
+      ownerId: recipient.ownerId,
+      kind: NotificationKind.INTERVIEW_REPORT_READY,
+      title: copy.title,
+      body: copy.body,
+      href: "/reports",
+      subjectId: state.id
+    },
+    skipDuplicates: true
+  });
+}
+
+export function interviewReportNotificationCopy(
+  state: InterviewState,
+  snapshot: InterviewReportSnapshot
+): { title: string; body: string } {
+  const profile = evaluationProfileForSetup(state.setup);
+  const title = `${profile.label} report is ready`;
+  if (snapshot.report.answerCount === 0) {
+    return {
+      title,
+      body: "Your session summary is ready. Open it to review the interview and choose your next step."
+    };
+  }
+
+  return {
+    title,
+    body: `Your evidence score is ${snapshot.report.summary.evidenceScore}/100. See what landed, what needs work, and your next step.`
+  };
 }
 
 async function applyEvaluationRecoveryMutation(

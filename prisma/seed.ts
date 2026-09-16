@@ -1,4 +1,4 @@
-import "dotenv/config";
+import { config as loadEnvFile } from "dotenv";
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -17,6 +17,9 @@ import {
   PREP_SESSIONS,
   type PlanQuestion
 } from "../src/lib/roadmap/frontend-plan";
+
+loadEnvFile({ path: ".env.local" });
+loadEnvFile();
 
 const prisma = new PrismaClient();
 
@@ -301,7 +304,7 @@ interface DsaPhaseSeed {
 }
 
 async function seedDsaQuestionBank(): Promise<void> {
-  const dsaDir = join(process.cwd(), "src/data/dsa");
+  const dsaDir = join(process.cwd(), "src/features/practice/dsa/content");
   const phases = readdirSync(dsaDir)
     .filter((file) => file.endsWith(".json"))
     .sort()

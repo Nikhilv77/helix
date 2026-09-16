@@ -1,4 +1,4 @@
-import "dotenv/config";
+import { config as loadEnvFile } from "dotenv";
 
 import { auditAppliedEngineeringContent } from "../src/features/practice/applied-engineering/domain/content-release-audit";
 import { NODEJS_APPLIED_ENGINEERING_INCIDENT_RANKING_CATALOGUE } from "../src/features/practice/applied-engineering/domain/incident-ranking-catalogue";
@@ -6,6 +6,9 @@ import { appliedEngineeringReviewArtifactSchema } from "../src/features/practice
 import { APPLIED_ENGINEERING_REVIEW_CANDIDATES } from "../src/features/practice/applied-engineering/domain/reviewed-incidents";
 import { AppliedEngineeringPersistenceService } from "../src/features/practice/applied-engineering/server/persistence.service";
 import { PrismaService } from "../src/server/database/prisma.service";
+
+loadEnvFile({ path: ".env.local" });
+loadEnvFile();
 
 const artifacts = APPLIED_ENGINEERING_REVIEW_CANDIDATES.map((artifact) =>
   appliedEngineeringReviewArtifactSchema.parse(artifact)

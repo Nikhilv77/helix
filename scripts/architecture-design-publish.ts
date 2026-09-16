@@ -1,4 +1,4 @@
-import "dotenv/config";
+import { config as loadEnvFile } from "dotenv";
 
 import {
   ARCHITECTURE_DESIGN_REVIEW_CANDIDATES,
@@ -8,6 +8,9 @@ import {
 import { buildArchitectureDesignPublicationPayloads } from "../src/features/practice/architecture-design/server/content-publisher";
 import { ArchitectureDesignPersistenceService } from "../src/features/practice/architecture-design/server/persistence.service";
 import { PrismaService } from "../src/server/database/prisma.service";
+
+loadEnvFile({ path: ".env.local" });
+loadEnvFile();
 
 async function main(): Promise<void> {
   const audits = ARCHITECTURE_DESIGN_REVIEW_CANDIDATES.map((artifact) => ({

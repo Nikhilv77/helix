@@ -1643,6 +1643,8 @@ enum NotificationKind {
   HELP_FEEDBACK_RECEIVED
   /// James completed and persisted a Resume Roast for the candidate.
   RESUME_ROAST_COMPLETED
+  /// A completed interview has a durable report ready for the candidate.
+  INTERVIEW_REPORT_READY
 }
 
 /// One item in a candidate's inbox.

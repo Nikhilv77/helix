@@ -12,7 +12,7 @@ import phase11TriesBacktracking from "@/features/practice/dsa/content/phase-11-t
 
 /**
  * Temporary shape for the DSA question bank. The questions live in
- * `src/data/dsa/*.json` while the bank is being written; once the schema
+ * `src/features/practice/dsa/content/*.json` while the bank is being written; once the schema
  * settles they move into Prisma and this module becomes the read model over
  * that table instead of over the JSON files.
  */

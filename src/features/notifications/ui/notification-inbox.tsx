@@ -9,6 +9,7 @@ import {
   CheckCheck,
   ChevronRight,
   Flame,
+  FileCheck2,
   HandHelping,
   MessageCircleHeart,
   Route,
@@ -95,6 +96,12 @@ function notificationPresentation(kind: string, teacherName: string): Notificati
         icon: Flame,
         teacher: false,
         personaId: "james"
+      };
+    case "INTERVIEW_REPORT_READY":
+      return {
+        label: "Interview report",
+        icon: FileCheck2,
+        teacher: false
       };
     default:
       return {
@@ -274,7 +281,7 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
                       ) : null}
                     </div>
                     <p className="mt-1 truncate text-[11.5px] text-cream/42 sm:text-[12px]">
-                      Coaching, resume feedback, reminders, and help activity
+                      Interview reports, coaching, resume feedback, and help activity
                     </p>
                   </div>
 

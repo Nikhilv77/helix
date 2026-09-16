@@ -1,4 +1,5 @@
-import { MemorySessionStore } from "./session-store";
+import { MemorySessionStore, interviewReportNotificationCopy } from "./session-store";
+import type { InterviewReportSnapshot } from "./report";
 import type { InterviewState } from "./types";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -107,5 +108,51 @@ describe("MemorySessionStore", () => {
       id: created.id
     });
     await expect(store.reactivateOwned(created.id, "user-2")).resolves.toBeNull();
+  });
+});
+
+describe("interview report notification copy", () => {
+  it("names the interview family and highlights the evidence score", () => {
+    const completed = {
+      ...state("77777777-7777-4777-8777-777777777777", Date.now()),
+      phase: "done" as const,
+      setup: {
+        ...state("unused", Date.now()).setup,
+        roundType: "technical" as const,
+        technicalDeepDive: {
+          kind: "technical-deep-dive" as const,
+          version: 2 as const,
+          coreBlueprintId: "core-1",
+          appliedBlueprintId: "applied-1"
+        }
+      }
+    };
+    const snapshot = {
+      report: { answerCount: 4, summary: { evidenceScore: 78 } }
+    } as InterviewReportSnapshot;
+
+    expect(interviewReportNotificationCopy(completed, snapshot)).toEqual({
+      title: "Core Technical & Projects report is ready",
+      body: "Your evidence score is 78/100. See what landed, what needs work, and your next step."
+    });
+  });
+
+  it("uses supportive summary copy when an interview ended without an answer", () => {
+    const completed = {
+      ...state("88888888-8888-4888-8888-888888888888", Date.now()),
+      phase: "done" as const,
+      setup: {
+        ...state("unused", Date.now()).setup,
+        roundType: "hiring-manager" as const
+      }
+    };
+    const snapshot = {
+      report: { answerCount: 0, summary: { evidenceScore: 0 } }
+    } as InterviewReportSnapshot;
+
+    expect(interviewReportNotificationCopy(completed, snapshot)).toEqual({
+      title: "HR & Behavioural report is ready",
+      body: "Your session summary is ready. Open it to review the interview and choose your next step."
+    });
   });
 });

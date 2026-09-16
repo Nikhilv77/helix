@@ -1,8 +1,11 @@
-import "dotenv/config";
+import { config as loadEnvFile } from "dotenv";
 
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getAppContainer } from "../src/server/app-container";
+
+loadEnvFile({ path: ".env.local" });
+loadEnvFile();
 
 async function main(): Promise<void> {
   const arguments_ = process.argv.slice(2);

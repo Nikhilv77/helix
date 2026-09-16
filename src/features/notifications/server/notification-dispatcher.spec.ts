@@ -25,7 +25,8 @@ const IN_APP_ONLY_KINDS: NotificationKind[] = [
   NotificationKind.HELP_REQUEST_RESOLVED,
   NotificationKind.HELP_REQUEST_EXPIRED,
   NotificationKind.HELP_FEEDBACK_RECEIVED,
-  NotificationKind.RESUME_ROAST_COMPLETED
+  NotificationKind.RESUME_ROAST_COMPLETED,
+  NotificationKind.INTERVIEW_REPORT_READY
 ];
 
 function harness(
