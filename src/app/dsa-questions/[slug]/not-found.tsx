@@ -13,14 +13,14 @@ export default function QuestionNotFound() {
             We don&apos;t have that question.
           </h1>
           <p className="mt-3 text-[15px] leading-7 text-cream/65">
-            No question in the bank matches that address. Your progress is untouched — pick the
-            next one up from Practice.
+            We couldn&apos;t find a question at that address. Your progress is untouched — choose
+            another one from the library.
           </p>
           <Link
-            href="/practice"
+            href="/dsa-questions"
             className="group mt-6 inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-b from-[#f7f2e5] to-[#e4dcc6] px-5 text-[14px] font-semibold text-[#1d3a86] transition hover:from-white hover:to-[#efe8d6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
-            Back to Practice
+            Browse questions
             <ArrowRight
               size={15}
               aria-hidden="true"

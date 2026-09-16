@@ -100,6 +100,7 @@ export function serialiseInterviewState(state: InterviewState) {
           language: question.language || null,
           codeTask: question.codeTask || null,
           codeSnippet: question.codeSnippet || null,
+          interviewSection: question.interviewSection ?? null,
           // This is deliberately the public render contract only. The saved
           // assessment snapshot's answer keys, rationales, hints and hidden
           // runner material never leave the server before completion.

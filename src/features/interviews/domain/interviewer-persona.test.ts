@@ -10,7 +10,18 @@ describe("interviewerPersonaIdForSetup", () => {
 
   it.each([
     { templateTitle: "DSA practice interview" },
+    { templateTitle: "DSA & Design interview" },
     { dsaQuestionSlugs: ["two-sum"] },
+    {
+      dsaDesignRound: {
+        kind: "dsa-design-round" as const,
+        version: 1 as const,
+        designScenarioKey: "multi-tenant-webhook-delivery",
+        designScenarioVersion: 1,
+        designScenarioTitle: "Multi-tenant webhook delivery platform",
+        designDifficulty: "standard" as const
+      }
+    },
     { dsaBlockAssessment: { kind: "dsa-block-assessment" } },
     { storyPracticeAssessment: { practice: "core-technical" } },
     { coreTechnicalAssessment: { kind: "core-technical-assessment" } }

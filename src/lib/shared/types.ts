@@ -1,6 +1,7 @@
 import type { SessionBlueprint } from "@/features/interviews/domain/personalized-plan";
 import type { PreparationOnboardingState } from "@/features/preparation-onboarding/domain/preparation-onboarding";
 import type { StoryPracticeAssessmentIdentity } from "@/features/practice/shared/server/contracts";
+import type { DsaDesignRoundMetadata } from "@/features/interviews/domain/dsa-design-round";
 
 export type Role = "backend" | "frontend" | "fullstack" | "data" | "ai-ml" | "pm";
 export type Level = "fresher" | "0-2" | "3-5" | "5-plus";
@@ -39,6 +40,8 @@ export interface InterviewSetup {
   };
   questionCount?: 3 | 4 | 5 | 6 | 7 | 8;
   dsaQuestionSlugs?: string[]; /** Marks the staged resume round, which the workspace renders differently. */
+  /** Public selection identity for the permanent combined DSA & Design round. */
+  dsaDesignRound?: DsaDesignRoundMetadata;
   resumeRound?: boolean;
   /** Marks the computer fundamentals round. */
   fundamentalsRound?: boolean;
@@ -353,6 +356,8 @@ export interface InterviewQuestion {
   language: string | null;
   codeTask: string | null;
   codeSnippet: string | null;
+  /** Candidate-facing section for the combined DSA & Design round. */
+  interviewSection?: "dsa" | "design" | null;
   /** Public-only immutable transfer problem data for a block assessment. */
   dsaTransferQuestion?: {
     slug: string;

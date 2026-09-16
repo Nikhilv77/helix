@@ -1,3 +1,5 @@
+import { isDsaDesignRound, type DsaDesignRoundMetadata } from "./dsa-design-round";
+
 export type InterviewerPersonaId = "claire" | "james";
 
 const GEMINI_INTERVIEWER_VOICES = {
@@ -14,6 +16,7 @@ type InterviewPersonaSetup = {
   templateId?: string;
   templateTitle?: string;
   dsaQuestionSlugs?: string[];
+  dsaDesignRound?: DsaDesignRoundMetadata;
   dsaBlockAssessment?: { kind: string };
   storyPracticeAssessment?: { practice: string };
   coreTechnicalAssessment?: { kind: string };
@@ -29,12 +32,8 @@ export function interviewerPersonaIdForSetup(
 ): InterviewerPersonaId {
   if (!setup) return "james";
 
-  const normalizedTitle = setup.templateTitle?.trim().toLowerCase() ?? "";
   const isDsa =
-    setup.dsaBlockAssessment?.kind === "dsa-block-assessment" ||
-    Boolean(setup.dsaQuestionSlugs?.length) ||
-    setup.templateId === "dsa" ||
-    normalizedTitle.includes("dsa");
+    setup.dsaBlockAssessment?.kind === "dsa-block-assessment" || isDsaDesignRound(setup);
   const isCoreTechnical =
     setup.storyPracticeAssessment?.practice === "core-technical" ||
     setup.coreTechnicalAssessment?.kind === "core-technical-assessment";

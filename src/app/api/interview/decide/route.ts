@@ -24,6 +24,8 @@ const decideSchema = z.object({
   /** Milliseconds from session start. Voice fills these from real audio timings. */
   startMs: z.number().int().min(0).optional(),
   endMs: z.number().int().min(0).optional(),
+  /** Browser-controlled origin; workspace is only set by the typed editor bridge. */
+  submissionSource: z.enum(["voice", "workspace"]).default("voice"),
   liveProposal: z
     .object({
       action: z.enum(["clarify", "probe", "challenge", "respond", "move_on"]),
@@ -79,7 +81,7 @@ export async function POST(request: NextRequest) {
         throw new ApiRouteError(
           400,
           "LIVE_PROPOSAL_REQUIRED",
-          "James must complete the live interview turn before it can be saved."
+          "The live interviewer must complete this turn before it can be saved."
         );
       }
       const defaultEnd = Math.max(0, now - existing.startedAt);
@@ -97,14 +99,16 @@ export async function POST(request: NextRequest) {
               answer,
               now,
               parsed.data.turnId,
-              parsed.data.liveProposal
+              parsed.data.liveProposal,
+              parsed.data.submissionSource
             )
           : await app.interviewService.answer(
               parsed.data.sessionId,
               answer,
               now,
               parsed.data.turnId,
-              parsed.data.liveProposal
+              parsed.data.liveProposal,
+              parsed.data.submissionSource
             );
       const { response } = answerResult;
       // Recovery runs outside the spoken-turn response. The job itself was

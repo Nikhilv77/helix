@@ -29,6 +29,7 @@ export function FundamentalsLiveWorkspace({
   question,
   questionIndex,
   questionCount,
+  interviewerName,
   counts,
   grade,
   concept,
@@ -55,6 +56,7 @@ export function FundamentalsLiveWorkspace({
   question: InterviewQuestion | null;
   questionIndex: number;
   questionCount: number;
+  interviewerName?: string;
   counts: StageCounts;
   grade: InterviewGrade | null;
   /** Teaching card for the question just answered, from the session payload. */
@@ -103,6 +105,7 @@ export function FundamentalsLiveWorkspace({
         draft={draft}
         notes=""
         selectedOption={selectedOption}
+        teacherName={interviewerName}
         onDraftChange={onDraftChange}
         onNotesChange={() => undefined}
         onSelectOption={onSelectOption}
@@ -115,6 +118,7 @@ export function FundamentalsLiveWorkspace({
         turns={turns}
         spokenAgentTurnKeys={spokenAgentTurnKeys}
         liveUserText={liveUserText}
+        teacherName={interviewerName}
         startedAt={startedAt}
         setup={setup}
         question={question}

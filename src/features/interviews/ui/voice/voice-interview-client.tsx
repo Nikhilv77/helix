@@ -25,7 +25,6 @@ import { PathRail } from "@/features/interviews/ui/shared/path-rail";
 import { MicMeter } from "@/features/interviews/ui/voice/mic-meter";
 import { InterviewerPresence } from "@/features/interviews/ui/voice/interviewer-presence";
 import { personaById, personaForSession } from "@/lib/avatars/personas";
-import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import type { PresenceState } from "@/features/interviews/ui/voice/interviewer-presence";
 import {
   ApiClientError,
@@ -56,6 +55,7 @@ import {
 import { stageCounts } from "./components/interview-question-panel";
 import { FundamentalsLiveWorkspace } from "./components/fundamentals-live-workspace";
 import { BlockAssessmentReviewWorkspace } from "./components/block-assessment-review-workspace";
+import { DsaDesignConversationWorkspace } from "./components/dsa-design-conversation-workspace";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 import type { AgentState, DsaLanguage, DsaRunResult, VoiceStatus } from "./types";
 import { describeVoiceState, formatClock, formatTypedAnswer } from "./utils/voice-interview";
@@ -70,6 +70,7 @@ import { useInterviewClock } from "./hooks/use-interview-clock";
 import { GeminiLiveInterviewer, type GeminiLiveInterviewerHandle } from "./gemini-live-interviewer";
 import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
 import { interviewerPersonaIdForSetup } from "@/features/interviews/domain/interviewer-persona";
+import { isDsaDesignRound } from "@/features/interviews/domain/dsa-design-round";
 
 const DEFAULT_HARD_CAP_MS = 15 * 60 * 1000;
 /**
@@ -164,8 +165,7 @@ export function VoiceInterviewClient({
         : null),
     [setup?.coreTechnicalAssessment, setup?.storyPracticeAssessment]
   );
-  const persona =
-    personaById(interviewerPersonaIdForSetup(setup)) ?? personaForSession(sessionId);
+  const persona = personaById(interviewerPersonaIdForSetup(setup)) ?? personaForSession(sessionId);
   const [currentQuestion, setCurrentQuestion] = useState<InterviewQuestion | null>(null);
   const [progress, setProgress] = useState({ index: 0, count: 4, followUps: 0 });
   const [planStages, setPlanStages] = useState<Array<InterviewStage | null>>([]);
@@ -718,7 +718,7 @@ export function VoiceInterviewClient({
 
     setTypedSending(false);
     if (
-      setup?.templateTitle === "DSA practice interview" ||
+      isDsaDesignRound(setup) ||
       setup?.dsaBlockAssessment?.kind === "dsa-block-assessment" ||
       storyPracticeAssessment !== null
     ) {
@@ -790,19 +790,43 @@ export function VoiceInterviewClient({
   ]);
 
   useEffect(() => {
-    if (setup?.templateTitle !== "DSA practice interview" || !dsaQuestionSlug) return;
+    if (!isDsaDesignRound(setup) || !dsaQuestionSlug) return;
     const question = findQuestion(dsaQuestionSlug)?.question;
     setTypedDraft(question ? dsaStarterCode(question, dsaLanguage) : "");
     setTypedNotes("");
     setTypedError(null);
     setDsaRunResult(null);
     setTypedStartedAt(Date.now());
-  }, [dsaLanguage, dsaQuestionSlug, setup?.templateTitle]);
+  }, [
+    dsaLanguage,
+    dsaQuestionSlug,
+    setup?.dsaDesignRound?.kind,
+    setup?.templateId,
+    setup?.templateTitle
+  ]);
 
   useEffect(() => {
-    if (setup?.templateTitle === "DSA practice interview") return;
+    if (!isDsaDesignRound(setup) || currentQuestion?.interviewSection !== "design") return;
+    // The design conversation must never inherit code, notes, output, or a
+    // pending selection from the preceding coding problem.
+    setSelectedOption(null);
+    setTypedError(null);
+    setDsaRunResult(null);
+    setTypedNotes("");
+    setTypedDraft("");
+    setTypedStartedAt(Date.now());
+  }, [
+    currentQuestion?.interviewSection,
+    progress.index,
+    setup?.dsaDesignRound?.kind,
+    setup?.templateId,
+    setup?.templateTitle
+  ]);
+
+  useEffect(() => {
+    if (isDsaDesignRound(setup)) return;
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [liveTranscript, setup?.templateTitle, turns]);
+  }, [liveTranscript, setup?.dsaDesignRound?.kind, setup?.templateId, setup?.templateTitle, turns]);
 
   useEffect(() => {
     if (status !== "live" || !micOn || agentSpeaking || micSignal || liveTranscript) {
@@ -1170,7 +1194,7 @@ export function VoiceInterviewClient({
   const selectedInputLabel =
     audioInputs.find((device) => device.deviceId === selectedInputId)?.label ||
     "Selected microphone";
-  const isDsaInterview = setup?.templateTitle === "DSA practice interview";
+  const isDsaInterview = isDsaDesignRound(setup);
   const isBlockAssessment = setup?.dsaBlockAssessment?.kind === "dsa-block-assessment";
   const isStoryPracticeAssessment = storyPracticeAssessment !== null;
   const isAnyBlockAssessment = isBlockAssessment || isStoryPracticeAssessment;
@@ -1212,6 +1236,13 @@ export function VoiceInterviewClient({
       ? (currentQuestion.dsaTransferQuestion ?? null)
       : null;
   const activeDsaQuestion: DsaWorkspaceQuestion | null = dsaQuestion ?? frozenTransferQuestion;
+  const isActiveDsaCodeQuestion =
+    isDsaInterview &&
+    currentQuestion?.interviewSection !== "design" &&
+    currentQuestion?.kind === "code" &&
+    Boolean(activeDsaQuestion);
+  const isActiveDsaDesignQuestion =
+    isDsaInterview && currentQuestion?.interviewSection === "design";
   const evaluationProfile = setup ? evaluationProfileForSetup(setup) : null;
 
   if (sessionUnavailable) {
@@ -1404,6 +1435,7 @@ export function VoiceInterviewClient({
           question={currentQuestion}
           questionIndex={progress.index}
           questionCount={progress.count}
+          interviewerName={persona.name}
           counts={stageProgress}
           grade={lastGrade}
           concept={answeredConcept}
@@ -1525,7 +1557,7 @@ export function VoiceInterviewClient({
           candidateCameraStream={candidateCameraStream}
           onDisableCamera={disableCandidateCamera}
         />
-      ) : isDsaInterview || (isBlockAssessment && currentQuestion?.kind === "code") ? (
+      ) : isActiveDsaCodeQuestion || (isBlockAssessment && currentQuestion?.kind === "code") ? (
         <DsaLiveWorkspace
           question={activeDsaQuestion}
           questionSlug={selectedDsaSlug ?? null}
@@ -1537,6 +1569,7 @@ export function VoiceInterviewClient({
           currentQuestion={currentQuestion}
           questionIndex={progress.index}
           questionCount={progress.count}
+          interviewerName={persona.name}
           thinking={agentState === "thinking"}
           bottomRef={bottomRef}
           renderInterviewer={interviewerSlot}
@@ -1553,6 +1586,34 @@ export function VoiceInterviewClient({
           onNotesChange={setTypedNotes}
           onSubmit={() => void submitDsaAnswer()}
           onSkip={isBlockAssessment ? () => void skipDsaCode() : undefined}
+          candidateCameraStream={candidateCameraStream}
+          onDisableCamera={disableCandidateCamera}
+        />
+      ) : isActiveDsaDesignQuestion ? (
+        <DsaDesignConversationWorkspace
+          question={currentQuestion}
+          questionIndex={progress.index}
+          questionCount={progress.count}
+          counts={stageProgress}
+          grade={lastGrade}
+          turns={displayTurns}
+          spokenAgentTurnKeys={spokenAgentTurnKeys}
+          liveUserText={liveTranscript}
+          startedAt={startedAt}
+          setup={setup}
+          thinking={agentState === "thinking"}
+          bottomRef={bottomRef}
+          agentSlot={interviewerSlot()}
+          micOn={micOn}
+          sending={typedSending}
+          error={typedError}
+          draft={typedDraft}
+          selectedOption={selectedOption}
+          interviewerName={persona.name}
+          onDraftChange={setTypedDraft}
+          onSelectOption={(option) => void submitOptionAnswer(option)}
+          onSubmit={() => void submitTypedAnswer()}
+          onRequestMic={requestMicrophone}
           candidateCameraStream={candidateCameraStream}
           onDisableCamera={disableCandidateCamera}
         />
@@ -1792,6 +1853,7 @@ function DsaLiveWorkspace({
   currentQuestion,
   questionIndex,
   questionCount,
+  interviewerName,
   thinking,
   bottomRef,
   renderInterviewer,
@@ -1821,6 +1883,7 @@ function DsaLiveWorkspace({
   currentQuestion: InterviewQuestion | null;
   questionIndex: number;
   questionCount: number;
+  interviewerName: string;
   thinking: boolean;
   bottomRef: React.RefObject<HTMLDivElement | null>;
   /** Built by the parent so every layout shows the same interviewer. */
@@ -1841,7 +1904,6 @@ function DsaLiveWorkspace({
   candidateCameraStream: MediaStream | null;
   onDisableCamera: () => void;
 }) {
-  const teacher = useWorkspaceTeacher();
   const canSubmit = draft.trim().length >= 10 && !sending;
   const splitWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const [questionPaneWidth, setQuestionPaneWidth] = useState(38);
@@ -2004,7 +2066,7 @@ function DsaLiveWorkspace({
           ) : (
             <div className="flex h-full items-center justify-center p-8 text-center">
               <p className="text-sm leading-6 text-cream/50">
-                {teacher.name} is preparing the next problem.
+                {interviewerName} is preparing the next problem.
               </p>
             </div>
           )}
@@ -2123,7 +2185,7 @@ function DsaLiveWorkspace({
             className={`dsa-live-editor-composer shrink-0 border-t ${INTERVIEW_PANEL_RULE} bg-black/10 p-4 sm:p-5`}
           >
             <label htmlFor="dsa-approach" className="text-sm font-semibold text-cream/82">
-              Explain your approach to {teacher.name}
+              Explain your approach to {interviewerName}
               <span className="ml-2 hidden font-normal text-cream/38 xl:inline">
                 Include the idea and complexity.
               </span>
@@ -2155,7 +2217,9 @@ function DsaLiveWorkspace({
                   ) : (
                     <Send size={15} aria-hidden="true" />
                   )}
-                  {sending ? `${teacher.name} is reviewing` : `Send solution to ${teacher.name}`}
+                  {sending
+                    ? `${interviewerName} is reviewing`
+                    : `Send solution to ${interviewerName}`}
                 </button>
                 {onSkip && !skipConfirmationVisible ? (
                   <button
@@ -2220,6 +2284,7 @@ function DsaLiveWorkspace({
         turns={turns}
         spokenAgentTurnKeys={spokenAgentTurnKeys}
         liveUserText={liveUserText}
+        teacherName={interviewerName}
         startedAt={startedAt}
         setup={setup}
         question={currentQuestion}

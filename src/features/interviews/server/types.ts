@@ -4,6 +4,7 @@ import type {
   QuestionFormat,
   SessionBlueprint
 } from "@/features/interviews/domain/personalized-plan";
+import type { DsaDesignRoundMetadata } from "@/features/interviews/domain/dsa-design-round";
 import {
   storyPracticeAssessmentIdentityFromSetup,
   type StoryPracticeAssessmentIdentity
@@ -56,6 +57,11 @@ export interface InterviewSetup {
   };
   /** Slugs selected for the live DSA workspace, in interview order. */
   dsaQuestionSlugs?: string[];
+  /**
+   * Public selection identity for the permanent combined round. Never put
+   * answer keys or rubrics here: setup is sent to the browser.
+   */
+  dsaDesignRound?: DsaDesignRoundMetadata;
   /** DSA rounds use a compact set of practice questions instead of the default four-question arc. */
   questionCount?: 3 | 4 | 5 | 6 | 7 | 8;
   /**
@@ -121,6 +127,8 @@ export interface PlannedQuestion {
   evidenceAnchor?: string;
   /** Structured presentation metadata. Optional for sessions saved before code rounds existed. */
   kind?: "conversation" | "code" | "mcq";
+  /** Candidate-facing section in the permanent DSA & Design round. */
+  interviewSection?: "dsa" | "design";
   language?: string;
   codeTask?: string;
   codeSnippet?: string;
@@ -330,6 +338,8 @@ export interface Turn {
   endedInterview?: boolean;
   /** Conversational request (for example, needing a break); never assessed as an answer. */
   assessmentExcluded?: boolean;
+  /** Trusted origin of an answer; workspace marks a real code submission. */
+  submissionSource?: "voice" | "workspace";
   /** Safe operational metadata for the decision that produced an agent turn. */
   runtime?: {
     engineVersion: string;

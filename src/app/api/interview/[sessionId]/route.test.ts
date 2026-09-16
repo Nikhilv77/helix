@@ -163,4 +163,63 @@ describe("interview public state serializer", () => {
     expect(serialized.turns[0]).not.toHaveProperty("runtime");
     expect(JSON.stringify(serialized)).not.toContain("private-model-route");
   });
+
+  it("does not expose unreached DSA & Design questions or private review guides", () => {
+    const state = {
+      id: "22222222-2222-4222-8222-222222222222",
+      setup: {
+        role: "backend",
+        level: "3-5",
+        roundType: "technical",
+        intensity: "realistic",
+        context: "Combined technical interview",
+        agenda: ["Two Sum", "Binary Search", "Design scenario: Social feed"],
+        templateId: "dsa",
+        templateTitle: "DSA & Design interview",
+        dsaQuestionSlugs: ["two-sum", "binary-search"],
+        dsaDesignRound: {
+          kind: "dsa-design-round",
+          version: 1,
+          designScenarioKey: "social-feed",
+          designScenarioVersion: 1,
+          designScenarioTitle: "Social feed",
+          designDifficulty: "standard"
+        }
+      },
+      plan: [
+        {
+          text: "Solve Two Sum.",
+          kind: "code",
+          interviewSection: "dsa",
+          mustHit: ["correctness"],
+          probeIfMissing: "Why is it correct?"
+        },
+        {
+          text: "PRIVATE_UNREACHED_DESIGN_PROMPT",
+          kind: "conversation",
+          interviewSection: "design",
+          mustHit: ["PRIVATE_EXPECTED_SIGNAL"],
+          probeIfMissing: "PRIVATE_PROBE",
+          storyPracticeInterviewerGuide: {
+            practice: "architecture-design",
+            label: "Architecture & Design",
+            expectedAnswer: "PRIVATE_EXPECTED_ANSWER",
+            rubric: [{ criterion: "PRIVATE_RUBRIC", points: 10 }]
+          }
+        }
+      ],
+      phase: "questioning",
+      questionIndex: 0,
+      followUpCount: 0,
+      startedAt: 1,
+      turns: []
+    } satisfies InterviewState;
+
+    const payload = JSON.stringify(serialiseInterviewState(state));
+    expect(payload).toContain("Solve Two Sum.");
+    expect(payload).not.toContain("PRIVATE_UNREACHED_DESIGN_PROMPT");
+    expect(payload).not.toContain("PRIVATE_EXPECTED_SIGNAL");
+    expect(payload).not.toContain("PRIVATE_EXPECTED_ANSWER");
+    expect(payload).not.toContain("PRIVATE_RUBRIC");
+  });
 });

@@ -231,6 +231,208 @@ describe("InterviewService resume round", () => {
     );
   });
 
+  it("holds spoken coding reasoning until the workspace submission in DSA & Design", async () => {
+    const codePlan: PlannedQuestion[] = [
+      {
+        text: "Walk me through how you would solve Two Sum.",
+        kind: "code",
+        interviewSection: "dsa",
+        answerFormat: "typed",
+        competency: "Algorithmic reasoning",
+        intent: "Assess the candidate's approach.",
+        mustHit: ["approach"],
+        probeIfMissing: "What edge case matters?",
+        maxFollowUps: 1
+      },
+      { ...questions[0]!, kind: "code", interviewSection: "dsa", answerFormat: "typed" }
+    ];
+    const { service, decide, evaluate, store } = harness(codePlan);
+    const started = await service.start(
+      {
+        ...setup,
+        templateId: "dsa",
+        templateTitle: "DSA & Design interview",
+        dsaQuestionSlugs: ["two-sum", "binary-search"],
+        dsaDesignRound: {
+          kind: "dsa-design-round",
+          version: 1,
+          designScenarioKey: "social-feed",
+          designScenarioVersion: 1,
+          designScenarioTitle: "Social feed",
+          designDifficulty: "standard"
+        }
+      },
+      "user-1",
+      1_000,
+      codePlan
+    );
+
+    const result = await service.answer(
+      started.state.id,
+      { text: "I would use a hash map and get linear time.", startMs: 500, endMs: 1_000 },
+      2_000,
+      undefined,
+      {
+        action: "move_on",
+        missing: "none",
+        candidateIntent: "answer",
+        acknowledgement: "",
+        line: "",
+        reason: "The approach sounds complete."
+      }
+    );
+
+    expect(result.state.questionIndex).toBe(0);
+    expect(result.decision.action).toBe("respond");
+    expect(result.decision.utterance).toBe("");
+    expect(decide).not.toHaveBeenCalled();
+    expect(evaluate).not.toHaveBeenCalled();
+    const saved = (await store.get(started.state.id))!;
+    expect(saved.turns.at(-1)).toMatchObject({
+      text: "I would use a hash map and get linear time.",
+      submissionSource: "voice",
+      questionIndex: 0
+    });
+  });
+
+  it("briefly acknowledges thinking time without repeating or advancing the coding problem", async () => {
+    const codePlan: PlannedQuestion[] = [
+      {
+        text: "Walk me through how you would solve Two Sum.",
+        kind: "code",
+        interviewSection: "dsa",
+        answerFormat: "typed",
+        competency: "Algorithmic reasoning",
+        intent: "Assess the candidate's approach.",
+        mustHit: ["approach"],
+        probeIfMissing: "What edge case matters?",
+        maxFollowUps: 1
+      },
+      questions[0]!
+    ];
+    const { service } = harness(codePlan);
+    const started = await service.start(
+      {
+        ...setup,
+        templateId: "dsa",
+        templateTitle: "DSA & Design interview",
+        dsaQuestionSlugs: ["two-sum"],
+        dsaDesignRound: {
+          kind: "dsa-design-round",
+          version: 1,
+          designScenarioKey: "social-feed",
+          designScenarioVersion: 1,
+          designScenarioTitle: "Social feed",
+          designDifficulty: "standard"
+        }
+      },
+      "user-1",
+      1_000,
+      codePlan
+    );
+
+    const result = await service.answer(
+      started.state.id,
+      { text: "I'm thinking about the solution.", startMs: 500, endMs: 1_000 },
+      2_000,
+      undefined,
+      {
+        action: "respond",
+        missing: "none",
+        candidateIntent: "other",
+        acknowledgement: "",
+        line: "",
+        candidateResponse: "Take your time—go ahead when you're ready.",
+        reason: "The candidate requested thinking time."
+      },
+      "voice"
+    );
+
+    expect(result.state.questionIndex).toBe(0);
+    expect(result.state.followUpCount).toBe(0);
+    expect(result.decision.action).toBe("respond");
+    expect(result.decision.utterance).toBe("Take your time—go ahead when you're ready.");
+    expect(result.decision.utterance).not.toContain(codePlan[0]!.text);
+  });
+
+  it("allows a spoken follow-up answer to advance after code was submitted", async () => {
+    const codePlan: PlannedQuestion[] = [
+      {
+        text: "Solve Two Sum.",
+        kind: "code",
+        interviewSection: "dsa",
+        answerFormat: "typed",
+        competency: "Algorithmic reasoning",
+        intent: "Assess the implementation.",
+        mustHit: ["correctness", "complexity"],
+        probeIfMissing: "Why is this linear?",
+        maxFollowUps: 1
+      },
+      questions[0]!
+    ];
+    const { service } = harness(codePlan);
+    const started = await service.start(
+      {
+        ...setup,
+        templateId: "dsa",
+        templateTitle: "DSA & Design interview",
+        dsaQuestionSlugs: ["two-sum"],
+        dsaDesignRound: {
+          kind: "dsa-design-round",
+          version: 1,
+          designScenarioKey: "social-feed",
+          designScenarioVersion: 1,
+          designScenarioTitle: "Social feed",
+          designDifficulty: "standard"
+        }
+      },
+      "user-1",
+      1_000,
+      codePlan
+    );
+
+    const submitted = await service.answer(
+      started.state.id,
+      { text: "```javascript\nreturn [];\n```", startMs: 500, endMs: 1_000 },
+      2_000,
+      undefined,
+      {
+        action: "probe",
+        missing: "clarity",
+        candidateIntent: "answer",
+        acknowledgement: "",
+        line: "Why is the lookup linear?",
+        reason: "Needs a complexity justification."
+      },
+      "workspace"
+    );
+    expect(submitted.state.questionIndex).toBe(0);
+    expect(submitted.state.followUpCount).toBe(1);
+
+    const followedUp = await service.answer(
+      started.state.id,
+      {
+        text: "Each lookup is constant time on average, so the loop is linear.",
+        startMs: 1_100,
+        endMs: 1_500
+      },
+      2_500,
+      undefined,
+      {
+        action: "move_on",
+        missing: "none",
+        candidateIntent: "answer",
+        acknowledgement: "That explains the bound.",
+        line: "",
+        reason: "The follow-up supplied the missing complexity evidence."
+      },
+      "voice"
+    );
+
+    expect(followedUp.state.questionIndex).toBe(1);
+    expect(followedUp.decision.utterance).toContain(questions[0]!.text);
+  });
+
   it("ends respectfully after three consecutive question refusals", async () => {
     const plan = [
       ...questions,

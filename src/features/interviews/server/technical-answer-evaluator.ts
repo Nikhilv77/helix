@@ -334,6 +334,7 @@ Expected evidence:
 ${question.mustHit.map((item) => `- ${item}`).join("\n")}
 
 ${storyPracticeGuide ? `Authoritative expected mechanism and evidence (server-only):\n${storyPracticeGuide.expectedAnswer}` : ""}
+${storyPracticeGuide && "practice" in storyPracticeGuide && storyPracticeGuide.practice === "architecture-design" ? "Treat the reference design as a grading rubric, not the only acceptable architecture. Accept a different coherent design when its assumptions are explicit and its trade-offs are technically defended." : ""}
 
 Question-specific rubric (use it as supporting evidence inside the session parameters below):
 ${formatRubric(rubric)}

@@ -195,6 +195,7 @@ export const GeminiLiveInterviewer = forwardRef<
       let lastCompletedCandidateTurn: { fingerprint: string; completedAtMs: number } | null = null;
       let lastAuthoritativeResponse: AuthoritativeResponse | null = null;
       let pendingTypedSubmission: {
+        input: { text: string; startMs: number; endMs: number };
         resolve: () => void;
         reject: (error: Error) => void;
         timeout: number;
@@ -283,7 +284,11 @@ export const GeminiLiveInterviewer = forwardRef<
 
       const persistAnswer = async (
         input: { text: string; startMs: number; endMs: number },
-        options: { announce?: boolean; liveProposal?: LiveConversationProposal } = {}
+        options: {
+          announce?: boolean;
+          liveProposal?: LiveConversationProposal;
+          submissionSource?: "voice" | "workspace";
+        } = {}
       ) => {
         const answer = input.text.trim();
         if (!answer) return;
@@ -303,6 +308,7 @@ export const GeminiLiveInterviewer = forwardRef<
             userAnswer: answer,
             startMs: input.startMs,
             endMs: input.endMs,
+            submissionSource: options.submissionSource,
             liveProposal: options.liveProposal
           });
           lastAuthoritativeResponse = {
@@ -426,6 +432,22 @@ export const GeminiLiveInterviewer = forwardRef<
         return rendered ? { text: rendered, startMs, endMs } : null;
       };
 
+      const consumeWorkspaceSubmission = (input: {
+        text: string;
+        startMs: number;
+        endMs: number;
+      }) => {
+        clearCandidateCommitTimer();
+        candidateFinalizedTranscript = "";
+        candidateStartedAtMs = null;
+        candidateUtteranceActive = false;
+        inputTranscriptRef.current = "";
+        const text = input.text.trim();
+        if (!text) return null;
+        callbacksRef.current.onInputTranscript({ text, finished: true });
+        return { ...input, text };
+      };
+
       const handleInterviewToolCall = async (call: {
         id?: string;
         name?: string;
@@ -467,7 +489,15 @@ export const GeminiLiveInterviewer = forwardRef<
         callbacksRef.current.onAgentState("thinking");
         try {
           const fallback = typeof call.args?.answerText === "string" ? call.args.answerText : "";
-          const candidateTurn = consumeCandidateTranscript(fallback);
+          const pendingWorkspaceInput = pendingTypedSubmission?.input;
+          const workspaceSubmission =
+            pendingWorkspaceInput &&
+            toolCallMatchesPendingTypedSubmission(fallback, pendingWorkspaceInput.text)
+              ? pendingWorkspaceInput
+              : undefined;
+          const candidateTurn = workspaceSubmission
+            ? consumeWorkspaceSubmission(workspaceSubmission)
+            : consumeCandidateTranscript(fallback);
           if (!candidateTurn)
             throw new Error("I couldn't capture that answer. Please say it again.");
 
@@ -504,11 +534,43 @@ export const GeminiLiveInterviewer = forwardRef<
 
           const response = await persistAnswer(candidateTurn, {
             announce: false,
-            liveProposal: liveConversationProposalFromToolArgs(call.args, interviewerName)
+            liveProposal: liveConversationProposalFromToolArgs(call.args, interviewerName),
+            submissionSource: workspaceSubmission ? "workspace" : "voice"
           });
           if (!response) throw new Error("The interview turn was not saved.");
           if (call.id) completedToolCalls.add(call.id);
           decisionPending = false;
+
+          // The server intentionally holds ordinary spoken reasoning on a code
+          // prompt until the candidate clicks Submit in the workspace. A blank
+          // authoritative utterance is a silent acknowledgement, not a reason
+          // to ask Gemini to speak or to advance the interview.
+          if (!response.utterance.trim()) {
+            session.sendToolResponse({
+              functionResponses: [
+                {
+                  id: call.id,
+                  name: call.name,
+                  response: {
+                    saved: true,
+                    action: response.action,
+                    questionIndex: response.questionIndex,
+                    approvedResponse: "",
+                    instruction:
+                      "Produce no audio or text for this turn. Stay silent and continue listening while the candidate works in the coding workspace."
+                  }
+                }
+              ]
+            });
+            if (pendingTypedSubmission) {
+              window.clearTimeout(pendingTypedSubmission.timeout);
+              pendingTypedSubmission.resolve();
+              pendingTypedSubmission = null;
+            }
+            callbacksRef.current.onAgentState("listening");
+            return;
+          }
+
           // Only the model continuation caused by this authoritative tool
           // response may be heard. Any model audio produced before the tool
           // call is speculative and remains muted.
@@ -1051,11 +1113,9 @@ export const GeminiLiveInterviewer = forwardRef<
               await persistAnswer(input);
               return;
             }
-            if (!session || pendingTypedSubmission) {
+            if (!session || pendingTypedSubmission || decisionPending) {
               throw new Error(`${interviewerName} is still responding to the previous answer.`);
             }
-            candidateFinalizedTranscript = input.text.trim();
-            candidateStartedAtMs = input.startMs;
             candidateUtteranceActive = false;
             await new Promise<void>((resolve, reject) => {
               const timeout = window.setTimeout(() => {
@@ -1066,7 +1126,7 @@ export const GeminiLiveInterviewer = forwardRef<
                   )
                 );
               }, 15_000);
-              pendingTypedSubmission = { resolve, reject, timeout };
+              pendingTypedSubmission = { input, resolve, reject, timeout };
               session?.sendClientContent({
                 turns: [{ role: "user", parts: [{ text: input.text }] }],
                 turnComplete: true
@@ -1234,6 +1294,17 @@ function isMissingDimension(value: unknown): value is LiveConversationProposal["
 
 function answerFingerprint(answer: string): string {
   return answer.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+}
+
+/** Prevents a nearby microphone tool call from consuming a typed submission marker. */
+export function toolCallMatchesPendingTypedSubmission(
+  toolAnswer: string,
+  pendingTypedAnswer: string
+): boolean {
+  const toolFingerprint = answerFingerprint(toolAnswer);
+  return Boolean(
+    toolFingerprint && toolFingerprint === answerFingerprint(pendingTypedAnswer)
+  );
 }
 
 export function candidateAnswerWasRecentlySubmitted(

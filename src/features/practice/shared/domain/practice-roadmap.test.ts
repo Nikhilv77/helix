@@ -86,7 +86,7 @@ describe("projectPracticeSessions", () => {
     expect(sessions.map((session) => session.key)).toEqual(PRACTICE_SESSION_KEYS);
     expect(sessions[0]).toMatchObject({
       key: "dsa",
-      title: "DSA · TypeScript",
+      title: "DSA & Design",
       sourceBlueprintId: "blueprint-problem-solving"
     });
 

@@ -1,6 +1,7 @@
 import type { CandidateProfile } from "@/lib/shared/types";
 import type { InterviewState } from "@/features/interviews/server/types";
 import {
+  buildOpeningUtterance,
   buildSystemInstruction,
   buildTranscriptionAudioConfig,
   buildTranscriptionVocabulary
@@ -92,6 +93,81 @@ describe("Gemini Live interview instruction", () => {
     expect(instruction).toContain("Continue from planned question 4");
     expect(instruction).toContain("Candidate: I investigated the failed deployment.");
     expect(instruction).toContain("do not restart the interview");
+  });
+
+  it("gives Claire the silent coding and connected design contract", () => {
+    const instruction = buildSystemInstruction({
+      roundTitle: "DSA & Design interview",
+      interviewerName: "Claire",
+      isHiringManagerRound: false,
+      isDsaDesignRound: true,
+      question: "Walk me through Two Sum.",
+      questionNumber: 1,
+      questionCount: 5,
+      followUpCount: 0,
+      maxFollowUps: 1,
+      mustHit: ["approach", "complexity"],
+      openingUtterance: buildOpeningUtterance({
+        isHiringManagerRound: false,
+        question: "Walk me through Two Sum.",
+        isDsaDesignRound: true
+      }),
+      plan: [
+        {
+          text: "Walk me through Two Sum.",
+          kind: "code",
+          answerFormat: "typed",
+          mustHit: ["approach", "complexity"],
+          maxFollowUps: 1,
+          acceptsCandidateQuestions: false
+        },
+        {
+          text: "Frame the design.",
+          kind: "conversation",
+          answerFormat: "spoken",
+          mustHit: ["scope"],
+          maxFollowUps: 1,
+          acceptsCandidateQuestions: false
+        }
+      ]
+    });
+
+    expect(instruction).toContain("You are Claire, a calm and technically sharp");
+    expect(instruction).toContain("Stay quiet while the candidate types");
+    expect(instruction).toContain("Wait for the workspace code submission");
+    expect(instruction).toContain("Keep all three design prompts on the same scenario");
+    expect(instruction).toContain("merely says they are thinking");
+    expect(instruction).toContain("Take your time—go ahead when you're ready.");
+    expect(instruction).toContain("talk through a tentative approach");
+    expect(instruction).toContain("do not interrupt active typing");
+    expect(instruction).toContain("If approvedResponse is empty, produce no audio");
+    expect(instruction).toContain("Never invent an employer fact");
+    expect(instruction).toContain('say exactly: "I\'m Claire from the recruiting team."');
+  });
+
+  it("resumes Claire on the current DSA & Design question", () => {
+    const instruction = buildSystemInstruction({
+      roundTitle: "DSA & Design interview",
+      interviewerName: "Claire",
+      isHiringManagerRound: false,
+      isDsaDesignRound: true,
+      question: "Defend the architecture.",
+      questionNumber: 5,
+      questionCount: 5,
+      followUpCount: 0,
+      maxFollowUps: 1,
+      mustHit: ["reliability"],
+      openingUtterance: "Welcome back. Defend the architecture.",
+      resuming: true,
+      conversationHistory: [
+        { speaker: "agent", text: "Design the data flow." },
+        { speaker: "user", text: "I would partition by account." }
+      ]
+    });
+
+    expect(instruction).toContain("Continue from planned question 5");
+    expect(instruction).toContain("Candidate: I would partition by account.");
+    expect(instruction).toContain("do not restart");
   });
 
   it("keeps non-hiring-manager rounds on the existing server-led contract", () => {

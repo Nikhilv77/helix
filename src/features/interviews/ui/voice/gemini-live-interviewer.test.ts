@@ -7,7 +7,8 @@ import {
   liveConversationProposalFromToolArgs,
   mergeFinalizedCandidateTranscript,
   resampleToPcm16,
-  selectGeminiLedCandidateTranscript
+  selectGeminiLedCandidateTranscript,
+  toolCallMatchesPendingTypedSubmission
 } from "./gemini-live-interviewer";
 
 describe("Gemini Live candidate transcript finalization", () => {
@@ -139,6 +140,15 @@ describe("Gemini-led interview tool decisions", () => {
         "Yeah, I've been engineering student and wanted to work at Nova cars."
       )
     ).toBe("Yeah, I've been an engineering student and wanted to work at NovaCart.");
+  });
+
+  it("does not let a nearby microphone turn consume the pending workspace marker", () => {
+    const typed = "```javascript\nfunction solve() { return 1; }\n```";
+
+    expect(toolCallMatchesPendingTypedSubmission(typed, typed)).toBe(true);
+    expect(
+      toolCallMatchesPendingTypedSubmission("I am still thinking about the hash map.", typed)
+    ).toBe(false);
   });
 
   it("accepts the bounded conversational proposal sent by Gemini Live", () => {

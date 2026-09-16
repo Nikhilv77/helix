@@ -1,4 +1,5 @@
 import { Intensity, InterviewSetup, Level, Role, RoundType } from "./types";
+import { isDsaDesignRound } from "@/features/interviews/domain/dsa-design-round";
 
 const ROLE_LABELS: Record<Role, string> = {
   backend: "backend engineer",
@@ -78,5 +79,5 @@ export function describeSetup(setup: InterviewSetup): string {
  * the generic role code exercise substituted into it.
  */
 export function isDsaRound(setup: InterviewSetup): boolean {
-  return Boolean(setup.dsaQuestionSlugs?.length);
+  return isDsaDesignRound(setup);
 }

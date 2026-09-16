@@ -6,8 +6,8 @@ import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
-  "DSA interview",
-  "A DSA interview with your chosen teacher based on the questions you have solved."
+  "DSA & Design interview",
+  "A Claire-led coding and system-design interview based on the questions and skills you have practised."
 );
 
 export default async function DsaInterviewEntryPage() {
@@ -27,6 +27,7 @@ export default async function DsaInterviewEntryPage() {
       sessionsRemaining={quota ? Math.max(0, quota.limit - quota.used) : null}
       firstName={profile.resume?.fullName?.trim().split(/\s+/)[0] ?? ""}
       workspaceAccent={profile.workspaceAccent}
+      designSupported={profile.targetRole === "backend" || profile.targetRole === "fullstack"}
     />
   );
 }

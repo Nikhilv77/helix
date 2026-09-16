@@ -1,7 +1,7 @@
 import { GEMINI_LED_INTERVIEW_TOOLS, usesGeminiLedConversation } from "./gemini-live-conversation";
 
 describe("Gemini-led interview policy", () => {
-  it("allows only the two conversational interview families", () => {
+  it("allows the reserved conversational interview families", () => {
     expect(
       usesGeminiLedConversation({
         roundType: "hiring-manager",
@@ -23,6 +23,15 @@ describe("Gemini-led interview policy", () => {
         templateId: "core-technical"
       })
     ).toBe(false);
+    expect(
+      usesGeminiLedConversation({
+        roundType: "technical",
+        resumeRound: false,
+        templateId: "dsa",
+        templateTitle: "DSA & Design interview",
+        dsaQuestionSlugs: ["two-sum"]
+      })
+    ).toBe(true);
   });
 
   it("requires Gemini to classify candidate intent by meaning", () => {

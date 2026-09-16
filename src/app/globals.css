@@ -6175,6 +6175,81 @@ html[data-theme="light"] .practice-question-page [class*="bg-white/"] {
   background-color: rgba(15, 23, 42, 0.045) !important;
 }
 
+/* The question library is a learner-facing catalogue rather than a raw bank
+   dump. Difficulty colours remain semantic in both themes, while the cards
+   inherit the active workspace surface and accent tokens. */
+.dsa-library-stat {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.dsa-library-stat-dot {
+  height: 0.45rem;
+  width: 0.45rem;
+  border-radius: 9999px;
+}
+
+.dsa-library-stat-dot-easy {
+  background: #58d69c;
+}
+
+.dsa-library-stat-dot-medium {
+  background: #e9bd59;
+}
+
+.dsa-library-stat-dot-hard {
+  background: #ef8585;
+}
+
+.dsa-library-difficulty-easy {
+  background: rgba(88, 214, 156, 0.12);
+  color: #79e2b2;
+}
+
+.dsa-library-difficulty-medium {
+  background: rgba(233, 189, 89, 0.12);
+  color: #f1cf7f;
+}
+
+.dsa-library-difficulty-hard {
+  background: rgba(239, 133, 133, 0.12);
+  color: #f2a0a0;
+}
+
+html.light .dsa-library-page .dsa-library-stat,
+html[data-theme="light"] .dsa-library-page .dsa-library-stat {
+  box-shadow: 0 18px 44px -38px rgba(15, 23, 42, 0.42);
+}
+
+html.light .dsa-library-page .dsa-library-topic-chip:hover,
+html[data-theme="light"] .dsa-library-page .dsa-library-topic-chip:hover,
+html.light .dsa-library-page .dsa-library-question-row:hover,
+html[data-theme="light"] .dsa-library-page .dsa-library-question-row:hover {
+  background-color: color-mix(in srgb, var(--workspace-accent) 6%, #ffffff) !important;
+}
+
+html.light .dsa-library-page .dsa-library-question-title,
+html[data-theme="light"] .dsa-library-page .dsa-library-question-title {
+  color: #1f2937 !important;
+}
+
+html.light .dsa-library-page .dsa-library-difficulty-easy,
+html[data-theme="light"] .dsa-library-page .dsa-library-difficulty-easy {
+  background: rgba(5, 150, 105, 0.1) !important;
+  color: #047857 !important;
+}
+
+html.light .dsa-library-page .dsa-library-difficulty-medium,
+html[data-theme="light"] .dsa-library-page .dsa-library-difficulty-medium {
+  background: rgba(180, 83, 9, 0.1) !important;
+  color: #a16207 !important;
+}
+
+html.light .dsa-library-page .dsa-library-difficulty-hard,
+html[data-theme="light"] .dsa-library-page .dsa-library-difficulty-hard {
+  background: rgba(220, 38, 38, 0.09) !important;
+  color: #b91c1c !important;
+}
+
 html.light .practice-question-page [class*="bg-black/"],
 html[data-theme="light"] .practice-question-page [class*="bg-black/"] {
   background-color: rgba(15, 23, 42, 0.035) !important;

@@ -67,6 +67,35 @@ function input(codeExecution: CodeExecutionEvidence | null): TechnicalAnswerEval
 }
 
 describe("technical answer evaluator", () => {
+  it("treats an approved design reference as a rubric rather than the only architecture", () => {
+    const prompt = buildTechnicalEvaluationPrompt({
+      setup: {
+        ...setup,
+        templateId: "dsa",
+        templateTitle: "DSA & Design interview"
+      },
+      question: {
+        ...question,
+        kind: "conversation",
+        interviewSection: "design",
+        topicKey: "architecture-design",
+        storyPracticeInterviewerGuide: {
+          practice: "architecture-design",
+          label: "Architecture & Design",
+          expectedAnswer: "Use a partitioned event stream.",
+          rubric: [{ criterion: "Defends consistency boundaries", points: 10 }]
+        }
+      },
+      answers: ["I would use a transactional outbox and explain its consistency boundary."],
+      rubric: [],
+      execution: null,
+      evaluatedAt: 3_000
+    });
+
+    expect(prompt).toContain("not the only acceptable architecture");
+    expect(prompt).toContain("Accept a different coherent design");
+  });
+
   it("caps a fluent high-scoring answer when supplied tests fail", () => {
     const result = normalizeTechnicalEvaluation(
       rawEvaluation,

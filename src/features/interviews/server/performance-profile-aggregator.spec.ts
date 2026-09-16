@@ -368,6 +368,58 @@ describe("performance profile aggregation", () => {
     );
   });
 
+  it("keeps system-design evidence from a combined DSA & Design round", () => {
+    const combined = dsaSession();
+    combined.state.setup.dsaDesignRound = {
+      kind: "dsa-design-round",
+      version: 1,
+      designScenarioKey: "social-feed",
+      designScenarioVersion: 1,
+      designScenarioTitle: "Social feed",
+      designDifficulty: "standard"
+    };
+    combined.state.plan.push({
+      text: "Frame the social feed design.",
+      kind: "conversation",
+      interviewSection: "design",
+      stage: "rapid",
+      topicKey: "architecture-design",
+      skillKeys: ["architecture-design", "reliability"],
+      rubricKeys: ["requirements", "scale"],
+      competency: "Requirements and scale",
+      mustHit: ["scope", "scale"],
+      probeIfMissing: "What scale assumption changes the design?"
+    });
+    combined.state.turns.push({
+      speaker: "user",
+      text: "I would support ten million daily users, define a 99.9 percent availability goal, and exclude recommendations from the first release.",
+      startMs: 9_000,
+      endMs: 16_000,
+      questionIndex: 1
+    });
+    combined.state.questionIndex = 2;
+
+    const profile = aggregateCandidatePerformanceProfile({
+      id: "10101010-1010-4010-8010-101010101010",
+      revision: 1,
+      sessions: [combined],
+      generatedAt: NOW
+    });
+
+    expect(profile?.skills.map((skill) => skill.skillKey)).toEqual(
+      expect.arrayContaining(["problem-solving", "architecture-design", "reliability"])
+    );
+    expect(profile?.skills.find((skill) => skill.skillKey === "architecture-design")).toMatchObject(
+      {
+        topicKeys: ["architecture-design"],
+        rubricPerformance: expect.arrayContaining([
+          expect.objectContaining({ rubricKey: "requirements" }),
+          expect.objectContaining({ rubricKey: "scale" })
+        ])
+      }
+    );
+  });
+
   it("produces the same fingerprint regardless of input ordering", () => {
     const older = personalizedSession();
     const newer = personalizedSession({

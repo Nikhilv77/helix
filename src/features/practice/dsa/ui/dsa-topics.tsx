@@ -99,15 +99,32 @@ export function DsaTopics({
             />
           ) : null}
 
-          <h2
-            id="dsa-path-heading"
-            className={`${recommendation ? "mt-9" : ""} text-[12px] font-semibold uppercase tracking-[0.14em] text-cream/52`}
+          <div
+            className={`${recommendation ? "mt-9" : ""} flex flex-wrap items-end justify-between gap-4`}
           >
-            Explore all DSA
-          </h2>
-          <p className="mt-2 max-w-[42rem] text-[14px] leading-6 text-cream/52">
-            Browse the full {plan.totalQuestions}-question library anytime.
-          </p>
+            <div>
+              <h2
+                id="dsa-path-heading"
+                className="text-[12px] font-semibold uppercase tracking-[0.14em] text-cream/52"
+              >
+                Explore all DSA
+              </h2>
+              <p className="mt-2 max-w-[42rem] text-[14px] leading-6 text-cream/52">
+                Browse the full {plan.totalQuestions}-question library anytime.
+              </p>
+            </div>
+            <Link
+              href="/dsa-questions"
+              className="group inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.035] px-3 text-xs font-semibold text-cream/62 transition hover:border-[var(--workspace-accent-border)] hover:bg-[var(--workspace-accent-soft)] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+            >
+              Open question library
+              <ArrowRight
+                size={13}
+                aria-hidden="true"
+                className="transition-transform group-hover:translate-x-0.5"
+              />
+            </Link>
+          </div>
 
           <div className="mt-4 space-y-3">
             {plan.chapters.map((chapter, index) => (

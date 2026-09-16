@@ -12,6 +12,7 @@ import {
   type DemonstratedSkillProfile
 } from "@/features/interviews/domain/performance-profile";
 import type { BlueprintDifficulty } from "@/features/interviews/domain/personalized-plan";
+import { isDsaDesignRound } from "@/features/interviews/domain/dsa-design-round";
 import { findQuestion } from "@/features/practice/dsa/domain/dsa";
 import { createInterviewReport } from "./report";
 import type { StoredInterviewSession } from "./session-store";
@@ -200,7 +201,7 @@ function dsaObservationsForSession(
   const report = createInterviewReport(session, now);
   const { state } = session;
 
-  return (state.setup.dsaQuestionSlugs ?? []).flatMap((slug, index) => {
+  const coding = (state.setup.dsaQuestionSlugs ?? []).flatMap((slug, index) => {
     const competency = report.competencies[index];
     const question = state.plan[index];
     const dsaQuestion = findQuestion(slug)?.question;
@@ -237,6 +238,31 @@ function dsaObservationsForSession(
       { ...common, skillKey: dsaPatternSkillKey(dsaQuestion.primaryPattern) }
     ];
   });
+
+  const design = state.plan.flatMap((question, index): PerformanceObservation[] => {
+    if (question.interviewSection !== "design") return [];
+    const competency = report.competencies[index];
+    if (
+      !competency?.answered ||
+      state.questionEvaluations?.[String(index)]?.source === "evaluation-unavailable"
+    ) {
+      return [];
+    }
+
+    const common = {
+      topicKey: question.topicKey ?? "architecture-design",
+      rubricKeys: unique(question.rubricKeys ?? []),
+      score: questionScore(state, question, index, competency.evidenceScore),
+      observedAt: observationTime(state, index),
+      sessionId: state.id
+    };
+    const skillKeys = unique(
+      question.skillKeys?.length ? question.skillKeys : ["architecture-design"]
+    );
+    return skillKeys.map((skillKey) => ({ ...common, skillKey }));
+  });
+
+  return [...coding, ...design];
 }
 
 function behavioralObservationsForSession(
@@ -347,7 +373,7 @@ function isTrustedPersonalizedSession(state: InterviewState): boolean {
 }
 
 function isDsaSession(state: InterviewState): boolean {
-  return state.setup.templateId === "dsa" || state.setup.templateTitle === "DSA practice interview";
+  return isDsaDesignRound(state.setup);
 }
 
 function isResumeBehavioralSession(state: InterviewState): boolean {

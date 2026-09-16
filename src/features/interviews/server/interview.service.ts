@@ -61,6 +61,7 @@ import {
   dsaBlockAssessmentOpening,
   dsaBlockAssessmentReviewFeedback
 } from "./dsa-block-assessment-dialogue";
+import { dsaDesignMoveOnUtterance } from "./dsa-design-dialogue";
 import {
   storyPracticeAssessmentDialogue,
   storyPracticeAssessmentMoveOnUtterance,
@@ -79,6 +80,7 @@ import {
   LIVE_EVALUATION_DEADLINE_MS
 } from "../domain/voice-turn-timing";
 import { usesGeminiLedConversation } from "../domain/gemini-live-conversation";
+import { isCombinedDsaDesignRound, isDsaDesignRound } from "../domain/dsa-design-round";
 import { interviewerNameForSetup } from "../domain/interviewer-persona";
 import { SESSION_TTL_MS } from "./session-constants";
 
@@ -100,6 +102,7 @@ export interface AnswerResult {
 }
 
 type AnswerMode = "answer" | "skip-block-assessment-code";
+type CandidateSubmissionSource = "voice" | "workspace";
 
 /** Server-only source of answer keys for frozen block-assessment review MCQs. */
 export interface BlockAssessmentMcqGrader {
@@ -352,9 +355,19 @@ export class InterviewService {
     answer: { text: string; startMs: number; endMs: number },
     now = Date.now(),
     turnId?: string,
-    liveProposal?: LiveConversationProposal
+    liveProposal?: LiveConversationProposal,
+    submissionSource: CandidateSubmissionSource = "voice"
   ): Promise<AnswerResult> {
-    return this.answerInternal(sessionId, answer, now, undefined, turnId, "answer", liveProposal);
+    return this.answerInternal(
+      sessionId,
+      answer,
+      now,
+      undefined,
+      turnId,
+      "answer",
+      liveProposal,
+      submissionSource
+    );
   }
 
   async answerOwned(
@@ -363,9 +376,19 @@ export class InterviewService {
     answer: { text: string; startMs: number; endMs: number },
     now = Date.now(),
     turnId?: string,
-    liveProposal?: LiveConversationProposal
+    liveProposal?: LiveConversationProposal,
+    submissionSource: CandidateSubmissionSource = "voice"
   ): Promise<AnswerResult> {
-    return this.answerInternal(sessionId, answer, now, ownerId, turnId, "answer", liveProposal);
+    return this.answerInternal(
+      sessionId,
+      answer,
+      now,
+      ownerId,
+      turnId,
+      "answer",
+      liveProposal,
+      submissionSource
+    );
   }
 
   async skipBlockAssessmentCodeOwned(
@@ -392,7 +415,8 @@ export class InterviewService {
     ownerId?: string,
     turnId?: string,
     mode: AnswerMode = "answer",
-    liveProposal?: LiveConversationProposal
+    liveProposal?: LiveConversationProposal,
+    submissionSource: CandidateSubmissionSource = "voice"
   ): Promise<AnswerResult> {
     // Establish ownership/capability-backed access before creating an
     // idempotency row, so a guessed UUID cannot cause writes to another user.
@@ -413,7 +437,8 @@ export class InterviewService {
         ownerId,
         turnId,
         mode,
-        liveProposal
+        liveProposal,
+        submissionSource
       );
     } catch (error) {
       if (turnId) {
@@ -439,7 +464,8 @@ export class InterviewService {
     ownerId?: string,
     turnId?: string,
     mode: AnswerMode = "answer",
-    liveProposal?: LiveConversationProposal
+    liveProposal?: LiveConversationProposal,
+    submissionSource: CandidateSubmissionSource = "voice"
   ): Promise<AnswerResult> {
     const existing = session.state;
 
@@ -507,7 +533,8 @@ export class InterviewService {
       ...(mode === "skip-block-assessment-code" || candidateDeclinedQuestion
         ? { skipped: true }
         : {}),
-      ...(candidateDeclinedQuestion ? { assessmentExcluded: true } : {})
+      ...(candidateDeclinedQuestion ? { assessmentExcluded: true } : {}),
+      submissionSource
     });
 
     if (mode === "skip-block-assessment-code") {
@@ -530,6 +557,40 @@ export class InterviewService {
 
     if (candidateDeclinedQuestion) {
       return this.completeDeclinedQuestion(withAnswer, now, session.version, turnId);
+    }
+
+    // In the combined round, spoken reasoning while a coding prompt is open
+    // is context—not a submitted solution. Keep the question active and let
+    // the workspace Submit action provide the authoritative answer boundary.
+    // Explicit end/decline intents have already returned above, so this guard
+    // only holds an ordinary answer/reasoning proposal from the live model;
+    // clarification requests are still answered in the conversation.
+    const holdingCodeThinkAloud =
+      isCombinedDsaDesignRound(existing.setup) &&
+      question.kind === "code" &&
+      submissionSource === "voice" &&
+      !existing.turns.some(
+        (turn) =>
+          turn.speaker === "user" &&
+          turn.questionIndex === existing.questionIndex &&
+          turn.submissionSource === "workspace"
+      ) &&
+      Boolean(liveProposal) &&
+      liveProposal?.candidateIntent !== "end" &&
+      liveProposal?.candidateIntent !== "decline" &&
+      liveProposal?.candidateIntent !== "question-or-clarification" &&
+      !(liveProposal?.action === "respond" && Boolean(liveProposal.candidateResponse?.trim()));
+    if (holdingCodeThinkAloud) {
+      const decision: Decision = {
+        action: "respond",
+        missing: "none",
+        reason: "held spoken coding reasoning until the workspace submission",
+        utterance: "",
+        forcedBy: null
+      };
+      const response = answerResponse(withAnswer, decision, now);
+      await this.persistAnswer(withAnswer, session.version, turnId, response);
+      return { state: withAnswer, decision, response };
     }
 
     const conversationHistory = withAnswer.turns
@@ -680,7 +741,9 @@ export class InterviewService {
       result.action === "move_on"
         ? ""
         : result.action === "respond"
-          ? conversationalReturnQuestion(generatedLine, question.text)
+          ? liveProposal?.candidateIntent === "other" && !generatedLine
+            ? ""
+            : conversationalReturnQuestion(generatedLine, question.text)
           : qualityCheckedFollowUp(
               generatedLine,
               question.text,
@@ -694,9 +757,15 @@ export class InterviewService {
             );
     const candidateResponse =
       result.action === "respond"
-        ? safeConversationalResponse(raw.candidateResponse)
+        ? safeConversationalResponse(
+            raw.candidateResponse,
+            interviewerNameForSetup(withEvidence.setup)
+          )
         : question.acceptsCandidateQuestions
-          ? safeCandidateResponse(raw.candidateResponse)
+          ? safeCandidateResponse(
+              raw.candidateResponse,
+              interviewerNameForSetup(withEvidence.setup)
+            )
           : "";
     const spokenBridge = joinSpoken(acknowledgement, candidateResponse);
     const utterance = this.composeUtterance(
@@ -1299,6 +1368,9 @@ export class InterviewService {
     if (state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment") {
       return dsaBlockAssessmentMoveOnUtterance(state, acknowledgement);
     }
+    if (isDsaDesignRound(state.setup)) {
+      return dsaDesignMoveOnUtterance(state, acknowledgement);
+    }
     const storyPracticeIdentity = storyPracticeAssessmentIdentityFromSetup(state.setup);
     if (storyPracticeIdentity) {
       return storyPracticeAssessmentMoveOnUtterance(
@@ -1472,10 +1544,10 @@ function joinSpoken(bridge: string, sentence: string): string {
   return /[.!?]$/.test(bridge) ? `${bridge} ${sentence}` : `${bridge}. ${sentence}`;
 }
 
-function safeCandidateResponse(value: string | undefined): string {
+function safeCandidateResponse(value: string | undefined, interviewerName: "Claire" | "James") {
   const normalized = value?.replace(/\s+/g, " ").trim() ?? "";
   if (!normalized) return "";
-  if (disclosesProviderIdentity(normalized)) return jamesRecruitingIdentity();
+  if (disclosesProviderIdentity(normalized)) return recruitingIdentity(interviewerName);
   const transparent = /\b(?:simulation|specific employer|speaking generally)\b/i.test(normalized)
     ? normalized
     : `Speaking generally for this simulation, ${normalized}`;
@@ -1485,10 +1557,13 @@ function safeCandidateResponse(value: string | undefined): string {
   return `${prefix.slice(0, lastSpace > 180 ? lastSpace : prefix.length).trimEnd()}…`;
 }
 
-function safeConversationalResponse(value: string | undefined): string {
+function safeConversationalResponse(
+  value: string | undefined,
+  interviewerName: "Claire" | "James"
+) {
   const normalized = value?.replace(/\s+/g, " ").trim() ?? "";
   if (!normalized) return "Let me answer that directly.";
-  if (disclosesProviderIdentity(normalized)) return jamesRecruitingIdentity();
+  if (disclosesProviderIdentity(normalized)) return recruitingIdentity(interviewerName);
   if (normalized.length <= 360) return normalized;
   const prefix = normalized.slice(0, 359);
   const lastSpace = prefix.lastIndexOf(" ");
@@ -1503,8 +1578,8 @@ function disclosesProviderIdentity(value: string): boolean {
   );
 }
 
-function jamesRecruitingIdentity(): string {
-  return "I'm James from the recruiting team.";
+function recruitingIdentity(interviewerName: "Claire" | "James"): string {
+  return `I'm ${interviewerName} from the recruiting team.`;
 }
 
 function conversationalReturnQuestion(candidate: string, questionAsked: string): string {
@@ -1787,7 +1862,7 @@ export function rubricFor(setup: InterviewSetup, question: PlannedQuestion) {
   }
   const storyPracticeGuide =
     question.storyPracticeInterviewerGuide ?? question.coreTechnicalInterviewerGuide;
-  if (storyPracticeAssessmentIdentityFromSetup(setup) && storyPracticeGuide) {
+  if (storyPracticeGuide) {
     const rubric = storyPracticeGuide.rubric;
     const total = rubric.reduce((sum, item) => sum + item.points, 0) || 1;
     return rubric.map((item, index) => ({
@@ -2051,8 +2126,10 @@ function introUtterance(state: InterviewState): string {
             state,
             storyPracticeAssessmentDialogue(storyPracticeIdentity.practice)
           )
-        : state.setup.templateTitle === "DSA practice interview"
-          ? `Hi, I'm ${interviewerName}. Welcome to your DSA interview. I picked a few problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful.`
+        : isDsaDesignRound(state.setup)
+          ? state.setup.dsaDesignRound?.kind === "dsa-design-round"
+            ? `Hi, I'm ${interviewerName}. Welcome to your DSA and design interview. We'll start with two coding problems, then use one design scenario to discuss requirements, architecture, trade-offs, and reliability. Explain your approach when it helps, and take quiet time when you need to code. Let's begin with the first problem.`
+            : `Hi, I'm ${interviewerName}. Welcome to your DSA interview. I picked a few problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful.`
           : state.setup.fundamentalsRound
             ? `Hi, I'm ${interviewerName}. This is a computer fundamentals round, in three parts. A few quick checks first, then I'll ask you to explain the mechanism behind some of them, and we'll finish by diagnosing something real. After each answer I'll show you what I was listening for.`
             : isResumeRound(state.setup)

@@ -4,11 +4,7 @@ import type { DsaQuestion } from "@/features/practice/dsa/domain/dsa";
 import { auditBank, dsaQuestionCount, subPatternIndex } from "@/features/practice/dsa/domain/dsa";
 import { privatePageMetadata } from "@/lib/shared/seo";
 
-/**
- * Temporary internal audit of the DSA question bank. Every section here is a
- * check that should trend to zero — or to a list you have consciously accepted.
- * This is the page that catches bad metadata before it becomes database rows.
- */
+/** Internal audit of the DSA question bank. */
 export const metadata = privatePageMetadata(
   "DSA Bank Audit",
   "Internal data-quality checks over the DSA question bank."
@@ -23,7 +19,7 @@ export default function DsaAuditPage() {
     <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <nav className="mb-6 text-xs text-white/45">
         <Link href="/dsa-questions" className="transition hover:text-white">
-          ← Temp DSA Questions
+          ← DSA Question Library
         </Link>
       </nav>
 

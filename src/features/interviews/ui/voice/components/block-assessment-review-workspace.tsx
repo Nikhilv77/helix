@@ -34,6 +34,7 @@ export function BlockAssessmentReviewWorkspace({
   error,
   draft,
   selectedOption,
+  interviewerName,
   onDraftChange,
   onSelectOption,
   onSubmit,
@@ -61,6 +62,7 @@ export function BlockAssessmentReviewWorkspace({
   error: string | null;
   draft: string;
   selectedOption: string | null;
+  interviewerName?: string;
   onDraftChange: (value: string) => void;
   onSelectOption: (option: string) => void;
   onSubmit: () => void;
@@ -88,6 +90,7 @@ export function BlockAssessmentReviewWorkspace({
         draft={draft}
         notes=""
         selectedOption={selectedOption}
+        teacherName={interviewerName}
         onDraftChange={onDraftChange}
         onNotesChange={() => undefined}
         onSelectOption={onSelectOption}
@@ -99,6 +102,7 @@ export function BlockAssessmentReviewWorkspace({
         turns={turns}
         spokenAgentTurnKeys={spokenAgentTurnKeys}
         liveUserText={liveUserText}
+        teacherName={interviewerName}
         startedAt={startedAt}
         setup={setup}
         question={question}

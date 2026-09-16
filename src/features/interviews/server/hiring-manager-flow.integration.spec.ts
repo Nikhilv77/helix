@@ -58,7 +58,10 @@ describe("Hiring Manager start → voice transcript → close → report", () =>
   it("carries a personalized frozen plan through the final candidate question into its report", async () => {
     const { service, plan, setup, decide } = harness();
     const started = await service.start(setup, OWNER_ID, STARTED_AT, plan);
-    const voiceOpening = buildOpeningUtterance(true, started.state.plan[0]!.text);
+    const voiceOpening = buildOpeningUtterance({
+      isHiringManagerRound: true,
+      question: started.state.plan[0]!.text
+    });
 
     expect(started.utterance).toContain("Senior Engineer at Northstar");
     expect(voiceOpening).toContain(started.state.plan[0]!.text);

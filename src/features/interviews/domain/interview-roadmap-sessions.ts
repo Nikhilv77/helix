@@ -75,15 +75,16 @@ function permanentInterviewRounds(
   const core = plan?.sessions.find((session) => session.kind === "core-technical");
   const applied = plan?.sessions.find((session) => session.kind === "applied-engineering");
   const dsa = plan?.sessions.find((session) => session.kind === "problem-solving");
-  const technical = core && applied && plan
-    ? technicalDeepDiveRoadmapSession(plan.id, core, applied, history)
-    : upcomingRound({
-        id: "technical-project",
-        order: 2,
-        title: "Core Technical & Projects",
-        purpose: "Core technical knowledge, project deep-dives, and practical coding.",
-        covers: ["Core concepts", "Project decisions", "Practical coding"]
-      });
+  const technical =
+    core && applied && plan
+      ? technicalDeepDiveRoadmapSession(plan.id, core, applied, history)
+      : upcomingRound({
+          id: "technical-project",
+          order: 2,
+          title: "Core Technical & Projects",
+          purpose: "Core technical knowledge, project deep-dives, and practical coding.",
+          covers: ["Core concepts", "Project decisions", "Practical coding"]
+        });
   const problemSolving = dsa
     ? dsaRoadmapSession(dsa, history)
     : upcomingRound({
@@ -102,8 +103,13 @@ function permanentInterviewRounds(
       id: "dsa",
       order: 3,
       title: "DSA & Design",
-      purpose: "DSA and design questions calibrated to your experience level.",
-      covers: ["Problem-solving", "Complexity and edge cases", "Design judgement"]
+      purpose: "Solve coding problems and defend a system design calibrated to your experience.",
+      covers: [
+        "Two DSA coding problems",
+        "Correctness, complexity, and edge cases",
+        "Requirements, architecture, reliability, and trade-offs"
+      ],
+      durationMinutes: 40
     },
     upcomingRound({
       id: "hiring-manager-final",
@@ -121,7 +127,10 @@ function upcomingRound({
   title,
   purpose,
   covers
-}: Pick<InterviewRoadmapSession, "id" | "order" | "title" | "purpose" | "covers">): InterviewRoadmapSession {
+}: Pick<
+  InterviewRoadmapSession,
+  "id" | "order" | "title" | "purpose" | "covers"
+>): InterviewRoadmapSession {
   return {
     id,
     planId: null,

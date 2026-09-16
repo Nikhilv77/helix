@@ -102,6 +102,7 @@ export function submitAnswer(params: {
   userAnswer: string;
   startMs: number;
   endMs: number;
+  submissionSource?: "voice" | "workspace";
   liveProposal?: {
     action: "clarify" | "probe" | "challenge" | "respond" | "move_on";
     missing: "clarity" | "structure" | "specificity" | "ownership" | "outcome" | "none";
