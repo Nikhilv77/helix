@@ -222,4 +222,76 @@ describe("interview public state serializer", () => {
     expect(payload).not.toContain("PRIVATE_EXPECTED_ANSWER");
     expect(payload).not.toContain("PRIVATE_RUBRIC");
   });
+
+  it("exposes only the safe Core Technical & Projects question contract", () => {
+    const state = {
+      id: "33333333-3333-4333-8333-333333333333",
+      setup: {
+        role: "backend",
+        level: "3-5",
+        roundType: "technical",
+        intensity: "realistic",
+        context: "Core Technical & Projects interview",
+        templateId: "technical-deep-dive",
+        templateTitle: "Core Technical & Projects interview",
+        technicalDeepDive: {
+          kind: "technical-deep-dive",
+          version: 2,
+          coreBlueprintId: "core-blueprint-1",
+          appliedBlueprintId: "applied-blueprint-1",
+          project: { sourceKind: "project", sourceId: "project-1", name: "Ledger" }
+        }
+      },
+      plan: [
+        {
+          text: "Which isolation level fits this write path?",
+          kind: "mcq",
+          options: ["Read committed", "Serializable", "Read uncommitted"],
+          answerIndex: 1,
+          explanation: "PRIVATE_AUTHORED_EXPLANATION",
+          technicalProjectsSection: "technical-calibration",
+          mustHit: ["write skew"],
+          probeIfMissing: "Which mechanism determines the guarantee?",
+          maxFollowUps: 0
+        },
+        {
+          text: "PRIVATE_UNREACHED_PROJECT_PROMPT",
+          kind: "conversation",
+          technicalProjectsSection: "project-deep-dive",
+          projectAct: "mechanism",
+          mustHit: ["request path"],
+          probeIfMissing: "Trace one request end to end.",
+          technicalProjectInterviewerGuide: {
+            sourceKind: "project",
+            sourceId: "project-1",
+            groundedFacts: ["PRIVATE_GROUNDED_FACT"],
+            allowedSkillKeys: ["postgresql"],
+            strongSignals: ["PRIVATE_STRONG_SIGNAL"],
+            contradictionChecks: ["PRIVATE_CONTRADICTION_CHECK"],
+            rubric: [{ criterion: "PRIVATE_PROJECT_RUBRIC", points: 10 }]
+          }
+        }
+      ],
+      phase: "questioning",
+      questionIndex: 0,
+      followUpCount: 0,
+      startedAt: 1,
+      turns: []
+    } satisfies InterviewState;
+
+    const serialized = serialiseInterviewState(state);
+    const payload = JSON.stringify(serialized);
+
+    expect(serialized.currentQuestion).toMatchObject({
+      text: "Which isolation level fits this write path?",
+      technicalProjectsSection: "technical-calibration",
+      options: ["Read committed", "Serializable", "Read uncommitted"],
+      maxFollowUps: 0
+    });
+    expect(payload).not.toContain("answerIndex");
+    expect(payload).not.toContain("PRIVATE_AUTHORED_EXPLANATION");
+    expect(payload).not.toContain("PRIVATE_UNREACHED_PROJECT_PROMPT");
+    expect(payload).not.toContain("PRIVATE_GROUNDED_FACT");
+    expect(payload).not.toContain("PRIVATE_PROJECT_RUBRIC");
+  });
 });

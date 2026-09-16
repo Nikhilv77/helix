@@ -224,4 +224,36 @@ describe("FallbackAiService", () => {
       })
     );
   });
+
+  it("retries the primary on the next request when the fallback also failed", async () => {
+    const primaryFailure = new AiProviderException({
+      code: "AI_TIMEOUT",
+      message: "Primary timed out",
+      provider: "primary",
+      operation: request.operation,
+      retryable: true
+    });
+    const fallbackFailure = new AiProviderException({
+      code: "AI_INVALID_RESPONSE",
+      message: "Fallback output did not match the schema",
+      provider: "fallback",
+      operation: request.operation + "-fallback",
+      retryable: true
+    });
+    const primary = {
+      generateStructured: vi
+        .fn()
+        .mockRejectedValueOnce(primaryFailure)
+        .mockResolvedValueOnce({ ok: true })
+    };
+    const fallback = provider(fallbackFailure);
+    const service = new FallbackAiService(primary, fallback, 60_000, Date.now, {
+      recoverPrimaryAfterFallbackFailure: false
+    });
+
+    await expect(service.generateStructured(request)).rejects.toBe(fallbackFailure);
+    await expect(service.generateStructured(request)).resolves.toEqual({ ok: true });
+    expect(primary.generateStructured).toHaveBeenCalledTimes(2);
+    expect(fallback.generateStructured).toHaveBeenCalledOnce();
+  });
 });

@@ -4,7 +4,10 @@ import type {
   ResumeRoastResult,
   ResumeRoastTarget
 } from "@/features/resume-roast/contracts/resume-roast";
-import { ResumeRoastTimeoutError } from "@/features/resume-roast/server/resume-roast.service";
+import {
+  ResumeRoastProviderRateLimitedError,
+  ResumeRoastTimeoutError
+} from "@/features/resume-roast/server/resume-roast.service";
 
 const target: ResumeRoastTarget = {
   role: "backend-engineer",
@@ -44,7 +47,9 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: mocks.auth }));
-vi.mock("@/features/interviews/server/owner", () => ({ authenticatedOwnerId: (id: string) => `user:${id}` }));
+vi.mock("@/features/interviews/server/owner", () => ({
+  authenticatedOwnerId: (id: string) => `user:${id}`
+}));
 vi.mock("@/server/rate-limit/shared-guard", () => ({
   RATE_LIMIT_POLICIES: { resumeRoastGeneration: { namespace: "resume-roast-generate" } },
   getSharedGuard: () => ({ enforce: mocks.enforce })
@@ -172,6 +177,20 @@ describe("/api/resume-roast", () => {
     expect(eventTypes(body)).toEqual(["session", "error"]);
     expect(body).toContain('"code":"timeout"');
     expect(body).not.toContain("gemini");
+  });
+
+  it("streams a distinct provider rate-limit error", async () => {
+    mocks.prepare.mockResolvedValueOnce({
+      kind: "claimed",
+      roastId: roast.id,
+      generationToken: "22222222-2222-4222-8222-222222222222",
+      target,
+      snapshot: {}
+    });
+    mocks.finishClaim.mockRejectedValueOnce(new ResumeRoastProviderRateLimitedError());
+
+    const response = await POST(request("POST", { target }));
+    expect(await response.text()).toContain('"code":"rate-limited"');
   });
 
   it("aborts an interrupted claimed stream and does not enqueue a completion", async () => {

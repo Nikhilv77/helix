@@ -17,7 +17,12 @@ const voice = vi.hoisted(() => ({
     async (
       _line: string,
       _persona?: string,
-      callbacks?: { onEnded?: () => void; onError?: () => void; playbackRate?: number }
+      callbacks?: {
+        onEnded?: () => void;
+        onError?: () => void;
+        playbackRate?: number;
+        delivery?: "quality" | "fast";
+      }
     ) => {
       callbacks?.onEnded?.();
       return "started" as const;
@@ -141,7 +146,9 @@ function streamResponse() {
   return new Response(body, { headers: { "content-type": "text/event-stream" } });
 }
 
-function errorStreamResponse(code: "timeout" | "invalid-response" | "generation-failed") {
+function errorStreamResponse(
+  code: "timeout" | "invalid-response" | "rate-limited" | "generation-failed"
+) {
   return new Response(encodeResumeRoastStreamEvent({ type: "error", code, retryable: true }), {
     headers: { "content-type": "text/event-stream" }
   });
@@ -238,7 +245,18 @@ describe("ResumeRoastWorkspace", () => {
         "Okay, I’ve got your resume. Three quick questions, then we’ll get into it."
       )
     ).toHaveLength(2);
-    expect(await screen.findAllByText("What role are you aiming for?")).toHaveLength(2);
+    expect(await screen.findAllByText("Which position are you targeting?")).toHaveLength(2);
+    await waitFor(() =>
+      expect(voice.speak).toHaveBeenCalledWith(
+        "Okay, I’ve got your resume. Three quick questions, then we’ll get into it. Which position are you targeting?",
+        "james"
+      )
+    );
+    expect(voice.preload).toHaveBeenCalledWith(
+      "What kind of company are we trying to impress?",
+      "james"
+    );
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
 
     fireEvent.click(await screen.findByRole("button", { name: "Backend Engineer" }));
     expect(
@@ -297,7 +315,7 @@ describe("ResumeRoastWorkspace", () => {
     expect(roastCall?.[0]).toContain(
       "Now check—I’ve laid out every issue with your resume and exactly how to fix it."
     );
-    expect(roastCall?.[2]).toBeUndefined();
+    expect(roastCall?.[2]).toEqual({ delivery: "fast" });
     expect(voice.speak.mock.calls.every(([, persona]) => persona === "james")).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "Start a fresh analysis" }));
@@ -424,6 +442,7 @@ describe("ResumeRoastWorkspace", () => {
   it.each([
     ["timeout", "James took too long. Try again."],
     ["invalid-response", "James couldn’t safely prepare that feedback. Try again."],
+    ["rate-limited", "James is busy right now. Wait a minute and try again."],
     ["generation-failed", "James is temporarily unavailable. Try again."]
   ] as const)("shows the specific %s stream failure", async (code, message) => {
     vi.mocked(fetch)

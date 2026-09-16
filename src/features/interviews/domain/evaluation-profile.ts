@@ -72,37 +72,43 @@ const profiles: Record<InterviewReportFamily, InterviewEvaluationProfile> = {
         "concept-depth",
         "Concept depth",
         "Explains the underlying mechanism rather than only naming technology.",
-        "Explain what happens under the hood and why it matters."
+        "Explain what happens under the hood and why it matters.",
+        20
       ),
       parameter(
         "technical-reasoning",
         "Technical reasoning",
         "Connects evidence, constraints, and technical decisions logically.",
-        "Make the constraint-to-decision chain explicit."
+        "Make the constraint-to-decision chain explicit.",
+        20
       ),
       parameter(
         "tradeoffs",
         "Trade-offs",
         "Recognizes alternatives and the costs of the chosen direction.",
-        "Name the strongest alternative and what you gave up."
+        "Name the strongest alternative and what you gave up.",
+        15
       ),
       parameter(
         "practical-execution",
         "Practical execution",
         "Carries the idea into an implementable and reliable solution.",
-        "Add implementation steps, validation, and failure handling."
+        "Add implementation steps, validation, and failure handling.",
+        20
       ),
       parameter(
         "project-ownership",
         "Project ownership",
         "Separates personal contribution from the surrounding team effort.",
-        "State the decision or implementation you personally owned."
+        "State the decision or implementation you personally owned.",
+        15
       ),
       parameter(
         "communication",
         "Communication",
         "Explains technical material precisely and in a usable sequence.",
-        "Lead with the mechanism, then support it with one concrete example."
+        "Lead with the mechanism, then support it with one concrete example.",
+        10
       )
     ]
   ),

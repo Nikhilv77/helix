@@ -46,7 +46,13 @@ export class FallbackAiService {
       try {
         return await this.generateWithFallback(request);
       } catch (fallbackError) {
-        if (!this.canRecoverPrimary(fallbackError)) throw fallbackError;
+        if (!this.canRecoverPrimary(fallbackError)) {
+          // The fallback could not cover the primary outage. Do not pin the
+          // next independent request to that same failed fallback for the
+          // remainder of the primary cooldown.
+          this.primaryRetryAfter = 0;
+          throw fallbackError;
+        }
         return this.generateWithPrimaryRecovery(request);
       }
     }
@@ -58,7 +64,10 @@ export class FallbackAiService {
     try {
       return await this.generateWithFallback(request);
     } catch (fallbackError) {
-      if (!this.canRecoverPrimary(fallbackError)) throw fallbackError;
+      if (!this.canRecoverPrimary(fallbackError)) {
+        this.primaryRetryAfter = 0;
+        throw fallbackError;
+      }
       return this.generateWithPrimaryRecovery(request);
     }
   }

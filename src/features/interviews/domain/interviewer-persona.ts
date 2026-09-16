@@ -1,4 +1,5 @@
 import { isDsaDesignRound, type DsaDesignRoundMetadata } from "./dsa-design-round";
+import { isTechnicalProjectsRound } from "./technical-deep-dive";
 
 export type InterviewerPersonaId = "claire" | "james";
 
@@ -20,6 +21,7 @@ type InterviewPersonaSetup = {
   dsaBlockAssessment?: { kind: string };
   storyPracticeAssessment?: { practice: string };
   coreTechnicalAssessment?: { kind: string };
+  technicalDeepDive?: { kind: string };
 };
 
 /**
@@ -38,7 +40,7 @@ export function interviewerPersonaIdForSetup(
     setup.storyPracticeAssessment?.practice === "core-technical" ||
     setup.coreTechnicalAssessment?.kind === "core-technical-assessment";
 
-  return isDsa || isCoreTechnical ? "claire" : "james";
+  return isDsa || isCoreTechnical || isTechnicalProjectsRound(setup) ? "claire" : "james";
 }
 
 export function interviewerNameForSetup(

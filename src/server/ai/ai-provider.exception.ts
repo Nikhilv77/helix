@@ -2,6 +2,7 @@ export type AiProviderErrorCode =
   | "AI_INVALID_EMBEDDING_RESPONSE"
   | "AI_INVALID_RESPONSE"
   | "AI_PROVIDER_ERROR"
+  | "AI_RATE_LIMITED"
   | "AI_TIMEOUT"
   | "AI_CANCELLED";
 

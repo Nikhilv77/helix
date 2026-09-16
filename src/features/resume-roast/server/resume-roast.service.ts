@@ -141,6 +141,7 @@ export class ResumeRoastService {
       if (error instanceof ResumeRoastGenerationFailedError) throw error;
       if (error instanceof ResumeRoastGenerationError) throw new ResumeRoastInvalidResponseError();
       if (error instanceof AiProviderException) {
+        if (error.code === "AI_RATE_LIMITED") throw new ResumeRoastProviderRateLimitedError();
         if (error.code === "AI_TIMEOUT") throw new ResumeRoastTimeoutError();
         if (error.code === "AI_INVALID_RESPONSE") throw new ResumeRoastInvalidResponseError();
       }
@@ -242,6 +243,12 @@ export class ResumeRoastInvalidResponseError extends ApiRouteError {
 export class ResumeRoastGenerationFailedError extends ApiRouteError {
   constructor() {
     super(503, "RESUME_ROAST_GENERATION_FAILED", "James could not prepare a roast right now.");
+  }
+}
+
+export class ResumeRoastProviderRateLimitedError extends ApiRouteError {
+  constructor() {
+    super(503, "RESUME_ROAST_PROVIDER_RATE_LIMITED", "James is busy. Try again in a minute.");
   }
 }
 

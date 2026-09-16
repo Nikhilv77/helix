@@ -71,6 +71,8 @@ import { GeminiLiveInterviewer, type GeminiLiveInterviewerHandle } from "./gemin
 import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
 import { interviewerPersonaIdForSetup } from "@/features/interviews/domain/interviewer-persona";
 import { isDsaDesignRound } from "@/features/interviews/domain/dsa-design-round";
+import { isTechnicalProjectsRound } from "@/features/interviews/domain/technical-deep-dive";
+import { TechnicalProjectsLiveWorkspace } from "./components/technical-projects-live-workspace";
 
 const DEFAULT_HARD_CAP_MS = 15 * 60 * 1000;
 /**
@@ -719,6 +721,7 @@ export function VoiceInterviewClient({
     setTypedSending(false);
     if (
       isDsaDesignRound(setup) ||
+      isTechnicalProjectsRound(setup) ||
       setup?.dsaBlockAssessment?.kind === "dsa-block-assessment" ||
       storyPracticeAssessment !== null
     ) {
@@ -742,13 +745,15 @@ export function VoiceInterviewClient({
     setup?.dsaBlockAssessment?.kind,
     setup?.fundamentalsRound,
     setup?.resumeRound,
+    setup?.technicalDeepDive,
     setup?.templateTitle,
     turns,
     typedSending
   ]);
 
   useEffect(() => {
-    if (!setup?.resumeRound && !setup?.fundamentalsRound) return;
+    if (!setup?.resumeRound && !setup?.fundamentalsRound && !isTechnicalProjectsRound(setup))
+      return;
 
     setSelectedOption(null);
     setTypedError(null);
@@ -758,7 +763,7 @@ export function VoiceInterviewClient({
     setTypedStartedAt(Date.now());
     // Keyed on the question index so a follow-up on the same question keeps
     // whatever the candidate has already written.
-  }, [progress.index, setup?.fundamentalsRound, setup?.resumeRound]);
+  }, [progress.index, setup?.fundamentalsRound, setup?.resumeRound, setup?.technicalDeepDive]);
 
   useEffect(() => {
     if (
@@ -1200,8 +1205,13 @@ export function VoiceInterviewClient({
   const isAnyBlockAssessment = isBlockAssessment || isStoryPracticeAssessment;
   const isResumeRound = setup?.resumeRound === true;
   const isFundamentalsRound = setup?.fundamentalsRound === true;
+  const isTechnicalProjectsInterview = isTechnicalProjectsRound(setup);
   const usesSupportedRoundWorkspace =
-    isResumeRound || isFundamentalsRound || isDsaInterview || isAnyBlockAssessment;
+    isResumeRound ||
+    isFundamentalsRound ||
+    isDsaInterview ||
+    isTechnicalProjectsInterview ||
+    isAnyBlockAssessment;
 
   // Old generic sessions can still exist in persistence. They must not keep
   // reviving the retired role/setup wizard or its legacy room layout.
@@ -1553,6 +1563,33 @@ export function VoiceInterviewClient({
           onSelectOption={(option) => void submitOptionAnswer(option)}
           onSubmit={() => void submitTypedAnswer()}
           onRun={() => void runResumeCode()}
+          onRequestMic={requestMicrophone}
+          candidateCameraStream={candidateCameraStream}
+          onDisableCamera={disableCandidateCamera}
+        />
+      ) : isTechnicalProjectsInterview ? (
+        <TechnicalProjectsLiveWorkspace
+          question={currentQuestion}
+          questionIndex={progress.index}
+          questionCount={progress.count}
+          counts={stageProgress}
+          turns={displayTurns}
+          spokenAgentTurnKeys={spokenAgentTurnKeys}
+          liveUserText={liveTranscript}
+          startedAt={startedAt}
+          setup={setup}
+          thinking={agentState === "thinking"}
+          bottomRef={bottomRef}
+          agentSlot={interviewerSlot()}
+          micOn={micOn}
+          sending={typedSending}
+          error={typedError}
+          draft={typedDraft}
+          selectedOption={selectedOption}
+          interviewerName={persona.name}
+          onDraftChange={setTypedDraft}
+          onSelectOption={(option) => void submitOptionAnswer(option)}
+          onSubmit={() => void submitTypedAnswer()}
           onRequestMic={requestMicrophone}
           candidateCameraStream={candidateCameraStream}
           onDisableCamera={disableCandidateCamera}

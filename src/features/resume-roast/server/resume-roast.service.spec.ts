@@ -11,6 +11,7 @@ import {
   ResumeRoastCancelledError,
   ResumeRoastGenerationFailedError,
   ResumeRoastInvalidResponseError,
+  ResumeRoastProviderRateLimitedError,
   ResumeRoastService,
   ResumeRoastTimeoutError
 } from "./resume-roast.service";
@@ -292,6 +293,25 @@ describe("ResumeRoastService", () => {
     await expect(
       service.finishClaim("user-a", claimed, new AbortController().signal)
     ).rejects.toBeInstanceOf(ResumeRoastInvalidResponseError);
+  });
+
+  it("maps provider throttling to a safe rate-limit route error", async () => {
+    const { service, generator } = setup();
+    const claimed = await service.prepare("user-a", target);
+    generator.generate.mockRejectedValueOnce(
+      new AiProviderException({
+        code: "AI_RATE_LIMITED",
+        message: "private provider detail",
+        provider: "groq",
+        operation: "resume.roast.generate-fallback",
+        retryable: true,
+        retryAfterMs: 60_000
+      })
+    );
+
+    await expect(
+      service.finishClaim("user-a", claimed, new AbortController().signal)
+    ).rejects.toBeInstanceOf(ResumeRoastProviderRateLimitedError);
   });
 
   it("aborts an interrupted claim before model work and leaves no partial completion", async () => {

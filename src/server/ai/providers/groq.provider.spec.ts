@@ -203,6 +203,25 @@ describe("GroqProvider", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("preserves a terminal rate limit as a distinct provider error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ error: { code: "rate_limit_exceeded" } }), {
+          status: 429,
+          headers: { "content-type": "application/json", "retry-after": "2" }
+        })
+      )
+    );
+    const provider = new GroqProvider(createConfig({ aiMaxRetries: 0 }), "test-key", "test-model");
+
+    await expect(provider.generateStructured(createRequest())).rejects.toMatchObject({
+      code: "AI_RATE_LIMITED",
+      retryable: true,
+      retryAfterMs: 2_000
+    });
+  });
+
   it("maps caller abort to AI_CANCELLED without retrying", async () => {
     let aborted = false;
     const fetchMock = vi.fn(

@@ -249,8 +249,8 @@ export function getAppContainer(): AppContainer {
     interviewAi === geminiAi
       ? geminiAi
       : new FallbackAiService(geminiAi, interviewAi, 60_000, Date.now, {
-          primaryTimeoutMs: 15_000,
-          fallbackTimeoutMs: 20_000,
+          primaryTimeoutMs: 30_000,
+          fallbackTimeoutMs: 25_000,
           recoverPrimaryAfterFallbackFailure: false
         });
 

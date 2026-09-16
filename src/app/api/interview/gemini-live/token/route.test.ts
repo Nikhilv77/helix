@@ -170,6 +170,56 @@ describe("Gemini Live interview instruction", () => {
     expect(instruction).toContain("do not restart");
   });
 
+  it("gives Claire a no-spoilers technical calibration and grounded project contract", () => {
+    const question = "Which database guarantee matters most here?";
+    const openingUtterance = buildOpeningUtterance({
+      isHiringManagerRound: false,
+      isTechnicalProjectsRound: true,
+      question
+    });
+    const instruction = buildSystemInstruction({
+      roundTitle: "Core Technical & Projects interview",
+      interviewerName: "Claire",
+      isHiringManagerRound: false,
+      isTechnicalProjectsRound: true,
+      question,
+      questionNumber: 1,
+      questionCount: 7,
+      followUpCount: 0,
+      maxFollowUps: 0,
+      mustHit: ["transaction isolation"],
+      openingUtterance,
+      plan: [
+        {
+          text: question,
+          kind: "mcq",
+          answerFormat: "mcq",
+          options: ["Atomicity", "Isolation", "Durability"],
+          mustHit: ["transaction isolation"],
+          maxFollowUps: 0,
+          acceptsCandidateQuestions: false
+        },
+        {
+          text: "Trace the request through your project.",
+          kind: "conversation",
+          answerFormat: "spoken",
+          mustHit: ["mechanism", "personal ownership"],
+          maxFollowUps: 2,
+          acceptsCandidateQuestions: false
+        }
+      ]
+    });
+
+    expect(openingUtterance).toContain("I'm Claire");
+    expect(openingUtterance).toContain("three short technical decisions");
+    expect(instruction).toContain("never announce whether an answer is correct");
+    expect(instruction).toContain("The remaining questions stay on one grounded project");
+    expect(instruction).toContain("Never invent project facts");
+    expect(instruction).toContain("Choices: A. Atomicity; B. Isolation; C. Durability");
+    expect(instruction).toContain("the 40-minute limit is only a maximum");
+    expect(instruction).toContain('say exactly: "I\'m Claire from the recruiting team."');
+  });
+
   it("keeps non-hiring-manager rounds on the existing server-led contract", () => {
     const instruction = buildSystemInstruction({
       roundTitle: "Core Technical",

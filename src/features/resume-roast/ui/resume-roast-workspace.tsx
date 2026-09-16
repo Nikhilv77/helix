@@ -57,15 +57,18 @@ interface RoastState {
 type ScreenState = "loading" | "selecting" | "streaming" | "ready" | "failed";
 
 const INTRO = "Okay, I’ve got your resume. Three quick questions, then we’ll get into it.";
-const ROLE_QUESTION = "What role are you aiming for?";
+const ROLE_QUESTION = "Which position are you targeting?";
+const OPENING_VOICE_LINE = `${INTRO} ${ROLE_QUESTION}`;
 const COMPANY_QUESTION = "What kind of company are we trying to impress?";
 const LEVEL_QUESTION = "What level are you applying for?";
-const READING_LINE = "Nice. Give me a second—I’m checking what the confidence forgot to prove.";
+const READING_LINE =
+  "Perfect. I’ll start analysing it now. Give me a second—I’m checking what the confidence forgot to prove.";
 const ROAST_CLOSING =
   "Now check—I’ve laid out every issue with your resume and exactly how to fix it.";
 const PROVIDER_FAILURE_MESSAGE = "James is temporarily unavailable. Try again.";
 const TIMEOUT_MESSAGE = "James took too long. Try again.";
 const INVALID_RESPONSE_MESSAGE = "James couldn’t safely prepare that feedback. Try again.";
+const PROVIDER_RATE_LIMIT_MESSAGE = "James is busy right now. Wait a minute and try again.";
 const RATE_LIMIT_MESSAGE = "You’ve requested several roasts. Try again in a few minutes.";
 const COMPLETION_AUTO_SCROLL_DELAY_MS = 5_000;
 const SCROLL_KEYS = new Set(["ArrowDown", "ArrowUp", "End", "Home", "PageDown", "PageUp", " "]);
@@ -79,6 +82,7 @@ export function resumeRoastProgressMessage(elapsedSeconds: number): string {
 function streamFailureMessage(code: Extract<ResumeRoastStreamEvent, { type: "error" }>["code"]) {
   if (code === "timeout") return TIMEOUT_MESSAGE;
   if (code === "invalid-response") return INVALID_RESPONSE_MESSAGE;
+  if (code === "rate-limited") return PROVIDER_RATE_LIMIT_MESSAGE;
   return PROVIDER_FAILURE_MESSAGE;
 }
 
@@ -104,7 +108,14 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
   const [failure, setFailure] = useState<string | null>(null);
   const [analysisElapsedSeconds, setAnalysisElapsedSeconds] = useState(0);
   const [roastVoiceRetry, setRoastVoiceRetry] = useState(0);
-  const { state: voiceState, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
+  const {
+    state: voiceState,
+    speak,
+    stop,
+    preload,
+    awaitingGesture,
+    setAwaitingGesture
+  } = useMayaVoice();
 
   const complete = events.some((event) => event.type === "done");
   const roastSessionId =
@@ -115,7 +126,7 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
   }, [events]);
   const voiceLine = useMemo(() => {
     if (screen === "streaming") return READING_LINE;
-    if (!target.role) return `${INTRO} ${ROLE_QUESTION}`;
+    if (!target.role) return OPENING_VOICE_LINE;
     if (!target.companyEnvironment) return COMPANY_QUESTION;
     if (!target.level) return LEVEL_QUESTION;
     return "";
@@ -133,10 +144,26 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
   );
 
   useEffect(() => {
+    if (!resume) return;
+    // Warm the opening alongside the state request so James can begin as soon
+    // as the target-selection room appears.
+    preload(OPENING_VOICE_LINE, "james");
+  }, [preload, resume]);
+
+  useEffect(() => {
+    if (screen === "loading" || complete) return;
+    // Warm only the next turn. This keeps the conversation responsive without
+    // spending TTS work on every possible line when the page first opens.
+    if (!target.role) preload(COMPANY_QUESTION, "james");
+    else if (!target.companyEnvironment) preload(LEVEL_QUESTION, "james");
+    else if (!target.level) preload(READING_LINE, "james");
+  }, [complete, preload, screen, target.companyEnvironment, target.level, target.role]);
+
+  useEffect(() => {
     if (complete || screen === "loading" || awaitingGesture) return;
-    const timer = window.setTimeout(() => playVoice(voiceLine), 360);
+    const timer = window.setTimeout(() => playVoice(voiceLine), target.role ? 180 : 0);
     return () => window.clearTimeout(timer);
-  }, [awaitingGesture, complete, playVoice, screen, voiceLine]);
+  }, [awaitingGesture, complete, playVoice, screen, target.role, voiceLine]);
 
   useEffect(() => {
     if (screen !== "streaming") return;
@@ -163,7 +190,7 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
     }
     spokenRoast.current = roastSessionId;
     spokenRoastAttempts.current.count += 1;
-    void speak(roastSpeech, "james").then((result) => {
+    void speak(roastSpeech, "james", { delivery: "fast" }).then((result) => {
       if (result === "blocked") {
         spokenRoast.current = "";
         return;
@@ -182,20 +209,19 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
     });
   }, [awaitingGesture, complete, roastSessionId, roastSpeech, roastVoiceRetry, speak, voiceState]);
 
-  useEffect(() => {
-    if (!awaitingGesture) return;
-    const unlock = () => {
-      setAwaitingGesture(false);
-      if (complete) spokenRoast.current = "";
-      else playVoice(voiceLine, true);
-    };
-    window.addEventListener("pointerdown", unlock, { once: true });
-    window.addEventListener("keydown", unlock, { once: true });
-    return () => {
-      window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("keydown", unlock);
-    };
-  }, [awaitingGesture, complete, playVoice, setAwaitingGesture, voiceLine]);
+  const startJamesVoice = useCallback(() => {
+    setAwaitingGesture(false);
+    if (complete) {
+      spokenRoast.current = roastSessionId;
+      if (roastSpeech) {
+        void speak(roastSpeech, "james", { delivery: "fast" }).then((result) => {
+          if (result === "blocked") spokenRoast.current = "";
+        });
+      }
+      return;
+    }
+    playVoice(voiceLine, true);
+  }, [complete, playVoice, roastSessionId, roastSpeech, setAwaitingGesture, speak, voiceLine]);
 
   const cancelRoast = useCallback(() => {
     roastController.current?.abort();
@@ -393,6 +419,8 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
           roastComplete={complete}
           failure={failure}
           analysisElapsedSeconds={analysisElapsedSeconds}
+          voiceNeedsGesture={awaitingGesture}
+          onStartVoice={startJamesVoice}
           onChooseRole={chooseRole}
           onChooseCompany={chooseCompany}
           onChooseLevel={chooseLevel}
@@ -435,6 +463,8 @@ function JamesChat({
   roastComplete,
   failure,
   analysisElapsedSeconds,
+  voiceNeedsGesture,
+  onStartVoice,
   onChooseRole,
   onChooseCompany,
   onChooseLevel,
@@ -450,6 +480,8 @@ function JamesChat({
   roastComplete: boolean;
   failure: string | null;
   analysisElapsedSeconds: number;
+  voiceNeedsGesture: boolean;
+  onStartVoice: () => void;
   onChooseRole: (role: ResumeRoastTarget["role"]) => void;
   onChooseCompany: (company: ResumeRoastTarget["companyEnvironment"]) => void;
   onChooseLevel: (level: ResumeRoastTarget["level"]) => void;
@@ -546,6 +578,19 @@ function JamesChat({
         className="thin-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-7 sm:px-8 sm:py-9"
       >
         <div className="mx-auto max-w-2xl space-y-8 pb-10">
+          {voiceNeedsGesture ? (
+            <button
+              type="button"
+              onClick={onStartVoice}
+              className="w-full rounded-2xl border border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] px-4 py-3 text-left text-sm font-semibold text-cream transition hover:bg-white/[0.08]"
+            >
+              {roastComplete ? "Hear James’s review" : "Start with James"}
+              <span className="mt-1 block text-xs font-normal text-cream/52">
+                Your browser needs one tap before it can play his voice.
+              </span>
+            </button>
+          ) : null}
+
           {!roastComplete ? <JamesLine text={INTRO} /> : null}
 
           {!showingPrevious && !roastComplete ? (

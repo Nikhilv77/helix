@@ -29,8 +29,15 @@ export interface InterviewSetup {
   /** Requested source IDs on launch, then trusted source IDs in saved state. */
   technicalDeepDive?: {
     kind: "technical-deep-dive";
+    version?: 1 | 2;
     coreBlueprintId: string;
     appliedBlueprintId: string;
+    project?: {
+      sourceKind: "project" | "work-experience" | "scenario";
+      sourceId: string;
+      name: string;
+      roleLabel?: string | null;
+    };
     questionSources?: Array<{
       blueprintId: string;
       blueprintKind: "core-technical" | "applied-engineering";
@@ -358,6 +365,9 @@ export interface InterviewQuestion {
   codeSnippet: string | null;
   /** Candidate-facing section for the combined DSA & Design round. */
   interviewSection?: "dsa" | "design" | null;
+  /** Candidate-facing section for the Core Technical & Projects round. */
+  technicalProjectsSection?: "technical-calibration" | "project-deep-dive" | null;
+  projectAct?: "context" | "mechanism" | "failure" | "tradeoffs" | null;
   /** Public-only immutable transfer problem data for a block assessment. */
   dsaTransferQuestion?: {
     slug: string;

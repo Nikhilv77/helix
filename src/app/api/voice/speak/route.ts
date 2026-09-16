@@ -37,7 +37,8 @@ const speakSchema = z.object({
    * A persona id, never a raw provider model. Provider and voice selection stay
    * on the server, so no caller-supplied string can reach a model parameter.
    */
-  persona: z.string().trim().max(60).optional()
+  persona: z.string().trim().max(60).optional(),
+  delivery: z.enum(["quality", "fast"]).optional()
 });
 
 /**
@@ -50,7 +51,8 @@ export async function GET(request: NextRequest) {
 
     const parsed = speakSchema.safeParse({
       text: request.nextUrl.searchParams.get("text") ?? "",
-      persona: request.nextUrl.searchParams.get("persona") ?? undefined
+      persona: request.nextUrl.searchParams.get("persona") ?? undefined,
+      delivery: request.nextUrl.searchParams.get("delivery") ?? undefined
     });
     if (!parsed.success) {
       throw new ApiRouteError(
@@ -62,12 +64,15 @@ export async function GET(request: NextRequest) {
 
     const config = getAppContainer().config;
     const useJamesVoice = parsed.data.persona === "james";
+    const useGeminiJamesVoice = useJamesVoice && parsed.data.delivery !== "fast";
     const model = useJamesVoice
-      ? GEMINI_TTS_MODEL
+      ? useGeminiJamesVoice
+        ? GEMINI_TTS_MODEL
+        : (personaById("james")?.voice ?? config.deepgramTtsModel)
       : (personaById(parsed.data.persona)?.voice ?? config.deepgramTtsModel);
     const cacheKey = createHash("sha256")
       .update(
-        `${useJamesVoice ? `gemini:${JAMES_TTS_STYLE_VERSION}` : "deepgram"}:${model}:${parsed.data.text}`
+        `${useGeminiJamesVoice ? `gemini:${JAMES_TTS_STYLE_VERSION}` : "deepgram"}:${model}:${parsed.data.text}`
       )
       .digest("hex");
     const cached = audioCache.get(cacheKey);
@@ -80,7 +85,7 @@ export async function GET(request: NextRequest) {
     await guard.enforce(RATE_LIMIT_POLICIES.voiceGeneration, ownerId);
     await guard.enforce(RATE_LIMIT_POLICIES.voiceCharacters, ownerId, parsed.data.text.length);
 
-    if (useJamesVoice) {
+    if (useGeminiJamesVoice) {
       try {
         const generated = await synthesizeJames({
           text: parsed.data.text,

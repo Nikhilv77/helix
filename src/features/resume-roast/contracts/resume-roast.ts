@@ -172,7 +172,13 @@ export const ResumeRoastStreamEventSchema = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("error"),
-      code: z.enum(["generation-failed", "invalid-response", "timeout", "cancelled"]),
+      code: z.enum([
+        "generation-failed",
+        "invalid-response",
+        "rate-limited",
+        "timeout",
+        "cancelled"
+      ]),
       retryable: z.boolean()
     })
     .strict()

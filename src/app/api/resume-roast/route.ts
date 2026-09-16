@@ -14,6 +14,7 @@ import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import {
   ResumeRoastCancelledError,
   ResumeRoastInvalidResponseError,
+  ResumeRoastProviderRateLimitedError,
   ResumeRoastTimeoutError
 } from "@/features/resume-roast/server/resume-roast.service";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
@@ -157,11 +158,13 @@ async function emitRoast(
         code:
           error instanceof ResumeRoastCancelledError
             ? "cancelled"
-            : error instanceof ResumeRoastTimeoutError
-              ? "timeout"
-              : error instanceof ResumeRoastInvalidResponseError
-                ? "invalid-response"
-                : "generation-failed",
+            : error instanceof ResumeRoastProviderRateLimitedError
+              ? "rate-limited"
+              : error instanceof ResumeRoastTimeoutError
+                ? "timeout"
+                : error instanceof ResumeRoastInvalidResponseError
+                  ? "invalid-response"
+                  : "generation-failed",
         retryable: !(error instanceof ResumeRoastCancelledError)
       });
       close();

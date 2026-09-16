@@ -139,7 +139,7 @@ describe("personalized interview roadmap sessions", () => {
     ]);
 
     expect(roadmapSessionHref(sessions[0]!)).toBe("/interview/resume");
-    expect(roadmapSessionHref(sessions[1]!)).toBeNull();
+    expect(roadmapSessionHref(sessions[1]!)).toBe("/interview/technical-projects");
     expect(roadmapSessionHref(sessions[2]!)).toBe("/interview/dsa");
     expect(roadmapSessionHref(sessions[3]!)).toBe("/interview/hiring-manager");
   });
@@ -216,10 +216,54 @@ describe("personalized interview roadmap sessions", () => {
       attemptStatus: "not_started",
       updatedPracticeAvailable: true
     });
-    expect(roadmapSessionHref(technical!)).toBeNull();
+    expect(roadmapSessionHref(technical!)).toBe("/interview/technical-projects");
   });
 
-  it("resumes an in-progress stable slot even after its plan is superseded", () => {
+  it("resumes only an actual combined Core Technical & Projects interview", () => {
+    const personalizedPlan = plan();
+    const core = personalizedPlan.sessions.find((session) => session.kind === "core-technical")!;
+    const applied = personalizedPlan.sessions.find(
+      (session) => session.kind === "applied-engineering"
+    )!;
+    const sessions = interviewRoadmapSessions({
+      personalizedPlan,
+      roadmap: null,
+      history: [
+        historyItem("technical-deep-dive", {
+          sessionId: "combined-interview-session",
+          status: "in_progress",
+          questionCount: 7,
+          questionsCovered: 3,
+          setup: {
+            role: "fullstack",
+            level: "3-5",
+            roundType: "technical",
+            intensity: "realistic",
+            context: "",
+            templateId: "technical-deep-dive",
+            technicalDeepDive: {
+              kind: "technical-deep-dive",
+              version: 2,
+              coreBlueprintId: core.id,
+              appliedBlueprintId: applied.id
+            }
+          }
+        })
+      ]
+    });
+    const technical = sessions.find((session) => session.id === "technical-deep-dive");
+
+    expect(technical).toMatchObject({
+      progressPercent: 43,
+      attemptStatus: "in_progress",
+      resumeSessionId: "combined-interview-session"
+    });
+    expect(roadmapSessionHref(technical!)).toBe(
+      "/interview/voice?session=combined-interview-session"
+    );
+  });
+
+  it("does not treat an old Applied practice assessment as the combined interview", () => {
     const regenerated = plan();
     regenerated.id = "plan-java-fullstack-revision-2";
     regenerated.sessions = regenerated.sessions.map((session) => ({
@@ -256,11 +300,11 @@ describe("personalized interview roadmap sessions", () => {
     const technical = sessions.find((session) => session.id === "technical-deep-dive");
 
     expect(technical).toMatchObject({
-      progressPercent: 50,
-      attemptStatus: "in_progress",
-      resumeSessionId: "live-old-plan-session"
+      progressPercent: 0,
+      attemptStatus: "not_started",
+      resumeSessionId: null
     });
-    expect(roadmapSessionHref(technical!)).toBeNull();
+    expect(roadmapSessionHref(technical!)).toBe("/interview/technical-projects");
   });
 
   it("counts a story-driven Core Technical assessment in the Core Technical interview slot", () => {
@@ -279,9 +323,9 @@ describe("personalized interview roadmap sessions", () => {
     const technical = sessions.find((session) => session.id === "technical-deep-dive");
 
     expect(technical).toMatchObject({
-      attemptStatus: "in_progress",
-      resumeSessionId: "core-technical:assessment-1"
+      attemptStatus: "not_started",
+      resumeSessionId: null
     });
-    expect(roadmapSessionHref(technical!)).toBeNull();
+    expect(roadmapSessionHref(technical!)).toBe("/interview/technical-projects");
   });
 });

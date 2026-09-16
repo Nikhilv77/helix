@@ -11,6 +11,18 @@ describe("Gemini-led interview policy", () => {
     ).toBe(true);
     expect(
       usesGeminiLedConversation({
+        roundType: "technical",
+        resumeRound: false,
+        templateId: "technical-deep-dive",
+        technicalDeepDive: {
+          kind: "technical-deep-dive",
+          coreBlueprintId: "core",
+          appliedBlueprintId: "applied"
+        }
+      })
+    ).toBe(true);
+    expect(
+      usesGeminiLedConversation({
         roundType: "behavioral",
         resumeRound: true,
         templateId: "resume-behavioral-defense"

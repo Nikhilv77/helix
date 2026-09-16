@@ -320,6 +320,7 @@ export function buildTechnicalEvaluationPrompt(input: TechnicalAnswerEvaluationI
 
   const storyPracticeGuide =
     question.storyPracticeInterviewerGuide ?? question.coreTechnicalInterviewerGuide;
+  const technicalProjectGuide = question.technicalProjectInterviewerGuide;
 
   return `Evaluate the candidate's cumulative answer to one interview question.
 
@@ -335,6 +336,7 @@ ${question.mustHit.map((item) => `- ${item}`).join("\n")}
 
 ${storyPracticeGuide ? `Authoritative expected mechanism and evidence (server-only):\n${storyPracticeGuide.expectedAnswer}` : ""}
 ${storyPracticeGuide && "practice" in storyPracticeGuide && storyPracticeGuide.practice === "architecture-design" ? "Treat the reference design as a grading rubric, not the only acceptable architecture. Accept a different coherent design when its assumptions are explicit and its trade-offs are technically defended." : ""}
+${technicalProjectGuide ? `Grounded project evidence (server-only; treat it as source context, not a complete answer):\n${technicalProjectGuide.groundedFacts.map((fact) => `- ${fact}`).join("\n")}\nAllowed skill scope: ${technicalProjectGuide.allowedSkillKeys.join(", ") || "role-relevant engineering"}\nStrong signals: ${technicalProjectGuide.strongSignals.join("; ")}\nImportant checks: ${technicalProjectGuide.contradictionChecks.join("; ")}` : ""}
 
 Question-specific rubric (use it as supporting evidence inside the session parameters below):
 ${formatRubric(rubric)}

@@ -12,15 +12,22 @@ export interface VoicePlaybackCallbacks {
   onEnded?: () => void;
   onError?: () => void;
   playbackRate?: number;
+  /** Prefer the streaming voice path for time-sensitive, newly generated copy. */
+  delivery?: "quality" | "fast";
 }
 
-export function voiceUrl(line: string, personaId?: string): string {
+export function voiceUrl(
+  line: string,
+  personaId?: string,
+  delivery?: VoicePlaybackCallbacks["delivery"]
+): string {
   const persona = personaId ? `&persona=${encodeURIComponent(personaId)}` : "";
+  const deliveryMode = delivery === "fast" ? "&delivery=fast" : "";
   // Keep a model version in the URL as an extra guard for browser media caches.
   // The API still resolves and validates the model itself.
   const model = personaId === "james" ? "gemini-charon-v4" : personaById(personaId)?.voice;
   const voiceVersion = model ? `&v=${encodeURIComponent(model)}` : "";
-  return `/api/voice/speak?text=${encodeURIComponent(line)}${persona}${voiceVersion}`;
+  return `/api/voice/speak?text=${encodeURIComponent(line)}${persona}${voiceVersion}${deliveryMode}`;
 }
 
 export function isAutoplayBlocked(error: unknown): boolean {
@@ -105,7 +112,7 @@ export function useMayaVoice() {
 
       try {
         const resolvedPersonaId = personaId ?? teacher.id;
-        const url = voiceUrl(line, resolvedPersonaId);
+        const url = voiceUrl(line, resolvedPersonaId, callbacks?.delivery);
         // Reuse the exact element that was warmed during the prior step. A
         // separate Audio instance can trigger another streamed TTS request,
         // which is why a preloaded transition still appeared to be loading.

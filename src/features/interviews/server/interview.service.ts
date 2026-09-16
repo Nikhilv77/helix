@@ -82,6 +82,8 @@ import {
 import { usesGeminiLedConversation } from "../domain/gemini-live-conversation";
 import { isCombinedDsaDesignRound, isDsaDesignRound } from "../domain/dsa-design-round";
 import { interviewerNameForSetup } from "../domain/interviewer-persona";
+import { isTechnicalProjectsRound } from "../domain/technical-deep-dive";
+import { technicalProjectsMoveOnUtterance } from "./technical-projects-dialogue";
 import { SESSION_TTL_MS } from "./session-constants";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -985,8 +987,9 @@ export class InterviewService {
       }
     };
     const result = advance(evaluatedState, "move_on", now);
-    const feedback =
-      state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment"
+    const feedback = isTechnicalProjectsRound(state.setup)
+      ? ""
+      : state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment"
         ? dsaBlockAssessmentReviewFeedback({
             sessionId: state.id,
             questionIndex: state.questionIndex,
@@ -1371,6 +1374,9 @@ export class InterviewService {
     if (isDsaDesignRound(state.setup)) {
       return dsaDesignMoveOnUtterance(state, acknowledgement);
     }
+    if (isTechnicalProjectsRound(state.setup)) {
+      return technicalProjectsMoveOnUtterance(state, acknowledgement);
+    }
     const storyPracticeIdentity = storyPracticeAssessmentIdentityFromSetup(state.setup);
     if (storyPracticeIdentity) {
       return storyPracticeAssessmentMoveOnUtterance(
@@ -1460,23 +1466,29 @@ function multipleChoiceEvaluation(
     : question.rubricKeys?.length
       ? question.rubricKeys
       : [question.competency ?? "technical-correctness"];
+  const reviewedExplanation = isTechnicalProjectsRound(state.setup)
+    ? question.explanation?.trim()
+    : undefined;
+  const resultSummary = correct
+    ? "The selected answer matches the authored correct option."
+    : "The selected answer does not match the authored correct option.";
 
   return {
     source: "local-mcq",
     score: correct ? 100 : 0,
     verdict: correct ? "correct" : "incorrect",
     confidence: 1,
-    summary: correct
-      ? "The selected answer matches the authored correct option."
-      : "The selected answer does not match the authored correct option.",
+    // The explanation is retained in the completed report evaluation, but is
+    // never included in the live question serializer or Claire's response.
+    summary: reviewedExplanation ? `${resultSummary} ${reviewedExplanation}` : resultSummary,
     strengths: correct ? ["Selected the technically correct option."] : [],
     gaps: correct ? [] : ["Review the underlying concept and the authored correct option."],
     rubricScores: rubricKeys.map((rubricKey) => ({
       rubricKey,
       score: correct ? 100 : 0,
       rationale: correct
-        ? "Matched the authored answer key."
-        : "Did not match the authored answer key."
+        ? (reviewedExplanation ?? "Matched the authored answer key.")
+        : (reviewedExplanation ?? "Did not match the authored answer key.")
     })),
     answerExcerpts: answer ? [answer.replace(/\s+/g, " ").trim().slice(0, 240)] : [],
     execution: null,
@@ -1856,12 +1868,14 @@ function topicLabelFor(setup: InterviewSetup, question: PlannedQuestion): string
 
 export function rubricFor(setup: InterviewSetup, question: PlannedQuestion) {
   const rubricKeys = new Set(question.rubricKeys ?? []);
-  if (!rubricKeys.size) return undefined;
   if (setup.dsaBlockAssessment?.kind === "dsa-block-assessment") {
+    if (!rubricKeys.size) return undefined;
     return BLOCK_ASSESSMENT_RUBRIC.filter((rubric) => rubricKeys.has(rubric.key));
   }
   const storyPracticeGuide =
-    question.storyPracticeInterviewerGuide ?? question.coreTechnicalInterviewerGuide;
+    question.storyPracticeInterviewerGuide ??
+    question.coreTechnicalInterviewerGuide ??
+    question.technicalProjectInterviewerGuide;
   if (storyPracticeGuide) {
     const rubric = storyPracticeGuide.rubric;
     const total = rubric.reduce((sum, item) => sum + item.points, 0) || 1;
@@ -1873,6 +1887,7 @@ export function rubricFor(setup: InterviewSetup, question: PlannedQuestion) {
       weakSignals: [`Does not establish: ${item.criterion}`]
     }));
   }
+  if (!rubricKeys.size) return undefined;
   return setup.personalizedBlueprint?.rubric.filter((rubric) => rubricKeys.has(rubric.key));
 }
 
@@ -2130,11 +2145,13 @@ function introUtterance(state: InterviewState): string {
           ? state.setup.dsaDesignRound?.kind === "dsa-design-round"
             ? `Hi, I'm ${interviewerName}. Welcome to your DSA and design interview. We'll start with two coding problems, then use one design scenario to discuss requirements, architecture, trade-offs, and reliability. Explain your approach when it helps, and take quiet time when you need to code. Let's begin with the first problem.`
             : `Hi, I'm ${interviewerName}. Welcome to your DSA interview. I picked a few problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful.`
-          : state.setup.fundamentalsRound
-            ? `Hi, I'm ${interviewerName}. This is a computer fundamentals round, in three parts. A few quick checks first, then I'll ask you to explain the mechanism behind some of them, and we'll finish by diagnosing something real. After each answer I'll show you what I was listening for.`
-            : isResumeRound(state.setup)
-              ? `Hi, I'm ${interviewerName}. Let's have a relaxed conversation about the work on your resume. I'll pick a few threads and ask about what actually happened, what you did, and what changed. Take your time.`
-              : `Hi, I'm ${interviewerName}, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
+          : isTechnicalProjectsRound(state.setup)
+            ? `Hi, I'm ${interviewerName}. Welcome to your Core Technical and Projects interview. We'll start with three short technical decisions, then spend most of the round on one project from your experience. I may ask you to trace mechanisms, defend trade-offs, and pressure-test what happened in production. Let's begin.`
+            : state.setup.fundamentalsRound
+              ? `Hi, I'm ${interviewerName}. This is a computer fundamentals round, in three parts. A few quick checks first, then I'll ask you to explain the mechanism behind some of them, and we'll finish by diagnosing something real. After each answer I'll show you what I was listening for.`
+              : isResumeRound(state.setup)
+                ? `Hi, I'm ${interviewerName}. Let's have a relaxed conversation about the work on your resume. I'll pick a few threads and ask about what actually happened, what you did, and what changed. Take your time.`
+                : `Hi, I'm ${interviewerName}, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
 
   if (isResumableBlockAssessment(state.setup)) return intro;
   return first ? `${intro} ${candidateFacingQuestion(first, state.setup)}` : intro;

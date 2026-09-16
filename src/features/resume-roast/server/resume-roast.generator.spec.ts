@@ -189,6 +189,21 @@ describe("ResumeRoastGenerator", () => {
     expect(generateStructured).toHaveBeenCalledTimes(2);
   });
 
+  it("does not immediately retry an invalid fallback response", async () => {
+    const fallbackError = new AiProviderException({
+      code: "AI_INVALID_RESPONSE",
+      message: "invalid",
+      provider: "groq",
+      operation: "resume.roast.generate-fallback",
+      retryable: true
+    });
+    const generateStructured = vi.fn().mockRejectedValue(fallbackError);
+    const generator = new ResumeRoastGenerator({ generateStructured } as never);
+
+    await expect(generator.generate({ snapshot, target })).rejects.toBe(fallbackError);
+    expect(generateStructured).toHaveBeenCalledOnce();
+  });
+
   it("rejects schema-invalid action plans and ungrounded anchors", () => {
     expect(() => validateResumeRoastResult(result({ actionPlan: [] }), snapshot)).toThrow(
       ResumeRoastGenerationError

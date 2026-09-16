@@ -6,10 +6,10 @@ import type {
 import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
 import type { InterviewHistoryItem } from "@/lib/shared/types";
 import {
-  TECHNICAL_DEEP_DIVE_DURATION_MINUTES,
   TECHNICAL_DEEP_DIVE_ID,
   TECHNICAL_DEEP_DIVE_PREP_SESSION,
-  TECHNICAL_DEEP_DIVE_QUESTION_COUNT,
+  TECHNICAL_PROJECTS_DURATION_MINUTES,
+  TECHNICAL_PROJECTS_QUESTION_COUNT,
   type TechnicalDeepDiveBlueprintIds
 } from "@/features/interviews/domain/technical-deep-dive";
 
@@ -62,6 +62,17 @@ export function roadmapSessionHref(session: InterviewRoadmapSession): string | n
   }
   if (session.id === "dsa") return "/interview/dsa";
   if (session.id === "resume-behavioral-defense") return "/interview/resume";
+  if (session.id === TECHNICAL_DEEP_DIVE_ID) {
+    const resumeSessionId = session.resumeSessionId;
+    if (
+      resumeSessionId &&
+      !resumeSessionId.startsWith("core-technical:") &&
+      !resumeSessionId.startsWith("applied-engineering:")
+    ) {
+      return `/interview/voice?session=${encodeURIComponent(resumeSessionId)}`;
+    }
+    return "/interview/technical-projects";
+  }
   // The old generic interview wizard is retired. New content gets a dedicated
   // entry route before it is made available from the four-round roadmap.
   return null;
@@ -171,8 +182,7 @@ function technicalDeepDiveRoadmapSession(
     session.setup.personalizedBlueprint?.kind === "applied-engineering";
   const latestActive = findLatestSession(
     history,
-    (session) =>
-      (isAnyCombined(session) || isSourceSlot(session)) && session.status === "in_progress"
+    (session) => isAnyCombined(session) && session.status === "in_progress"
   );
   const completedCurrent = findLatestSession(
     history,
@@ -187,7 +197,7 @@ function technicalDeepDiveRoadmapSession(
   const totalQuestions =
     progressSession?.status === "in_progress"
       ? progressSession.questionCount
-      : TECHNICAL_DEEP_DIVE_QUESTION_COUNT;
+      : TECHNICAL_PROJECTS_QUESTION_COUNT;
   const progress = sessionProgress(progressSession, totalQuestions);
 
   return {
@@ -203,7 +213,7 @@ function technicalDeepDiveRoadmapSession(
     ],
     ...progress,
     updatedPracticeAvailable: Boolean(previousTechnicalCompletion && !completedCurrent),
-    durationMinutes: TECHNICAL_DEEP_DIVE_DURATION_MINUTES,
+    durationMinutes: TECHNICAL_PROJECTS_DURATION_MINUTES,
     difficulty: harderDifficulty(core.difficulty, applied.difficulty),
     technicalDeepDive: {
       coreBlueprintId: core.id,

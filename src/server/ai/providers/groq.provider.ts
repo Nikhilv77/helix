@@ -130,7 +130,7 @@ export class GroqProvider implements SystemDesignerAIProvider {
         });
 
         if (!shouldRetry) throw mapped;
-        if (mapped.code === "AI_PROVIDER_ERROR") {
+        if (mapped.code === "AI_PROVIDER_ERROR" || mapped.code === "AI_RATE_LIMITED") {
           await waitForRetry(
             Math.min(30_000, mapped.retryAfterMs ?? 1_000 * attempt),
             request.signal
@@ -175,34 +175,30 @@ export class GroqProvider implements SystemDesignerAIProvider {
       if (callerAborted || request.signal?.aborted) throw this.cancelledError(request.operation);
       if (timedOut) throw this.timeoutError(request.operation);
 
-      if (!response.ok) {
-        const failure = await this.readFailure(response);
-        if (response.status === 400 && failure.code === "json_validate_failed") {
-          response = await this.sendRequest(request, controller.signal, "best-effort");
-        }
+      let failure = response.ok ? undefined : await this.readFailure(response);
+      if (response.status === 400 && failure?.code === "json_validate_failed") {
+        response = await this.sendRequest(request, controller.signal, "best-effort");
+        failure = response.ok ? undefined : await this.readFailure(response);
+      }
+
+      if (response.status === 400 && failure?.code === "json_validate_failed") {
+        response = await this.sendRequest(request, controller.signal, "json-object");
+        failure = response.ok ? undefined : await this.readFailure(response);
       }
 
       if (!response.ok) {
-        const failure = await this.readFailure(response);
-        if (response.status === 400 && failure.code === "json_validate_failed") {
-          response = await this.sendRequest(request, controller.signal, "json-object");
-        }
-      }
-
-      if (!response.ok) {
-        const failure = await this.readFailure(response);
         throw new AiProviderException({
-          code: "AI_PROVIDER_ERROR",
+          code: response.status === 429 ? "AI_RATE_LIMITED" : "AI_PROVIDER_ERROR",
           message:
             `Groq request failed with status ${response.status}` +
-            (failure.reason ? ` (${failure.reason})` : ""),
+            (failure?.reason ? ` (${failure.reason})` : ""),
           provider: PROVIDER_NAME,
           operation: request.operation,
           retryable:
             TRANSIENT_STATUS_CODES.has(response.status) ||
-            failure.reason === "structured-output-validation" ||
-            failure.reason === "json-generation",
-          retryAfterMs: failure.retryAfterMs
+            failure?.reason === "structured-output-validation" ||
+            failure?.reason === "json-generation",
+          retryAfterMs: failure?.retryAfterMs
         });
       }
 

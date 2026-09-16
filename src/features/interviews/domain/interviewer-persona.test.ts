@@ -24,7 +24,11 @@ describe("interviewerPersonaIdForSetup", () => {
     },
     { dsaBlockAssessment: { kind: "dsa-block-assessment" } },
     { storyPracticeAssessment: { practice: "core-technical" } },
-    { coreTechnicalAssessment: { kind: "core-technical-assessment" } }
+    { coreTechnicalAssessment: { kind: "core-technical-assessment" } },
+    { templateId: "technical-deep-dive" },
+    { templateTitle: "Technical Deep Dive" },
+    { templateTitle: "Core Technical & Projects interview" },
+    { technicalDeepDive: { kind: "technical-deep-dive" } }
   ])("assigns Claire to DSA and Core Technical", (setup) => {
     expect(interviewerPersonaIdForSetup(setup)).toBe("claire");
   });

@@ -46,8 +46,16 @@ export interface InterviewSetup {
   /** Source identities retained when Core and Applied launch as one mixed round. */
   technicalDeepDive?: {
     kind: "technical-deep-dive";
+    /** Missing/1 is the legacy four-slot projection; 2 is Core Technical & Projects. */
+    version?: 1 | 2;
     coreBlueprintId: string;
     appliedBlueprintId: string;
+    project?: {
+      sourceKind: "project" | "work-experience" | "scenario";
+      sourceId: string;
+      name: string;
+      roleLabel?: string | null;
+    };
     questionSources?: Array<{
       blueprintId: string;
       blueprintKind: "core-technical" | "applied-engineering";
@@ -129,6 +137,9 @@ export interface PlannedQuestion {
   kind?: "conversation" | "code" | "mcq";
   /** Candidate-facing section in the permanent DSA & Design round. */
   interviewSection?: "dsa" | "design";
+  /** Candidate-facing section in the permanent Core Technical & Projects round. */
+  technicalProjectsSection?: "technical-calibration" | "project-deep-dive";
+  projectAct?: "context" | "mechanism" | "failure" | "tradeoffs";
   language?: string;
   codeTask?: string;
   codeSnippet?: string;
@@ -168,6 +179,16 @@ export interface PlannedQuestion {
     practice: StoryPracticeAssessmentIdentity["practice"];
     label: string;
     expectedAnswer: string;
+    rubric: Array<{ criterion: string; points: number }>;
+  };
+  /** Server-only grounded evidence for a project interview act. */
+  technicalProjectInterviewerGuide?: {
+    sourceKind: "project" | "work-experience" | "scenario";
+    sourceId: string;
+    groundedFacts: string[];
+    allowedSkillKeys: string[];
+    strongSignals: string[];
+    contradictionChecks: string[];
     rubric: Array<{ criterion: string; points: number }>;
   };
   /** Which stage of a resume round this question belongs to. */

@@ -989,6 +989,68 @@ describe("InterviewService resume round", () => {
     expect(reply).toMatchObject({ speaker: "agent", correct: false, gradedQuestionIndex: 0 });
   });
 
+  it("keeps Core Technical MCQ grading silent live and saves the explanation for the report", async () => {
+    const technicalProjectsSetup: InterviewSetup = {
+      ...setup,
+      templateId: "technical-deep-dive",
+      templateTitle: "Core Technical & Projects interview",
+      technicalDeepDive: {
+        kind: "technical-deep-dive",
+        version: 2,
+        coreBlueprintId: "core-blueprint-1",
+        appliedBlueprintId: "applied-blueprint-1"
+      }
+    };
+    const nextMcq: PlannedQuestion = {
+      ...mcqQuestion,
+      text: "Which queue runs first?",
+      technicalProjectsSection: "technical-calibration"
+    };
+    const { service, decide } = harness();
+    const started = await service.start(technicalProjectsSetup, "user-1", 1_000, [
+      { ...mcqQuestion, technicalProjectsSection: "technical-calibration" },
+      nextMcq
+    ]);
+
+    const { state, decision } = await service.answer(
+      started.state.id,
+      { text: "useMemo", startMs: 0, endMs: 1_000 },
+      2_000
+    );
+
+    expect(decide).not.toHaveBeenCalled();
+    expect(decision.utterance).toBe(
+      "Let's take the next technical scenario. Which queue runs first?"
+    );
+    expect(decision.utterance).not.toMatch(/correct|incorrect|useRef|answer key/i);
+    expect(state.questionEvaluations?.["0"]?.summary).toContain(mcqQuestion.explanation);
+  });
+
+  it("builds a weighted rubric from the private project guide", () => {
+    const projectQuestion: PlannedQuestion = {
+      ...questions[0]!,
+      technicalProjectInterviewerGuide: {
+        sourceKind: "project",
+        sourceId: "project-1",
+        groundedFacts: ["Built an offline synchronization layer."],
+        allowedSkillKeys: ["typescript"],
+        strongSignals: ["ownership", "mechanism"],
+        contradictionChecks: ["Separate personal and team work."],
+        rubric: [
+          { criterion: "Establishes personal ownership.", points: 4 },
+          { criterion: "Traces the mechanism end to end.", points: 3 },
+          { criterion: "Uses concrete verification evidence.", points: 3 }
+        ]
+      }
+    };
+
+    expect(rubricFor(setup, projectQuestion)).toEqual([
+      expect.objectContaining({ weightPercent: 40 }),
+      expect.objectContaining({ weightPercent: 30 }),
+      expect.objectContaining({ weightPercent: 30 })
+    ]);
+  });
+
   it("sends a written skills answer through the decider as usual", async () => {
     const { service, decide } = harness();
     decide.mockResolvedValue({

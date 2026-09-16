@@ -62,7 +62,13 @@ export class ResumeRoastGenerator {
       } catch (error) {
         const invalidResponse =
           error instanceof ResumeRoastGenerationError ||
-          (error instanceof AiProviderException && error.code === "AI_INVALID_RESPONSE");
+          (error instanceof AiProviderException &&
+            error.code === "AI_INVALID_RESPONSE" &&
+            // A fallback provider has already consumed the failover path. An
+            // immediate second pass would hit that provider again while the
+            // primary is cooling down and commonly turns a schema miss into a
+            // rate-limit failure.
+            !error.operation.endsWith("-fallback"));
         if (!invalidResponse) throw error;
         if (attempt === RESUME_ROAST_VALIDATION_ATTEMPTS) throw error;
       }

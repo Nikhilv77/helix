@@ -1,6 +1,7 @@
 import type { FunctionDeclaration } from "@google/genai";
 import type { InterviewSetup } from "@/features/interviews/server/types";
 import { isCombinedDsaDesignRound } from "./dsa-design-round";
+import { isTechnicalProjectsRound } from "./technical-deep-dive";
 
 export const COMPLETE_INTERVIEW_TURN_TOOL = "complete_interview_turn";
 
@@ -89,12 +90,14 @@ export function usesGeminiLedConversation(
     | "templateTitle"
     | "dsaQuestionSlugs"
     | "dsaDesignRound"
+    | "technicalDeepDive"
   >
 ): boolean {
   return (
     setup.templateId === "hiring-manager-final" ||
     setup.templateId === "resume-behavioral-defense" ||
     (setup.roundType === "hiring-manager" && setup.resumeRound === true) ||
-    isCombinedDsaDesignRound(setup)
+    isCombinedDsaDesignRound(setup) ||
+    isTechnicalProjectsRound(setup)
   );
 }

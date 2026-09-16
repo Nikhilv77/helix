@@ -5,23 +5,44 @@ export const TECHNICAL_DEEP_DIVE_ID = "technical-deep-dive" as const;
 export const TECHNICAL_DEEP_DIVE_TITLE = "Technical Deep Dive" as const;
 export const TECHNICAL_DEEP_DIVE_QUESTION_COUNT = 4 as const;
 export const TECHNICAL_DEEP_DIVE_DURATION_MINUTES = 25 as const;
+export const TECHNICAL_PROJECTS_TITLE = "Core Technical & Projects interview" as const;
+export const TECHNICAL_PROJECTS_QUESTION_COUNT = 7 as const;
+export const TECHNICAL_PROJECTS_DURATION_MINUTES = 40 as const;
 
 export interface TechnicalDeepDiveBlueprintIds {
   coreBlueprintId: string;
   appliedBlueprintId: string;
 }
 
+export type TechnicalProjectsRoundIdentity = {
+  templateId?: string;
+  templateTitle?: string;
+  technicalDeepDive?: { kind: string };
+};
+
+/** Durable identity shared by legacy four-question and current seven-question rounds. */
+export function isTechnicalProjectsRound(
+  setup: TechnicalProjectsRoundIdentity | null | undefined
+): boolean {
+  if (!setup) return false;
+  return (
+    setup.templateId === TECHNICAL_DEEP_DIVE_ID ||
+    setup.technicalDeepDive?.kind === TECHNICAL_DEEP_DIVE_ID ||
+    setup.templateTitle === TECHNICAL_DEEP_DIVE_TITLE ||
+    setup.templateTitle === TECHNICAL_PROJECTS_TITLE
+  );
+}
+
 /** Candidate-facing fallback used before a personalized plan is available. */
 export const TECHNICAL_DEEP_DIVE_PREP_SESSION: PrepSession = {
   id: TECHNICAL_DEEP_DIVE_ID,
   order: 2,
-  title: TECHNICAL_DEEP_DIVE_TITLE,
-  purpose:
-    "Connect language and framework internals to the production failures, trade-offs, and debugging decisions they create.",
+  title: "Core Technical & Projects",
+  purpose: "Prove the mechanisms you know, then defend how you used them in a real project.",
   covers: [
-    "Two questions on core language or framework mechanics",
-    "Two production scenarios on debugging and engineering judgement",
-    "Concrete reasoning from mechanism to system behaviour"
+    "Three scenario-based technical checks",
+    "One project traced from design to production",
+    "Ownership, trade-offs, failures, testing, and impact"
   ],
   status: "planned"
 };
