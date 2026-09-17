@@ -41,6 +41,8 @@ export type StoryPracticeTechnologyWelcomeExperience<TValue extends string = str
   confirmingScript: (selectedLabel: string | null) => string;
   generatingScript: string;
   options: readonly StoryPracticeTechnologyOption<TValue>[];
+  /** Starts preparation with the server-derived recommendation instead of asking the learner. */
+  autoStart?: boolean;
   buildConfirmation: (value: TValue) => unknown;
   buildPreparation: (focusRevisionId: string, requestId: string) => unknown;
 };

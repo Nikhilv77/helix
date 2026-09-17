@@ -1,9 +1,10 @@
 import { z } from "zod";
 
-/** v2 adds immutable server-only transfer runner contracts and public starters. */
-export const DSA_BLOCK_ASSESSMENT_SNAPSHOT_VERSION = 2;
+/** v4 supports authored block checks when no verified implementation evidence exists. */
+export const DSA_BLOCK_ASSESSMENT_SNAPSHOT_VERSION = 4;
 export const DSA_BLOCK_ASSESSMENT_RUBRIC_VERSION = 1;
-export const DSA_BLOCK_ASSESSMENT_DURATION_MINUTES = 40;
+export const DSA_BLOCK_ASSESSMENT_DURATION_MINUTES = 25;
+const LEGACY_DSA_BLOCK_ASSESSMENT_DURATION_MINUTES = 40;
 
 export const dsaAssessmentMetricSchema = z.enum([
   "pattern-recognition",
@@ -31,13 +32,34 @@ const reviewItemSchema = z
       "static-code-cue",
       "optimization-review"
     ]),
-    sourceAttemptId: z.string().uuid(),
+    sourceAttemptId: z.string().uuid().nullable(),
     sourceQuestionSlug: z.string().min(1),
     sourceQuestionTitle: z.string().min(1),
     sourceQuestionPattern: z.string().min(1),
-    sourceCode: z.string().min(1),
+    /** Candidate-facing recap of the completed problem. Present on authored checks. */
+    sourcePrompt: z.string().min(1).max(4_000).optional(),
+    /** Safe reference material for the MCQ workspace; never includes solution metadata. */
+    sourceReference: z
+      .object({
+        difficulty: z.string().min(1),
+        problemStatement: z.string().min(1).max(8_000),
+        constraints: z.array(z.string().min(1)).max(12),
+        examples: z
+          .array(
+            z.object({
+              input: z.string().min(1),
+              output: z.string().min(1),
+              explanation: z.string().min(1).optional()
+            })
+          )
+          .max(3)
+      })
+      .optional(),
+    sourceCode: z.string().min(1).nullable(),
+    /** Syntax used by the saved submission. Absent on legacy snapshots. */
+    language: z.enum(["javascript", "python", "cpp", "java"]).optional(),
     /** Exact bounded excerpt from sourceCode used as this prompt's visual anchor. */
-    codeSnippet: z.string().min(1).max(1_600),
+    codeSnippet: z.string().min(1).max(1_600).nullable(),
     prompt: z.string().min(1),
     options: z.array(z.string().min(1)).min(2).max(6),
     correctOption: z.number().int().nonnegative(),
@@ -58,7 +80,7 @@ const reviewItemSchema = z
         message: "correctOption must reference one of the saved options."
       });
     }
-    if (!item.sourceCode.includes(item.codeSnippet)) {
+    if (item.sourceCode && item.codeSnippet && !item.sourceCode.includes(item.codeSnippet)) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["codeSnippet"],
@@ -127,7 +149,12 @@ const transferQuestionSnapshotSchema = z.object({
 
 export const dsaBlockAssessmentSnapshotSchema = z
   .object({
-    schemaVersion: z.union([z.literal(1), z.literal(DSA_BLOCK_ASSESSMENT_SNAPSHOT_VERSION)]),
+    schemaVersion: z.union([
+      z.literal(1),
+      z.literal(2),
+      z.literal(3),
+      z.literal(DSA_BLOCK_ASSESSMENT_SNAPSHOT_VERSION)
+    ]),
     rubricVersion: z.literal(DSA_BLOCK_ASSESSMENT_RUBRIC_VERSION),
     blockId: z.string().uuid(),
     blockOrdinal: z.number().int().positive(),
@@ -136,18 +163,37 @@ export const dsaBlockAssessmentSnapshotSchema = z
       id: z.string().nullable(),
       source: z.literal("candidate-profile-at-preparation")
     }),
-    durationMinutes: z.literal(DSA_BLOCK_ASSESSMENT_DURATION_MINUTES),
+    durationMinutes: z.union([
+      z.literal(LEGACY_DSA_BLOCK_ASSESSMENT_DURATION_MINUTES),
+      z.literal(DSA_BLOCK_ASSESSMENT_DURATION_MINUTES)
+    ]),
     preparedAt: z.string().datetime(),
     reviewItems: z.array(reviewItemSchema).min(5).max(6),
-    transferQuestions: z.array(transferQuestionSnapshotSchema).length(2)
+    transferQuestions: z.array(transferQuestionSnapshotSchema).min(1).max(2)
   })
   .superRefine((snapshot, context) => {
+    const expectedTransferCount = snapshot.schemaVersion >= 3 ? 1 : 2;
+    if (snapshot.transferQuestions.length !== expectedTransferCount) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["transferQuestions"],
+        message: `Snapshot v${snapshot.schemaVersion} requires ${expectedTransferCount} transfer question${expectedTransferCount === 1 ? "" : "s"}.`
+      });
+    }
+    const expectedDuration = snapshot.schemaVersion >= 3 ? 25 : 40;
+    if (snapshot.durationMinutes !== expectedDuration) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["durationMinutes"],
+        message: `Snapshot v${snapshot.schemaVersion} requires a ${expectedDuration}-minute duration.`
+      });
+    }
     const codeDependent = snapshot.reviewItems.filter(
       (item) =>
         item.grounding.kind === "saved-execution-evidence" ||
         item.grounding.kind === "deterministic-static-analysis"
     ).length;
-    if (codeDependent < Math.ceil(snapshot.reviewItems.length / 2)) {
+    if (snapshot.schemaVersion < 4 && codeDependent < Math.ceil(snapshot.reviewItems.length / 2)) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["reviewItems"],
@@ -155,7 +201,21 @@ export const dsaBlockAssessmentSnapshotSchema = z
           "A majority of review items must depend on saved execution or deterministic code analysis."
       });
     }
-    if (snapshot.schemaVersion === DSA_BLOCK_ASSESSMENT_SNAPSHOT_VERSION) {
+    if (
+      snapshot.schemaVersion >= 4 &&
+      snapshot.reviewItems.some((item) =>
+        item.sourceCode === null || item.codeSnippet === null
+          ? item.grounding.kind !== "authored-reference-metadata"
+          : false
+      )
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["reviewItems"],
+        message: "Review items without code must be grounded in authored question metadata."
+      });
+    }
+    if (snapshot.schemaVersion >= 2) {
       snapshot.transferQuestions.forEach((question, index) => {
         if (!question.runnerContract) {
           context.addIssue({

@@ -16,6 +16,7 @@ import { NotFoundErrorException } from "@/server/common/exceptions/not-found-err
 import type { CoreTechnicalBaselineEvidenceService } from "./baseline-evidence.service";
 
 export const coreTechnicalFocusConfirmationSchema = z.union([
+  z.object({ automatic: z.literal(true) }).strict(),
   z.object({ technology: coreTechnicalTechnologySchema }).strict(),
   // Compatibility for the original single-language preparation screen.
   z.object({ language: z.literal("javascript") }).strict()
@@ -93,7 +94,9 @@ export class CoreTechnicalFocusService {
 
     const resumeEvidence = deriveResumeEvidence(profile.resumeAnalysis);
     const explicitTechnology = "technology" in confirmation;
-    const technology = explicitTechnology ? confirmation.technology : "nodejs";
+    const technology = explicitTechnology
+      ? confirmation.technology
+      : deriveTechnology(profile.resumeAnalysis);
     const targetCompany = profile.targetCompany?.trim() || null;
     const targetDate = profile.targetDate?.toISOString().slice(0, 10) ?? null;
     const targetJob = profile.headline?.trim() || defaultTargetJob(profile.targetRole, seniority);
@@ -110,7 +113,7 @@ export class CoreTechnicalFocusService {
         runtimeVersion: "22 LTS",
         framework: explicitTechnology
           ? coreTechnicalFrameworkFor(technology)
-          : deriveFramework(profile.resumeAnalysis),
+          : (coreTechnicalFrameworkFor(technology) ?? deriveFramework(profile.resumeAnalysis)),
         technology
       },
       excludedTopicKeys: [],
@@ -125,6 +128,21 @@ export class CoreTechnicalFocusService {
     });
     return deepFreeze(focus);
   }
+}
+
+function deriveTechnology(value: unknown) {
+  const text = resumeEvidenceText(value);
+  const candidates = [
+    ["nestjs", /\bnest(?:\.js|js)?\b/i],
+    ["fastify", /\bfastify\b/i],
+    ["express", /\bexpress(?:\.js|js)?\b/i],
+    ["koa", /\bkoa(?:\.js|js)?\b/i],
+    ["nextjs", /\bnext(?:\.js|js)?\b/i],
+    ["typescript", /\btypescript\b/i],
+    ["javascript", /\bjavascript\b|\becmascript\b/i],
+    ["nodejs", /\bnode(?:\.js|js)?\b/i]
+  ] as const;
+  return candidates.find(([, matcher]) => matcher.test(text))?.[0] ?? "nodejs";
 }
 
 function deriveFramework(value: unknown): string | null {

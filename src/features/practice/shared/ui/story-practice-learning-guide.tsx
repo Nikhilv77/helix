@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowRight } from "lucide-react";
 import { Fragment, type ReactNode } from "react";
 import type { StoryPracticeQuestionView } from "@/features/practice/shared/ui/view-contracts";
+import { PracticeCodeViewer } from "@/features/practice/shared/ui/practice-code-viewer";
 
 type LearningGuide = NonNullable<
   NonNullable<StoryPracticeQuestionView["authorizedAnswer"]>["learningGuide"]
@@ -79,12 +80,13 @@ function LearningMarkdown({ markdown }: { markdown: string }) {
         }
         if (block.kind === "code") {
           return (
-            <pre
+            <PracticeCodeViewer
               key={index}
-              className="thin-scroll overflow-x-auto rounded-lg bg-black/28 px-3.5 py-3 font-mono text-[11.5px] leading-5 text-cream/68"
-            >
-              <code>{block.text}</code>
-            </pre>
+              code={block.text}
+              language={block.language}
+              maxLines={18}
+              ariaLabel={`${block.language || "Text"} learning guide code, read only`}
+            />
           );
         }
         if (block.kind === "list") {
@@ -108,7 +110,9 @@ function LearningMarkdown({ markdown }: { markdown: string }) {
 }
 
 type MarkdownBlock =
-  { kind: "heading" | "paragraph" | "code"; text: string } | { kind: "list"; items: string[] };
+  | { kind: "heading" | "paragraph"; text: string }
+  | { kind: "code"; text: string; language: string }
+  | { kind: "list"; items: string[] };
 
 function markdownBlocks(markdown: string): MarkdownBlock[] {
   const lines = markdown.replace(/\r/g, "").split("\n");
@@ -116,6 +120,7 @@ function markdownBlocks(markdown: string): MarkdownBlock[] {
   let paragraph: string[] = [];
   let list: string[] = [];
   let code: string[] | null = null;
+  let codeLanguage = "text";
   const flush = () => {
     if (paragraph.length) blocks.push({ kind: "paragraph", text: paragraph.join(" ") });
     if (list.length) blocks.push({ kind: "list", items: list });
@@ -125,13 +130,15 @@ function markdownBlocks(markdown: string): MarkdownBlock[] {
 
   for (const rawLine of lines) {
     const line = rawLine.trimEnd();
-    if (line.trim().startsWith("```")) {
+    const fence = line.trim().match(/^```([^`]*)$/);
+    if (fence) {
       if (code) {
-        blocks.push({ kind: "code", text: code.join("\n") });
+        blocks.push({ kind: "code", text: code.join("\n"), language: codeLanguage });
         code = null;
       } else {
         flush();
         code = [];
+        codeLanguage = fence[1]?.trim() || "text";
       }
       continue;
     }
@@ -159,7 +166,7 @@ function markdownBlocks(markdown: string): MarkdownBlock[] {
     paragraph.push(line.trim());
   }
   flush();
-  if (code?.length) blocks.push({ kind: "code", text: code.join("\n") });
+  if (code?.length) blocks.push({ kind: "code", text: code.join("\n"), language: codeLanguage });
   return blocks;
 }
 

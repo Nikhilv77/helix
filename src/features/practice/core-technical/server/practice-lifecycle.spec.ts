@@ -89,6 +89,7 @@ describe("Core Technical practice lifecycle", () => {
       work
     });
     expect(replay.attempt.id).toBe("attempt-1");
+    expect(replay.question.revealedHints).toEqual(mcq.hints);
     expect(evaluate).not.toHaveBeenCalled();
 
     await expect(
@@ -209,6 +210,7 @@ describe("Core Technical practice lifecycle", () => {
 
     const learned = await service.learn("owner-1", { questionId: QUESTION_ID, confirmed: true });
     expect(learned.status).toBe("LEARNED");
+    expect(learned.revealedHints).toEqual(mcq.hints);
     expect(learned.authorizedAnswer).toMatchObject({ concise: mcq.answer.concise });
     expect(questionUpdate).toHaveBeenCalledWith(
       expect.objectContaining({

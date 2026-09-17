@@ -44,11 +44,7 @@ export class CoreTechnicalRunnerService {
     private readonly executor: CoreTechnicalSandboxExecutor = new LocalIsolatedNode22Executor()
   ) {}
 
-  supportsStack(input: {
-    language: string;
-    runtime: string;
-    runtimeVersion: string;
-  }): boolean {
+  supportsStack(input: { language: string; runtime: string; runtimeVersion: string }): boolean {
     return CORE_TECHNICAL_RUNNER_REGISTRY.some(
       (runner) =>
         runner.language === input.language &&
@@ -66,11 +62,13 @@ export class CoreTechnicalRunnerService {
       throw new Error("Core Technical code must contain between 1 and 12000 characters");
     }
 
-    const fingerprint = codeFingerprint(code);
-    const suiteFingerprint = fingerprintValue({
-      publicTests: question.publicTests,
-      hiddenTests: question.hiddenTests
-    });
+    const fingerprint = ownedFingerprint(codeFingerprint(code));
+    const suiteFingerprint = ownedFingerprint(
+      fingerprintValue({
+        publicTests: question.publicTests,
+        hiddenTests: question.hiddenTests
+      })
+    );
     const compile = await this.execute(question, code, "check");
     if (compile.reason !== "completed") {
       return this.executionFailure(question, fingerprint, suiteFingerprint, compile, true);
@@ -358,6 +356,10 @@ function boundedDiagnostic(value: string): string {
 
 function fingerprintValue(value: unknown): string {
   return createHash("sha256").update(stableJson(value), "utf8").digest("hex");
+}
+
+function ownedFingerprint(value: string): string {
+  return `sha256:${value}`;
 }
 
 function stableJson(value: unknown): string {

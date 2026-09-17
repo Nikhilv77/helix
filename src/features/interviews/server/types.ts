@@ -151,6 +151,14 @@ export interface PlannedQuestion {
   codeSnippet?: string;
   /** Stable ID into the server-only assessment snapshot's answer key. */
   dsaAssessmentReviewItemId?: string;
+  /** Candidate-safe source problem reference for block-assessment MCQs. */
+  dsaReviewContext?: {
+    title: string;
+    difficulty: string;
+    problemStatement: string;
+    constraints: string[];
+    examples: Array<{ input: string; output: string; explanation?: string }>;
+  };
   /** Public, immutable render contract for a frozen transfer coding problem. */
   dsaTransferQuestion?: {
     slug: string;

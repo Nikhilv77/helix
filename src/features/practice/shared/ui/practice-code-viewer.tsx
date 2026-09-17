@@ -28,6 +28,9 @@ export interface PracticeCodeViewerProps {
   highlightLine?: number | null;
   /** Roughly how many lines to show before scrolling. */
   maxLines?: number;
+  ariaLabel?: string;
+  /** Removes duplicate chrome when the viewer already sits inside an editor panel. */
+  embedded?: boolean;
 }
 
 const registerTheme: BeforeMount = (monaco) => {
@@ -91,7 +94,7 @@ function currentThemeIsLight() {
 
 /** Monaco's ids differ from the language names carried on an answer key. */
 function monacoLanguage(language: string): string {
-  switch (language) {
+  switch (language.trim().toLowerCase()) {
     case "js":
     case "javascript":
       return "javascript";
@@ -105,8 +108,27 @@ function monacoLanguage(language: string): string {
       return "cpp";
     case "java":
       return "java";
+    case "go":
+    case "golang":
+      return "go";
+    case "csharp":
+    case "c#":
+      return "csharp";
+    case "ruby":
+      return "ruby";
+    case "php":
+      return "php";
     case "sql":
       return "sql";
+    case "json":
+      return "json";
+    case "yaml":
+    case "yml":
+      return "yaml";
+    case "shell":
+    case "bash":
+    case "sh":
+      return "shell";
     default:
       return "plaintext";
   }
@@ -116,7 +138,9 @@ export function PracticeCodeViewer({
   code,
   language,
   highlightLine = null,
-  maxLines = 18
+  maxLines = 18,
+  ariaLabel = "Code example, read only",
+  embedded = false
 }: PracticeCodeViewerProps) {
   const editorRef = useRef<MonacoEditor | null>(null);
   const decorationsRef = useRef<DecorationsCollection | null>(null);
@@ -174,7 +198,12 @@ export function PracticeCodeViewer({
   }, [highlightLine, ready]);
 
   return (
-    <div className="practice-code-viewer overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0f10] py-2">
+    <div
+      role="region"
+      aria-label={ariaLabel}
+      aria-readonly="true"
+      className={`practice-code-viewer overflow-hidden bg-[#0d0f10] py-2 ${embedded ? "" : "rounded-xl border border-white/[0.08]"}`}
+    >
       <Editor
         height={`${height}px`}
         language={monacoLanguage(language)}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isWorkspaceChromeRoute } from "./workspace-routes";
+import { isWorkspaceCanvasRoute, isWorkspaceChromeRoute } from "./workspace-routes";
 
 describe("workspace routes", () => {
   it.each([
@@ -19,4 +19,9 @@ describe("workspace routes", () => {
       expect(isWorkspaceChromeRoute(pathname)).toBe(false);
     }
   );
+
+  it("renders the DSA checkpoint as a full-screen workspace canvas", () => {
+    expect(isWorkspaceChromeRoute("/practice/dsa/assessment")).toBe(false);
+    expect(isWorkspaceCanvasRoute("/practice/dsa/assessment")).toBe(true);
+  });
 });

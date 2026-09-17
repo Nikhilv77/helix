@@ -9,8 +9,8 @@ import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { useTheme } from "@/lib/theme/theme-context";
 import { DARK_PORTRAIT_PLACEHOLDER } from "@/lib/avatars/portrait-placeholder";
 import {
-  interviewRoomHref,
-  openInterviewRoom
+  dsaAssessmentRoomHref,
+  openDsaAssessmentRoom
 } from "@/features/interviews/ui/shared/interview-room-navigation";
 import type { DsaBlockHistoryItem } from "@/features/practice/dsa/server/dsa-block-history.service";
 
@@ -76,7 +76,7 @@ export function BlockAssessmentPreview({
       const payload: unknown = await response.json().catch(() => null);
       const sessionId = readSessionId(payload);
       if (!response.ok || !sessionId) throw new Error(readStartError(payload, response.status));
-      openInterviewRoom(sessionId);
+      openDsaAssessmentRoom(sessionId);
     } catch (error) {
       setStartError(
         error instanceof Error ? error.message : "The assessment could not be started. Try again."
@@ -289,7 +289,8 @@ function ReadyAssessment({
         Your 1:1 with {teacherName} is ready
       </h3>
       <p className="mt-2 text-[14px] leading-6 text-cream/58">
-        Review your submitted code, then solve two unseen transfer problems in a 40-minute session.
+        Five evidence-based checks from your submitted code, then one unseen problem in a focused
+        25-minute checkpoint.
       </p>
       <button
         type="button"
@@ -328,7 +329,7 @@ function InProgressAssessment({ sessionId }: { sessionId: string | null }) {
       </p>
       {sessionId ? (
         <a
-          href={interviewRoomHref(sessionId)}
+          href={dsaAssessmentRoomHref(sessionId)}
           className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:-translate-y-0.5 hover:bg-white"
         >
           Resume assessment <ArrowRight size={15} aria-hidden="true" />

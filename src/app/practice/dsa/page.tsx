@@ -28,12 +28,6 @@ export default async function DsaPracticePage({
   const query = await searchParams;
   const requestedBlockId = typeof query.block === "string" ? query.block : null;
   const panel = query.panel === "transcript" ? "transcript" : "overview";
-  const allowEarlyAssessmentStart = container.config.nodeEnv === "development";
-
-  if (allowEarlyAssessmentStart) {
-    await container.dsaPracticeBlockStore.refreshReadiness(ownerId, { allowIncomplete: true });
-  }
-
   // This is deliberately awaited before recommendation/history reads. It
   // repairs a terminal interview whose deferred finalizer failed.
   await container.dsaBlockAssessmentFinalizationService.recoverCurrent(ownerId);
@@ -85,7 +79,7 @@ export default async function DsaPracticePage({
           recommendation={recommendation}
           blockHistory={blockHistory}
           panel={panel}
-          allowEarlyAssessmentStart={allowEarlyAssessmentStart}
+          allowEarlyAssessmentStart={false}
         />
       ) : (
         <div

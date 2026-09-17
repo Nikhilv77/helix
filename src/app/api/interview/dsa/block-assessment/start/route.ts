@@ -5,7 +5,10 @@ import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { DsaBlockAssessmentPreparationError } from "@/features/practice/dsa/server/dsa-block-assessment-preparation.service";
 import { DsaBlockAssessmentRuntimeError } from "@/features/practice/dsa/server/dsa-block-assessment-runtime.service";
-import { attachInterviewOwnerCookie, resolveInterviewOwner } from "@/features/interviews/server/owner";
+import {
+  attachInterviewOwnerCookie,
+  resolveInterviewOwner
+} from "@/features/interviews/server/owner";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 
 export const dynamic = "force-dynamic";
@@ -20,14 +23,6 @@ export async function POST(request: NextRequest) {
     const parsed = startSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
       throw new ApiRouteError(400, "BAD_REQUEST", "A valid DSA block ID is required.");
-    }
-    if (app.config.nodeEnv === "development") {
-      await app.dsaPracticeBlockStore.refreshReadiness(owner.ownerId, {
-        allowIncomplete: true
-      });
-      await app.dsaBlockAssessmentPreparationService.prepareCurrent(owner.ownerId, {
-        allowSyntheticEvidence: true
-      });
     }
     const guard = getSharedGuard(app.config);
     await guard.enforce(RATE_LIMIT_POLICIES.interviewCreation, owner.ownerId);

@@ -200,7 +200,7 @@ function fixture(
 }
 
 describe("DsaBlockAssessmentPreparationService", () => {
-  it("snapshots exact verified source code, grounded MCQs, and two authored unseen transfer problems", async () => {
+  it("snapshots exact verified source code, five grounded MCQs, and one authored unseen transfer problem", async () => {
     const unverified = verifiedAttempt("10000000-0000-4000-8000-000000000013", {
       answer: "throw new Error('do not use me')",
       verificationStatus: "UNVERIFIED"
@@ -209,34 +209,35 @@ describe("DsaBlockAssessmentPreparationService", () => {
 
     const snapshot = await test.service.prepareCurrent("owner-1");
 
-    expect(snapshot.reviewItems.length).toBeGreaterThanOrEqual(5);
-    expect(snapshot.reviewItems.length).toBeLessThanOrEqual(6);
+    expect(snapshot.reviewItems).toHaveLength(5);
     expect(snapshot.reviewItems.every((item) => item.sourceAttemptId === ATTEMPT_ONE)).toBe(true);
     expect(snapshot.reviewItems[0]?.sourceCode).toContain("const seen = new Map()");
-    expect(snapshot.reviewItems.every((item) => item.sourceCode.includes(item.codeSnippet))).toBe(
-      true
-    );
+    expect(
+      snapshot.reviewItems.every(
+        (item) =>
+          item.sourceCode !== null &&
+          item.codeSnippet !== null &&
+          item.sourceCode.includes(item.codeSnippet)
+      )
+    ).toBe(true);
     expect(
       snapshot.reviewItems.filter(
         (item) =>
           item.grounding.kind === "saved-execution-evidence" ||
           item.grounding.kind === "deterministic-static-analysis"
       ).length
-    ).toBeGreaterThanOrEqual(Math.ceil(snapshot.reviewItems.length / 2));
+    ).toBeGreaterThanOrEqual(2);
     expect(snapshot.reviewItems.map((item) => item.grounding.kind)).toEqual(
       expect.arrayContaining([
         "saved-execution-evidence",
-        "authored-reference-metadata",
-        "deterministic-static-analysis"
+        "authored-reference-metadata"
       ])
     );
-    expect(snapshot.transferQuestions.map((item) => item.slug)).toEqual([
-      "contains-duplicate",
-      "longest-substring-without-repeating-characters"
-    ]);
+    expect(snapshot.transferQuestions.map((item) => item.slug)).toEqual(["contains-duplicate"]);
     expect(snapshot.transferQuestions.every((item) => item.slug !== "lru-cache")).toBe(true);
     expect(snapshot.transferQuestions.every((item) => item.problemStatement)).toBe(true);
-    expect(snapshot.schemaVersion).toBe(2);
+    expect(snapshot.schemaVersion).toBe(4);
+    expect(snapshot.durationMinutes).toBe(25);
     expect(snapshot.transferQuestions.every((item) => item.runnerContract?.version === 1)).toBe(
       true
     );
@@ -290,9 +291,9 @@ describe("DsaBlockAssessmentPreparationService", () => {
     const snapshot = await test.service.prepareCurrent("owner-1");
 
     expect(snapshot.reviewItems.every((item) => item.sourceAttemptId === ATTEMPT_ONE)).toBe(true);
-    expect(snapshot.reviewItems.every((item) => item.sourceCode.includes("latest accepted"))).toBe(
-      true
-    );
+    expect(
+      snapshot.reviewItems.every((item) => item.sourceCode?.includes("latest accepted") === true)
+    ).toBe(true);
   });
 
   it("builds a failed visible-case question from persisted execution facts", async () => {
@@ -367,6 +368,7 @@ describe("DsaBlockAssessmentPreparationService", () => {
     const test = fixture();
     const snapshot = await test.service.prepareCurrent("owner-1");
     const invalid = structuredClone(snapshot);
+    invalid.schemaVersion = 3;
     for (const item of invalid.reviewItems) {
       item.grounding.kind = "authored-reference-metadata";
     }
@@ -387,41 +389,25 @@ describe("DsaBlockAssessmentPreparationService", () => {
     const snapshot = await test.service.prepareCurrent("owner-1");
 
     expect(snapshot.transferQuestions.map((question) => question.selectionReason)).toEqual([
-      "previously-seen-fallback",
       "previously-seen-fallback"
     ]);
   });
 
-  it("rejects non-ready current blocks and insufficient verified code evidence", async () => {
+  it("rejects non-ready blocks and uses authored checks when verified code is unavailable", async () => {
     const locked = fixture({ status: DsaPracticeBlockStatus.PRACTISING });
     await expect(locked.service.prepareCurrent("owner-1")).rejects.toMatchObject({
       code: "ASSESSMENT_NOT_READY"
     } satisfies Partial<DsaBlockAssessmentPreparationError>);
 
     const insufficient = fixture({ attempts: [] });
-    await expect(insufficient.service.prepareCurrent("owner-1")).rejects.toMatchObject({
-      code: "INSUFFICIENT_GROUNDED_CODE_EVIDENCE"
-    } satisfies Partial<DsaBlockAssessmentPreparationError>);
-  });
-
-  it("creates isolated synthetic review evidence only when the development override is explicit", async () => {
-    const test = fixture({ attempts: [] });
-
-    const snapshot = await test.service.prepareCurrent("owner-1", {
-      allowSyntheticEvidence: true
-    });
-
-    expect(snapshot.reviewItems).toHaveLength(6);
+    const snapshot = await insufficient.service.prepareCurrent("owner-1");
+    expect(snapshot.reviewItems).toHaveLength(5);
+    expect(snapshot.reviewItems.every((item) => item.sourceAttemptId === null)).toBe(true);
     expect(
-      snapshot.reviewItems.every((item) => item.sourceCode.includes("developmentAssessmentFixture"))
+      snapshot.reviewItems.every((item) => item.grounding.kind === "authored-reference-metadata")
     ).toBe(true);
-    expect(
-      snapshot.reviewItems.filter(
-        (item) =>
-          item.grounding.kind === "saved-execution-evidence" ||
-          item.grounding.kind === "deterministic-static-analysis"
-      ).length
-    ).toBeGreaterThanOrEqual(Math.ceil(snapshot.reviewItems.length / 2));
+    expect(snapshot.reviewItems.every((item) => item.sourceReference?.problemStatement)).toBe(true);
+    expect(snapshot.reviewItems.every((item) => item.sourceReference?.difficulty)).toBe(true);
   });
 
   it("does not reveal another candidate's current block", async () => {

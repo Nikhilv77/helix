@@ -146,6 +146,12 @@ export class CoreTechnicalQuestionGenerator {
     if (!/\b(?:you|your)\b/i.test(candidate.prompt)) {
       errors.push("prompt is not written directly to the candidate");
     }
+    if (candidate.artifact.kind === "code" && candidate.artifact.content.split("\n").length < 3) {
+      errors.push("code artifact is compressed instead of formatted as readable source code");
+    }
+    if (candidate.starterCode && candidate.starterCode.split("\n").length < 3) {
+      errors.push("starter code is compressed instead of formatted as readable source code");
+    }
     if (!candidate.answer.learningGuide) {
       errors.push("question omitted its detailed learning guide");
     } else {
@@ -200,6 +206,8 @@ export class CoreTechnicalQuestionGenerator {
       "Preserve the supplied interview pattern's mechanism and expected reasoning.",
       "Use the learning path only for continuity. Every question must stand on a concrete, relatable task such as fixing a slow database request, tracing a bug, or explaining a familiar code result.",
       "Prefer frequently asked fundamentals and plain language. Do not invent a vague company narrative or bury the task in incident prose.",
+      "Prioritize recurring interview questions with high transfer value: reference and value semantics, execution order, concurrency, error propagation, resource ownership, testing, and debugging evidence. Avoid novelty for its own sake.",
+      "Every code artifact and code answer must be properly indented multiline source code with an explicit language. Never compress code onto one line and never wrap stored source in Markdown fences.",
       "Write a complete correct private answer, a discriminating 10-point rubric, realistic mistakes, and interviewer follow-ups.",
       "Write a detailed Markdown learning guide and a small ordered mechanism diagram that teaches the answer after the candidate attempts it.",
       "Hints must progress from orientation to mechanism to near-solution without revealing the answer immediately.",
@@ -256,6 +264,8 @@ export class CoreTechnicalQuestionGenerator {
         "Every prompt, artifact content, hint, explanation, rubric criterion, mistake, follow-up, and interview connection must contain at least 20 characters; the concise answer must contain at least 8.",
         "Start the prompt with the concrete task or symptom. Keep it between 24 and 90 words, use direct second-person language, and make it easy to repeat aloud in an interview.",
         "Prefer the most frequently asked version of the supplied pattern. Avoid obscure package, runtime, or infrastructure trivia unless the candidate seniority or selected technology genuinely calls for it.",
+        "If the artifact contains code, set artifact.language and format it exactly as it should appear in an editor: real line breaks, consistent indentation, and enough surrounding context to reason about it.",
+        "Write answer.concise and answer.explanation like an experienced mentor speaking to a learner: use short sentences, common words, direct second-person language where appropriate, and explain necessary technical terms. Avoid grading or AI-style phrases such as governing mechanism, frozen contract, evidence, diagnostically useful, or material correction.",
         "answer.learningGuide is required. Its Markdown must use the headings '## What is happening', '## How to reason through it', '## A strong interview answer', and '## What to avoid'. Explain technical terms in plain language and include a useful example.",
         "answer.learningGuide.diagram must contain 2 to 6 ordered steps. Each step needs a short label and a self-contained detail; it must still make sense as an accessible numbered list on a phone.",
         "Use exactly three distinct progressive hints and between 1 and 6 rubric criteria totaling exactly 10 points.",

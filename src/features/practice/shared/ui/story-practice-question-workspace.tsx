@@ -17,11 +17,15 @@ import {
   Play,
   RotateCcw,
   SkipForward,
+  Sparkles,
+  X,
   XCircle
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { DsaCodeEditor } from "@/features/interviews/ui/dsa/dsa-code-editor";
 import { StoryPracticeArtifact } from "@/features/practice/shared/ui/story-practice-artifact";
+import { PracticeCodeViewer } from "@/features/practice/shared/ui/practice-code-viewer";
 import type { StoryPracticeWorkspaceExperience as StoryPracticeWorkspaceExperienceContract } from "@/features/practice/shared/ui/contracts";
 import type {
   StoryPracticeAttemptWork,
@@ -72,9 +76,13 @@ export function StoryPracticeQuestionWorkspace({
   const [draftState, setDraftState] = useState<"saved" | "saving" | "unsaved">("saved");
   const [error, setError] = useState<string | null>(null);
   const [confirmLearn, setConfirmLearn] = useState(false);
+  const usesModalReview = experience.slug === "core-technical";
   const [panelTab, setPanelTab] = useState<QuestionPanelTab>(() =>
-    initialQuestion.status === "ACTIVE" ? "description" : "review"
+    initialQuestion.status === "ACTIVE" || experience.slug === "core-technical"
+      ? "description"
+      : "review"
   );
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [testCasesOpen, setTestCasesOpen] = useState(() => initialQuestion.latestRun !== null);
   const initialDraft = useRef(JSON.stringify(draftFor(workKind, choice, text, code)));
   const draftSequence = useRef(0);
@@ -179,6 +187,7 @@ export function StoryPracticeQuestionWorkspace({
     const validation = validateAttempt(workKind, work, code, run);
     if (validation) {
       setError(validation);
+      if (workKind === "code") setTestCasesOpen(true);
       return;
     }
     setPending("attempt");
@@ -198,7 +207,8 @@ export function StoryPracticeQuestionWorkspace({
       clearReplayRequest(key);
       setQuestion(experience.adaptQuestion(data.question));
       setConfirmLearn(false);
-      setPanelTab("review");
+      if (usesModalReview) setReviewOpen(true);
+      else setPanelTab("review");
       router.refresh();
     } catch (cause) {
       setError(messageFrom(cause, "Your answer could not be evaluated. Your draft is safe."));
@@ -218,7 +228,8 @@ export function StoryPracticeQuestionWorkspace({
         experience.label
       );
       setQuestion(experience.adaptQuestion(data.question));
-      setPanelTab("review");
+      if (usesModalReview) setReviewOpen(true);
+      else setPanelTab("review");
       router.refresh();
     } catch (cause) {
       setError(messageFrom(cause, "Learn could not be confirmed. Your draft is safe."));
@@ -232,7 +243,7 @@ export function StoryPracticeQuestionWorkspace({
   const panelTabs: Array<{ id: QuestionPanelTab; label: string }> = [
     { id: "description", label: "Description" },
     { id: "hints", label: "Hints" },
-    { id: "review", label: "Review" }
+    ...(usesModalReview ? [] : [{ id: "review" as const, label: "Review" }])
   ];
 
   return (
@@ -267,6 +278,16 @@ export function StoryPracticeQuestionWorkspace({
         </div>
 
         <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
+          {usesModalReview && terminal && (attempt || answer) ? (
+            <button
+              type="button"
+              onClick={() => setReviewOpen(true)}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.045] px-3 text-[12.5px] font-semibold text-cream/68 transition hover:bg-white/[0.08] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+            >
+              <Sparkles size={13} aria-hidden="true" className="text-[var(--workspace-accent)]" />
+              Review answer
+            </button>
+          ) : null}
           {terminal ? (
             <span className="inline-flex h-9 items-center gap-2 rounded-lg bg-[var(--workspace-accent-soft)] px-3 text-[12.5px] font-semibold text-[var(--workspace-accent)]">
               <CheckCircle2 size={14} aria-hidden="true" />
@@ -380,6 +401,23 @@ export function StoryPracticeQuestionWorkspace({
                     </li>
                   ))}
                 </ol>
+                {!mutable && question.revealedHints.length === 0 ? (
+                  <div className="mt-5 rounded-xl border border-white/[0.07] bg-black/20 px-4 py-4">
+                    <p className="text-[13px] leading-6 text-cream/52">
+                      No hints were opened before this question was completed. The full reasoning is
+                      available in the answer debrief.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        usesModalReview ? setReviewOpen(true) : setPanelTab("review")
+                      }
+                      className="mt-3 inline-flex h-9 items-center justify-center rounded-lg bg-white/[0.055] px-3 text-[12.5px] font-semibold text-cream/72 transition hover:bg-white/[0.085] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
+                    >
+                      Open answer debrief
+                    </button>
+                  </div>
+                ) : null}
                 {mutable && question.revealedHints.length < question.question.hintCount ? (
                   <button
                     type="button"
@@ -398,8 +436,9 @@ export function StoryPracticeQuestionWorkspace({
               </section>
             ) : null}
 
-            {panelTab === "review" ? (
+            {panelTab === "review" && !usesModalReview ? (
               <div className="space-y-4">
+                <ReviewContext question={question} stageTitle={stageTitle} />
                 {attempt ? <Feedback question={question} experience={experience} /> : null}
                 {answer ? <AuthorizedAnswer question={question} /> : null}
                 {!attempt && !answer ? (
@@ -443,7 +482,11 @@ export function StoryPracticeQuestionWorkspace({
                 <FileText size={15} aria-hidden="true" className="text-[var(--workspace-accent)]" />
               )}
               <h2 id="your-response-heading">
-                {workKind === "code" ? responseLabel(question.question.format) : "Answer workspace"}
+                {terminal
+                  ? "Your submitted answer"
+                  : workKind === "code"
+                    ? responseLabel(question.question.format)
+                    : "Answer workspace"}
               </h2>
             </div>
             {workKind === "code" && experience.capabilities.runCode ? (
@@ -454,7 +497,7 @@ export function StoryPracticeQuestionWorkspace({
                 <button
                   type="button"
                   onClick={() => {
-                    setCode(question.question.starterCode ?? "");
+                    setCode(starterCodeForEditor(question));
                     setRun(null);
                     setTestCasesOpen(false);
                   }}
@@ -500,6 +543,7 @@ export function StoryPracticeQuestionWorkspace({
                 ariaLabel={`${experience.label} JavaScript editor`}
                 onChange={(value) => {
                   setCode(value);
+                  setError(null);
                   if (run?.code !== value) {
                     setRun(null);
                     setTestCasesOpen(false);
@@ -513,6 +557,8 @@ export function StoryPracticeQuestionWorkspace({
                 <TextInput
                   value={text}
                   spoken={question.question.format === "spoken"}
+                  structured={usesModalReview}
+                  promptSubject={question.question.artifact.kind === "code" ? "code" : "evidence"}
                   disabled={!mutable || pending !== null}
                   placeholder={experience.textAnswerPlaceholder}
                   onChange={setText}
@@ -520,15 +566,7 @@ export function StoryPracticeQuestionWorkspace({
               </div>
             )}
 
-            {error ? (
-              <p
-                role="alert"
-                className="mx-4 mb-4 rounded-lg border border-[#e3a15b]/20 bg-[#e3a15b]/10 px-4 py-3 text-[13px] leading-5 text-[#e7bd83] sm:mx-5"
-              >
-                {error}
-              </p>
-            ) : null}
-            {confirmLearn && mutable ? (
+            {confirmLearn && mutable && workKind !== "code" ? (
               <div className="mx-4 mb-4 rounded-xl border border-[#e3a15b]/20 bg-[#e3a15b]/[0.07] px-4 py-4 sm:mx-5">
                 <p className="text-[13px] leading-5 text-cream/62">
                   This reveals the answer and unlocks progress, but contributes zero Practice
@@ -549,13 +587,69 @@ export function StoryPracticeQuestionWorkspace({
             ) : null}
           </div>
 
+          {workKind === "code" ? (
+            <div
+              className={`flex min-h-11 shrink-0 items-center border-t px-4 text-sm leading-5 sm:px-5 ${
+                error
+                  ? "border-[#e3a15b]/20 bg-[#e3a15b]/10 text-[#e7bd83]"
+                  : "border-white/[0.07] bg-black/10 text-cream/46"
+              }`}
+              role={error ? "alert" : "status"}
+              aria-live="polite"
+            >
+              {error ? (
+                error
+              ) : pending === "run" ? (
+                <span className="inline-flex items-center gap-2 text-cream/68">
+                  <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" />
+                  Running your code against the test cases…
+                </span>
+              ) : run?.result.accepted ? (
+                "All tests pass. You can submit this solution."
+              ) : run ? (
+                "Some tests failed. Fix the code, then run it again."
+              ) : (
+                "Edit the starter code, run the tests, then submit after they pass."
+              )}
+            </div>
+          ) : error ? (
+            <p
+              role="alert"
+              className="mx-4 mb-4 rounded-lg border border-[#e3a15b]/20 bg-[#e3a15b]/10 px-4 py-3 text-sm leading-5 text-[#e7bd83] sm:mx-5"
+            >
+              {error}
+            </p>
+          ) : null}
+
+          {workKind === "code" && confirmLearn && mutable ? (
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[#e3a15b]/20 bg-[#e3a15b]/[0.07] px-4 py-3 sm:px-5">
+              <p className="text-sm leading-6 text-cream/68">
+                Reveal the worked answer and continue. This question will count as learned, not
+                solved.
+              </p>
+              <button
+                type="button"
+                onClick={() => void learn()}
+                disabled={pending !== null}
+                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-cream px-4 text-sm font-semibold text-[#17181a] transition hover:bg-white disabled:opacity-55"
+              >
+                {pending === "learn" ? (
+                  <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" />
+                ) : null}
+                {pending === "learn" ? "Opening answer…" : "Reveal answer and continue"}
+              </button>
+            </div>
+          ) : null}
+
           {workKind === "code" && testCasesOpen ? (
             <div className="thin-scroll max-h-[16rem] shrink-0 overflow-y-auto border-t border-white/[0.07] bg-black/10 px-4 py-4 sm:px-5">
               {run ? (
                 <RunResult run={run} />
               ) : (
-                <p className="text-[12.5px] text-cream/42">
-                  Run your code to check the public cases and hidden-case summary.
+                <p className="text-sm text-cream/46">
+                  {pending === "run"
+                    ? "The test results will appear here when the run finishes."
+                    : "No test result is available yet."}
                 </p>
               )}
             </div>
@@ -586,7 +680,11 @@ export function StoryPracticeQuestionWorkspace({
                       · {run.result.hiddenTests.total} hidden
                     </span>
                   </>
-                ) : null}
+                ) : (
+                  <span className="text-sm font-normal text-cream/38">
+                    · {question.question.publicTests?.length ?? 0} visible + hidden checks
+                  </span>
+                )}
                 <ChevronDown
                   size={13}
                   aria-hidden="true"
@@ -617,7 +715,8 @@ export function StoryPracticeQuestionWorkspace({
                   aria-expanded={confirmLearn}
                   className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-white/[0.05] px-3 text-[12.5px] font-semibold text-cream/58 transition hover:bg-white/[0.09] hover:text-cream disabled:opacity-55"
                 >
-                  <SkipForward size={13} aria-hidden="true" /> Learn instead
+                  <SkipForward size={13} aria-hidden="true" />
+                  {confirmLearn ? "Cancel" : "Learn instead"}
                 </button>
                 <button
                   type="button"
@@ -637,12 +736,28 @@ export function StoryPracticeQuestionWorkspace({
           </div>
         </section>
       </div>
+
+      {usesModalReview ? (
+        <StoryPracticeReviewModal
+          open={reviewOpen}
+          question={question}
+          stageTitle={stageTitle}
+          experience={experience}
+          onClose={() => setReviewOpen(false)}
+        />
+      ) : null}
     </section>
   );
 }
 
-function Artifact({ question }: { question: StoryPracticeQuestionView }) {
-  return <StoryPracticeArtifact artifact={question.question.artifact} />;
+function Artifact({
+  question,
+  comfortable = false
+}: {
+  question: StoryPracticeQuestionView;
+  comfortable?: boolean;
+}) {
+  return <StoryPracticeArtifact artifact={question.question.artifact} comfortable={comfortable} />;
 }
 
 function ChoiceInput({
@@ -696,38 +811,191 @@ function ChoiceInput({
 function TextInput({
   value,
   spoken,
+  structured,
+  promptSubject,
   disabled,
   placeholder,
   onChange
 }: {
   value: string;
   spoken: boolean;
+  structured: boolean;
+  promptSubject: "code" | "evidence";
   disabled: boolean;
   placeholder: string;
   onChange: (value: string) => void;
 }) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [ghost, setGhost] = useState<{ prompt: string; anchor: number; suggestion: string } | null>(
+    null
+  );
+  const [ghostText, setGhostText] = useState("");
+  const [scrollTop, setScrollTop] = useState(0);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "0px";
+    textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 224), 420)}px`;
+  }, [value]);
+
+  useEffect(() => {
+    if (!ghost) {
+      setGhostText("");
+      return;
+    }
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setGhostText(ghost.suggestion);
+      return;
+    }
+    let length = 0;
+    setGhostText("");
+    const timer = window.setInterval(() => {
+      length += 1;
+      setGhostText(ghost.suggestion.slice(0, length));
+      if (length >= ghost.suggestion.length) window.clearInterval(timer);
+    }, 14);
+    return () => window.clearInterval(timer);
+  }, [ghost]);
+
+  function addPrompt(prompt: string) {
+    const textarea = textareaRef.current;
+    const heading = `${prompt}:\n`;
+    const start = textarea?.selectionStart ?? value.length;
+    const end = textarea?.selectionEnd ?? value.length;
+    const before = value.slice(0, start);
+    const separator = before.trimEnd() ? (before.endsWith("\n") ? "\n" : "\n\n") : "";
+    const after = value.slice(end);
+    const trailingSeparator = after.trim() ? "\n" : "";
+    const next = `${before}${separator}${heading}${trailingSeparator}${after}`;
+    const cursor = start + separator.length + heading.length;
+    setGhost({ prompt, anchor: cursor, suggestion: promptSuggestion(prompt, promptSubject) });
+    onChange(next);
+    window.requestAnimationFrame(() => {
+      textarea?.focus();
+      textarea?.setSelectionRange(cursor, cursor);
+    });
+  }
+
   return (
-    <div>
+    <div className="max-w-[52rem]">
       {spoken ? (
         <p className="mb-2 text-[12px] leading-5 text-cream/42">
           Say your answer aloud, then type the evidence you want assessed.
         </p>
       ) : null}
-      <textarea
-        aria-label={spoken ? "Spoken answer transcript" : "Written answer"}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        disabled={disabled}
-        maxLength={12_000}
-        rows={14}
-        className="min-h-[24rem] w-full resize-none rounded-xl border border-white/[0.075] bg-[linear-gradient(145deg,#111315,#0e1012)] px-4 py-4 text-[14px] leading-7 text-cream outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] placeholder:text-cream/24 transition focus:border-[var(--workspace-accent-border)] focus:ring-4 focus:ring-[var(--workspace-accent-soft)] disabled:opacity-65 xl:min-h-[calc(100svh-28rem)]"
-        placeholder={placeholder}
-      />
-      <p className="mt-1.5 text-right font-mono text-[10px] tabular-nums text-cream/28">
-        {value.length}/12000
-      </p>
+      <div className="overflow-hidden rounded-2xl border border-white/[0.085] bg-[#0d0f10] shadow-[0_18px_48px_rgba(0,0,0,0.16)]">
+        {structured ? (
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-white/[0.06] px-3 py-2.5 sm:px-4">
+            <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cream/30">
+              Add a prompt
+            </span>
+            {["Outcome", "Why it happens", "Production consequence", "How to fix"].map((prompt) => {
+              const alreadyAdded = hasStructuredPrompt(value, prompt);
+              return (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => addPrompt(prompt)}
+                  disabled={disabled || alreadyAdded}
+                  aria-label={alreadyAdded ? `${prompt} prompt added` : undefined}
+                  className="rounded-md border border-white/[0.065] bg-white/[0.035] px-2 py-1 text-[10.5px] font-medium text-cream/48 transition hover:border-white/[0.12] hover:bg-white/[0.06] hover:text-cream/76 disabled:cursor-not-allowed disabled:border-white/[0.045] disabled:bg-white/[0.02] disabled:text-cream/28"
+                >
+                  {alreadyAdded ? (
+                    <Check size={10} aria-hidden="true" className="mr-1 inline" />
+                  ) : (
+                    "+ "
+                  )}
+                  {prompt}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+        <div className="relative">
+          <textarea
+            ref={textareaRef}
+            aria-label={spoken ? "Spoken answer transcript" : "Written answer"}
+            value={value}
+            onChange={(event) => {
+              setGhost(null);
+              onChange(event.target.value);
+            }}
+            onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
+            disabled={disabled}
+            maxLength={12_000}
+            rows={8}
+            className={`block min-h-56 max-h-[26.25rem] w-full resize-none overflow-y-auto bg-transparent px-4 py-4 text-[14px] leading-7 caret-cream outline-none placeholder:text-cream/24 disabled:opacity-65 ${structured && value ? "text-transparent" : "text-cream"}`}
+            placeholder={placeholder}
+          />
+          {structured && value ? (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 overflow-hidden px-4 py-4 text-[14px] leading-7"
+            >
+              <div
+                className="whitespace-pre-wrap break-words text-cream"
+                style={{ transform: `translateY(-${scrollTop}px)` }}
+              >
+                {ghost ? (
+                  <>
+                    <StyledAnswerText value={value.slice(0, ghost.anchor)} />
+                    <span className="text-cream/25">{ghostText}</span>
+                    <StyledAnswerText value={value.slice(ghost.anchor)} />
+                  </>
+                ) : (
+                  <StyledAnswerText value={value} />
+                )}
+              </div>
+            </div>
+          ) : null}
+        </div>
+        <div className="flex min-h-10 items-center justify-between border-t border-white/[0.055] px-3 sm:px-4">
+          <p className="text-[11px] text-cream/30">
+            {structured
+              ? "Use only the prompts that help your explanation."
+              : "Your draft saves automatically."}
+          </p>
+          <p className="font-mono text-[10px] tabular-nums text-cream/28">{value.length}/12000</p>
+        </div>
+      </div>
     </div>
   );
+}
+
+function StyledAnswerText({ value }: { value: string }) {
+  const lines = value.split("\n");
+  return lines.map((line, index) => (
+    <span key={`${index}:${line}`}>
+      {isStructuredPromptLine(line) ? (
+        <span className="font-semibold text-cream/90 underline decoration-[var(--workspace-accent)] decoration-1 underline-offset-[5px]">
+          {line}
+        </span>
+      ) : (
+        line
+      )}
+      {index < lines.length - 1 ? "\n" : null}
+    </span>
+  ));
+}
+
+function isStructuredPromptLine(line: string): boolean {
+  return /^(Outcome|Why it happens|Production consequence|How to fix):\s*$/i.test(line);
+}
+
+function hasStructuredPrompt(value: string, prompt: string): boolean {
+  const escaped = prompt.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^${escaped}:\\s*$`, "im").test(value);
+}
+
+function promptSuggestion(prompt: string, subject: "code" | "evidence"): string {
+  const shown = subject === "code" ? "the code shown" : "the evidence shown";
+  if (prompt === "Outcome") return `State the exact outcome you expect from ${shown}.`;
+  if (prompt === "Why it happens")
+    return "Connect that outcome to the runtime mechanism that causes it.";
+  if (prompt === "Production consequence")
+    return "Explain the production impact if this behavior is misunderstood.";
+  return "Describe the smallest safe fix and why it changes the outcome.";
 }
 
 function ResponseIntro({
@@ -848,20 +1116,30 @@ function Feedback({
   experience: StoryPracticeWorkspaceExperience;
 }) {
   const attempt = question.latestAttempt!;
+  const score = attempt.score ?? attempt.feedback.score;
+  const verdict =
+    score >= 8
+      ? "Strong answer"
+      : score >= 5
+        ? "Partially correct"
+        : score > 0
+          ? "Needs work"
+          : "Incorrect";
   return (
     <section
       className="rounded-[1.15rem] border border-white/[0.075] bg-[#0e1011] px-5 py-5"
       aria-labelledby="attempt-feedback-heading"
     >
       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
-        Interview feedback
+        Answer review
       </p>
       <h2
         id="attempt-feedback-heading"
         className="mt-2 font-display text-[1.3rem] font-semibold text-cream"
       >
-        {attempt.score ?? attempt.feedback.score}/10 · {attempt.feedback.result}
+        {verdict} · {score}/10
       </h2>
+      <p className="mt-2 text-[13px] leading-6 text-cream/58">{attempt.feedback.result}</p>
       <dl className="mt-4 grid gap-4 sm:grid-cols-2">
         <FeedbackItem label="What worked" value={attempt.feedback.didWell} />
         <FeedbackItem label="What to improve" value={attempt.feedback.missingOrIncorrect} />
@@ -900,9 +1178,9 @@ function FeedbackItem({ label, value }: { label: string; value: string }) {
 function AuthorizedAnswer({ question }: { question: StoryPracticeQuestionView }) {
   const answer = question.authorizedAnswer!;
   return (
-    <details className="rounded-xl border border-white/[0.075] bg-[#111214] px-4 py-4">
+    <details open className="rounded-xl border border-white/[0.075] bg-[#111214] px-4 py-4">
       <summary className="flex min-h-11 cursor-pointer items-center text-[13px] font-semibold text-cream/72 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent)]">
-        Review the concise answer
+        Correct answer and explanation
       </summary>
       <p className="mt-4 text-[13px] leading-6 text-cream/64">{answer.concise}</p>
       <p className="mt-3 text-[12.5px] leading-6 text-cream/48">{answer.explanation}</p>
@@ -918,18 +1196,239 @@ function AuthorizedAnswer({ question }: { question: StoryPracticeQuestionView })
               JavaScript · read only
             </span>
           </div>
-          <div style={{ height: codeViewerHeight(answer.referenceSolution, 380) }}>
-            <DsaCodeEditor
-              language="javascript"
-              value={answer.referenceSolution}
-              readOnly
-              autoFocus={false}
-              ariaLabel="Reference solution code, read only"
-            />
-          </div>
+          <PracticeCodeViewer
+            code={answer.referenceSolution}
+            language={question.question.artifact.language ?? "javascript"}
+            maxLines={18}
+            ariaLabel="Reference solution code, read only"
+            embedded
+          />
         </div>
       ) : null}
     </details>
+  );
+}
+
+function StoryPracticeReviewModal({
+  open,
+  question,
+  stageTitle,
+  experience,
+  onClose
+}: {
+  open: boolean;
+  question: StoryPracticeQuestionView;
+  stageTitle: string;
+  experience: StoryPracticeWorkspaceExperience;
+  onClose: () => void;
+}) {
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+  const attempt = question.latestAttempt;
+  const answer = question.authorizedAnswer;
+
+  useEffect(() => setPortalRoot(document.body), []);
+  useEffect(() => {
+    if (!open) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [onClose, open]);
+  if (!open || !portalRoot || (!attempt && !answer)) return null;
+
+  const score = attempt?.score ?? attempt?.feedback.score ?? 0;
+  const verdict = !attempt
+    ? "Learning review"
+    : score >= 8
+      ? "Strong answer"
+      : score >= 5
+        ? "Partially correct"
+        : score > 0
+          ? "Needs work"
+          : "Incorrect";
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6"
+      role="presentation"
+    >
+      <div aria-hidden="true" className="absolute inset-0 bg-black/75 backdrop-blur-[3px]" />
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="story-review-title"
+        className="relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[58rem] flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.11] bg-[#141719] shadow-[0_32px_120px_rgba(0,0,0,0.68)]"
+      >
+        <header className="relative shrink-0 overflow-hidden border-b border-white/[0.075] bg-[#0c0e0f] px-5 py-4 sm:px-6 sm:py-5">
+          <div className="practice-accent-glow pointer-events-none absolute inset-x-[15%] bottom-[-120%] h-[180%] opacity-55" />
+          <div className="relative flex items-start justify-between gap-5">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2 text-sm font-semibold uppercase tracking-[0.1em] text-cream/42">
+                <span className="text-[var(--workspace-accent)]">Answer debrief</span>
+                <span aria-hidden="true">·</span>
+                <span>{experience.label}</span>
+              </div>
+              <h2
+                id="story-review-title"
+                className="mt-2 font-display text-[1.55rem] font-semibold leading-tight tracking-[-0.035em] text-cream sm:text-[1.9rem]"
+              >
+                {verdict}
+                {attempt ? ` · ${score}/10` : ""}
+              </h2>
+              <p className="mt-2 max-w-[48rem] text-sm leading-6 text-cream/60">
+                {attempt?.feedback.result ?? `Review the reasoning behind ${stageTitle}.`}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close answer review"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/[0.055] text-cream/56 transition hover:bg-white/[0.1] hover:text-cream"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+        </header>
+
+        <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-5 sm:px-6">
+          {attempt ? (
+            <section
+              className="grid gap-5 border-b border-white/[0.07] py-5 sm:grid-cols-2 sm:gap-0"
+              aria-label="Answer feedback"
+            >
+              <div className="sm:pr-6">
+                <ReviewInsight
+                  label="What you understood"
+                  value={attempt.feedback.didWell}
+                  tone="positive"
+                />
+              </div>
+              <div className="sm:border-l sm:border-white/[0.07] sm:pl-6">
+                <ReviewInsight
+                  label="What went wrong"
+                  value={attempt.feedback.missingOrIncorrect}
+                  tone="corrective"
+                />
+              </div>
+            </section>
+          ) : null}
+
+          <section className="border-b border-white/[0.07] py-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.1em] text-[var(--workspace-accent)]">
+                  Question and code
+                </p>
+                <h3 className="mt-1 text-sm font-semibold text-cream/82">{stageTitle}</h3>
+              </div>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-cream/34">
+                Read only
+              </span>
+            </div>
+            <div
+              className={`mt-4 grid gap-5 ${attempt ? "lg:grid-cols-2 lg:gap-0" : "grid-cols-1"}`}
+            >
+              <div className={`min-w-0 ${attempt ? "lg:pr-6" : ""}`}>
+                <Artifact question={question} comfortable />
+              </div>
+              {attempt ? (
+                <div className="space-y-5 lg:border-l lg:border-white/[0.07] lg:pl-6">
+                  <>
+                    <ReviewDetail
+                      label={experience.feedbackReasoningLabel}
+                      value={attempt.feedback.mechanism}
+                    />
+                    <ReviewDetail
+                      label="Why this matters"
+                      value={attempt.feedback.productionConsequence}
+                    />
+                  </>
+                </div>
+              ) : null}
+            </div>
+          </section>
+
+          {answer ? (
+            <section className="border-b border-white/[0.07] py-5">
+              <p className="text-sm font-semibold uppercase tracking-[0.1em] text-[var(--workspace-accent)]">
+                Strong interview answer
+              </p>
+              <p className="mt-3 text-sm font-semibold leading-6 text-cream/86">{answer.concise}</p>
+              <p className="mt-2 text-sm leading-6 text-cream/58">{answer.explanation}</p>
+              {answer.referenceSolution ? (
+                <div className="mt-4 overflow-hidden rounded-xl border border-white/[0.07] bg-[#0b0d10]">
+                  <PracticeCodeViewer
+                    code={readableCode(answer.referenceSolution)}
+                    language={question.question.artifact.language ?? "javascript"}
+                    maxLines={16}
+                    ariaLabel="Strong interview answer reference code"
+                    embedded
+                  />
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+        </div>
+      </aside>
+    </div>,
+    portalRoot
+  );
+}
+
+function ReviewInsight({
+  label,
+  value,
+  tone
+}: {
+  label: string;
+  value: string;
+  tone: "positive" | "corrective";
+}) {
+  return (
+    <article>
+      <div className="flex items-center gap-2">
+        <span
+          className={`h-1.5 w-1.5 rounded-full ${tone === "positive" ? "bg-[var(--workspace-accent)]" : "bg-[#e3a15b]"}`}
+        />
+        <h3 className="text-sm font-semibold uppercase tracking-[0.1em] text-cream/42">{label}</h3>
+      </div>
+      <p className="mt-2.5 text-sm leading-6 text-cream/66">{value}</p>
+    </article>
+  );
+}
+
+function ReviewDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-sm font-semibold uppercase tracking-[0.1em] text-cream/42">{label}</p>
+      <p className="mt-2 text-sm leading-6 text-cream/62">{value}</p>
+    </div>
+  );
+}
+
+function ReviewContext({
+  question,
+  stageTitle
+}: {
+  question: StoryPracticeQuestionView;
+  stageTitle: string;
+}) {
+  return (
+    <section className="rounded-[1.15rem] border border-white/[0.075] bg-[#111214] px-5 py-5">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
+        Question reviewed
+      </p>
+      <h2 className="mt-2 font-display text-[1.25rem] font-semibold tracking-[-0.02em] text-cream">
+        {stageTitle}
+      </h2>
+      <p className="mt-3 whitespace-pre-wrap text-[13.5px] leading-6 text-cream/62">
+        {question.question.prompt}
+      </p>
+      <div className="mt-5 border-t border-white/[0.06] pt-5">
+        <Artifact question={question} />
+      </div>
+    </section>
   );
 }
 
@@ -974,7 +1473,84 @@ function initialText(question: StoryPracticeQuestionView): string {
 function initialCode(question: StoryPracticeQuestionView): string {
   const work = question.draft ?? question.latestAttempt?.work;
   if (work?.kind === "code") return work.code;
-  return question.latestRun?.code ?? question.question.starterCode ?? "";
+  return question.latestRun?.code ?? starterCodeForEditor(question);
+}
+
+function starterCodeForEditor(question: StoryPracticeQuestionView): string {
+  const starter = question.question.starterCode ?? "";
+  if (!starter || starter.includes("\n")) return starter;
+
+  const artifact = question.question.artifact;
+  if (
+    artifact.kind === "code" &&
+    artifact.content.includes("\n") &&
+    withoutFormatting(artifact.content) === withoutFormatting(starter)
+  ) {
+    return artifact.content;
+  }
+
+  return expandCompactCode(starter);
+}
+
+function withoutFormatting(value: string): string {
+  return value.replace(/\s+/g, "");
+}
+
+function readableCode(value: string): string {
+  return value.includes("\n") ? value : expandCompactCode(value);
+}
+
+/** Formats legacy one-line starter code without changing its tokens. */
+function expandCompactCode(source: string): string {
+  const lines: string[] = [];
+  let current = "";
+  let indent = 0;
+  let quote: "'" | '"' | "`" | null = null;
+  let escaped = false;
+
+  const pushLine = () => {
+    const content = current.trim();
+    if (content) lines.push(`${"  ".repeat(indent)}${content}`);
+    current = "";
+  };
+
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index]!;
+    if (quote) {
+      current += character;
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === quote) quote = null;
+      continue;
+    }
+    if (character === "'" || character === '"' || character === "`") {
+      quote = character;
+      current += character;
+      continue;
+    }
+    if (character === "{") {
+      current = `${current.trimEnd()} {`;
+      pushLine();
+      indent += 1;
+      continue;
+    }
+    if (character === "}") {
+      pushLine();
+      indent = Math.max(0, indent - 1);
+      current = "}";
+      const next = source.slice(index + 1).trimStart()[0];
+      if (next !== ";" && next !== "," && next !== ")" && next !== "]") pushLine();
+      continue;
+    }
+    if (character === ";") {
+      current += character;
+      pushLine();
+      continue;
+    }
+    current += character;
+  }
+  pushLine();
+  return lines.join("\n");
 }
 
 function initialRun(question: StoryPracticeQuestionView): LocalRun | null {
@@ -1067,10 +1643,6 @@ function responseGuidance(format: StoryPracticeQuestionView["question"]["format"
     default:
       return assertNever(format);
   }
-}
-
-function codeViewerHeight(value: string, maximum: number): number {
-  return Math.min(maximum, Math.max(220, value.split("\n").length * 23 + 64));
 }
 
 async function post<T>(url: string, body: unknown, experienceLabel: string): Promise<T> {

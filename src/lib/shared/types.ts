@@ -370,6 +370,14 @@ export interface InterviewQuestion {
   language: string | null;
   codeTask: string | null;
   codeSnippet: string | null;
+  /** Candidate-safe source problem reference for a DSA block review question. */
+  dsaReviewContext?: {
+    title: string;
+    difficulty: string;
+    problemStatement: string;
+    constraints: string[];
+    examples: Array<{ input: string; output: string; explanation?: string }>;
+  } | null;
   /** Candidate-facing section for the combined DSA & Design round. */
   interviewSection?: "dsa" | "design" | null;
   /** Candidate-facing section for the Core Technical & Projects round. */

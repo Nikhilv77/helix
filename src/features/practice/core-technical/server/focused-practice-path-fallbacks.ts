@@ -483,7 +483,7 @@ function buildDraft(storyKey: string, content: QuestionContent[]): ReviewedCoreT
       ],
       commonMistakes: [...pattern.commonMistakes],
       interviewerFollowUps: [...pattern.followUps],
-      interviewConnection: `Interviewers use this task to test whether you can reason about ${pattern.title.toLowerCase()} from concrete evidence instead of repeating a definition.`,
+      interviewConnection: `Interviewers use this task to see whether you can ${pattern.title.charAt(0).toLowerCase()}${pattern.title.slice(1)} using concrete evidence instead of repeating a definition.`,
       ...(item.executable ?? {})
     } satisfies GeneratedQuestionCandidate;
     return {

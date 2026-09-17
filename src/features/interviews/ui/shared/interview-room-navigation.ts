@@ -10,3 +10,11 @@ export function interviewRoomHref(sessionId: string): string {
 export function openInterviewRoom(sessionId: string): void {
   window.location.assign(interviewRoomHref(sessionId));
 }
+
+export function dsaAssessmentRoomHref(sessionId: string): string {
+  return `/practice/dsa/assessment?session=${encodeURIComponent(sessionId)}`;
+}
+
+export function openDsaAssessmentRoom(sessionId: string): void {
+  window.location.assign(dsaAssessmentRoomHref(sessionId));
+}

@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { coreTechnicalStoryReviewArtifactSchema } from "@/features/practice/core-technical/domain/review-artifact-contracts";
+import { coreTechnicalPublicRunResultSchema } from "@/features/practice/core-technical/domain/practice-contracts";
 import type { CoreTechnicalSandboxExecutor } from "./runner-contracts";
 import {
   CORE_TECHNICAL_NODE_RUNTIME_VERSION,
@@ -13,7 +14,10 @@ import {
 import { CORE_TECHNICAL_RUNNER_REGISTRY, CoreTechnicalRunnerService } from "./runner.service";
 import { VercelSandboxNode22Executor } from "./vercel-sandbox-executor";
 
-const generatedDirectory = path.resolve(process.cwd(), "src/features/practice/core-technical/domain/generated");
+const generatedDirectory = path.resolve(
+  process.cwd(),
+  "src/features/practice/core-technical/domain/generated"
+);
 const artifacts = [
   "follow-operation-guided-benchmark.json",
   "operation-fails-halfway-standard-benchmark.json"
@@ -168,8 +172,9 @@ isolated("Core Technical pinned local sandbox", () => {
         network: false
       }
     });
-    expect(result.codeFingerprint).toMatch(/^[a-f0-9]{64}$/);
-    expect(result.testSuiteFingerprint).toMatch(/^[a-f0-9]{64}$/);
+    expect(result.codeFingerprint).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(result.testSuiteFingerprint).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(() => coreTechnicalPublicRunResultSchema.parse(result)).not.toThrow();
     expect(JSON.stringify(result)).not.toContain(question.hiddenTests![0]!.name);
     expect(JSON.stringify(result)).not.toContain(question.hiddenTests![0]!.testCode);
   });

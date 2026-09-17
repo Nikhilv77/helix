@@ -50,8 +50,10 @@ function question(
     artifact: {
       kind: executable ? "code" : "scenario",
       title: "Evidence for incident stage " + order,
-      content:
-        "This artifact contains the operation evidence required to answer the current technical question."
+      content: executable
+        ? "export async function repair(value) {\n  return value;\n}"
+        : "This artifact contains the operation evidence required to answer the current technical question.",
+      ...(executable ? { language: "javascript" } : {})
     },
     ...(mcq
       ? {

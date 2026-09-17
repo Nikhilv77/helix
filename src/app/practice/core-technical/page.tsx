@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { CoreTechnicalOverview } from "@/features/practice/core-technical/ui/core-technical-overview";
 import { CoreTechnicalTechnologyWelcome } from "@/features/practice/core-technical/ui/core-technical-technology-welcome";
-import { coreTechnicalTechnologyOptions } from "@/features/practice/core-technical/domain/technology-focus";
 import { coreTechnicalHistoryNavigation } from "@/features/practice/core-technical/domain/ui-state";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
@@ -13,7 +12,7 @@ import { NotFoundErrorException } from "@/server/common/exceptions/not-found-err
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
   "Core Technical Practice",
-  "Practical JavaScript and Node.js questions commonly discussed in technical interviews."
+  "Resume-personalized technical questions built around recurring interview patterns."
 );
 
 export default async function CoreTechnicalPracticePage({
@@ -56,11 +55,7 @@ export default async function CoreTechnicalPracticePage({
     (profile.targetRole === "backend" || profile.targetRole === "fullstack");
 
   if (needsFirstStory) {
-    return (
-      <CoreTechnicalTechnologyWelcome
-        technologies={coreTechnicalTechnologyOptions(profile.resume?.skills ?? [])}
-      />
-    );
+    return <CoreTechnicalTechnologyWelcome />;
   }
 
   return (

@@ -499,7 +499,11 @@ function publicQuestion(question: QuestionRead) {
   const snapshot = publicCoreTechnicalQuestionSchema.parse(question.publicSnapshot);
   const attempted = question.attempts.length > 0;
   const answerAuthorized = attempted || question.status === CoreTechnicalQuestionStatus.LEARNED;
-  const hintCount = Math.min(3, Math.max(0, question.state?.revealedHintCount ?? 0));
+  // Hints are no longer assistance once the answer is authorized. Returning all
+  // three keeps the completed review useful instead of leaving a dead Hints tab.
+  const hintCount = answerAuthorized
+    ? 3
+    : Math.min(3, Math.max(0, question.state?.revealedHintCount ?? 0));
   return {
     id: question.id,
     blockId: question.blockId,

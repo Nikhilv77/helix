@@ -103,6 +103,7 @@ export function serialiseInterviewState(state: InterviewState) {
           language: question.language || null,
           codeTask: question.codeTask || null,
           codeSnippet: question.codeSnippet || null,
+          dsaReviewContext: question.dsaReviewContext ?? null,
           interviewSection: question.interviewSection ?? null,
           technicalProjectsSection: question.technicalProjectsSection ?? null,
           projectAct: question.projectAct ?? null,

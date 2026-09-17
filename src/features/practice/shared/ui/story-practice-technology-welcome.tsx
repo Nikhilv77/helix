@@ -19,8 +19,11 @@ export function StoryPracticeTechnologyWelcome<TValue extends string>({
 }: StoryPracticeTechnologyWelcomeProps<TValue>) {
   const router = useRouter();
   const requestPending = useRef(false);
-  const [phase, setPhase] = useState<PreparationPhase>("choosing");
-  const [selected, setSelected] = useState<TValue | null>(null);
+  const automaticOption = experience.autoStart ? (experience.options[0] ?? null) : null;
+  const [phase, setPhase] = useState<PreparationPhase>(
+    automaticOption ? "confirming" : "choosing"
+  );
+  const [selected, setSelected] = useState<TValue | null>(automaticOption?.value ?? null);
   const [error, setError] = useState<string | null>(null);
   const { state: voiceState, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
   const speaking = voiceState === "speaking";
@@ -76,13 +79,18 @@ export function StoryPracticeTechnologyWelcome<TValue extends string>({
             ? cause.message
             : "I couldn’t finish the practice set. Your progress is safe—please try again."
         );
-        setPhase("choosing");
-        setSelected(null);
+        setPhase(experience.autoStart ? "confirming" : "choosing");
+        setSelected(experience.autoStart ? (experience.options[0]?.value ?? null) : null);
         requestPending.current = false;
       }
     },
     [experience, router, setAwaitingGesture]
   );
+
+  useEffect(() => {
+    if (!experience.autoStart || !automaticOption || requestPending.current) return;
+    void prepare(automaticOption.value);
+  }, [automaticOption, experience.autoStart, prepare]);
 
   return (
     <main className="practice-page mx-auto flex min-h-[calc(100svh-5rem)] w-full max-w-[86rem] items-center px-4 py-10 sm:px-8 lg:px-10">
@@ -111,9 +119,11 @@ export function StoryPracticeTechnologyWelcome<TValue extends string>({
             id={`${experience.slug}-welcome-title`}
             className="max-w-[42rem] font-display text-[2.45rem] font-semibold leading-[1.03] tracking-[-0.045em] text-cream sm:text-[3.5rem]"
           >
-            {phase === "choosing" ? experience.heading : "Preparing your practice path."}
+            {phase === "choosing" && !experience.autoStart
+              ? experience.heading
+              : "Preparing your personalised practice path."}
           </h1>
-          {phase === "choosing" ? (
+          {phase === "choosing" && !experience.autoStart ? (
             <div className="mt-9">
               <div className="grid gap-2 sm:grid-cols-2">
                 {experience.options.map((option) => (
@@ -143,6 +153,17 @@ export function StoryPracticeTechnologyWelcome<TValue extends string>({
                 ))}
               </div>
             </div>
+          ) : error ? (
+            <button
+              type="button"
+              onClick={() => {
+                const option = experience.options[0];
+                if (option) void prepare(option.value);
+              }}
+              className="mt-9 inline-flex min-h-11 items-center justify-center rounded-xl bg-cream px-5 text-[13.5px] font-semibold text-[#17181a] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            >
+              Try again
+            </button>
           ) : (
             <div
               className="mt-9 flex items-center gap-3 text-[16px] font-medium text-cream/52"

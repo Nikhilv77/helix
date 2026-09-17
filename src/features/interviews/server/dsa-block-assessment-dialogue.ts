@@ -24,27 +24,50 @@ export function dsaBlockAssessmentOpening(state: AssessmentDialogueState): strin
   const first = state.plan[0];
   const reviewCount = state.plan.filter((question) => question.stage === "rapid").length;
   const transferCount = state.plan.filter((question) => question.stage === "code").length;
+  const usesSavedCode = state.plan.some(
+    (question) => question.stage === "rapid" && Boolean(question.codeSnippet)
+  );
   const greeting = stableChoice(state.id, "opening:greeting", [
-    "Hi—good to meet you.",
-    "Hey, welcome in.",
-    "Hi. Take a second to settle in.",
-    "Hey. We can keep this conversational."
+    "Hi, and congratulations on completing this practice block.",
+    "Nice work completing this question set.",
+    "You’ve finished the block. Let’s check how well the ideas have settled in.",
+    "Great work getting through the block. This checkpoint will measure what transferred."
   ]);
-  const shape = stableChoice(state.id, "opening:shape", [
-    `We’ll start with ${reviewCount} quick reads of code you’ve already submitted, then work through ${transferCount} fresh problems.`,
-    `First I’ll ask ${reviewCount} short questions about your saved solutions. After that, we’ll solve ${transferCount} new problems together.`,
-    `We’ll use your own code for a ${reviewCount}-question review, then switch to ${transferCount} unseen coding problems.`
-  ]);
+  const shape = stableChoice(
+    state.id,
+    "opening:shape",
+    usesSavedCode
+      ? [
+          `You’ll start with ${reviewCount} quick checks grounded in code you already submitted, then solve ${transferCount === 1 ? "one fresh problem" : `${transferCount} fresh problems`}.`,
+          `First are ${reviewCount} short questions about your saved solutions. After that comes ${transferCount === 1 ? "one unseen coding problem" : `${transferCount} unseen coding problems`}.`,
+          `This uses your own code for a ${reviewCount}-question review, then tests transfer with ${transferCount === 1 ? "one new problem" : `${transferCount} new problems`}.`
+        ]
+      : [
+          `You’ll start with ${reviewCount} focused checks from this block, then solve ${transferCount === 1 ? "one fresh problem" : `${transferCount} fresh problems`}.`,
+          `First are ${reviewCount} short questions on the patterns, complexity, and edge cases you practised. After that comes ${transferCount === 1 ? "one unseen coding problem" : `${transferCount} unseen coding problems`}.`,
+          `We’ll review the key decisions from this block in ${reviewCount} quick questions, then test transfer with ${transferCount === 1 ? "one new problem" : `${transferCount} new problems`}.`
+        ]
+  );
   const expectation = stableChoice(state.id, "opening:expectation", [
-    "Talk through your reasoning when we reach the editor; I may ask about a trade-off or edge case.",
-    "Once we start coding, think out loud so I can follow the decisions you’re making.",
-    "For the coding part, I care about the reasoning as much as the final implementation."
+    "When you reach the editor, run your code and add a short explanation of the approach and complexity.",
+    "For the coding part, the implementation, test evidence, and your written reasoning all count.",
+    "You do not need to speak. I’ll guide you, and you can answer everything on screen."
   ]);
-  const handoff = stableChoice(state.id, "opening:first-question", [
-    "Let’s begin with something from your own code.",
-    "We’ll start with a saved submission.",
-    "All right, first let’s look at your code."
-  ]);
+  const handoff = stableChoice(
+    state.id,
+    "opening:first-question",
+    usesSavedCode
+      ? [
+          "Let’s begin with something from your own code.",
+          "We’ll start with a saved submission.",
+          "All right, first let’s look at your code."
+        ]
+      : [
+          "Let’s begin with a pattern decision.",
+          "We’ll start with one of the problems from this block.",
+          "All right, here’s the first check."
+        ]
+  );
 
   return joinSpoken(greeting, shape, expectation, first ? handoff : null, first?.text);
 }
@@ -62,7 +85,7 @@ export function dsaBlockAssessmentReviewFeedback(input: {
         "Yes—that’s the right read.",
         "Exactly.",
         "That’s the right conclusion.",
-        "Yes, that’s what the code shows."
+        "Yes, that matches the intended reasoning."
       ])
     : stableChoice(input.sessionId, moment, [
         input.correctAnswer ? `The stronger answer here is ${input.correctAnswer}.` : "Not quite.",
@@ -70,8 +93,8 @@ export function dsaBlockAssessmentReviewFeedback(input: {
           ? `Here, the answer is ${input.correctAnswer}.`
           : "That one doesn’t hold here.",
         input.correctAnswer
-          ? `For this submission, ${input.correctAnswer} is the grounded answer.`
-          : "The saved evidence points another way."
+          ? `The grounded answer here is ${input.correctAnswer}.`
+          : "The evidence points another way."
       ]);
 
   return joinSpoken(lead, input.explanation);
@@ -84,9 +107,9 @@ export function dsaBlockAssessmentMoveOnUtterance(
 ): string {
   if (state.phase === "done" || state.phase === "wrap") {
     const closing = stableChoice(state.id, "closing", [
-      "That’s the full assessment. Thanks for walking me through your decisions—your feedback will be ready shortly.",
-      "We’ve covered everything I wanted to see. Thanks for thinking out loud with me; your feedback will be ready shortly.",
-      "That completes the round. Thanks for the conversation—your feedback will be ready shortly."
+      "That’s the full checkpoint. You completed the block review and the transfer problem. I’m preparing your results now, including what went well, what to revisit, and what to practise next.",
+      "You’ve completed the checkpoint—nice work. Your results page will break down the review questions, the coding problem, and the most useful next step.",
+      "That completes the assessment. Take a breath while I prepare your results. You’ll be able to review your strengths, the concepts that need another pass, and your recommended next problem."
     ]);
     return joinSpoken(acknowledgement, closing);
   }
@@ -110,7 +133,7 @@ function transitionBridge(
   if (previous?.stage === "rapid" && next.stage === "code") {
     return stableChoice(sessionId, `transition:${nextIndex}:transfer`, [
       "That closes the review portion. Let’s move into live problem solving.",
-      "All right, we’re done reviewing the saved code. Let’s switch to a fresh problem.",
+      "All right, the quick checks are done. Let’s switch to a fresh problem.",
       "That’s the quick review finished. Now I want to see how you approach something new."
     ]);
   }
@@ -124,12 +147,23 @@ function transitionBridge(
   }
 
   if (previous?.stage === "rapid" && next.stage === "rapid") {
-    return stableChoice(sessionId, `transition:${nextIndex}:review`, [
-      "Let’s stay with your code for another one.",
-      "Here’s another detail from a saved solution.",
-      "Let’s check one more decision in the code.",
-      "Now look at this next excerpt."
-    ]);
+    return stableChoice(
+      sessionId,
+      `transition:${nextIndex}:review`,
+      next.codeSnippet
+        ? [
+            "Let’s stay with your code for another one.",
+            "Here’s another detail from a saved solution.",
+            "Let’s check one more decision in the code.",
+            "Now look at this next excerpt."
+          ]
+        : [
+            "Let’s test another decision from the block.",
+            "Good. Here’s the next reasoning check.",
+            "Now let’s shift to another problem you practised.",
+            "Let’s keep going with the next concept."
+          ]
+    );
   }
 
   return "";

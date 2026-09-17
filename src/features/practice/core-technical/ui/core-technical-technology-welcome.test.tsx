@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -36,7 +36,7 @@ describe("CoreTechnicalTechnologyWelcome", () => {
     window.sessionStorage.clear();
   });
 
-  it("shows resume suggestions and creates a private personalized block immediately", async () => {
+  it("automatically creates a private personalized block from server-owned profile evidence", async () => {
     const bodies: unknown[] = [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
       bodies.push(JSON.parse(String(init?.body)));
@@ -45,35 +45,18 @@ describe("CoreTechnicalTechnologyWelcome", () => {
         : success({ block: { id: "block-one" } });
     });
 
-    render(
-      <CoreTechnicalTechnologyWelcome
-        technologies={[
-          {
-            value: "typescript",
-            label: "TypeScript",
-            detail: "Practical TypeScript on Node.js",
-            resumeMatched: true
-          },
-          {
-            value: "nodejs",
-            label: "Node.js",
-            detail: "Runtime behaviour",
-            resumeMatched: false
-          }
-        ]}
-      />
-    );
+    render(<CoreTechnicalTechnologyWelcome />);
 
-    expect(screen.queryByText("Suggested from your resume")).toBeNull();
-    expect(screen.queryByText(/complete practice workspace/i)).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: /Preparing your personalised practice path/i })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Personalised technical focus:/i })).toBeNull();
     expect(screen.getByTestId("teacher").parentElement).toHaveAttribute(
       "data-avatar-feather",
       "alpha-edge"
     );
-    fireEvent.click(screen.getByRole("button", { name: /TypeScript: Practical TypeScript/i }));
-
     await waitFor(() => expect(bodies).toHaveLength(2));
-    expect(bodies[0]).toEqual({ technology: "typescript" });
+    expect(bodies[0]).toEqual({ automatic: true });
     expect(bodies[1]).toMatchObject({
       focusRevisionId: "11111111-1111-4111-8111-111111111111",
       personalized: true

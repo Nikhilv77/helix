@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CoreTechnicalQuestionFormat } from "@/features/practice/core-technical/domain/contracts";
 import type {
@@ -67,7 +67,7 @@ describe("CoreTechnicalQuestionWorkspace", () => {
       if (format === "debug-repair" || format === "micro-implementation") {
         expect(screen.getByText("8 min")).toBeInTheDocument();
         expect(screen.getByLabelText("Core Technical JavaScript editor")).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "Test cases" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /Test cases/i })).toBeInTheDocument();
       } else {
         expect(
           screen.getByText(format === "production-decision" ? "4 min" : "5 min")
@@ -96,13 +96,90 @@ describe("CoreTechnicalQuestionWorkspace", () => {
     );
 
     expect(screen.getByLabelText("flaky-test-suite code artifact, read only")).toHaveAttribute(
-      "readonly"
+      "aria-readonly",
+      "true"
     );
     expect(
       screen.getByRole("heading", { level: 2, name: "Make an async test deterministic" })
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Written answer")).toBeInTheDocument();
     expect(screen.queryByLabelText("Core Technical JavaScript editor")).toBeNull();
+  });
+
+  it("renders compressed metrics as wrapped evidence rows instead of one horizontal line", () => {
+    const question = makeQuestion("production-decision");
+    question.question.artifact = {
+      kind: "metrics",
+      title: "Configuration path constraints",
+      content:
+        "2,000 requests/second; shared configuration reloads once per minute; two request-specific fields change"
+    };
+
+    render(
+      <CoreTechnicalQuestionWorkspace
+        block={makeBlock(question)}
+        initialQuestion={question}
+        stageTitle="Choose the copy strategy"
+      />
+    );
+
+    expect(screen.getByText("2,000 requests/second")).toBeInTheDocument();
+    expect(screen.getByText("shared configuration reloads once per minute")).toBeInTheDocument();
+    expect(screen.getByText("two request-specific fields change")).toBeInTheDocument();
+    expect(screen.getByText("2,000 requests/second").parentElement).toHaveClass("w-full");
+  });
+
+  it("expands legacy one-line starter code into readable editor lines", () => {
+    const question = makeQuestion("debug-repair");
+    question.question.starterCode =
+      "export function normalizeUser(input) { const output = { ...input }; output.profile.name = output.profile.name.trim(); return output; }";
+    question.question.artifact = {
+      kind: "code",
+      title: "Mutating request normalizer",
+      language: "javascript",
+      content:
+        "export function normalizeUser(input) {\n  const output = { ...input };\n  output.profile.name = output.profile.name.trim();\n  return output;\n}"
+    };
+
+    render(
+      <CoreTechnicalQuestionWorkspace
+        block={makeBlock(question)}
+        initialQuestion={question}
+        stageTitle="Repair the mutation boundary"
+      />
+    );
+
+    expect(screen.getByLabelText("Core Technical JavaScript editor")).toHaveValue(
+      question.question.artifact.content
+    );
+  });
+
+  it("shows clear code workflow feedback when submit is clicked before a passing run", () => {
+    const question = makeQuestion("debug-repair");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ question }));
+
+    render(
+      <CoreTechnicalQuestionWorkspace
+        block={makeBlock(question)}
+        initialQuestion={question}
+        stageTitle="Repair the mutation boundary"
+      />
+    );
+
+    expect(
+      screen.getByText(/edit the starter code, run the tests, then submit/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Test cases.*1 visible.*hidden checks/i })
+    ).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Learn instead" }));
+    expect(screen.getByRole("button", { name: "Reveal answer and continue" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Submit answer" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/run this exact code before submitting/i);
+    expect(screen.getByText("No test result is available yet.")).toBeInTheDocument();
   });
 
   it("keeps an active question editable when its loose path is not current", () => {
@@ -119,6 +196,36 @@ describe("CoreTechnicalQuestionWorkspace", () => {
     expect(screen.getByLabelText("Written answer")).not.toHaveAttribute("readonly");
     expect(screen.getByRole("button", { name: "Submit answer" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Learn instead" })).toBeEnabled();
+  });
+
+  it("offers an optional interview-answer structure in a compact composer", async () => {
+    const question = makeQuestion("written");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ question }));
+
+    render(
+      <CoreTechnicalQuestionWorkspace
+        block={makeBlock(question)}
+        initialQuestion={question}
+        stageTitle="Explain the constraint"
+      />
+    );
+
+    const answer = screen.getByLabelText("Written answer");
+    expect(answer).toHaveClass("min-h-56");
+    fireEvent.click(screen.getByRole("button", { name: "+ Why it happens" }));
+    expect(answer).toHaveValue("Why it happens:\n");
+    expect(
+      await screen.findByText("Connect that outcome to the runtime mechanism that causes it.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Why it happens:").find((element) => element.tagName === "SPAN")
+    ).toHaveClass("underline");
+    expect(screen.getByRole("button", { name: "Why it happens prompt added" })).toBeDisabled();
+    expect(answer.closest("div")?.parentElement).not.toHaveClass(
+      "focus-within:border-[var(--workspace-accent-border)]"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "+ How to fix" }));
+    expect(answer).toHaveValue("Why it happens:\n\nHow to fix:\n");
   });
 
   it("completes every public format through its Step 12 run and attempt paths", async () => {
@@ -183,7 +290,7 @@ describe("CoreTechnicalQuestionWorkspace", () => {
         });
       }
       fireEvent.click(screen.getByRole("button", { name: "Submit answer" }));
-      await screen.findByRole("heading", { name: /10\/10 · Strong answer/i });
+      await screen.findByRole("heading", { name: /Strong answer · 10\/10/i });
       expect(calls).toContain("/api/practice/core-technical/attempt");
       if (code) expect(calls).toContain("/api/practice/core-technical/run");
       view.unmount();
@@ -253,12 +360,15 @@ describe("CoreTechnicalQuestionWorkspace", () => {
     expect(await screen.findByText(/Trace the first queue boundary/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Submit answer" }));
+    const dialog = await screen.findByRole("dialog", { name: /Strong answer · 10\/10/i });
+    expect(within(dialog).getByText("Trace the runtime")).toBeInTheDocument();
+    expect(within(dialog).getByText("request:start", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("Your submitted answer")).toBeInTheDocument();
+    expect(within(dialog).getByText("Strong interview answer")).toBeInTheDocument();
     expect(
-      await screen.findByRole("heading", { name: /10\/10 · Strong answer/i })
+      within(dialog).getByText("The promise callback runs before the timer callback.")
     ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Detailed walkthrough" })).toBeInTheDocument();
-    expect(screen.getByText("From synchronous work to the timer")).toBeInTheDocument();
-    expect(screen.getByText(/Interviewers use this/)).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Try a variation" })).toBeNull();
     expect(mocks.refresh).toHaveBeenCalled();
   });
 
@@ -304,9 +414,12 @@ describe("CoreTechnicalQuestionWorkspace", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Submit answer" }));
     expect(
-      await screen.findByRole("heading", { name: /10\/10 · Strong answer/i })
+      await screen.findByRole("heading", { name: /Strong answer · 10\/10/i })
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Reference solution code, read only")).toHaveAttribute("readonly");
+    expect(screen.getByLabelText("Strong interview answer reference code")).toHaveAttribute(
+      "aria-readonly",
+      "true"
+    );
   });
 
   it("requires explicit confirmation before Learn and restores the server-owned terminal state", async () => {
@@ -338,6 +451,14 @@ describe("CoreTechnicalQuestionWorkspace", () => {
 
     expect(await screen.findByText("Learned · zero mastery")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Submit answer" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("tab", { name: /Hints/i }));
+    expect(
+      screen.getByText(/No hints were opened before this question was completed/i)
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open answer debrief" }));
+    expect(screen.getByRole("dialog", { name: "Learning review" })).toBeInTheDocument();
+    expect(screen.getByText("Strong interview answer")).toBeInTheDocument();
   });
 
   it("announces evaluator failure and retries an unchanged answer with the same request ID", async () => {
@@ -387,7 +508,7 @@ describe("CoreTechnicalQuestionWorkspace", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/draft is safe/i);
     fireEvent.click(screen.getByRole("button", { name: "Submit answer" }));
 
-    await screen.findByRole("heading", { name: /10\/10 · Strong answer/i });
+    await screen.findByRole("heading", { name: /Strong answer · 10\/10/i });
     expect(bodies).toHaveLength(2);
     expect(bodies[1]).toEqual(bodies[0]);
   });
@@ -499,7 +620,7 @@ function makeAttempt(work: NonNullable<CoreTechnicalPublicQuestion["latestAttemp
 }
 
 function makeRun(accepted: boolean) {
-  const code = "export async function repair() { return true; }";
+  const code = "export async function repair() {\n  return true;\n}";
   return {
     id: "44444444-4444-4444-8444-444444444444",
     code,

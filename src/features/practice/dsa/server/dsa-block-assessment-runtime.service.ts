@@ -1,7 +1,6 @@
 import { DsaPracticeBlockStatus, Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import {
-  DSA_BLOCK_ASSESSMENT_SNAPSHOT_VERSION,
   parseDsaBlockAssessmentSnapshot,
   type DsaBlockAssessmentSnapshot,
   type DsaBlockAssessmentTransferQuestion
@@ -366,7 +365,7 @@ function readSnapshot(value: unknown, blockId: string): DsaBlockAssessmentSnapsh
 
 function assertRunnableSnapshot(snapshot: DsaBlockAssessmentSnapshot): void {
   if (
-    snapshot.schemaVersion < DSA_BLOCK_ASSESSMENT_SNAPSHOT_VERSION ||
+    snapshot.schemaVersion < 2 ||
     snapshot.transferQuestions.some((question) => !question.runnerContract || !question.starterCode)
   ) {
     throw new DsaBlockAssessmentRuntimeError(
@@ -382,14 +381,15 @@ export function buildAssessmentSetup(
   snapshot: DsaBlockAssessmentSnapshot,
   owner: { targetRole: string | null; level: string | null; context: string | null }
 ): InterviewSetup {
+  const usesSavedCode = snapshot.reviewItems.some((item) => Boolean(item.codeSnippet));
   return {
     role: asRole(owner.targetRole),
     level: asLevel(owner.level),
     roundType: "technical",
     intensity: "realistic",
     context: [
-      "This is a frozen DSA block assessment. Ask the prepared questions in order.",
-      "The first stage is candidate-code review; the final two are transfer coding problems.",
+      "This is a frozen, teacher-led DSA block checkpoint. Present the prepared questions in order.",
+      `The first stage is ${usesSavedCode ? "candidate-code review" : "a knowledge check grounded in the completed block"}; the final ${snapshot.transferQuestions.length === 1 ? "question is an unseen transfer coding problem" : "questions are unseen transfer coding problems"}.`,
       owner.context ?? ""
     ]
       .filter(Boolean)
@@ -398,7 +398,7 @@ export function buildAssessmentSetup(
     templateId: "dsa-block-assessment",
     templateTitle: "DSA block assessment",
     durationMinutes: snapshot.durationMinutes,
-    questionCount: (snapshot.reviewItems.length + snapshot.transferQuestions.length) as 7 | 8,
+    questionCount: (snapshot.reviewItems.length + snapshot.transferQuestions.length) as 6 | 7 | 8,
     dsaBlockAssessment: {
       kind: "dsa-block-assessment",
       blockId,
@@ -415,20 +415,34 @@ export function buildAssessmentPlan(snapshot: DsaBlockAssessmentSnapshot): Plann
     evidenceAnchor: item.sourceQuestionTitle,
     kind: "mcq" as const,
     stage: "rapid" as const,
-    codeSnippet: item.codeSnippet,
+    language: item.language ?? "javascript",
+    codeTask: item.sourcePrompt,
+    codeSnippet: item.codeSnippet ?? undefined,
+    dsaReviewContext: item.sourceReference
+      ? {
+          title: item.sourceQuestionTitle,
+          ...item.sourceReference
+        }
+      : undefined,
     dsaAssessmentReviewItemId: item.id,
     options: [...item.options],
     answerFormat: "mcq" as const,
     competency: item.metric,
-    intent: "Assess the candidate's reasoning about their verified code.",
+    intent: item.codeSnippet
+      ? "Assess the candidate's reasoning about their verified code."
+      : `Assess retained understanding of ${item.sourceQuestionTitle} from the completed block.`,
     mustHit: ["Select the best grounded answer."],
-    probeIfMissing: "Choose the option that best matches the code shown."
+    probeIfMissing: item.codeSnippet
+      ? "Choose the option that best matches the code shown."
+      : "Choose the option best supported by the problem and the block's intended approach."
   }));
   const transfer = snapshot.transferQuestions.map((question, index) => ({
     text:
-      index === 0
-        ? `Your first transfer problem is ${question.title}. Take a moment to read it, then talk me through the approach you want to try.`
-        : `Your second transfer problem is ${question.title}. Start by framing the invariant or data structure you want to rely on, then implement it.`,
+      snapshot.transferQuestions.length === 1
+        ? `Your transfer problem is ${question.title}. Read it carefully, implement it in the editor, then include your approach and complexity.`
+        : index === 0
+          ? `Your first transfer problem is ${question.title}. Read it carefully, then implement it in the editor.`
+          : `Your second transfer problem is ${question.title}. Frame the invariant or data structure you want to rely on, then implement it.`,
     evidenceAnchor: `${question.primaryPattern} transfer problem frozen for this block assessment`,
     kind: "code" as const,
     stage: "code" as const,

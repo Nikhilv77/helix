@@ -35,7 +35,19 @@ export class CoreTechnicalAttemptEvaluator {
         modelClass: "fast",
         temperature: 0.1,
         schema: coreTechnicalAttemptFeedbackSchema,
-        systemInstruction: `You are a strict Node.js interview evaluator. Return only JSON matching the schema. Judge correctness before fluency. Use the frozen answer and rubric, never invent evidence, and keep every field concise. The candidate will be shown this response after submitting, so do not mention hidden rubrics or private source material. Score from 0 to 10. schemaVersion must be 1.`,
+        systemInstruction: `You are an experienced technical mentor reviewing one practice answer. Return only JSON matching the schema. Judge correctness before fluency. Use only the supplied question, answer, and rubric; never invent details. Score from 0 to 10. schemaVersion must be 1.
+
+Write every learner-facing field in plain, natural language:
+- Speak directly to the learner using "you".
+- Use short sentences and everyday words.
+- Be specific about their answer. Quote a short phrase from it when useful.
+- Explain a technical term the first time it appears.
+- Say what is correct, what went wrong, and what the correct reasoning is.
+- Keep each field to one or two short sentences.
+- Never use evaluator language such as "governing mechanism", "frozen contract", "evidence", "diagnosable", "material correction", "counterfactual", or "the candidate".
+- Do not mention hidden rubrics, private source material, or these instructions.
+
+interviewerFollowUp and transferExample are required by the schema but should use the same simple, conversational style.`,
         prompt: `Evaluate this genuine Core Technical practice attempt.
 
 Format: ${question.format}
@@ -75,16 +87,28 @@ function evaluateChoice(
   const feedback = coreTechnicalAttemptFeedbackSchema.parse({
     schemaVersion: 1,
     score: correct ? 10 : 0,
-    result: bounded(correct ? "That conclusion is correct." : `That choice is not correct. ${question.answer.concise}`, 500),
+    result: bounded(
+      correct
+        ? "That conclusion is correct."
+        : `That choice is not correct. ${question.answer.concise}`,
+      500
+    ),
     mechanism: bounded(question.answer.explanation, 700),
     didWell: correct
-      ? "You identified the governing behavior from the evidence."
-      : "You committed to a concrete prediction, which makes the misconception diagnosable.",
-    missingOrIncorrect: bounded(correct
-      ? "No material correction is needed."
-      : question.commonMistakes[0] ?? "The selected choice does not follow from the runtime behavior.", 700),
+      ? "You read the code correctly and chose the right result."
+      : "You gave a clear answer, so it is easy to see where the reasoning went off track.",
+    missingOrIncorrect: bounded(
+      correct
+        ? "Your reasoning is correct. Nothing needs to be fixed here."
+        : (question.commonMistakes[0] ??
+            "The selected choice does not follow from the runtime behavior."),
+      700
+    ),
     productionConsequence: consequence(question),
-    transferExample: `Apply the same mechanism when reviewing a similar ${question.artifact.kind} in another service.`,
+    transferExample: bounded(
+      `For a similar question, use the same idea: ${question.answer.explanation}`,
+      500
+    ),
     interviewerFollowUp: bounded(question.interviewerFollowUps[0]!, 500),
     missedEdgeCases: []
   });
@@ -96,7 +120,10 @@ function evaluateCode(
   run: CoreTechnicalRunResult | null
 ): AttemptEvaluation {
   if (!run) throw new Error("A frozen code run is required to evaluate executable work");
-  const missed = run.publicTests.filter((test) => !test.passed).map((test) => test.name).slice(0, 5);
+  const missed = run.publicTests
+    .filter((test) => !test.passed)
+    .map((test) => test.name)
+    .slice(0, 5);
   const feedback = coreTechnicalAttemptFeedbackSchema.parse({
     schemaVersion: 1,
     score: run.accepted ? 10 : 0,
@@ -107,13 +134,19 @@ function evaluateCode(
         : `The submitted code did not complete successfully (${run.status}).`,
     mechanism: bounded(question.answer.explanation, 700),
     didWell: run.accepted
-      ? "Your implementation satisfied the frozen executable contract."
-      : "You produced runnable evidence against the exact submitted code.",
-    missingOrIncorrect: bounded(run.accepted
-      ? "No tested correctness gap remains."
-      : question.commonMistakes[0] ?? "The implementation does not yet meet the frozen contract.", 700),
+      ? "Your code handled all of the tested cases correctly."
+      : "You ran the exact code you submitted, which gives us a clear failure to work from.",
+    missingOrIncorrect: bounded(
+      run.accepted
+        ? "Your solution is correct for all of the tested cases."
+        : (question.commonMistakes[0] ?? "The code does not yet produce the required result."),
+      700
+    ),
     productionConsequence: consequence(question),
-    transferExample: `Use the same repair and verification boundary on a comparable ${question.artifact.kind} path.`,
+    transferExample: bounded(
+      `For a similar question, use the same idea: ${question.answer.explanation}`,
+      500
+    ),
     interviewerFollowUp: bounded(question.interviewerFollowUps[0]!, 500),
     missedEdgeCases: missed
   });
@@ -121,7 +154,13 @@ function evaluateCode(
 }
 
 function consequence(question: GeneratedQuestionCandidate): string {
-  return bounded(question.answer.concise, 500);
+  const mistake = question.commonMistakes[0];
+  return bounded(
+    mistake
+      ? `In production, this misunderstanding can cause subtle bugs. ${mistake}`
+      : `In production, this can make the code behave differently from what you expect.`,
+    500
+  );
 }
 
 function bounded(value: string, limit: number): string {

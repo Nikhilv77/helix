@@ -55,9 +55,19 @@ describe("DSA block assessment dialogue", () => {
 
     expect(replay).toBe(first);
     expect(first).toContain("2");
-    expect(first).toMatch(/saved solutions|own code|saved submission/i);
+    expect(first).toMatch(/patterns|key decisions|focused checks/i);
     expect(first).toContain(plan[0]!.text);
     expect(first).not.toContain("I'm Maya");
+  });
+
+  it("describes saved submissions only when the rapid round actually includes code", () => {
+    const codePlan: PlannedQuestion[] = [
+      { ...plan[0]!, codeSnippet: "for (const value of values) {}" },
+      ...plan.slice(1)
+    ];
+    const opening = dsaBlockAssessmentOpening(dialogueState({ plan: codePlan }));
+
+    expect(opening).toMatch(/saved solutions|own code|saved submission/i);
   });
 
   it("varies greetings between sessions while remaining stable within a session", () => {

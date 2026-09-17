@@ -22,20 +22,11 @@ vi.mock("@/infrastructure/realtime/use-maya-voice", () => ({
 describe("story-practice technology welcome parity", () => {
   afterEach(() => vi.clearAllMocks());
 
-  it("keeps Core and Applied on the same accessible responsive shell", () => {
-    const core = render(
-      <CoreTechnicalTechnologyWelcome
-        technologies={[
-          {
-            value: "javascript",
-            label: "JavaScript",
-            detail: "JavaScript on Node.js",
-            resumeMatched: true
-          }
-        ]}
-      />
-    );
-    const coreGeometry = geometry();
+  it("keeps automatic Core preparation and selectable Applied setup on the same responsive shell", () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(() => new Promise(() => {}));
+    const core = render(<CoreTechnicalTechnologyWelcome />);
+    const coreGeometry = geometry("Preparing your personalised practice path.");
+    expect(screen.queryByRole("button", { name: /JavaScript:/i })).toBeNull();
     core.unmount();
 
     render(
@@ -50,7 +41,7 @@ describe("story-practice technology welcome parity", () => {
         ]}
       />
     );
-    const appliedGeometry = geometry();
+    const appliedGeometry = geometry("What do you want to get better at?");
 
     expect(appliedGeometry).toEqual(coreGeometry);
     expect(appliedGeometry.main).toContain("max-w-[86rem]");
@@ -61,17 +52,17 @@ describe("story-practice technology welcome parity", () => {
     expect(appliedGeometry.stage).toContain("sm:h-[23rem]");
     expect(appliedGeometry.stage).toContain("lg:h-[31rem]");
     expect(appliedGeometry.stage).not.toContain("hidden");
-    expect(appliedGeometry.choice).toContain("min-h-[6rem]");
-    expect(appliedGeometry.choice).toContain("focus-visible:ring-2");
+    const choice = screen.getByRole("button", { name: /JavaScript:/i });
+    expect(choice.className).toContain("min-h-[6rem]");
+    expect(choice.className).toContain("focus-visible:ring-2");
   });
 });
 
-function geometry() {
-  const heading = screen.getByRole("heading", { name: "What do you want to get better at?" });
+function geometry(headingName: string) {
+  const heading = screen.getByRole("heading", { name: headingName });
   const section = heading.closest("section");
   const main = heading.closest("main");
   const teacher = screen.getByTestId("teacher");
-  const choice = screen.getByRole("button", { name: /JavaScript:/i });
 
   expect(section).toHaveAttribute("aria-labelledby", heading.id);
   expect(teacher.parentElement).toHaveAttribute("data-avatar-feather", "alpha-edge");
@@ -80,7 +71,6 @@ function geometry() {
     main: main?.className,
     section: section?.className,
     stage: teacher.parentElement?.parentElement?.className,
-    feather: teacher.parentElement?.className,
-    choice: choice.className
+    feather: teacher.parentElement?.className
   };
 }

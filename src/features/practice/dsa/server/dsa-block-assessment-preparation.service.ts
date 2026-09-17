@@ -24,7 +24,7 @@ import type { PrismaService } from "@/server/database/prisma.service";
 
 const FRONTEND_ROADMAP_ROLE = "fullstack";
 const MIN_REVIEW_ITEMS = 5;
-const MAX_REVIEW_ITEMS = 6;
+const MAX_REVIEW_ITEMS = 5;
 
 const blockSelect = {
   id: true,
@@ -118,10 +118,7 @@ export class DsaBlockAssessmentPreparationError extends Error {
 export class DsaBlockAssessmentPreparationService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async prepareCurrent(
-    ownerId: string,
-    options: { allowSyntheticEvidence?: boolean } = {}
-  ): Promise<DsaBlockAssessmentSnapshot> {
+  async prepareCurrent(ownerId: string): Promise<DsaBlockAssessmentSnapshot> {
     return this.prisma.$transaction(
       async (tx) => {
         await lockOwner(tx, ownerId);
@@ -177,26 +174,16 @@ export class DsaBlockAssessmentPreparationService {
         // One best attempt per block question: accepted beats non-accepted,
         // then higher score, then the most recent attempt, then id. This keeps
         // a retry from surfacing stale code while making ties deterministic.
-        let sourceAttempts = latestBestAttempts(verifiedAttempts, block.questionSlugs);
-        let reviewItems = selectReviewItems(sourceAttempts, block.questionSlugs);
-        if (
-          options.allowSyntheticEvidence === true &&
-          (reviewItems.length < MIN_REVIEW_ITEMS || !hasCodeDependentMajority(reviewItems))
-        ) {
-          const synthetic = developmentReviewAttempt(
-            authoredQuestions,
-            block.questionSlugs,
-            sourceAttempts
-          );
-          if (synthetic) {
-            sourceAttempts = [...sourceAttempts, synthetic];
-            reviewItems = selectReviewItems(sourceAttempts, block.questionSlugs);
-          }
-        }
-        if (reviewItems.length < MIN_REVIEW_ITEMS || !hasCodeDependentMajority(reviewItems)) {
+        const sourceAttempts = latestBestAttempts(verifiedAttempts, block.questionSlugs);
+        const codeReviewItems = selectReviewItems(sourceAttempts, block.questionSlugs);
+        const reviewItems =
+          codeReviewItems.length >= MIN_REVIEW_ITEMS
+            ? codeReviewItems
+            : selectAuthoredReviewItems(authoredQuestions, block.questionSlugs);
+        if (reviewItems.length < MIN_REVIEW_ITEMS) {
           throw new DsaBlockAssessmentPreparationError(
             "INSUFFICIENT_GROUNDED_CODE_EVIDENCE",
-            "Run verified code for more problems in this block before preparing the code-review round."
+            "This block does not contain enough authored material for a grounded assessment."
           );
         }
 
@@ -211,13 +198,15 @@ export class DsaBlockAssessmentPreparationService {
           reviewItems,
           weakestPattern: weakestVerifiedPattern(sourceAttempts, block.questionSlugs)
         });
-        if (selectedTransferQuestions.length !== 2) {
+        if (selectedTransferQuestions.length < 1) {
           throw new DsaBlockAssessmentPreparationError(
             "TRANSFER_QUESTIONS_UNAVAILABLE",
-            "Two suitable authored transfer questions are not available for this block."
+            "A suitable authored transfer question is not available for this block."
           );
         }
-        const transferQuestions = freezeTransferRunnerContracts(selectedTransferQuestions);
+        const transferQuestions = freezeTransferRunnerContracts(
+          selectedTransferQuestions.slice(0, 1)
+        );
 
         const snapshot = parseDsaBlockAssessmentSnapshot({
           schemaVersion: DSA_BLOCK_ASSESSMENT_SNAPSHOT_VERSION,
@@ -241,69 +230,6 @@ export class DsaBlockAssessmentPreparationService {
       { maxWait: 20_000, timeout: 120_000 }
     );
   }
-}
-
-/** Development-only fixture used by the explicitly guarded early-start path. */
-function developmentReviewAttempt(
-  authoredQuestions: AuthoredQuestion[],
-  blockQuestionSlugs: string[],
-  existingAttempts: ReviewAttempt[]
-): ReviewAttempt | null {
-  const attempted = new Set(existingAttempts.flatMap((attempt) => attempt.dsaQuestionSlug ?? []));
-  const question =
-    authoredQuestions.find(
-      (candidate) => blockQuestionSlugs.includes(candidate.slug) && !attempted.has(candidate.slug)
-    ) ?? authoredQuestions.find((candidate) => blockQuestionSlugs.includes(candidate.slug));
-  if (!question) return null;
-
-  const examples = Array.isArray(question.examples) ? question.examples : [];
-  const visibleTestEvidence = examples.slice(0, 3).flatMap((value) => {
-    const example = jsonRecord(value as Prisma.JsonValue);
-    const input = boundedText(example?.input);
-    const output = boundedText(example?.output);
-    return input && output
-      ? [{ input, expectedOutput: output, actualOutput: output, error: null, passed: true }]
-      : [];
-  });
-  if (!visibleTestEvidence.length) {
-    visibleTestEvidence.push({
-      input: "development fixture input",
-      expectedOutput: "development fixture output",
-      actualOutput: "development fixture output",
-      error: null,
-      passed: true
-    });
-  }
-
-  return {
-    id: "00000000-0000-4000-8000-000000000001",
-    dsaQuestionSlug: question.slug,
-    answer: [
-      "function developmentAssessmentFixture(values) {",
-      "  const seen = new Map();",
-      "  for (const value of values) seen.set(value, true);",
-      "  return values;",
-      "}"
-    ].join("\n"),
-    score: 1,
-    correctness: "accepted",
-    language: "javascript",
-    evaluatorVersion: "dsa-assessment-development-bypass-v1",
-    feedback: {
-      source: "development-assessment-bypass",
-      testsPassed: visibleTestEvidence.length,
-      testCount: visibleTestEvidence.length,
-      visibleTestEvidence
-    },
-    createdAt: new Date(0),
-    dsaQuestion: {
-      slug: question.slug,
-      title: question.title,
-      primaryPattern: question.primaryPattern,
-      complexity: question.complexity,
-      edgeCases: question.edgeCases
-    }
-  };
 }
 
 function assertReadyBlock(block: BlockRecord | null): asserts block is BlockRecord {
@@ -332,25 +258,26 @@ function selectReviewItems(
       (left, right) =>
         (order.get(left.sourceQuestionSlug) ?? Number.MAX_SAFE_INTEGER) -
           (order.get(right.sourceQuestionSlug) ?? Number.MAX_SAFE_INTEGER) ||
-        left.sourceAttemptId.localeCompare(right.sourceAttemptId) ||
+        (left.sourceAttemptId ?? "").localeCompare(right.sourceAttemptId ?? "") ||
         left.family.localeCompare(right.family)
     );
   const selected: DsaBlockAssessmentReviewItem[] = [];
   const sourceQuestions = new Set<string>();
   const sourcePatterns = new Set<string>();
+  const highValueCandidates = candidates.filter(
+    (item) => item.family !== "static-code-cue" && item.family !== "execution-evidence"
+  );
   const families = [
-    "execution-case",
-    "execution-evidence",
     "optimization-review",
-    "static-code-cue",
     "pattern-choice",
     "complexity-target",
-    "edge-case"
+    "edge-case",
+    "execution-case"
   ] as const;
 
   for (const family of families) {
     const candidate = chooseReviewCandidate(
-      candidates.filter((item) => item.family === family),
+      highValueCandidates.filter((item) => item.family === family),
       sourceQuestions,
       sourcePatterns
     );
@@ -362,7 +289,9 @@ function selectReviewItems(
 
   while (selected.length < MIN_REVIEW_ITEMS) {
     const candidate = chooseReviewCandidate(
-      candidates.filter((item) => !selected.some((selectedItem) => selectedItem.id === item.id)),
+      highValueCandidates.filter(
+        (item) => !selected.some((selectedItem) => selectedItem.id === item.id)
+      ),
       sourceQuestions,
       sourcePatterns
     );
@@ -372,28 +301,203 @@ function selectReviewItems(
     sourcePatterns.add(candidate.sourceQuestionPattern);
   }
 
-  // A sixth item adds useful variation only when there is independently
-  // grounded material; it never duplicates a question ID or exceeds the
-  // promised six rapid prompts.
-  if (selected.length >= MIN_REVIEW_ITEMS) {
-    const sixth = chooseReviewCandidate(
-      candidates.filter((item) => !selected.some((selectedItem) => selectedItem.id === item.id)),
-      sourceQuestions,
-      sourcePatterns
-    );
-    if (sixth) selected.push(sixth);
-  }
-
   return selected.slice(0, MAX_REVIEW_ITEMS);
 }
 
-function hasCodeDependentMajority(items: DsaBlockAssessmentReviewItem[]): boolean {
-  const codeDependent = items.filter(
-    (item) =>
-      item.grounding.kind === "saved-execution-evidence" ||
-      item.grounding.kind === "deterministic-static-analysis"
-  ).length;
-  return codeDependent >= Math.ceil(items.length / 2);
+/**
+ * A completed block may contain completion records without executable code
+ * (for example, imported or manually completed roadmap work). In that case we
+ * assess durable knowledge from the authored question bank instead of
+ * pretending a candidate submission or test run exists.
+ */
+function selectAuthoredReviewItems(
+  authoredQuestions: AuthoredQuestion[],
+  blockQuestionSlugs: string[]
+): DsaBlockAssessmentReviewItem[] {
+  const bySlug = new Map(authoredQuestions.map((question) => [question.slug, question]));
+  const questions = blockQuestionSlugs.flatMap((slug) => {
+    const question = bySlug.get(slug);
+    return question ? [question] : [];
+  });
+  const items: DsaBlockAssessmentReviewItem[] = [];
+  const patterns = [...new Set(authoredQuestions.map((question) => question.primaryPattern))];
+  const concepts = authoredQuestions.flatMap((question) => question.conceptsTested).filter(Boolean);
+  const commonMistakes = authoredQuestions
+    .flatMap((question) => question.commonMistakes)
+    .filter(Boolean);
+  const edgeCases = authoredQuestions.flatMap((question) => question.edgeCases).filter(Boolean);
+
+  const preferredQuestion = (
+    preferredIndex: number,
+    predicate: (question: AuthoredQuestion) => boolean
+  ) => {
+    const preferred = questions[preferredIndex];
+    return preferred && predicate(preferred) ? preferred : questions.find(predicate);
+  };
+
+  const add = (input: {
+    question: AuthoredQuestion | undefined;
+    family: DsaBlockAssessmentReviewItem["family"];
+    prompt: string;
+    correct: string | null | undefined;
+    distractors: string[];
+    rationale: string;
+    metric: DsaBlockAssessmentReviewItem["metric"];
+    evidence: Record<string, unknown>;
+  }) => {
+    const question = input.question;
+    const correct = input.correct?.trim();
+    if (!question || !correct || items.length >= MAX_REVIEW_ITEMS) return;
+    const options = deterministicOptions(
+      correct,
+      input.distractors.filter((candidate) => candidate.trim() && candidate !== correct),
+      `${question.slug}:${input.family}`
+    );
+    if (options.length < 2) return;
+    items.push({
+      id: `authored:${question.slug}:${input.family}`,
+      family: input.family,
+      sourceAttemptId: null,
+      sourceQuestionSlug: question.slug,
+      sourceQuestionTitle: question.title,
+      sourceQuestionPattern: question.primaryPattern,
+      sourcePrompt:
+        (question.problemStatement?.trim() || question.promptSummary.trim() || undefined)?.slice(
+          0,
+          4_000
+        ),
+      sourceReference: authoredReviewReference(question),
+      sourceCode: null,
+      codeSnippet: null,
+      prompt: input.prompt,
+      options,
+      correctOption: options.indexOf(correct),
+      rationale: input.rationale,
+      metric: input.metric,
+      grounding: {
+        kind: "authored-reference-metadata",
+        source: `DsaQuestion:${question.slug}`,
+        detail: "Immutable authored curriculum metadata for this completed block.",
+        evidence: input.evidence
+      }
+    });
+  };
+
+  const patternQuestion = questions[0];
+  add({
+    question: patternQuestion,
+    family: "pattern-choice",
+    prompt: patternQuestion
+      ? `Which technique gives the intended interview-ready solution for ${patternQuestion.title}?`
+      : "",
+    correct: patternQuestion?.primaryPattern,
+    distractors: patterns,
+    rationale: patternQuestion
+      ? `${patternQuestion.title} is authored around the ${patternQuestion.primaryPattern} pattern.`
+      : "",
+    metric: "pattern-recognition",
+    evidence: { primaryPattern: patternQuestion?.primaryPattern }
+  });
+
+  const complexityQuestion = preferredQuestion(1, (question) =>
+    Boolean(complexityTime(question.complexity))
+  );
+  const targetTime = complexityQuestion ? complexityTime(complexityQuestion.complexity) : null;
+  add({
+    question: complexityQuestion,
+    family: "complexity-target",
+    prompt: complexityQuestion
+      ? `What time complexity should an interview-ready solution for ${complexityQuestion.title} target?`
+      : "",
+    correct: targetTime,
+    distractors: complexityDistractors(targetTime ?? ""),
+    rationale: complexityQuestion
+      ? `The authored target for ${complexityQuestion.title} is ${targetTime} time.`
+      : "",
+    metric: "efficiency",
+    evidence: { time: targetTime }
+  });
+
+  const conceptQuestion = preferredQuestion(2, (question) => Boolean(question.conceptsTested[0]));
+  const centralConcept = conceptQuestion?.conceptsTested[0];
+  add({
+    question: conceptQuestion,
+    family: "static-code-cue",
+    prompt: conceptQuestion
+      ? `Which concept is central to the intended solution for ${conceptQuestion.title}?`
+      : "",
+    correct: centralConcept,
+    distractors: concepts,
+    rationale: conceptQuestion
+      ? `${centralConcept} is explicitly tested by ${conceptQuestion.title}.`
+      : "",
+    metric: "pattern-recognition",
+    evidence: { concept: centralConcept }
+  });
+
+  const mistakeQuestion = preferredQuestion(3, (question) => Boolean(question.commonMistakes[0]));
+  const mistake = mistakeQuestion?.commonMistakes[0];
+  add({
+    question: mistakeQuestion,
+    family: "optimization-review",
+    prompt: mistakeQuestion
+      ? `Which choice is a known failure mode when solving ${mistakeQuestion.title}?`
+      : "",
+    correct: mistake,
+    distractors: commonMistakes,
+    rationale: mistakeQuestion ? `${mistake} is listed as a common mistake for this problem.` : "",
+    metric: "code-quality",
+    evidence: { commonMistake: mistake }
+  });
+
+  const edgeQuestion = preferredQuestion(4, (question) => Boolean(question.edgeCases[0]));
+  const edgeCase = edgeQuestion?.edgeCases[0];
+  add({
+    question: edgeQuestion,
+    family: "edge-case",
+    prompt: edgeQuestion
+      ? `Which case should be validated explicitly for ${edgeQuestion.title}?`
+      : "",
+    correct: edgeCase,
+    distractors: edgeCases,
+    rationale: edgeQuestion ? `${edgeCase} is an authored edge case for this problem.` : "",
+    metric: "correctness-edge-cases",
+    evidence: { edgeCase }
+  });
+
+  return items.slice(0, MAX_REVIEW_ITEMS);
+}
+
+function authoredReviewReference(question: AuthoredQuestion) {
+  const problemStatement = (question.problemStatement?.trim() || question.promptSummary.trim()).slice(
+    0,
+    8_000
+  );
+  if (!problemStatement) return undefined;
+  return {
+    difficulty: question.difficulty,
+    problemStatement,
+    constraints: question.constraints.filter(Boolean).slice(0, 12),
+    examples: readPublicExamples(question.examples).slice(0, 3)
+  };
+}
+
+function readPublicExamples(
+  value: unknown
+): Array<{ input: string; output: string; explanation?: string }> {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((example) => {
+    if (!example || typeof example !== "object") return [];
+    const input = "input" in example && typeof example.input === "string" ? example.input : null;
+    const output =
+      "output" in example && typeof example.output === "string" ? example.output : null;
+    if (!input || !output) return [];
+    const explanation =
+      "explanation" in example && typeof example.explanation === "string"
+        ? example.explanation
+        : undefined;
+    return [{ input, output, ...(explanation ? { explanation } : {}) }];
+  });
 }
 
 function latestBestAttempts(
@@ -459,6 +563,7 @@ function buildGroundedReviewItems(attempt: ReviewAttempt): DsaBlockAssessmentRev
     sourceQuestionTitle: question.title,
     sourceQuestionPattern: question.primaryPattern,
     sourceCode,
+    language: assessmentLanguage(attempt.language),
     codeSnippet: focusedCodeSnippet(sourceCode)
   };
   const items: DsaBlockAssessmentReviewItem[] = [];
@@ -577,7 +682,7 @@ function buildGroundedReviewItems(attempt: ReviewAttempt): DsaBlockAssessmentRev
         family: "edge-case",
         prompt: `Which edge case would you test first against this saved solution for ${question.title}?`,
         correct: edgeCase,
-        distractors: ["A successful network retry", "A browser refresh", "A missing CSS class"],
+        distractors: question.edgeCases.filter((candidate) => candidate !== edgeCase),
         rationale: `This edge case is preserved in the authored metadata for ${question.title}.`,
         metric: "correctness-edge-cases",
         grounding: {
@@ -612,6 +717,10 @@ function buildGroundedReviewItems(attempt: ReviewAttempt): DsaBlockAssessmentRev
   }
 
   return items;
+}
+
+function assessmentLanguage(value: string | null): "javascript" | "python" | "cpp" | "java" {
+  return value === "python" || value === "cpp" || value === "java" ? value : "javascript";
 }
 
 function reviewItem(
@@ -895,14 +1004,14 @@ function visibleExecutionFacts(attempt: ReviewAttempt): Array<{
 }
 
 function focusedCodeSnippet(sourceCode: string): string {
-  const firstLineBreak = sourceCode.indexOf("\n");
-  const focused = firstLineBreak === -1 ? sourceCode : sourceCode.slice(0, firstLineBreak + 1);
-  return focused.slice(0, 1_600);
+  return sourceCode.trim().slice(0, 1_600);
 }
 
 function snippetAroundMatch(sourceCode: string, match: RegExpMatchArray): string {
-  const start = Math.max(0, (match.index ?? 0) - 120);
-  return sourceCode.slice(start, start + 1_600);
+  if (sourceCode.length <= 1_600) return focusedCodeSnippet(sourceCode);
+  const matchIndex = match.index ?? 0;
+  const lineStart = sourceCode.lastIndexOf("\n", Math.max(0, matchIndex - 600));
+  return sourceCode.slice(lineStart === -1 ? 0 : lineStart + 1, matchIndex + 1_000).slice(0, 1_600);
 }
 
 function optimizationCue(
@@ -918,7 +1027,26 @@ function optimizationCue(
   evidence: Record<string, unknown>;
 } | null {
   const sort = sourceCode.match(/\.sort\s*\(/);
-  if (!sort || !authoredTimeTarget || !/^O\(n\)$/i.test(authoredTimeTarget.trim())) return null;
+  if (!sort || !authoredTimeTarget) return null;
+  if (/count keys/i.test(authoredTimeTarget)) {
+    return {
+      codeSnippet: snippetAroundMatch(sourceCode, sort),
+      prompt:
+        "This solution sorts every string to build its grouping key. Which change makes key construction linear in the string length?",
+      correct: "Build a fixed-size character-frequency signature for each string.",
+      distractors: [
+        "Sort the complete input array before grouping.",
+        "Replace the map with a recursive depth-first search.",
+        "Compare every pair of strings character by character."
+      ],
+      rationale:
+        "A frequency signature avoids sorting every string and supports the documented O(n*k) count-key approach.",
+      detail:
+        "A `.sort(...)` key is present while the authored target explicitly calls for count keys.",
+      evidence: { matcher: "sort-call-count-key-v1", authoredTimeTarget }
+    };
+  }
+  if (!/^O\(n\)$/i.test(authoredTimeTarget.trim())) return null;
   return {
     codeSnippet: snippetAroundMatch(sourceCode, sort),
     prompt: `This excerpt calls .sort(...), while the authored reference target is ${authoredTimeTarget}. What is the most defensible optimization follow-up?`,
@@ -1011,10 +1139,14 @@ function staticCodeCue(sourceCode: string): {
 }
 
 function deterministicOptions(correct: string, distractors: string[], seed: string): string[] {
-  const unique = [correct, ...distractors].filter(
-    (value, index, values) => value.trim() && values.indexOf(value) === index
-  );
-  const minimum = ["None of the above", "An unrelated browser event", "A database migration"];
+  const unique = [correct, ...distractors]
+    .filter((value, index, values) => value.trim() && values.indexOf(value) === index)
+    .slice(0, 4);
+  const minimum = [
+    "A different invariant from the block",
+    "A brute-force scan with no retained state",
+    "An implementation detail unrelated to the target pattern"
+  ];
   for (const option of minimum) {
     if (unique.length >= 4) break;
     if (!unique.includes(option) && option !== correct) unique.push(option);
@@ -1045,11 +1177,10 @@ function executionDistractors(correct: string): string[] {
 }
 
 function executionCaseDistractors(correct: string): string[] {
-  return [
-    "Output: (a different recorded value)",
-    "Runtime error: no output was recorded",
-    "The input was not part of the saved visible run"
-  ].filter((option) => option !== correct);
+  const oppositeBoolean = correct === "Output: true" ? "Output: false" : "Output: true";
+  return [oppositeBoolean, "Output: []", "Output: null", "Runtime error: execution fails"].filter(
+    (option) => option !== correct
+  );
 }
 
 function usableCode(value: string | null): value is string {
