@@ -2,6 +2,7 @@ import type { SessionBlueprint } from "@/features/interviews/domain/personalized
 import type { PreparationOnboardingState } from "@/features/preparation-onboarding/domain/preparation-onboarding";
 import type { StoryPracticeAssessmentIdentity } from "@/features/practice/shared/server/contracts";
 import type { DsaDesignRoundMetadata } from "@/features/interviews/domain/dsa-design-round";
+import type { VersionedSystemDesignCanvas } from "@/features/interviews/domain/system-design-canvas";
 
 export type Role = "backend" | "frontend" | "fullstack" | "data" | "ai-ml" | "pm";
 export type Level = "fresher" | "0-2" | "3-5" | "5-plus";
@@ -29,7 +30,7 @@ export interface InterviewSetup {
   /** Requested source IDs on launch, then trusted source IDs in saved state. */
   technicalDeepDive?: {
     kind: "technical-deep-dive";
-    version?: 1 | 2;
+    version?: 1 | 2 | 3;
     coreBlueprintId: string;
     appliedBlueprintId: string;
     project?: {
@@ -45,7 +46,7 @@ export interface InterviewSetup {
       rubricKeys: string[];
     }>;
   };
-  questionCount?: 3 | 4 | 5 | 6 | 7 | 8;
+  questionCount?: 2 | 3 | 4 | 5 | 6 | 7 | 8;
   dsaQuestionSlugs?: string[]; /** Marks the staged resume round, which the workspace renders differently. */
   /** Public selection identity for the permanent combined DSA & Design round. */
   dsaDesignRound?: DsaDesignRoundMetadata;
@@ -353,7 +354,13 @@ export type InterviewStage =
   /** Computer fundamentals: rapid checks, then mechanism, then diagnosis. */
   | "rapid"
   | "explain"
-  | "scenario";
+  | "scenario"
+  /** Candidate-led system-design interview acts. */
+  | "design-frame"
+  | "design-canvas"
+  | "design-deep-dive"
+  | "design-pressure"
+  | "design-defend";
 
 export interface InterviewQuestion {
   text: string;
@@ -367,7 +374,7 @@ export interface InterviewQuestion {
   interviewSection?: "dsa" | "design" | null;
   /** Candidate-facing section for the Core Technical & Projects round. */
   technicalProjectsSection?: "technical-calibration" | "project-deep-dive" | null;
-  projectAct?: "context" | "mechanism" | "failure" | "tradeoffs" | null;
+  projectAct?: "context" | "mechanism" | "failure" | "tradeoffs" | "coding" | null;
   /** Public-only immutable transfer problem data for a block assessment. */
   dsaTransferQuestion?: {
     slug: string;
@@ -495,6 +502,8 @@ export interface InterviewCompetencyReport {
 }
 
 export interface InterviewReport extends InterviewHistoryItem {
+  /** Final durable architecture artifact for a System Design interview. */
+  designCanvas?: VersionedSystemDesignCanvas | null;
   competencies: InterviewCompetencyReport[];
   interaction: {
     probes: number;

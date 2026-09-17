@@ -420,6 +420,69 @@ describe("performance profile aggregation", () => {
     );
   });
 
+  it("keeps architecture evidence from a dedicated System Design interview", () => {
+    const design = dsaSession();
+    design.state.setup = {
+      role: "backend",
+      level: "3-5",
+      roundType: "technical",
+      intensity: "realistic",
+      context: "System Design interview",
+      templateId: "system-design",
+      templateTitle: "System Design Interview",
+      dsaDesignRound: {
+        kind: "dsa-design-round",
+        version: 1,
+        designScenarioKey: "global-media-processing",
+        designScenarioVersion: 1,
+        designScenarioTitle: "Global media processing",
+        designDifficulty: "standard"
+      },
+      questionCount: 5
+    };
+    design.state.plan = [
+      {
+        text: "Frame the media platform.",
+        kind: "conversation",
+        interviewSection: "design",
+        stage: "design-frame",
+        topicKey: "architecture-design",
+        skillKeys: ["architecture-design"],
+        rubricKeys: ["requirements", "scale"],
+        competency: "Requirements and scale",
+        mustHit: ["scope", "scale"],
+        probeIfMissing: "Which scale assumption matters most?"
+      }
+    ];
+    design.state.turns = [
+      {
+        speaker: "user",
+        text: "I would first clarify upload size, throughput, processing latency, and deletion guarantees.",
+        startMs: 1_000,
+        endMs: 8_000,
+        questionIndex: 0
+      }
+    ];
+    design.state.questionIndex = 1;
+
+    expect(completedAdaptiveSessions([design])).toEqual([design]);
+    expect(
+      aggregateCandidatePerformanceProfile({
+        id: "13131313-1313-4313-8313-131313131313",
+        revision: 1,
+        sessions: [design],
+        generatedAt: NOW
+      })?.skills
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          skillKey: "architecture-design",
+          topicKeys: ["architecture-design"]
+        })
+      ])
+    );
+  });
+
   it("produces the same fingerprint regardless of input ordering", () => {
     const older = personalizedSession();
     const newer = personalizedSession({

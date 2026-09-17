@@ -46,8 +46,8 @@ export interface InterviewSetup {
   /** Source identities retained when Core and Applied launch as one mixed round. */
   technicalDeepDive?: {
     kind: "technical-deep-dive";
-    /** Missing/1 is the legacy four-slot projection; 2 is Core Technical & Projects. */
-    version?: 1 | 2;
+    /** Missing/1 is legacy; 2 is the spoken project round; 3 adds project coding. */
+    version?: 1 | 2 | 3;
     coreBlueprintId: string;
     appliedBlueprintId: string;
     project?: {
@@ -71,7 +71,7 @@ export interface InterviewSetup {
    */
   dsaDesignRound?: DsaDesignRoundMetadata;
   /** DSA rounds use a compact set of practice questions instead of the default four-question arc. */
-  questionCount?: 3 | 4 | 5 | 6 | 7 | 8;
+  questionCount?: 2 | 3 | 4 | 5 | 6 | 7 | 8;
   /**
    * Marks the staged resume round, which is planned entirely from the kit
    * stored with the candidate's resume rather than from a model call.
@@ -126,7 +126,13 @@ export type InterviewStage =
   /** Computer fundamentals: rapid checks, then mechanism, then diagnosis. */
   | "rapid"
   | "explain"
-  | "scenario";
+  | "scenario"
+  /** Candidate-led system-design interview acts. */
+  | "design-frame"
+  | "design-canvas"
+  | "design-deep-dive"
+  | "design-pressure"
+  | "design-defend";
 
 export interface PlannedQuestion {
   /** Spoken verbatim. The decider never rewrites this. */
@@ -135,11 +141,11 @@ export interface PlannedQuestion {
   evidenceAnchor?: string;
   /** Structured presentation metadata. Optional for sessions saved before code rounds existed. */
   kind?: "conversation" | "code" | "mcq";
-  /** Candidate-facing section in the permanent DSA & Design round. */
+  /** Candidate-facing section shared by separate rounds and legacy combined sessions. */
   interviewSection?: "dsa" | "design";
   /** Candidate-facing section in the permanent Core Technical & Projects round. */
   technicalProjectsSection?: "technical-calibration" | "project-deep-dive";
-  projectAct?: "context" | "mechanism" | "failure" | "tradeoffs";
+  projectAct?: "context" | "mechanism" | "failure" | "tradeoffs" | "coding";
   language?: string;
   codeTask?: string;
   codeSnippet?: string;

@@ -1,7 +1,8 @@
 import type { InterviewSetup } from "@/lib/shared/types";
 
 export const INTERVIEW_REPORT_FAMILIES = [
-  "dsa-design",
+  "dsa",
+  "system-design",
   "core-technical-projects",
   "hr-behavioral",
   "resume-behavioral"
@@ -25,7 +26,7 @@ export interface InterviewEvaluationProfile {
 }
 
 const profiles: Record<InterviewReportFamily, InterviewEvaluationProfile> = {
-  "dsa-design": profile("dsa-design", "DSA & Design", "DSA & Design", [
+  dsa: profile("dsa", "DSA Interview", "DSA", [
     parameter(
       "problem-understanding",
       "Problem understanding",
@@ -59,8 +60,46 @@ const profiles: Record<InterviewReportFamily, InterviewEvaluationProfile> = {
     parameter(
       "communication",
       "Communication",
-      "Keeps the reasoning structured and easy for an interviewer to follow.",
+      "Keeps algorithmic reasoning structured and easy for an interviewer to follow.",
       "Signpost the approach, key decision, and conclusion in that order."
+    )
+  ]),
+  "system-design": profile("system-design", "System Design", "System Design", [
+    parameter(
+      "requirements-framing",
+      "Requirements framing",
+      "Discovers users, scope, constraints, scale, and measurable goals before choosing components.",
+      "Ask targeted product and scale questions before drawing the architecture."
+    ),
+    parameter(
+      "architecture-reasoning",
+      "Architecture reasoning",
+      "Builds coherent component boundaries and explains the end-to-end data flow.",
+      "Trace one important request through every component and state transition."
+    ),
+    parameter(
+      "data-consistency",
+      "Data & consistency",
+      "Defines durable identities, storage access patterns, and consistency boundaries.",
+      "Name the authoritative state and how retries remain idempotent."
+    ),
+    parameter(
+      "scalability",
+      "Scalability",
+      "Uses estimates to identify bottlenecks, partitioning needs, and asynchronous work.",
+      "Connect each scaling mechanism to a quantified load assumption."
+    ),
+    parameter(
+      "reliability-tradeoffs",
+      "Reliability & trade-offs",
+      "Handles failures and changing constraints while defending explicit costs and guarantees.",
+      "Pressure-test one failure boundary and explain the degraded behavior."
+    ),
+    parameter(
+      "communication",
+      "Communication",
+      "Makes the evolving architecture and its decisions easy to follow.",
+      "Signpost assumptions, the chosen design, and the main trade-off."
     )
   ]),
   "core-technical-projects": profile(
@@ -222,12 +261,17 @@ export function interviewFamilyForSetup(
 
   const practice = setup.storyPracticeAssessment?.practice;
   const identity = `${setup.templateId ?? ""} ${setup.templateTitle ?? ""}`.toLowerCase();
+  if (setup.templateId === "system-design" || practice === "architecture-design") {
+    return "system-design";
+  }
   if (
     setup.dsaBlockAssessment?.kind === "dsa-block-assessment" ||
-    practice === "architecture-design" ||
-    /\b(?:dsa|algorithm|architecture|system design)\b/.test(identity)
+    /\b(?:dsa|algorithm)\b/.test(identity)
   ) {
-    return "dsa-design";
+    return "dsa";
+  }
+  if (/\b(?:architecture|system design)\b/.test(identity)) {
+    return "system-design";
   }
 
   return "core-technical-projects";
@@ -236,7 +280,8 @@ export function interviewFamilyForSetup(
 export function evaluationProfileForSetup(
   setup: Parameters<typeof interviewFamilyForSetup>[0]
 ): InterviewEvaluationProfile {
-  return profiles[interviewFamilyForSetup(setup)];
+  const selected = profiles[interviewFamilyForSetup(setup)];
+  return selected;
 }
 
 export function evaluationProfileForFamily(

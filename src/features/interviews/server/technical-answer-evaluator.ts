@@ -308,7 +308,12 @@ function resumeSectionName(stage: PlannedQuestion["stage"]): string {
     code: "Coding exercise",
     rapid: "Quick check",
     explain: "Concept explanation",
-    scenario: "Real-world scenario"
+    scenario: "Real-world scenario",
+    "design-frame": "Requirements framing",
+    "design-canvas": "Architecture design",
+    "design-deep-dive": "Technical deep dive",
+    "design-pressure": "Architecture pressure test",
+    "design-defend": "Trade-off defence"
   };
   return labels[stage ?? "experience"];
 }

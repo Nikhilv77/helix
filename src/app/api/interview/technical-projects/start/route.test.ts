@@ -114,12 +114,13 @@ describe("POST /api/interview/technical-projects/start", () => {
       templateTitle: "Core Technical & Projects interview",
       durationMinutes: 40,
       questionCount: 7,
-      technicalDeepDive: { kind: "technical-deep-dive", version: 2 }
+      technicalDeepDive: { kind: "technical-deep-dive", version: 3 }
     });
     expect(plan).toHaveLength(7);
     expect(plan.slice(0, 3).every((question: { kind?: string }) => question.kind === "mcq")).toBe(
       true
     );
+    expect(plan[6]).toMatchObject({ kind: "code", projectAct: "coding" });
     const payload = JSON.stringify(await response.json());
     expect(payload).not.toContain("answerIndex");
     expect(payload).not.toContain("technicalProjectInterviewerGuide");

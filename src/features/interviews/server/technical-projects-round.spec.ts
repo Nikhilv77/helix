@@ -103,7 +103,7 @@ const profile = {
 } as unknown as CandidateProfile;
 
 describe("Core Technical & Projects frozen plan", () => {
-  it("builds three deterministic MCQs followed by four acts on one project", () => {
+  it("builds three deterministic MCQs, three project prompts, and project coding", () => {
     const core = blueprint("core-technical");
     const applied = blueprint("applied-engineering");
     const mcqs = selectTechnicalProjectMcqs({ kit: null, coreBlueprint: core, level: "3-5" });
@@ -125,12 +125,23 @@ describe("Core Technical & Projects frozen plan", () => {
       "context",
       "mechanism",
       "failure",
-      "tradeoffs"
+      "coding"
     ]);
     expect(
       plan.slice(3).every((question) => question.topicKey === "project:resume-project-1")
     ).toBe(true);
-    expect(plan.slice(3).every((question) => question.maxFollowUps === 2)).toBe(true);
+    expect(plan.slice(3, 6).every((question) => question.maxFollowUps === 2)).toBe(true);
+    expect(plan[6]).toMatchObject({
+      kind: "code",
+      stage: "code",
+      answerFormat: "typed",
+      language: "javascript",
+      projectAct: "coding",
+      maxFollowUps: 1
+    });
+    expect(plan[6]?.text).toContain("Ledger Guard");
+    expect(plan[6]?.codeTask).toContain("Ledger Guard");
+    expect(plan[6]?.codeSnippet).toContain("applyProjectRule");
   });
 
   it("prefers relevant resume projects and falls back without inventing ownership", () => {
@@ -150,5 +161,47 @@ describe("Core Technical & Projects frozen plan", () => {
       appliedBlueprint: applied
     });
     expect(fallback.sourceKind).toBe("scenario");
+  });
+
+  it("uses a resume coding task only when its skill belongs to the selected project", () => {
+    const core = blueprint("core-technical");
+    const applied = blueprint("applied-engineering");
+    const mcqs = selectTechnicalProjectMcqs({ kit: null, coreBlueprint: core, level: "3-5" });
+    const project = selectGroundedProjectSource({
+      profile,
+      coreBlueprint: core,
+      appliedBlueprint: applied
+    });
+    const matchingTask = {
+      skill: "Node.js",
+      language: "javascript",
+      title: "Retry guard",
+      brief: "Implement a replay-safe handler.",
+      starterCode: "function handle(event) {\n  // TODO\n}",
+      expects: ["deduplicates retries", "validates input"]
+    };
+
+    const matchingPlan = buildTechnicalProjectsPlan({
+      coreBlueprint: core,
+      appliedBlueprint: applied,
+      mcqs,
+      project,
+      codingTask: matchingTask
+    });
+    expect(matchingPlan[6]).toMatchObject({
+      language: "javascript",
+      codeSnippet: matchingTask.starterCode
+    });
+    expect(matchingPlan[6]?.codeTask).toContain(matchingTask.brief);
+
+    const unrelatedPlan = buildTechnicalProjectsPlan({
+      coreBlueprint: core,
+      appliedBlueprint: applied,
+      mcqs,
+      project,
+      codingTask: { ...matchingTask, skill: "React", title: "Debounce UI input" }
+    });
+    expect(unrelatedPlan[6]?.text).not.toContain("Debounce UI input");
+    expect(unrelatedPlan[6]?.codeTask).toContain("Ledger Guard");
   });
 });

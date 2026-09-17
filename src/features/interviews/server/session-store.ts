@@ -12,6 +12,10 @@ import type { InterviewAnswerResponse, InterviewState } from "./types";
 import type { EvaluationRecoveryMutation } from "./evaluation-recovery";
 import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
 import { NotificationKind } from "@/features/notifications/server/notification.service";
+import type {
+  SystemDesignCanvasDocument,
+  VersionedSystemDesignCanvas
+} from "@/features/interviews/domain/system-design-canvas";
 
 const ANSWER_LEASE_MS = 20_000;
 const ANSWER_PROCESSING = "PROCESSING";
@@ -23,6 +27,16 @@ export class SessionVersionConflictError extends Error {
   constructor(readonly sessionId: string) {
     super(`Interview session ${sessionId} changed before it could be saved`);
     this.name = SessionVersionConflictError.name;
+  }
+}
+
+export class DesignCanvasVersionConflictError extends Error {
+  constructor(
+    readonly sessionId: string,
+    readonly current: VersionedSystemDesignCanvas
+  ) {
+    super(`System design canvas ${sessionId} changed before it could be saved`);
+    this.name = DesignCanvasVersionConflictError.name;
   }
 }
 
@@ -50,6 +64,13 @@ export interface SessionStore {
   listReportsByOwner(ownerId: string, limit: number, now?: number): Promise<InterviewReport[]>;
   /** Moves sessions proven by a signed anonymous-browser identity to its account. */
   reassignOwner(fromOwnerId: string, toOwnerId: string): Promise<number>;
+  getDesignCanvas(sessionId: string, ownerId: string): Promise<VersionedSystemDesignCanvas | null>;
+  saveDesignCanvas(
+    sessionId: string,
+    ownerId: string,
+    document: SystemDesignCanvasDocument,
+    expectedRevision: number
+  ): Promise<VersionedSystemDesignCanvas>;
   save(
     state: InterviewState,
     expectedVersion: number,
@@ -107,6 +128,7 @@ export class MemorySessionStore implements SessionStore {
   private readonly durableSessions = new Map<string, StoredSession>();
   private readonly answerRequests = new Map<string, MemoryAnswerRequest>();
   private readonly evaluationRecoveries = new Map<string, EvaluationRecoveryMutation>();
+  private readonly designCanvases = new Map<string, VersionedSystemDesignCanvas>();
   /** Start times per owner, kept beyond session lifetime for the daily cap. */
   private readonly startsByOwner = new Map<string, number[]>();
 
@@ -202,6 +224,38 @@ export class MemorySessionStore implements SessionStore {
       moved += 1;
     }
     return moved;
+  }
+
+  async getDesignCanvas(
+    sessionId: string,
+    ownerId: string
+  ): Promise<VersionedSystemDesignCanvas | null> {
+    const session = this.durableSessions.get(sessionId);
+    if (!session || session.ownerId !== ownerId) return null;
+    return this.designCanvases.get(sessionId) ?? null;
+  }
+
+  async saveDesignCanvas(
+    sessionId: string,
+    ownerId: string,
+    document: SystemDesignCanvasDocument,
+    expectedRevision: number
+  ): Promise<VersionedSystemDesignCanvas> {
+    const session = this.durableSessions.get(sessionId);
+    if (!session || session.ownerId !== ownerId) {
+      throw new Error(`Interview session ${sessionId} was not found`);
+    }
+    const current = this.designCanvases.get(sessionId);
+    const currentRevision = current?.revision ?? 0;
+    if (currentRevision !== expectedRevision) {
+      throw new DesignCanvasVersionConflictError(
+        sessionId,
+        current ?? { document, revision: 0, updatedAt: session.touchedAt }
+      );
+    }
+    const saved = { document, revision: expectedRevision + 1, updatedAt: Date.now() };
+    this.designCanvases.set(sessionId, saved);
+    return saved;
   }
 
   async save(
@@ -494,6 +548,75 @@ export class PrismaSessionStore implements SessionStore {
       data: { ownerId: toOwnerId }
     });
     return result.count;
+  }
+
+  async getDesignCanvas(
+    sessionId: string,
+    ownerId: string
+  ): Promise<VersionedSystemDesignCanvas | null> {
+    const row = await this.prisma.interviewDesignCanvas.findFirst({
+      where: { sessionId, session: { ownerId } }
+    });
+    return row
+      ? {
+          document: row.document as unknown as SystemDesignCanvasDocument,
+          revision: row.revision,
+          updatedAt: row.updatedAt.getTime()
+        }
+      : null;
+  }
+
+  async saveDesignCanvas(
+    sessionId: string,
+    ownerId: string,
+    document: SystemDesignCanvasDocument,
+    expectedRevision: number
+  ): Promise<VersionedSystemDesignCanvas> {
+    try {
+      return await this.prisma.$transaction(async (transaction) => {
+        const session = await transaction.interviewSession.findFirst({
+          where: { id: sessionId, ownerId },
+          select: { id: true }
+        });
+        if (!session) throw new Error(`Interview session ${sessionId} was not found`);
+
+        const current = await transaction.interviewDesignCanvas.findUnique({
+          where: { sessionId }
+        });
+        if ((current?.revision ?? 0) !== expectedRevision) {
+          throw new DesignCanvasVersionConflictError(
+            sessionId,
+            current
+              ? {
+                  document: current.document as unknown as SystemDesignCanvasDocument,
+                  revision: current.revision,
+                  updatedAt: current.updatedAt.getTime()
+                }
+              : { document, revision: 0, updatedAt: Date.now() }
+          );
+        }
+
+        const saved = current
+          ? await transaction.interviewDesignCanvas.update({
+              where: { sessionId },
+              data: { document: toJsonValue(document), revision: { increment: 1 } }
+            })
+          : await transaction.interviewDesignCanvas.create({
+              data: { sessionId, document: toJsonValue(document), revision: 1 }
+            });
+        return {
+          document: saved.document as unknown as SystemDesignCanvasDocument,
+          revision: saved.revision,
+          updatedAt: saved.updatedAt.getTime()
+        };
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        const current = await this.getDesignCanvas(sessionId, ownerId);
+        if (current) throw new DesignCanvasVersionConflictError(sessionId, current);
+      }
+      throw error;
+    }
   }
 
   async save(

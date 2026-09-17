@@ -117,7 +117,7 @@ function historyItem(
 }
 
 describe("personalized interview roadmap sessions", () => {
-  it("keeps the four permanent candidate-facing interview rounds", () => {
+  it("keeps the five permanent candidate-facing interview rounds", () => {
     const sessions = interviewRoadmapSessions({
       personalizedPlan: plan(),
       roadmap: null,
@@ -128,20 +128,23 @@ describe("personalized interview roadmap sessions", () => {
       "resume-behavioral-defense",
       "technical-deep-dive",
       "dsa",
+      "system-design",
       "hiring-manager-final"
     ]);
-    expect(sessions.map((session) => session.order)).toEqual([1, 2, 3, 4]);
+    expect(sessions.map((session) => session.order)).toEqual([1, 2, 3, 4, 5]);
     expect(sessions.map((session) => session.title)).toEqual([
       "Resume & Behavioral Defense",
       "Core Technical & Projects",
-      "DSA & Design",
+      "DSA Interview",
+      "System Design",
       "Hiring Manager & Final Behavioural"
     ]);
 
     expect(roadmapSessionHref(sessions[0]!)).toBe("/interview/resume");
     expect(roadmapSessionHref(sessions[1]!)).toBe("/interview/technical-projects");
     expect(roadmapSessionHref(sessions[2]!)).toBe("/interview/dsa");
-    expect(roadmapSessionHref(sessions[3]!)).toBe("/interview/hiring-manager");
+    expect(roadmapSessionHref(sessions[3]!)).toBe("/interview/design");
+    expect(roadmapSessionHref(sessions[4]!)).toBe("/interview/hiring-manager");
   });
 
   it("uses dedicated DSA and resume history to restore their visible progress", () => {

@@ -9,14 +9,14 @@ describe("interview evaluation profiles", () => {
   it("defines six distinct judgement parameters for every report family", () => {
     const profiles = allInterviewEvaluationProfiles();
 
-    expect(profiles).toHaveLength(4);
+    expect(profiles).toHaveLength(5);
     for (const profile of profiles) {
       expect(profile.parameters).toHaveLength(6);
       expect(new Set(profile.parameters.map((parameter) => parameter.key)).size).toBe(6);
     }
   });
 
-  it("classifies durable session identities into the four learner-facing families", () => {
+  it("classifies durable session identities into the five learner-facing families", () => {
     expect(interviewFamilyForSetup({ roundType: "hiring-manager", resumeRound: true })).toBe(
       "hr-behavioral"
     );
@@ -29,7 +29,7 @@ describe("interview evaluation profiles", () => {
     ).toBe("resume-behavioral");
     expect(
       interviewFamilyForSetup({ roundType: "technical", templateId: "dsa-block-assessment" })
-    ).toBe("dsa-design");
+    ).toBe("dsa");
     expect(
       interviewFamilyForSetup({
         roundType: "technical",
@@ -42,10 +42,23 @@ describe("interview evaluation profiles", () => {
           evaluatorVersion: "v1"
         }
       })
-    ).toBe("dsa-design");
+    ).toBe("system-design");
     expect(
       evaluationProfileForSetup({ roundType: "technical", templateId: "technical-deep-dive" })
         .family
     ).toBe("core-technical-projects");
+  });
+
+  it("labels separated coding and design sessions independently", () => {
+    expect(
+      evaluationProfileForSetup({
+        roundType: "technical",
+        templateId: "dsa",
+        templateTitle: "DSA Interview"
+      }).label
+    ).toBe("DSA Interview");
+    expect(
+      evaluationProfileForSetup({ roundType: "technical", templateId: "system-design" }).label
+    ).toBe("System Design");
   });
 });

@@ -47,7 +47,7 @@ const sessionIcons: Record<string, LucideIcon> = {
   "architecture-system-design": CircleGauge,
   "resume-behavioral-defense": BadgeCheck,
   "technical-project": Cpu,
-  "dsa-design": CodeXml,
+  "system-design": CircleGauge,
   "hiring-manager-final": Rocket
 };
 
@@ -143,8 +143,7 @@ export function InterviewsView({
                 key={session.id}
                 session={session}
                 disabled={
-                  (exhausted && !session.resumeSessionId) ||
-                  session.id === "technical-project"
+                  (exhausted && !session.resumeSessionId) || session.id === "technical-project"
                 }
                 delay={index * 70}
               />
@@ -163,10 +162,11 @@ export function InterviewsView({
 function supportsResume(session: InterviewHistoryItem): boolean {
   return Boolean(
     session.setup.resumeRound ||
-      session.setup.fundamentalsRound ||
-      session.setup.dsaQuestionSlugs?.length ||
-      session.setup.dsaBlockAssessment ||
-      session.setup.storyPracticeAssessment
+    session.setup.fundamentalsRound ||
+    session.setup.dsaQuestionSlugs?.length ||
+    session.setup.dsaDesignRound?.kind === "dsa-design-round" ||
+    session.setup.dsaBlockAssessment ||
+    session.setup.storyPracticeAssessment
   );
 }
 
@@ -195,16 +195,16 @@ function RoadmapSessionCard({
   const actionLabel = unavailable
     ? "Coming soon"
     : session.resumeSessionId
-    ? "Resume session"
-    : session.updatedPracticeAvailable
-      ? "Try updated session"
-      : session.attemptStatus === "completed"
-        ? "Practice again"
-        : session.attemptStatus === "expired"
-          ? "Start again"
-          : session.id === "technical-project"
-            ? "Coming soon"
-            : "Start session";
+      ? "Resume session"
+      : session.updatedPracticeAvailable
+        ? "Try updated session"
+        : session.attemptStatus === "completed"
+          ? "Practice again"
+          : session.attemptStatus === "expired"
+            ? "Start again"
+            : session.id === "technical-project"
+              ? "Coming soon"
+              : "Start session";
 
   return (
     <SharedRoadmapSessionCard

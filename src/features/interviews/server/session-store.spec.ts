@@ -1,6 +1,7 @@
 import { MemorySessionStore, interviewReportNotificationCopy } from "./session-store";
 import type { InterviewReportSnapshot } from "./report";
 import type { InterviewState } from "./types";
+import { EMPTY_SYSTEM_DESIGN_CANVAS } from "@/features/interviews/domain/system-design-canvas";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -108,6 +109,32 @@ describe("MemorySessionStore", () => {
       id: created.id
     });
     await expect(store.reactivateOwned(created.id, "user-2")).resolves.toBeNull();
+  });
+
+  it("versions canvas autosaves independently from live interview turns", async () => {
+    const store = new MemorySessionStore();
+    const created = state("88888888-8888-4888-8888-888888888888", Date.now());
+    await store.create(created, "user-1");
+
+    const first = await store.saveDesignCanvas(
+      created.id,
+      "user-1",
+      {
+        ...EMPTY_SYSTEM_DESIGN_CANVAS,
+        notes: "10k uploads per second"
+      },
+      0
+    );
+    expect(first).toMatchObject({ revision: 1 });
+    await expect(store.getVersioned(created.id)).resolves.toMatchObject({ version: 0 });
+
+    await expect(
+      store.saveDesignCanvas(created.id, "user-1", EMPTY_SYSTEM_DESIGN_CANVAS, 0)
+    ).rejects.toMatchObject({
+      name: "DesignCanvasVersionConflictError",
+      current: { revision: 1 }
+    });
+    await expect(store.getDesignCanvas(created.id, "user-2")).resolves.toBeNull();
   });
 });
 

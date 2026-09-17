@@ -38,7 +38,7 @@ export interface ReportsOverview {
   competencies: ReportCompetencyRow[];
   matrix: ReportMatrix;
   roundTypes: ReportRoundTypeRow[];
-  /** The four permanent interview families, including empty families. */
+  /** The five permanent interview families, including empty families. */
   families: ReportFamilySummary[];
   pressure: ReportPressure;
   recurringGaps: ReportGap[];

@@ -132,7 +132,10 @@ export function InterviewQuestionPanel({
   onSelectOption,
   onSubmit,
   onRequestMic,
-  showCodeSnippet = true
+  showCodeSnippet = true,
+  showEvidenceAnchor = true,
+  showExpectations = true,
+  questionWorkspace
 }: {
   question: InterviewQuestion | null;
   questionIndex: number;
@@ -159,6 +162,9 @@ export function InterviewQuestionPanel({
   onSubmit: () => void;
   onRequestMic: () => void;
   showCodeSnippet?: boolean;
+  showEvidenceAnchor?: boolean;
+  showExpectations?: boolean;
+  questionWorkspace?: React.ReactNode;
 }) {
   const teacher = useWorkspaceTeacher();
   const interviewerName = teacherName ?? teacher.name;
@@ -208,7 +214,7 @@ export function InterviewQuestionPanel({
               {question.text}
             </h1>
 
-            {question.evidenceAnchor && anchorLabel ? (
+            {showEvidenceAnchor && question.evidenceAnchor && anchorLabel ? (
               <p className="mt-3 border-l-2 border-[var(--workspace-accent)]/45 pl-3 text-sm leading-6 text-cream/48">
                 {anchorLabel}: {question.evidenceAnchor}
               </p>
@@ -226,7 +232,9 @@ export function InterviewQuestionPanel({
               </pre>
             ) : null}
 
-            {question.expects?.length && format !== "mcq" ? (
+            {questionWorkspace}
+
+            {showExpectations && question.expects?.length && format !== "mcq" ? (
               <div className="mt-6">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cream/38">
                   A strong answer covers

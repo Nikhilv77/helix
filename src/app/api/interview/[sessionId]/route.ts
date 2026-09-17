@@ -68,6 +68,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 export function serialiseInterviewState(state: InterviewState) {
   const question = currentQuestion(state);
   const visibleStage = publicStage(state, state.questionIndex);
+  const hideDesignInterviewerGuide = question?.interviewSection === "design";
 
   return {
     sessionId: state.id,
@@ -94,7 +95,9 @@ export function serialiseInterviewState(state: InterviewState) {
     currentQuestion: question
       ? {
           text: question.text,
-          evidenceAnchor: question.evidenceAnchor?.trim() || null,
+          evidenceAnchor: hideDesignInterviewerGuide
+            ? null
+            : question.evidenceAnchor?.trim() || null,
           kind: question.kind ?? "conversation",
           competency: question.competency ?? null,
           language: question.language || null,
@@ -113,7 +116,8 @@ export function serialiseInterviewState(state: InterviewState) {
           // browser never receives the correct option.
           options: question.options?.length ? question.options : null,
           answerFormat: question.answerFormat ?? null,
-          expects: question.mustHit?.length ? question.mustHit : null,
+          expects:
+            !hideDesignInterviewerGuide && question.mustHit?.length ? question.mustHit : null,
           maxFollowUps: question.maxFollowUps ?? null
         }
       : null

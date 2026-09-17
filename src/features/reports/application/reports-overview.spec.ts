@@ -80,14 +80,14 @@ describe("createReportsOverview", () => {
     expect(overview.trend).toEqual([]);
     expect(overview.competencies).toEqual([]);
     expect(overview.matrix.rounds).toEqual([]);
-    expect(overview.families).toHaveLength(4);
+    expect(overview.families).toHaveLength(5);
     expect(overview.families.every((family) => family.averageScore === null)).toBe(true);
     expect(overview.latest).toBeNull();
     expect(overview.best).toBeNull();
     expect(overview.generatedAt).toBe(5_000);
   });
 
-  it("keeps separate overall scores for the four permanent interview families", () => {
+  it("keeps separate overall scores for the five permanent interview families", () => {
     const overview = createReportsOverview([
       report({
         sessionId: "hr",
@@ -109,6 +109,14 @@ describe("createReportsOverview", () => {
         competencies: [competency("Correctness", 74)]
       }),
       report({
+        sessionId: "design",
+        setup: {
+          roundType: "technical",
+          templateId: "system-design"
+        } as InterviewReport["setup"],
+        competencies: [competency("Architecture reasoning", 79)]
+      }),
+      report({
         sessionId: "core",
         setup: {
           roundType: "technical",
@@ -121,7 +129,8 @@ describe("createReportsOverview", () => {
     expect(
       Object.fromEntries(overview.families.map((family) => [family.family, family.averageScore]))
     ).toEqual({
-      "dsa-design": 74,
+      dsa: 74,
+      "system-design": 79,
       "core-technical-projects": 88,
       "hr-behavioral": 81,
       "resume-behavioral": 67

@@ -115,6 +115,48 @@ describe("interview public state serializer", () => {
     expect(serialized.skippedQuestionIndexes).toEqual([3]);
   });
 
+  it("never exposes the system-design evidence anchor or scoring rubric", () => {
+    const state = {
+      id: "11111111-1111-4111-8111-111111111111",
+      setup: {
+        role: "backend",
+        level: "3-5",
+        roundType: "technical",
+        intensity: "realistic",
+        context: "DSA and design",
+        dsaDesignRound: {
+          kind: "dsa-design-round",
+          version: 1,
+          designScenarioKey: "global-media-processing",
+          designScenarioVersion: 1,
+          designScenarioTitle: "Global media upload and processing",
+          designDifficulty: "standard"
+        }
+      },
+      plan: [
+        {
+          text: "Design a global media upload platform. Begin by asking questions.",
+          evidenceAnchor: "PRIVATE_SCENARIO_CONTEXT",
+          interviewSection: "design",
+          stage: "design-frame",
+          mustHit: ["PRIVATE_SCORING_RUBRIC"],
+          probeIfMissing: "Ask one focused question."
+        }
+      ],
+      phase: "questioning",
+      questionIndex: 0,
+      followUpCount: 0,
+      startedAt: 1,
+      turns: []
+    } satisfies InterviewState;
+
+    const serialized = serialiseInterviewState(state);
+    expect(serialized.currentQuestion?.evidenceAnchor).toBeNull();
+    expect(serialized.currentQuestion?.expects).toBeNull();
+    expect(JSON.stringify(serialized)).not.toContain("PRIVATE_SCENARIO_CONTEXT");
+    expect(JSON.stringify(serialized)).not.toContain("PRIVATE_SCORING_RUBRIC");
+  });
+
   it("keeps provider telemetry server-side", () => {
     const state = {
       id: "11111111-1111-4111-8111-111111111111",

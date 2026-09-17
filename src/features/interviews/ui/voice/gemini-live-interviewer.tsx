@@ -25,6 +25,7 @@ const OUTPUT_SAMPLE_RATE = 24_000;
 const TRANSCRIPTION_ROTATION_MS = 8 * 60 * 1000;
 const TRANSCRIPTION_RETRY_MS = 15_000;
 const DUPLICATE_TURN_WINDOW_MS = 2_500;
+const APPROVED_AUDIO_FALLBACK_MS = 8_000;
 
 type TranscriptionConnection = {
   token: string;
@@ -83,6 +84,8 @@ type LiveConversationProposal = {
 export interface GeminiLiveInterviewerHandle {
   /** Sends a typed or selected answer through the same authoritative interview brain. */
   submitTypedAnswer(input: { text: string; startMs: number; endMs: number }): Promise<void>;
+  /** Speaks a trusted workspace status without treating it as a candidate answer. */
+  speakWorkspaceUpdate(text: string): boolean;
   reconnect(): void;
 }
 
@@ -142,6 +145,9 @@ export const GeminiLiveInterviewer = forwardRef<
         throw new Error("The live interviewer is still connecting.");
       }
     );
+    const speakWorkspaceUpdateRef = useRef<GeminiLiveInterviewerHandle["speakWorkspaceUpdate"]>(
+      () => false
+    );
     const reconnectRef = useRef<() => void>(() => undefined);
     const inputTranscriptRef = useRef("");
     const outputTranscriptRef = useRef("");
@@ -183,6 +189,11 @@ export const GeminiLiveInterviewer = forwardRef<
       let openingTurnStarted = false;
       let approvedGeminiTurnPending = false;
       let approvedGeminiTurnStarted = false;
+      let approvedResponseText: string | null = null;
+      let approvedResponseHasAudio = false;
+      let approvedResponseTurnComplete = false;
+      let approvedResponseRetryCount = 0;
+      let approvedResponseFallbackTimer: number | null = null;
       let decisionPending = false;
       let authoritativePromptSent = false;
       let authoritativeTurnStarted = false;
@@ -190,6 +201,8 @@ export const GeminiLiveInterviewer = forwardRef<
       let closingResponsePending = false;
       let closingResponseStarted = false;
       let closingResponseFallbackTimer: number | null = null;
+      let workspaceUpdateFallbackTimer: number | null = null;
+      let workspaceUpdateRetryTimer: number | null = null;
       const answersInFlight = new Set<string>();
       const completedToolCalls = new Set<string>();
       let lastCompletedCandidateTurn: { fingerprint: string; completedAtMs: number } | null = null;
@@ -200,7 +213,40 @@ export const GeminiLiveInterviewer = forwardRef<
         reject: (error: Error) => void;
         timeout: number;
       } | null = null;
+      let pendingWorkspaceUpdateText: string | null = null;
+      let queuedWorkspaceUpdateText: string | null = null;
       const scheduled = new Set<AudioBufferSourceNode>();
+
+      const resolvePendingTypedSubmission = () => {
+        if (!pendingTypedSubmission) return;
+        window.clearTimeout(pendingTypedSubmission.timeout);
+        pendingTypedSubmission.resolve();
+        pendingTypedSubmission = null;
+      };
+
+      const clearApprovedResponse = () => {
+        if (approvedResponseFallbackTimer !== null) {
+          window.clearTimeout(approvedResponseFallbackTimer);
+          approvedResponseFallbackTimer = null;
+        }
+        approvedResponseText = null;
+        approvedResponseHasAudio = false;
+        approvedResponseTurnComplete = false;
+        approvedResponseRetryCount = 0;
+      };
+
+      const finishApprovedResponsePlayback = () => {
+        if (
+          !approvedResponseText ||
+          !approvedResponseHasAudio ||
+          !approvedResponseTurnComplete ||
+          scheduled.size > 0
+        ) {
+          return;
+        }
+        clearApprovedResponse();
+        resolvePendingTypedSubmission();
+      };
 
       const completeClosingResponse = () => {
         if (!closingResponsePending) return;
@@ -210,12 +256,21 @@ export const GeminiLiveInterviewer = forwardRef<
           window.clearTimeout(closingResponseFallbackTimer);
           closingResponseFallbackTimer = null;
         }
+        if (workspaceUpdateFallbackTimer !== null) {
+          window.clearTimeout(workspaceUpdateFallbackTimer);
+          workspaceUpdateFallbackTimer = null;
+        }
+        if (workspaceUpdateRetryTimer !== null) {
+          window.clearTimeout(workspaceUpdateRetryTimer);
+          workspaceUpdateRetryTimer = null;
+        }
         callbacksRef.current.onFinalResponseSpoken();
       };
 
       const updatePlaybackState = (speaking: boolean) => {
         callbacksRef.current.onAgentSpeaking(speaking);
         callbacksRef.current.onAgentState(speaking ? "speaking" : "listening");
+        if (!speaking) finishApprovedResponsePlayback();
         if (closingResponsePending && speaking) closingResponseStarted = true;
         if (closingResponsePending && closingResponseStarted && !speaking) {
           completeClosingResponse();
@@ -243,6 +298,19 @@ export const GeminiLiveInterviewer = forwardRef<
           window.clearTimeout(closingResponseFallbackTimer);
           closingResponseFallbackTimer = null;
         }
+        if (workspaceUpdateFallbackTimer !== null) {
+          window.clearTimeout(workspaceUpdateFallbackTimer);
+          workspaceUpdateFallbackTimer = null;
+        }
+        if (workspaceUpdateRetryTimer !== null) {
+          window.clearTimeout(workspaceUpdateRetryTimer);
+          workspaceUpdateRetryTimer = null;
+        }
+        if (approvedResponseFallbackTimer !== null) {
+          window.clearTimeout(approvedResponseFallbackTimer);
+          approvedResponseFallbackTimer = null;
+        }
+        queuedWorkspaceUpdateText = null;
         if (pendingTypedSubmission) {
           window.clearTimeout(pendingTypedSubmission.timeout);
           pendingTypedSubmission.reject(new Error("The live interviewer disconnected."));
@@ -454,6 +522,26 @@ export const GeminiLiveInterviewer = forwardRef<
         args?: Record<string, unknown>;
       }) => {
         if (!session || call.name !== COMPLETE_INTERVIEW_TURN_TOOL) return;
+        if (pendingWorkspaceUpdateText) {
+          approvedGeminiTurnPending = true;
+          approvedGeminiTurnStarted = false;
+          session.sendToolResponse({
+            functionResponses: [
+              {
+                id: call.id,
+                name: call.name,
+                response: {
+                  saved: false,
+                  workspaceEvent: true,
+                  approvedResponse: pendingWorkspaceUpdateText,
+                  instruction:
+                    "This was a workspace event, not a candidate answer. Do not advance or save it. Speak approvedResponse exactly once."
+                }
+              }
+            ]
+          });
+          return;
+        }
         if (call.id && completedToolCalls.has(call.id)) {
           session.sendToolResponse({
             functionResponses: [
@@ -523,11 +611,7 @@ export const GeminiLiveInterviewer = forwardRef<
                 }
               ]
             });
-            if (pendingTypedSubmission) {
-              window.clearTimeout(pendingTypedSubmission.timeout);
-              pendingTypedSubmission.resolve();
-              pendingTypedSubmission = null;
-            }
+            resolvePendingTypedSubmission();
             callbacksRef.current.onAgentState("listening");
             return;
           }
@@ -562,11 +646,7 @@ export const GeminiLiveInterviewer = forwardRef<
                 }
               ]
             });
-            if (pendingTypedSubmission) {
-              window.clearTimeout(pendingTypedSubmission.timeout);
-              pendingTypedSubmission.resolve();
-              pendingTypedSubmission = null;
-            }
+            resolvePendingTypedSubmission();
             callbacksRef.current.onAgentState("listening");
             return;
           }
@@ -576,6 +656,10 @@ export const GeminiLiveInterviewer = forwardRef<
           // call is speculative and remains muted.
           approvedGeminiTurnPending = true;
           approvedGeminiTurnStarted = false;
+          approvedResponseText = response.utterance;
+          approvedResponseHasAudio = false;
+          approvedResponseTurnComplete = false;
+          approvedResponseRetryCount = 0;
           session.sendToolResponse({
             functionResponses: [
               {
@@ -595,11 +679,40 @@ export const GeminiLiveInterviewer = forwardRef<
               }
             ]
           });
-          if (pendingTypedSubmission) {
-            window.clearTimeout(pendingTypedSubmission.timeout);
-            pendingTypedSubmission.resolve();
-            pendingTypedSubmission = null;
-          }
+          const retryApprovedAudio = () => {
+            approvedResponseFallbackTimer = null;
+            if (!approvedResponseText || approvedResponseHasAudio || !session) return;
+
+            if (approvedResponseRetryCount >= 1) {
+              approvedGeminiTurnPending = false;
+              approvedGeminiTurnStarted = false;
+              clearApprovedResponse();
+              resolvePendingTypedSubmission();
+              callbacksRef.current.onAgentState("listening");
+              callbacksRef.current.onError(
+                `${interviewerName}'s reply was saved, but the audio could not be played. You can continue from the written response.`
+              );
+              if (closingResponsePending) completeClosingResponse();
+              return;
+            }
+
+            approvedResponseRetryCount += 1;
+            approvedGeminiTurnPending = true;
+            approvedGeminiTurnStarted = false;
+            approvedResponseTurnComplete = false;
+            callbacksRef.current.onAgentState("thinking");
+            session.sendRealtimeInput({
+              text: `The previous approved interview reply produced no playable audio. Speak this exact response now, once, without adding or changing anything: ${JSON.stringify(approvedResponseText)}`
+            });
+            approvedResponseFallbackTimer = window.setTimeout(
+              retryApprovedAudio,
+              APPROVED_AUDIO_FALLBACK_MS
+            );
+          };
+          approvedResponseFallbackTimer = window.setTimeout(
+            retryApprovedAudio,
+            APPROVED_AUDIO_FALLBACK_MS
+          );
         } catch (error) {
           decisionPending = false;
           const failure = error instanceof Error ? error : new Error("Could not save your answer.");
@@ -893,6 +1006,13 @@ export const GeminiLiveInterviewer = forwardRef<
                     if (approvedGeminiTurnStarted) {
                       approvedGeminiTurnPending = false;
                       approvedGeminiTurnStarted = false;
+                      clearApprovedResponse();
+                      resolvePendingTypedSubmission();
+                      pendingWorkspaceUpdateText = null;
+                      if (workspaceUpdateFallbackTimer !== null) {
+                        window.clearTimeout(workspaceUpdateFallbackTimer);
+                        workspaceUpdateFallbackTimer = null;
+                      }
                     }
                   }
                   // Realtime text can interrupt the speculative response. The
@@ -918,6 +1038,17 @@ export const GeminiLiveInterviewer = forwardRef<
                       if (approvedGeminiTurnPending) approvedGeminiTurnStarted = true;
                       for (const part of content.modelTurn.parts) {
                         if (!part.inlineData?.data || !outputContext) continue;
+                        if (approvedGeminiTurnPending && approvedResponseText) {
+                          approvedResponseHasAudio = true;
+                          callbacksRef.current.onError(null);
+                          if (approvedResponseFallbackTimer !== null) {
+                            window.clearTimeout(approvedResponseFallbackTimer);
+                            approvedResponseFallbackTimer = null;
+                          }
+                        }
+                        if (outputContext.state === "suspended") {
+                          void outputContext.resume();
+                        }
                         schedulePcmAudio(
                           outputContext,
                           avatarDestination,
@@ -995,13 +1126,35 @@ export const GeminiLiveInterviewer = forwardRef<
                     if (completedApprovedTurn) {
                       approvedGeminiTurnPending = false;
                       approvedGeminiTurnStarted = false;
+                      if (approvedResponseText) {
+                        approvedResponseTurnComplete = true;
+                        finishApprovedResponsePlayback();
+                      }
+                      if (pendingWorkspaceUpdateText) {
+                        callbacksRef.current.onOutputTranscript({
+                          text: pendingWorkspaceUpdateText,
+                          finished: true
+                        });
+                        pendingWorkspaceUpdateText = null;
+                        if (workspaceUpdateFallbackTimer !== null) {
+                          window.clearTimeout(workspaceUpdateFallbackTimer);
+                          workspaceUpdateFallbackTimer = null;
+                        }
+                      }
                     }
-                    if (closingResponsePending && completedApprovedTurn) {
-                      // Playback completion normally closes the room. This
-                      // also handles a provider turn that completes without a
-                      // playable audio packet.
+                    if (
+                      closingResponsePending &&
+                      completedApprovedTurn &&
+                      !approvedResponseText
+                    ) {
+                      // Playback completion normally closes the room. If it
+                      // completed before this packet, finish the durable turn.
                       completeClosingResponse();
-                    } else if (!closingResponsePending && !decisionPending) {
+                    } else if (
+                      !closingResponsePending &&
+                      !decisionPending &&
+                      scheduled.size === 0
+                    ) {
                       callbacksRef.current.onAgentState("listening");
                     }
                     return;
@@ -1113,25 +1266,77 @@ export const GeminiLiveInterviewer = forwardRef<
               await persistAnswer(input);
               return;
             }
-            if (!session || pendingTypedSubmission || decisionPending) {
+            if (
+              !session ||
+              pendingTypedSubmission ||
+              decisionPending ||
+              approvedGeminiTurnPending ||
+              approvedResponseText ||
+              scheduled.size > 0
+            ) {
               throw new Error(`${interviewerName} is still responding to the previous answer.`);
             }
             candidateUtteranceActive = false;
             await new Promise<void>((resolve, reject) => {
               const timeout = window.setTimeout(() => {
                 pendingTypedSubmission = null;
+                approvedGeminiTurnPending = false;
+                approvedGeminiTurnStarted = false;
+                clearApprovedResponse();
+                callbacksRef.current.onAgentState("listening");
                 reject(
                   new Error(
-                    `${interviewerName} did not receive the typed answer. Please try again.`
+                    `${interviewerName} could not complete the typed response. Your saved conversation is safe; please try continuing.`
                   )
                 );
-              }, 15_000);
+              }, 45_000);
               pendingTypedSubmission = { input, resolve, reject, timeout };
               session?.sendClientContent({
                 turns: [{ role: "user", parts: [{ text: input.text }] }],
                 turnComplete: true
               });
             });
+          };
+          speakWorkspaceUpdateRef.current = (text) => {
+            const approved = text.trim();
+            if (!approved || closed || !geminiLedConversation || !session) {
+              return false;
+            }
+            if (
+              decisionPending ||
+              openingTurnPending ||
+              approvedGeminiTurnPending ||
+              pendingWorkspaceUpdateText
+            ) {
+              queuedWorkspaceUpdateText = approved;
+              if (workspaceUpdateRetryTimer === null) {
+                workspaceUpdateRetryTimer = window.setTimeout(() => {
+                  workspaceUpdateRetryTimer = null;
+                  const queued = queuedWorkspaceUpdateText;
+                  queuedWorkspaceUpdateText = null;
+                  if (queued) speakWorkspaceUpdateRef.current(queued);
+                }, 500);
+              }
+              return true;
+            }
+            queuedWorkspaceUpdateText = null;
+            pendingWorkspaceUpdateText = approved;
+            approvedGeminiTurnPending = true;
+            approvedGeminiTurnStarted = false;
+            outputTranscriptRef.current = approved;
+            callbacksRef.current.onOutputTranscript({ text: approved, finished: false });
+            callbacksRef.current.onAgentState("thinking");
+            workspaceUpdateFallbackTimer = window.setTimeout(() => {
+              pendingWorkspaceUpdateText = null;
+              approvedGeminiTurnPending = false;
+              approvedGeminiTurnStarted = false;
+              workspaceUpdateFallbackTimer = null;
+              callbacksRef.current.onAgentState("listening");
+            }, 12_000);
+            session.sendRealtimeInput({
+              text: `The coding workspace—not the candidate—reported an execution event. Do not call complete_interview_turn and do not advance the interview. Speak this exact approved line with no additional words: ${JSON.stringify(approved)}`
+            });
+            return true;
           };
           reconnectRef.current = () => {
             if (!closed) {
@@ -1163,6 +1368,7 @@ export const GeminiLiveInterviewer = forwardRef<
       ref,
       () => ({
         submitTypedAnswer: (input) => submitTypedAnswerRef.current(input),
+        speakWorkspaceUpdate: (text) => speakWorkspaceUpdateRef.current(text),
         reconnect: () => reconnectRef.current()
       }),
       []
@@ -1302,9 +1508,7 @@ export function toolCallMatchesPendingTypedSubmission(
   pendingTypedAnswer: string
 ): boolean {
   const toolFingerprint = answerFingerprint(toolAnswer);
-  return Boolean(
-    toolFingerprint && toolFingerprint === answerFingerprint(pendingTypedAnswer)
-  );
+  return Boolean(toolFingerprint && toolFingerprint === answerFingerprint(pendingTypedAnswer));
 }
 
 export function candidateAnswerWasRecentlySubmitted(

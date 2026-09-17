@@ -104,5 +104,32 @@ describe("NotificationInbox", () => {
     expect(screen.getByText("Interview report")).toBeVisible();
     expect(screen.getByText("Core Technical & Projects report is ready")).toBeVisible();
     expect(screen.getByRole("link")).toHaveAttribute("href", "/reports");
+    const source = screen.getByLabelText("Claire, interviewer");
+    expect(source.querySelector("img")).toHaveAttribute(
+      "src",
+      "/images/teacher-portraits/claire.jpg"
+    );
+  });
+
+  it("uses the interviewer assigned to a behavioural report", () => {
+    inbox.items.splice(0, inbox.items.length, {
+      id: "notification-3",
+      kind: "INTERVIEW_REPORT_READY",
+      title: "HR & Behavioural report is ready",
+      body: "Your evidence score is 81/100.",
+      href: "/reports",
+      read: false,
+      createdAt: Date.now(),
+      sender: null
+    });
+
+    render(<NotificationInbox />);
+    fireEvent.click(screen.getByRole("button", { name: "Notifications, 1 unread" }));
+
+    const source = screen.getByLabelText("James, interviewer");
+    expect(source.querySelector("img")).toHaveAttribute(
+      "src",
+      "/images/teacher-portraits/james.jpg"
+    );
   });
 });

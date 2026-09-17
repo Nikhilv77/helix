@@ -42,7 +42,10 @@ export function BlockAssessmentReviewWorkspace({
   candidateCameraStream,
   onDisableCamera,
   stages = REVIEW_STAGES,
-  anchorLabel = "Saved solution"
+  anchorLabel = "Saved solution",
+  showEvidenceAnchor = true,
+  showExpectations = true,
+  questionWorkspace
 }: {
   question: InterviewQuestion | null;
   questionIndex: number;
@@ -71,6 +74,9 @@ export function BlockAssessmentReviewWorkspace({
   onDisableCamera: () => void;
   stages?: InterviewStageDef[];
   anchorLabel?: string;
+  showEvidenceAnchor?: boolean;
+  showExpectations?: boolean;
+  questionWorkspace?: React.ReactNode;
 }) {
   return (
     <div className="thin-scroll flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4 xl:grid xl:grid-cols-[minmax(0,1fr)_19rem] xl:overflow-hidden xl:pb-0">
@@ -96,6 +102,9 @@ export function BlockAssessmentReviewWorkspace({
         onSelectOption={onSelectOption}
         onSubmit={onSubmit}
         onRequestMic={onRequestMic}
+        showEvidenceAnchor={showEvidenceAnchor}
+        showExpectations={showExpectations}
+        questionWorkspace={questionWorkspace}
       />
       <MayaAside
         agentSlot={agentSlot}

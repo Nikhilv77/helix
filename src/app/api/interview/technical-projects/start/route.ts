@@ -96,7 +96,8 @@ export async function POST(request: NextRequest) {
         coreBlueprint,
         appliedBlueprint,
         mcqs,
-        project
+        project,
+        codingTask: kit?.codingTask
       });
       const result = await app.interviewService.start(
         {
@@ -116,7 +117,8 @@ export async function POST(request: NextRequest) {
             "Three mechanism-level technical decisions",
             "Project context and personal ownership",
             "End-to-end technical mechanism",
-            "Failure diagnosis, verification, trade-offs, and evolution"
+            "Failure diagnosis and verification",
+            "One project-grounded coding task"
           ],
           templateId: TECHNICAL_DEEP_DIVE_ID,
           templateTitle: TECHNICAL_PROJECTS_TITLE,
@@ -125,7 +127,7 @@ export async function POST(request: NextRequest) {
           personalizedBlueprint: coreBlueprint,
           technicalDeepDive: {
             kind: TECHNICAL_DEEP_DIVE_ID,
-            version: 2,
+            version: 3,
             coreBlueprintId: coreBlueprint.id,
             appliedBlueprintId: appliedBlueprint.id,
             project: {

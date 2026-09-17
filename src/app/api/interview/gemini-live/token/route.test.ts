@@ -127,7 +127,9 @@ describe("Gemini Live interview instruction", () => {
           answerFormat: "spoken",
           mustHit: ["scope"],
           maxFollowUps: 1,
-          acceptsCandidateQuestions: false
+          acceptsCandidateQuestions: false,
+          interviewSection: "design",
+          privateGuide: "25 million uploads per day; resumable uploads are required."
         }
       ]
     });
@@ -135,7 +137,15 @@ describe("Gemini Live interview instruction", () => {
     expect(instruction).toContain("You are Claire, a calm and technically sharp");
     expect(instruction).toContain("Stay quiet while the candidate types");
     expect(instruction).toContain("Wait for the workspace code submission");
-    expect(instruction).toContain("Keep all three design prompts on the same scenario");
+    expect(instruction).toContain(
+      'A trusted client message beginning "The coding workspace—not the candidate—reported an execution event"'
+    );
+    expect(instruction).toContain("do not advance the question");
+    expect(instruction).toContain("Keep all five design acts on the same scenario");
+    expect(instruction).toContain("candidate's questions are requirement discovery");
+    expect(instruction).toContain("Do not recite a prepared architecture");
+    expect(instruction).toContain("PRIVATE INTERVIEWER GUIDE");
+    expect(instruction).toContain("25 million uploads per day");
     expect(instruction).toContain("merely says they are thinking");
     expect(instruction).toContain("Take your time—go ahead when you're ready.");
     expect(instruction).toContain("talk through a tentative approach");
@@ -143,6 +153,67 @@ describe("Gemini Live interview instruction", () => {
     expect(instruction).toContain("If approvedResponse is empty, produce no audio");
     expect(instruction).toContain("Never invent an employer fact");
     expect(instruction).toContain('say exactly: "I\'m Claire from the recruiting team."');
+  });
+
+  it("keeps a new DSA interview coding-only", () => {
+    const question = "Walk me through Two Sum.";
+    const opening = buildOpeningUtterance({
+      isHiringManagerRound: false,
+      question,
+      isDsaDesignRound: true,
+      dsaDesignMode: "dsa"
+    });
+    const instruction = buildSystemInstruction({
+      roundTitle: "DSA Interview",
+      interviewerName: "Claire",
+      isHiringManagerRound: false,
+      isDsaDesignRound: true,
+      dsaDesignMode: "dsa",
+      question,
+      questionNumber: 1,
+      questionCount: 2,
+      followUpCount: 0,
+      maxFollowUps: 2,
+      mustHit: ["approach", "complexity"],
+      openingUtterance: opening
+    });
+
+    expect(opening).toContain("two coding problems");
+    expect(opening).not.toContain("design");
+    expect(instruction).toContain("conducting a DSA interview");
+    expect(instruction).toContain("This is coding-only");
+    expect(instruction).toContain("Never introduce a system-design scenario");
+  });
+
+  it("keeps a new System Design interview free of coding questions", () => {
+    const question = "Design a global media upload and processing platform.";
+    const opening = buildOpeningUtterance({
+      isHiringManagerRound: false,
+      question,
+      isDsaDesignRound: true,
+      dsaDesignMode: "design"
+    });
+    const instruction = buildSystemInstruction({
+      roundTitle: "System Design Interview",
+      interviewerName: "Claire",
+      isHiringManagerRound: false,
+      isDsaDesignRound: true,
+      dsaDesignMode: "design",
+      question,
+      questionNumber: 1,
+      questionCount: 5,
+      followUpCount: 0,
+      maxFollowUps: 2,
+      mustHit: ["requirements", "scale"],
+      openingUtterance: opening,
+      currentStage: "design-frame"
+    });
+
+    expect(opening).toContain("intentionally open-ended prompt");
+    expect(opening).toContain("architecture on the canvas");
+    expect(instruction).toContain("conducting a System Design interview");
+    expect(instruction).toContain("This is design-only");
+    expect(instruction).toContain("Never introduce a coding problem");
   });
 
   it("resumes Claire on the current DSA & Design question", () => {
@@ -206,15 +277,28 @@ describe("Gemini Live interview instruction", () => {
           mustHit: ["mechanism", "personal ownership"],
           maxFollowUps: 2,
           acceptsCandidateQuestions: false
+        },
+        {
+          text: "Implement the project boundary.",
+          kind: "code",
+          answerFormat: "typed",
+          mustHit: ["implementation", "tests"],
+          maxFollowUps: 1,
+          acceptsCandidateQuestions: false
         }
       ]
     });
 
     expect(openingUtterance).toContain("I'm Claire");
     expect(openingUtterance).toContain("three short technical decisions");
+    expect(openingUtterance).toContain("finish with a coding task grounded in that project");
     expect(instruction).toContain("never announce whether an answer is correct");
     expect(instruction).toContain("The remaining questions stay on one grounded project");
     expect(instruction).toContain("Never invent project facts");
+    expect(instruction).toContain("spoken planning or explanation is context");
+    expect(instruction).toContain(
+      "Implement the project boundary. The candidate submits this through the workspace."
+    );
     expect(instruction).toContain("Choices: A. Atomicity; B. Isolation; C. Durability");
     expect(instruction).toContain("the 40-minute limit is only a maximum");
     expect(instruction).toContain('say exactly: "I\'m Claire from the recruiting team."');

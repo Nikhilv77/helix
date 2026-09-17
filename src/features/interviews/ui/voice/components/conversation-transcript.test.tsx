@@ -7,6 +7,14 @@ vi.mock("@/lib/avatars/teacher-context", () => ({
   useWorkspaceTeacher: () => ({ id: "sophia", name: "Sophia" })
 }));
 
+vi.mock("@/features/interviews/ui/dsa/dsa-code-editor", () => ({
+  DsaCodeEditor: ({ value, syntaxLanguage, ariaLabel }: Record<string, string>) => (
+    <pre data-language={syntaxLanguage} aria-label={ariaLabel}>
+      {value}
+    </pre>
+  )
+}));
+
 import { ConversationTranscript } from "./conversation-transcript";
 
 const turns: Turn[] = [
@@ -46,6 +54,37 @@ describe("ConversationTranscript", () => {
     renderTranscript(turns[2]!.text);
 
     expect(screen.getAllByText(turns[2]!.text)).toHaveLength(1);
+  });
+
+  it("renders fenced candidate code in the read-only Monaco presentation", () => {
+    render(
+      <ConversationTranscript
+        turns={[
+          {
+            speaker: "user",
+            text: "Here is my solution:\n```javascript\nfunction solve(nums) {\n  return nums.length;\n}\n```\nIt is O(n).",
+            startMs: 1_000,
+            endMs: 2_000
+          }
+        ]}
+        spokenAgentTurnKeys={new Set()}
+        liveUserText=""
+        teacherName="James"
+        startedAt={0}
+        setup={null}
+        question={null}
+        thinking={false}
+        bottomRef={createRef<HTMLDivElement>()}
+      />
+    );
+
+    expect(screen.getByText("Here is my solution:")).toBeVisible();
+    expect(screen.getByText("It is O(n).")).toBeVisible();
+    expect(screen.getByTestId("transcript-code-block")).toBeVisible();
+    expect(screen.getByLabelText("javascript code from transcript")).toHaveTextContent(
+      "function solve(nums)"
+    );
+    expect(screen.queryByText(/```javascript/)).toBeNull();
   });
 });
 

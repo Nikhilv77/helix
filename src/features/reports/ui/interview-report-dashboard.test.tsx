@@ -99,7 +99,7 @@ const report = {
 describe("InterviewReportDashboard", () => {
   afterEach(cleanup);
 
-  it("shows the latest round with its own parameters and four-family overall scores", () => {
+  it("shows the latest round with its own parameters and five-family overall scores", () => {
     render(
       <InterviewReportDashboard
         report={report}
@@ -111,7 +111,8 @@ describe("InterviewReportDashboard", () => {
 
     expect(screen.getByLabelText(/james reported back to me/i)).toBeVisible();
     expect(screen.getByText("Overall performance")).toBeVisible();
-    expect(screen.getAllByText("DSA & Design").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("DSA Interview").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("System Design").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Core Technical & Projects").length).toBeGreaterThan(0);
     expect(screen.getAllByText("HR & Behavioural").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Resume & Behavioural").length).toBeGreaterThan(0);

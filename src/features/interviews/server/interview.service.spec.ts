@@ -5,6 +5,7 @@ import {
   candidateDeclinesQuestion,
   candidateNeedsInterviewBreak,
   candidateRequestsInterviewEnd,
+  candidateRequestsQuestionSkip,
   executionForEvaluation,
   InterviewService,
   qualityCheckedFollowUp,
@@ -18,6 +19,7 @@ import {
   LIVE_DECISION_DEADLINE_MS,
   LIVE_EVALUATION_DEADLINE_MS
 } from "../domain/voice-turn-timing";
+import { EMPTY_SYSTEM_DESIGN_CANVAS } from "../domain/system-design-canvas";
 
 const setup: InterviewSetup = {
   role: "frontend",
@@ -74,6 +76,51 @@ const mcqQuestion: PlannedQuestion = {
 };
 
 describe("InterviewService resume round", () => {
+  it("attaches the durable architecture artifact to a System Design report", async () => {
+    const designQuestion: PlannedQuestion = {
+      text: "Design a global upload system.",
+      kind: "conversation",
+      interviewSection: "design",
+      stage: "design-frame",
+      competency: "Requirements and scale",
+      mustHit: ["scope", "scale"],
+      probeIfMissing: "Which scale assumption matters most?"
+    };
+    const { service } = harness([designQuestion]);
+    const started = await service.start(
+      {
+        ...setup,
+        templateId: "system-design",
+        templateTitle: "System Design Interview",
+        dsaDesignRound: {
+          kind: "dsa-design-round",
+          version: 1,
+          designScenarioKey: "global-media-processing",
+          designScenarioVersion: 1,
+          designScenarioTitle: "Global media processing",
+          designDifficulty: "standard"
+        },
+        questionCount: 5
+      },
+      "user-1",
+      1_000,
+      [designQuestion]
+    );
+    await service.saveSystemDesignCanvas(
+      "user-1",
+      started.state.id,
+      { ...EMPTY_SYSTEM_DESIGN_CANVAS, notes: "25M uploads per day" },
+      0
+    );
+
+    await expect(service.report("user-1", started.state.id, 2_000)).resolves.toMatchObject({
+      designCanvas: {
+        revision: 1,
+        document: { notes: "25M uploads per day" }
+      }
+    });
+  });
+
   it("recognizes clear question refusals without swallowing substantive negative answers", () => {
     expect(candidateDeclinesQuestion("No.")).toBe(true);
     expect(candidateDeclinesQuestion("Pass, thanks.")).toBe(true);
@@ -115,6 +162,16 @@ describe("InterviewService resume round", () => {
       false
     );
     expect(candidateRequestsInterviewEnd("I couldn't explain the cache invalidation.")).toBe(false);
+  });
+
+  it("distinguishes skipping a question from ending the interview", () => {
+    expect(candidateRequestsQuestionSkip("Let's move to the next question.")).toBe(true);
+    expect(
+      candidateRequestsQuestionSkip("I can't think this much, let's move to the next question.")
+    ).toBe(true);
+    expect(candidateRequestsQuestionSkip("Please skip this problem.")).toBe(true);
+    expect(candidateRequestsQuestionSkip("What is the next question?")).toBe(false);
+    expect(candidateRequestsInterviewEnd("Let's move to the next question.")).toBe(false);
   });
 
   it("recognizes fatigue as a request for support rather than an explicit exit", () => {
@@ -231,6 +288,73 @@ describe("InterviewService resume round", () => {
     );
   });
 
+  it("overrides a mistaken end intent when the candidate asks for the next DSA problem", async () => {
+    const codePlan: PlannedQuestion[] = [
+      {
+        text: "Solve Two Sum.",
+        kind: "code",
+        interviewSection: "dsa",
+        answerFormat: "typed",
+        mustHit: ["correctness", "complexity"],
+        probeIfMissing: "Can you optimize it?",
+        maxFollowUps: 2
+      },
+      {
+        text: "Solve Valid Anagram.",
+        kind: "code",
+        interviewSection: "dsa",
+        answerFormat: "typed",
+        mustHit: ["correctness", "complexity"],
+        probeIfMissing: "What is the complexity?",
+        maxFollowUps: 2
+      }
+    ];
+    const { service } = harness(codePlan);
+    const started = await service.start(
+      {
+        ...setup,
+        templateId: "dsa",
+        templateTitle: "DSA & Design interview",
+        dsaQuestionSlugs: ["two-sum", "valid-anagram"],
+        dsaDesignRound: {
+          kind: "dsa-design-round",
+          version: 1,
+          designScenarioKey: "media-upload",
+          designScenarioVersion: 1,
+          designScenarioTitle: "Media upload",
+          designDifficulty: "standard"
+        }
+      },
+      "user-1",
+      1_000,
+      codePlan
+    );
+
+    const result = await service.answer(
+      started.state.id,
+      {
+        text: "I can't think this much, let's move to the next question.",
+        startMs: 500,
+        endMs: 1_000
+      },
+      2_000,
+      undefined,
+      {
+        action: "move_on",
+        missing: "none",
+        candidateIntent: "end",
+        acknowledgement: "",
+        line: "",
+        reason: "Misclassified request to move on."
+      }
+    );
+
+    expect(result.state.phase).toBe("questioning");
+    expect(result.state.questionIndex).toBe(1);
+    expect(result.decision.utterance).toContain("Solve Valid Anagram");
+    expect(result.decision.utterance).not.toMatch(/role|team|end the interview/i);
+  });
+
   it("holds spoken coding reasoning until the workspace submission in DSA & Design", async () => {
     const codePlan: PlannedQuestion[] = [
       {
@@ -284,15 +408,77 @@ describe("InterviewService resume round", () => {
 
     expect(result.state.questionIndex).toBe(0);
     expect(result.decision.action).toBe("respond");
-    expect(result.decision.utterance).toBe("");
+    expect(result.decision.utterance).toContain("Keep working through the idea");
+    expect(result.state.turns.at(-1)).toMatchObject({
+      speaker: "agent",
+      action: "respond",
+      questionIndex: 0
+    });
     expect(decide).not.toHaveBeenCalled();
     expect(evaluate).not.toHaveBeenCalled();
     const saved = (await store.get(started.state.id))!;
-    expect(saved.turns.at(-1)).toMatchObject({
+    expect(saved.turns.at(-2)).toMatchObject({
       text: "I would use a hash map and get linear time.",
       submissionSource: "voice",
       questionIndex: 0
     });
+  });
+
+  it("holds spoken coding reasoning until the workspace submission in Core Technical & Projects", async () => {
+    const codePlan: PlannedQuestion[] = [
+      {
+        text: "Implement the project boundary.",
+        kind: "code",
+        stage: "code",
+        technicalProjectsSection: "project-deep-dive",
+        projectAct: "coding",
+        answerFormat: "typed",
+        competency: "Project-grounded implementation",
+        intent: "Assess practical implementation.",
+        mustHit: ["working implementation"],
+        probeIfMissing: "How would you test it?",
+        maxFollowUps: 1
+      },
+      questions[0]!
+    ];
+    const { service, decide, evaluate } = harness(codePlan);
+    const started = await service.start(
+      {
+        ...setup,
+        templateId: "technical-deep-dive",
+        templateTitle: "Core Technical & Projects interview",
+        technicalDeepDive: {
+          kind: "technical-deep-dive",
+          version: 3,
+          coreBlueprintId: "core-1",
+          appliedBlueprintId: "applied-1"
+        }
+      },
+      "user-1",
+      1_000,
+      codePlan
+    );
+
+    const result = await service.answer(
+      started.state.id,
+      { text: "I would validate the input and deduplicate by id.", startMs: 500, endMs: 1_000 },
+      2_000,
+      undefined,
+      {
+        action: "move_on",
+        missing: "none",
+        candidateIntent: "answer",
+        acknowledgement: "",
+        line: "",
+        reason: "The spoken approach sounds complete."
+      }
+    );
+
+    expect(result.state.questionIndex).toBe(0);
+    expect(result.decision.action).toBe("respond");
+    expect(result.decision.utterance).toContain("Keep working through the idea");
+    expect(decide).not.toHaveBeenCalled();
+    expect(evaluate).not.toHaveBeenCalled();
   });
 
   it("briefly acknowledges thinking time without repeating or advancing the coding problem", async () => {
@@ -408,6 +594,8 @@ describe("InterviewService resume round", () => {
     );
     expect(submitted.state.questionIndex).toBe(0);
     expect(submitted.state.followUpCount).toBe(1);
+    expect(submitted.decision.utterance).toContain("I can see your submitted code");
+    expect(submitted.decision.utterance).toContain("There isn't a run result");
 
     const followedUp = await service.answer(
       started.state.id,
@@ -1506,13 +1694,17 @@ describe("InterviewService personalized blueprint evidence", () => {
     const started = await service.start(setup, "user-code", 1_000, [codeQuestion]);
     await service.recordCodeExecution("user-code", started.state.id, 0, execution);
 
-    await service.answer(
+    const result = await service.answer(
       started.state.id,
       { text: "function retry() {}", startMs: 0, endMs: 1_000 },
-      2_000
+      2_000,
+      undefined,
+      undefined,
+      "workspace"
     );
 
     expect(evaluate).toHaveBeenCalledWith(expect.objectContaining({ execution }));
+    expect(result.decision.utterance).toContain("1 of 3 tests passed");
   });
 });
 

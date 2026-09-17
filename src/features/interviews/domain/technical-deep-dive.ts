@@ -42,7 +42,7 @@ export const TECHNICAL_DEEP_DIVE_PREP_SESSION: PrepSession = {
   covers: [
     "Three scenario-based technical checks",
     "One project traced from design to production",
-    "Ownership, trade-offs, failures, testing, and impact"
+    "One project-grounded practical coding task"
   ],
   status: "planned"
 };

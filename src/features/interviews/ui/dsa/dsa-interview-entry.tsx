@@ -15,20 +15,18 @@ export function DsaInterviewEntry({
   completedCount,
   sessionsRemaining,
   firstName,
-  workspaceAccent,
-  designSupported
+  workspaceAccent
 }: {
   completedCount: number;
   /** Null when the quota could not be read; the server still enforces it. */
   sessionsRemaining: number | null;
   firstName: string;
   workspaceAccent: WorkspaceAccent;
-  designSupported: boolean;
 }) {
   const greeting = firstName ? `Hey ${firstName},` : "Hey there,";
   const outOfSessions = sessionsRemaining === 0;
   const ready = completedCount >= MIN_SOLVED && !outOfSessions;
-  const roundLabel = designSupported ? "DSA & Design interview" : "DSA interview";
+  const roundLabel = "DSA interview";
   const copy =
     completedCount < MIN_SOLVED
       ? {
@@ -45,12 +43,8 @@ export function DsaInterviewEntry({
         : {
             eyebrow: roundLabel,
             headline: `${greeting} Claire is ready for your technical interview.`,
-            body: designSupported
-              ? "Claire will lead two coding problems first, then take you through one system-design scenario covering requirements, architecture, trade-offs, and reliability. Think out loud when it helps; she will give you quiet space while you code."
-              : "Claire will lead a focused coding interview using important problems you have already practised. Think out loud when it helps; she will give you quiet space while you code.",
-            script: designSupported
-              ? `Hi ${firstName || "there"}. Claire will take your DSA and design interview. You’ll solve two coding problems first, then defend one system design through requirements, architecture, trade-offs, and reliability. Think out loud when it helps, but Claire will give you quiet space while you code.`
-              : `Hi ${firstName || "there"}. Claire will take your DSA interview. You’ll solve coding problems you have practised and explain your approach, correctness, complexity, and edge cases. Think out loud when it helps, but Claire will give you quiet space while you code.`
+            body: "Claire will lead two focused coding problems using important questions you have already practised. Explain your reasoning when it helps; she will give you quiet space while you code.",
+            script: `Hi ${firstName || "there"}. Claire will take your DSA interview. You’ll solve two coding problems and explain your approach, correctness, complexity, and edge cases. Think out loud when it helps, but Claire will give you quiet space while you code.`
           };
 
   return (

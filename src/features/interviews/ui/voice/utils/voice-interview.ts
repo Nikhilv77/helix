@@ -1,6 +1,6 @@
 import type { Participant, Room, TranscriptionSegment } from "livekit-client";
 import type { InterviewQuestion, InterviewSetup } from "@/lib/shared/types";
-import type { AgentState, VoiceStatus } from "../types";
+import type { AgentState, DsaRunResult, VoiceStatus } from "../types";
 
 export function formatClock(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -21,6 +21,23 @@ export function formatTypedAnswer(
   return [`\`\`\`${language}\n${answer}\n\`\`\``, reasoning ? `Reasoning: ${reasoning}` : ""]
     .filter(Boolean)
     .join("\n\n");
+}
+
+export function codeRunAcknowledgement(result: DsaRunResult): string {
+  if (result.tests.length > 0) {
+    const passed = result.tests.filter((test) => test.passed).length;
+    if (passed === result.tests.length) {
+      return `I can see the code and output. All ${result.tests.length} supplied tests passed—check your complexity and submit when you're ready.`;
+    }
+    return `I can see the code and output. ${passed} of ${result.tests.length} supplied tests passed, so use the failing result to guide your next change.`;
+  }
+  if (result.compileOutput.trim()) {
+    return "I can see the run output. It did not compile yet—check the compiler message and keep working through it.";
+  }
+  if (result.stderr.trim() || !result.accepted) {
+    return "I can see the run output. There is still an execution issue, so inspect the error and try the next fix.";
+  }
+  return "I can see the code and output. It ran successfully—review the behavior, then submit when you're ready.";
 }
 
 export function roleLabel(role: InterviewSetup["role"]): string {

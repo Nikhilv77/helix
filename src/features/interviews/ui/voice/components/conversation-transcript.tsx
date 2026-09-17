@@ -1,6 +1,10 @@
 import type { RefObject } from "react";
 import { BriefcaseBusiness, Code2, Loader2 } from "lucide-react";
 import type { InterviewQuestion, InterviewSetup, Turn } from "@/lib/shared/types";
+import {
+  DsaCodeEditor,
+  type DsaEditorLanguage
+} from "@/features/interviews/ui/dsa/dsa-code-editor";
 import { formatClock, roleLabel, roundLabel } from "../utils/voice-interview";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
@@ -152,7 +156,8 @@ export function ConversationTranscript({
                     </span>
                   </div>
 
-                  <p
+                  <TranscriptMarkdown
+                    text={turn.text}
                     className={
                       compact
                         ? isAgent
@@ -164,9 +169,7 @@ export function ConversationTranscript({
                             ? "text-base leading-7 text-cream/82"
                             : "text-sm leading-6 text-cream/68"
                     }
-                  >
-                    {turn.text}
-                  </p>
+                  />
                 </div>
               </article>
             );
@@ -184,6 +187,100 @@ export function ConversationTranscript({
       )}
     </section>
   );
+}
+
+type TranscriptBlock =
+  { kind: "prose"; text: string } | { kind: "code"; code: string; language: string };
+
+export function transcriptMarkdownBlocks(text: string): TranscriptBlock[] {
+  const blocks: TranscriptBlock[] = [];
+  const fence = /```\s*([^\s`\n]*)\s*\n([\s\S]*?)```/g;
+  let cursor = 0;
+
+  for (const match of text.matchAll(fence)) {
+    const index = match.index ?? 0;
+    const prose = text.slice(cursor, index).trim();
+    if (prose) blocks.push({ kind: "prose", text: prose });
+    blocks.push({
+      kind: "code",
+      language: match[1]?.trim() || "text",
+      code: (match[2] ?? "").replace(/^\n|\n$/g, "")
+    });
+    cursor = index + match[0].length;
+  }
+
+  const remainder = text.slice(cursor).trim();
+  if (remainder) blocks.push({ kind: "prose", text: remainder });
+  return blocks.length > 0 ? blocks : [{ kind: "prose", text }];
+}
+
+function TranscriptMarkdown({ text, className }: { text: string; className: string }) {
+  const blocks = transcriptMarkdownBlocks(text);
+
+  return (
+    <div className={`${className} space-y-3`}>
+      {blocks.map((block, index) =>
+        block.kind === "code" ? (
+          <TranscriptCodeBlock
+            key={`${index}-${block.language}-${block.code.length}`}
+            code={block.code}
+            language={block.language}
+          />
+        ) : (
+          <p key={`${index}-${block.text.length}`} className="whitespace-pre-wrap">
+            {block.text}
+          </p>
+        )
+      )}
+    </div>
+  );
+}
+
+function TranscriptCodeBlock({ code, language }: { code: string; language: string }) {
+  const editorLanguage = normalizeEditorLanguage(language);
+  const lineCount = Math.max(1, code.split("\n").length);
+  const height = Math.min(320, Math.max(112, lineCount * 23 + 34));
+
+  return (
+    <div
+      className="w-full min-w-0 overflow-hidden rounded-xl border border-white/[0.07] bg-[#0b0d10] text-left"
+      data-testid="transcript-code-block"
+    >
+      <div className="border-b border-white/[0.06] px-3 py-2 font-mono text-[9px] uppercase tracking-[0.14em] text-cream/38">
+        {language || editorLanguage}
+      </div>
+      <div style={{ height }}>
+        <DsaCodeEditor
+          language={editorLanguage}
+          syntaxLanguage={monacoLanguage(language)}
+          value={code}
+          readOnly
+          autoFocus={false}
+          ariaLabel={`${language || editorLanguage} code from transcript`}
+        />
+      </div>
+    </div>
+  );
+}
+
+function normalizeEditorLanguage(language: string): DsaEditorLanguage {
+  const normalized = language.trim().toLowerCase();
+  if (["js", "jsx", "javascript", "typescript", "ts", "tsx"].includes(normalized)) {
+    return "javascript";
+  }
+  if (["py", "python"].includes(normalized)) return "python";
+  if (["c++", "cpp", "cxx"].includes(normalized)) return "cpp";
+  if (normalized === "java") return "java";
+  return "javascript";
+}
+
+function monacoLanguage(language: string): string {
+  const normalized = language.trim().toLowerCase();
+  if (normalized === "js") return "javascript";
+  if (normalized === "ts") return "typescript";
+  if (normalized === "py") return "python";
+  if (["c++", "cxx"].includes(normalized)) return "cpp";
+  return normalized || "plaintext";
 }
 
 function turnKey(turn: Turn): string {

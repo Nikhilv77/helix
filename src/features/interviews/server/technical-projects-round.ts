@@ -2,6 +2,7 @@ import type { SessionBlueprint } from "@/features/interviews/domain/personalized
 import type {
   CandidateProfile,
   Level,
+  ResumeCodingTask,
   ResumeInterviewKit,
   ResumeSkillQuestion
 } from "@/lib/shared/types";
@@ -143,6 +144,7 @@ export function buildTechnicalProjectsPlan(input: {
   appliedBlueprint: SessionBlueprint;
   mcqs: readonly ReviewedTechnicalMcq[];
   project: GroundedProjectInterviewSource;
+  codingTask?: ResumeCodingTask | null;
 }): PlannedQuestion[] {
   if (input.coreBlueprint.kind !== "core-technical") {
     throw new Error("Core Technical & Projects requires a Core Technical blueprint");
@@ -198,20 +200,114 @@ export function buildTechnicalProjectsPlan(input: {
       ],
       durationMs: 8 * 60_000
     }),
-    projectQuestion(input.project, {
-      act: "tradeoffs",
-      text: `Close with the strongest alternative you rejected for ${input.project.name}, the cost you accepted, and what you would change now.`,
-      competency: "Trade-offs and evolution",
-      mustHit: [
-        "rejected alternative",
-        "accepted cost or risk",
-        "rollout evidence or later improvement"
-      ],
-      probe: "Which changed constraint would make the rejected alternative the better choice?",
-      parameters: ["tradeoffs", "practical-execution", "project-ownership", "communication"],
-      durationMs: 7 * 60_000
-    })
+    projectCodingQuestion(input.project, input.codingTask)
   ];
+}
+
+function projectCodingQuestion(
+  project: GroundedProjectInterviewSource,
+  codingTask: ResumeCodingTask | null | undefined
+): PlannedQuestion {
+  const relevantCodingTask = codingTaskForProject(project, codingTask);
+  const language = relevantCodingTask?.language || projectLanguage(project.skillKeys);
+  const task = relevantCodingTask?.brief?.trim() || fallbackProjectCodeTask(project);
+  const expects = relevantCodingTask?.expects?.filter(Boolean).slice(0, 3) ?? [];
+  const groundedFacts = [project.summary, project.outcome].filter((value): value is string =>
+    Boolean(value?.trim())
+  );
+
+  return {
+    text: `Let's finish with a coding task grounded in ${project.name}${relevantCodingTask?.title ? `: ${relevantCodingTask.title}` : "."}`,
+    evidenceAnchor: `${project.name}: ${project.summary}`.slice(0, 4_000),
+    kind: "code",
+    stage: "code",
+    technicalProjectsSection: "project-deep-dive",
+    projectAct: "coding",
+    answerFormat: "typed",
+    language,
+    codeTask: `${task}\n\nConnect the implementation to ${project.name}. State any project detail you need to assume rather than inventing it.`,
+    codeSnippet: relevantCodingTask?.starterCode?.trim() || starterCode(language),
+    competency: "Project-grounded implementation",
+    topicKey: `project:${project.sourceId}`,
+    skillKeys: [...project.skillKeys],
+    evaluationParameterKeys: [
+      "technical-reasoning",
+      "tradeoffs",
+      "practical-execution",
+      "project-ownership"
+    ],
+    intent: "Verify that the candidate can turn their project understanding into working code.",
+    mustHit:
+      expects.length > 0
+        ? expects
+        : [
+            "a coherent project-specific rule",
+            "input and failure handling",
+            "focused examples or tests"
+          ],
+    probeIfMissing:
+      "Which project constraint does this implementation protect, and how would you test it?",
+    maxFollowUps: 1,
+    pacingSection: "project-deep-dive",
+    requiredForPacing: true,
+    estimatedDurationMs: 7 * 60_000,
+    technicalProjectInterviewerGuide: {
+      sourceKind: project.sourceKind,
+      sourceId: project.sourceId,
+      groundedFacts,
+      allowedSkillKeys: [...project.skillKeys],
+      strongSignals:
+        expects.length > 0
+          ? expects
+          : ["project-specific assumption", "correct boundary handling", "verification examples"],
+      contradictionChecks: [
+        "Do not treat an assumption in the coding task as a historical project fact.",
+        "Challenge only behavior that contradicts the submitted code or the candidate's stated assumption."
+      ],
+      rubric: (expects.length > 0
+        ? expects
+        : ["project-specific assumption", "correct boundary handling", "verification examples"]
+      ).map((criterion, index) => ({ criterion, points: index === 0 ? 4 : 3 }))
+    }
+  };
+}
+
+function codingTaskForProject(
+  project: GroundedProjectInterviewSource,
+  codingTask: ResumeCodingTask | null | undefined
+): ResumeCodingTask | null {
+  if (!codingTask?.brief.trim()) return null;
+  const projectSkills = new Set(project.skillKeys.map(normalizeKey));
+  return projectSkills.has(normalizeKey(codingTask.skill)) ? codingTask : null;
+}
+
+function projectLanguage(skillKeys: readonly string[]): string {
+  const skills = skillKeys.map(normalizeKey);
+  if (skills.some((skill) => skill === "python" || skill === "pytorch" || skill === "django"))
+    return "python";
+  if (skills.some((skill) => skill === "java" || skill === "spring")) return "java";
+  if (skills.some((skill) => skill === "cpp" || skill === "c-plus-plus")) return "cpp";
+  if (skills.some((skill) => skill === "javascript" || skill === "nodejs" || skill === "node-js"))
+    return "javascript";
+  return "typescript";
+}
+
+function fallbackProjectCodeTask(project: GroundedProjectInterviewSource): string {
+  return `Implement one small, self-contained rule or data transformation that belongs at an important boundary in ${project.name}. Define clear inputs and outputs, handle invalid input and a duplicate or retry case, and add two focused examples or tests. The saved project context is: ${project.summary}`;
+}
+
+function starterCode(language: string): string {
+  if (language === "python") {
+    return `def apply_project_rule(value):\n    # State the project-specific assumption, then implement the rule.\n    raise NotImplementedError\n\n# Add two focused examples or tests.`;
+  }
+  if (language === "java") {
+    return `class Solution {\n    static Object applyProjectRule(Object value) {\n        // State the project-specific assumption, then implement the rule.\n        throw new UnsupportedOperationException("Not implemented");\n    }\n\n    public static void main(String[] args) {\n        // Add two focused examples or tests.\n    }\n}`;
+  }
+  if (language === "cpp") {
+    return `#include <iostream>\n#include <stdexcept>\n\nint applyProjectRule(int value) {\n    // State the project-specific assumption, then implement the rule.\n    throw std::runtime_error("Not implemented");\n}\n\nint main() {\n    // Add two focused examples or tests.\n}`;
+  }
+  const declaration = language === "typescript" ? "export function" : "function";
+  return `${declaration} applyProjectRule(value${language === "typescript" ? ": unknown" : ""})${language === "typescript" ? ": unknown" : ""} {\n  // State the project-specific assumption, then implement the rule.\n  throw new Error("Not implemented");\n}\n\n// Add two focused examples or tests.`;
 }
 
 function toPlannedMcq(question: ReviewedTechnicalMcq, index: number): PlannedQuestion {

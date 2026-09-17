@@ -15,6 +15,7 @@ import {
   HIRING_MANAGER_STAGES,
   RESUME_STAGES,
   type InterviewGrade,
+  type InterviewStageDef,
   type StageCounts
 } from "./interview-question-panel";
 
@@ -63,7 +64,9 @@ export function ResumeLiveWorkspace({
   onRun,
   onRequestMic,
   candidateCameraStream,
-  onDisableCamera
+  onDisableCamera,
+  stageDefinitions,
+  evidenceAnchorLabel
 }: {
   resume: CandidateResume | null;
   question: InterviewQuestion | null;
@@ -100,10 +103,18 @@ export function ResumeLiveWorkspace({
   onRequestMic: () => void;
   candidateCameraStream: MediaStream | null;
   onDisableCamera: () => void;
+  stageDefinitions?: InterviewStageDef[];
+  evidenceAnchorLabel?: string | null;
 }) {
   const codingStage = question?.stage === "code";
   const isHiringManagerRound = setup?.roundType === "hiring-manager";
-  const stages = isHiringManagerRound ? HIRING_MANAGER_STAGES : RESUME_STAGES;
+  const stages = stageDefinitions ?? (isHiringManagerRound ? HIRING_MANAGER_STAGES : RESUME_STAGES);
+  const anchorLabel =
+    evidenceAnchorLabel === undefined
+      ? isHiringManagerRound
+        ? null
+        : "From your resume"
+      : evidenceAnchorLabel;
 
   return (
     <div
@@ -170,7 +181,7 @@ export function ResumeLiveWorkspace({
         questionIndex={questionIndex}
         questionCount={questionCount}
         stages={stages}
-        anchorLabel={isHiringManagerRound ? null : "From your resume"}
+        anchorLabel={anchorLabel}
         counts={counts}
         grade={grade}
         liveTranscript={liveUserText}

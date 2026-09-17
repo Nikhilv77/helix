@@ -58,7 +58,12 @@ import { BlockAssessmentReviewWorkspace } from "./components/block-assessment-re
 import { DsaDesignConversationWorkspace } from "./components/dsa-design-conversation-workspace";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 import type { AgentState, DsaLanguage, DsaRunResult, VoiceStatus } from "./types";
-import { describeVoiceState, formatClock, formatTypedAnswer } from "./utils/voice-interview";
+import {
+  codeRunAcknowledgement,
+  describeVoiceState,
+  formatClock,
+  formatTypedAnswer
+} from "./utils/voice-interview";
 import { SessionLoadingScreen, SessionStateScreen, VoiceShell } from "./components/session-state";
 import { MicrophonePicker } from "./components/microphone-picker";
 import { TypedAnswerPanel } from "./components/typed-answer-panel";
@@ -70,7 +75,11 @@ import { useInterviewClock } from "./hooks/use-interview-clock";
 import { GeminiLiveInterviewer, type GeminiLiveInterviewerHandle } from "./gemini-live-interviewer";
 import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
 import { interviewerPersonaIdForSetup } from "@/features/interviews/domain/interviewer-persona";
-import { isDsaDesignRound } from "@/features/interviews/domain/dsa-design-round";
+import {
+  isDsaDesignRound,
+  isDsaInterviewRound,
+  isSystemDesignRound
+} from "@/features/interviews/domain/dsa-design-round";
 import { isTechnicalProjectsRound } from "@/features/interviews/domain/technical-deep-dive";
 import { TechnicalProjectsLiveWorkspace } from "./components/technical-projects-live-workspace";
 import { notifyWorkspaceNotificationsChanged } from "@/features/notifications/ui/notification-ui-events";
@@ -724,9 +733,14 @@ export function VoiceInterviewClient({
     const userTurns = turns.filter((turn) => turn.speaker === "user").length;
     if (userTurns <= typedUserTurnsRef.current) return;
 
-    setTypedSending(false);
+    if (isSystemDesignRound(setup)) {
+      setTypedDraft("");
+      setTypedNotes("");
+      setTypedStartedAt(Date.now());
+      return;
+    }
     if (
-      isDsaDesignRound(setup) ||
+      isDsaInterviewRound(setup) ||
       isTechnicalProjectsRound(setup) ||
       setup?.dsaBlockAssessment?.kind === "dsa-block-assessment" ||
       storyPracticeAssessment !== null
@@ -769,7 +783,14 @@ export function VoiceInterviewClient({
     setTypedStartedAt(Date.now());
     // Keyed on the question index so a follow-up on the same question keeps
     // whatever the candidate has already written.
-  }, [progress.index, setup?.fundamentalsRound, setup?.resumeRound, setup?.technicalDeepDive]);
+  }, [
+    progress.index,
+    setup?.fundamentalsRound,
+    setup?.resumeRound,
+    setup?.technicalDeepDive?.kind,
+    setup?.templateId,
+    setup?.templateTitle
+  ]);
 
   useEffect(() => {
     if (
@@ -928,6 +949,7 @@ export function VoiceInterviewClient({
 
     try {
       await geminiInterviewerRef.current?.submitTypedAnswer({ text: answer, startMs, endMs });
+      setTypedSending(false);
     } catch (caught) {
       setTypedSending(false);
       setTypedError(
@@ -954,6 +976,7 @@ export function VoiceInterviewClient({
 
     try {
       await geminiInterviewerRef.current?.submitTypedAnswer({ text: option, startMs, endMs });
+      setTypedSending(false);
     } catch (caught) {
       setSelectedOption(null);
       setTypedSending(false);
@@ -981,6 +1004,7 @@ export function VoiceInterviewClient({
 
     try {
       await geminiInterviewerRef.current?.submitTypedAnswer({ text: answer, startMs, endMs });
+      setTypedSending(false);
     } catch (caught) {
       setTypedSending(false);
       setTypedError(caught instanceof Error ? caught.message : "The solution could not be sent.");
@@ -1010,6 +1034,7 @@ export function VoiceInterviewClient({
         endMs: Math.max(0, now - startedAt)
       });
       await poll();
+      setTypedSending(false);
     } catch (caught) {
       dsaSkipPendingRef.current = false;
       setTypedSending(false);
@@ -1049,6 +1074,7 @@ export function VoiceInterviewClient({
         throw new Error(payload.error?.message || "The code runner could not run this.");
       }
       setDsaRunResult(payload.data);
+      geminiInterviewerRef.current?.speakWorkspaceUpdate(codeRunAcknowledgement(payload.data));
     } catch (caught) {
       setTypedError(caught instanceof Error ? caught.message : "Code execution failed.");
     } finally {
@@ -1087,6 +1113,7 @@ export function VoiceInterviewClient({
         throw new Error(payload.error?.message || "Judge0 could not run this code.");
       }
       setDsaRunResult(payload.data);
+      geminiInterviewerRef.current?.speakWorkspaceUpdate(codeRunAcknowledgement(payload.data));
     } catch (caught) {
       setTypedError(caught instanceof Error ? caught.message : "Code execution failed.");
     } finally {
@@ -1209,7 +1236,8 @@ export function VoiceInterviewClient({
   const selectedInputLabel =
     audioInputs.find((device) => device.deviceId === selectedInputId)?.label ||
     "Selected microphone";
-  const isDsaInterview = isDsaDesignRound(setup);
+  const isDsaInterview = isDsaInterviewRound(setup);
+  const isSystemDesignInterview = isSystemDesignRound(setup);
   const isBlockAssessment = setup?.dsaBlockAssessment?.kind === "dsa-block-assessment";
   const isStoryPracticeAssessment = storyPracticeAssessment !== null;
   const isAnyBlockAssessment = isBlockAssessment || isStoryPracticeAssessment;
@@ -1220,6 +1248,7 @@ export function VoiceInterviewClient({
     isResumeRound ||
     isFundamentalsRound ||
     isDsaInterview ||
+    isSystemDesignInterview ||
     isTechnicalProjectsInterview ||
     isAnyBlockAssessment;
 
@@ -1262,7 +1291,7 @@ export function VoiceInterviewClient({
     currentQuestion?.kind === "code" &&
     Boolean(activeDsaQuestion);
   const isActiveDsaDesignQuestion =
-    isDsaInterview && currentQuestion?.interviewSection === "design";
+    isSystemDesignInterview && currentQuestion?.interviewSection === "design";
   const evaluationProfile = setup ? evaluationProfileForSetup(setup) : null;
 
   if (sessionUnavailable) {
@@ -1595,11 +1624,18 @@ export function VoiceInterviewClient({
           sending={typedSending}
           error={typedError}
           draft={typedDraft}
+          notes={typedNotes}
           selectedOption={selectedOption}
+          language={resumeEditorLanguage(currentQuestion?.language ?? null)}
+          syntaxLanguage={resumeSyntaxLanguage(currentQuestion?.language ?? null)}
+          running={dsaRunning}
+          runResult={dsaRunResult}
           interviewerName={persona.name}
           onDraftChange={setTypedDraft}
+          onNotesChange={setTypedNotes}
           onSelectOption={(option) => void submitOptionAnswer(option)}
           onSubmit={() => void submitTypedAnswer()}
+          onRun={() => void runResumeCode()}
           onRequestMic={requestMicrophone}
           candidateCameraStream={candidateCameraStream}
           onDisableCamera={disableCandidateCamera}
@@ -1638,6 +1674,7 @@ export function VoiceInterviewClient({
         />
       ) : isActiveDsaDesignQuestion ? (
         <DsaDesignConversationWorkspace
+          canvasStorageKey={sessionId}
           question={currentQuestion}
           questionIndex={progress.index}
           questionCount={progress.count}

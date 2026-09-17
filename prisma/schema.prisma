@@ -388,9 +388,23 @@ model InterviewSession {
   createdAt      DateTime                 @default(now())
   answerRequests InterviewAnswerRequest[]
   evaluationJobs InterviewEvaluationJob[]
+  designCanvas   InterviewDesignCanvas?
 
   @@index([ownerId, startedAt])
   @@index([touchedAt])
+}
+
+/// Independently versioned diagram state. Canvas autosaves never contend with
+/// the interview turn version used by voice and answer persistence.
+model InterviewDesignCanvas {
+  sessionId  String           @id @db.Uuid
+  document   Json
+  revision   Int              @default(1)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  session    InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([updatedAt])
 }
 
 /// Durable, content-addressed recovery for live evaluations that missed the

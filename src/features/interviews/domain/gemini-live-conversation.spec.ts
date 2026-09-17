@@ -13,6 +13,13 @@ describe("Gemini-led interview policy", () => {
       usesGeminiLedConversation({
         roundType: "technical",
         resumeRound: false,
+        templateId: "system-design"
+      })
+    ).toBe(true);
+    expect(
+      usesGeminiLedConversation({
+        roundType: "technical",
+        resumeRound: false,
         templateId: "technical-deep-dive",
         technicalDeepDive: {
           kind: "technical-deep-dive",

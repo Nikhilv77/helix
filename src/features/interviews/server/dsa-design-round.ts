@@ -23,35 +23,52 @@ export function rankDsaDesignScenarioWithFallback<TFocus, TSelection>(
   }
 }
 
-/**
- * Creates the server-owned, frozen five-question plan for the permanent DSA
- * & Design round. The start route owns question/scenario selection; this pure
- * mapper only preserves that selection and keeps private design evidence in
- * interviewer guides.
- */
+/** New coding-only rounds use the same authored problem and interviewer evidence. */
+export function buildDsaInterviewPlan(input: {
+  dsaQuestions: readonly [DsaQuestion, DsaQuestion];
+}): PlannedQuestion[] {
+  return [dsaQuestion(input.dsaQuestions[0], 1), dsaQuestion(input.dsaQuestions[1], 2)];
+}
+
+/** New design-only rounds keep all reference material in private interviewer guides. */
+export function buildSystemDesignPlan(input: {
+  designArtifact: ArchitectureDesignReviewArtifact;
+}): PlannedQuestion[] {
+  return designQuestions(input.designArtifact);
+}
+
+/** Retained so already-created combined rounds remain reproducible and resumable. */
 export function buildDsaDesignPlan(input: {
   dsaQuestions: readonly [DsaQuestion, DsaQuestion];
   designArtifact: ArchitectureDesignReviewArtifact;
 }): PlannedQuestion[] {
-  if (input.designArtifact.humanReview.status !== "approved") {
-    throw new Error("DSA & Design rounds require a human-approved design artifact");
+  return [
+    ...buildDsaInterviewPlan({ dsaQuestions: input.dsaQuestions }),
+    ...buildSystemDesignPlan({ designArtifact: input.designArtifact })
+  ];
+}
+
+function designQuestions(designArtifact: ArchitectureDesignReviewArtifact): PlannedQuestion[] {
+  if (designArtifact.humanReview.status !== "approved") {
+    throw new Error("System Design rounds require a human-approved design artifact");
   }
 
-  const sourceQuestions = [...input.designArtifact.questionBlock.questions].sort(
+  const sourceQuestions = [...designArtifact.questionBlock.questions].sort(
     (left, right) => left.order - right.order
   );
   const [requirements, contracts, architecture, operations] = sourceQuestions;
   if (!requirements || !contracts || !architecture || !operations) {
-    throw new Error("DSA & Design rounds require four reviewed design source questions");
+    throw new Error("System Design rounds require four reviewed design source questions");
   }
 
+  const scenarioPrompt = `${designArtifact.scenario.premise} Begin by asking me whatever you need to clarify before choosing components.`;
+  const pressureTests = designArtifact.scenario.realismAnchors.slice(-2);
+
   return [
-    dsaQuestion(input.dsaQuestions[0], 1),
-    dsaQuestion(input.dsaQuestions[1], 2),
     designQuestion({
       section: "frame",
-      scenarioTitle: input.designArtifact.scenario.title,
-      text: `Let’s frame ${input.designArtifact.scenario.title}. State the users, scope, non-goals, and scale assumptions that shape your design.`,
+      scenarioTitle: designArtifact.scenario.title,
+      text: scenarioPrompt,
       sources: [requirements],
       competency: "Requirements and scale",
       mustHit: [
@@ -61,13 +78,13 @@ export function buildDsaDesignPlan(input: {
       ],
       probeIfMissing:
         "Which quantified constraint changes your design most, and what guarantee follows from it?",
-      stage: "rapid",
+      stage: "design-frame",
       requiredForPacing: true
     }),
     designQuestion({
       section: "design",
-      scenarioTitle: input.designArtifact.scenario.title,
-      text: "Now define the critical contracts, data and request flow, then defend the architecture, partitioning, and main trade-off.",
+      scenarioTitle: designArtifact.scenario.title,
+      text: "Using the requirements you established, build the architecture on the canvas. Talk through the main components, data flow, storage choices, asynchronous boundaries, and the most important trade-off.",
       sources: [contracts, architecture],
       competency: "Architecture and trade-offs",
       mustHit: [
@@ -77,13 +94,45 @@ export function buildDsaDesignPlan(input: {
       ],
       probeIfMissing:
         "Trace one request through the system and name the failure boundary your trade-off creates.",
-      stage: "explain",
+      stage: "design-canvas",
+      requiredForPacing: true
+    }),
+    designQuestion({
+      section: "deep-dive",
+      scenarioTitle: designArtifact.scenario.title,
+      text: "Claire will select one component from your architecture. Trace that component’s contracts, state transitions, consistency boundary, idempotency, and recovery behavior end to end.",
+      sources: [contracts, architecture],
+      competency: "Technical depth",
+      mustHit: [
+        "component-specific contract and state",
+        "consistency and idempotency boundary",
+        "failure recovery grounded in the proposed design"
+      ],
+      probeIfMissing:
+        "What durable identity or state transition prevents duplicate work at that boundary?",
+      stage: "design-deep-dive",
+      requiredForPacing: true
+    }),
+    designQuestion({
+      section: "pressure",
+      scenarioTitle: designArtifact.scenario.title,
+      text: `Pressure test: ${pressureTests.join(" ")} Adapt your architecture and explain what changes, what degrades, and how the system recovers.`,
+      sources: [architecture, operations],
+      competency: "Scale and failure response",
+      mustHit: [
+        "identifies the first bottleneck or unsafe boundary",
+        "adapts capacity and failure isolation",
+        "preserves correctness while degrading gracefully"
+      ],
+      probeIfMissing:
+        "Which part fails first under this change, and what mechanism contains the blast radius?",
+      stage: "design-pressure",
       requiredForPacing: true
     }),
     designQuestion({
       section: "defend",
-      scenarioTitle: input.designArtifact.scenario.title,
-      text: "Pressure-test the design: explain failure recovery, operational signals, security boundaries, and how you would evolve it safely.",
+      scenarioTitle: designArtifact.scenario.title,
+      text: "Finish by summarizing the design you would ship: its main trade-offs, operational signals, security boundaries, remaining risks, and the first improvement you would make with more time.",
       sources: [operations],
       competency: "Reliability and evolution",
       mustHit: [
@@ -93,7 +142,7 @@ export function buildDsaDesignPlan(input: {
       ],
       probeIfMissing:
         "How would you roll this out reversibly, and which threshold triggers rollback?",
-      stage: "scenario",
+      stage: "design-defend",
       requiredForPacing: true
     })
   ];
@@ -124,7 +173,7 @@ function dsaQuestion(question: DsaQuestion, position: 1 | 2): PlannedQuestion {
       "important edge cases"
     ],
     probeIfMissing: question.followUpPrompts[0] ?? "What edge case would break a naive approach?",
-    maxFollowUps: 1,
+    maxFollowUps: 2,
     requiredForPacing: position === 1,
     estimatedDurationMs: position === 1 ? 8 * 60_000 : 7 * 60_000,
     dsaInterviewerGuide: {
@@ -138,19 +187,20 @@ function dsaQuestion(question: DsaQuestion, position: 1 | 2): PlannedQuestion {
 }
 
 function designQuestion(input: {
-  section: "frame" | "design" | "defend";
+  section: "frame" | "design" | "deep-dive" | "pressure" | "defend";
   scenarioTitle: string;
   text: string;
   sources: readonly ArchitectureDesignQuestion[];
   competency: string;
   mustHit: string[];
   probeIfMissing: string;
-  stage: "rapid" | "explain" | "scenario";
+  stage:
+    "design-frame" | "design-canvas" | "design-deep-dive" | "design-pressure" | "design-defend";
   requiredForPacing: boolean;
 }): PlannedQuestion {
   return {
     text: input.text,
-    evidenceAnchor: publicEvidenceAnchor(input.scenarioTitle, input.sources),
+    evidenceAnchor: input.scenarioTitle,
     kind: "conversation",
     interviewSection: "design",
     stage: input.stage,
@@ -162,9 +212,16 @@ function designQuestion(input: {
     intent: `Assess ${input.competency.toLowerCase()} against the frozen reviewed design scenario.`,
     mustHit: input.mustHit,
     probeIfMissing: input.probeIfMissing,
-    maxFollowUps: 1,
+    maxFollowUps: input.section === "frame" || input.section === "design" ? 2 : 1,
     requiredForPacing: input.requiredForPacing,
-    estimatedDurationMs: input.section === "frame" ? 5 * 60_000 : 6 * 60_000,
+    estimatedDurationMs:
+      input.section === "frame"
+        ? 4 * 60_000
+        : input.section === "design"
+          ? 7 * 60_000
+          : input.section === "defend"
+            ? 3 * 60_000
+            : 4 * 60_000,
     storyPracticeInterviewerGuide: {
       practice: "architecture-design",
       label: "Architecture & Design",
@@ -176,18 +233,6 @@ function designQuestion(input: {
       )
     }
   };
-}
-
-function publicEvidenceAnchor(
-  scenarioTitle: string,
-  sources: readonly ArchitectureDesignQuestion[]
-): string {
-  return [
-    `Scenario: ${scenarioTitle}`,
-    ...sources.map((source) => `${source.artifact.title}: ${source.artifact.content}`)
-  ]
-    .join("\n\n")
-    .slice(0, 4_000);
 }
 
 function patternLabel(pattern: string): string {

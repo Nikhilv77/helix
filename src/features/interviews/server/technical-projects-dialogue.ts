@@ -9,7 +9,7 @@ export function technicalProjectsMoveOnUtterance(
   if (state.phase === "done" || state.phase === "wrap") {
     return join(
       acknowledgement,
-      "That completes the technical and project round. Thank you for walking me through the details. Your report will separate the technical calibration from the evidence you demonstrated in the project discussion."
+      "That completes the technical and project round. Thank you for walking me through the details. Your report will separate the technical calibration, project discussion, and coding evidence."
     );
   }
 
@@ -33,8 +33,8 @@ export function technicalProjectsMoveOnUtterance(
     bridge = "Let's trace the technical path in detail.";
   } else if (previous?.projectAct === "mechanism" && next.projectAct === "failure") {
     bridge = "Now let's pressure-test that path.";
-  } else if (previous?.projectAct === "failure" && next.projectAct === "tradeoffs") {
-    bridge = "Let's close by examining the decision and how it evolved.";
+  } else if (previous?.projectAct === "failure" && next.projectAct === "coding") {
+    bridge = "Let's finish by turning that project understanding into code.";
   }
   return join(acknowledgement, bridge, next.text);
 }

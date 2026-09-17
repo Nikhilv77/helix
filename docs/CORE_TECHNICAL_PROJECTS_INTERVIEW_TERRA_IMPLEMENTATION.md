@@ -31,10 +31,11 @@ Do not make new product decisions while implementing.
    that Claire will conduct the interview.
 7. The standard round contains exactly seven planned questions:
    - three rapid, scenario-based Core Technical MCQs;
-   - four connected project deep-dive prompts about one grounded project.
+   - three connected spoken prompts about one grounded project;
+   - one coding task grounded in that same project.
 8. The hard cap is 40 minutes. It is a maximum, not a target.
 9. The technical calibration comes first. The project deep dive follows as one
-   continuous investigation rather than four unrelated questions.
+   continuous investigation that ends in implementation.
 10. MCQs test mechanisms and engineering consequences, not definitions,
     syntax trivia, framework release trivia, or trick wording.
 11. MCQ answers are graded deterministically on the server. Claire does not
@@ -182,7 +183,7 @@ The permanent card must say:
 - Covers:
   - `Three scenario-based technical checks`
   - `One project traced from design to production`
-  - `Ownership, trade-offs, failures, testing, and impact`
+  - `Project-grounded practical coding`
 - Duration: `40 min`
 
 The card must start a new seven-question round or resume any unfinished session
@@ -212,8 +213,8 @@ The launch page uses `InterviewLaunchStage`. The selected teacher says:
 
 > Hey {firstName}. Claire will lead your Core Technical and Projects interview.
 > She'll begin with three short technical decisions, then go deeply into one
-> project—what you built, how it worked, what failed, and the trade-offs you
-> owned. Answer as you would in a real engineering interview.
+> project—what you built, how it worked, and what failed—then finish with one
+> coding task grounded in that project. Answer as you would in a real engineering interview.
 
 Requirements:
 
@@ -253,9 +254,9 @@ assistant, or a language model.
 The server owns the first utterance and it is spoken once:
 
 > Hi, I'm Claire. Welcome to your Core Technical and Projects interview. We'll
-> start with three short technical decisions, then spend most of the round on
-> one project from your experience. I may ask you to trace mechanisms, defend
-> trade-offs, and pressure-test what happened in production. Let's begin.
+> start with three short technical decisions, then examine one project from
+> your experience and finish with a coding task grounded in that project. I may
+> ask you to trace mechanisms and pressure-test what happened in production. Let's begin.
 > {first MCQ}
 
 Gemini must not prepend a second greeting, add a new question, or reveal the
@@ -468,7 +469,7 @@ Extend `PlannedQuestion` additively:
 
 ```ts
 technicalProjectsSection?: "technical-calibration" | "project-deep-dive";
-projectAct?: "context" | "mechanism" | "failure" | "tradeoffs";
+projectAct?: "context" | "mechanism" | "failure" | "tradeoffs" | "coding";
 technicalProjectInterviewerGuide?: {
   sourceKind: "project" | "work-experience" | "scenario";
   sourceId: string;
@@ -505,6 +506,7 @@ export function buildTechnicalProjectsPlan(input: {
   appliedBlueprint: SessionBlueprint;
   mcqs: readonly ReviewedTechnicalMcq[];
   project: GroundedProjectInterviewSource;
+  codingTask?: ResumeCodingTask | null;
   difficulty: BlueprintDifficulty;
 }): PlannedQuestion[];
 ```
@@ -518,7 +520,7 @@ index 2: Core Technical MCQ 3
 index 3: project Context & ownership
 index 4: project Mechanism & trace
 index 5: project Failure & verification
-index 6: project Trade-offs & evolution
+index 6: project-grounded coding task
 ```
 
 Do not call the general interview planner to generate this plan.
@@ -608,12 +610,12 @@ Freeze:
 Use deterministic prompt templates with role-aware nouns. The prompt may insert
 the safe project name and grounded role, but never invent architecture.
 
-All four project questions use:
+The three spoken project questions use:
 
 - `kind: "conversation"`;
 - `answerFormat: "spoken"`;
 - `stage: "project"` for context/mechanism and `stage: "scenario"` for
-  failure/trade-offs;
+  failure;
 - `technicalProjectsSection: "project-deep-dive"`;
 - one `projectAct` value;
 - the same project source ID;
@@ -908,7 +910,8 @@ Candidate-facing stages:
   { id: "rapid", label: "Technical", caption: "Three mechanism checks" },
   { id: "project", label: "Project", caption: "Context and ownership" },
   { id: "explain", label: "Trace", caption: "Mechanism and data flow" },
-  { id: "scenario", label: "Pressure-test", caption: "Failure and trade-offs" }
+  { id: "scenario", label: "Pressure-test", caption: "Failure and verification" },
+  { id: "code", label: "Code", caption: "Implement a project rule" }
 ];
 ```
 
@@ -1308,13 +1311,13 @@ Compatibility rules:
 
 ### Identity and planning
 
-- Legacy and v2 Technical Deep Dive resolve Claire/Kore.
+- Legacy, v2, and v3 Technical Deep Dive resolve Claire/Kore.
 - Resume/Hiring Manager remain James/Charon.
 - DSA remains Claire/Kore.
-- V2 plan has exactly seven questions.
+- V3 plan has exactly seven questions.
 - First three are MCQs with valid private answers.
 - Final four share one project source ID.
-- Project acts are Context, Mechanism, Failure, Trade-offs.
+- Project acts are Context, Mechanism, Failure, Coding.
 - Question parameter mappings match section 6.4.
 - Optional/required pacing flags are correct.
 - No public field invents project architecture or outcomes.
@@ -1410,7 +1413,7 @@ Compatibility rules:
 9. Trace the technical path; confirm a specific mechanism probe, not a generic
    “tell me more.”
 10. Discuss a failure; confirm Claire asks for evidence or verification.
-11. Defend trade-offs and evolution.
+11. Complete and submit the project-grounded coding task.
 12. Confirm Claire closes once.
 13. Confirm selected teacher says Claire reported back.
 14. Open `/reports`; verify MCQ explanations, project evidence, six parameters,
@@ -1525,12 +1528,12 @@ The feature is complete only when every statement is true:
 - The selected teacher audibly hands the candidate to Claire.
 - Claire/Kore is consistent in the live room, reconnect, completion, and
   debrief copy.
-- The frozen round contains three reviewed technical MCQs and four connected
-  prompts about one grounded project/work source.
+- The frozen round contains three reviewed technical MCQs, three connected
+  spoken prompts, and one coding task about one grounded project/work source.
 - MCQs test mechanisms, are graded deterministically, and reveal no live
   correctness feedback.
-- Project questions adapt to role and deeply test context, personal ownership,
-  mechanism, failure evidence, testing, trade-offs, rollout, and result.
+- Project questions adapt to role and test context, personal ownership,
+  mechanism, failure evidence, testing, and practical implementation.
 - Gemini provides natural turn-taking but cannot grade, invent, reorder,
   persist, skip, or end independently.
 - Decline skips; end closes; clarification/help/thinking time stay bounded and

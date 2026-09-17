@@ -80,11 +80,21 @@ import {
   LIVE_EVALUATION_DEADLINE_MS
 } from "../domain/voice-turn-timing";
 import { usesGeminiLedConversation } from "../domain/gemini-live-conversation";
-import { isCombinedDsaDesignRound, isDsaDesignRound } from "../domain/dsa-design-round";
+import {
+  isDsaDesignRound,
+  isDsaInterviewRound,
+  isSystemDesignRound
+} from "../domain/dsa-design-round";
 import { interviewerNameForSetup } from "../domain/interviewer-persona";
 import { isTechnicalProjectsRound } from "../domain/technical-deep-dive";
 import { technicalProjectsMoveOnUtterance } from "./technical-projects-dialogue";
 import { SESSION_TTL_MS } from "./session-constants";
+import {
+  EMPTY_SYSTEM_DESIGN_CANVAS,
+  systemDesignCanvasDocumentSchema,
+  type SystemDesignCanvasDocument,
+  type VersionedSystemDesignCanvas
+} from "../domain/system-design-canvas";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** A spoken conversation should never wait on the model's full provider timeout. */
@@ -280,7 +290,12 @@ export class InterviewService {
       });
     }
 
-    return createInterviewReport(session, now);
+    const report = createInterviewReport(session, now);
+    if (!isSystemDesignRound(session.state.setup)) return report;
+    return {
+      ...report,
+      designCanvas: await this.getSystemDesignCanvas(ownerId, sessionId)
+    };
   }
 
   /** Unowned lookup reserved for a route that already verified an agent capability. */
@@ -311,6 +326,53 @@ export class InterviewService {
 
   async getOwnedActive(ownerId: string, sessionId: string): Promise<InterviewState> {
     return this.get(sessionId, ownerId);
+  }
+
+  async getSystemDesignCanvas(
+    ownerId: string,
+    sessionId: string
+  ): Promise<VersionedSystemDesignCanvas> {
+    const session = await this.store.getOwned(sessionId, ownerId);
+    if (!session) {
+      throw new NotFoundErrorException("SESSION_NOT_FOUND", "Interview session not found", {
+        sessionId
+      });
+    }
+    if (!isSystemDesignRound(session.state.setup)) {
+      throw new BadRequestErrorException(
+        "DESIGN_CANVAS_NOT_AVAILABLE",
+        "This interview does not use a system-design canvas.",
+        { sessionId }
+      );
+    }
+    const stored = await this.store.getDesignCanvas(sessionId, ownerId);
+    if (stored) {
+      const parsed = systemDesignCanvasDocumentSchema.safeParse(stored.document);
+      return {
+        ...stored,
+        document: parsed.success ? parsed.data : EMPTY_SYSTEM_DESIGN_CANVAS
+      };
+    }
+    return {
+      document: EMPTY_SYSTEM_DESIGN_CANVAS,
+      revision: 0,
+      updatedAt: session.touchedAt
+    };
+  }
+
+  async saveSystemDesignCanvas(
+    ownerId: string,
+    sessionId: string,
+    document: SystemDesignCanvasDocument,
+    expectedRevision: number
+  ): Promise<VersionedSystemDesignCanvas> {
+    await this.getSystemDesignCanvas(ownerId, sessionId);
+    return this.store.saveDesignCanvas(
+      sessionId,
+      ownerId,
+      systemDesignCanvasDocumentSchema.parse(document),
+      expectedRevision
+    );
   }
 
   /** Records execution separately from correctness so reports never equate compiling with passing. */
@@ -510,17 +572,24 @@ export class InterviewService {
       mode === "answer" &&
       !isResumableBlockAssessment(existing.setup) &&
       candidateNeedsInterviewBreak(answer.text);
+    const candidateRequestedQuestionSkip =
+      mode === "answer" &&
+      usesGeminiLedConversation(existing.setup) &&
+      candidateRequestsQuestionSkip(answer.text);
     const candidateEndedInterview =
       mode === "answer" &&
       !isResumableBlockAssessment(existing.setup) &&
       !candidateNeedsBreak &&
+      !candidateRequestedQuestionSkip &&
       (liveProposal?.candidateIntent === "end" || candidateRequestsInterviewEnd(answer.text));
     const candidateDeclinedQuestion =
       mode === "answer" &&
       usesGeminiLedConversation(existing.setup) &&
       !candidateNeedsBreak &&
       !candidateEndedInterview &&
-      (liveProposal?.candidateIntent === "decline" || candidateDeclinesQuestion(answer.text));
+      (candidateRequestedQuestionSkip ||
+        liveProposal?.candidateIntent === "decline" ||
+        candidateDeclinesQuestion(answer.text));
     const withAnswer = appendTurn(existing, {
       speaker: "user",
       text: answer.text,
@@ -561,14 +630,14 @@ export class InterviewService {
       return this.completeDeclinedQuestion(withAnswer, now, session.version, turnId);
     }
 
-    // In the combined round, spoken reasoning while a coding prompt is open
+    // In combined rounds, spoken reasoning while a coding prompt is open
     // is context—not a submitted solution. Keep the question active and let
     // the workspace Submit action provide the authoritative answer boundary.
     // Explicit end/decline intents have already returned above, so this guard
     // only holds an ordinary answer/reasoning proposal from the live model;
     // clarification requests are still answered in the conversation.
     const holdingCodeThinkAloud =
-      isCombinedDsaDesignRound(existing.setup) &&
+      (isDsaInterviewRound(existing.setup) || isTechnicalProjectsRound(existing.setup)) &&
       question.kind === "code" &&
       submissionSource === "voice" &&
       !existing.turns.some(
@@ -583,16 +652,27 @@ export class InterviewService {
       liveProposal?.candidateIntent !== "question-or-clarification" &&
       !(liveProposal?.action === "respond" && Boolean(liveProposal.candidateResponse?.trim()));
     if (holdingCodeThinkAloud) {
+      const utterance = codingPresenceAcknowledgement(withAnswer);
       const decision: Decision = {
         action: "respond",
         missing: "none",
         reason: "held spoken coding reasoning until the workspace submission",
-        utterance: "",
+        utterance,
         forcedBy: null
       };
-      const response = answerResponse(withAnswer, decision, now);
-      await this.persistAnswer(withAnswer, session.version, turnId, response);
-      return { state: withAnswer, decision, response };
+      const spokenAt = elapsedMs(withAnswer, now);
+      const withReply = appendTurn(withAnswer, {
+        speaker: "agent",
+        text: utterance,
+        startMs: spokenAt,
+        endMs: spokenAt,
+        action: "respond",
+        forcedBy: null,
+        questionIndex: withAnswer.questionIndex
+      });
+      const response = answerResponse(withReply, decision, now);
+      await this.persistAnswer(withReply, session.version, turnId, response);
+      return { state: withReply, decision, response };
     }
 
     const conversationHistory = withAnswer.turns
@@ -725,15 +805,18 @@ export class InterviewService {
                 }
               : result.state.questionEvaluations
           };
-    const acknowledgement = liveProposal
-      ? liveAcknowledgement(raw.acknowledgement, result.action, withAnswer.turns)
-      : naturalAcknowledgement(
-          raw.acknowledgement,
-          result.action,
-          withAnswer.turns,
-          result.state.followUpCount,
-          answer.text
-        );
+    const acknowledgement =
+      question.kind === "code" && submissionSource === "workspace"
+        ? codeSubmissionAcknowledgement(withAnswer)
+        : liveProposal
+          ? liveAcknowledgement(raw.acknowledgement, result.action, withAnswer.turns)
+          : naturalAcknowledgement(
+              raw.acknowledgement,
+              result.action,
+              withAnswer.turns,
+              result.state.followUpCount,
+              answer.text
+            );
     // The state machine can override a requested follow-up when its budget or
     // the round time is exhausted. Never carry the rejected model question
     // into a move-on response: doing so makes James ask that stale follow-up
@@ -1976,8 +2059,54 @@ function answerResponse(
   };
 }
 
+function codingPresenceAcknowledgement(state: InterviewState): string {
+  const priorAcknowledgements = state.turns.filter(
+    (turn) =>
+      turn.speaker === "agent" &&
+      turn.questionIndex === state.questionIndex &&
+      turn.action === "respond"
+  ).length;
+  const lines = [
+    "I'm with you. Keep working through the idea—the clock is running, and you can submit when you're ready.",
+    "Got it. Keep going, and use the run output to test the edge cases before you submit.",
+    "Okay. Talk me through the next step if it helps, then submit once the code reflects your approach."
+  ];
+  return lines[priorAcknowledgements % lines.length]!;
+}
+
+function codeSubmissionAcknowledgement(state: InterviewState): string {
+  const execution = state.codeExecutions?.[String(state.questionIndex)];
+  if (!execution) {
+    return "I can see your submitted code. There isn't a run result, so I'll review the implementation itself.";
+  }
+  if (execution.testCount > 0) {
+    return `I can see your submitted code and the latest output: ${execution.testsPassed} of ${execution.testCount} tests passed.`;
+  }
+  if (execution.accepted) {
+    return "I can see your submitted code and the latest output. It ran successfully.";
+  }
+  return "I can see your submitted code and the latest run output. Let's look at what it shows.";
+}
+
 function answerPayloadHash(answer: { text: string; startMs: number; endMs: number }): string {
   return createHash("sha256").update(answer.text).digest("hex");
+}
+
+/** A request to leave this question must never be interpreted as leaving the interview. */
+export function candidateRequestsQuestionSkip(value: string): boolean {
+  const normalized = value
+    .toLowerCase()
+    .replace(/[’]/g, "'")
+    .replace(/[^a-z0-9'\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!normalized || normalized.split(" ").length > 24) return false;
+
+  return (
+    /\b(?:move|go|skip|pass)(?: on)? to (?:the )?next (?:question|problem)\b/.test(normalized) ||
+    /\b(?:skip|pass) (?:this|the current) (?:question|problem)\b/.test(normalized) ||
+    /^(?:next|next question|next problem|move on)(?: please)?$/.test(normalized)
+  );
 }
 
 /**
@@ -2084,6 +2213,9 @@ export function candidateDeclinesQuestion(value: string): boolean {
     /^(?:i )?(?:cannot|can't) (?:think of anything|remember|recall)(?: right now)?$/.test(
       statement
     ) ||
+    /^(?:i )?(?:cannot|can't) (?:think of|figure out|come up with) (?:an? |the |any )?(?:solution|optimization|optimisation|better approach)(?: right now| further| anymore)?$/.test(
+      statement
+    ) ||
     /^(?:nothing|not much) (?:comes|is coming) to mind$/.test(statement) ||
     /^i(?:'m| am) not sure(?: about this| about that| of the answer)?$/.test(statement) ||
     /\bi (?:will not|won't) tell you\b/.test(statement)
@@ -2141,17 +2273,19 @@ function introUtterance(state: InterviewState): string {
             state,
             storyPracticeAssessmentDialogue(storyPracticeIdentity.practice)
           )
-        : isDsaDesignRound(state.setup)
-          ? state.setup.dsaDesignRound?.kind === "dsa-design-round"
-            ? `Hi, I'm ${interviewerName}. Welcome to your DSA and design interview. We'll start with two coding problems, then use one design scenario to discuss requirements, architecture, trade-offs, and reliability. Explain your approach when it helps, and take quiet time when you need to code. Let's begin with the first problem.`
-            : `Hi, I'm ${interviewerName}. Welcome to your DSA interview. I picked a few problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful.`
-          : isTechnicalProjectsRound(state.setup)
-            ? `Hi, I'm ${interviewerName}. Welcome to your Core Technical and Projects interview. We'll start with three short technical decisions, then spend most of the round on one project from your experience. I may ask you to trace mechanisms, defend trade-offs, and pressure-test what happened in production. Let's begin.`
-            : state.setup.fundamentalsRound
-              ? `Hi, I'm ${interviewerName}. This is a computer fundamentals round, in three parts. A few quick checks first, then I'll ask you to explain the mechanism behind some of them, and we'll finish by diagnosing something real. After each answer I'll show you what I was listening for.`
-              : isResumeRound(state.setup)
-                ? `Hi, I'm ${interviewerName}. Let's have a relaxed conversation about the work on your resume. I'll pick a few threads and ask about what actually happened, what you did, and what changed. Take your time.`
-                : `Hi, I'm ${interviewerName}, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
+        : isSystemDesignRound(state.setup) && !isDsaInterviewRound(state.setup)
+          ? `Hi, I'm ${interviewerName}. Welcome to your System Design interview. I’ll give you an intentionally open-ended prompt. Start by clarifying the requirements, then build and evolve the architecture on the canvas as we go deeper.`
+          : isDsaInterviewRound(state.setup)
+            ? state.setup.dsaDesignRound?.kind === "dsa-design-round"
+              ? `Hi, I'm ${interviewerName}. Welcome back to your legacy DSA and design interview. We'll start with coding, then continue into the frozen design scenario.`
+              : `Hi, I'm ${interviewerName}. Welcome to your DSA interview. I picked two problems you've already solved in practice, and we'll talk through them like a real coding round. Take your time, explain your thinking, and I'll jump in when a follow-up is useful.`
+            : isTechnicalProjectsRound(state.setup)
+              ? `Hi, I'm ${interviewerName}. Welcome to your Core Technical and Projects interview. We'll start with three short technical decisions, then spend most of the round on one project from your experience. I may ask you to trace mechanisms, defend trade-offs, and pressure-test what happened in production. Let's begin.`
+              : state.setup.fundamentalsRound
+                ? `Hi, I'm ${interviewerName}. This is a computer fundamentals round, in three parts. A few quick checks first, then I'll ask you to explain the mechanism behind some of them, and we'll finish by diagnosing something real. After each answer I'll show you what I was listening for.`
+                : isResumeRound(state.setup)
+                  ? `Hi, I'm ${interviewerName}. Let's have a relaxed conversation about the work on your resume. I'll pick a few threads and ask about what actually happened, what you did, and what changed. Take your time.`
+                  : `Hi, I'm ${interviewerName}, your Trailgrad interviewer. We'll spend about ${minutes} minutes on this ${state.setup.roundType.replace("-", " ")} conversation. I'll ask one question at a time, and you can pause to think.`;
 
   if (isResumableBlockAssessment(state.setup)) return intro;
   return first ? `${intro} ${candidateFacingQuestion(first, state.setup)}` : intro;

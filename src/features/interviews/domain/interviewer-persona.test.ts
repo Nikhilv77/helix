@@ -11,6 +11,7 @@ describe("interviewerPersonaIdForSetup", () => {
   it.each([
     { templateTitle: "DSA practice interview" },
     { templateTitle: "DSA & Design interview" },
+    { templateId: "system-design" },
     { dsaQuestionSlugs: ["two-sum"] },
     {
       dsaDesignRound: {

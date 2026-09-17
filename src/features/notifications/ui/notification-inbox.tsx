@@ -32,9 +32,27 @@ interface NotificationPresentation {
   icon: LucideIcon;
   teacher: boolean;
   personaId?: string;
+  personaRole?: string;
 }
 
-function notificationPresentation(kind: string, teacherName: string): NotificationPresentation {
+function interviewReportPersonaId(title: string): "claire" | "james" | undefined {
+  const normalizedTitle = title.trim().toLowerCase();
+
+  if (/^(?:dsa|system design|core technical|dsa & design)\b/.test(normalizedTitle)) {
+    return "claire";
+  }
+  if (/^(?:resume|hr)\b/.test(normalizedTitle)) {
+    return "james";
+  }
+
+  return undefined;
+}
+
+function notificationPresentation(
+  kind: string,
+  teacherName: string,
+  title: string
+): NotificationPresentation {
   switch (kind) {
     case "TEACHER_WELCOME":
       return {
@@ -101,7 +119,9 @@ function notificationPresentation(kind: string, teacherName: string): Notificati
       return {
         label: "Interview report",
         icon: FileCheck2,
-        teacher: false
+        teacher: false,
+        personaId: interviewReportPersonaId(title),
+        personaRole: "interviewer"
       };
     default:
       return {
@@ -131,7 +151,9 @@ function NotificationSource({
     return (
       <div
         aria-label={
-          presentation.teacher ? `${persona.name}, your teacher` : `${persona.name}, Resume Roast`
+          presentation.teacher
+            ? `${persona.name}, your teacher`
+            : `${persona.name}, ${presentation.personaRole ?? "Resume Roast"}`
         }
         className="relative h-11 w-11 shrink-0 overflow-hidden rounded-[0.9rem] bg-[#202126] ring-1 ring-inset ring-white/[0.09]"
       >
@@ -334,7 +356,11 @@ export function NotificationInbox({ onOpen }: { onOpen?: () => void } = {}) {
 
                       <div className="overflow-hidden rounded-xl bg-cream/[0.018] ring-1 ring-inset ring-white/[0.05]">
                         {items.map((item, index) => {
-                          const presentation = notificationPresentation(item.kind, teacher.name);
+                          const presentation = notificationPresentation(
+                            item.kind,
+                            teacher.name,
+                            item.title
+                          );
                           const content = (
                             <div className="relative flex min-w-0 items-start gap-3.5 px-4 py-4 sm:gap-4 sm:px-5 sm:py-[1.125rem]">
                               {!item.read ? (

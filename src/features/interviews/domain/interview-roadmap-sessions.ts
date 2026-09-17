@@ -39,7 +39,7 @@ export interface InterviewRoadmapSession {
  * Builds the candidate-facing interview path.
  *
  * Planning can use many internal blueprints, but the product always presents
- * the same four interview rounds. This keeps the candidate journey stable as
+ * the same five interview rounds. This keeps the candidate journey stable as
  * we add richer content inside each round.
  */
 export function interviewRoadmapSessions(input: {
@@ -56,11 +56,13 @@ export function roadmapSessionHref(session: InterviewRoadmapSession): string | n
     session.resumeSessionId &&
     (session.id === "resume-behavioral-defense" ||
       session.id === "dsa" ||
+      session.id === "system-design" ||
       session.id === "hiring-manager-final")
   ) {
     return `/interview/voice?session=${encodeURIComponent(session.resumeSessionId)}`;
   }
   if (session.id === "dsa") return "/interview/dsa";
+  if (session.id === "system-design") return "/interview/design";
   if (session.id === "resume-behavioral-defense") return "/interview/resume";
   if (session.id === TECHNICAL_DEEP_DIVE_ID) {
     const resumeSessionId = session.resumeSessionId;
@@ -74,7 +76,7 @@ export function roadmapSessionHref(session: InterviewRoadmapSession): string | n
     return "/interview/technical-projects";
   }
   // The old generic interview wizard is retired. New content gets a dedicated
-  // entry route before it is made available from the four-round roadmap.
+  // entry route before it is made available from the permanent roadmap.
   return null;
 }
 
@@ -86,6 +88,9 @@ function permanentInterviewRounds(
   const core = plan?.sessions.find((session) => session.kind === "core-technical");
   const applied = plan?.sessions.find((session) => session.kind === "applied-engineering");
   const dsa = plan?.sessions.find((session) => session.kind === "problem-solving");
+  const architecture = plan?.sessions.find(
+    (session) => session.kind === "architecture-system-design"
+  );
   const technical =
     core && applied && plan
       ? technicalDeepDiveRoadmapSession(plan.id, core, applied, history)
@@ -99,11 +104,20 @@ function permanentInterviewRounds(
   const problemSolving = dsa
     ? dsaRoadmapSession(dsa, history)
     : upcomingRound({
-        id: "dsa-design",
+        id: "dsa",
         order: 3,
-        title: "DSA & Design",
-        purpose: "Problem-solving and design questions calibrated to your experience level.",
-        covers: ["DSA problems", "Complexity and edge cases", "Design judgement"]
+        title: "DSA Interview",
+        purpose: "Solve coding problems and defend correctness, complexity, and edge cases.",
+        covers: ["Two DSA problems", "Correctness", "Complexity and edge cases"]
+      });
+  const systemDesign = architecture
+    ? systemDesignRoadmapSession(architecture, history)
+    : upcomingRound({
+        id: "system-design",
+        order: 4,
+        title: "System Design",
+        purpose: "Drive an architecture from ambiguous requirements through production trade-offs.",
+        covers: ["Requirements and scale", "Architecture canvas", "Failures and trade-offs"]
       });
 
   return [
@@ -113,23 +127,53 @@ function permanentInterviewRounds(
       ...problemSolving,
       id: "dsa",
       order: 3,
-      title: "DSA & Design",
-      purpose: "Solve coding problems and defend a system design calibrated to your experience.",
+      title: "DSA Interview",
+      purpose: "Solve coding problems and defend correctness, complexity, and edge cases.",
       covers: [
         "Two DSA coding problems",
-        "Correctness, complexity, and edge cases",
-        "Requirements, architecture, reliability, and trade-offs"
+        "Approach and correctness",
+        "Complexity, edge cases, and optimization"
       ],
-      durationMinutes: 40
+      durationMinutes: 35
     },
+    { ...systemDesign, id: "system-design", order: 4, title: "System Design" },
     upcomingRound({
       id: "hiring-manager-final",
-      order: 4,
+      order: 5,
       title: "Hiring Manager & Final Behavioural",
       purpose: "A final conversation round for communication, motivation, judgement, and fit.",
       covers: ["Career motivation", "Leadership and judgement", "Candidate questions"]
     })
   ];
+}
+
+function systemDesignRoadmapSession(
+  blueprint: SessionBlueprint,
+  history: InterviewHistoryItem[]
+): InterviewRoadmapSession {
+  const latest = findLatestSession(
+    history,
+    (session) => session.setup.templateId === "system-design"
+  );
+  const progress = sessionProgress(latest, latest?.questionCount ?? 5);
+
+  return {
+    id: "system-design",
+    planId: null,
+    kind: "architecture-system-design",
+    order: 4,
+    title: "System Design",
+    purpose:
+      "Clarify an ambiguous problem, draw the architecture, then adapt and defend it under production pressure.",
+    covers: [
+      "Requirement discovery and scale",
+      "Architecture canvas and deep dive",
+      "Pressure testing, reliability, and trade-offs"
+    ],
+    ...progress,
+    durationMinutes: 45,
+    difficulty: blueprint.difficulty
+  };
 }
 
 function upcomingRound({
@@ -231,7 +275,7 @@ function dsaRoadmapSession(
     (session) =>
       session.setup.templateId === "dsa" || session.setup.templateTitle === "DSA practice interview"
   );
-  const progress = sessionProgress(latest, latest?.questionCount ?? 3);
+  const progress = sessionProgress(latest, latest?.questionCount ?? 2);
   const titleSuffix = problemSolvingBlueprint.title.split("·").slice(1).join("·").trim();
 
   return {
@@ -243,12 +287,12 @@ function dsaRoadmapSession(
     purpose:
       "A focused coding interview on DSA problems you have practiced, including approach, correctness, complexity, and edge cases.",
     covers: [
-      "Three function-based DSA problems",
+      "Two function-based DSA problems",
       "Approach and time-space complexity",
       "Correctness, edge cases, and follow-ups"
     ],
     ...progress,
-    durationMinutes: 15,
+    durationMinutes: 35,
     difficulty: "adaptive"
   };
 }

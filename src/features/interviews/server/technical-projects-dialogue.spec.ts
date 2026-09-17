@@ -71,6 +71,28 @@ describe("technical projects dialogue", () => {
     );
 
     expect(pressureTest).toBe("Clear. Now let's pressure-test that path. What failed?");
+
+    const coding = technicalProjectsMoveOnUtterance(
+      {
+        phase: "questioning",
+        questionIndex: 1,
+        plan: [
+          question("What failed?", {
+            technicalProjectsSection: "project-deep-dive",
+            projectAct: "failure"
+          }),
+          question("Implement the project rule.", {
+            technicalProjectsSection: "project-deep-dive",
+            projectAct: "coding"
+          })
+        ]
+      },
+      "Understood."
+    );
+
+    expect(coding).toBe(
+      "Understood. Let's finish by turning that project understanding into code. Implement the project rule."
+    );
     expect(close).toContain("That completes the technical and project round.");
     expect(close).toContain("separate the technical calibration");
   });

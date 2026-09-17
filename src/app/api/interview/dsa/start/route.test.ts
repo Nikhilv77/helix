@@ -121,7 +121,7 @@ describe("POST /api/interview/dsa/start", () => {
     expect(mocks.start).not.toHaveBeenCalled();
   });
 
-  it("starts a private five-question backend DSA & Design round", async () => {
+  it("starts a private coding-only DSA round", async () => {
     const response = await POST(
       new NextRequest("http://localhost/api/interview/dsa/start", { method: "POST" })
     );
@@ -131,18 +131,15 @@ describe("POST /api/interview/dsa/start", () => {
     expect(ownerId).toBe("user:test");
     expect(setup).toMatchObject({
       templateId: "dsa",
-      templateTitle: "DSA & Design interview",
-      durationMinutes: 40,
-      questionCount: 5,
-      dsaDesignRound: {
-        kind: "dsa-design-round",
-        designScenarioKey: "multi-tenant-webhook-delivery"
-      }
+      templateTitle: "DSA Interview",
+      durationMinutes: 35,
+      questionCount: 2
     });
-    expect(plan).toHaveLength(5);
+    expect(setup.dsaDesignRound).toBeUndefined();
+    expect(plan).toHaveLength(2);
     expect(
       plan.map((question: { interviewSection?: string }) => question.interviewSection)
-    ).toEqual(["dsa", "dsa", "design", "design", "design"]);
+    ).toEqual(["dsa", "dsa"]);
     expect(JSON.stringify(await response.json())).not.toContain("expectedAnswer");
     expect(mocks.release).toHaveBeenCalledOnce();
   });

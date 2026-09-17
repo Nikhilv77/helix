@@ -1,6 +1,6 @@
 import type { FunctionDeclaration } from "@google/genai";
 import type { InterviewSetup } from "@/features/interviews/server/types";
-import { isCombinedDsaDesignRound } from "./dsa-design-round";
+import { isDsaDesignRound } from "./dsa-design-round";
 import { isTechnicalProjectsRound } from "./technical-deep-dive";
 
 export const COMPLETE_INTERVIEW_TURN_TOOL = "complete_interview_turn";
@@ -31,7 +31,7 @@ export const GEMINI_LED_INTERVIEW_TOOLS: Array<{
               type: "string",
               enum: ["answer", "decline", "end", "question-or-clarification", "other"],
               description:
-                "Classify the candidate's communicative intent by meaning, not exact wording. Use decline when they refuse this question or cannot/will not answer it; end only when they explicitly want to end the whole interview; question-or-clarification when they ask the interviewer something; answer for an attempted answer; otherwise other."
+                "Classify the candidate's communicative intent by meaning, not exact wording. Use decline when they refuse this question, cannot/will not answer it, or ask to move to the next question. Use end only when they explicitly want to end the whole interview; moving to the next question is never end. Use question-or-clarification when they ask the interviewer something; answer for an attempted answer; otherwise other."
             },
             action: {
               type: "string",
@@ -97,7 +97,7 @@ export function usesGeminiLedConversation(
     setup.templateId === "hiring-manager-final" ||
     setup.templateId === "resume-behavioral-defense" ||
     (setup.roundType === "hiring-manager" && setup.resumeRound === true) ||
-    isCombinedDsaDesignRound(setup) ||
+    isDsaDesignRound(setup) ||
     isTechnicalProjectsRound(setup)
   );
 }

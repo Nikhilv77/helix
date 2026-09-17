@@ -12,7 +12,10 @@ import {
   type DemonstratedSkillProfile
 } from "@/features/interviews/domain/performance-profile";
 import type { BlueprintDifficulty } from "@/features/interviews/domain/personalized-plan";
-import { isDsaDesignRound } from "@/features/interviews/domain/dsa-design-round";
+import {
+  isDsaDesignRound,
+  isSystemDesignRound
+} from "@/features/interviews/domain/dsa-design-round";
 import { findQuestion } from "@/features/practice/dsa/domain/dsa";
 import { createInterviewReport } from "./report";
 import type { StoredInterviewSession } from "./session-store";
@@ -76,8 +79,13 @@ export function completedAdaptiveSessions(
       if (isTrustedPersonalizedSession(state)) {
         return state.plan.some((question, index) => answered.has(index) && question.topicKey);
       }
-      if (isDsaSession(state)) {
-        return Boolean(state.setup.dsaQuestionSlugs?.some((_slug, index) => answered.has(index)));
+      if (isDsaOrDesignSession(state)) {
+        return state.plan.some(
+          (question, index) =>
+            answered.has(index) &&
+            (question.interviewSection === "design" ||
+              Boolean(state.setup.dsaQuestionSlugs?.[index]))
+        );
       }
       if (isResumeBehavioralSession(state)) {
         return state.plan.some((question, index) => answered.has(index) && question.kind !== "mcq");
@@ -157,7 +165,7 @@ function observationsForSession(
   session: StoredInterviewSession,
   now: number
 ): PerformanceObservation[] {
-  if (isDsaSession(session.state)) return dsaObservationsForSession(session, now);
+  if (isDsaOrDesignSession(session.state)) return dsaObservationsForSession(session, now);
   if (isResumeBehavioralSession(session.state)) {
     return behavioralObservationsForSession(session, now);
   }
@@ -372,7 +380,7 @@ function isTrustedPersonalizedSession(state: InterviewState): boolean {
   return Boolean(state.setup.personalizedPlanId && state.setup.personalizedBlueprint);
 }
 
-function isDsaSession(state: InterviewState): boolean {
+function isDsaOrDesignSession(state: InterviewState): boolean {
   return isDsaDesignRound(state.setup);
 }
 
@@ -380,8 +388,13 @@ function isResumeBehavioralSession(state: InterviewState): boolean {
   return state.setup.resumeRound === true || state.setup.templateId === "resume-behavioral-defense";
 }
 
-function performanceSourceKind(state: InterviewState): "personalized" | "dsa" | "behavioral" {
-  if (isDsaSession(state)) return "dsa";
+function performanceSourceKind(
+  state: InterviewState
+): "personalized" | "dsa" | "system-design" | "behavioral" {
+  if (isSystemDesignRound(state.setup) && !state.setup.dsaQuestionSlugs?.length) {
+    return "system-design";
+  }
+  if (isDsaOrDesignSession(state)) return "dsa";
   if (isResumeBehavioralSession(state)) return "behavioral";
   return "personalized";
 }
