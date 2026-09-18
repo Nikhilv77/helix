@@ -336,4 +336,126 @@ describe("interview public state serializer", () => {
     expect(payload).not.toContain("PRIVATE_GROUNDED_FACT");
     expect(payload).not.toContain("PRIVATE_PROJECT_RUBRIC");
   });
+
+  it("formats Core Technical review questions and zeroes codeTask", () => {
+    const state = {
+      id: "cf6d426b-8aad-4def-a9be-b23438bf1d2e",
+      setup: {
+        role: "backend",
+        level: "3-5",
+        context: "Distributed database concurrency evaluation",
+        roundType: "technical",
+        intensity: "realistic",
+        templateId: "core-technical-block-assessment",
+        coreTechnicalAssessment: {
+          kind: "core-technical-assessment",
+          blockId: "block-1",
+          assessmentId: "assessment-1",
+          snapshotVersion: 1,
+          evaluatorVersion: "eval-1"
+        }
+      },
+      plan: [
+        {
+          text: "What causes transaction deadlocks under serializable isolation?",
+          evidenceAnchor: "Transaction isolation levels",
+          codeTask: "Transaction isolation levels",
+          kind: "mcq",
+          options: ["Concurrent lock acquisition order", "Read replicas lag", "Network partition", "Garbage collection"],
+          stage: "rapid",
+          mustHit: [],
+          probeIfMissing: "",
+          dsaReviewContext: {
+            title: "Concurrency",
+            difficulty: "intermediate",
+            problemStatement: "Transactions acquire row locks in conflicting order.",
+            constraints: [],
+            examples: []
+          }
+        }
+      ],
+      phase: "questioning",
+      questionIndex: 0,
+      followUpCount: 0,
+      startedAt: 1,
+      turns: []
+    } satisfies InterviewState;
+
+    const serialized = serialiseInterviewState(state);
+
+    expect(serialized.currentQuestion).toMatchObject({
+      text: "What causes transaction deadlocks under serializable isolation?",
+      kind: "mcq",
+      codeTask: null,
+      dsaTransferQuestion: null
+    });
+    expect(serialized.currentQuestion?.options).toHaveLength(4);
+    expect(serialized.currentQuestion?.dsaReviewContext).toBeDefined();
+  });
+
+  it("formats Core Technical transfer question with its transfer metadata", () => {
+    const state = {
+      id: "cf6d426b-8aad-4def-a9be-b23438bf1d2e",
+      setup: {
+        role: "backend",
+        level: "3-5",
+        context: "Distributed database concurrency evaluation",
+        roundType: "technical",
+        intensity: "realistic",
+        templateId: "core-technical-block-assessment",
+        coreTechnicalAssessment: {
+          kind: "core-technical-assessment",
+          blockId: "block-1",
+          assessmentId: "assessment-1",
+          snapshotVersion: 1,
+          evaluatorVersion: "eval-1"
+        }
+      },
+      plan: [
+        { text: "Q1", stage: "rapid", mustHit: [], probeIfMissing: "" },
+        { text: "Q2", stage: "rapid", mustHit: [], probeIfMissing: "" },
+        { text: "Q3", stage: "explain", mustHit: [], probeIfMissing: "" },
+        {
+          text: "Implement ordered lock acquisition to prevent deadlocks.",
+          codeTask: "Implement ordered lock acquisition to prevent deadlocks.",
+          kind: "code",
+          stage: "explain",
+          mustHit: [],
+          probeIfMissing: "",
+          dsaTransferQuestion: {
+            slug: "core-technical-transfer-4",
+            title: "Ordered Lock Acquisition",
+            primaryPattern: "concurrency-control",
+            difficulty: "medium",
+            expectedTimeMinutes: 10,
+            problemStatement: "Sort resources before acquiring locks.",
+            promptSummary: "Sort resources before acquiring locks.",
+            constraints: ["Deterministic lock order"],
+            examples: [],
+            starterCode: {
+              javascript: "function solution(input) { return input; }\nmodule.exports = { solution };",
+              python: "",
+              cpp: "",
+              java: ""
+            }
+          }
+        }
+      ],
+      phase: "questioning",
+      questionIndex: 3,
+      followUpCount: 0,
+      startedAt: 1,
+      turns: []
+    } satisfies InterviewState;
+
+    const serialized = serialiseInterviewState(state);
+
+    expect(serialized.currentQuestion).toMatchObject({
+      kind: "code",
+      options: null
+    });
+    expect(serialized.currentQuestion?.dsaTransferQuestion).toBeDefined();
+    expect(serialized.currentQuestion?.dsaTransferQuestion?.starterCode.javascript).toContain("function solution");
+    expect(serialized.currentQuestion?.dsaTransferQuestion?.constraints.length).toBeGreaterThan(0);
+  });
 });

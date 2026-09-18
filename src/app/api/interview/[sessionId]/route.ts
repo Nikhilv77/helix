@@ -7,7 +7,8 @@ import { currentQuestion } from "@/features/interviews/server/state-machine";
 import {
   roundCaps,
   type InterviewStage,
-  type InterviewState
+  type InterviewState,
+  type PlannedQuestion
 } from "@/features/interviews/server/types";
 import { findFundamentalsQuestion } from "@/lib/fundamentals/fundamentals";
 import { authorizeInterviewSession } from "@/features/interviews/server/session-access";
@@ -93,35 +94,37 @@ export function serialiseInterviewState(state: InterviewState) {
     evidence: state.evidence ?? null,
     turns: state.turns.map(publicTurn),
     currentQuestion: question
-      ? {
-          text: question.text,
-          evidenceAnchor: hideDesignInterviewerGuide
-            ? null
-            : question.evidenceAnchor?.trim() || null,
-          kind: question.kind ?? "conversation",
-          competency: question.competency ?? null,
-          language: question.language || null,
-          codeTask: question.codeTask || null,
-          codeSnippet: question.codeSnippet || null,
-          dsaReviewContext: question.dsaReviewContext ?? null,
-          interviewSection: question.interviewSection ?? null,
-          technicalProjectsSection: question.technicalProjectsSection ?? null,
-          projectAct: question.projectAct ?? null,
-          // This is deliberately the public render contract only. The saved
-          // assessment snapshot's answer keys, rationales, hints and hidden
-          // runner material never leave the server before completion.
-          dsaTransferQuestion: question.dsaTransferQuestion ?? null,
-          stage: visibleStage,
-          skill: question.skill || null,
-          // `answerIndex` stays on the server. Grading happens there, so the
-          // browser never receives the correct option.
-          options: question.options?.length ? question.options : null,
-          answerFormat: question.answerFormat ?? null,
-          expects:
-            !hideDesignInterviewerGuide && question.mustHit?.length ? question.mustHit : null,
-          maxFollowUps: question.maxFollowUps ?? null
-        }
+      ? formatPublicQuestion(question, visibleStage, hideDesignInterviewerGuide)
       : null
+  };
+}
+
+function formatPublicQuestion(
+  question: PlannedQuestion,
+  visibleStage: InterviewStage | null,
+  hideDesignInterviewerGuide: boolean
+) {
+  const isCode = question.kind === "code";
+
+  return {
+    text: question.text,
+    evidenceAnchor: hideDesignInterviewerGuide ? null : question.evidenceAnchor?.trim() || null,
+    kind: question.kind ?? "conversation",
+    competency: question.competency ?? null,
+    language: question.language || null,
+    codeTask: isCode ? (question.codeTask || null) : null,
+    codeSnippet: question.codeSnippet || null,
+    dsaReviewContext: question.dsaReviewContext ?? null,
+    interviewSection: question.interviewSection ?? null,
+    technicalProjectsSection: question.technicalProjectsSection ?? null,
+    projectAct: question.projectAct ?? null,
+    dsaTransferQuestion: isCode ? (question.dsaTransferQuestion ?? null) : null,
+    stage: visibleStage,
+    skill: question.skill || null,
+    options: question.options?.length ? question.options : null,
+    answerFormat: question.answerFormat ?? null,
+    expects: !hideDesignInterviewerGuide && question.mustHit?.length ? question.mustHit : null,
+    maxFollowUps: question.maxFollowUps ?? null
   };
 }
 

@@ -102,11 +102,16 @@ export async function POST(request: NextRequest) {
     // crafted request cannot execute a changed/live-bank question instead.
     const frozenTransfer =
       parsed.data.sessionId !== undefined && parsed.data.questionIndex !== undefined
-        ? await app.dsaBlockAssessmentRuntimeService.frozenTransferForRun(
+        ? (await app.dsaBlockAssessmentRuntimeService.frozenTransferForRun(
             ownerId,
             parsed.data.sessionId,
             parsed.data.questionIndex
-          )
+          )) ||
+          (await app.coreTechnicalAssessmentRuntimeService.frozenTransferForRun(
+            ownerId,
+            parsed.data.sessionId,
+            parsed.data.questionIndex
+          ))
         : null;
 
     if (frozenTransfer) {

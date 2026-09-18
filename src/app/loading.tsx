@@ -25,6 +25,10 @@ export default async function RootLoading() {
 
   const interviewRoute = pathname === "/interview" || pathname.startsWith("/interview/");
   const dsaAssessmentRoute = pathname === "/practice/dsa/assessment";
+  const assessmentRoute =
+    pathname === "/practice/dsa/assessment" ||
+    pathname === "/practice/core-technical/assessment" ||
+    pathname.startsWith("/practice/core-technical/assessment/");
   const progressRoute = pathname === "/progress";
   const manageRoute = pathname === "/manage";
   const profileRoute = pathname === "/profile";
@@ -41,7 +45,7 @@ export default async function RootLoading() {
 
   if (interviewRoute || progressRoute) return null;
 
-  if (dsaAssessmentRoute) {
+  if (assessmentRoute) {
     return <div className="fixed inset-0 z-[100] bg-black" aria-label="Loading assessment" />;
   }
 

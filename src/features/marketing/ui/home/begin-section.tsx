@@ -19,7 +19,7 @@ export function Begin() {
       ref={sectionRef}
       id="flow"
       data-running={present}
-      className="marketing-deferred-section marketing-theme-section relative z-10 overflow-hidden px-5 pb-24 pt-28 sm:px-10 sm:pb-36 sm:pt-40"
+      className="marketing-deferred-section marketing-theme-section relative z-10 overflow-hidden px-5 pb-24 pt-10 sm:px-10 sm:pb-36 sm:pt-16"
     >
       <span aria-hidden="true" className="begin-ember" />
 

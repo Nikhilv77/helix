@@ -18,3 +18,11 @@ export function dsaAssessmentRoomHref(sessionId: string): string {
 export function openDsaAssessmentRoom(sessionId: string): void {
   window.location.assign(dsaAssessmentRoomHref(sessionId));
 }
+
+export function coreTechnicalAssessmentRoomHref(sessionId: string): string {
+  return `/practice/core-technical/assessment?session=${encodeURIComponent(sessionId)}`;
+}
+
+export function openCoreTechnicalAssessmentRoom(sessionId: string): void {
+  window.location.assign(coreTechnicalAssessmentRoomHref(sessionId));
+}

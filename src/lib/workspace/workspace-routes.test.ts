@@ -24,4 +24,11 @@ describe("workspace routes", () => {
     expect(isWorkspaceChromeRoute("/practice/dsa/assessment")).toBe(false);
     expect(isWorkspaceCanvasRoute("/practice/dsa/assessment")).toBe(true);
   });
+
+  it("renders the Core Technical checkpoint as a full-screen workspace canvas", () => {
+    expect(isWorkspaceChromeRoute("/practice/core-technical/assessment")).toBe(false);
+    expect(isWorkspaceCanvasRoute("/practice/core-technical/assessment")).toBe(true);
+    expect(isWorkspaceChromeRoute("/practice/core-technical/assessment/test-id")).toBe(false);
+    expect(isWorkspaceCanvasRoute("/practice/core-technical/assessment/test-id")).toBe(true);
+  });
 });

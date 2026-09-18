@@ -54,7 +54,7 @@ describe("CoreTechnicalAssessmentRoomPage", () => {
       assessmentId: "assessment-one",
       requestId: "assessment-one"
     });
-    expect(mocks.redirect).toHaveBeenCalledWith("/interview/voice?session=assessment-one");
+    expect(mocks.redirect).toHaveBeenCalledWith("/practice/core-technical/assessment?session=assessment-one");
   });
 
   it("returns to Core Technical when the assessment does not belong to the selected block", async () => {

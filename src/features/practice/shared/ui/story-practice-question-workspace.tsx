@@ -682,7 +682,7 @@ export function StoryPracticeQuestionWorkspace({
                   </>
                 ) : (
                   <span className="text-sm font-normal text-cream/38">
-                    · {question.question.publicTests?.length ?? 0} visible + hidden checks
+                    · {(question.question as { publicTests?: unknown[] }).publicTests?.length ?? 0} visible + hidden checks
                   </span>
                 )}
                 <ChevronDown

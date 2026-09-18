@@ -37,7 +37,7 @@ describe("consolidated help route", () => {
     [POST, "POST", ["request", "request-1"], mocks.requestIdPost],
     [GET, "GET", ["room", "request-1"], mocks.roomGet],
     [PUT, "PUT", ["room", "request-1"], mocks.roomPut]
-  ])("passes dynamic ids through %s /%s", async (route, method, path, handler) => {
+  ])("passes dynamic ids through %s /%s", async (route, method, path, handler: any) => {
     const request = makeRequest(method as string, path as string[]);
     const response = await route(request, context(path as string[]));
 

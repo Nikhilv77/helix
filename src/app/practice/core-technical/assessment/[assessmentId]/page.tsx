@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { interviewRoomHref } from "@/features/interviews/ui/shared/interview-room-navigation";
+import { coreTechnicalAssessmentRoomHref } from "@/features/interviews/ui/shared/interview-room-navigation";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
@@ -46,7 +46,7 @@ export default async function CoreTechnicalAssessmentRoomPage({
       assessmentId,
       requestId: assessmentId
     });
-    redirect(interviewRoomHref(started.sessionId));
+    redirect(coreTechnicalAssessmentRoomHref(started.sessionId));
   }
 
   redirect(`/practice/core-technical?block=${encodeURIComponent(block.id)}`);

@@ -302,7 +302,7 @@ function makeAssessment(
     assessment,
     report: completed ? report() : null,
     transcript: completed ? transcript() : null
-  } as NonNullable<CoreTechnicalPublicBlock["assessment"]>;
+  } as unknown as NonNullable<CoreTechnicalPublicBlock["assessment"]>;
 }
 
 function report() {

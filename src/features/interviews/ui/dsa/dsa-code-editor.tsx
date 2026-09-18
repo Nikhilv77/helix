@@ -124,7 +124,8 @@ export function DsaCodeEditor({
   readOnly = false,
   autoFocus = true,
   selection = null,
-  ariaLabel
+  ariaLabel,
+  wordWrap = "off"
 }: {
   language: DsaEditorLanguage;
   /** Monaco language id when display syntax differs from the execution language. */
@@ -137,6 +138,7 @@ export function DsaCodeEditor({
   autoFocus?: boolean;
   selection?: DsaEditorSelection | null;
   ariaLabel?: string;
+  wordWrap?: "on" | "off";
 }) {
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
   const monacoRef = useRef<Parameters<OnMount>[1] | null>(null);
@@ -238,7 +240,7 @@ export function DsaCodeEditor({
         scrollBeyondLastLine: false,
         smoothScrolling: true,
         tabSize: 2,
-        wordWrap: "off",
+        wordWrap,
         cursorBlinking: "smooth",
         cursorSmoothCaretAnimation: "on",
         bracketPairColorization: { enabled: true },

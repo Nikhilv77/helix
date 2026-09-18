@@ -28,8 +28,21 @@ export const coreTechnicalPublicAssessmentPromptSchema = z
     id: identifierSchema,
     order: z.number().int().min(1).max(5),
     kind: coreTechnicalAssessmentPromptKindSchema,
-    prompt: z.string().min(20).max(4_000),
-    context: z.string().min(8).max(4_000).nullable()
+    prompt: z.string().min(10).max(4_000),
+    context: z.string().min(8).max(4_000).nullable().optional(),
+    codeSnippet: z.string().max(4_000).nullable().optional(),
+    options: z.array(z.string().min(1)).min(2).max(6).optional(),
+    correctOption: z.number().int().nonnegative().optional(),
+    rationale: z.string().max(4_000).optional(),
+    codeTask: z.string().max(4_000).optional(),
+    starterCode: z.string().max(12_000).optional(),
+    runnerContract: z
+      .object({
+        version: z.literal(1),
+        functionName: z.string().min(1),
+        testCases: z.array(z.unknown()).min(1)
+      })
+      .optional()
   })
   .strict();
 
@@ -233,13 +246,19 @@ export function publicCoreTechnicalAssessmentSnapshot(raw: unknown) {
     schemaVersion: snapshot.schemaVersion,
     blueprintVersion: snapshot.blueprintVersion,
     preparedAt: snapshot.preparedAt,
-    prompts: snapshot.prompts.map(({ id, order, kind, prompt, context }) => ({
-      id,
-      order,
-      kind,
-      prompt,
-      context
-    })),
+    prompts: snapshot.prompts.map(
+      ({ id, order, kind, prompt, context, codeSnippet, options, codeTask, starterCode }) => ({
+        id,
+        order,
+        kind,
+        prompt,
+        context: context ?? null,
+        codeSnippet: codeSnippet ?? null,
+        options: options ?? [],
+        codeTask: codeTask ?? null,
+        starterCode: starterCode ?? null
+      })
+    ),
     submission: snapshot.submission
       ? {
           requestId: snapshot.submission.requestId,

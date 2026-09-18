@@ -86,24 +86,24 @@ export function Stuck() {
     <section
       ref={sectionRef}
       id="help"
-      className="marketing-theme-section relative z-10 min-h-[190svh] px-5 sm:min-h-[170svh] sm:px-10"
+      className="marketing-theme-section relative z-10 min-h-[140svh] px-5 sm:min-h-[135svh] sm:px-10"
     >
-      <div className="sticky top-0 flex min-h-[100svh] items-start pb-8 pt-16 sm:pb-24 sm:pt-36">
+      <div className="sticky top-0 flex min-h-[100svh] flex-col justify-center px-0 py-10 sm:py-14">
         <div className="mx-auto w-full max-w-[58rem]">
           <Reveal delay={80}>
             <div className="mx-auto max-w-3xl">
               <h2 className="marketing-section-title display-heading help-heading max-w-3xl text-center text-cream">
                 You&rsquo;re never completely stuck.
               </h2>
-              <p className="marketing-lede mx-auto mt-5 max-w-xl text-center text-cream/68 sm:mt-6">
+              <p className="marketing-lede mx-auto mt-4 max-w-xl text-center text-cream/68 sm:mt-5">
                 Get a quick answer first. When you want a person, we connect you with someone who
                 has already solved it.
               </p>
             </div>
           </Reveal>
 
-          <Reveal delay={180} className="mt-10 sm:mt-20">
-            <div aria-hidden="true" className="mb-7 grid grid-cols-4 gap-2 sm:mb-9">
+          <Reveal delay={180} className="mt-8 sm:mt-12">
+            <div aria-hidden="true" className="mb-6 grid grid-cols-4 gap-2 sm:mb-8">
               {helpSteps.map((step, index) => (
                 <span
                   key={step.number}
@@ -115,7 +115,7 @@ export function Stuck() {
               ))}
             </div>
 
-            <div aria-live="polite" className="relative min-h-[13rem] sm:min-h-[12rem]">
+            <div aria-live="polite" className="relative min-h-[10rem] sm:min-h-[9rem]">
               {helpSteps.map((step, index) => {
                 const isActive = index === activeStep;
 

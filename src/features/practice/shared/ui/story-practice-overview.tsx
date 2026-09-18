@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Check, ChevronDown, Clock3, Loader2 } from "luci
 import { useRef, useState } from "react";
 import { humanizeStoryPracticeKey, storyPracticeQuestionMinutes } from "./presentation";
 import { StoryPracticeAssessment, type PublicAssessment } from "./story-practice-assessment";
+import { CoreTechnicalBlockAssessmentPreview } from "@/features/practice/core-technical/ui/core-technical-block-assessment-preview";
 import { StoryPracticeIntro } from "./story-practice-intro";
 import type { StoryPracticeOverviewExperience as StoryPracticeOverviewExperienceContract } from "@/features/practice/shared/ui/contracts";
 import type {
@@ -147,13 +148,21 @@ export function StoryPracticeOverview({
               })}
             </ul>
 
-            <StoryPracticeAssessment
-              block={block}
-              terminalCount={terminalCount}
-              allowEarlyStart={allowEarlyAssessmentStart}
-              dedicatedRoom={false}
-              experience={resolvedExperience.assessment}
-            />
+            {resolvedExperience.slug === "core-technical" ? (
+              <CoreTechnicalBlockAssessmentPreview
+                block={block}
+                terminalCount={terminalCount}
+                allowEarlyStart={allowEarlyAssessmentStart}
+              />
+            ) : (
+              <StoryPracticeAssessment
+                block={block}
+                terminalCount={terminalCount}
+                allowEarlyStart={allowEarlyAssessmentStart}
+                dedicatedRoom={false}
+                experience={resolvedExperience.assessment}
+              />
+            )}
           </div>
 
           <StoryLibrary

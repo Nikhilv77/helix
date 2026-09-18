@@ -136,7 +136,6 @@ describe("CoreTechnicalQuestionWorkspace", () => {
     question.question.artifact = {
       kind: "code",
       title: "Mutating request normalizer",
-      language: "javascript",
       content:
         "export function normalizeUser(input) {\n  const output = { ...input };\n  output.profile.name = output.profile.name.trim();\n  return output;\n}"
     };

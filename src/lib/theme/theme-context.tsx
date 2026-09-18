@@ -132,10 +132,17 @@ export function ThemeProvider({
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
+const DEFAULT_THEME_CONTEXT: ThemeContextValue = {
+  theme: "dark",
+  resolvedTheme: "dark",
+  setTheme: () => {},
+  toggleTheme: () => {}
+};
+
 export function useTheme(): ThemeContextValue {
   const context = useContext(ThemeContext);
   if (!context) {
-    throw new Error("useTheme must be used within a ThemeProvider");
+    return DEFAULT_THEME_CONTEXT;
   }
   return context;
 }

@@ -149,6 +149,7 @@ export interface PlannedQuestion {
   language?: string;
   codeTask?: string;
   codeSnippet?: string;
+  starterCode?: string;
   /** Stable ID into the server-only assessment snapshot's answer key. */
   dsaAssessmentReviewItemId?: string;
   /** Candidate-safe source problem reference for block-assessment MCQs. */

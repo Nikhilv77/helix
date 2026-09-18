@@ -314,7 +314,10 @@ function javascriptHarness(code: string, functionName: string, testCases: CodeTe
       (testCase, index) => `try {
   const rawArguments = [${testCase.arguments.map((value, index) => argumentSource(testCase, index, "javascript", jsLiteral(value))).join(", ")}];
   const argumentsList = trailgradAdaptArguments(rawArguments, "${testCase.adapter ?? "none"}");
-  const value = ${functionName}(...argumentsList);
+  let value = ${functionName}(...argumentsList);
+  if (value && typeof value.then === "function") {
+    value = await value;
+  }
   const outputValue = ${testCase.mode === "mutated-first-argument" ? "argumentsList[0]" : "value"};
   const output = trailgradAdaptOutput(outputValue === undefined && ["linked-list-mutated", "tree-output", "tree-mutated-output", "tree-right-chain"].includes("${testCase.adapter ?? "none"}") ? argumentsList[0] : outputValue, "${testCase.adapter ?? "none"}", argumentsList);
   console.log("${RESULT_MARKER}${index}:" + JSON.stringify({ ok: true, value: output }));
@@ -323,7 +326,7 @@ function javascriptHarness(code: string, functionName: string, testCases: CodeTe
 }`
     )
     .join("\n");
-  return `${javascriptAdapterHelpers()}\n${code}\n\n${runs}\n`;
+  return `${javascriptAdapterHelpers()}\n${code}\n\n(async () => {\n${runs}\n})();\n`;
 }
 
 function pythonHarness(code: string, functionName: string, testCases: CodeTestCase[]): string {
@@ -333,6 +336,8 @@ function pythonHarness(code: string, functionName: string, testCases: CodeTestCa
     raw_arguments = [${testCase.arguments.map((value, index) => argumentSource(testCase, index, "python", pythonLiteral(value))).join(", ")}]
     arguments_list = trailgrad_adapt_arguments(raw_arguments, "${testCase.adapter ?? "none"}")
     value = ${functionName}(*arguments_list)
+    if inspect.iscoroutine(value):
+        value = asyncio.run(value)
     output_value = ${testCase.mode === "mutated-first-argument" ? "arguments_list[0]" : "value"}
     output = trailgrad_adapt_output(arguments_list[0] if output_value is None and "${testCase.adapter ?? "none"}" in ("linked-list-mutated", "tree-output", "tree-mutated-output", "tree-right-chain") else output_value, "${testCase.adapter ?? "none"}", arguments_list)
     print("${RESULT_MARKER}${index}:" + json.dumps({"ok": True, "value": output}, separators=(",", ":")))
@@ -340,7 +345,7 @@ except Exception as error:
     print("${RESULT_MARKER}${index}:" + json.dumps({"ok": False, "error": str(error)}, separators=(",", ":")))`
     )
     .join("\n");
-  return `import json\n${pythonAdapterHelpers()}\n${code}\n\n${runs}\n`;
+  return `import json\nimport inspect\nimport asyncio\n${pythonAdapterHelpers()}\n${code}\n\n${runs}\n`;
 }
 
 /**
