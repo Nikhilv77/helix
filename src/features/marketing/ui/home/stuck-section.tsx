@@ -36,10 +36,10 @@ export function Stuck() {
   const [activeStep, setActiveStep] = useState(0);
 
   useEffect(() => {
-    let nearby = false;
+    let listening = false;
 
     function updateProgress() {
-      if (!nearby || frameRef.current !== null) return;
+      if (frameRef.current !== null) return;
 
       frameRef.current = window.requestAnimationFrame(() => {
         frameRef.current = null;
@@ -61,24 +61,43 @@ export function Stuck() {
       });
     }
 
+    function attachListeners() {
+      if (listening) return;
+      listening = true;
+      window.addEventListener("scroll", updateProgress, { passive: true });
+      window.addEventListener("resize", updateProgress);
+    }
+
+    function detachListeners() {
+      if (!listening) return;
+      listening = false;
+      window.removeEventListener("scroll", updateProgress);
+      window.removeEventListener("resize", updateProgress);
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
-        nearby = Boolean(entry?.isIntersecting);
-        if (nearby) updateProgress();
+        const isNearby = Boolean(entry?.isIntersecting);
+        if (isNearby) {
+          attachListeners();
+          updateProgress();
+        } else {
+          detachListeners();
+        }
       },
       { rootMargin: "100% 0px", threshold: 0 }
     );
 
     const section = sectionRef.current;
     if (section) observer.observe(section);
-    window.addEventListener("scroll", updateProgress, { passive: true });
-    window.addEventListener("resize", updateProgress);
 
     return () => {
       observer.disconnect();
-      window.removeEventListener("scroll", updateProgress);
-      window.removeEventListener("resize", updateProgress);
-      if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
+      detachListeners();
     };
   }, []);
 
@@ -107,10 +126,8 @@ export function Stuck() {
               {helpSteps.map((step, index) => (
                 <span
                   key={step.number}
-                  className={[
-                    "h-[3px] rounded-full transition-colors duration-500",
-                    index <= activeStep ? "accent-rail" : "bg-white/[0.12]"
-                  ].join(" ")}
+                  className="help-step-rail h-[3px] rounded-full transition-colors duration-500"
+                  data-active={index <= activeStep}
                 />
               ))}
             </div>

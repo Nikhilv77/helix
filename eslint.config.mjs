@@ -29,7 +29,13 @@ export default tseslint.config(
         process: "readonly",
         require: "readonly",
         __dirname: "readonly",
-        __filename: "readonly"
+        __filename: "readonly",
+        fetch: "readonly",
+        WebSocket: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        setInterval: "readonly",
+        clearInterval: "readonly"
       }
     },
     rules: {

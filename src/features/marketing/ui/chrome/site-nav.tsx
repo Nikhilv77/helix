@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Menu, X } from "lucide-react";
-import { TrailgradMark } from "@/components/brand/blueprint-art";
+import { TrailgradMark } from "@/components/trailgrad-mark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { PrimaryAction } from "@/features/marketing/ui/home/primary-action";
 
 // Every href below resolves to a section that exists on this page, in the
 // order those sections appear — the previous set listed Interview before
@@ -15,13 +16,6 @@ const navLinks: Array<{ label: string; href: string }> = [
   { label: "Interview", href: "#interview" },
   { label: "Practice", href: "#practice" },
   { label: "Help", href: "#help" }
-];
-
-const footerLinks: Array<{ label: string; href: string }> = [
-  { label: "Interview", href: "#interview" },
-  { label: "Practice", href: "#practice" },
-  { label: "Help", href: "#help" },
-  { label: "Blog", href: "/blog" }
 ];
 
 /**
@@ -63,6 +57,11 @@ function sectionHref(href: string, prefix: string): string {
   return href.startsWith("#") ? `${prefix}${href}` : href;
 }
 
+const desktopActionClass =
+  "site-nav-action hidden sm:block [&>*]:inline-flex [&>*]:h-11 [&>*]:items-center [&>*]:rounded-xl [&>*]:px-5 [&>*]:text-sm [&>*]:font-semibold [&>*]:tracking-tight [&>*]:outline-none";
+const mobileActionClass =
+  "site-nav-action px-5 pb-5 pt-3 [&>*]:inline-flex [&>*]:h-11 [&>*]:w-full [&>*]:items-center [&>*]:justify-center [&>*]:rounded-xl [&>*]:text-sm [&>*]:font-semibold [&>*]:outline-none";
+
 /**
  * A rule and some type.
  *
@@ -73,26 +72,19 @@ function sectionHref(href: string, prefix: string): string {
  * against the flat sections below.
  */
 export function SiteNav({
-  action,
-  actionKind = "icon",
+  action = (
+    <PrimaryAction ariaLabel="Start free" className="outline-none">
+      Start free
+    </PrimaryAction>
+  ),
   sectionHrefPrefix = ""
 }: {
-  action: ReactNode;
-  actionKind?: "icon" | "button";
+  action?: ReactNode;
   sectionHrefPrefix?: string;
-}) {
+} = {}) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const activeSection = useActiveSection(navSectionIds);
-
-  const desktopActionClass =
-    actionKind === "button"
-      ? "site-nav-action hidden sm:block [&>*]:inline-flex [&>*]:h-11 [&>*]:items-center [&>*]:rounded-xl [&>*]:px-5 [&>*]:text-sm [&>*]:font-semibold [&>*]:tracking-tight [&>*]:outline-none"
-      : "hidden sm:block [&>*]:grid [&>*]:h-10 [&>*]:w-10 [&>*]:place-items-center [&>*]:rounded-full [&>*]:p-0 [&>*]:text-cream/70 [&>*]:transition [&>*]:hover:text-cream";
-  const mobileActionClass =
-    actionKind === "button"
-      ? "site-nav-action px-5 pb-5 pt-3 [&>*]:inline-flex [&>*]:h-11 [&>*]:w-full [&>*]:items-center [&>*]:justify-center [&>*]:rounded-xl [&>*]:text-sm [&>*]:font-semibold [&>*]:outline-none"
-      : "px-5 pb-5 pt-3 [&>*]:grid [&>*]:h-11 [&>*]:w-full [&>*]:place-items-center [&>*]:rounded-full [&>*]:p-0 [&>*]:text-cream";
 
   useEffect(() => {
     // Coalesced into rAF: touch scrolling fires this far faster than the
@@ -229,61 +221,5 @@ export function SiteNav({
         <div className={mobileActionClass}>{action}</div>
       </div>
     </header>
-  );
-}
-
-/**
- * Same language as the bar at the top: a hairline, plain type, nothing
- * enclosed. The cream CTA that used to sit here is gone — the closing section
- * directly above it already makes that ask, and two in a row read as nagging.
- */
-export function SiteFooter({ sectionHrefPrefix = "" }: { sectionHrefPrefix?: string }) {
-  return (
-    <footer className="relative z-10 border-t border-white/[0.06] px-5 py-10 sm:px-8">
-      <div className="mx-auto flex w-full max-w-[72rem] flex-col gap-8">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <Link
-            href="/"
-            aria-label="Trailgrad home"
-            className="inline-flex items-center gap-2.5 rounded-lg text-cream outline-none transition-opacity duration-300 hover:opacity-70 focus-visible:ring-2 focus-visible:ring-cream/40"
-          >
-            <TrailgradMark className="marketing-brand-mark h-5 w-5" />
-            <span className="text-[0.95rem] font-medium tracking-tight">Trailgrad</span>
-          </Link>
-
-          <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-7 gap-y-3">
-            {footerLinks.map((link) => (
-              <Link
-                key={link.label}
-                href={sectionHref(link.href, sectionHrefPrefix)}
-                className="text-sm text-cream/50 outline-none transition-colors duration-300 hover:text-cream/90 focus-visible:ring-2 focus-visible:ring-cream/40"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        <div className="flex flex-col gap-3 border-t border-white/[0.05] pt-7 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[0.8125rem] text-cream/34">
-            © {new Date().getFullYear()} Trailgrad · AI interview practice
-          </p>
-          <div className="flex gap-6">
-            <Link
-              href="/terms"
-              className="text-[0.8125rem] text-cream/42 transition-colors duration-300 hover:text-cream/80"
-            >
-              Terms
-            </Link>
-            <Link
-              href="/privacy"
-              className="text-[0.8125rem] text-cream/42 transition-colors duration-300 hover:text-cream/80"
-            >
-              Privacy
-            </Link>
-          </div>
-        </div>
-      </div>
-    </footer>
   );
 }

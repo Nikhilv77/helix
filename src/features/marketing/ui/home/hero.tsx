@@ -34,6 +34,11 @@ const pitches = [
   }
 ] as const;
 
+const animatedPitches = pitches.map((pitch) => ({
+  ...pitch,
+  words: pitch.heading.split(" ")
+}));
+
 /** Steady time on screen once the last word has settled, then the way out. */
 const HOLD_MS = 3600;
 const EXIT_MS = 1050;
@@ -43,7 +48,7 @@ export function Hero() {
   const parallaxRef = useRef<HTMLDivElement>(null);
   const present = useViewportPresence(sectionRef, "25% 0px");
   const { index, phase } = useRotator({
-    length: pitches.length,
+    length: animatedPitches.length,
     holdMs: HOLD_MS,
     exitMs: EXIT_MS,
     enabled: present
@@ -73,17 +78,22 @@ export function Hero() {
          * `hidden` for exactly that reason.
          */}
         <div aria-hidden="true" className="grid w-full">
-          {pitches.map((pitch, pitchIndex) => {
+          {animatedPitches.map((pitch, pitchIndex) => {
             const active = pitchIndex === index;
-            const words = pitch.heading.split(" ");
+            const words = pitch.words;
 
             return (
               <div
                 key={pitch.heading}
-                className={[
-                  "col-start-1 row-start-1 flex flex-col items-center",
-                  active ? "" : "invisible"
-                ].join(" ")}
+                className="col-start-1 row-start-1 flex flex-col items-center"
+                // Keep every pitch in the grid for stable height, but make the
+                // inactive layers safe before Tailwind has loaded as well as
+                // after hydration. This prevents a flash of all three pitches
+                // stacked on top of one another.
+                style={{
+                  opacity: active ? 1 : 0,
+                  visibility: active ? "visible" : "hidden"
+                }}
               >
                 <p
                   className="marketing-hero-title stagger-line wordmark text-cream"

@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
 import { blogPosts } from "@/features/marketing/content/blog";
-import { SiteFooter, SiteNav } from "@/features/marketing/ui/chrome/site-chrome";
-import { PrimaryAction } from "@/features/marketing/ui/home/primary-action";
+import { SiteFooter } from "@/features/marketing/ui/chrome/site-footer";
+import { SiteNav } from "@/features/marketing/ui/chrome/site-nav";
 
 export const metadata: Metadata = {
   title: "Blog",
@@ -27,15 +27,7 @@ export function BlogIndexPage() {
       className="blueprint marketing-blog marketing-theme min-h-screen overflow-x-clip"
       data-marketing-accent="orange"
     >
-      <SiteNav
-        actionKind="button"
-        sectionHrefPrefix="/"
-        action={
-          <PrimaryAction ariaLabel="Start free" className="outline-none">
-            Start free
-          </PrimaryAction>
-        }
-      />
+      <SiteNav sectionHrefPrefix="/" />
 
       <main className="marketing-theme-section relative z-10 px-5 pb-24 pt-36 sm:px-10 sm:pb-28 sm:pt-40">
         <div className="mx-auto w-full max-w-[58rem]">

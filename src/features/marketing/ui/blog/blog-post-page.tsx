@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { blogPosts, getBlogPost } from "@/features/marketing/content/blog";
-import { SiteFooter, SiteNav } from "@/features/marketing/ui/chrome/site-chrome";
-import { PrimaryAction } from "@/features/marketing/ui/home/primary-action";
+import { SiteFooter } from "@/features/marketing/ui/chrome/site-footer";
+import { SiteNav } from "@/features/marketing/ui/chrome/site-nav";
 
 export function generateStaticParams() {
   return blogPosts.map((post) => ({ slug: post.slug }));
@@ -61,15 +61,7 @@ export async function BlogPostPage({ params }: { params: Promise<{ slug: string 
       className="blueprint marketing-blog marketing-theme min-h-screen overflow-x-clip"
       data-marketing-accent="orange"
     >
-      <SiteNav
-        actionKind="button"
-        sectionHrefPrefix="/"
-        action={
-          <PrimaryAction ariaLabel="Start free" className="outline-none">
-            Start free
-          </PrimaryAction>
-        }
-      />
+      <SiteNav sectionHrefPrefix="/" />
 
       <main className="marketing-theme-section relative z-10 px-5 pb-24 pt-36 sm:px-10 sm:pb-28 sm:pt-40">
         <article className="mx-auto w-full max-w-[44rem]">

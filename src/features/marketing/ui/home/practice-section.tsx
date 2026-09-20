@@ -225,8 +225,7 @@ export function Practice() {
   });
 
   const group = practicePairs.slice(groupIndex * 3, groupIndex * 3 + 3);
-  const scene = codeScenes[groupIndex] ?? codeScenes[0];
-  const animate = inView;
+  const scene = codeScenes[groupIndex] ?? codeScenes[0]!;
 
   return (
     <section
@@ -252,7 +251,7 @@ export function Practice() {
             <div className="public-glass min-h-[48rem] overflow-hidden rounded-[1.5rem] sm:min-h-[27rem]">
               <div className="grid content-start items-start md:grid-cols-[1fr_1fr]">
                 <div className="min-w-0">
-                  <LiveEditor scene={scene} phase={phase} active={animate} />
+                  <LiveEditor scene={scene} phase={phase} active={inView} />
                 </div>
 
                 <div className="practice-zone self-start border-t border-white/[0.07] px-7 py-7 md:border-l md:border-t-0 sm:px-9">
@@ -261,7 +260,7 @@ export function Practice() {
                       <div
                         key={`${pair.question}-explanation`}
                         className="stagger-fade border-t border-white/[0.07] py-5 first:border-t-0"
-                        data-phase={animate ? phase : undefined}
+                        data-phase={inView ? phase : undefined}
                         style={{ "--base": `${pairIndex * 150 + 80}ms`, "--n": 0 } as CSSProperties}
                       >
                         <p className="text-xs font-medium uppercase tracking-[0.1em] text-cream/42">

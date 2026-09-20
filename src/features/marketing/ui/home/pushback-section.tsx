@@ -49,6 +49,13 @@ const rounds = [
   ]
 ] as const;
 
+const animatedRounds = rounds.map((round) =>
+  round.map((turn) => ({
+    ...turn,
+    words: turn.speaker === "Tutor" ? turn.line.split(" ") : undefined
+  }))
+);
+
 const HOLD_MS = 3800;
 const EXIT_MS = 1000;
 const TURN_STEP = 340;
@@ -120,13 +127,12 @@ export function Pushback() {
   const cardRef = useRef<HTMLDivElement>(null);
   const inView = useViewportPresence(cardRef);
   const { index, phase } = useRotator({
-    length: rounds.length,
+    length: animatedRounds.length,
     holdMs: HOLD_MS,
     exitMs: EXIT_MS,
     enabled: inView
   });
-  const round = rounds[index] ?? rounds[0]!;
-  const animate = inView;
+  const round = animatedRounds[index] ?? animatedRounds[0]!;
 
   return (
     <section
@@ -157,7 +163,6 @@ export function Pushback() {
               <div className="col-start-1 row-start-1">
                 {round.map((turn, turnIndex) => {
                   const base = { "--base": `${turnIndex * TURN_STEP}ms` } as CSSProperties;
-                  const words = turn.line.split(" ");
                   const tutor = turn.speaker === "Tutor";
 
                   return (
@@ -170,27 +175,27 @@ export function Pushback() {
                     >
                       <SpeakerMark
                         speaker={turn.speaker}
-                        phase={animate ? phase : undefined}
+                        phase={inView ? phase : undefined}
                         style={base}
                       />
 
                       <div className="min-w-0 flex-1">
                         <div
                           className="stagger-fade flex items-baseline gap-3"
-                          data-phase={animate ? phase : undefined}
+                          data-phase={inView ? phase : undefined}
                           style={base}
                         >
                           <p className="text-[0.95rem] font-medium text-cream">{turn.speaker}</p>
                           <span className="font-mono text-xs text-cream/35">{turn.at}</span>
                         </div>
 
-                        {tutor ? (
+                        {tutor && turn.words ? (
                           <p
                             className={[
                               "stagger-line mt-2 text-[1.0625rem] leading-[1.45] sm:text-xl sm:leading-snug",
                               turnIndex > 0 ? "font-semibold text-cream" : "text-cream/85"
                             ].join(" ")}
-                            data-phase={animate ? phase : undefined}
+                            data-phase={inView ? phase : undefined}
                             style={
                               {
                                 "--base": `${turnIndex * TURN_STEP + 140}ms`,
@@ -198,7 +203,7 @@ export function Pushback() {
                               } as CSSProperties
                             }
                           >
-                            {words.map((word, wordIndex) => (
+                            {turn.words.map((word, wordIndex) => (
                               <Fragment key={`${word}-${wordIndex}`}>
                                 {wordIndex > 0 ? " " : null}
                                 <span
@@ -213,7 +218,7 @@ export function Pushback() {
                         ) : (
                           <p
                             className="stagger-fade mt-2 text-[1.0625rem] leading-[1.45] text-cream/82 sm:text-xl sm:leading-snug"
-                            data-phase={animate ? phase : undefined}
+                            data-phase={inView ? phase : undefined}
                             style={
                               { "--base": `${turnIndex * TURN_STEP + 140}ms` } as CSSProperties
                             }
@@ -224,7 +229,7 @@ export function Pushback() {
 
                         {turnIndex === 0 ? (
                           <TranscriptWave
-                            phase={animate ? phase : undefined}
+                            phase={inView ? phase : undefined}
                             style={
                               { "--base": `${turnIndex * TURN_STEP + 420}ms` } as CSSProperties
                             }

@@ -3938,6 +3938,107 @@ html {
   display: none;
 }
 
+/* The signed-out home page opens in a brief dawn state, then lets the existing
+   ember-backed hero emerge as night. This lives below `.marketing-theme`, not
+   on `<html>`, so it never changes the saved theme or leaks into public reading
+   pages and signed-in workspace routes. */
+.home-theme-arrival {
+  --home-nightfall-duration: 2400ms;
+}
+
+.home-theme-arrival[data-home-ambience] .marketing-theme-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  pointer-events: none;
+  background:
+    radial-gradient(52% 38% at 50% 108%, rgba(255, 174, 82, 0.92), transparent 72%),
+    radial-gradient(78% 58% at 50% 112%, rgba(242, 110, 1, 0.48), transparent 76%),
+    radial-gradient(112% 82% at 50% 120%, rgba(186, 58, 2, 0.22), transparent 78%),
+    linear-gradient(180deg, #fafafc 0%, #f7f5f2 100%);
+  opacity: 0;
+  transition: opacity var(--home-nightfall-duration) cubic-bezier(0.45, 0, 0.2, 1);
+}
+
+.home-theme-arrival[data-home-ambience="dawn"] .marketing-theme {
+  --color-cream-rgb: 19 21 27;
+  --color-cream-soft-rgb: 51 65 85;
+  --color-cream-dim-rgb: 100 116 139;
+}
+
+.home-theme-arrival[data-home-ambience="dawn"] .marketing-theme-hero::after {
+  opacity: 1;
+}
+
+.home-theme-arrival[data-home-ambience] .marketing-hero-title,
+.home-theme-arrival[data-home-ambience] .marketing-theme-hero .marketing-lede,
+.home-theme-arrival[data-home-ambience] header nav a {
+  transition-property: color;
+  transition-duration: var(--home-nightfall-duration);
+  transition-timing-function: cubic-bezier(0.45, 0, 0.2, 1);
+}
+
+.home-theme-arrival[data-home-ambience] .marketing-brand-mark {
+  transition-duration: var(--home-nightfall-duration);
+}
+
+.home-theme-arrival[data-home-ambience="dawn"] .marketing-brand-mark {
+  filter: brightness(0);
+}
+
+.home-theme-arrival[data-home-ambience="dawn"] .glass-cta,
+.home-theme-arrival[data-home-ambience="dawn"] .site-nav-action > * {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: #0f172a;
+  box-shadow:
+    0 10px 28px rgba(15, 23, 42, 0.12),
+    0 2px 6px rgba(15, 23, 42, 0.08);
+  color: #ffffff;
+  transition-duration: var(--home-nightfall-duration);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-theme-arrival {
+    --home-nightfall-duration: 0ms;
+  }
+
+  html.dark .home-theme-arrival[data-home-ambience="dawn"] .marketing-theme,
+  html[data-theme="dark"] .home-theme-arrival[data-home-ambience="dawn"] .marketing-theme {
+    --color-cream-rgb: 241 234 216;
+    --color-cream-soft-rgb: 247 242 229;
+    --color-cream-dim-rgb: 188 183 168;
+  }
+
+  html.dark .home-theme-arrival[data-home-ambience="dawn"] .marketing-theme-hero::after,
+  html[data-theme="dark"]
+    .home-theme-arrival[data-home-ambience="dawn"]
+    .marketing-theme-hero::after {
+    opacity: 0;
+  }
+
+  html.dark .home-theme-arrival[data-home-ambience="dawn"] .marketing-brand-mark,
+  html[data-theme="dark"] .home-theme-arrival[data-home-ambience="dawn"] .marketing-brand-mark {
+    filter: none;
+  }
+
+  html.dark .home-theme-arrival[data-home-ambience="dawn"] .glass-cta,
+  html.dark .home-theme-arrival[data-home-ambience="dawn"] .site-nav-action > *,
+  html[data-theme="dark"] .home-theme-arrival[data-home-ambience="dawn"] .glass-cta,
+  html[data-theme="dark"]
+    .home-theme-arrival[data-home-ambience="dawn"]
+    .site-nav-action
+    > * {
+    border-color: rgba(255, 255, 255, 0.075);
+    background: rgba(18, 19, 22, 0.72);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.03),
+      0 18px 48px rgba(0, 0, 0, 0.3);
+    color: #f5f3ef;
+  }
+}
+
 .marketing-theme-section {
   border-top: 0;
   background: transparent !important;
@@ -3962,8 +4063,24 @@ html {
   background: rgba(var(--dm-accent-rgb), 0.18);
 }
 
-.accent-rail {
-  background: rgba(var(--dm-accent-rgb), 0.35);
+/* The help progress rail follows foreground contrast, not the orange scene
+   lighting: cream on the dark page and charcoal on the light page. */
+.help-step-rail {
+  background: rgba(241, 234, 216, 0.12);
+}
+
+.help-step-rail[data-active="true"] {
+  background: rgba(241, 234, 216, 0.78);
+}
+
+html.light .help-step-rail,
+html[data-theme="light"] .help-step-rail {
+  background: rgba(15, 23, 42, 0.12);
+}
+
+html.light .help-step-rail[data-active="true"],
+html[data-theme="light"] .help-step-rail[data-active="true"] {
+  background: rgba(15, 23, 42, 0.76);
 }
 
 /* The destination end of the escalation, lifted just enough off the panel's

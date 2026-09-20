@@ -14,8 +14,6 @@ export type BlogPost = {
   readTime: string;
   coverImage: string;
   coverAlt: string;
-  metric: string;
-  metricLabel: string;
   summary: string[];
   sections: BlogSection[];
   nextPractice: string[];
@@ -31,8 +29,6 @@ export const blogPosts = [
     readTime: "6 min read",
     coverImage: "/images/blog/resume-answers-cutout.png",
     coverAlt: "A clean resume turning into simple interview question cards",
-    metric: "4",
-    metricLabel: "Story layers",
     summary: [
       "Separate resume lines from real stories before practice.",
       "Attach scope, tradeoffs, and outcome to every project.",
@@ -83,8 +79,6 @@ export const blogPosts = [
     readTime: "7 min read",
     coverImage: "/images/blog/practice-round-cutout.png",
     coverAlt: "A simple practice round interface with a microphone and audio waveform",
-    metric: "90",
-    metricLabel: "Second answer cap",
     summary: [
       "Use a short timer to catch vague answers early.",
       "Practice follow-ups, not just first responses.",
@@ -135,8 +129,6 @@ export const blogPosts = [
     readTime: "5 min read",
     coverImage: "/images/blog/report-recap-cutout.png",
     coverAlt: "A clean interview report with progress bars, note cards, and an improvement arrow",
-    metric: "1",
-    metricLabel: "Next focus",
     summary: [
       "Look for the one failure pattern that repeated.",
       "Separate story gaps from delivery issues.",

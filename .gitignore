@@ -9,6 +9,7 @@ frontend/.next
 frontend/.next.stale*
 .tmp
 tmp
+scratch/
 .env
 .env.*
 !.env.example
