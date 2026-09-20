@@ -558,7 +558,8 @@ export class InterviewService {
 
     if (
       mode === "skip-block-assessment-code" &&
-      (existing.setup.dsaBlockAssessment?.kind !== "dsa-block-assessment" ||
+      ((existing.setup.dsaBlockAssessment?.kind !== "dsa-block-assessment" &&
+        existing.setup.coreTechnicalAssessment?.kind !== "core-technical-assessment") ||
         question.kind !== "code")
     ) {
       throw new BadRequestErrorException(
@@ -2018,7 +2019,10 @@ export function executionForEvaluation(
   answers: string[]
 ) {
   const execution = state.codeExecutions?.[String(questionIndex)] ?? null;
-  if (state.setup.dsaBlockAssessment?.kind !== "dsa-block-assessment") return execution;
+  const requiresBoundExecution =
+    state.setup.dsaBlockAssessment?.kind === "dsa-block-assessment" ||
+    state.setup.coreTechnicalAssessment?.kind === "core-technical-assessment";
+  if (!requiresBoundExecution) return execution;
   const latest = answers.at(-1);
   return execution?.codeHash && latest && execution.codeHash === fencedCodeFingerprint(latest)
     ? execution

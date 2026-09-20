@@ -102,16 +102,16 @@ export function buildArchitectureDesignAssessmentSetup(
     intensity: "realistic",
     context: [
       `This is the frozen assessment for the Architecture & Design scenario “${scenarioTitle}”.`,
-      "Use only the five prepared prompts and their server-only evaluation guides.",
+      "Run this as a senior system-design interview: frame the problem, make two fast production decisions, build the architecture on the shared canvas, pressure-test it, and defend its evolution.",
       record.block.owner.context ?? ""
     ]
       .filter(Boolean)
       .join("\n\n")
       .slice(0, 1_200),
-    templateId: "architecture-design-scenario-assessment",
+    templateId: "system-design",
     templateTitle: `${scenarioTitle} assessment`,
-    durationMinutes: 30,
-    questionCount: 5,
+    durationMinutes: 35,
+    questionCount: snapshot.prompts.length as 4 | 5,
     storyPracticeAssessment: {
       kind: "story-practice-assessment",
       practice: "architecture-design",
@@ -123,9 +123,9 @@ export function buildArchitectureDesignAssessmentSetup(
     storyPracticeAssessmentPresentation: {
       evidenceAnchorLabel: "Design evidence",
       stages: [
-        { id: "rapid", label: "Frame", caption: "Requirements and scale" },
-        { id: "explain", label: "Design", caption: "Contracts and architecture" },
-        { id: "scenario", label: "Defend", caption: "Operations and evolution" }
+        { id: "rapid", label: "Frame", caption: "Requirements and decisions" },
+        { id: "explain", label: "Design", caption: "Live architecture canvas" },
+        { id: "scenario", label: "Defend", caption: "Production and evolution" }
       ]
     }
   };
@@ -139,15 +139,25 @@ export function buildArchitectureDesignAssessmentPlan(
     .map((prompt) => ({
       text: prompt.prompt,
       evidenceAnchor: prompt.context ?? undefined,
-      kind: "conversation" as const,
+      kind: prompt.responseMode === "mcq" ? ("mcq" as const) : ("conversation" as const),
       stage: stageFor(prompt.order),
-      answerFormat: "spoken" as const,
+      answerFormat: prompt.responseMode === "mcq" ? ("mcq" as const) : ("spoken" as const),
+      interviewSection: "design" as const,
+      ...(prompt.responseMode === "mcq"
+        ? {
+            options: prompt.options,
+            answerIndex: prompt.privateEvaluation.correctChoiceIndex,
+            explanation: prompt.privateEvaluation.choiceExplanation
+          }
+        : prompt.responseMode === "composite"
+          ? { options: prompt.options }
+          : {}),
       competency: competencyFor(prompt.kind),
       rubricKeys: [...prompt.privateEvaluation.dimensionKeys],
       intent: `Assess ${competencyFor(prompt.kind).toLowerCase()} using the frozen design evidence.`,
       mustHit: publicExpectationsFor(prompt.kind),
       probeIfMissing: probeFor(prompt.kind),
-      maxFollowUps: 1,
+      maxFollowUps: 0,
       storyPracticeInterviewerGuide: {
         practice: "architecture-design" as const,
         label: "Architecture & Design",
@@ -157,10 +167,13 @@ export function buildArchitectureDesignAssessmentPlan(
     }));
 }
 
-function stageFor(order: number): "rapid" | "explain" | "scenario" {
-  if (order <= 2) return "rapid";
-  if (order <= 4) return "explain";
-  return "scenario";
+function stageFor(
+  order: number
+): "design-frame" | "design-canvas" | "design-deep-dive" | "design-pressure" | "design-defend" {
+  if (order === 1) return "design-frame";
+  if (order === 2) return "design-canvas";
+  if (order === 3) return "design-deep-dive";
+  return "design-pressure";
 }
 
 function competencyFor(

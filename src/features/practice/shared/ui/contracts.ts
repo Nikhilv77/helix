@@ -99,6 +99,8 @@ export type StoryPracticeOverviewExperience<TAssessment = unknown, TReport = unk
 export type StoryPracticeWorkspaceExperience<TQuestion = unknown> = StoryPracticeRouteIdentity & {
   label: string;
   environmentLabel: string | null;
+  /** Controls whether terminal feedback replaces a reference tab or opens as a focused debrief. */
+  answerReview?: "tab" | "modal";
   capabilities: {
     runCode: boolean;
   };

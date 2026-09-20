@@ -63,22 +63,28 @@ export class CoreTechnicalAssessmentEvaluator {
       })
     );
     assertFeedbackIdentity(input.snapshot, raw.promptFeedback);
-    const totalCodeQuestionCount = input.questions.filter(({ privateSnapshot }) => {
-      const question = generatedQuestionCandidateSchema.parse(privateSnapshot);
-      return question.format === "debug-repair" || question.format === "micro-implementation";
-    }).length;
-    const acceptedCodeQuestionCount = input.questions.filter((question) =>
-      question.codeRuns.some((run) => run.passed)
-    ).length;
-    const implementationCap = acceptedCodeQuestionCount === 0
-      ? 35
-      : acceptedCodeQuestionCount < totalCodeQuestionCount
-        ? 70
-        : 100;
+    const assessmentExecution = input.snapshot.submission?.codeExecution ?? null;
+    const codeSkipped = input.snapshot.submission?.codeSkipped === true;
+    const totalCodeQuestionCount = 1;
+    const acceptedCodeQuestionCount = assessmentExecution?.accepted ? 1 : 0;
+    const implementationCap = codeSkipped ? 0 : acceptedCodeQuestionCount === 0 ? 35 : 100;
     const scores = {
       ...raw.scores,
       debuggingImplementation: Math.min(raw.scores.debuggingImplementation, implementationCap)
     };
+    const transferPromptId = input.snapshot.prompts.find(
+      (prompt) => prompt.kind === "repair-implementation-transfer"
+    )?.id;
+    const promptFeedback = raw.promptFeedback.map((feedback) => {
+      if (feedback.promptId !== transferPromptId || acceptedCodeQuestionCount > 0) return feedback;
+      return {
+        ...feedback,
+        score: Math.min(feedback.score, implementationCap),
+        feedback: codeSkipped
+          ? "The implementation task was skipped, so it receives no implementation credit."
+          : "No accepted run matched the submitted code, so implementation credit is capped until the frozen tests pass."
+      };
+    });
     const evidence = adaptiveEvidence(input, scores);
     const nextStory = this.ranking.findNextStory(input.focus, evidence);
     const continuation = nextStory
@@ -90,10 +96,7 @@ export class CoreTechnicalAssessmentEvaluator {
           assessmentScores: evidence.assessmentScores,
           learnedCount: evidence.practice.learnedCount,
           meanVerifiedScore: evidence.practice.meanVerifiedScore,
-          weakKeys: [
-            ...evidence.practice.weakTopicKeys,
-            ...evidence.practice.weakMechanismKeys
-          ],
+          weakKeys: [...evidence.practice.weakTopicKeys, ...evidence.practice.weakMechanismKeys],
           readySummary:
             "You have demonstrated the available Core Technical outcomes with verified practice and assessment evidence.",
           completeSummary:
@@ -113,19 +116,21 @@ export class CoreTechnicalAssessmentEvaluator {
       teacherSummary: raw.teacherSummary,
       strengths: raw.strengths,
       improvementAreas: raw.improvementAreas,
-      promptFeedback: raw.promptFeedback,
+      promptFeedback,
       solvedVsLearned: {
         completedCount: input.questions.length - learnedQuestionOrders.length,
         learnedCount: learnedQuestionOrders.length,
         learnedQuestionOrders,
-        masteryCreditNote: learnedQuestionOrders.length === 0
-          ? `All ${input.questions.length} Practice questions were solved through attempts; no Learn action reduced Practice mastery credit.`
-          : `Questions ${learnedQuestionOrders.join(", ")} were learned rather than solved and contribute zero Practice mastery credit.`
+        masteryCreditNote:
+          learnedQuestionOrders.length === 0
+            ? `All ${input.questions.length} Practice questions were solved through attempts; no Learn action reduced Practice mastery credit.`
+            : `Questions ${learnedQuestionOrders.join(", ")} were learned rather than solved and contribute zero Practice mastery credit.`
       },
       deterministicEvidence: {
         acceptedCodeQuestionCount,
         totalCodeQuestionCount,
-        implementationScoreCapped: scores.debuggingImplementation !== raw.scores.debuggingImplementation
+        implementationScoreCapped:
+          scores.debuggingImplementation !== raw.scores.debuggingImplementation
       },
       ...(nextStory ? { nextStory } : {}),
       continuation
@@ -165,7 +170,9 @@ function assessmentPrompt(input: EvaluateInput): string {
   return `Evaluate this five-prompt story assessment.
 
 Frozen prompts, private evaluation contracts, and candidate answers:
-${input.snapshot.prompts.map((prompt) => `Prompt ${prompt.order} (${prompt.id}): ${prompt.prompt}
+${input.snapshot.prompts
+  .map(
+    (prompt) => `Prompt ${prompt.order} (${prompt.id}): ${prompt.prompt}
 Context: ${prompt.context ?? "none"}
 Expected answer: ${prompt.privateEvaluation.expectedAnswer}
 Rubric: ${prompt.privateEvaluation.rubric.map((item) => `${item.points}/10 ${item.criterion}`).join("; ")}
@@ -173,10 +180,18 @@ Deterministic evidence rule: ${prompt.privateEvaluation.deterministicEvidence}
 Candidate answer:
 """
 ${responseById.get(prompt.id)!.answer}
-"""`).join("\n\n")}
+"""`
+  )
+  .join("\n\n")}
 
 Authoritative Practice evidence (model scores may not override this):
-${JSON.stringify(practiceEvidence)}`;
+${JSON.stringify(practiceEvidence)}
+
+Authoritative assessment transfer-code evidence (this alone controls assessment implementation credit):
+${JSON.stringify({
+  skipped: input.snapshot.submission?.codeSkipped === true,
+  execution: input.snapshot.submission?.codeExecution ?? null
+})}`;
 }
 
 function adaptiveEvidence(
@@ -193,7 +208,8 @@ function adaptiveEvidence(
   let totalCodeQuestionCount = 0;
   for (const row of input.questions) {
     const question = generatedQuestionCandidateSchema.parse(row.privateSnapshot);
-    const executable = question.format === "debug-repair" || question.format === "micro-implementation";
+    const executable =
+      question.format === "debug-repair" || question.format === "micro-implementation";
     if (executable) totalCodeQuestionCount += 1;
     if (row.codeRuns.some((run) => run.passed)) acceptedCodeQuestionCount += 1;
     if (row.status === "LEARNED") {
@@ -201,7 +217,9 @@ function adaptiveEvidence(
       verifiedScores.push(0);
     } else completedCount += 1;
     hintsUsed += row.state?.revealedHintCount ?? 0;
-    const latestVerified = row.attempts.find((attempt) => attempt.verificationStatus === "VERIFIED");
+    const latestVerified = row.attempts.find(
+      (attempt) => attempt.verificationStatus === "VERIFIED"
+    );
     if (
       row.status !== "LEARNED" &&
       latestVerified?.score !== null &&
@@ -209,7 +227,11 @@ function adaptiveEvidence(
     ) {
       verifiedScores.push(latestVerified.score);
     }
-    if (row.status === "LEARNED" || (latestVerified?.score ?? 10) < 7 || (row.state?.revealedHintCount ?? 0) >= 2) {
+    if (
+      row.status === "LEARNED" ||
+      (latestVerified?.score ?? 10) < 7 ||
+      (row.state?.revealedHintCount ?? 0) >= 2
+    ) {
       question.topicKeys.forEach((key) => weakTopicKeys.add(key));
       question.mechanismKeys.forEach((key) => weakMechanismKeys.add(key));
     }

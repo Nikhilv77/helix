@@ -14,6 +14,7 @@ import {
   type ArchitectureDesignConfirmedFocus
 } from "@/features/practice/architecture-design/domain/focus-ranking-contracts";
 import { architectureDesignQuestionSchema } from "@/features/practice/architecture-design/domain/question-contracts";
+import { systemDesignCanvasDocumentSchema } from "@/features/interviews/domain/system-design-canvas";
 import type { AiService } from "@/server/ai/ai.service";
 import { storyPracticeFingerprint } from "@/features/practice/shared/server/practice-orchestrator";
 import { terminalStoryPracticeContinuation } from "@/features/practice/shared/server/continuation-orchestrator";
@@ -38,6 +39,7 @@ type EvaluateInput = {
   priorScenarioKeys: string[];
   priorTopicKeys: string[];
   finalizedAt: Date;
+  designCanvas?: { document: unknown; revision: number } | null;
 };
 
 export class ArchitectureDesignAssessmentEvaluator {
@@ -60,7 +62,7 @@ export class ArchitectureDesignAssessmentEvaluator {
         temperature: 0.1,
         schema: architectureDesignAssessmentEvaluationSchema,
         systemInstruction:
-          "You are a strict senior system-design interviewer. Use only the frozen scenario prompts, expected answers, rubrics, candidate responses, and supplied practice evidence. Do not invent requirements, traffic, dependencies, or production facts. Return exactly one mastery entry for every supplied Architecture dimension and JSON matching the schema.",
+          "You are a strict senior system-design interviewer. Use only the frozen scenario prompts, expected answers, rubrics, candidate responses, saved design canvas, and supplied practice evidence. Treat the canvas as candidate evidence: reward clear ownership and flows, and penalize missing or contradictory architecture evidence without erasing valid spoken reasoning. Do not invent requirements, traffic, dependencies, or production facts. Return exactly one mastery entry for every supplied Architecture dimension and JSON matching the schema.",
         prompt
       })
     );
@@ -164,7 +166,32 @@ ${responseById.get(prompt.id)!.answer}
   .join("\n\n")}
 
 Authoritative Practice evidence (Learn is zero Practice mastery and unverified attempts are not demonstrated ability):
-${JSON.stringify(practiceEvidence)}`;
+${JSON.stringify(practiceEvidence)}
+
+Saved architecture canvas (candidate-authored evidence):
+${JSON.stringify(canvasEvidence(input.designCanvas))}`;
+}
+
+function canvasEvidence(canvas: EvaluateInput["designCanvas"]) {
+  if (!canvas) return { status: "missing" };
+  const parsed = systemDesignCanvasDocumentSchema.safeParse(canvas.document);
+  if (!parsed.success) return { status: "invalid", revision: canvas.revision };
+  const labels = new Map(parsed.data.nodes.map((node) => [node.id, node.label]));
+  return {
+    status:
+      parsed.data.nodes.length === 0 && parsed.data.edges.length === 0 && !parsed.data.notes.trim()
+        ? "empty"
+        : "present",
+    revision: canvas.revision,
+    nodes: parsed.data.nodes.map(({ kind, label, detail }) => ({ kind, label, detail })),
+    edges: parsed.data.edges.map(({ from, to, label, mode }) => ({
+      from: labels.get(from) ?? from,
+      to: labels.get(to) ?? to,
+      label,
+      mode
+    })),
+    notes: parsed.data.notes
+  };
 }
 
 function adaptiveEvidence(

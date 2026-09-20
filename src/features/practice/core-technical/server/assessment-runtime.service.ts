@@ -17,6 +17,8 @@ import { ConflictErrorException } from "@/server/common/exceptions/conflict-erro
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 import { StoryPracticeAssessmentRuntimeCoordinator } from "@/features/practice/shared/server/assessment-runtime";
 import type { CoreTechnicalAssessmentService } from "./assessment.service";
+import { generatedQuestionCandidateSchema } from "../domain/question-contracts";
+import type { ExecutableCoreTechnicalQuestion } from "./runner-contracts";
 
 /** Launches a frozen Core assessment in the shared DSA-quality voice room. */
 export class CoreTechnicalAssessmentRuntimeService {
@@ -84,8 +86,9 @@ export class CoreTechnicalAssessmentRuntimeService {
     sessionId: string,
     questionIndex: number
   ): Promise<{
+    kind: "core-technical";
     slug: string;
-    runnerContract: { version: 1; functionName: string; testCases: any[] };
+    question: ExecutableCoreTechnicalQuestion;
   } | null> {
     const session = await this.prisma.interviewSession.findFirst({
       where: { id: sessionId, ownerId },
@@ -106,57 +109,38 @@ export class CoreTechnicalAssessmentRuntimeService {
         : undefined);
     if (!assessmentId) return null;
 
+    if (state.questionIndex !== questionIndex) return null;
+
     const record = await this.prisma.coreTechnicalAssessment.findFirst({
       where: { id: assessmentId, ownerId },
-      select: { assessmentSnapshot: true }
+      select: {
+        assessmentSnapshot: true,
+        block: { select: { questions: { select: { id: true, privateSnapshot: true } } } }
+      }
     });
     if (!record?.assessmentSnapshot) return null;
     const snapshot = coreTechnicalAssessmentSnapshotSchema.parse(record.assessmentSnapshot);
-    const targetPrompt =
-      snapshot.prompts[questionIndex] ??
-      snapshot.prompts.find((prompt) => prompt.kind === "repair-implementation-transfer");
-    if (!targetPrompt || (targetPrompt.kind !== "repair-implementation-transfer" && !targetPrompt.runnerContract)) {
+    const targetPrompt = snapshot.prompts[questionIndex];
+    if (!targetPrompt || targetPrompt.kind !== "repair-implementation-transfer") return null;
+    const legacyQuestion = record.block.questions.find(
+      (question) => question.id === targetPrompt.privateEvaluation.sourceQuestionId
+    )?.privateSnapshot;
+    const rawQuestion = targetPrompt.privateEvaluation.executableQuestion ?? legacyQuestion;
+    if (!rawQuestion) return null;
+    const parsedQuestion = generatedQuestionCandidateSchema.parse(rawQuestion);
+    if (
+      !parsedQuestion.starterCode ||
+      !parsedQuestion.referenceSolution ||
+      !parsedQuestion.publicTests ||
+      !parsedQuestion.hiddenTests ||
+      !parsedQuestion.wrongSolutions ||
+      !parsedQuestion.runnerContract
+    )
       return null;
-    }
-    const rawContract = targetPrompt.runnerContract;
-    const testCases = (rawContract?.testCases?.length ? rawContract.testCases : [
-      {
-        input: "{}",
-        expectedOutput: "true",
-        visible: true,
-        arguments: [{}],
-        expectedValue: true
-      }
-    ]).map((tc: any) => {
-      let parsedInput: unknown = tc.input;
-      try {
-        parsedInput = typeof tc.input === "string" ? JSON.parse(tc.input) : tc.input;
-      } catch {
-        parsedInput = tc.input;
-      }
-      let parsedExpected: unknown = tc.expectedOutput ?? tc.expectedValue;
-      try {
-        parsedExpected = typeof parsedExpected === "string" ? JSON.parse(parsedExpected) : parsedExpected;
-      } catch {
-        // keep as is
-      }
-      return {
-        input: typeof tc.input === "string" ? tc.input : JSON.stringify(tc.input ?? {}),
-        expectedOutput: typeof tc.expectedOutput === "string" ? tc.expectedOutput : JSON.stringify(tc.expectedOutput ?? true),
-        visible: tc.visible ?? true,
-        arguments: Array.isArray(tc.arguments) ? tc.arguments : [parsedInput],
-        expectedValue: tc.expectedValue !== undefined ? tc.expectedValue : parsedExpected
-      };
-    });
-
-    const contract = {
-      version: 1 as const,
-      functionName: rawContract?.functionName || "solution",
-      testCases
-    };
     return {
+      kind: "core-technical",
       slug: `core-technical-transfer-${targetPrompt.id}`,
-      runnerContract: contract
+      question: parsedQuestion as ExecutableCoreTechnicalQuestion
     };
   }
 }
@@ -236,21 +220,23 @@ export function buildCoreTechnicalAssessmentPlan(
         answerFormat: isCode ? ("typed" as const) : isMcq ? ("mcq" as const) : ("spoken" as const),
         language: isCode ? "javascript" : undefined,
         options: prompt.options?.length ? [...prompt.options] : undefined,
+        answerIndex: isMcq ? prompt.correctOption : undefined,
         codeSnippet: prompt.codeSnippet ?? undefined,
         codeTask: isCode ? (prompt.codeTask ?? prompt.prompt) : undefined,
         starterCode: isCode ? (prompt.starterCode ?? undefined) : undefined,
-        dsaReviewContext: !isCode && prompt.context
-          ? {
-              title: competencyFor(prompt.kind),
-              difficulty: "intermediate",
-              problemStatement: prompt.context,
-              constraints: [
-                "Identify the governing mechanism",
-                "Reason about runtime trade-offs and edge cases"
-              ],
-              examples: []
-            }
-          : undefined,
+        dsaReviewContext:
+          !isCode && prompt.context
+            ? {
+                title: competencyFor(prompt.kind),
+                difficulty: "intermediate",
+                problemStatement: prompt.context,
+                constraints: [
+                  "Identify the governing mechanism",
+                  "Reason about runtime trade-offs and edge cases"
+                ],
+                examples: []
+              }
+            : undefined,
         dsaTransferQuestion: isCode
           ? {
               slug: `core-technical-transfer-${prompt.id}`,
@@ -267,15 +253,34 @@ export function buildCoreTechnicalAssessmentPlan(
                 "Non-blocking asynchronous execution",
                 "Ensure clean error boundary resolution"
               ],
-              examples: (prompt.runnerContract?.testCases as Array<{ input?: string; expectedOutput?: string; explanation?: string }> | undefined)?.slice(0, 2).map((tc) => ({
-                input: typeof tc.input === "string" ? tc.input : JSON.stringify(tc.input ?? {}),
-                output: typeof tc.expectedOutput === "string" ? tc.expectedOutput : JSON.stringify(tc.expectedOutput ?? true),
-                explanation: tc.explanation ?? undefined
-              })) ?? [],
+              examples:
+                (
+                  prompt.runnerContract?.testCases as
+                    | Array<{
+                        input?: string;
+                        expectedOutput?: string;
+                        explanation?: string;
+                        visible?: boolean;
+                      }>
+                    | undefined
+                )
+                  ?.filter((testCase) => testCase.visible !== false)
+                  // Legacy v1 snapshots accidentally marked hidden cases visible;
+                  // the first case is authored public, so never expose later cases.
+                  .slice(0, 1)
+                  .map((testCase) => ({
+                    input:
+                      typeof testCase.input === "string"
+                        ? testCase.input
+                        : JSON.stringify(testCase.input ?? {}),
+                    output:
+                      typeof testCase.expectedOutput === "string"
+                        ? testCase.expectedOutput
+                        : JSON.stringify(testCase.expectedOutput ?? true),
+                    explanation: testCase.explanation ?? undefined
+                  })) ?? [],
               starterCode: {
-                javascript:
-                  prompt.starterCode ??
-                  `/**\n * Core Technical Mechanism Repair\n * Implement a clean repair satisfying the boundary constraints.\n */\nfunction ${prompt.runnerContract?.functionName || "solution"}(input) {\n  // Implementation\n  return input;\n}\n\nmodule.exports = { ${prompt.runnerContract?.functionName || "solution"} };\n`,
+                javascript: prompt.starterCode ?? "",
                 python: "",
                 cpp: "",
                 java: ""

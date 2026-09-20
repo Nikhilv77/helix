@@ -25,20 +25,27 @@ const REQUEST_ID = "33333333-3333-4333-8333-333333333333";
 const NOW = new Date("2026-09-08T13:00:00Z");
 
 describe("Architecture assessment blueprint and evaluator", () => {
-  it("freezes five prompts from four terminal questions without exposing evaluation material", () => {
+  it("freezes four assessment questions from four terminal questions without exposing evaluation material", () => {
     const snapshot = assessmentSnapshot();
     const publicSnapshot = publicArchitectureDesignAssessmentSnapshot(snapshot);
 
-    expect(snapshot.prompts).toHaveLength(5);
+    expect(snapshot.prompts).toHaveLength(4);
     expect(snapshot.deliveryMode).toBe("shared-voice-room");
     expect(snapshot.prompts.map(({ kind }) => kind)).toEqual([
       "requirements-scope",
       "api-data-capacity",
       "architecture-tradeoffs",
-      "reliability-security-operability",
-      "communication-evolution"
+      "reliability-security-operability"
     ]);
+    expect(snapshot.prompts.map(({ responseMode }) => responseMode)).toEqual([
+      "mcq",
+      "mcq",
+      "composite",
+      "composite"
+    ]);
+    expect(publicSnapshot.prompts[1]?.options).toHaveLength(4);
     expect(JSON.stringify(publicSnapshot)).not.toMatch(/privateEvaluation|expectedAnswer|rubric/);
+    expect(JSON.stringify(publicSnapshot)).not.toMatch(/correctChoiceIndex|choiceExplanation/);
     expect(
       publicArchitectureDesignAssessmentSnapshot({ ...snapshot, deliveryMode: undefined })
         .deliveryMode
@@ -55,7 +62,7 @@ describe("Architecture assessment blueprint and evaluator", () => {
     ).toThrow("four terminal questions");
   });
 
-  it("opens a durable five-prompt room while keeping answer guides server-only", async () => {
+  it("opens a durable four-question room while keeping answer guides server-only", async () => {
     const snapshot = assessmentSnapshot();
     const interviews = {
       start: vi.fn().mockResolvedValue({ state: { id: ASSESSMENT_ID }, created: true })
@@ -84,15 +91,29 @@ describe("Architecture assessment blueprint and evaluator", () => {
       runtime.startOrResume("owner-one", { assessmentId: ASSESSMENT_ID, requestId: REQUEST_ID })
     ).resolves.toMatchObject({ sessionId: ASSESSMENT_ID, created: true });
     const plan = buildArchitectureDesignAssessmentPlan(snapshot);
-    expect(plan).toHaveLength(5);
-    expect(plan.every(({ maxFollowUps }) => maxFollowUps === 1)).toBe(true);
+    expect(plan).toHaveLength(4);
+    expect(plan.every(({ maxFollowUps }) => maxFollowUps === 0)).toBe(true);
+    expect(plan.map(({ stage }) => stage)).toEqual([
+      "design-frame",
+      "design-canvas",
+      "design-deep-dive",
+      "design-pressure"
+    ]);
+    expect(plan.map(({ kind }) => kind)).toEqual(["mcq", "mcq", "conversation", "conversation"]);
+    expect(plan.slice(0, 2).every(({ answerIndex }) => typeof answerIndex === "number")).toBe(true);
+    expect(
+      plan
+        .slice(2)
+        .every(({ options, answerIndex }) => options?.length === 4 && answerIndex === undefined)
+    ).toBe(true);
+    expect(plan.every(({ interviewSection }) => interviewSection === "design")).toBe(true);
     expect(plan[0]?.storyPracticeInterviewerGuide).toMatchObject({
       practice: "architecture-design",
       label: "Architecture & Design"
     });
     expect(interviews.start).toHaveBeenCalledWith(
       expect.objectContaining({
-        templateId: "architecture-design-scenario-assessment",
+        templateId: "system-design",
         storyPracticeAssessment: expect.objectContaining({
           practice: "architecture-design",
           blockId: BLOCK_ID,
@@ -106,7 +127,7 @@ describe("Architecture assessment blueprint and evaluator", () => {
     );
   });
 
-  it("maps a completed Architecture room transcript to its five frozen prompt IDs", async () => {
+  it("maps a completed Architecture room transcript to its four frozen prompt IDs", async () => {
     const snapshot = assessmentSnapshot();
     const setup = (
       await import("./assessment-runtime.service")
@@ -214,6 +235,34 @@ describe("Architecture assessment blueprint and evaluator", () => {
       })),
       priorScenarioKeys: [selection().selectedScenario.scenarioKey],
       priorTopicKeys: ["webhook-delivery"],
+      designCanvas: {
+        revision: 3,
+        document: {
+          schemaVersion: 1,
+          nodes: [
+            {
+              id: "api",
+              kind: "gateway",
+              label: "Ingress API",
+              detail: "Owns admission",
+              x: 0,
+              y: 0
+            },
+            {
+              id: "queue",
+              kind: "queue",
+              label: "Delivery queue",
+              detail: "Tenant-fair work",
+              x: 240,
+              y: 0
+            }
+          ],
+          edges: [
+            { id: "api-queue", from: "api", to: "queue", label: "accepted events", mode: "async" }
+          ],
+          notes: "Retries use isolated delayed capacity."
+        }
+      },
       finalizedAt: new Date("2026-09-08T13:00:00Z")
     });
 
@@ -227,10 +276,13 @@ describe("Architecture assessment blueprint and evaluator", () => {
       selection().selectedScenario.scenarioKey
     );
     expect(result.evidence.practice.meanVerifiedScore).toBe(6);
-    expect(result.transcript.entries).toHaveLength(5);
+    expect(result.transcript.entries).toHaveLength(4);
     expect(JSON.stringify(result.transcript)).not.toMatch(/expectedAnswer|rubric/);
     expect(generateStructured).toHaveBeenCalledWith(
-      expect.objectContaining({ operation: "architecture-design.assessment.finalize" })
+      expect.objectContaining({
+        operation: "architecture-design.assessment.finalize",
+        prompt: expect.stringContaining('"label":"Ingress API"')
+      })
     );
   });
 

@@ -118,7 +118,10 @@ describe("CoreTechnicalAssessment", () => {
     expect(textareas[0]).toHaveAttribute("readonly");
 
     fireEvent.click(screen.getByRole("button", { name: "Retry report" }));
-    expect(await screen.findByRole("heading", { name: "70/100 overall" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Practice path results" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("70")).toBeInTheDocument();
     expect(bodies).toHaveLength(2);
     expect(bodies[1]).toEqual(bodies[0]);
   });
@@ -142,7 +145,7 @@ describe("CoreTechnicalAssessment", () => {
     expect(screen.getByDisplayValue(submission.responses[0]!.answer)).toHaveAttribute("readonly");
     expect(screen.getByRole("status")).toHaveTextContent("Finalizing");
     fireEvent.click(screen.getByRole("button", { name: "Retry report" }));
-    await screen.findByRole("heading", { name: "70/100 overall" });
+    await screen.findByRole("heading", { name: "Practice path results" });
     expect(requestBodies()[0]).toEqual({
       assessmentId: ASSESSMENT_ID,
       requestId: FINALIZE_REQUEST_ID,
@@ -165,7 +168,7 @@ describe("CoreTechnicalAssessment", () => {
     expect(screen.getByRole("region", { name: "Strengths" })).toHaveTextContent(
       "Clear causal reasoning"
     );
-    expect(screen.getByRole("region", { name: "Improve next" })).toHaveTextContent(
+    expect(screen.getByRole("region", { name: "Improvement areas" })).toHaveTextContent(
       "Add stronger runtime evidence"
     );
     expect(screen.getByText(/contributes zero Practice mastery/i)).toBeInTheDocument();
@@ -178,7 +181,7 @@ describe("CoreTechnicalAssessment", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Continue to next practice path" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/still current/i);
-    expect(screen.getByRole("heading", { name: "70/100 overall" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Practice path results" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Retry next practice path" }));
 
     await waitFor(() =>
@@ -216,7 +219,9 @@ describe("CoreTechnicalAssessment", () => {
 
     expect(screen.getByText("Preparation complete")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "You’ve completed the available practice path curriculum" })
+      screen.getByRole("heading", {
+        name: "You’ve completed the available practice path curriculum"
+      })
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /continue to next/i })).toBeNull();
   });

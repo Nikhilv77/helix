@@ -4,6 +4,7 @@ import {
   type ArchitectureDesignQuestion
 } from "@/features/practice/architecture-design/domain/question-contracts";
 import { ARCHITECTURE_DESIGN_REVIEW_CANDIDATES } from "@/features/practice/architecture-design/domain/reviewed-scenarios";
+import { architectureDesignKnowledgeCheck } from "@/features/practice/architecture-design/domain/knowledge-check";
 import type { PrismaService } from "@/server/database/prisma.service";
 import {
   ARCHITECTURE_DESIGN_ATTEMPT_EVALUATOR_FINGERPRINT,
@@ -35,6 +36,26 @@ describe("ArchitectureDesignPracticeService", () => {
     expect(serialized).not.toMatch(
       /referenceAnswer|correctChoiceIndex|rubric|commonMistakes|hints/
     );
+    expect(result.question.knowledgeCheck.choices).toHaveLength(4);
+  });
+
+  it("checks the quick quiz on the server without exposing its answer beforehand", async () => {
+    const service = new ArchitectureDesignPracticeService(
+      {
+        architectureBlockQuestion: {
+          findFirst: vi.fn().mockResolvedValue(publicRow(question))
+        }
+      } as unknown as PrismaService,
+      evaluator()
+    );
+    const check = architectureDesignKnowledgeCheck(question);
+
+    await expect(
+      service.checkKnowledge("owner-1", {
+        questionId: QUESTION_ID,
+        selectedChoiceIndex: check.correctChoiceIndex
+      })
+    ).resolves.toMatchObject({ correct: true, correctChoiceIndex: check.correctChoiceIndex });
   });
 
   it("rejects foreign question IDs before writing learner state", async () => {
@@ -141,6 +162,19 @@ describe("ArchitectureDesignPracticeService", () => {
 
     expect(result.question.status).toBe("COMPLETED");
     expect(result.question.authorizedAnswer).not.toBeNull();
+    expect(result.question.authorizedAnswer?.learningGuide.markdown).toContain("## Outcome");
+    expect(result.question.authorizedAnswer?.learningGuide.markdown).toContain("## Why it happens");
+    expect(result.question.authorizedAnswer?.learningGuide.markdown).toContain(
+      "## Production consequence"
+    );
+    expect(result.question.authorizedAnswer?.learningGuide.markdown).toContain("## How to fix");
+    expect(result.question.authorizedAnswer?.learningGuide.diagram.steps).toHaveLength(4);
+    expect(result.question.authorizedAnswer?.learningGuide.markdown).toContain(
+      question.commonMistakes[0]
+    );
+    expect(result.question.authorizedAnswer?.learningGuide.markdown).toContain(
+      question.interviewerFollowUps[0]
+    );
     expect(tx.architectureQuestionAttempt.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({

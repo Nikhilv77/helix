@@ -18,7 +18,8 @@ vi.mock("@/server/app-container", () => ({
   getAppContainer: () => ({
     config: {},
     interviewService: { skipBlockAssessmentCodeOwned: mocks.skip },
-    dsaBlockAssessmentFinalizationService: { finalizeOwned: vi.fn() }
+    dsaBlockAssessmentFinalizationService: { finalizeOwned: vi.fn() },
+    coreTechnicalAssessmentService: { finalizeInterviewOwned: vi.fn() }
   })
 }));
 

@@ -162,6 +162,23 @@ describe("CoreTechnicalAssessmentRuntimeService", () => {
     );
   });
 
+  it("propagates the frozen MCQ answer key into the shared deterministic grader", () => {
+    const snapshot = assessmentSnapshot();
+    snapshot.prompts[0] = {
+      ...snapshot.prompts[0]!,
+      options: ["plausible distractor", "frozen correct answer", "another distractor"],
+      correctOption: 1
+    };
+
+    const [question] = buildCoreTechnicalAssessmentPlan(snapshot);
+
+    expect(question).toMatchObject({
+      kind: "mcq",
+      options: ["plausible distractor", "frozen correct answer", "another distractor"],
+      answerIndex: 1
+    });
+  });
+
   it("groups spoken answers and follow-ups by frozen prompt for final scoring", () => {
     const responses = coreTechnicalInterviewResponses(assessmentSnapshot(), {
       turns: [
@@ -237,14 +254,18 @@ describe("CoreTechnicalAssessmentRuntimeService", () => {
 
     await service.finalizeInterviewOwned("owner-one", ASSESSMENT_ID);
 
-    expect(finalize).toHaveBeenCalledWith("owner-one", {
-      assessmentId: ASSESSMENT_ID,
-      requestId: ASSESSMENT_ID,
-      responses: snapshot.prompts.map((prompt, index) => ({
-        promptId: prompt.id,
-        answer: `Spoken evidence for prompt ${index + 1}`
-      }))
-    });
+    expect(finalize).toHaveBeenCalledWith(
+      "owner-one",
+      {
+        assessmentId: ASSESSMENT_ID,
+        requestId: ASSESSMENT_ID,
+        responses: snapshot.prompts.map((prompt, index) => ({
+          promptId: prompt.id,
+          answer: `Spoken evidence for prompt ${index + 1}`
+        }))
+      },
+      { codeExecution: null, codeSkipped: false }
+    );
   });
 });
 

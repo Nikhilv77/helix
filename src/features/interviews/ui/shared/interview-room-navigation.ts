@@ -26,3 +26,11 @@ export function coreTechnicalAssessmentRoomHref(sessionId: string): string {
 export function openCoreTechnicalAssessmentRoom(sessionId: string): void {
   window.location.assign(coreTechnicalAssessmentRoomHref(sessionId));
 }
+
+export function architectureDesignAssessmentRoomHref(sessionId: string): string {
+  return `/practice/architecture-design/assessment?session=${encodeURIComponent(sessionId)}`;
+}
+
+export function openArchitectureDesignAssessmentRoom(sessionId: string): void {
+  window.location.assign(architectureDesignAssessmentRoomHref(sessionId));
+}

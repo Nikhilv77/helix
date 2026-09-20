@@ -29,18 +29,31 @@ export const architectureDesignAssessmentPromptKindSchema = z.enum([
   "communication-evolution"
 ]);
 
-export const architectureDesignPublicAssessmentPromptSchema = z
+const architectureDesignAssessmentPromptObjectSchema = z
   .object({
     id: architectureDesignIdentifierSchema,
     order: z.number().int().min(1).max(5),
     kind: architectureDesignAssessmentPromptKindSchema,
     prompt: z.string().trim().min(20).max(4_000),
-    context: z.string().trim().min(8).max(4_000).nullable()
+    context: z.string().trim().min(8).max(4_000).nullable(),
+    responseMode: z.enum(["spoken", "mcq", "composite"]).optional(),
+    options: z.array(z.string().trim().min(4).max(500)).length(4).optional()
   })
   .strict();
 
+export const architectureDesignPublicAssessmentPromptSchema =
+  architectureDesignAssessmentPromptObjectSchema.superRefine((prompt, context) => {
+    if (["mcq", "composite"].includes(prompt.responseMode ?? "") !== Boolean(prompt.options)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["options"],
+        message: "Assessment MCQs require exactly four options"
+      });
+    }
+  });
+
 export const architectureDesignPrivateAssessmentPromptSchema =
-  architectureDesignPublicAssessmentPromptSchema
+  architectureDesignAssessmentPromptObjectSchema
     .extend({
       privateEvaluation: z
         .object({
@@ -48,7 +61,9 @@ export const architectureDesignPrivateAssessmentPromptSchema =
           sourceQuestionFingerprint: architectureDesignFingerprintSchema,
           expectedAnswer: z.string().trim().min(8).max(6_000),
           rubric: z.array(architectureDesignRubricItemSchema).min(1).max(6),
-          dimensionKeys: z.array(architectureDesignDimensionSchema).min(1).max(8)
+          dimensionKeys: z.array(architectureDesignDimensionSchema).min(1).max(8),
+          correctChoiceIndex: z.number().int().min(0).max(3).optional(),
+          choiceExplanation: z.string().trim().min(8).max(1_200).optional()
         })
         .strict()
     })
@@ -59,6 +74,17 @@ export const architectureDesignPrivateAssessmentPromptSchema =
           code: z.ZodIssueCode.custom,
           path: ["privateEvaluation", "rubric"],
           message: "Assessment prompt rubrics must total exactly 10 points"
+        });
+      }
+      if (
+        ["mcq", "composite"].includes(prompt.responseMode ?? "") !==
+        (prompt.privateEvaluation.correctChoiceIndex !== undefined &&
+          prompt.privateEvaluation.choiceExplanation !== undefined)
+      ) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["privateEvaluation", "correctChoiceIndex"],
+          message: "Assessment MCQs require a private answer and explanation"
         });
       }
     });
@@ -76,12 +102,12 @@ export const architectureDesignAssessmentSnapshotSchema = z
     preparedAt: z.string().datetime(),
     blockContentFingerprint: architectureDesignFingerprintSchema,
     sourceSelection: architectureDesignScenarioSelectionSchema,
-    prompts: z.array(architectureDesignPrivateAssessmentPromptSchema).length(5),
+    prompts: z.array(architectureDesignPrivateAssessmentPromptSchema).min(4).max(5),
     submission: z
       .object({
         requestId: z.string().uuid(),
         responseFingerprint: architectureDesignFingerprintSchema,
-        responses: z.array(architectureDesignAssessmentResponseSchema).length(5),
+        responses: z.array(architectureDesignAssessmentResponseSchema).min(4).max(5),
         submittedAt: z.string().datetime()
       })
       .strict()
@@ -94,7 +120,7 @@ export const architectureDesignAssessmentSnapshotSchema = z
         context.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["prompts", index, "order"],
-          message: "Assessment prompts must be ordered from one through five"
+          message: "Assessment prompts must have contiguous order"
         });
       }
     });
@@ -105,6 +131,13 @@ export const architectureDesignAssessmentSnapshotSchema = z
         message: "Assessment prompt IDs must be unique"
       });
     }
+    if (snapshot.submission && snapshot.submission.responses.length !== snapshot.prompts.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["submission", "responses"],
+        message: "Assessment responses must match the frozen prompt count"
+      });
+    }
   });
 
 export const publicArchitectureDesignAssessmentSnapshotSchema = z
@@ -113,11 +146,11 @@ export const publicArchitectureDesignAssessmentSnapshotSchema = z
     blueprintVersion: z.literal(ARCHITECTURE_DESIGN_ASSESSMENT_BLUEPRINT_VERSION),
     deliveryMode: z.literal("shared-voice-room").optional(),
     preparedAt: z.string().datetime(),
-    prompts: z.array(architectureDesignPublicAssessmentPromptSchema).length(5),
+    prompts: z.array(architectureDesignPublicAssessmentPromptSchema).min(4).max(5),
     submission: z
       .object({
         requestId: z.string().uuid(),
-        responses: z.array(architectureDesignAssessmentResponseSchema).length(5),
+        responses: z.array(architectureDesignAssessmentResponseSchema).min(4).max(5),
         submittedAt: z.string().datetime()
       })
       .strict()
@@ -241,7 +274,7 @@ export const architectureDesignAssessmentFinalizeInputSchema = z
   .object({
     assessmentId: z.string().uuid(),
     requestId: z.string().uuid(),
-    responses: z.array(architectureDesignAssessmentResponseSchema).length(5)
+    responses: z.array(architectureDesignAssessmentResponseSchema).min(4).max(5)
   })
   .strict();
 
@@ -266,7 +299,8 @@ export const architectureDesignSafeTranscriptSchema = z
           })
           .strict()
       )
-      .length(5)
+      .min(4)
+      .max(5)
   })
   .strict();
 
@@ -290,13 +324,17 @@ export function publicArchitectureDesignAssessmentSnapshot(raw: unknown) {
     blueprintVersion: snapshot.blueprintVersion,
     deliveryMode: snapshot.deliveryMode,
     preparedAt: snapshot.preparedAt,
-    prompts: snapshot.prompts.map(({ id, order, kind, prompt, context }) => ({
-      id,
-      order,
-      kind,
-      prompt,
-      context
-    })),
+    prompts: snapshot.prompts.map(
+      ({ id, order, kind, prompt, context, responseMode, options }) => ({
+        id,
+        order,
+        kind,
+        prompt,
+        context,
+        responseMode,
+        options
+      })
+    ),
     submission: snapshot.submission
       ? {
           requestId: snapshot.submission.requestId,

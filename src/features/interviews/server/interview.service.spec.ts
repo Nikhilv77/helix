@@ -847,7 +847,7 @@ describe("InterviewService resume round", () => {
     expect(store.evaluationRecoveryCount()).toBe(1);
   });
 
-  it("uses the frozen five-metric rubric and excludes stale block execution from evaluation", () => {
+  it("uses the frozen five-metric rubric and excludes stale DSA and Core execution", () => {
     const blockSetup: InterviewSetup = {
       ...setup,
       dsaBlockAssessment: {
@@ -883,6 +883,26 @@ describe("InterviewService resume round", () => {
     expect(executionForEvaluation(state, 0, [`\`\`\`javascript\n${code}\n\`\`\``])).not.toBeNull();
     expect(
       executionForEvaluation(state, 0, ["```javascript\nfunction changed() {}\n```"])
+    ).toBeNull();
+
+    const coreState = {
+      ...state,
+      setup: {
+        ...setup,
+        coreTechnicalAssessment: {
+          kind: "core-technical-assessment",
+          blockId: "11111111-1111-4111-8111-111111111111",
+          assessmentId: "22222222-2222-4222-8222-222222222222",
+          snapshotVersion: 1,
+          evaluatorVersion: "core-technical-assessment-evaluator-v1"
+        }
+      }
+    } as unknown as import("./types").InterviewState;
+    expect(
+      executionForEvaluation(coreState, 0, [`\`\`\`javascript\n${code}\n\`\`\``])
+    ).not.toBeNull();
+    expect(
+      executionForEvaluation(coreState, 0, ["```javascript\nfunction changed() {}\n```"])
     ).toBeNull();
   });
 

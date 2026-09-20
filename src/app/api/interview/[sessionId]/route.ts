@@ -69,7 +69,10 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 export function serialiseInterviewState(state: InterviewState) {
   const question = currentQuestion(state);
   const visibleStage = publicStage(state, state.questionIndex);
-  const hideDesignInterviewerGuide = question?.interviewSection === "design";
+  const isArchitectureAssessment =
+    state.setup.storyPracticeAssessment?.practice === "architecture-design";
+  const hideDesignInterviewerGuide =
+    question?.interviewSection === "design" && !isArchitectureAssessment;
 
   return {
     sessionId: state.id,
@@ -112,7 +115,7 @@ function formatPublicQuestion(
     kind: question.kind ?? "conversation",
     competency: question.competency ?? null,
     language: question.language || null,
-    codeTask: isCode ? (question.codeTask || null) : null,
+    codeTask: isCode ? question.codeTask || null : null,
     codeSnippet: question.codeSnippet || null,
     dsaReviewContext: question.dsaReviewContext ?? null,
     interviewSection: question.interviewSection ?? null,

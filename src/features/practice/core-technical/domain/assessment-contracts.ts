@@ -12,8 +12,24 @@ const identifierSchema = z
   .max(140)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 const fingerprintSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
-const boundedTextSchema = z.string().trim().min(1).max(12_000);
-const assessmentAnswerSchema = z.string().trim().min(1).max(4_000);
+const boundedTextSchema = z.string().trim().min(1).max(16_000);
+const assessmentAnswerSchema = z.string().trim().min(1).max(16_000);
+
+const assessmentCodeExecutionSchema = z
+  .object({
+    language: z.string().min(1).max(120),
+    status: z.string().min(1).max(200),
+    accepted: z.boolean(),
+    testsPassed: z.number().int().nonnegative(),
+    testCount: z.number().int().nonnegative(),
+    compileOutput: z.string().max(2_000),
+    stderr: z.string().max(2_000),
+    time: z.string().nullable(),
+    memory: z.number().nullable(),
+    recordedAt: z.number().int().nonnegative(),
+    codeHash: z.string().regex(/^[a-f0-9]{64}$/)
+  })
+  .strict();
 
 export const coreTechnicalAssessmentPromptKindSchema = z.enum([
   "weak-response-review",
@@ -64,7 +80,9 @@ const privateAssessmentPromptSchema = coreTechnicalPublicAssessmentPromptSchema
           )
           .min(1)
           .max(6),
-        deterministicEvidence: z.enum(["accepted-run-required", "practice-evidence", "none"])
+        deterministicEvidence: z.enum(["accepted-run-required", "practice-evidence", "none"]),
+        /** Frozen server-only source for the isolated Node runner. */
+        executableQuestion: z.unknown().optional()
       })
       .strict()
   })
@@ -89,6 +107,8 @@ export const coreTechnicalAssessmentSnapshotSchema = z
         requestId: z.string().uuid(),
         responseFingerprint: fingerprintSchema,
         responses: z.array(coreTechnicalAssessmentResponseSchema).length(5),
+        codeExecution: assessmentCodeExecutionSchema.nullable().optional(),
+        codeSkipped: z.boolean().optional(),
         submittedAt: z.string().datetime()
       })
       .strict()

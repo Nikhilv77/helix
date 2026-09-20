@@ -65,10 +65,13 @@ const NODE_KINDS = [...systemDesignCanvasNodeKinds];
 /** Interview whiteboard with durable state, architecture primitives, and fast keyboard editing. */
 export function SystemDesignCanvas({
   storageKey,
-  sessionId
+  sessionId,
+  embedded = false
 }: {
   storageKey?: string;
   sessionId?: string;
+  /** Removes the interview card chrome when another workspace already owns the surface. */
+  embedded?: boolean;
 }) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const nextId = useRef(1);
@@ -435,7 +438,11 @@ export function SystemDesignCanvas({
 
   return (
     <section
-      className="mt-6 overflow-hidden rounded-xl border border-white/[0.07] bg-black/20"
+      className={
+        embedded
+          ? "overflow-hidden"
+          : "mt-6 overflow-hidden rounded-xl border border-white/[0.07] bg-black/20"
+      }
       onKeyDown={(event) => {
         if (isEditingTarget(event.target)) return;
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
@@ -452,25 +459,29 @@ export function SystemDesignCanvas({
         }
       }}
     >
-      <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.06] px-3 py-2.5">
-        <div className="mr-auto min-w-44">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-medium text-cream/82">Architecture canvas</p>
-            <span
-              className={`font-mono text-[8px] uppercase tracking-[0.12em] ${
-                saveStatus === "offline" || saveStatus === "conflict"
-                  ? "text-amber-300/65"
-                  : "text-cream/28"
-              }`}
-              role="status"
-            >
-              {canvasSaveLabel(saveStatus)}
-            </span>
+      <div
+        className={`flex flex-wrap items-center gap-2 border-b border-white/[0.06] py-2.5 ${embedded ? "px-0" : "px-3"}`}
+      >
+        {!embedded ? (
+          <div className="mr-auto min-w-44">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-cream/82">Architecture canvas</p>
+              <span
+                className={`font-mono text-[8px] uppercase tracking-[0.12em] ${
+                  saveStatus === "offline" || saveStatus === "conflict"
+                    ? "text-amber-300/65"
+                    : "text-cream/28"
+                }`}
+                role="status"
+              >
+                {canvasSaveLabel(saveStatus)}
+              </span>
+            </div>
+            <p className="text-[11px] text-cream/38">
+              Build as you talk; your diagram is saved in this session.
+            </p>
           </div>
-          <p className="text-[11px] text-cream/38">
-            Build as you talk; your diagram is saved in this session.
-          </p>
-        </div>
+        ) : null}
         <CanvasButton
           label="Client"
           icon={<Monitor size={12} />}
@@ -546,7 +557,7 @@ export function SystemDesignCanvas({
       <div
         ref={canvasRef}
         tabIndex={0}
-        className="relative h-[26rem] touch-none overflow-hidden bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.055)_1px,transparent_1px)] [background-size:20px_20px] outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--workspace-accent)]/50"
+        className={`relative touch-none overflow-hidden bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.055)_1px,transparent_1px)] [background-size:20px_20px] outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--workspace-accent)]/50 ${embedded ? "h-[22rem]" : "h-[26rem]"}`}
         aria-label="System design diagram canvas"
         onPointerMove={(event) => {
           if (!dragging || !canvasRef.current) return;
@@ -834,21 +845,23 @@ export function SystemDesignCanvas({
         </div>
       ) : null}
 
-      <label className="block border-t border-white/[0.06] px-3 py-2.5">
-        <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-cream/35">
-          Assumptions and estimates
-        </span>
-        <textarea
-          value={snapshot.notes}
-          maxLength={12_000}
-          onChange={(event) => {
-            const notes = event.target.value;
-            commit((current) => ({ ...current, notes }));
-          }}
-          placeholder="Record clarified requirements, scale estimates, SLOs, and trade-offs…"
-          className="mt-1.5 min-h-16 w-full resize-y bg-transparent text-sm leading-6 text-cream/72 outline-none placeholder:text-cream/24"
-        />
-      </label>
+      {!embedded ? (
+        <label className="block border-t border-white/[0.06] px-3 py-2.5">
+          <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-cream/35">
+            Assumptions and estimates
+          </span>
+          <textarea
+            value={snapshot.notes}
+            maxLength={12_000}
+            onChange={(event) => {
+              const notes = event.target.value;
+              commit((current) => ({ ...current, notes }));
+            }}
+            placeholder="Record clarified requirements, scale estimates, SLOs, and trade-offs…"
+            className="mt-1.5 min-h-16 w-full resize-y bg-transparent text-sm leading-6 text-cream/72 outline-none placeholder:text-cream/24"
+          />
+        </label>
+      ) : null}
     </section>
   );
 }

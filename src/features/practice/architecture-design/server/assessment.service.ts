@@ -168,7 +168,7 @@ export class ArchitectureDesignAssessmentService {
     return this.read(ownerId, input.assessmentId);
   }
 
-  /** Converts a completed shared voice-room transcript into the Architecture five-score report. */
+  /** Converts a completed teacher-led checkpoint into the Architecture score report. */
   async finalizeInterviewOwned(ownerId: string, sessionId: string) {
     const session = await this.prisma.interviewSession.findFirst({
       where: { id: sessionId, ownerId },
@@ -339,6 +339,7 @@ export class ArchitectureDesignAssessmentService {
             (question) => architectureDesignQuestionSchema.parse(question.privateSnapshot).topicKeys
           )
         ),
+        designCanvas: evidence.designCanvas,
         finalizedAt
       });
     } catch (error) {
@@ -443,7 +444,12 @@ export class ArchitectureDesignAssessmentService {
         questions: { select: { privateSnapshot: true } }
       }
     });
-    return { block: assessment.block, history };
+    const designCanvas =
+      (await this.prisma.interviewDesignCanvas?.findUnique({
+        where: { sessionId: assessmentId },
+        select: { document: true, revision: true }
+      })) ?? null;
+    return { block: assessment.block, history, designCanvas };
   }
 }
 

@@ -18,17 +18,21 @@ import { ReportMayaAvatar } from "@/features/reports/ui/report-maya-avatar";
 export function VoiceShell({
   children,
   workspaceAccent,
-  wide = false
+  wide = false,
+  withinWorkspaceChrome = false
 }: {
   children: React.ReactNode;
   workspaceAccent: WorkspaceAccent;
   wide?: boolean;
+  withinWorkspaceChrome?: boolean;
 }) {
   return (
     <main
       data-workspace-accent={workspaceAccent}
       style={workspaceAccentCssVariables(workspaceAccent) as CSSProperties}
-      className="interview-workspace-page workspace-black relative h-[100dvh] overflow-hidden bg-black px-4 text-cream sm:px-8"
+      className={`interview-workspace-page workspace-black relative overflow-hidden bg-black px-4 text-cream sm:px-8 ${
+        withinWorkspaceChrome ? "h-[calc(100dvh-3.5rem)] md:h-[calc(100dvh-4.25rem)]" : "h-[100dvh]"
+      }`}
     >
       <span
         aria-hidden="true"

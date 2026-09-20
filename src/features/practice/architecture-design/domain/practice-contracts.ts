@@ -41,6 +41,13 @@ export const architectureDesignLearnInputSchema = z
   .object({ questionId: z.string().uuid(), confirmed: z.literal(true) })
   .strict();
 
+export const architectureDesignKnowledgeCheckInputSchema = z
+  .object({
+    questionId: z.string().uuid(),
+    selectedChoiceIndex: z.number().int().min(0).max(3)
+  })
+  .strict();
+
 export const architectureDesignPrepareInputSchema = z
   .object({ requestId: z.string().uuid(), focusRevisionId: z.string().uuid() })
   .strict();
@@ -72,7 +79,31 @@ export const architectureDesignAttemptFeedbackSchema = z
   .strict();
 
 export const architectureDesignAuthorizedAnswerSchema = z
-  .object({ summary: z.string().min(1).max(4_000), explanation: z.string().min(1).max(12_000) })
+  .object({
+    summary: z.string().min(1).max(4_000),
+    explanation: z.string().min(1).max(12_000),
+    learningGuide: z
+      .object({
+        markdown: z.string().trim().min(80).max(20_000),
+        diagram: z
+          .object({
+            title: z.string().trim().min(4).max(160),
+            steps: z
+              .array(
+                z
+                  .object({
+                    label: z.string().trim().min(2).max(80),
+                    detail: z.string().trim().min(8).max(1_000)
+                  })
+                  .strict()
+              )
+              .min(2)
+              .max(6)
+          })
+          .strict()
+      })
+      .strict()
+  })
   .strict();
 
 export const architectureDesignAttemptIdentitySchema = z

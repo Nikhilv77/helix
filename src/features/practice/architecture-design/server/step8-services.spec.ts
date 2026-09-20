@@ -258,7 +258,7 @@ describe("Architecture Step 8 services", () => {
       nextUp: { title: first.scenario.stages[2]!.title, difficulty: "guided" }
     });
     const rounds = await service.rounds("owner-1", 10, now.getTime());
-    expect(rounds.history[0]).toMatchObject({ status: "completed", answerCount: 5 });
+    expect(rounds.history[0]).toMatchObject({ status: "completed", answerCount: 4 });
     expect(rounds.reports[0]).toMatchObject({
       status: "completed",
       summary: { evidenceScore: 72 },

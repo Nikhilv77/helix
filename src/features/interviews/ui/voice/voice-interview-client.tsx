@@ -1508,7 +1508,8 @@ export function VoiceInterviewClient({
           candidateCameraStream={candidateCameraStream}
           onDisableCamera={disableCandidateCamera}
         />
-      ) : isStoryPracticeAssessment ? (
+      ) : isStoryPracticeAssessment &&
+        storyPracticeAssessment.practice !== "architecture-design" ? (
         <BlockAssessmentReviewWorkspace
           question={currentQuestion}
           questionIndex={progress.index}

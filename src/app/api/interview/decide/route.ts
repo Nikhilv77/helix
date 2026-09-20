@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 const decideSchema = z.object({
   sessionId: z.string().uuid(),
   turnId: z.string().uuid(),
-  userAnswer: z.string().trim().min(1).max(8000),
+  userAnswer: z.string().trim().min(1).max(16_000),
   /** Milliseconds from session start. Voice fills these from real audio timings. */
   startMs: z.number().int().min(0).optional(),
   endMs: z.number().int().min(0).optional(),

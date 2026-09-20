@@ -79,6 +79,125 @@ export async function POST(request: NextRequest) {
     const app = getAppContainer();
     const config = app.config;
     const ownerId = authenticatedOwnerId(userId);
+    let slug = parsed.data.slug;
+    let testCases: ReturnType<typeof buildTestCases> = [];
+    let sourceCode = parsed.data.code;
+    const runnerLanguage =
+      parsed.data.language === "typescript" ? ("javascript" as const) : parsed.data.language;
+
+    // A block assessment is pinned to the immutable assessment record. The
+    // browser's slug is ignored entirely for these sessions, so an old tab or
+    // crafted request cannot execute a changed/live-bank question instead.
+    const dsaFrozenTransfer =
+      parsed.data.sessionId !== undefined && parsed.data.questionIndex !== undefined
+        ? await app.dsaBlockAssessmentRuntimeService.frozenTransferForRun(
+            ownerId,
+            parsed.data.sessionId,
+            parsed.data.questionIndex
+          )
+        : null;
+    const coreFrozenTransfer =
+      !dsaFrozenTransfer &&
+      parsed.data.sessionId !== undefined &&
+      parsed.data.questionIndex !== undefined
+        ? await app.coreTechnicalAssessmentRuntimeService.frozenTransferForRun(
+            ownerId,
+            parsed.data.sessionId,
+            parsed.data.questionIndex
+          )
+        : null;
+
+    if (coreFrozenTransfer) {
+      if (parsed.data.language !== "javascript") {
+        throw new ApiRouteError(
+          422,
+          "CORE_TECHNICAL_LANGUAGE_UNSUPPORTED",
+          "This Node.js assessment must be completed in JavaScript."
+        );
+      }
+      if (parsed.data.code.length > 12_000) {
+        throw new ApiRouteError(
+          400,
+          "CORE_TECHNICAL_CODE_TOO_LONG",
+          "Core Technical solutions must be at most 12000 characters."
+        );
+      }
+      const guard = getSharedGuard(config);
+      await guard.enforce(RATE_LIMIT_POLICIES.codeExecution, ownerId);
+      const lease = await guard.acquire(
+        {
+          namespace: "code-run",
+          ttlMs: 25_000,
+          code: "CODE_RUN_IN_PROGRESS",
+          message: "Your previous code run is still in progress."
+        },
+        ownerId
+      );
+      try {
+        const result = await app.coreTechnicalRunnerService.run(
+          coreFrozenTransfer.question,
+          parsed.data.code
+        );
+        const hiddenTests = Array.from({ length: result.hiddenTests.total }, (_, index) => ({
+          index: result.publicTests.length + index,
+          visible: false,
+          input: "",
+          expectedOutput: "",
+          actualOutput: "",
+          passed: index < result.hiddenTests.passed,
+          error: null
+        }));
+        const tests = [
+          ...result.publicTests.map((test, index) => ({
+            index,
+            visible: true,
+            input: test.input,
+            expectedOutput: test.expected,
+            actualOutput: "",
+            passed: test.passed,
+            error: test.diagnostic ?? null
+          })),
+          ...hiddenTests
+        ];
+        const data = {
+          language: "JavaScript (Node.js 22)",
+          status: result.accepted
+            ? `${tests.length}/${tests.length} tests passed`
+            : result.status === "tests-failed"
+              ? `${tests.filter((test) => test.passed).length}/${tests.length} tests passed`
+              : result.status,
+          accepted: result.accepted,
+          stdout: "",
+          stderr: result.diagnostic ?? "",
+          compileOutput: result.status === "compile-error" ? (result.diagnostic ?? "") : "",
+          time: `${result.durationMs / 1_000}`,
+          memory: result.peakMemoryMb === null ? null : Math.round(result.peakMemoryMb * 1_024),
+          tests
+        };
+        await app.interviewService.recordCodeExecution(
+          ownerId,
+          parsed.data.sessionId!,
+          parsed.data.questionIndex!,
+          {
+            language: data.language,
+            status: data.status,
+            accepted: data.accepted,
+            testsPassed: tests.filter((test) => test.passed).length,
+            testCount: tests.length,
+            compileOutput: data.compileOutput,
+            stderr: data.stderr,
+            time: data.time,
+            memory: data.memory,
+            recordedAt: Date.now(),
+            codeHash: codeFingerprint(parsed.data.code)
+          }
+        );
+        return apiSuccess(data);
+      } finally {
+        await lease.release();
+      }
+    }
+
     if (!config.rapidApiKey) {
       throw new ApiRouteError(
         503,
@@ -91,40 +210,18 @@ export async function POST(request: NextRequest) {
       "X-RapidAPI-Key": config.rapidApiKey,
       "X-RapidAPI-Host": config.rapidApiHost
     };
-    let slug = parsed.data.slug;
-    let testCases: ReturnType<typeof buildTestCases> = [];
-    let sourceCode = parsed.data.code;
-    const runnerLanguage =
-      parsed.data.language === "typescript" ? ("javascript" as const) : parsed.data.language;
 
-    // A block assessment is pinned to the immutable assessment record. The
-    // browser's slug is ignored entirely for these sessions, so an old tab or
-    // crafted request cannot execute a changed/live-bank question instead.
-    const frozenTransfer =
-      parsed.data.sessionId !== undefined && parsed.data.questionIndex !== undefined
-        ? (await app.dsaBlockAssessmentRuntimeService.frozenTransferForRun(
-            ownerId,
-            parsed.data.sessionId,
-            parsed.data.questionIndex
-          )) ||
-          (await app.coreTechnicalAssessmentRuntimeService.frozenTransferForRun(
-            ownerId,
-            parsed.data.sessionId,
-            parsed.data.questionIndex
-          ))
-        : null;
-
-    if (frozenTransfer) {
-      slug = frozenTransfer.slug;
+    if (dsaFrozenTransfer) {
+      slug = dsaFrozenTransfer.slug;
       try {
         // The full public + hidden runner contract was captured with the
         // assessment. Do not ask the mutable authored bank for structured
         // cases here; a completed assessment must remain reproducible.
-        testCases = frozenTransfer.runnerContract.testCases;
+        testCases = dsaFrozenTransfer.runnerContract.testCases;
         sourceCode = buildTestHarness(
           parsed.data.code,
           runnerLanguage,
-          frozenTransfer.runnerContract.functionName,
+          dsaFrozenTransfer.runnerContract.functionName,
           testCases
         );
       } catch (error) {

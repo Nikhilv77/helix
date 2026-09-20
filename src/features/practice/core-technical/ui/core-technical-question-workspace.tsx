@@ -16,6 +16,7 @@ export const CORE_TECHNICAL_WORKSPACE_EXPERIENCE: StoryPracticeWorkspaceExperien
   routeBase: "/practice/core-technical",
   subjectNoun: "practice path",
   environmentLabel: "JavaScript · Node.js 22",
+  answerReview: "modal",
   capabilities: { runCode: true },
   textAnswerPlaceholder: "Explain what is happening, how you know, and what you would change…",
   feedbackReasoningLabel: "Mechanism",

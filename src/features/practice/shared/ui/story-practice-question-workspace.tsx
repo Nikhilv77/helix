@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   Check,
@@ -21,7 +22,7 @@ import {
   X,
   XCircle
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DsaCodeEditor } from "@/features/interviews/ui/dsa/dsa-code-editor";
 import { StoryPracticeArtifact } from "@/features/practice/shared/ui/story-practice-artifact";
@@ -57,13 +58,38 @@ export type StoryPracticeQuestionWorkspaceProps = {
   initialQuestion: StoryPracticeQuestionView;
   stageTitle: string;
   experience: StoryPracticeWorkspaceExperience;
+  responseTool?: ReactNode;
+  structuredAnswerPrompts?: readonly StructuredAnswerPrompt[];
 };
+
+export type StructuredAnswerPrompt = {
+  label: string;
+  suggestion: string;
+};
+
+const CORE_TECHNICAL_ANSWER_PROMPTS: readonly StructuredAnswerPrompt[] = [
+  { label: "Outcome", suggestion: "State the exact outcome you expect from the evidence shown." },
+  {
+    label: "Why it happens",
+    suggestion: "Connect that outcome to the runtime mechanism that causes it."
+  },
+  {
+    label: "Production consequence",
+    suggestion: "Explain the production impact if this behavior is misunderstood."
+  },
+  {
+    label: "How to fix",
+    suggestion: "Describe the smallest safe fix and why it changes the outcome."
+  }
+];
 
 export function StoryPracticeQuestionWorkspace({
   block,
   initialQuestion,
   stageTitle,
-  experience
+  experience,
+  responseTool,
+  structuredAnswerPrompts
 }: StoryPracticeQuestionWorkspaceProps) {
   const router = useRouter();
   const [question, setQuestion] = useState(initialQuestion);
@@ -75,8 +101,11 @@ export function StoryPracticeQuestionWorkspace({
   const [pending, setPending] = useState<PendingAction>(null);
   const [draftState, setDraftState] = useState<"saved" | "saving" | "unsaved">("saved");
   const [error, setError] = useState<string | null>(null);
+  const [learnError, setLearnError] = useState<string | null>(null);
   const [confirmLearn, setConfirmLearn] = useState(false);
-  const usesModalReview = experience.slug === "core-technical";
+  const usesModalReview = experience.answerReview === "modal";
+  const answerPrompts =
+    structuredAnswerPrompts ?? (usesModalReview ? CORE_TECHNICAL_ANSWER_PROMPTS : []);
   const [panelTab, setPanelTab] = useState<QuestionPanelTab>(() =>
     initialQuestion.status === "ACTIVE" || experience.slug === "core-technical"
       ? "description"
@@ -220,7 +249,7 @@ export function StoryPracticeQuestionWorkspace({
   async function learn() {
     if (!mutable || !confirmLearn || pending) return;
     setPending("learn");
-    setError(null);
+    setLearnError(null);
     try {
       const data = await post<{ question: StoryPracticeQuestionView }>(
         `${experience.apiBase}/learn`,
@@ -228,11 +257,13 @@ export function StoryPracticeQuestionWorkspace({
         experience.label
       );
       setQuestion(experience.adaptQuestion(data.question));
+      setConfirmLearn(false);
+      setLearnError(null);
       if (usesModalReview) setReviewOpen(true);
       else setPanelTab("review");
       router.refresh();
     } catch (cause) {
-      setError(messageFrom(cause, "Learn could not be confirmed. Your draft is safe."));
+      setLearnError(messageFrom(cause, "Learn could not be confirmed. Your draft is safe."));
     } finally {
       setPending(null);
     }
@@ -553,12 +584,12 @@ export function StoryPracticeQuestionWorkspace({
               />
             ) : (
               <div className="p-4 sm:p-5">
+                {responseTool}
                 <ResponseIntro format={question.question.format} experience={experience} />
                 <TextInput
                   value={text}
                   spoken={question.question.format === "spoken"}
-                  structured={usesModalReview}
-                  promptSubject={question.question.artifact.kind === "code" ? "code" : "evidence"}
+                  structuredPrompts={answerPrompts}
                   disabled={!mutable || pending !== null}
                   placeholder={experience.textAnswerPlaceholder}
                   onChange={setText}
@@ -566,25 +597,6 @@ export function StoryPracticeQuestionWorkspace({
               </div>
             )}
 
-            {confirmLearn && mutable && workKind !== "code" ? (
-              <div className="mx-4 mb-4 rounded-xl border border-[#e3a15b]/20 bg-[#e3a15b]/[0.07] px-4 py-4 sm:mx-5">
-                <p className="text-[13px] leading-5 text-cream/62">
-                  This reveals the answer and unlocks progress, but contributes zero Practice
-                  mastery.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => void learn()}
-                  disabled={pending !== null}
-                  className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-cream px-4 text-[13px] font-semibold text-[#17181a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:opacity-55"
-                >
-                  {pending === "learn" ? (
-                    <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" />
-                  ) : null}
-                  Confirm Learn
-                </button>
-              </div>
-            ) : null}
           </div>
 
           {workKind === "code" ? (
@@ -619,26 +631,6 @@ export function StoryPracticeQuestionWorkspace({
             >
               {error}
             </p>
-          ) : null}
-
-          {workKind === "code" && confirmLearn && mutable ? (
-            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[#e3a15b]/20 bg-[#e3a15b]/[0.07] px-4 py-3 sm:px-5">
-              <p className="text-sm leading-6 text-cream/68">
-                Reveal the worked answer and continue. This question will count as learned, not
-                solved.
-              </p>
-              <button
-                type="button"
-                onClick={() => void learn()}
-                disabled={pending !== null}
-                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-cream px-4 text-sm font-semibold text-[#17181a] transition hover:bg-white disabled:opacity-55"
-              >
-                {pending === "learn" ? (
-                  <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" />
-                ) : null}
-                {pending === "learn" ? "Opening answer…" : "Reveal answer and continue"}
-              </button>
-            </div>
           ) : null}
 
           {workKind === "code" && testCasesOpen ? (
@@ -682,7 +674,8 @@ export function StoryPracticeQuestionWorkspace({
                   </>
                 ) : (
                   <span className="text-sm font-normal text-cream/38">
-                    · {(question.question as { publicTests?: unknown[] }).publicTests?.length ?? 0} visible + hidden checks
+                    · {(question.question as { publicTests?: unknown[] }).publicTests?.length ?? 0}{" "}
+                    visible + hidden checks
                   </span>
                 )}
                 <ChevronDown
@@ -710,13 +703,16 @@ export function StoryPracticeQuestionWorkspace({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setConfirmLearn((current) => !current)}
+                  onClick={() => {
+                    setLearnError(null);
+                    setConfirmLearn(true);
+                  }}
                   disabled={pending !== null}
                   aria-expanded={confirmLearn}
                   className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-white/[0.05] px-3 text-[12.5px] font-semibold text-cream/58 transition hover:bg-white/[0.09] hover:text-cream disabled:opacity-55"
                 >
                   <SkipForward size={13} aria-hidden="true" />
-                  {confirmLearn ? "Cancel" : "Learn instead"}
+                  Learn instead
                 </button>
                 <button
                   type="button"
@@ -737,6 +733,18 @@ export function StoryPracticeQuestionWorkspace({
         </section>
       </div>
 
+      <LearnConfirmationModal
+        open={confirmLearn && mutable}
+        codeQuestion={workKind === "code"}
+        pending={pending === "learn"}
+        error={learnError}
+        onCancel={() => {
+          setLearnError(null);
+          setConfirmLearn(false);
+        }}
+        onConfirm={() => void learn()}
+      />
+
       {usesModalReview ? (
         <StoryPracticeReviewModal
           open={reviewOpen}
@@ -747,6 +755,109 @@ export function StoryPracticeQuestionWorkspace({
         />
       ) : null}
     </section>
+  );
+}
+
+function LearnConfirmationModal({
+  open,
+  codeQuestion,
+  pending,
+  error,
+  onCancel,
+  onConfirm
+}: {
+  open: boolean;
+  codeQuestion: boolean;
+  pending: boolean;
+  error: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+
+  useEffect(() => setPortalRoot(document.body), []);
+  useEffect(() => {
+    if (!open) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !pending) onCancel();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [onCancel, open, pending]);
+
+  if (!open || !portalRoot) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex items-start justify-center px-4 pt-[max(1rem,8vh)] sm:px-6">
+      <div aria-hidden="true" className="absolute inset-0 bg-black/70 backdrop-blur-[3px]" />
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="learn-confirmation-title"
+        className="relative w-full max-w-[34rem] overflow-hidden rounded-2xl border border-[#e3a15b]/30 bg-[#171614] shadow-[0_30px_100px_rgba(0,0,0,0.7)]"
+      >
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#e3a15b]/80 to-transparent" />
+        <div className="px-5 pb-5 pt-6 sm:px-6 sm:pb-6">
+          <div className="flex items-start gap-4">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#e3a15b]/25 bg-[#e3a15b]/10 text-[#efb978]">
+              <AlertTriangle size={20} aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold uppercase tracking-[0.1em] text-[#efb978]">
+                Learning mode
+              </p>
+              <h2
+                id="learn-confirmation-title"
+                className="mt-1.5 font-display text-2xl font-semibold tracking-[-0.03em] text-cream"
+              >
+                Reveal the guided answer?
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-cream/62">
+                This reveals the guided answer and unlocks progress, but contributes zero Practice
+                mastery. The question will be recorded as Learned rather than solved.
+              </p>
+            </div>
+          </div>
+
+          {error ? (
+            <p
+              role="alert"
+              className="mt-4 rounded-xl border border-[#e3a15b]/20 bg-[#e3a15b]/[0.07] px-4 py-3 text-sm leading-5 text-[#efc38d]"
+            >
+              {error}
+            </p>
+          ) : null}
+
+          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={pending}
+              autoFocus
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-white/[0.09] bg-white/[0.045] px-4 text-sm font-semibold text-cream/68 transition hover:bg-white/[0.08] hover:text-cream disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={pending}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-cream px-5 text-sm font-semibold text-[#17181a] transition hover:bg-white disabled:cursor-wait disabled:opacity-60"
+            >
+              {pending ? (
+                <Loader2 size={15} className="motion-safe:animate-spin" aria-hidden="true" />
+              ) : null}
+              {pending
+                ? "Opening guide…"
+                : codeQuestion
+                  ? "Reveal answer and continue"
+                  : "Confirm Learn"}
+            </button>
+          </div>
+        </div>
+      </aside>
+    </div>,
+    portalRoot
   );
 }
 
@@ -811,16 +922,14 @@ function ChoiceInput({
 function TextInput({
   value,
   spoken,
-  structured,
-  promptSubject,
+  structuredPrompts,
   disabled,
   placeholder,
   onChange
 }: {
   value: string;
   spoken: boolean;
-  structured: boolean;
-  promptSubject: "code" | "evidence";
+  structuredPrompts: readonly StructuredAnswerPrompt[];
   disabled: boolean;
   placeholder: string;
   onChange: (value: string) => void;
@@ -858,9 +967,9 @@ function TextInput({
     return () => window.clearInterval(timer);
   }, [ghost]);
 
-  function addPrompt(prompt: string) {
+  function addPrompt(prompt: StructuredAnswerPrompt) {
     const textarea = textareaRef.current;
-    const heading = `${prompt}:\n`;
+    const heading = `${prompt.label}:\n`;
     const start = textarea?.selectionStart ?? value.length;
     const end = textarea?.selectionEnd ?? value.length;
     const before = value.slice(0, start);
@@ -869,7 +978,7 @@ function TextInput({
     const trailingSeparator = after.trim() ? "\n" : "";
     const next = `${before}${separator}${heading}${trailingSeparator}${after}`;
     const cursor = start + separator.length + heading.length;
-    setGhost({ prompt, anchor: cursor, suggestion: promptSuggestion(prompt, promptSubject) });
+    setGhost({ prompt: prompt.label, anchor: cursor, suggestion: prompt.suggestion });
     onChange(next);
     window.requestAnimationFrame(() => {
       textarea?.focus();
@@ -885,20 +994,20 @@ function TextInput({
         </p>
       ) : null}
       <div className="overflow-hidden rounded-2xl border border-white/[0.085] bg-[#0d0f10] shadow-[0_18px_48px_rgba(0,0,0,0.16)]">
-        {structured ? (
+        {structuredPrompts.length ? (
           <div className="flex flex-wrap items-center gap-1.5 border-b border-white/[0.06] px-3 py-2.5 sm:px-4">
             <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-cream/30">
               Add a prompt
             </span>
-            {["Outcome", "Why it happens", "Production consequence", "How to fix"].map((prompt) => {
-              const alreadyAdded = hasStructuredPrompt(value, prompt);
+            {structuredPrompts.map((prompt) => {
+              const alreadyAdded = hasStructuredPrompt(value, prompt.label);
               return (
                 <button
-                  key={prompt}
+                  key={prompt.label}
                   type="button"
                   onClick={() => addPrompt(prompt)}
                   disabled={disabled || alreadyAdded}
-                  aria-label={alreadyAdded ? `${prompt} prompt added` : undefined}
+                  aria-label={alreadyAdded ? `${prompt.label} prompt added` : undefined}
                   className="rounded-md border border-white/[0.065] bg-white/[0.035] px-2 py-1 text-[10.5px] font-medium text-cream/48 transition hover:border-white/[0.12] hover:bg-white/[0.06] hover:text-cream/76 disabled:cursor-not-allowed disabled:border-white/[0.045] disabled:bg-white/[0.02] disabled:text-cream/28"
                 >
                   {alreadyAdded ? (
@@ -906,7 +1015,7 @@ function TextInput({
                   ) : (
                     "+ "
                   )}
-                  {prompt}
+                  {prompt.label}
                 </button>
               );
             })}
@@ -925,10 +1034,10 @@ function TextInput({
             disabled={disabled}
             maxLength={12_000}
             rows={8}
-            className={`block min-h-56 max-h-[26.25rem] w-full resize-none overflow-y-auto bg-transparent px-4 py-4 text-[14px] leading-7 caret-cream outline-none placeholder:text-cream/24 disabled:opacity-65 ${structured && value ? "text-transparent" : "text-cream"}`}
+            className={`block min-h-56 max-h-[26.25rem] w-full resize-none overflow-y-auto bg-transparent px-4 py-4 text-[14px] leading-7 caret-cream outline-none placeholder:text-cream/24 disabled:opacity-65 ${structuredPrompts.length && value ? "text-transparent" : "text-cream"}`}
             placeholder={placeholder}
           />
-          {structured && value ? (
+          {structuredPrompts.length && value ? (
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-0 overflow-hidden px-4 py-4 text-[14px] leading-7"
@@ -939,12 +1048,18 @@ function TextInput({
               >
                 {ghost ? (
                   <>
-                    <StyledAnswerText value={value.slice(0, ghost.anchor)} />
+                    <StyledAnswerText
+                      value={value.slice(0, ghost.anchor)}
+                      prompts={structuredPrompts}
+                    />
                     <span className="text-cream/25">{ghostText}</span>
-                    <StyledAnswerText value={value.slice(ghost.anchor)} />
+                    <StyledAnswerText
+                      value={value.slice(ghost.anchor)}
+                      prompts={structuredPrompts}
+                    />
                   </>
                 ) : (
-                  <StyledAnswerText value={value} />
+                  <StyledAnswerText value={value} prompts={structuredPrompts} />
                 )}
               </div>
             </div>
@@ -952,7 +1067,7 @@ function TextInput({
         </div>
         <div className="flex min-h-10 items-center justify-between border-t border-white/[0.055] px-3 sm:px-4">
           <p className="text-[11px] text-cream/30">
-            {structured
+            {structuredPrompts.length
               ? "Use only the prompts that help your explanation."
               : "Your draft saves automatically."}
           </p>
@@ -963,11 +1078,17 @@ function TextInput({
   );
 }
 
-function StyledAnswerText({ value }: { value: string }) {
+function StyledAnswerText({
+  value,
+  prompts
+}: {
+  value: string;
+  prompts: readonly StructuredAnswerPrompt[];
+}) {
   const lines = value.split("\n");
   return lines.map((line, index) => (
     <span key={`${index}:${line}`}>
-      {isStructuredPromptLine(line) ? (
+      {isStructuredPromptLine(line, prompts) ? (
         <span className="font-semibold text-cream/90 underline decoration-[var(--workspace-accent)] decoration-1 underline-offset-[5px]">
           {line}
         </span>
@@ -979,23 +1100,16 @@ function StyledAnswerText({ value }: { value: string }) {
   ));
 }
 
-function isStructuredPromptLine(line: string): boolean {
-  return /^(Outcome|Why it happens|Production consequence|How to fix):\s*$/i.test(line);
+function isStructuredPromptLine(line: string, prompts: readonly StructuredAnswerPrompt[]): boolean {
+  return prompts.some(({ label }) => new RegExp(`^${escapeRegex(label)}:\\s*$`, "i").test(line));
 }
 
 function hasStructuredPrompt(value: string, prompt: string): boolean {
-  const escaped = prompt.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`^${escaped}:\\s*$`, "im").test(value);
+  return new RegExp(`^${escapeRegex(prompt)}:\\s*$`, "im").test(value);
 }
 
-function promptSuggestion(prompt: string, subject: "code" | "evidence"): string {
-  const shown = subject === "code" ? "the code shown" : "the evidence shown";
-  if (prompt === "Outcome") return `State the exact outcome you expect from ${shown}.`;
-  if (prompt === "Why it happens")
-    return "Connect that outcome to the runtime mechanism that causes it.";
-  if (prompt === "Production consequence")
-    return "Explain the production impact if this behavior is misunderstood.";
-  return "Describe the smallest safe fix and why it changes the outcome.";
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function ResponseIntro({
@@ -1014,7 +1128,7 @@ function ResponseIntro({
       <h3 className="mt-2 font-display text-[1.45rem] font-semibold leading-tight tracking-[-0.03em] text-cream sm:text-[1.65rem]">
         {experience.responseLabel(format) ?? responseLabel(format)}
       </h3>
-      <p className="mt-2 max-w-[42rem] text-[12.5px] leading-5 text-cream/42">{guidance}</p>
+      <p className="mt-2 max-w-[42rem] text-sm leading-6 text-cream/46">{guidance}</p>
     </div>
   );
 }

@@ -41,6 +41,13 @@ describe("Core Technical assessment, adaptation, and history lifecycle", () => {
       "repair-implementation-transfer",
       "production-verification-defence"
     ]);
+    const transfer = snapshot.prompts.find(
+      (prompt) => prompt.kind === "repair-implementation-transfer"
+    )!;
+    const frozenCases = transfer.runnerContract!.testCases as Array<{ visible: boolean }>;
+    expect(frozenCases.some((testCase) => testCase.visible)).toBe(true);
+    expect(frozenCases.some((testCase) => !testCase.visible)).toBe(true);
+    expect(transfer.privateEvaluation.executableQuestion).toBeDefined();
     const serialized = JSON.stringify(publicCoreTechnicalAssessmentSnapshot(snapshot));
     expect(serialized).not.toContain("privateEvaluation");
     expect(serialized).not.toContain("expectedAnswer");
@@ -105,9 +112,14 @@ describe("Core Technical assessment, adaptation, and history lifecycle", () => {
     expect(result.report.scores.debuggingImplementation).toBe(35);
     expect(result.report.deterministicEvidence).toMatchObject({
       acceptedCodeQuestionCount: 0,
-      totalCodeQuestionCount: 2,
+      totalCodeQuestionCount: 1,
       implementationScoreCapped: true
     });
+    expect(
+      result.report.promptFeedback.find(
+        (feedback) => feedback.promptId === "repair-transfer-mechanism"
+      )
+    ).toMatchObject({ score: 35 });
     expect(result.report.solvedVsLearned).toMatchObject({
       learnedCount: 1,
       learnedQuestionOrders: [1]
@@ -115,6 +127,64 @@ describe("Core Technical assessment, adaptation, and history lifecycle", () => {
     expect(result.report.nextStory!.selectedStory.storyKey).toBe(second.story.key);
     expect(JSON.stringify(result.transcript)).not.toContain("expectedAnswer");
     expect(JSON.stringify(result.transcript)).not.toContain("rubric");
+  });
+
+  it("uses the frozen assessment run—not prior Practice runs—for implementation credit", async () => {
+    const base = assessmentSnapshot();
+    const responses = base.prompts.map((prompt, index) => ({
+      promptId: prompt.id,
+      answer:
+        index === 3
+          ? "```javascript\nexport function repair() { return true; }\n```"
+          : `Assessment response for ${prompt.id}.`
+    }));
+    const snapshot = {
+      ...base,
+      submission: {
+        requestId: REQUEST_ID,
+        responseFingerprint: `sha256:${"e".repeat(64)}`,
+        responses,
+        codeExecution: {
+          language: "JavaScript (Node.js 22)",
+          status: "2/2 tests passed",
+          accepted: true,
+          testsPassed: 2,
+          testCount: 2,
+          compileOutput: "",
+          stderr: "",
+          time: "0.02",
+          memory: null,
+          recordedAt: NOW.getTime(),
+          codeHash: "f".repeat(64)
+        },
+        codeSkipped: false,
+        submittedAt: NOW.toISOString()
+      }
+    };
+    const evaluator = new CoreTechnicalAssessmentEvaluator(
+      { generateStructured: vi.fn().mockResolvedValue(aiEvaluation(base)) } as never,
+      ranking()
+    );
+
+    const result = await evaluator.evaluate({
+      assessmentId: ASSESSMENT_ID,
+      blockId: BLOCK_ID,
+      storyKey: first.story.key,
+      focus: focus(),
+      snapshot,
+      responses,
+      questions: evidenceQuestions({ learnedFirst: false, acceptedCodeRuns: 0 }),
+      priorStoryKeys: [first.story.key],
+      priorTopicKeys: [],
+      finalizedAt: NOW
+    });
+
+    expect(result.report.scores.debuggingImplementation).toBe(95);
+    expect(result.report.deterministicEvidence).toMatchObject({
+      acceptedCodeQuestionCount: 1,
+      totalCodeQuestionCount: 1,
+      implementationScoreCapped: false
+    });
   });
 
   it("completes the Core curriculum when the final published path has no successor", async () => {

@@ -131,6 +131,8 @@ export function skipDsaBlockAssessmentCode(params: {
   });
 }
 
+export const skipBlockAssessmentCode = skipDsaBlockAssessmentCode;
+
 export function getSession(sessionId: string): Promise<SessionResponse> {
   return request<SessionResponse>(`/api/interview/${sessionId}`);
 }

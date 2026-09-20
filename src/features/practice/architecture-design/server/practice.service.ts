@@ -17,11 +17,16 @@ import {
   architectureDesignAuthorizedAnswerSchema,
   architectureDesignDraftWorkSchema,
   architectureDesignLearnInputSchema,
+  architectureDesignKnowledgeCheckInputSchema,
   architectureDesignRevealHintInputSchema,
   architectureDesignSaveDraftInputSchema,
   type ArchitectureDesignAttemptWork,
   type ArchitectureDesignDraftWork
 } from "@/features/practice/architecture-design/domain/practice-contracts";
+import {
+  architectureDesignKnowledgeCheck,
+  publicArchitectureDesignKnowledgeCheck
+} from "@/features/practice/architecture-design/domain/knowledge-check";
 import {
   architectureDesignQuestionSchema,
   publicArchitectureDesignQuestionSchema,
@@ -139,6 +144,18 @@ export class ArchitectureDesignPracticeService {
 
   async question(ownerId: string, questionId: string) {
     return publicQuestion(await this.findQuestion(ownerId, questionId));
+  }
+
+  async checkKnowledge(ownerId: string, rawInput: unknown) {
+    const input = architectureDesignKnowledgeCheckInputSchema.parse(rawInput);
+    const row = await this.findQuestion(ownerId, input.questionId);
+    const question = architectureDesignQuestionSchema.parse(row.privateSnapshot);
+    const check = architectureDesignKnowledgeCheck(question);
+    return {
+      correct: input.selectedChoiceIndex === check.correctChoiceIndex,
+      correctChoiceIndex: check.correctChoiceIndex,
+      rationale: check.rationale
+    };
   }
 
   async historyBlock(ownerId: string, blockId: string) {
@@ -414,6 +431,7 @@ function publicQuestion(question: QuestionRead) {
     status: question.status,
     question: {
       ...snapshot,
+      knowledgeCheck: publicArchitectureDesignKnowledgeCheck(frozen),
       transferConnection: answerAuthorized ? frozen.transferConnection : undefined
     },
     draft: parseDraft(question.state?.draft),
@@ -421,13 +439,61 @@ function publicQuestion(question: QuestionRead) {
       revealArchitectureDesignHint(frozen, (index + 1) as 1 | 2 | 3)
     ),
     authorizedAnswer: answerAuthorized
-      ? architectureDesignAuthorizedAnswerSchema.parse(frozen.referenceAnswer)
+      ? architectureDesignAuthorizedAnswerSchema.parse({
+          ...frozen.referenceAnswer,
+          learningGuide: architectureDesignLearningGuide(frozen)
+        })
       : null,
     latestAttempt: question.attempts[0] ? publicAttempt(question.attempts[0]) : null,
     completedAt: question.completedAt?.toISOString() ?? null,
     learnedAt: question.learnedAt?.toISOString() ?? null,
     updatedAt: question.updatedAt.toISOString()
   };
+}
+
+function architectureDesignLearningGuide(
+  question: ReturnType<typeof architectureDesignQuestionSchema.parse>
+) {
+  const consequence = question.commonMistakes.map((mistake) => `- ${mistake}`).join("\n");
+  const fix = [
+    ...question.rubric.map(({ criterion }) => `- ${criterion}`),
+    ...question.interviewerFollowUps.map((followUp) => `- Be ready to defend: ${followUp}`)
+  ].join("\n");
+  return {
+    markdown: [
+      "## Outcome",
+      question.referenceAnswer.summary,
+      "## Why it happens",
+      question.referenceAnswer.explanation,
+      "## Production consequence",
+      consequence,
+      "## How to fix",
+      fix
+    ].join("\n\n"),
+    diagram: {
+      title: "How a strong system-design answer progresses",
+      steps: [
+        { label: "Outcome", detail: question.referenceAnswer.summary },
+        {
+          label: "Mechanism",
+          detail: compactGuideText(question.referenceAnswer.explanation, 700)
+        },
+        {
+          label: "Production risk",
+          detail: compactGuideText(question.commonMistakes.join(" "), 700)
+        },
+        {
+          label: "Defend",
+          detail: compactGuideText(question.interviewerFollowUps.join(" "), 700)
+        }
+      ]
+    }
+  };
+}
+
+function compactGuideText(value: string, maxLength: number): string {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 1).trimEnd()}…`;
 }
 
 export type ArchitectureDesignPublicBlock = ReturnType<typeof publicBlock>;

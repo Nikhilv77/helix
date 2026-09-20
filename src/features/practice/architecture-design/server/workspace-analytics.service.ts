@@ -1,5 +1,6 @@
 import { ArchitectureAssessmentStatus, ArchitectureQuestionStatus, Prisma } from "@prisma/client";
 import {
+  architectureDesignAssessmentSnapshotSchema,
   architectureDesignAssessmentReportSchema,
   architectureDesignSafeTranscriptSchema
 } from "@/features/practice/architecture-design/domain/assessment-contracts";
@@ -41,6 +42,7 @@ const assessmentRoundSelect = {
   completedAt: true,
   createdAt: true,
   updatedAt: true,
+  assessmentSnapshot: true,
   block: {
     select: { id: true, scenarioSnapshot: true, selectionSnapshot: true }
   },
@@ -189,8 +191,12 @@ function toHistory(
   const completed = assessment.status === ArchitectureAssessmentStatus.COMPLETED;
   const startedAt = (assessment.startedAt ?? assessment.createdAt).getTime();
   const endedAt = assessment.completedAt?.getTime() ?? now;
+  const parsedSnapshot = assessment.assessmentSnapshot
+    ? architectureDesignAssessmentSnapshotSchema.safeParse(assessment.assessmentSnapshot)
+    : null;
+  const questionCount = (parsedSnapshot?.success ? parsedSnapshot.data.prompts.length : 4) as 4 | 5;
   const answerCount =
-    completed || assessment.status === ArchitectureAssessmentStatus.FINALIZING ? 5 : 0;
+    completed || assessment.status === ArchitectureAssessmentStatus.FINALIZING ? questionCount : 0;
   return {
     sessionId: sessionId(assessment.id),
     status: completed ? "completed" : "in_progress",
@@ -204,12 +210,12 @@ function toHistory(
       templateId: TEMPLATE_ID,
       templateTitle: `Architecture & Design · ${scenario.title}`,
       durationMinutes: scenario.expectedMinutes,
-      questionCount: 5
+      questionCount
     },
     startedAt,
     updatedAt: assessment.updatedAt.getTime(),
     durationMs: Math.max(0, endedAt - startedAt),
-    questionCount: 5,
+    questionCount,
     questionsCovered: answerCount,
     answerCount
   };

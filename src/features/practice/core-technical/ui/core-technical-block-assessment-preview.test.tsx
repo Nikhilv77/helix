@@ -200,7 +200,9 @@ describe("CoreTechnicalBlockAssessmentPreview", () => {
     render(<CoreTechnicalBlockAssessmentPreview block={block} terminalCount={8} />);
 
     expect(screen.getByText("Assessment ready")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Your 1:1 with Maya is ready" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Your 1:1 with Maya is ready" })
+    ).toBeInTheDocument();
     const startButton = screen.getByRole("button", { name: /start assessment/i });
     expect(startButton).toBeInTheDocument();
 
@@ -219,10 +221,10 @@ describe("CoreTechnicalBlockAssessmentPreview", () => {
   it("announces API failure on start and permits retry", async () => {
     const block = makeBlock("READY");
     vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ success: false, error: { message: "Server overloaded" } }),
-        { status: 500, headers: { "content-type": "application/json" } }
-      )
+      new Response(JSON.stringify({ success: false, error: { message: "Server overloaded" } }), {
+        status: 500,
+        headers: { "content-type": "application/json" }
+      })
     );
 
     render(<CoreTechnicalBlockAssessmentPreview block={block} terminalCount={8} />);
@@ -263,8 +265,8 @@ describe("CoreTechnicalBlockAssessmentPreview", () => {
     const block = makeBlock("COMPLETED");
     render(<CoreTechnicalBlockAssessmentPreview block={block} terminalCount={8} />);
 
-    expect(screen.getByText("Completed Checkpoint")).toBeInTheDocument();
-    expect(screen.getByText("Maya’s Assessment Scorecard")).toBeInTheDocument();
+    expect(screen.getByText("Assessment complete")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Block 1 results" })).toBeInTheDocument();
     expect(screen.getByText("85")).toBeInTheDocument();
     expect(screen.getByText(/Excellent grasp of Node.js microtask mechanics/i)).toBeInTheDocument();
     expect(screen.getByText("Technical accuracy")).toBeInTheDocument();
@@ -272,11 +274,13 @@ describe("CoreTechnicalBlockAssessmentPreview", () => {
     expect(screen.getByText("Debugging & repair")).toBeInTheDocument();
     expect(screen.getByText("Production verification")).toBeInTheDocument();
 
-    // Toggle strengths & improvement areas
-    const toggleButton = screen.getByRole("button", { name: /View strengths & areas to polish/i });
-    fireEvent.click(toggleButton);
-
     expect(screen.getByText("Causal event loop tracing")).toBeInTheDocument();
     expect(screen.getByText("Quantify GC pressure under load")).toBeInTheDocument();
+
+    const toggleButton = screen.getByRole("button", { name: /View question feedback/i });
+    fireEvent.click(toggleButton);
+    expect(
+      screen.getByText(/Clear distinction between nextTick and macrotask queues/i)
+    ).toBeInTheDocument();
   });
 });

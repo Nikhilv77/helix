@@ -2,16 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import {
-  ArrowRight,
-  Check,
-  CheckCircle2,
-  Clock3,
-  Loader2,
-  LockKeyhole,
-  Play,
-  RotateCcw
-} from "lucide-react";
+import { ArrowRight, Check, Clock3, Loader2, LockKeyhole, Play, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { StoryPracticeAssessmentExperience as StoryPracticeAssessmentExperienceContract } from "@/features/practice/shared/ui/contracts";
 import type {
@@ -20,8 +11,12 @@ import type {
 } from "@/features/practice/shared/ui/view-contracts";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { DARK_PORTRAIT_PLACEHOLDER } from "@/lib/avatars/portrait-placeholder";
+import { AssessmentResultsScorecard } from "@/features/practice/shared/ui/assessment-results-scorecard";
 import { humanizeStoryPracticeKey } from "./presentation";
-import { openInterviewRoom } from "@/features/interviews/ui/shared/interview-room-navigation";
+import {
+  openArchitectureDesignAssessmentRoom,
+  openInterviewRoom
+} from "@/features/interviews/ui/shared/interview-room-navigation";
 
 export type PublicAssessment = StoryPracticeAssessmentView;
 type AssessmentSnapshot = NonNullable<PublicAssessment["assessment"]>;
@@ -53,10 +48,9 @@ export function StoryPracticeAssessment({
   const router = useRouter();
   const teacher = useWorkspaceTeacher();
   const lightTheme = useDocumentLightTheme();
-  const teacherPortrait =
-    lightTheme
-      ? `/images/teacher-portraits/assessment-headsets/light/${teacher.id}.jpg`
-      : `/images/teacher-portraits/assessment-headsets/${teacher.id}.jpg`;
+  const teacherPortrait = lightTheme
+    ? `/images/teacher-portraits/assessment-headsets/light/${teacher.id}.jpg`
+    : `/images/teacher-portraits/assessment-headsets/${teacher.id}.jpg`;
   const [assessment, setAssessment] = useState(block.assessment);
   const serverSubmission = assessment?.assessment?.submission ?? null;
   const [recoverySubmission, setRecoverySubmission] = useState<SavedSubmission | null>(null);
@@ -188,14 +182,16 @@ export function StoryPracticeAssessment({
           Continue your 1:1 with {teacher.name}
         </h3>
         <p className="mt-2 text-[14px] leading-6 text-cream/58">
-          Your frozen prompts and conversation are saved in the same voice room used by DSA.
+          {experience.slug === "architecture-design"
+            ? "Your frozen prompts, canvas, and teacher guidance are saved in the dedicated assessment room."
+            : "Your frozen prompts and conversation are saved in the same voice room used by DSA."}
         </p>
         <button
           type="button"
           onClick={() => void startAssessment()}
           className="mt-4 inline-flex min-h-10 self-start items-center gap-2 rounded-xl bg-cream px-4 text-[13px] font-semibold text-[#090a0b] transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
         >
-          {pending === "start" ? "Opening voice room…" : "Continue assessment"}
+          {pending === "start" ? "Opening assessment…" : "Continue assessment"}
           {pending === "start" ? (
             <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" />
           ) : (
@@ -287,6 +283,8 @@ export function StoryPracticeAssessment({
           error={error}
           onContinue={() => void continueStory()}
           experience={experience}
+          teacherName={teacher.name}
+          teacherPortrait={teacherPortrait}
         />
       </AssessmentFrame>
     );
@@ -308,9 +306,9 @@ export function StoryPracticeAssessment({
           </h3>
           <p className="mt-2 max-w-[39rem] text-[13px] leading-5 text-cream/52">
             {status === "FINALIZING"
-              ? "Your five answers are checkpointed by the server. Retry the exact saved submission to finish the report."
+              ? "Your answers are checkpointed by the server. Retry the exact saved submission to finish the report."
               : recoverySubmission
-                ? "The submission outcome is unknown, so your five answers and request ID are frozen for one exact retry."
+                ? "The submission outcome is unknown, so your answers and request ID are frozen for one exact retry."
                 : "Answer every prompt. Drafts remain in this browser until the server checkpoints the complete submission."}
           </p>
         </div>
@@ -419,8 +417,12 @@ export function StoryPracticeAssessment({
       window.sessionStorage.removeItem(key);
       setAssessment(experience.adaptAssessment(data.assessment));
       if (usesSharedVoiceRoom && !dedicatedRoom) {
-        if (!data.sessionId) throw new Error("The voice assessment room could not be prepared.");
-        openInterviewRoom(data.sessionId);
+        if (!data.sessionId) throw new Error("The assessment room could not be prepared.");
+        if (experience.slug === "architecture-design") {
+          openArchitectureDesignAssessmentRoom(data.sessionId);
+        } else {
+          openInterviewRoom(data.sessionId);
+        }
       } else if (dedicatedRoom) {
         router.refresh();
       } else {
@@ -734,7 +736,9 @@ function Report({
   pending,
   error,
   onContinue,
-  experience
+  experience,
+  teacherName,
+  teacherPortrait
 }: {
   block: StoryPracticeBlockView;
   assessment: PublicAssessment;
@@ -743,6 +747,8 @@ function Report({
   error: string | null;
   onContinue: () => void;
   experience: StoryPracticeAssessmentExperience;
+  teacherName: string;
+  teacherPortrait: string;
 }) {
   const report = assessment.report!;
   const transcript = assessment.transcript;
@@ -756,85 +762,33 @@ function Report({
   const nextItem = continuation?.kind === "continue" ? continuation.next : null;
 
   return (
-    <>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
-            {capitalize(experience.subjectNoun)} report
-          </p>
-          <h3
-            ref={headingRef}
-            tabIndex={-1}
-            className="mt-2 font-display text-[1.55rem] font-semibold text-cream outline-none"
-          >
-            {report.overallScore}/100 overall
-          </h3>
-          <p className="mt-2 max-w-[39rem] text-[13px] leading-6 text-cream/58">
-            {report.teacherSummary}
-          </p>
-        </div>
-        <span className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg bg-[var(--workspace-accent-soft)] px-3 text-xs font-semibold text-[var(--workspace-accent)]">
-          <CheckCircle2 size={13} aria-hidden="true" /> Completed
-        </span>
-      </div>
-
-      <dl className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-        {scores.map(([label, value]) => (
-          <div key={label} className="rounded-xl bg-[#141619] px-3.5 py-3">
-            <dt className="text-[9px] font-semibold uppercase leading-4 tracking-[0.1em] text-cream/34">
-              {label}
-            </dt>
-            <dd className="mt-1.5 text-lg font-semibold tabular-nums text-cream">{value}</dd>
-          </div>
-        ))}
-      </dl>
-
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        <ReportList title="Strengths" items={report.strengths} />
-        <ReportList title="Improve next" items={report.improvementAreas} />
-      </div>
-
-      <section className="mt-5" aria-labelledby="prompt-feedback-heading">
-        <h4 id="prompt-feedback-heading" className="text-[13px] font-semibold text-cream/78">
-          Prompt feedback
-        </h4>
-        <ol className="mt-3 space-y-2">
-          {report.promptFeedback.map((feedback, index) => (
-            <li key={feedback.promptId} className="rounded-xl bg-[#141619] px-4 py-4">
-              <div className="flex items-start justify-between gap-4">
-                <p className="text-[12.5px] font-semibold leading-5 text-cream/72">
-                  {index + 1}. {promptById.get(feedback.promptId)?.prompt ?? "Assessment prompt"}
-                </p>
-                <span className="shrink-0 text-[12px] font-semibold tabular-nums text-[var(--workspace-accent)]">
-                  {feedback.score}/100
-                </span>
-              </div>
-              <p className="mt-2 text-[12.5px] leading-5 text-cream/50">{feedback.feedback}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section
-        className="mt-5 rounded-xl border border-white/[0.07] px-4 py-4"
-        aria-labelledby="mastery-evidence-heading"
-      >
-        <h4 id="mastery-evidence-heading" className="text-[13px] font-semibold text-cream/76">
-          Practice evidence
-        </h4>
-        <p className="mt-2 text-[12.5px] leading-5 text-cream/52">
-          {experience.evidenceSummary(report)}
+    <AssessmentResultsScorecard
+      teacherName={teacherName}
+      teacherPortrait={teacherPortrait}
+      title={`${capitalize(experience.subjectNoun)} results`}
+      overallScore={report.overallScore}
+      summary={report.teacherSummary}
+      metrics={scores.map(([label, value]) => ({ label, value }))}
+      evidenceLines={[
+        `${report.solvedVsLearned.completedCount} completed · ${report.solvedVsLearned.learnedCount} learned`,
+        experience.evidenceSummary(report),
+        report.solvedVsLearned.masteryCreditNote
+      ]}
+      strengths={report.strengths}
+      improvementAreas={report.improvementAreas}
+      questionFeedback={report.promptFeedback.map((feedback) => ({
+        title: promptById.get(feedback.promptId)?.prompt ?? "Assessment prompt",
+        score: feedback.score,
+        feedback: feedback.feedback
+      }))}
+      headingRef={headingRef}
+    >
+      {report.deterministicEvidence.implementationScoreCapped ? (
+        <p className="mt-4 rounded-xl border border-[#e3a15b]/20 bg-[#e3a15b]/10 px-4 py-3 text-sm leading-5 text-[#e7bd83]">
+          The implementation score cap was preserved because accepted runner evidence was
+          incomplete.
         </p>
-        <p className="mt-2 text-[12px] leading-5 text-cream/42">
-          {report.solvedVsLearned.masteryCreditNote}
-        </p>
-        {report.deterministicEvidence.implementationScoreCapped ? (
-          <p className="mt-2 text-[12px] leading-5 text-[#e7bd83]">
-            The implementation score cap was preserved because accepted runner evidence was
-            incomplete.
-          </p>
-        ) : null}
-      </section>
+      ) : null}
 
       {transcript ? (
         <details className="mt-5 rounded-xl border border-white/[0.07] px-4 py-4">
@@ -921,25 +875,12 @@ function Report({
           Historical reports are read-only.
         </p>
       ) : null}
-    </>
+    </AssessmentResultsScorecard>
   );
 }
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function ReportList({ title, items }: { title: string; items: string[] }) {
-  return (
-    <section className="rounded-xl bg-[#141619] px-4 py-4" aria-label={title}>
-      <h4 className="text-[12px] font-semibold text-cream/72">{title}</h4>
-      <ul className="mt-2 space-y-2 text-[12.5px] leading-5 text-cream/50">
-        {items.map((item) => (
-          <li key={item}>• {item}</li>
-        ))}
-      </ul>
-    </section>
-  );
 }
 
 function ActionError({ message }: { message: string }) {

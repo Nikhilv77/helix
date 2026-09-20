@@ -1,18 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { ArrowRight, Check, ChevronDown, Loader2, Play, X } from "lucide-react";
+import { ArrowRight, Check, Loader2, Play, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { useTheme } from "@/lib/theme/theme-context";
 import { DARK_PORTRAIT_PLACEHOLDER } from "@/lib/avatars/portrait-placeholder";
-import {
-  coreTechnicalAssessmentRoomHref,
-  openCoreTechnicalAssessmentRoom
-} from "@/features/interviews/ui/shared/interview-room-navigation";
+import { openCoreTechnicalAssessmentRoom } from "@/features/interviews/ui/shared/interview-room-navigation";
 import type { StoryPracticeBlockView } from "@/features/practice/shared/ui/view-contracts";
+import { AssessmentResultsScorecard } from "@/features/practice/shared/ui/assessment-results-scorecard";
 
 const METRICS = [
   ["technical-accuracy", "Technical accuracy"],
@@ -42,7 +39,8 @@ export function CoreTechnicalBlockAssessmentPreview({
   const status = block.assessment?.status ?? "LOCKED";
   const isAssessed = status === "COMPLETED";
   const isInProgress = status === "IN_PROGRESS";
-  const isReady = status === "READY" || (allowEarlyStart && block.isCurrent && !isAssessed && !isInProgress);
+  const isReady =
+    status === "READY" || (allowEarlyStart && block.isCurrent && !isAssessed && !isInProgress);
   const isPractising = !isAssessed && !isInProgress && !isReady;
 
   const [noticeVisible, setNoticeVisible] = useState(false);
@@ -166,14 +164,12 @@ export function CoreTechnicalBlockAssessmentPreview({
                 onStart={() => void startAssessment()}
               />
             ) : isInProgress ? (
-              <InProgressAssessment
-                assessmentId={block.assessment?.id ?? null}
-                onStart={() => void startAssessment()}
-              />
+              <InProgressAssessment onStart={() => void startAssessment()} />
             ) : (
               <CompletedAssessment
                 block={block}
                 teacherName={teacher.name}
+                teacherPortrait={assessmentPortrait}
               />
             )}
           </div>
@@ -215,7 +211,8 @@ function LockedAssessment({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-display text-[1.25rem] font-semibold tracking-[-0.02em] text-cream">
-            {remainingQuestions} {remainingQuestions === 1 ? "question" : "questions"} until your 1:1
+            {remainingQuestions} {remainingQuestions === 1 ? "question" : "questions"} until your
+            1:1
           </h3>
           <p className="mt-1 text-[12px] leading-5 text-cream/48">
             Solve your path questions to unlock this assessment with {teacherName}.
@@ -300,8 +297,8 @@ function ReadyAssessment({
         Your 1:1 with {teacherName} is ready
       </h3>
       <p className="mt-2 text-[14px] leading-6 text-cream/58">
-        Four evidence-based mechanism and diagnosis checks, then one live transfer repair in a focused
-        25-minute checkpoint.
+        Four evidence-based mechanism and diagnosis checks, then one live transfer repair in a
+        focused 25-minute checkpoint.
       </p>
       <button
         type="button"
@@ -326,13 +323,7 @@ function ReadyAssessment({
   );
 }
 
-function InProgressAssessment({
-  assessmentId,
-  onStart
-}: {
-  assessmentId: string | null;
-  onStart: () => void;
-}) {
+function InProgressAssessment({ onStart }: { onStart: () => void }) {
   return (
     <div>
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
@@ -357,13 +348,14 @@ function InProgressAssessment({
 
 function CompletedAssessment({
   block,
-  teacherName
+  teacherName,
+  teacherPortrait
 }: {
   block: StoryPracticeBlockView;
   teacherName: string;
+  teacherPortrait: string;
 }) {
   const report = block.assessment?.report;
-  const [detailsVisible, setDetailsVisible] = useState(false);
 
   if (!report) {
     return (
@@ -377,111 +369,44 @@ function CompletedAssessment({
   }
 
   const scores = report.scores;
+  const promptById = new Map(
+    block.assessment?.assessment?.prompts.map((prompt) => [prompt.id, prompt.prompt]) ?? []
+  );
+  const metrics = METRICS.map(([key, label]) => ({
+    label,
+    value:
+      key === "technical-accuracy"
+        ? scores.technicalAccuracy
+        : key === "mechanism-reasoning"
+          ? scores.mechanismReasoning
+          : key === "diagnosis-evidence"
+            ? scores.diagnosisEvidence
+            : key === "debugging-implementation"
+              ? scores.debuggingImplementation
+              : scores.communicationProduction
+  }));
 
   return (
-    <div className="py-2">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--workspace-accent)]">
-            Completed Checkpoint
-          </p>
-          <h3 className="mt-1 font-display text-2xl font-semibold text-cream">
-            {teacherName}’s Assessment Scorecard
-          </h3>
-        </div>
-        <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-black/40 px-4 py-2">
-          <span className="text-xs text-cream/50">Overall</span>
-          <span className="font-display text-2xl font-bold text-[var(--workspace-accent)]">
-            {report.overallScore}
-          </span>
-          <span className="text-xs text-cream/30">/ 100</span>
-        </div>
-      </div>
-
-      <p className="mt-3 text-sm leading-6 text-cream/65">{report.teacherSummary}</p>
-
-      <div className="mt-5 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-        {METRICS.map(([key, label]) => {
-          const score =
-            key === "technical-accuracy"
-              ? scores.technicalAccuracy
-              : key === "mechanism-reasoning"
-                ? scores.mechanismReasoning
-                : key === "diagnosis-evidence"
-                  ? scores.diagnosisEvidence
-                  : key === "debugging-implementation"
-                    ? scores.debuggingImplementation
-                    : scores.communicationProduction;
-
-          return (
-            <div
-              key={key}
-              className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-cream/60">{label}</span>
-                <span className="font-mono text-xs font-semibold text-cream/90">{score}%</span>
-              </div>
-              <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.06]">
-                <div
-                  className="h-full rounded-full bg-[var(--workspace-accent)]"
-                  style={{ width: `${score}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="mt-4 flex items-center justify-between border-t border-white/[0.06] pt-3">
-        <button
-          type="button"
-          onClick={() => setDetailsVisible(!detailsVisible)}
-          className="flex items-center gap-1.5 text-xs font-medium text-cream/50 transition hover:text-cream"
-        >
-          <span>{detailsVisible ? "Hide notes" : "View strengths & areas to polish"}</span>
-          <ChevronDown
-            size={13}
-            className={`transition-transform ${detailsVisible ? "rotate-180" : ""}`}
-          />
-        </button>
-      </div>
-
-      {detailsVisible ? (
-        <div className="mt-3 grid gap-3 border-t border-white/[0.05] pt-3 sm:grid-cols-2">
-          {report.strengths.length ? (
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-cream/40">
-                Strengths
-              </p>
-              <ul className="mt-2 space-y-1.5 text-xs text-cream/70">
-                {report.strengths.map((s, idx) => (
-                  <li key={idx} className="flex items-start gap-1.5">
-                    <span className="text-[var(--workspace-accent)]">•</span>
-                    <span>{s}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          {report.improvementAreas.length ? (
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-cream/40">
-                Improvement Areas
-              </p>
-              <ul className="mt-2 space-y-1.5 text-xs text-cream/70">
-                {report.improvementAreas.map((a, idx) => (
-                  <li key={idx} className="flex items-start gap-1.5">
-                    <span className="text-[#efb38f]">•</span>
-                    <span>{a}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+    <AssessmentResultsScorecard
+      teacherName={teacherName}
+      teacherPortrait={teacherPortrait}
+      title={`Block ${block.ordinal} results`}
+      overallScore={report.overallScore}
+      summary={report.teacherSummary}
+      metrics={metrics}
+      evidenceLines={[
+        `${report.solvedVsLearned.completedCount} completed · ${report.solvedVsLearned.learnedCount} learned`,
+        report.solvedVsLearned.masteryCreditNote,
+        `${report.deterministicEvidence.acceptedCodeQuestionCount}/${report.deterministicEvidence.totalCodeQuestionCount} implementation tasks verified by the runner${report.deterministicEvidence.implementationScoreCapped ? " · implementation score capped" : ""}`
+      ]}
+      strengths={report.strengths}
+      improvementAreas={report.improvementAreas}
+      questionFeedback={report.promptFeedback.map((feedback) => ({
+        title: promptById.get(feedback.promptId) ?? "Assessment question",
+        score: feedback.score,
+        feedback: feedback.feedback
+      }))}
+    />
   );
 }
 
@@ -539,8 +464,8 @@ function AssessmentNotice({
             Finish your {remainingQuestions} remaining question{remainingQuestions === 1 ? "" : "s"}
           </h4>
           <p className="mt-1.5 text-xs leading-5 text-cream/60">
-            Every question in your path builds evidence and invariants tested in this 1:1 checkpoint.
-            Finish or Learn each question to unlock.
+            Every question in your path builds evidence and invariants tested in this 1:1
+            checkpoint. Finish or Learn each question to unlock.
           </p>
         </div>
         <button
@@ -559,9 +484,15 @@ function AssessmentNotice({
 
 function readSessionId(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") return null;
-  const direct = "sessionId" in payload && typeof payload.sessionId === "string" ? payload.sessionId : null;
+  const direct =
+    "sessionId" in payload && typeof payload.sessionId === "string" ? payload.sessionId : null;
   if (direct) return direct;
-  if ("data" in payload && payload.data && typeof payload.data === "object" && "sessionId" in payload.data) {
+  if (
+    "data" in payload &&
+    payload.data &&
+    typeof payload.data === "object" &&
+    "sessionId" in payload.data
+  ) {
     return typeof payload.data.sessionId === "string" ? payload.data.sessionId : null;
   }
   return null;
@@ -574,4 +505,3 @@ function readStartError(payload: unknown, status: number): string {
   }
   return `The assessment could not be started (HTTP ${status}).`;
 }
-

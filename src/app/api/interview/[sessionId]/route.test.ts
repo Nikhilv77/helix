@@ -157,6 +157,55 @@ describe("interview public state serializer", () => {
     expect(JSON.stringify(serialized)).not.toContain("PRIVATE_SCORING_RUBRIC");
   });
 
+  it("exposes candidate-facing evidence for the Architecture block assessment only", () => {
+    const state = {
+      id: "11111111-1111-4111-8111-111111111111",
+      setup: {
+        role: "backend",
+        level: "3-5",
+        roundType: "technical",
+        intensity: "realistic",
+        context: "Architecture checkpoint",
+        templateId: "system-design",
+        storyPracticeAssessment: {
+          kind: "story-practice-assessment",
+          practice: "architecture-design",
+          blockId: "block-1",
+          assessmentId: "assessment-1",
+          snapshotVersion: 1,
+          evaluatorVersion: "eval-1"
+        }
+      },
+      plan: [
+        {
+          text: "Choose the strongest boundary.",
+          evidenceAnchor: "Traffic trace: candidate-facing production evidence",
+          interviewSection: "design",
+          stage: "design-frame",
+          mustHit: ["explicit scope"],
+          probeIfMissing: "State the governing constraint.",
+          storyPracticeInterviewerGuide: {
+            practice: "architecture-design",
+            label: "Architecture & Design",
+            expectedAnswer: "PRIVATE_ANSWER",
+            rubric: [{ criterion: "PRIVATE_RUBRIC", points: 10 }]
+          }
+        }
+      ],
+      phase: "questioning",
+      questionIndex: 0,
+      followUpCount: 0,
+      startedAt: 1,
+      turns: []
+    } satisfies InterviewState;
+
+    const serialized = serialiseInterviewState(state);
+    expect(serialized.currentQuestion?.evidenceAnchor).toContain("candidate-facing");
+    expect(serialized.currentQuestion?.expects).toEqual(["explicit scope"]);
+    expect(JSON.stringify(serialized)).not.toContain("PRIVATE_ANSWER");
+    expect(JSON.stringify(serialized)).not.toContain("PRIVATE_RUBRIC");
+  });
+
   it("keeps provider telemetry server-side", () => {
     const state = {
       id: "11111111-1111-4111-8111-111111111111",
@@ -361,7 +410,12 @@ describe("interview public state serializer", () => {
           evidenceAnchor: "Transaction isolation levels",
           codeTask: "Transaction isolation levels",
           kind: "mcq",
-          options: ["Concurrent lock acquisition order", "Read replicas lag", "Network partition", "Garbage collection"],
+          options: [
+            "Concurrent lock acquisition order",
+            "Read replicas lag",
+            "Network partition",
+            "Garbage collection"
+          ],
           stage: "rapid",
           mustHit: [],
           probeIfMissing: "",
@@ -433,7 +487,8 @@ describe("interview public state serializer", () => {
             constraints: ["Deterministic lock order"],
             examples: [],
             starterCode: {
-              javascript: "function solution(input) { return input; }\nmodule.exports = { solution };",
+              javascript:
+                "function solution(input) { return input; }\nmodule.exports = { solution };",
               python: "",
               cpp: "",
               java: ""
@@ -455,7 +510,9 @@ describe("interview public state serializer", () => {
       options: null
     });
     expect(serialized.currentQuestion?.dsaTransferQuestion).toBeDefined();
-    expect(serialized.currentQuestion?.dsaTransferQuestion?.starterCode.javascript).toContain("function solution");
+    expect(serialized.currentQuestion?.dsaTransferQuestion?.starterCode.javascript).toContain(
+      "function solution"
+    );
     expect(serialized.currentQuestion?.dsaTransferQuestion?.constraints.length).toBeGreaterThan(0);
   });
 });

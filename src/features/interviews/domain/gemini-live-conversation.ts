@@ -91,8 +91,13 @@ export function usesGeminiLedConversation(
     | "dsaQuestionSlugs"
     | "dsaDesignRound"
     | "technicalDeepDive"
+    | "storyPracticeAssessment"
   >
 ): boolean {
+  // Practice block assessments use their configured teacher and server-backed
+  // TTS. A system-design template describes the rubric, not a Gemini Live room.
+  if (setup.storyPracticeAssessment?.kind === "story-practice-assessment") return false;
+
   return (
     setup.templateId === "hiring-manager-final" ||
     setup.templateId === "resume-behavioral-defense" ||

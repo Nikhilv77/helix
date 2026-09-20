@@ -20,6 +20,7 @@ import { NotFoundErrorException } from "@/server/common/exceptions/not-found-err
 import { ServiceUnavailableErrorException } from "@/server/common/exceptions/service-unavailable-error.exception";
 import type { PrismaService } from "@/server/database/prisma.service";
 import type { InterviewState } from "@/features/interviews/server/types";
+import { fencedCodeFingerprint } from "@/features/interviews/server/code-fingerprint";
 import { storyPracticeAssessmentIdentityFromSetup } from "@/features/practice/shared/server/contracts";
 import { storyPracticeInterviewResponses } from "@/features/practice/shared/server/assessment-transcript";
 import {
@@ -174,7 +175,14 @@ export class CoreTechnicalAssessmentService {
     return this.read(ownerId, input.assessmentId);
   }
 
-  async finalize(ownerId: string, rawInput: unknown) {
+  async finalize(
+    ownerId: string,
+    rawInput: unknown,
+    trustedCodeEvidence: {
+      codeExecution: NonNullable<InterviewState["codeExecutions"]>[string] | null;
+      codeSkipped: boolean;
+    } | null = null
+  ) {
     const input = coreTechnicalAssessmentFinalizeInputSchema.parse(rawInput);
     const responseFingerprint = fingerprint(input.responses);
     const phase = await this.prisma.$transaction(async (tx) => {
@@ -245,6 +253,8 @@ export class CoreTechnicalAssessmentService {
           requestId: input.requestId,
           responseFingerprint,
           responses: input.responses,
+          codeExecution: trustedCodeEvidence?.codeExecution ?? null,
+          codeSkipped: trustedCodeEvidence?.codeSkipped ?? false,
           submittedAt: submittedAt.toISOString()
         }
       });
@@ -363,14 +373,30 @@ export class CoreTechnicalAssessmentService {
     const snapshot = coreTechnicalAssessmentSnapshotSchema.parse(assessment.assessmentSnapshot);
     const responses = coreTechnicalInterviewResponses(snapshot, state);
     if (responses.some((response) => response.answer.length === 0)) return null;
+    const codeQuestionIndex = snapshot.prompts.findIndex(
+      (prompt) => prompt.kind === "repair-implementation-transfer"
+    );
+    const codeSkipped = state.turns.some(
+      (turn) => turn.questionIndex === codeQuestionIndex && turn.speaker === "user" && turn.skipped
+    );
+    const execution = state.codeExecutions?.[String(codeQuestionIndex)] ?? null;
+    const submittedCodeHash = fencedCodeFingerprint(responses[codeQuestionIndex]?.answer ?? "");
+    const boundExecution =
+      !codeSkipped && execution?.codeHash && execution.codeHash === submittedCodeHash
+        ? execution
+        : null;
 
-    return this.finalize(ownerId, {
-      assessmentId: identity.assessmentId,
-      // The durable room UUID is stable across retries and uniquely belongs to
-      // this one assessment, so it is also the finalization idempotency key.
-      requestId: sessionId,
-      responses
-    });
+    return this.finalize(
+      ownerId,
+      {
+        assessmentId: identity.assessmentId,
+        // The durable room UUID is stable across retries and uniquely belongs to
+        // this one assessment, so it is also the finalization idempotency key.
+        requestId: sessionId,
+        responses
+      },
+      { codeExecution: boundExecution, codeSkipped }
+    );
   }
 
   /** Agent-capability path used after the final spoken answer. */
@@ -507,5 +533,5 @@ export function coreTechnicalInterviewResponses(
   snapshot: ReturnType<typeof coreTechnicalAssessmentSnapshotSchema.parse>,
   state: Pick<InterviewState, "turns">
 ) {
-  return storyPracticeInterviewResponses(snapshot.prompts, state.turns, 12_000);
+  return storyPracticeInterviewResponses(snapshot.prompts, state.turns, 16_000);
 }

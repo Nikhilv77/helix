@@ -53,6 +53,24 @@ describe("Gemini-led interview policy", () => {
     ).toBe(true);
   });
 
+  it("keeps story-practice assessments on the teacher and TTS flow", () => {
+    expect(
+      usesGeminiLedConversation({
+        roundType: "technical",
+        resumeRound: false,
+        templateId: "system-design",
+        storyPracticeAssessment: {
+          kind: "story-practice-assessment",
+          practice: "architecture-design",
+          blockId: "54152ade-38d6-40a9-8fcc-b803789292e2",
+          assessmentId: "8585fc2f-39b4-4350-b68d-58e5ddb34f2f",
+          snapshotVersion: 1,
+          evaluatorVersion: "architecture-design-assessment-evaluator-v1"
+        }
+      })
+    ).toBe(false);
+  });
+
   it("requires Gemini to classify candidate intent by meaning", () => {
     const declaration = GEMINI_LED_INTERVIEW_TOOLS[0]?.functionDeclarations[0];
     const schema = declaration?.parametersJsonSchema as {

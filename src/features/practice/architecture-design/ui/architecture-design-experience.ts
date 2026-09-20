@@ -58,7 +58,7 @@ export const ARCHITECTURE_DESIGN_ASSESSMENT_EXPERIENCE: StoryPracticeAssessmentE
     "Communication & evolution"
   ],
   defenceDescription:
-    "Defend your requirements, boundaries, data flow, failure strategy, and evolution decisions in five focused prompts.",
+    "Complete two focused design decisions, then defend two end-to-end architectures with production evidence and the canvas.",
   answerPlaceholder:
     "State assumptions, quantify the constraint, and defend the architecture trade-off.",
   evidenceSummary: (report) =>
@@ -101,12 +101,23 @@ export const ARCHITECTURE_DESIGN_WORKSPACE_EXPERIENCE: StoryPracticeWorkspaceExp
   routeBase: ARCHITECTURE_DESIGN_ROUTE_BASE,
   subjectNoun: "scenario",
   environmentLabel: null,
+  answerReview: "modal",
   capabilities: { runCode: false },
   textAnswerPlaceholder:
     "Describe components, request and data flow, storage, failure paths, and trade-offs…",
   feedbackReasoningLabel: "Design reasoning",
-  responseLabel: () => null,
-  responseGuidance: () => null,
+  responseLabel: (format) =>
+    format === "artifact-diagnosis"
+      ? "Diagnose the architecture"
+      : format === "production-decision"
+        ? "Defend your production decision"
+        : "Frame your system-design answer",
+  responseGuidance: (format) =>
+    format === "artifact-diagnosis"
+      ? "Trace the failure through components and data flow, quantify its impact, then propose an isolated and operable correction."
+      : format === "production-decision"
+        ? "State the outcome you need, compare realistic alternatives, and defend the trade-off, failure behavior, and rollout guardrails."
+        : "Clarify scope and non-goals, state assumptions, show the important estimates, and turn ambiguous requirements into measurable SLOs.",
   adaptQuestion: (question) =>
     architectureDesignQuestionView(question as ArchitectureDesignPublicQuestion)
 };

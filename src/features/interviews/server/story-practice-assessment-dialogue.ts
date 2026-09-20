@@ -58,7 +58,7 @@ const APPLIED_ENGINEERING_DIALOGUE: StoryPracticeAssessmentDialogue = {
 
 const ARCHITECTURE_DESIGN_DIALOGUE: StoryPracticeAssessmentDialogue = {
   openingShape:
-    "We’ll work through five focused prompts from the design scenario you just practised: frame the requirements and scale, define the contracts and data, defend the architecture and failure strategy, then finish with operability and evolution.",
+    "We’ll run a four-part design checkpoint from the scenario you just practised: two focused decisions, then two complete architecture defences using the canvas and production evidence.",
   expectations: [
     "Think out loud. State your assumptions, quantify the important constraint, and make the trade-off explicit. I may pressure-test one boundary before we move on.",
     "Treat this like a real system-design interview. Trace the request and data flow, identify the failure boundary, and defend why the design fits the stated scale.",

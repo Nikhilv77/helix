@@ -52,8 +52,7 @@ export function buildCoreTechnicalAssessmentSnapshot(input: {
       "revisit-weak-response",
       1,
       "weak-response-review",
-      weakest.question.prompt ||
-        `Review the core runtime mechanism from ${story.title}. Which statement correctly explains the underlying system behavior and its production impact?`,
+      stagedPrompt("weak-response-review", story.title, weakest.question.prompt),
       weakest,
       "practice-evidence",
       questions
@@ -62,8 +61,7 @@ export function buildCoreTechnicalAssessmentSnapshot(input: {
       "defend-code-evidence",
       2,
       "code-evidence-defence",
-      executable.question.prompt ||
-        `Defend the implementation decisions for ${executable.question.artifact.title || story.title}. Which invariant or boundary condition is most critical to ensure resilience?`,
+      stagedPrompt("code-evidence-defence", story.title, executable.question.prompt),
       executable,
       "accepted-run-required",
       questions
@@ -72,8 +70,7 @@ export function buildCoreTechnicalAssessmentSnapshot(input: {
       "diagnose-unseen-transfer",
       3,
       "unseen-diagnosis-transfer",
-      diagnosis.question.prompt ||
-        `A downstream service experiences unexpected degradation under similar runtime conditions. How would you systematically diagnose the root cause and isolate the fault?`,
+      stagedPrompt("unseen-diagnosis-transfer", story.title, diagnosis.question.prompt),
       diagnosis,
       "practice-evidence",
       questions
@@ -82,8 +79,7 @@ export function buildCoreTechnicalAssessmentSnapshot(input: {
       "repair-transfer-mechanism",
       4,
       "repair-implementation-transfer",
-      repair.question.prompt ||
-        `Implement a clean, non-blocking mechanism repair in the editor. Ensure edge cases and error boundaries are properly handled.`,
+      stagedPrompt("repair-implementation-transfer", story.title, repair.question.prompt),
       repair,
       "accepted-run-required",
       questions
@@ -92,8 +88,7 @@ export function buildCoreTechnicalAssessmentSnapshot(input: {
       "prove-and-ship",
       5,
       "production-verification-defence",
-      production.question.prompt ||
-        `How would you verify and safely ship this repair to production? Consider testing strategy, observability signals, and rollback criteria.`,
+      stagedPrompt("production-verification-defence", story.title, production.question.prompt),
       production,
       "practice-evidence",
       questions
@@ -125,20 +120,17 @@ function assessmentPrompt(
   }>
 ): CoreTechnicalAssessmentSnapshot["prompts"][number] {
   const isCodeTransfer = kind === "repair-implementation-transfer";
-  const { options, correctOption } = buildOptionsForPrompt(source, kind, allQuestions);
+  const { options, correctOption } = buildOptionsForPrompt(source, allQuestions);
 
-  const starterCode = isCodeTransfer
-    ? source.question.starterCode?.trim() || defaultStarterCode(source.question)
-    : undefined;
-  const runnerContract = isCodeTransfer
-    ? buildRunnerContract(source.question)
-    : undefined;
+  const starterCode = isCodeTransfer ? requiredStarterCode(source.question) : undefined;
+  const runnerContract = isCodeTransfer ? buildRunnerContract(source.question) : undefined;
 
-  const codeSnippet = source.question.artifact.kind === "code"
-    ? source.question.artifact.content.slice(0, 1_600)
-    : source.question.starterCode
-      ? source.question.starterCode.slice(0, 1_600)
-      : undefined;
+  const codeSnippet =
+    source.question.artifact.kind === "code"
+      ? source.question.artifact.content.slice(0, 1_600)
+      : source.question.starterCode
+        ? source.question.starterCode.slice(0, 1_600)
+        : undefined;
 
   return {
     id,
@@ -172,7 +164,8 @@ function assessmentPrompt(
         4_000
       ),
       rubric: source.question.rubric,
-      deterministicEvidence
+      deterministicEvidence,
+      ...(isCodeTransfer ? { executableQuestion: source.question } : {})
     }
   };
 }
@@ -182,7 +175,6 @@ function buildOptionsForPrompt(
     row: BlueprintQuestion;
     question: ReturnType<typeof generatedQuestionCandidateSchema.parse>;
   },
-  kind: CoreTechnicalAssessmentSnapshot["prompts"][number]["kind"],
   allQuestions: Array<{
     row: BlueprintQuestion;
     question: ReturnType<typeof generatedQuestionCandidateSchema.parse>;
@@ -200,23 +192,23 @@ function buildOptionsForPrompt(
     return { options: rawOptions, correctOption };
   }
 
-  // Harvest distractors dynamically from this question and other questions in the story block
+  // Keep distractors mechanism-local. Unrelated generic architecture statements
+  // make the correct answer visually obvious and do not test this scenario.
   const mistakes = (source.question.commonMistakes ?? []).map((m) => bounded(m, 380));
-  const otherMistakes = allQuestions
-    .filter((q) => q.row.id !== source.row.id)
+  const relatedQuestions = allQuestions.filter(
+    ({ row, question }) =>
+      row.id !== source.row.id &&
+      (question.topicKeys.some((key) => source.question.topicKeys.includes(key)) ||
+        question.mechanismKeys.some((key) => source.question.mechanismKeys.includes(key)))
+  );
+  const otherMistakes = relatedQuestions
     .flatMap((q) => q.question.commonMistakes ?? [])
     .map((m) => bounded(m, 380));
-  const otherConciseAnswers = allQuestions
-    .filter((q) => q.row.id !== source.row.id)
-    .map((q) => bounded(q.question.answer.concise, 380));
-  const universalFallbacks = universalArchitecturalDistractors();
+  const otherConciseAnswers = relatedQuestions.map((q) => bounded(q.question.answer.concise, 380));
 
-  const candidatePool = [
-    ...mistakes,
-    ...otherMistakes,
-    ...otherConciseAnswers,
-    ...universalFallbacks
-  ].filter((item): item is string => Boolean(item) && item !== correct);
+  const candidatePool = [...mistakes, ...otherMistakes, ...otherConciseAnswers].filter(
+    (item): item is string => Boolean(item) && item !== correct
+  );
 
   const rawDistractors: string[] = [];
   for (const candidate of candidatePool) {
@@ -225,92 +217,98 @@ function buildOptionsForPrompt(
       if (rawDistractors.length === 3) break;
     }
   }
+  if (rawDistractors.length === 0) {
+    throw new Error("Assessment MCQ requires at least one authored mechanism-local distractor");
+  }
 
-  // Place correct option deterministically between 0 and 3 based on row order
-  const targetPos = (source.row.order + 1) % 4;
+  // Stable for a frozen snapshot, but not learnable from question order.
+  const optionCount = Math.min(4, rawDistractors.length + 1);
+  const targetPos = stableOptionPosition(source.row.contentFingerprint, optionCount);
   const options = [...rawDistractors.slice(0, 3)];
   options.splice(targetPos, 0, correct);
 
   return { options: options.slice(0, 4), correctOption: targetPos };
 }
 
-function universalArchitecturalDistractors(): string[] {
-  return [
-    "The execution path silently swallows rejected operations without recording telemetry or alerting callers.",
-    "Synchronous processing of unbounded payloads causes thread starvation under concurrent workload spikes.",
-    "State mutations bypass transactional isolation boundaries, risking cross-request data corruption.",
-    "Resource disposal and connection teardown are bypassed on abnormal termination pathways."
-  ];
+function stableOptionPosition(fingerprint: string, optionCount: number): number {
+  return Number.parseInt(fingerprint.slice(-2), 16) % optionCount;
 }
 
-function defaultStarterCode(question: ReturnType<typeof generatedQuestionCandidateSchema.parse>): string {
-  const functionName = question.runnerContract?.entrypoint || "solution";
-  return `/**
- * Core Technical Mechanism Repair
- * Implement a clean, non-blocking repair satisfying the boundary constraints.
- */
-function ${functionName}(input) {
-  // Your implementation here
-  return input;
-}
-
-module.exports = { ${functionName} };
-`;
-}
-
-function buildRunnerContract(
-  question: ReturnType<typeof generatedQuestionCandidateSchema.parse>
-): { version: 1; functionName: string; testCases: unknown[] } {
-  const functionName = question.runnerContract?.entrypoint || "solution";
-  const allTests = (question.publicTests ?? []).concat(question.hiddenTests ?? []);
-  if (allTests.length > 0) {
-    return {
-      version: 1,
-      functionName,
-      testCases: allTests.map((test) => {
-        let parsedInput: unknown = test.input;
-        try {
-          parsedInput = JSON.parse(test.input);
-        } catch {
-          parsedInput = test.input || {};
-        }
-        let parsedExpected: unknown = test.expected;
-        try {
-          parsedExpected = JSON.parse(test.expected);
-        } catch {
-          parsedExpected = test.expected || true;
-        }
-        return {
-          input: test.input || "{}",
-          expectedOutput: test.expected || "true",
-          visible: true,
-          arguments: [parsedInput],
-          expectedValue: parsedExpected
-        };
-      })
-    };
+function stagedPrompt(
+  kind: CoreTechnicalAssessmentSnapshot["prompts"][number]["kind"],
+  storyTitle: string,
+  sourcePrompt: string
+): string {
+  const source = bounded(sourcePrompt, 2_600);
+  switch (kind) {
+    case "weak-response-review":
+      return `Re-evaluate this ${storyTitle} scenario and choose the explanation that correctly connects the governing Node.js mechanism to its production consequence.\n\n${source}`;
+    case "code-evidence-defence":
+      return `An interviewer challenges the evidence behind this implementation. Choose the statement that most accurately identifies the critical invariant and what the saved tests actually prove.\n\n${source}`;
+    case "unseen-diagnosis-transfer":
+      return `The same underlying mechanism now appears behind a different service boundary. Choose the diagnostic conclusion best supported by the runtime evidence, including how it rules out a plausible alternative.\n\n${source}`;
+    case "repair-implementation-transfer":
+      return `Implement the following mechanism repair as an unseen transfer task. Preserve the runtime contract, handle cleanup and failure paths, and make the authored public and hidden tests pass.\n\n${source}`;
+    case "production-verification-defence":
+      return `Assume the repair is ready for release. Choose the production plan with the strongest verification signal, rollback trigger, and failure containment.\n\n${source}`;
   }
+}
 
+function requiredStarterCode(
+  question: ReturnType<typeof generatedQuestionCandidateSchema.parse>
+): string {
+  const starterCode = question.starterCode?.trim();
+  if (!starterCode) throw new Error("Assessment transfer requires frozen authored starter code");
+  return starterCode;
+}
+
+function buildRunnerContract(question: ReturnType<typeof generatedQuestionCandidateSchema.parse>): {
+  version: 1;
+  functionName: string;
+  testCases: unknown[];
+} {
+  const functionName = exportedFunctionName(question.starterCode) || "solution";
+  const publicTests = question.publicTests ?? [];
+  const hiddenTests = question.hiddenTests ?? [];
+  const allTests = publicTests.concat(hiddenTests);
+  if (!question.runnerContract || publicTests.length === 0 || hiddenTests.length === 0) {
+    throw new Error("Assessment transfer requires an authored runner and public/hidden tests");
+  }
   return {
     version: 1,
     functionName,
-    testCases: [
-      {
-        input: "{ valid: true }",
-        expectedOutput: "true",
-        visible: true,
-        arguments: [{ valid: true }],
-        expectedValue: true
-      },
-      {
-        input: "{ valid: false }",
-        expectedOutput: "false",
-        visible: false,
-        arguments: [{ valid: false }],
-        expectedValue: false
+    testCases: allTests.map((test, index) => {
+      let parsedInput: unknown = test.input;
+      try {
+        parsedInput = JSON.parse(test.input);
+      } catch {
+        parsedInput = test.input;
       }
-    ]
+      let parsedExpected: unknown = test.expected;
+      try {
+        parsedExpected = JSON.parse(test.expected);
+      } catch {
+        parsedExpected = test.expected;
+      }
+      return {
+        input: test.input,
+        expectedOutput: test.expected,
+        visible: index < publicTests.length,
+        // Display compatibility only. Core execution uses executableQuestion.testCode.
+        arguments: [parsedInput],
+        expectedValue: parsedExpected
+      };
+    })
   };
+}
+
+function exportedFunctionName(source: string | undefined): string | null {
+  if (!source) return null;
+  return (
+    source.match(/export\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/)?.[1] ??
+    source.match(/(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/)?.[1] ??
+    null
+  );
 }
 
 function weakness(question: BlueprintQuestion): number {
@@ -322,4 +320,3 @@ function weakness(question: BlueprintQuestion): number {
 function bounded(value: string, limit: number): string {
   return value.length <= limit ? value : value.slice(0, limit - 3) + "...";
 }
-

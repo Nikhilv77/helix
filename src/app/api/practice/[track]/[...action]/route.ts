@@ -32,6 +32,7 @@ import { POST as architectureContinue } from "../../architecture-design/continue
 import { POST as architectureDraft } from "../../architecture-design/draft/handler";
 import { POST as architectureHint } from "../../architecture-design/hint/handler";
 import { POST as architectureLearn } from "../../architecture-design/learn/handler";
+import { POST as architectureKnowledgeCheck } from "../../architecture-design/knowledge-check/handler";
 import { POST as architecturePrepare } from "../../architecture-design/prepare/handler";
 import { POST as architectureStartPath } from "../../architecture-design/start-path/handler";
 
@@ -75,6 +76,7 @@ const handlers: Readonly<Record<string, PracticeHandler>> = {
   "architecture-design/draft": architectureDraft,
   "architecture-design/hint": architectureHint,
   "architecture-design/learn": architectureLearn,
+  "architecture-design/knowledge-check": architectureKnowledgeCheck,
   "architecture-design/prepare": architecturePrepare,
   "architecture-design/start-path": architectureStartPath
 };

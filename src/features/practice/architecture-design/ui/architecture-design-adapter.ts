@@ -21,7 +21,8 @@ export function architectureDesignQuestionView(
     authorizedAnswer: question.authorizedAnswer
       ? {
           concise: question.authorizedAnswer.summary,
-          explanation: question.authorizedAnswer.explanation
+          explanation: question.authorizedAnswer.explanation,
+          learningGuide: question.authorizedAnswer.learningGuide
         }
       : null,
     latestAttempt: question.latestAttempt

@@ -51,11 +51,18 @@ export async function POST(request: NextRequest) {
     );
 
     if (result.response.phase === "done") {
-      after(() =>
-        app.dsaBlockAssessmentFinalizationService
-          .finalizeOwned(access.ownerId, parsed.data.sessionId)
-          .catch(() => null)
-      );
+      after(async () => {
+        await Promise.allSettled([
+          app.dsaBlockAssessmentFinalizationService.finalizeOwned(
+            access.ownerId,
+            parsed.data.sessionId
+          ),
+          app.coreTechnicalAssessmentService.finalizeInterviewOwned(
+            access.ownerId,
+            parsed.data.sessionId
+          )
+        ]);
+      });
     }
     return apiSuccess(result.response);
   } catch (error) {
