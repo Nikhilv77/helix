@@ -22,9 +22,8 @@ export function MarketingHome() {
           <Practice />
           <Stuck />
           <Begin />
+          <SiteFooter />
         </main>
-
-        <SiteFooter />
       </div>
     </HomeThemeArrival>
   );

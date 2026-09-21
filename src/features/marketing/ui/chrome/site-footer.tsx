@@ -19,7 +19,7 @@ function sectionHref(href: string, prefix: string): string {
  */
 export function SiteFooter({ sectionHrefPrefix = "" }: { sectionHrefPrefix?: string }) {
   return (
-    <footer className="relative z-10 border-t border-white/[0.06] px-5 py-10 sm:px-8">
+    <footer className="site-footer relative z-10 border-t border-white/[0.06] px-5 py-10 sm:px-8">
       <div className="mx-auto flex w-full max-w-[72rem] flex-col gap-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <Link
