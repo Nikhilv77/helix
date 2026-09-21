@@ -4778,58 +4778,56 @@ html[data-theme="light"] .practice-editor-caret {
     animation-name: stagger-fade-out-mobile;
   }
 
-  .begin-ember {
-    transform-origin: 50% 100%;
-    animation-name: hero-ember-breathe-mobile;
-  }
-
-  /* On mobile the ember is the page's one fixed backdrop, not a second layer
-     waiting behind the sticky hero. With no sticky-background handoff there is
-     no compositor seam for Chrome to reveal while its toolbar is resizing. */
+  /* On phones the ember hangs from the top like a broad half-sun. Keeping the
+     lower half of the viewport free of gradients gives Chrome a single opaque
+     canvas next to the system navigation while its toolbar is resizing. */
   .home-theme-arrival .marketing-theme[data-marketing-accent="orange"] {
     --mobile-home-ember:
-      radial-gradient(92% 32% at 50% 108%, rgba(255, 178, 88, 0.96) 0%, rgba(255, 178, 88, 0.7) 30%, rgba(255, 178, 88, 0) 74%),
-      radial-gradient(138% 54% at 50% 113%, rgba(242, 110, 1, 0.9) 0%, rgba(242, 110, 1, 0.42) 48%, rgba(242, 110, 1, 0) 80%),
-      radial-gradient(178% 74% at 50% 119%, rgba(186, 58, 2, 0.7) 0%, rgba(186, 58, 2, 0.28) 56%, rgba(186, 58, 2, 0) 84%),
-      radial-gradient(220% 96% at 50% 126%, rgba(84, 24, 4, 0.64) 0%, rgba(84, 24, 4, 0.2) 62%, rgba(84, 24, 4, 0) 86%);
-    isolation: isolate;
+      radial-gradient(92% 32% at 50% -8%, rgba(255, 178, 88, 0.96) 0%, rgba(255, 178, 88, 0.7) 30%, rgba(255, 178, 88, 0) 74%),
+      radial-gradient(138% 54% at 50% -13%, rgba(242, 110, 1, 0.9) 0%, rgba(242, 110, 1, 0.42) 48%, rgba(242, 110, 1, 0) 80%),
+      radial-gradient(178% 74% at 50% -19%, rgba(186, 58, 2, 0.7) 0%, rgba(186, 58, 2, 0.28) 56%, rgba(186, 58, 2, 0) 84%),
+      radial-gradient(220% 96% at 50% -26%, rgba(84, 24, 4, 0.64) 0%, rgba(84, 24, 4, 0.2) 62%, rgba(84, 24, 4, 0) 86%);
   }
 
-  .home-theme-arrival .marketing-theme[data-marketing-accent="orange"]::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background: var(--mobile-home-ember), #030304;
-  }
-
-  .home-theme-arrival[data-home-ambience="dawn"]
-    .marketing-theme[data-marketing-accent="orange"]::before,
-  html.light .home-theme-arrival .marketing-theme[data-marketing-accent="orange"]::before,
-  html[data-theme="light"]
-    .home-theme-arrival
-    .marketing-theme[data-marketing-accent="orange"]::before {
-    background: #f7f5f2;
-  }
-
-  .home-theme-arrival .marketing-theme-hero {
-    background: transparent;
-  }
-
-  html.light .home-theme-arrival .marketing-theme-hero,
-  html[data-theme="light"] .home-theme-arrival .marketing-theme-hero {
-    background: transparent !important;
+  .home-theme-arrival .begin-ember {
+    display: none;
   }
 
   .home-theme-arrival .marketing-theme-hero::before {
-    display: none;
+    display: block;
+    background: var(--mobile-home-ember);
+    animation: none;
+    transform: none;
+    will-change: auto;
+  }
+
+  .home-theme-arrival[data-home-ambience] .marketing-theme-hero::after {
+    background:
+      var(--mobile-home-ember),
+      linear-gradient(180deg, #fafafc 0%, #f7f5f2 100%);
+  }
+
+  html.light .home-theme-arrival .marketing-theme-hero::before,
+  html[data-theme="light"] .home-theme-arrival .marketing-theme-hero::before {
+    opacity: 0.62;
+    filter: saturate(1.08);
   }
 
   .public-glass {
     background: linear-gradient(145deg, rgba(27, 28, 32, 0.97), rgba(13, 14, 16, 0.97));
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+
+  .home-theme-arrival .pushback-card {
+    border: 0;
+    background: #101113;
+    box-shadow: none;
+  }
+
+  html.light .home-theme-arrival .pushback-card,
+  html[data-theme="light"] .home-theme-arrival .pushback-card {
+    background: #ffffff;
   }
 
   .glass-cta,

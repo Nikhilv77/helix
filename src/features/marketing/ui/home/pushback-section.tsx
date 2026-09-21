@@ -158,7 +158,7 @@ export function Pushback() {
             <div
               ref={cardRef}
               data-running={inView}
-              className="marketing-animation-scope public-glass relative grid min-h-[24rem] w-full overflow-hidden rounded-[1.5rem] px-5 py-4 sm:min-h-[22rem] sm:px-9 sm:py-6"
+              className="pushback-card marketing-animation-scope public-glass relative grid min-h-[24rem] w-full overflow-hidden rounded-[1.5rem] px-5 py-4 sm:min-h-[22rem] sm:px-9 sm:py-6"
             >
               <div className="col-start-1 row-start-1">
                 {round.map((turn, turnIndex) => {
