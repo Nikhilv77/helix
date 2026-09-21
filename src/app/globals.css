@@ -4799,10 +4799,26 @@ html[data-theme="light"] .practice-editor-caret {
   .home-theme-arrival .marketing-theme[data-marketing-accent="orange"]::before {
     content: "";
     position: fixed;
-    inset: -8rem 0;
+    inset: 0 0 -8rem;
     z-index: -1;
     pointer-events: none;
-    background: var(--mobile-home-ember), #030304;
+    background-color: #030304;
+    background-image:
+      var(--mobile-home-ember),
+      radial-gradient(90% 180% at 50% 0%, #ffb258 0%, #f26e01 52%, #6f2004 100%);
+    background-position:
+      top,
+      top,
+      top,
+      top,
+      bottom;
+    background-size:
+      100% calc(100% - 8rem),
+      100% calc(100% - 8rem),
+      100% calc(100% - 8rem),
+      100% calc(100% - 8rem),
+      100% 8rem;
+    background-repeat: no-repeat;
   }
 
   .home-theme-arrival[data-home-ambience="dawn"]
