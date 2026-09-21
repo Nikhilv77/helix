@@ -3731,7 +3731,19 @@ html {
 }
 
 .marketing-theme-hero {
+  /* `svh` freezes at Chrome's toolbar-expanded height. Once the toolbar
+     collapses, that leaves its former height unpainted above Android's system
+     navigation. Use `vh` as the legacy large-viewport fallback and let modern
+     browsers track the live visual viewport with `dvh`. */
+  height: 100vh;
+  min-height: 36rem;
   background: #030304;
+}
+
+@supports (height: 100dvh) {
+  .marketing-theme-hero {
+    height: 100dvh;
+  }
 }
 
 /*
