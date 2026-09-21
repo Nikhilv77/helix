@@ -3900,17 +3900,17 @@ html {
  * slot with `!important`.
  */
 .begin-ember {
-  display: none;
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(50% 34% at 50% -4%, rgba(255, 178, 88, 0.95) 0%, rgba(255, 178, 88, 0) 72%),
-    radial-gradient(76% 56% at 50% -9%, rgba(242, 110, 1, 0.95) 0%, rgba(242, 110, 1, 0) 74%),
-    radial-gradient(104% 76% at 50% -15%, rgba(186, 58, 2, 0.82) 0%, rgba(186, 58, 2, 0) 76%),
-    radial-gradient(148% 106% at 50% -23%, rgba(84, 24, 4, 0.75) 0%, rgba(84, 24, 4, 0) 78%);
+    radial-gradient(50% 34% at 50% 104%, rgba(255, 178, 88, 0.95) 0%, rgba(255, 178, 88, 0) 72%),
+    radial-gradient(76% 56% at 50% 109%, rgba(242, 110, 1, 0.95) 0%, rgba(242, 110, 1, 0) 74%),
+    radial-gradient(104% 76% at 50% 115%, rgba(186, 58, 2, 0.82) 0%, rgba(186, 58, 2, 0) 76%),
+    radial-gradient(148% 106% at 50% 123%, rgba(84, 24, 4, 0.75) 0%, rgba(84, 24, 4, 0) 78%);
   animation: hero-ember-breathe 16s ease-in-out infinite alternate;
+  transform-origin: 50% 100%;
   will-change: transform;
 }
 
