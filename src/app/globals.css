@@ -4783,10 +4783,9 @@ html[data-theme="light"] .practice-editor-caret {
     animation-name: hero-ember-breathe-mobile;
   }
 
-  /* Keep a static, overscanned copy of the ember behind the sticky hero. Mobile
-     Chrome can resize the visual viewport before its sticky compositor layer
-     catches up; this buffer ensures that delayed frame reveals the same scene
-     instead of the marketing canvas underneath. */
+  /* On mobile the ember is the page's one fixed backdrop, not a second layer
+     waiting behind the sticky hero. With no sticky-background handoff there is
+     no compositor seam for Chrome to reveal while its toolbar is resizing. */
   .home-theme-arrival .marketing-theme[data-marketing-accent="orange"] {
     --mobile-home-ember:
       radial-gradient(92% 32% at 50% 108%, rgba(255, 178, 88, 0.96) 0%, rgba(255, 178, 88, 0.7) 30%, rgba(255, 178, 88, 0) 74%),
@@ -4799,26 +4798,10 @@ html[data-theme="light"] .practice-editor-caret {
   .home-theme-arrival .marketing-theme[data-marketing-accent="orange"]::before {
     content: "";
     position: fixed;
-    inset: 0 0 -8rem;
+    inset: 0;
     z-index: -1;
     pointer-events: none;
-    background-color: #030304;
-    background-image:
-      var(--mobile-home-ember),
-      radial-gradient(90% 180% at 50% 0%, #ffb258 0%, #f26e01 52%, #6f2004 100%);
-    background-position:
-      top,
-      top,
-      top,
-      top,
-      bottom;
-    background-size:
-      100% calc(100% - 8rem),
-      100% calc(100% - 8rem),
-      100% calc(100% - 8rem),
-      100% calc(100% - 8rem),
-      100% 8rem;
-    background-repeat: no-repeat;
+    background: var(--mobile-home-ember), #030304;
   }
 
   .home-theme-arrival[data-home-ambience="dawn"]
@@ -4830,16 +4813,17 @@ html[data-theme="light"] .practice-editor-caret {
     background: #f7f5f2;
   }
 
-  /* Tall phone viewports make the desktop ember read like a narrow spotlight.
-     Wider horizontal radii keep the warm edge-to-edge wash while the staggered
-     vertical falloff preserves plenty of clean black behind the hero copy. The
-     static paint also avoids a second continuously transformed full-screen
-     layer during touch momentum. */
-  .marketing-theme-hero::before {
-    background: var(--mobile-home-ember);
-    animation: none;
-    transform: none;
-    will-change: auto;
+  .home-theme-arrival .marketing-theme-hero {
+    background: transparent;
+  }
+
+  html.light .home-theme-arrival .marketing-theme-hero,
+  html[data-theme="light"] .home-theme-arrival .marketing-theme-hero {
+    background: transparent !important;
+  }
+
+  .home-theme-arrival .marketing-theme-hero::before {
+    display: none;
   }
 
   .public-glass {
