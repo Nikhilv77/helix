@@ -14,7 +14,8 @@ function prefersReducedMotion(): boolean {
  */
 export function useInView<T extends Element>(
   ref: RefObject<T | null>,
-  rootMargin = "0px 0px -12% 0px"
+  rootMargin?: string,
+  threshold?: number
 ): boolean {
   const [inView, setInView] = useState(false);
 
@@ -27,6 +28,10 @@ export function useInView<T extends Element>(
       return;
     }
 
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
+    const computedRootMargin = rootMargin ?? (isMobile ? "0px 0px 0px 0px" : "0px 0px -12% 0px");
+    const computedThreshold = threshold ?? (isMobile ? 0.01 : 0.12);
+
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -36,12 +41,12 @@ export function useInView<T extends Element>(
           }
         }
       },
-      { rootMargin, threshold: 0.12 }
+      { rootMargin: computedRootMargin, threshold: computedThreshold }
     );
 
     observer.observe(element);
     return () => observer.disconnect();
-  }, [ref, rootMargin]);
+  }, [ref, rootMargin, threshold]);
 
   return inView;
 }
@@ -91,12 +96,20 @@ interface RevealProps {
   children: ReactNode;
   delay?: number;
   className?: string;
+  rootMargin?: string;
+  threshold?: number;
 }
 
 /** Fades and lifts its children into place once they enter the viewport. */
-export function Reveal({ children, delay = 0, className }: RevealProps) {
+export function Reveal({
+  children,
+  delay = 0,
+  className,
+  rootMargin,
+  threshold
+}: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const visible = useInView(ref);
+  const visible = useInView(ref, rootMargin, threshold);
 
   return (
     <div

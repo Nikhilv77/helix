@@ -105,9 +105,9 @@ export function Stuck() {
     <section
       ref={sectionRef}
       id="help"
-      className="marketing-theme-section relative z-10 min-h-[140svh] px-5 sm:min-h-[135svh] sm:px-10"
+      className="marketing-theme-section relative z-10 min-h-[140svh] min-h-[140dvh] px-5 sm:min-h-[135svh] sm:min-h-[135dvh] sm:px-10"
     >
-      <div className="sticky top-0 flex min-h-[100svh] flex-col justify-center px-0 py-10 sm:py-14">
+      <div className="sticky top-0 flex min-h-[100svh] min-h-[100dvh] flex-col justify-center px-0 py-10 sm:py-14">
         <div className="mx-auto w-full max-w-[58rem]">
           <Reveal delay={80}>
             <div className="mx-auto max-w-3xl">

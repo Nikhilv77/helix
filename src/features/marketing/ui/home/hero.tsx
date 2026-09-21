@@ -63,7 +63,7 @@ export function Hero() {
       ref={sectionRef}
       id="learn"
       data-running={present}
-      className="marketing-theme-hero sticky top-0 z-0 h-[100svh] min-h-[36rem] overflow-hidden px-5 pb-20 pt-20 sm:px-10 sm:pb-[20vh] sm:pt-24"
+      className="marketing-theme-hero sticky top-0 z-0 h-[100svh] min-h-[100dvh] min-h-[36rem] overflow-hidden px-5 pb-20 pt-20 sm:px-10 sm:pb-[20vh] sm:pt-24"
     >
       <div
         ref={parallaxRef}
