@@ -4703,6 +4703,37 @@ html[data-theme="light"] .practice-editor-caret {
   will-change: auto;
 }
 
+@media (min-width: 640px) {
+  .home-theme-arrival .marketing-theme[data-marketing-accent="orange"] {
+    --desktop-home-ember:
+      radial-gradient(50% 34% at 50% -4%, rgba(255, 178, 88, 0.95) 0%, rgba(255, 178, 88, 0) 72%),
+      radial-gradient(76% 56% at 50% -9%, rgba(242, 110, 1, 0.95) 0%, rgba(242, 110, 1, 0) 74%),
+      radial-gradient(104% 76% at 50% -15%, rgba(186, 58, 2, 0.82) 0%, rgba(186, 58, 2, 0) 76%),
+      radial-gradient(148% 106% at 50% -23%, rgba(84, 24, 4, 0.75) 0%, rgba(84, 24, 4, 0) 78%);
+  }
+
+  .home-theme-arrival .marketing-theme-hero::before {
+    background: var(--desktop-home-ember);
+    transform-origin: 50% 0%;
+  }
+
+  html.light .home-theme-arrival .marketing-theme-hero::before,
+  html[data-theme="light"] .home-theme-arrival .marketing-theme-hero::before {
+    opacity: 0.52;
+    filter: saturate(1.08);
+  }
+
+  .home-theme-arrival[data-home-ambience] .marketing-theme-hero::after {
+    background:
+      var(--desktop-home-ember),
+      linear-gradient(180deg, #fafafc 0%, #f7f5f2 100%);
+  }
+
+  .home-theme-arrival .begin-ember {
+    display: none;
+  }
+}
+
 @media (max-width: 639px), (hover: none) and (pointer: coarse) {
   /* Large animated blur filters and full-surface backdrop filters are the two
      expensive effects on mobile GPUs. The movement, timing and fades remain;
