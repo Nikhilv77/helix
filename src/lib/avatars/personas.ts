@@ -37,6 +37,19 @@ export interface AvatarRig {
  */
 export type PersonaGender = "feminine" | "masculine";
 
+/** Google Gemini prebuilt voice used for the natural, context-aware TTS path. */
+export type GeminiTtsVoice =
+  | "Achird"
+  | "Aoede"
+  | "Callirrhoe"
+  | "Charon"
+  | "Iapetus"
+  | "Kore"
+  | "Orus"
+  | "Schedar"
+  | "Sulafat"
+  | "Vindemiatrix";
+
 export interface InterviewerPersona {
   id: string;
   /** Shown to candidates. */
@@ -47,16 +60,15 @@ export interface InterviewerPersona {
   portrait: string;
   gender: PersonaGender;
   /**
-   * Deepgram Aura model id — the voice is baked into the id, there is no
-   * separate voice parameter. Mirrors TRAILGRAD_TTS_MODEL in the agent.
+   * Deepgram Aura-2 fallback model id — the voice is baked into the id, there
+   * is no separate voice parameter. Mirrors TRAILGRAD_TTS_MODEL in the agent.
    *
-   * Every id here is checked against Deepgram's live model list. Aura-1 and
-   * Aura-2 voice names overlap only partially, so verify both the name and the
-   * generation prefix before shipping; a bad id fails at synthesis time.
+   * Every id here is checked against Deepgram's live model list. A bad id fails
+   * at synthesis time, exactly when the primary provider is already unavailable.
    */
   voice: string;
-  /** Browser playback multiplier for generated voice clips. Defaults to 1. */
-  speechRate?: number;
+  /** Gemini voice used for the primary context-aware speech path. */
+  geminiVoice: GeminiTtsVoice;
   /** One line of manner, for briefing copy and prompt conditioning. */
   manner: string;
   /**
@@ -93,12 +105,17 @@ export const MAYA: InterviewerPersona = {
   model: "/avatars/maya.glb",
   portrait: "/images/teacher-portraits/maya.jpg",
   gender: "feminine",
-  voice: "aura-asteria-en",
+  voice: "aura-2-asteria-en",
+  geminiVoice: "Aoede",
   manner: "Clear, confident, and energetic. Turns uncertainty into a concrete next step.",
   tagline: "Clear, confident, knows the way",
   bio: "I bring clarity and momentum when a topic feels messy. We'll find the important idea, make it practical, and keep moving.",
-  greeting: "Hi, I'm Maya. We'll make the hard parts clear and keep moving.",
-  rig: DEFAULT_RIG
+  greeting:
+    "Hi, I'm Maya. Tell me what you're working toward, and I'll help you turn each difficult topic into a clear next step.",
+  rig: {
+    ...DEFAULT_RIG,
+    mouthActivity: 0.72
+  }
 };
 
 export const INTERVIEWERS: InterviewerPersona[] = [
@@ -109,10 +126,12 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     portrait: "/images/teacher-portraits/claire.jpg",
     gender: "feminine",
     voice: "aura-2-athena-en",
+    geminiVoice: "Kore",
     manner: "Encouraging. Gives you room to finish a thought before probing.",
     tagline: "Encouraging, patient, still probing",
     bio: "I've sat on both sides of this table. You won't get cut off here — finish the thought, then we go deeper together.",
-    greeting: "Hey, I'm Claire. No rush with me — take the space you need.",
+    greeting:
+      "Hi, I'm Claire. Take your time explaining your approach. I'll listen closely, then ask the questions that help you strengthen it.",
     rig: {
       restingSmile: 0.055,
       blinkIntervalMs: [3000, 6800],
@@ -127,17 +146,19 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     model: "/avatars/daniel.glb",
     portrait: "/images/teacher-portraits/daniel.jpg",
     gender: "masculine",
-    voice: "aura-orion-en",
+    voice: "aura-2-orion-en",
+    geminiVoice: "Iapetus",
     manner: "Calm and approachable. Makes difficult ideas comfortable to work through.",
     tagline: "Calm, approachable, easy to think with",
     bio: "I keep the room calm enough for you to think properly. Take your time, talk it through, and we'll make the difficult parts manageable together.",
-    greeting: "Hi, I'm Daniel. Take your time—we'll work through it together.",
+    greeting:
+      "Hi, I'm Daniel. We'll slow difficult ideas down, work through them together, and make sure you understand why the answer works.",
     rig: {
       restingSmile: 0.005,
       blinkIntervalMs: [4200, 8000],
       motion: 0.62,
       browActivity: 0.05,
-      mouthActivity: 1.1
+      mouthActivity: 0.72
     }
   },
   {
@@ -146,12 +167,14 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     model: "/avatars/olivia.glb",
     portrait: "/images/teacher-portraits/olivia.jpg",
     gender: "feminine",
-    voice: "aura-luna-en",
+    voice: "aura-2-luna-en",
+    geminiVoice: "Vindemiatrix",
     manner:
       "Friendly and naturally engaging. Keeps practice conversational without losing the point.",
     tagline: "Friendly, natural, keeps you engaged",
     bio: "I like practice to feel like a real conversation, not a lecture. We'll stay curious, keep the energy easy, and still get to the useful detail.",
-    greeting: "Hey, I'm Olivia. Let's make this feel like a real conversation.",
+    greeting:
+      "Hi, I'm Olivia. We'll practise through a natural conversation, so you can become clearer and more confident without sounding rehearsed.",
     rig: {
       restingSmile: 0.02,
       blinkIntervalMs: [2000, 4400],
@@ -167,10 +190,12 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     portrait: "/images/teacher-portraits/james.jpg",
     gender: "masculine",
     voice: "aura-2-neptune-en",
+    geminiVoice: "Charon",
     manner: "Formal and reserved. Structured, one question at a time.",
     tagline: "Formal, structured, no surprises",
     bio: "One question at a time, in order, no games. If you like knowing exactly where you stand at every moment, we'll get along.",
-    greeting: "Good to meet you. I'm James. Shall we begin?",
+    greeting:
+      "Good to meet you. I'm James. We'll work through the interview in a clear order, one question at a time, so you always know what to focus on.",
     rig: {
       restingSmile: 0.0,
       blinkIntervalMs: [3800, 7400],
@@ -185,11 +210,13 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     model: "/avatars/pooja.glb",
     portrait: "/images/teacher-portraits/pooja.jpg",
     gender: "feminine",
-    voice: "aura-luna-en",
+    voice: "aura-2-vesta-en",
+    geminiVoice: "Callirrhoe",
     manner: "Warm and professional. Gives polished guidance without making it feel formal.",
     tagline: "Warm, polished, quietly reassuring",
     bio: "I bring a warm, professional rhythm to practice. We'll work carefully, communicate clearly, and turn rough answers into polished ones.",
-    greeting: "Hi, I'm Pooja. Let's work through this clearly, one step at a time.",
+    greeting:
+      "Hi, I'm Pooja. I'll help you organize rough thoughts into polished answers that are clear, professional, and true to your experience.",
     rig: {
       restingSmile: 0.045,
       blinkIntervalMs: [3200, 6600],
@@ -204,11 +231,13 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     model: "/avatars/alex.glb",
     portrait: "/images/teacher-portraits/alex.jpg",
     gender: "masculine",
-    voice: "aura-zeus-en",
+    voice: "aura-2-zeus-en",
+    geminiVoice: "Schedar",
     manner: "Grounded and reassuring. Gives direct advice with a steady, trustworthy presence.",
     tagline: "Grounded, smooth, straight with you",
     bio: "I'll give you the honest version without making the room tense. We'll focus on what matters, make sound choices, and build confidence from there.",
-    greeting: "I'm Alex. Let's look at what matters and make a solid plan.",
+    greeting:
+      "Hi, I'm Alex. We'll identify what matters most, test your reasoning, and build a practical plan you can trust.",
     rig: {
       restingSmile: 0.015,
       blinkIntervalMs: [2400, 5200],
@@ -225,12 +254,14 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     model: "/avatars/sophia.glb",
     portrait: "/images/teacher-portraits/sophia.jpg",
     gender: "feminine",
-    voice: "aura-stella-en",
+    voice: "aura-2-hera-en",
+    geminiVoice: "Sulafat",
     manner:
       "Clear and professional. Keeps you engaged while turning vague ideas into precise ones.",
     tagline: "Clear, professional, keeps you sharp",
     bio: "I keep the conversation focused and engaging. Bring me the rough version of an idea and we'll sharpen it until it is precise and convincing.",
-    greeting: "Hi, I'm Sophia. Let's sharpen the idea until it holds up.",
+    greeting:
+      "Hi, I'm Sophia. Share how you would approach the problem, and I'll help you make the reasoning precise, structured, and easy to defend.",
     rig: {
       restingSmile: 0.02,
       blinkIntervalMs: [4000, 7600],
@@ -245,11 +276,13 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     model: "/avatars/ryan.glb",
     portrait: "/images/teacher-portraits/ryan.jpg",
     gender: "masculine",
-    voice: "aura-perseus-en",
+    voice: "aura-2-orpheus-en",
+    geminiVoice: "Orus",
     manner: "Confident and precise. Pushes for clear reasoning and professional communication.",
     tagline: "Confident, precise, raises the bar",
     bio: "I'll help you sound as capable as your thinking really is. We'll tighten the reasoning, remove the ambiguity, and make every answer interview-ready.",
-    greeting: "Ryan here. Let's make your thinking clear and interview-ready.",
+    greeting:
+      "Hi, I'm Ryan. I'll challenge unclear assumptions, tighten your reasoning, and help you communicate your strongest answer with confidence.",
     rig: {
       restingSmile: 0.06,
       blinkIntervalMs: [2800, 6000],
@@ -265,11 +298,13 @@ export const INTERVIEWERS: InterviewerPersona[] = [
     model: "/avatars/ethan.glb",
     portrait: "/images/teacher-portraits/ethan.jpg",
     gender: "masculine",
-    voice: "aura-arcas-en",
+    voice: "aura-2-arcas-en",
+    geminiVoice: "Achird",
     manner: "Natural and easygoing. Explains clearly and keeps the session comfortable.",
     tagline: "Natural, smooth, easy to learn with",
     bio: "I keep things relaxed so you can focus on understanding. Ask the unfinished question, think out loud, and we'll make the idea click without forcing it.",
-    greeting: "Hey, I'm Ethan. Get comfortable—we'll make this click.",
+    greeting:
+      "Hi, I'm Ethan. Think out loud with me, and we'll break the problem into simple pieces until the whole idea makes sense.",
     rig: {
       restingSmile: 0.04,
       blinkIntervalMs: [2200, 4800],
@@ -287,16 +322,16 @@ export const ALL_PERSONAS: InterviewerPersona[] = [MAYA, ...INTERVIEWERS];
  * intentionally interview-only: James owns the general interview room, while
  * Claire owns DSA and Core Technical assessments.
  */
-export const DEFAULT_TEACHER_SELECTION_ID = "sophia";
+export const DEFAULT_TEACHER_SELECTION_ID = "daniel";
 
 const TEACHER_SELECTION_ORDER = [
-  "ryan",
   "sophia",
-  "maya",
-  "olivia",
   "daniel",
-  "ethan",
   "pooja",
+  "maya",
+  "ethan",
+  "ryan",
+  "olivia",
   "alex"
 ] as const;
 

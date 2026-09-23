@@ -116,7 +116,7 @@ export function ResumeStep({
         </div>
       ) : null}
 
-      <div className={["mx-auto w-full max-w-4xl", compact ? "" : "mt-10"].join(" ")}>
+      <div className={["mx-auto w-full max-w-[52rem]", compact ? "" : "mt-10"].join(" ")}>
         <input
           ref={inputRef}
           type="file"
@@ -150,7 +150,7 @@ export function ResumeStep({
             "onboarding-card-reveal group relative overflow-hidden text-left outline-none transition duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
             compact
               ? "min-h-[18rem] rounded-[1.25rem] px-4 py-9 sm:min-h-[21rem] sm:rounded-[1.5rem] sm:p-7"
-              : "min-h-[21rem] rounded-[1.5rem] p-5 sm:p-7",
+              : "min-h-[20rem] rounded-[1.5rem] p-5 sm:p-7",
             compact
               ? dragging
                 ? "bg-[#191a1d]"
@@ -187,7 +187,7 @@ export function ResumeStep({
           <div
             className={[
               "relative flex flex-col items-center justify-center text-center",
-              compact ? "min-h-[13.5rem] sm:min-h-[18rem]" : "min-h-[18rem]"
+              compact ? "min-h-[13.5rem] sm:min-h-[18rem]" : "min-h-[17rem]"
             ].join(" ")}
           >
             {file ? (

@@ -1,6 +1,7 @@
 export * from "./assessment-contracts";
 export * from "./baseline-evidence-contracts";
 export * from "./content-release-audit";
+export * from "./content-candidates";
 export * from "./contracts";
 export * from "./focus-ranking-contracts";
 export * from "./practice-contracts";

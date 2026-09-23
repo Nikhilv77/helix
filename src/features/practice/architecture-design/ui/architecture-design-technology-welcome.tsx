@@ -16,7 +16,7 @@ const experience: StoryPracticeTechnologyWelcomeExperience<"role-aligned"> = {
   label: "Architecture & Design",
   apiBase: "/api/practice/architecture-design",
   routeBase: "/practice/architecture-design",
-  heading: "What do you want to get better at?",
+  heading: "Preparing your role-aligned system design path",
   choosingScript:
     "Welcome to Architecture and Design practice. Let’s build the system-design path aligned to your role.",
   confirmingScript: () =>
@@ -24,6 +24,7 @@ const experience: StoryPracticeTechnologyWelcomeExperience<"role-aligned"> = {
   generatingScript:
     "I’m preparing a reviewed scenario with requirements, data, architecture, reliability, and evolution questions.",
   options: ROLE_ALIGNED_PATH,
+  autoStart: true,
   buildConfirmation: () => ({ path: "role-aligned" }),
   buildPreparation: (focusRevisionId, requestId) => ({ requestId, focusRevisionId })
 };

@@ -364,7 +364,8 @@ describe("ArchitectureDesignEligibilityService", () => {
     });
     expect(published).toHaveBeenCalledWith(
       ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE.filter(
-        ({ publicationStatus }) => publicationStatus === "published"
+        ({ publicationStatus, roles }) =>
+          publicationStatus === "published" && roles.includes("backend")
       ).map(({ key, version }) => ({ key, version }))
     );
   });
@@ -408,6 +409,59 @@ describe("ArchitectureDesignEligibilityService", () => {
     await expect(all.forProfile({ targetRole: "backend", level: null })).resolves.toMatchObject({
       reason: "LEVEL_REQUIRED"
     });
+  });
+
+  it("does not substitute backend scenarios when AI/ML versions are absent", async () => {
+    const catalogue = publishedCatalogue().filter(({ roles }) => roles.includes("backend"));
+    const eligibility = await new ArchitectureDesignEligibilityService({
+      catalogue,
+      publications: { published: async (items) => items }
+    }).forProfile({ targetRole: "ai-ml", level: "0-2" });
+
+    expect(eligibility).toMatchObject({
+      available: false,
+      reason: "CONTENT_UNAVAILABLE"
+    });
+    expect(eligibility.scenarios).toHaveLength(0);
+  });
+
+  it("uses the same persisted scenario flow for AI/ML after both reviewed versions are published", async () => {
+    const catalogue = publishedCatalogue();
+    const service = new ArchitectureDesignEligibilityService({
+      catalogue,
+      publications: { published: async (items) => items }
+    });
+    const eligibility = await service.forProfile({ targetRole: "ai-ml", level: "3-5" });
+
+    expect(eligibility).toMatchObject({
+      available: true,
+      publishedScenarioCount: 2,
+      scenarios: [
+        { key: "retrieval-augmented-support-assistant", questions: expect.any(Array) },
+        { key: "real-time-fraud-model-platform", questions: expect.any(Array) }
+      ]
+    });
+    expect(eligibility.scenarios.every(({ questions }) => questions.length === 4)).toBe(true);
+    expect(
+      new ArchitectureDesignScenarioRankingService(catalogue).rankFirstScenario(
+        focus(evidence("GUIDED"), {
+          role: "ai-ml",
+          targetJob: "Machine Learning Engineer",
+          resumeEvidence: {
+            architectureSkillKeys: ["model-serving", "retrieval"],
+            projectKeywords: ["rag", "fraud"]
+          },
+          planEvidence: {
+            blueprintId: null,
+            topicKeys: ["rag-serving", "online-ml-serving"],
+            skillKeys: ["evaluation"]
+          }
+        })
+      ).selectedScenario.scenarioKey
+    ).toMatch(/^(retrieval-augmented-support-assistant|real-time-fraud-model-platform)$/);
+    expect(
+      (await service.forProfile({ targetRole: "backend", level: "3-5" })).scenarios
+    ).toHaveLength(6);
   });
 });
 

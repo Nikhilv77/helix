@@ -89,7 +89,8 @@ export async function POST(request: NextRequest) {
       const mcqs = selectTechnicalProjectMcqs({
         kit,
         coreBlueprint,
-        level: profile.level
+        level: profile.level,
+        targetRole: profile.targetRole
       });
       const project = selectGroundedProjectSource({ profile, coreBlueprint, appliedBlueprint });
       const plan = buildTechnicalProjectsPlan({
@@ -97,7 +98,8 @@ export async function POST(request: NextRequest) {
         appliedBlueprint,
         mcqs,
         project,
-        codingTask: kit?.codingTask
+        codingTask: kit?.codingTask,
+        targetRole: profile.targetRole
       });
       const result = await app.interviewService.start(
         {

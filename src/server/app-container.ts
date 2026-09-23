@@ -101,6 +101,7 @@ import { ArchitectureDesignAssessmentService } from "@/features/practice/archite
 import { ArchitectureDesignAssessmentRuntimeService } from "@/features/practice/architecture-design/server/assessment-runtime.service";
 import { ArchitectureDesignAttemptEvaluator } from "@/features/practice/architecture-design/server/attempt-evaluator";
 import { ArchitectureDesignBaselineEvidenceService } from "@/features/practice/architecture-design/server/baseline-evidence.service";
+import { ArchitecturePracticeCanvasService } from "@/features/practice/architecture-design/server/canvas.service";
 import { ArchitectureDesignContinuationService } from "@/features/practice/architecture-design/server/continuation.service";
 import { ArchitectureDesignEligibilityService } from "@/features/practice/architecture-design/server/eligibility.service";
 import { ArchitectureDesignFocusService } from "@/features/practice/architecture-design/server/focus.service";
@@ -114,6 +115,8 @@ import { NODEJS_APPLIED_ENGINEERING_INCIDENT_RANKING_CATALOGUE } from "@/feature
 import { ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE } from "@/features/practice/architecture-design/domain/scenario-ranking-catalogue";
 import { NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE } from "@/features/practice/core-technical/domain/story-ranking-catalogue";
 import { NODEJS_CORE_TECHNICAL_DOMAIN_MAP } from "@/features/practice/core-technical/domain/domain-map";
+import { AiMlPracticeService } from "@/features/practice/ai-ml/server/ai-ml-practice.service";
+import { AiMlStoryPracticeService } from "@/features/practice/ai-ml/server/ai-ml-story-practice.service";
 import {
   CORE_TECHNICAL_INTERVIEW_EVIDENCE,
   CORE_TECHNICAL_SOURCES,
@@ -157,6 +160,8 @@ export interface AppContainer {
   personalizedInterviewPlanGenerator: PersonalizedInterviewPlanGenerator;
   personalizedInterviewPlanningService: PersonalizedInterviewPlanningService;
   practiceRoadmapService: PracticeRoadmapService;
+  aiMlPracticeService: AiMlPracticeService;
+  aiMlStoryPracticeService: AiMlStoryPracticeService;
   workspaceSearchService: WorkspaceSearchService;
   resumeRoastService: ResumeRoastService;
   preparationOnboardingService: PreparationOnboardingService;
@@ -198,6 +203,7 @@ export interface AppContainer {
   appliedEngineeringPreparationService: AppliedEngineeringPreparationService;
   architectureDesign: {
     baselineEvidence: ArchitectureDesignBaselineEvidenceService;
+    canvas: ArchitecturePracticeCanvasService;
     focus: ArchitectureDesignFocusService;
     ranking: ArchitectureDesignScenarioRankingService;
     repository: ArchitectureDesignRepositoryAdapter;
@@ -525,6 +531,7 @@ export function getAppContainer(): AppContainer {
   const architectureDesignWorkspaceAnalyticsService =
     new ArchitectureDesignWorkspaceAnalyticsService(prisma);
 
+  const aiMlPracticeService = new AiMlPracticeService(prisma);
   container = {
     config,
     healthService: new HealthService(config, prisma),
@@ -567,6 +574,7 @@ export function getAppContainer(): AppContainer {
     appliedEngineeringPreparationService,
     architectureDesign: {
       baselineEvidence: architectureDesignBaselineEvidenceService,
+      canvas: new ArchitecturePracticeCanvasService(prisma),
       focus: architectureDesignFocusService,
       ranking: architectureDesignScenarioRankingService,
       repository: architectureDesignRepositoryAdapter,
@@ -626,6 +634,8 @@ export function getAppContainer(): AppContainer {
       frontendRoadmapService,
       personalizedInterviewPlanningService
     ),
+    aiMlPracticeService,
+    aiMlStoryPracticeService: new AiMlStoryPracticeService(prisma, aiMlPracticeService, geminiAi),
     workspaceSearchService: new WorkspaceSearchService(prisma),
     // Resume Roast reuses the profile's immutable candidate revision and the
     // same Gemini client as structured resume extraction.

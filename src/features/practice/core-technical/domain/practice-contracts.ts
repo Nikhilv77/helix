@@ -1,68 +1,28 @@
 import { z } from "zod";
 import { coreTechnicalLearningGuideSchema } from "./question-contracts";
 
+import {
+  storyPracticeDraftWorkSchema as coreTechnicalDraftWorkSchema,
+  storyPracticeAttemptWorkSchema as coreTechnicalAttemptWorkSchema,
+  storyPracticeSaveDraftInputSchema as coreTechnicalSaveDraftInputSchema,
+  storyPracticeRevealHintInputSchema as coreTechnicalRevealHintInputSchema,
+  storyPracticeRunInputSchema as coreTechnicalRunInputSchema,
+  storyPracticeAttemptInputSchema as coreTechnicalAttemptInputSchema,
+  storyPracticeLearnInputSchema as coreTechnicalLearnInputSchema,
+  storyPracticeAttemptFeedbackSchema as coreTechnicalAttemptFeedbackSchema
+} from "@/features/practice/shared/domain/story-practice-contracts";
 const fingerprintSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
-const boundedTextSchema = z.string().trim().min(1).max(12_000);
-const genuineAnswerSchema = z.string().trim().min(8).max(12_000);
 
-export const coreTechnicalDraftWorkSchema = z.discriminatedUnion("kind", [
-  z
-    .object({ kind: z.literal("choice"), selectedChoiceIndex: z.number().int().min(0).max(4) })
-    .strict(),
-  z.object({ kind: z.literal("text"), text: boundedTextSchema }).strict(),
-  z.object({ kind: z.literal("code"), code: boundedTextSchema }).strict()
-]);
-
-export const coreTechnicalAttemptWorkSchema = z.discriminatedUnion("kind", [
-  z
-    .object({ kind: z.literal("choice"), selectedChoiceIndex: z.number().int().min(0).max(4) })
-    .strict(),
-  z.object({ kind: z.literal("text"), text: genuineAnswerSchema }).strict(),
-  z
-    .object({
-      kind: z.literal("code"),
-      code: boundedTextSchema,
-      runId: z.string().uuid()
-    })
-    .strict()
-]);
-
-export const coreTechnicalSaveDraftInputSchema = z
-  .object({
-    questionId: z.string().uuid(),
-    draft: coreTechnicalDraftWorkSchema.nullable()
-  })
-  .strict();
-
-export const coreTechnicalRevealHintInputSchema = z
-  .object({
-    questionId: z.string().uuid(),
-    hintNumber: z.union([z.literal(1), z.literal(2), z.literal(3)])
-  })
-  .strict();
-
-export const coreTechnicalRunInputSchema = z
-  .object({
-    questionId: z.string().uuid(),
-    requestId: z.string().uuid(),
-    code: boundedTextSchema
-  })
-  .strict();
-
-export const coreTechnicalAttemptInputSchema = z
-  .object({
-    questionId: z.string().uuid(),
-    requestId: z.string().uuid(),
-    work: coreTechnicalAttemptWorkSchema
-  })
-  .strict();
-
-export const coreTechnicalLearnInputSchema = z
-  .object({
-    questionId: z.string().uuid(),
-    confirmed: z.literal(true)
-  })
-  .strict();
+export {
+  coreTechnicalDraftWorkSchema,
+  coreTechnicalAttemptWorkSchema,
+  coreTechnicalSaveDraftInputSchema,
+  coreTechnicalRevealHintInputSchema,
+  coreTechnicalRunInputSchema,
+  coreTechnicalAttemptInputSchema,
+  coreTechnicalLearnInputSchema,
+  coreTechnicalAttemptFeedbackSchema
+};
 
 export const coreTechnicalPrepareInputSchema = z
   .object({
@@ -81,21 +41,6 @@ export const coreTechnicalStartPathInputSchema = z
       .min(2)
       .max(120)
       .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
-  })
-  .strict();
-
-export const coreTechnicalAttemptFeedbackSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    score: z.number().min(0).max(10),
-    result: z.string().trim().min(1).max(500),
-    mechanism: z.string().trim().min(1).max(700),
-    didWell: z.string().trim().min(1).max(500),
-    missingOrIncorrect: z.string().trim().min(1).max(700),
-    productionConsequence: z.string().trim().min(1).max(500),
-    transferExample: z.string().trim().min(1).max(500),
-    interviewerFollowUp: z.string().trim().min(1).max(500),
-    missedEdgeCases: z.array(z.string().trim().min(1).max(300)).max(5).default([])
   })
   .strict();
 

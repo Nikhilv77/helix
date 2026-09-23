@@ -90,6 +90,18 @@ function plan(): PersonalizedInterviewPlan {
   };
 }
 
+function aiMlPlan(): PersonalizedInterviewPlan {
+  const value = plan();
+  return {
+    ...value,
+    id: "plan-ai-ml",
+    sourceSnapshot: {
+      ...value.sourceSnapshot,
+      targetRole: { title: "AI Engineer", family: "ai-ml", source: "declared" }
+    }
+  };
+}
+
 function historyItem(
   templateId: string | undefined,
   overrides: Partial<InterviewHistoryItem> = {}
@@ -145,6 +157,22 @@ describe("personalized interview roadmap sessions", () => {
     expect(roadmapSessionHref(sessions[2]!)).toBe("/interview/dsa");
     expect(roadmapSessionHref(sessions[3]!)).toBe("/interview/design");
     expect(roadmapSessionHref(sessions[4]!)).toBe("/interview/hiring-manager");
+  });
+
+  it("does not render a separate DSA round for AI/ML", () => {
+    const sessions = interviewRoadmapSessions({
+      personalizedPlan: aiMlPlan(),
+      roadmap: null,
+      history: []
+    });
+
+    expect(sessions.map((session) => session.id)).toEqual([
+      "resume-behavioral-defense",
+      "technical-deep-dive",
+      "system-design",
+      "hiring-manager-final"
+    ]);
+    expect(sessions.map((session) => session.order)).toEqual([1, 2, 3, 4]);
   });
 
   it("uses dedicated DSA and resume history to restore their visible progress", () => {

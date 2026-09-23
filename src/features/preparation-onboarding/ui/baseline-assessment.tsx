@@ -26,36 +26,52 @@ const PracticeCodeViewer = dynamic(
 
 export type BaselineFlowStage = "intro" | BaselineSection | "completed" | null;
 
+export function baselineIntroCopy(role: Role) {
+  const body =
+    role === "ai-ml"
+      ? "This isn’t about testing everything you know. We’ll look at a few role-specific technical choices, one real-world engineering situation, and one architecture decision. That’s enough to understand where to begin."
+      : "This isn’t about testing everything you know. We’ll look at a few coding patterns, some role-specific technical choices, one real-world engineering situation, and one architecture decision. That’s enough to understand where to begin.";
+
+  return {
+    eyebrow: `Quick starting check · ${BASELINE_DURATION_LABEL}`,
+    title: "Let’s find your starting point.",
+    body,
+    voiceText: `Let’s find your starting point. ${body}`
+  };
+}
+
 export function BaselineIntro({ role }: { role: Role }) {
   const checks = [
     ...(includesDsaPulse(role)
       ? [
           {
             icon: Braces,
-            title: "DSA pulse",
-            detail: "Six lightweight checks across patterns and code reading."
+            title: "Coding",
+            detail: "Six quick questions on common patterns and reading code."
           }
         ]
       : []),
     {
       icon: Code2,
-      title: "Technical pulse",
-      detail: "Three quick decisions shaped by your target role."
+      title: "Role knowledge",
+      detail: "Three practical decisions based on the role you’re preparing for."
     },
     {
       icon: Blocks,
-      title: "Engineering pulse",
-      detail: "One production scenario and the trade-offs you notice."
+      title: "Engineering judgment",
+      detail: "One real-world production problem and how you’d approach it."
     },
     {
       icon: Blocks,
-      title: "Architecture pulse",
-      detail: "One system-design decision about the boundary that matters."
+      title: "System design",
+      detail: "One architecture choice and the trade-offs behind it."
     }
   ];
   return (
     <div className="mt-7 max-w-3xl">
-      <p className="maya-baseline-duration text-base font-semibold text-cream">{BASELINE_DURATION_LABEL}</p>
+      <p className="maya-baseline-duration text-base font-semibold text-cream">
+        {BASELINE_DURATION_LABEL}
+      </p>
       <div className="mt-5 grid gap-x-8 gap-y-6 sm:grid-cols-2">
         {checks.map(({ icon: Icon, title, detail }) => (
           <div

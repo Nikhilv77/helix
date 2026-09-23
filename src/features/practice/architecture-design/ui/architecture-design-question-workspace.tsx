@@ -107,7 +107,7 @@ function ArchitectureCanvasSection({ blockId, order }: { blockId: string; order:
         <p className="mt-2 max-w-[52rem] text-sm leading-6 text-cream/55">{canvasTask(order)}</p>
       </div>
       <div className="border-t border-white/[0.07] px-4 pb-4">
-        <SystemDesignCanvas storageKey={`practice:${blockId}`} embedded />
+        <SystemDesignCanvas practiceBlockId={blockId} embedded />
       </div>
     </section>
   );

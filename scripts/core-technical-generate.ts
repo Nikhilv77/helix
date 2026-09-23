@@ -12,7 +12,11 @@ import {
 import { NODEJS_CORE_TECHNICAL_PRACTICE_PATH_BLUEPRINTS } from "../src/features/practice/core-technical/domain/practice-path-blueprints";
 import { getAppContainer } from "../src/server/app-container";
 
-loadEnvFile({ path: ".env.local" });
+// Imported Prisma code may load .env first; restore the verified local database.
+const localEnvironment = loadEnvFile({ path: ".env.local", override: true });
+if (!localEnvironment.parsed?.DATABASE_URL) {
+  throw new Error("Core Technical generation requires DATABASE_URL in .env.local.");
+}
 loadEnvFile();
 
 const REVIEW_ARTIFACT_DIRECTORY = path.resolve(

@@ -80,10 +80,14 @@ export class ArchitectureDesignFocusService {
         "Your profile could not be found."
       );
     }
-    if (profile.targetRole !== "backend" && profile.targetRole !== "fullstack") {
+    if (
+      profile.targetRole !== "backend" &&
+      profile.targetRole !== "fullstack" &&
+      profile.targetRole !== "ai-ml"
+    ) {
       throw new ConflictErrorException(
         "ARCHITECTURE_DESIGN_ROLE_UNSUPPORTED",
-        "Architecture & Design currently supports Backend and Full-stack profiles."
+        "Architecture & Design currently supports Backend, Full-stack, and AI/ML profiles."
       );
     }
     const seniority = toSeniority(profile.level);
@@ -197,7 +201,8 @@ function defaultTargetJob(
   seniority: ArchitectureDesignConfirmedFocus["seniority"]
 ): string {
   const level = seniority === "junior" ? "Junior" : seniority === "senior" ? "Senior" : "Mid-level";
-  return `${level} ${role === "backend" ? "Backend" : "Full-stack"} Engineer`;
+  const roleLabel = role === "backend" ? "Backend" : role === "ai-ml" ? "AI/ML" : "Full-stack";
+  return `${level} ${roleLabel} Engineer`;
 }
 
 function isIdentifier(value: unknown): value is string {

@@ -309,7 +309,7 @@ export function confirmResumeUpdate(
 export function completeOnboarding(
   result: ResumeExtractionResponse,
   teacherId?: string | null
-): Promise<ResumeExtractionResponse> {
+): Promise<{ completed: true }> {
   if (!result.profile.targetRole || !result.profile.level) {
     throw new ApiClientError({
       code: "ONBOARDING_SELECTION_MISSING",
@@ -319,14 +319,16 @@ export function completeOnboarding(
     });
   }
 
-  return request<ResumeExtractionResponse>("/api/onboarding/complete", {
+  return request<{ completed: true }>("/api/onboarding/complete", {
     method: "POST",
     body: {
       targetRole: result.profile.targetRole,
       level: result.profile.level,
       teacherId: teacherId ?? null,
       resumeFile: result.resumeFile,
-      extraction: result.extraction
+      extraction: result.extraction,
+      confirmationToken: result.confirmationToken,
+      previewExpiresAt: result.previewExpiresAt
     }
   });
 }

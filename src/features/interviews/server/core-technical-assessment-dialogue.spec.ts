@@ -61,7 +61,7 @@ describe("Core Technical assessment dialogue", () => {
       storyPracticeAssessmentDialogue("architecture-design")
     );
 
-    expect(text).toContain("five focused prompts");
+    expect(text).toContain("four-part design checkpoint");
     expect(text).toMatch(/requirements and scale|architecture|trade-off/i);
     expect(text).toContain("Why does this closure retain state?");
   });

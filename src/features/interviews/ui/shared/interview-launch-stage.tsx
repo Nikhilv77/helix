@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { Loader2, Volume2, VolumeX } from "lucide-react";
@@ -93,7 +94,7 @@ export function InterviewLaunchStage({
   workspaceAccent,
   startingLabel,
   waitForVoiceBeforeNavigate = false,
-  briefingPlaybackRate,
+  returnHref,
   navigateToInterview
 }: {
   ready: boolean;
@@ -103,7 +104,8 @@ export function InterviewLaunchStage({
   startingLabel?: string;
   /** Use the spoken handoff as the gate before entering a live room. */
   waitForVoiceBeforeNavigate?: boolean;
-  briefingPlaybackRate?: number;
+  /** Destination shown when this round is not yet ready. */
+  returnHref?: string;
   /** Test seam; production navigation uses a hard replace into the live room. */
   navigateToInterview?: (sessionId: string) => void;
 }) {
@@ -138,7 +140,6 @@ export function InterviewLaunchStage({
         return;
       }
       void speak(line, undefined, {
-        playbackRate: briefingPlaybackRate,
         onEnded: () => {
           const next = lineIndex + 1;
           if (next < scriptLines.length) {
@@ -153,7 +154,7 @@ export function InterviewLaunchStage({
         if (result === "blocked") briefingStartedRef.current = false;
       });
     },
-    [briefingPlaybackRate, continueToInterview, scriptLines, speak]
+    [continueToInterview, scriptLines, speak]
   );
 
   useEffect(() => {
@@ -292,6 +293,15 @@ export function InterviewLaunchStage({
             {copy.headline}
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-8 text-cream/72 sm:text-lg">{copy.body}</p>
+
+          {!ready && returnHref ? (
+            <Link
+              href={returnHref}
+              className="mt-8 inline-flex w-fit rounded-full border border-cream/20 px-5 py-2.5 text-sm font-semibold text-cream transition hover:border-cream/45"
+            >
+              Back to interviews
+            </Link>
+          ) : null}
 
           {ready && starting ? (
             <p className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-cream/78">

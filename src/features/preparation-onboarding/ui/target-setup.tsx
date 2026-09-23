@@ -176,6 +176,10 @@ export function targetStageFor(stage: PreparationOnboardingStage): number {
   return 4;
 }
 
+export function initialWelcomeStep(stage: PreparationOnboardingStage): 0 | 1 {
+  return stage === "target_role" ? 0 : 1;
+}
+
 export function nextTargetStage(stage: number): PreparationOnboardingStage | null {
   return (
     (

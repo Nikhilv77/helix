@@ -10,7 +10,8 @@ import {
   buildSystemDesignPlan,
   rankDsaDesignScenarioWithFallback
 } from "@/features/interviews/server/dsa-design-round";
-import { ARCHITECTURE_DESIGN_REVIEW_CANDIDATES } from "@/features/practice/architecture-design/domain/reviewed-scenarios";
+import { ARCHITECTURE_DESIGN_CONTENT_CANDIDATES } from "@/features/practice/architecture-design/domain/content-candidates";
+import { ConflictErrorException } from "@/server/common/exceptions/conflict-error.exception";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,15 @@ export async function POST(request: NextRequest) {
         app.profileService.get(ownerId),
         app.interviewService.history(ownerId, 50).catch(() => [])
       ]);
+      if (profile.targetRole === "ai-ml") {
+        const eligibility = await app.architectureDesign.eligibility.forProfile(profile);
+        if (!eligibility.available) {
+          throw new ConflictErrorException(
+            "AI_ML_DESIGN_CONTENT_UNAVAILABLE",
+            "AI/ML System Design scenarios are not published in this environment yet."
+          );
+        }
+      }
       const recentScenarioKeys = history
         .filter((item) => item.status === "completed")
         .map((item) => item.setup.dsaDesignRound?.designScenarioKey)
@@ -54,10 +64,18 @@ export async function POST(request: NextRequest) {
         focus,
         recentScenarioKeys
       );
-      const artifact = ARCHITECTURE_DESIGN_REVIEW_CANDIDATES.find(
+      const artifact = ARCHITECTURE_DESIGN_CONTENT_CANDIDATES.find(
         (candidate) => candidate.scenario.key === selection.selectedScenario.scenarioKey
       );
-      if (!artifact) throw new Error("Selected System Design scenario is unavailable");
+      if (!artifact || artifact.humanReview.status !== "approved") {
+        throw new Error("Selected System Design scenario is unavailable");
+      }
+      if (profile.targetRole === "ai-ml" && !artifact.scenario.roles.includes("ai-ml")) {
+        throw new ConflictErrorException(
+          "AI_ML_DESIGN_SCENARIO_MISMATCH",
+          "That design scenario does not belong to the AI/ML path."
+        );
+      }
 
       const plan = buildSystemDesignPlan({ designArtifact: artifact });
       const result = await app.interviewService.start(

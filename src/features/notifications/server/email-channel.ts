@@ -2,7 +2,11 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { Logger } from "@/server/common/logger";
-import { TRAILGRAD_LOGO_CID, TRAILGRAD_LOGO_CONTENT_ID } from "./email-template";
+import {
+  isEmailHtmlSafeToSend,
+  TRAILGRAD_LOGO_CID,
+  TRAILGRAD_LOGO_CONTENT_ID
+} from "./email-template";
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 const TIMEOUT_MS = 8_000;
@@ -72,7 +76,16 @@ export class EmailChannel {
     const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
     try {
-      const attachments = message.html?.includes(TRAILGRAD_LOGO_CID)
+      const safeHtml = message.html && isEmailHtmlSafeToSend(message.html) ? message.html : undefined;
+      if (message.html && !safeHtml) {
+        this.logger.error(
+          JSON.stringify({
+            event: "email.html.rejected",
+            reason: "Malformed materialized email HTML"
+          })
+        );
+      }
+      const attachments = safeHtml?.includes(TRAILGRAD_LOGO_CID)
         ? await trailgradLogoAttachment()
         : [];
       const response = await fetch(RESEND_ENDPOINT, {
@@ -87,7 +100,7 @@ export class EmailChannel {
           to: [to],
           subject: message.subject,
           text: message.text,
-          ...(message.html ? { html: message.html } : {}),
+          ...(safeHtml ? { html: safeHtml } : {}),
           ...(attachments.length ? { attachments } : {})
         }),
         signal: controller.signal

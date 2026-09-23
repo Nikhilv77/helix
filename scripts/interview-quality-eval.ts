@@ -4,7 +4,11 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getAppContainer } from "../src/server/app-container";
 
-loadEnvFile({ path: ".env.local" });
+// Imported Prisma code may load .env first; restore the verified local database.
+const localEnvironment = loadEnvFile({ path: ".env.local", override: true });
+if (!localEnvironment.parsed?.DATABASE_URL) {
+  throw new Error("Interview quality evaluation requires DATABASE_URL in .env.local.");
+}
 loadEnvFile();
 
 async function main(): Promise<void> {

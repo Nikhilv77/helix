@@ -7,7 +7,12 @@ import { APPLIED_ENGINEERING_REVIEW_CANDIDATES } from "../src/features/practice/
 import { AppliedEngineeringPersistenceService } from "../src/features/practice/applied-engineering/server/persistence.service";
 import { PrismaService } from "../src/server/database/prisma.service";
 
-loadEnvFile({ path: ".env.local" });
+// Prisma's import can load .env before this module runs. Use the development
+// database that the package script verified before constructing PrismaService.
+const localEnvironment = loadEnvFile({ path: ".env.local", override: true });
+if (!localEnvironment.parsed?.DATABASE_URL) {
+  throw new Error("Applied Engineering publication requires DATABASE_URL in .env.local.");
+}
 loadEnvFile();
 
 const artifacts = APPLIED_ENGINEERING_REVIEW_CANDIDATES.map((artifact) =>

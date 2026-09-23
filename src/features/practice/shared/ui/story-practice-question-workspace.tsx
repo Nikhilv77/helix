@@ -39,6 +39,12 @@ import {
   storyPracticeQuestionMinutes,
   storyPracticeQuestionWorkKind
 } from "./presentation";
+import { InteractiveAnswerInput } from "./interactive-answer-input";
+import {
+  emptyInteractiveResponse,
+  interactiveResponseError,
+  type InteractiveResponse
+} from "../domain/interactive-response";
 import { StoryPracticeLearningGuide } from "./story-practice-learning-guide";
 
 type PendingAction = "hint" | "run" | "attempt" | "learn" | null;
@@ -93,7 +99,18 @@ export function StoryPracticeQuestionWorkspace({
 }: StoryPracticeQuestionWorkspaceProps) {
   const router = useRouter();
   const [question, setQuestion] = useState(initialQuestion);
-  const workKind = storyPracticeQuestionWorkKind(question.question.format);
+  const interaction = question.question.interaction;
+  const workKind = interaction
+    ? "interactive"
+    : storyPracticeQuestionWorkKind(question.question.format);
+  const [interactive, setInteractive] = useState<InteractiveResponse | null>(() => {
+    const saved = initialQuestion.draft ?? initialQuestion.latestAttempt?.work;
+    return saved?.kind === "interactive"
+      ? saved.response
+      : interaction
+        ? emptyInteractiveResponse(interaction)
+        : null;
+  });
   const [choice, setChoice] = useState<number | null>(() => initialChoice(initialQuestion));
   const [text, setText] = useState(() => initialText(initialQuestion));
   const [code, setCode] = useState(() => initialCode(initialQuestion));
@@ -113,7 +130,7 @@ export function StoryPracticeQuestionWorkspace({
   );
   const [reviewOpen, setReviewOpen] = useState(false);
   const [testCasesOpen, setTestCasesOpen] = useState(() => initialQuestion.latestRun !== null);
-  const initialDraft = useRef(JSON.stringify(draftFor(workKind, choice, text, code)));
+  const initialDraft = useRef(JSON.stringify(draftFor(workKind, choice, text, code, interactive)));
   const draftSequence = useRef(0);
   // Non-current library paths remain ordinary practice. Current ownership only
   // controls block-assessment eligibility, not whether a question can be solved.
@@ -127,8 +144,8 @@ export function StoryPracticeQuestionWorkspace({
   const next = block.questions.find(({ order }) => order === question.order + 1) ?? null;
 
   const draft = useMemo(
-    () => draftFor(workKind, choice, text, code),
-    [choice, code, text, workKind]
+    () => draftFor(workKind, choice, text, code, interactive),
+    [choice, code, text, workKind, interactive]
   );
   const draftSignature = JSON.stringify(draft);
 
@@ -212,8 +229,11 @@ export function StoryPracticeQuestionWorkspace({
 
   async function submitAttempt() {
     if (!mutable || pending) return;
-    const work = attemptFor(workKind, choice, text, code, run);
-    const validation = validateAttempt(workKind, work, code, run);
+    const work = attemptFor(workKind, choice, text, code, run, interactive);
+    const validation =
+      interaction && interactive
+        ? interactiveResponseError(interaction, interactive, true)
+        : validateAttempt(workKind, work, code, run);
     if (validation) {
       setError(validation);
       if (workKind === "code") setTestCasesOpen(true);
@@ -380,6 +400,14 @@ export function StoryPracticeQuestionWorkspace({
                   <p className="relative mt-4 whitespace-pre-wrap text-[14.5px] leading-7 text-cream/66">
                     {question.question.prompt}
                   </p>
+                  {question.question.revisionNote ? (
+                    <p
+                      role="note"
+                      className="relative mt-4 rounded-lg border border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)] px-3 py-2 text-[12px] leading-5 text-cream/72"
+                    >
+                      {question.question.revisionNote}
+                    </p>
+                  ) : null}
                   <div className="relative mt-5 flex flex-wrap gap-1.5">
                     {question.question.topicKeys.slice(0, 3).map((topic) => (
                       <span
@@ -556,7 +584,19 @@ export function StoryPracticeQuestionWorkspace({
           </div>
 
           <div className="thin-scroll min-h-0 flex-1 overflow-y-auto">
-            {workKind === "choice" ? (
+            {interaction && interactive ? (
+              <div className="p-4 sm:p-5">
+                <InteractiveAnswerInput
+                  interaction={interaction}
+                  response={interactive}
+                  disabled={!mutable || pending !== null}
+                  onChange={(value) => {
+                    setInteractive(value);
+                    setError(null);
+                  }}
+                />
+              </div>
+            ) : workKind === "choice" ? (
               <div className="p-4 sm:p-5">
                 <ResponseIntro format={question.question.format} experience={experience} />
                 <ChoiceInput
@@ -596,7 +636,6 @@ export function StoryPracticeQuestionWorkspace({
                 />
               </div>
             )}
-
           </div>
 
           {workKind === "code" ? (
@@ -1432,7 +1471,9 @@ function StoryPracticeReviewModal({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.1em] text-[var(--workspace-accent)]">
-                  Question and code
+                  {question.question.artifact.kind === "code"
+                    ? "Question and code"
+                    : "Question and evidence"}
                 </p>
                 <h3 className="mt-1 text-sm font-semibold text-cream/82">{stageTitle}</h3>
               </div>
@@ -1676,8 +1717,11 @@ function draftFor(
   kind: ReturnType<typeof storyPracticeQuestionWorkKind>,
   choice: number | null,
   text: string,
-  code: string
+  code: string,
+  interactive: InteractiveResponse | null
 ): StoryPracticeDraftWork | null {
+  if (kind === "interactive")
+    return interactive ? { kind: "interactive", response: interactive } : null;
   if (kind === "choice")
     return choice === null ? null : { kind: "choice", selectedChoiceIndex: choice };
   if (kind === "code") return code.trim() ? { kind: "code", code } : null;
@@ -1689,8 +1733,11 @@ function attemptFor(
   choice: number | null,
   text: string,
   code: string,
-  run: LocalRun | null
+  run: LocalRun | null,
+  interactive: InteractiveResponse | null
 ): StoryPracticeAttemptWork | null {
+  if (kind === "interactive")
+    return interactive ? { kind: "interactive", response: interactive } : null;
   if (kind === "choice")
     return choice === null ? null : { kind: "choice", selectedChoiceIndex: choice };
   if (kind === "code") return run ? { kind: "code", code, runId: run.id } : null;

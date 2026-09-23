@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   findActive: vi.fn(),
   getProfile: vi.fn(),
   history: vi.fn(),
+  designEligibility: vi.fn(),
   confirmFocus: vi.fn(),
   rankFirstScenario: vi.fn(),
   start: vi.fn()
@@ -32,6 +33,7 @@ vi.mock("@/server/app-container", () => ({
       findOwnedActiveByTemplate: mocks.findActive
     },
     architectureDesign: {
+      eligibility: { forProfile: mocks.designEligibility },
       focus: { confirm: mocks.confirmFocus },
       ranking: { rankFirstScenario: mocks.rankFirstScenario }
     }
@@ -51,6 +53,7 @@ describe("POST /api/interview/design/start", () => {
       level: "3-5"
     });
     mocks.history.mockResolvedValue([]);
+    mocks.designEligibility.mockResolvedValue({ available: false });
     mocks.confirmFocus.mockResolvedValue({ focusFingerprint: "focus:test" });
     mocks.rankFirstScenario.mockReturnValue({
       selectedScenario: {
@@ -115,5 +118,50 @@ describe("POST /api/interview/design/start", () => {
       }
     });
     expect(mocks.start).not.toHaveBeenCalled();
+  });
+
+  it("does not launch a generic backend design scenario for an AI/ML candidate", async () => {
+    mocks.getProfile.mockResolvedValue({ targetRole: "ai-ml", level: "0-2" });
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/interview/design/start", { method: "POST" })
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "AI_ML_DESIGN_CONTENT_UNAVAILABLE" }
+    });
+    expect(mocks.confirmFocus).not.toHaveBeenCalled();
+    expect(mocks.start).not.toHaveBeenCalled();
+    expect(mocks.release).toHaveBeenCalledOnce();
+  });
+
+  it("starts the reviewed AI/ML scenario through the shared System Design interview", async () => {
+    mocks.getProfile.mockResolvedValue({ targetRole: "ai-ml", level: "3-5" });
+    mocks.designEligibility.mockResolvedValue({ available: true });
+    mocks.rankFirstScenario.mockReturnValue({
+      selectedScenario: {
+        scenarioKey: "retrieval-augmented-support-assistant",
+        scenarioVersion: 1,
+        difficulty: "standard"
+      }
+    });
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/interview/design/start", { method: "POST" })
+    );
+
+    expect(response.status).toBe(200);
+    const [setup, ownerId, , plan] = mocks.start.mock.calls[0]!;
+    expect(ownerId).toBe("user:test");
+    expect(setup).toMatchObject({
+      role: "ai-ml",
+      dsaDesignRound: {
+        designScenarioKey: "retrieval-augmented-support-assistant"
+      }
+    });
+    expect(plan).toHaveLength(5);
+    expect(plan[0]?.text).toContain("customer-support assistant");
+    expect(mocks.release).toHaveBeenCalledOnce();
   });
 });

@@ -91,11 +91,36 @@ export interface ArchitectureDesignPracticeEntry {
   href: "/practice/architecture-design" | null;
 }
 
+/** AI/ML uses the shared Practice card shell while its questions stay role-specific. */
+export interface AiMlPracticeEntry {
+  key: "ai-ml-core-technical" | "ai-ml-applied-engineering" | "ai-ml-architecture-design";
+  order: number;
+  title: string;
+  purpose: string;
+  covers: string[];
+  difficulty: string;
+  durationMinutes: number;
+  availability: PracticeSessionAvailability;
+  availabilityLabel?: string | null;
+  status: PracticeProgressStatus;
+  totalQuestions: number;
+  attemptedQuestions: number;
+  completedQuestions: number;
+  progressPercent: number;
+  href:
+    | "/practice/ai-ml/core-technical"
+    | "/practice/ai-ml/applied-engineering"
+    | "/practice/ai-ml/architecture-design"
+    | "/practice/architecture-design"
+    | null;
+}
+
 export type PracticeDisplaySession =
   | PracticeRoadmapSession
   | CoreTechnicalPracticeEntry
   | AppliedEngineeringPracticeEntry
-  | ArchitectureDesignPracticeEntry;
+  | ArchitectureDesignPracticeEntry
+  | AiMlPracticeEntry;
 
 export interface PracticeRoadmapHome {
   roadmapId: string;

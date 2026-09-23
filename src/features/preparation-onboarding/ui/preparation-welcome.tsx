@@ -25,15 +25,13 @@ import {
   submitPreparationBaseline
 } from "@/lib/api/api-client";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
-import {
-  BASELINE_DURATION_LABEL,
-  baselineQuestionTeacherCue
-} from "@/features/preparation-onboarding/domain/preparation-onboarding-flow";
+import { baselineQuestionTeacherCue } from "@/features/preparation-onboarding/domain/preparation-onboarding-flow";
 import { suggestedPreparationRole } from "@/features/preparation-onboarding/domain/preparation-target";
 import type { CandidateProfile, Role } from "@/lib/shared/types";
 import {
   BaselineIntro,
   BaselineQuestionCard,
+  baselineIntroCopy,
   baselineStageFor,
   welcomeProgressIndex
 } from "./baseline-assessment";
@@ -46,6 +44,7 @@ import {
   TARGET_TIMELINE_OPTIONS,
   TargetChoiceGrid,
   dateForTimeline,
+  initialWelcomeStep,
   levelTarget,
   nextTargetStage,
   storedLevel,
@@ -62,6 +61,7 @@ import {
   WELCOME_BODY_STAGGER_MS
 } from "./welcome-presentation";
 import { useWelcomeVoice, voiceLabel } from "./welcome-voice";
+import { preparationWelcomeIntroCopy } from "./welcome-copy";
 
 const AvatarStage = dynamic(
   () => import("@/features/interviews/ui/voice/avatar-stage").then((module) => module.AvatarStage),
@@ -85,7 +85,7 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
   const teacher = useWorkspaceTeacher();
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const userControlledScroll = useRef(false);
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(() => initialWelcomeStep(profile.preparationOnboarding.stage));
   const [onboarding, setOnboarding] = useState(profile.preparationOnboarding);
   const [targetStage, setTargetStage] = useState(() =>
     targetStageFor(profile.preparationOnboarding.stage)
@@ -113,12 +113,8 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
   const [touchPresentation, setTouchPresentation] = useState(false);
   const [lightweightAvatar, setLightweightAvatar] = useState(false);
   const visible = mounted;
-  const resume = profile.resume;
   const alreadyOnboarded = profile.preparationOnboarding.completedAt !== null;
-  const firstName = resume?.fullName.trim().split(/\s+/)[0] || "there";
-  const topEvidence = resume?.experience[0]
-    ? `${resume.experience[0].role || "your work"} at ${resume.experience[0].organization}`
-    : resume?.projects[0]?.name || profile.headline || "your resume evidence";
+  const welcomeIntro = preparationWelcomeIntroCopy(profile, teacher.name);
 
   const slides = useMemo(() => {
     const baseTargetCopy = TARGET_SETUP_COPY[targetStage] ?? TARGET_SETUP_COPY[0];
@@ -135,21 +131,19 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
     return [
       {
         eyebrow: "Background understood",
-        title: `Hi ${firstName}, I’m ${teacher.name}.`,
-        body: `I’ve looked through your background, including ${topEvidence} and ${resume?.skills.length ?? 0} supported skills. Now let’s make sure I’m preparing you for the right job.`,
+        title: welcomeIntro.title,
+        body: welcomeIntro.body,
         icon: Check
       },
       { ...targetCopy, icon: Target }
     ];
   }, [
-    firstName,
     profile.preparationOnboarding.stage,
-    resume?.skills.length,
     resumeSuggestedRole,
     targetRole,
     targetStage,
-    teacher.name,
-    topEvidence
+    welcomeIntro.body,
+    welcomeIntro.title
   ]);
 
   const activeBaselineSection =
@@ -162,13 +156,11 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
   );
   const baselineSlide = useMemo(() => {
     if (baselineStage === "intro") {
+      const intro = baselineIntroCopy(targetRole);
       return {
-        eyebrow: `Short baseline · ${BASELINE_DURATION_LABEL}`,
-        title: "Let’s find your starting point.",
-        body:
-          targetRole === "ai-ml"
-            ? "This is not about measuring everything today. A stack-aware technical pulse, an engineering scenario, and one architecture decision are enough for a useful starting picture."
-            : "This is not about measuring everything today. A short DSA pulse, a stack-aware technical pulse, an engineering scenario, and one architecture decision are enough for a useful starting picture.",
+        eyebrow: intro.eyebrow,
+        title: intro.title,
+        body: intro.body,
         icon: Target
       };
     }
@@ -206,6 +198,11 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
     return null;
   }, [activeBaselineQuestion, alreadyOnboarded, baselineStage, onboarding.questionIds, targetRole]);
   const current = baselineSlide ?? slides[step] ?? slides[0] ?? FALLBACK_WELCOME_SLIDE;
+  const voicePlaybackKey = baselineStage
+    ? `baseline:${baselineStage}`
+    : step === 0
+      ? "welcome:intro"
+      : `target:${targetStage}`;
   const titleReveal = useWordReveal(current.title, visible, 160);
   const bodyReveal = useWordReveal(
     current.body,
@@ -216,6 +213,7 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
   const { voiceState, speaking, awaitingGesture, stopVoice, toggleVoice } = useWelcomeVoice({
     teacherId: teacher.id,
     current,
+    playbackKey: voicePlaybackKey,
     slides,
     visible,
     step,
@@ -602,10 +600,6 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
                 type="button"
                 disabled={saving || Boolean(activeBaselineQuestion && !baselineResponseReady)}
                 onClick={() => {
-                  if (step === 0) {
-                    setStep(1);
-                    return;
-                  }
                   if (baselineStage === "intro") {
                     void beginBaseline();
                     return;
@@ -618,6 +612,10 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
                     finishPreparationOnboarding();
                     return;
                   }
+                  if (step === 0) {
+                    setStep(1);
+                    return;
+                  }
                   void advanceTargetSetup();
                 }}
                 className="maya-welcome-primary browse-nudge inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-[#f5f3ef] px-5 text-sm font-semibold text-[#17181b] shadow-[0_18px_44px_-26px_rgba(245,243,239,0.22)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70 sm:flex-none"
@@ -626,13 +624,9 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
                   <>
                     <Loader2 size={15} className="animate-spin" /> Saving your progress
                   </>
-                ) : step === 0 ? (
-                  <>
-                    Set my target <ArrowRight size={15} />
-                  </>
                 ) : baselineStage === "intro" ? (
                   <>
-                    Start baseline <ArrowRight size={15} />
+                    Start quick check <ArrowRight size={15} />
                   </>
                 ) : activeBaselineQuestion ? (
                   <>
@@ -642,6 +636,10 @@ export function PreparationWelcome({ profile, blocking = true }: PreparationWelc
                   <>
                     {alreadyOnboarded ? "Continue learning" : "Build my preparation"}{" "}
                     <ArrowRight size={15} />
+                  </>
+                ) : step === 0 ? (
+                  <>
+                    Set my target <ArrowRight size={15} />
                   </>
                 ) : targetStage === TARGET_SETUP_COPY.length - 1 ? (
                   <>

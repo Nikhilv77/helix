@@ -88,6 +88,7 @@ export type StoryPracticeOverviewExperience<TAssessment = unknown, TReport = unk
   label: string;
   environmentLabel: string | null;
   libraryDescription: string;
+  libraryHint?: string;
   startUnstartedPath?: {
     endpoint: `/api/practice/${string}`;
   };
@@ -95,6 +96,18 @@ export type StoryPracticeOverviewExperience<TAssessment = unknown, TReport = unk
   intro: StoryPracticeIntroExperience;
   assessment: StoryPracticeAssessmentExperience<TAssessment, TReport>;
 };
+
+/** Library cards do not depend on an assessment implementation. */
+export type StoryPracticeLibraryExperience = Pick<
+  StoryPracticeOverviewExperience,
+  | "slug"
+  | "routeBase"
+  | "subjectNoun"
+  | "label"
+  | "libraryDescription"
+  | "libraryHint"
+  | "startUnstartedPath"
+>;
 
 export type StoryPracticeWorkspaceExperience<TQuestion = unknown> = StoryPracticeRouteIdentity & {
   label: string;

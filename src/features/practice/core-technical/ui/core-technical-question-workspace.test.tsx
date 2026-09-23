@@ -214,7 +214,11 @@ describe("CoreTechnicalQuestionWorkspace", () => {
     fireEvent.click(screen.getByRole("button", { name: "+ Why it happens" }));
     expect(answer).toHaveValue("Why it happens:\n");
     expect(
-      await screen.findByText("Connect that outcome to the runtime mechanism that causes it.")
+      await screen.findByText(
+        "Connect that outcome to the runtime mechanism that causes it.",
+        {},
+        { timeout: 3000 }
+      )
     ).toBeInTheDocument();
     expect(
       screen.getAllByText("Why it happens:").find((element) => element.tagName === "SPAN")

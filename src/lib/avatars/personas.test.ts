@@ -17,10 +17,8 @@ import {
 } from "./personas";
 
 /**
- * Gender of every Deepgram voice the cast uses, taken from the `feminine` /
- * `masculine` tags on Deepgram's live model list rather than guessed from the
- * name. Aura-1 and Aura-2 use different model ids, so this checked-in table
- * also prevents a valid voice from one generation being sent as the other.
+ * Gender of every Aura-2 fallback voice the cast uses, taken from Deepgram's
+ * live model list rather than guessed from the name.
  */
 const VOICE_GENDER: Record<string, PersonaGender> = {
   "aura-2-asteria-en": "feminine",
@@ -30,21 +28,17 @@ const VOICE_GENDER: Record<string, PersonaGender> = {
   "aura-2-theia-en": "feminine",
   "aura-2-vesta-en": "feminine",
   "aura-2-athena-en": "feminine",
+  "aura-2-electra-en": "feminine",
+  "aura-2-hera-en": "feminine",
+  "aura-2-luna-en": "feminine",
   "aura-2-mars-en": "masculine",
   "aura-2-neptune-en": "masculine",
   "aura-2-apollo-en": "masculine",
   "aura-2-arcas-en": "masculine",
   "aura-2-atlas-en": "masculine",
   "aura-2-orion-en": "masculine",
-  "aura-2-zeus-en": "masculine",
-  "aura-asteria-en": "feminine",
-  "aura-stella-en": "feminine",
-  "aura-hera-en": "feminine",
-  "aura-luna-en": "feminine",
-  "aura-orion-en": "masculine",
-  "aura-arcas-en": "masculine",
-  "aura-perseus-en": "masculine",
-  "aura-zeus-en": "masculine"
+  "aura-2-orpheus-en": "masculine",
+  "aura-2-zeus-en": "masculine"
 };
 
 /**
@@ -91,13 +85,13 @@ describe("interviewer personas", () => {
 
   it("keeps the intended onboarding carousel order", () => {
     expect(ONBOARDING_PERSONAS.map((persona) => persona.id)).toEqual([
-      "ryan",
       "sophia",
-      "maya",
-      "olivia",
       "daniel",
-      "ethan",
       "pooja",
+      "maya",
+      "ethan",
+      "ryan",
+      "olivia",
       "alex"
     ]);
     expect(SELECTABLE_TEACHERS).toEqual(ONBOARDING_PERSONAS);
@@ -105,12 +99,12 @@ describe("interviewer personas", () => {
     const centre = ONBOARDING_PERSONAS.findIndex(
       (persona) => persona.id === DEFAULT_TEACHER_SELECTION_ID
     );
-    expect(ONBOARDING_PERSONAS[centre]?.id).toBe("sophia");
+    expect(ONBOARDING_PERSONAS[centre]?.id).toBe("daniel");
     expect(
       ONBOARDING_PERSONAS[(centre - 1 + ONBOARDING_PERSONAS.length) % ONBOARDING_PERSONAS.length]
         ?.id
-    ).toBe("ryan");
-    expect(ONBOARDING_PERSONAS[(centre + 1) % ONBOARDING_PERSONAS.length]?.id).toBe("maya");
+    ).toBe("sophia");
+    expect(ONBOARDING_PERSONAS[(centre + 1) % ONBOARDING_PERSONAS.length]?.id).toBe("pooja");
   });
 
   it("keeps James and Claire available only as interviewers", () => {
@@ -122,19 +116,15 @@ describe("interviewer personas", () => {
     expect(personaById("claire")?.name).toBe("Claire");
   });
 
-  it("only shares a voice for the intentionally separated Pooja and Olivia pair", () => {
-    const personasByVoice = new Map<string, string[]>();
-    for (const persona of ALL_PERSONAS) {
-      const ids = personasByVoice.get(persona.voice) ?? [];
-      ids.push(persona.id);
-      personasByVoice.set(persona.voice, ids);
-    }
+  it("gives every persona distinct primary and fallback voices", () => {
+    expect(new Set(ALL_PERSONAS.map((persona) => persona.geminiVoice)).size).toBe(
+      ALL_PERSONAS.length
+    );
+    expect(new Set(ALL_PERSONAS.map((persona) => persona.voice)).size).toBe(ALL_PERSONAS.length);
+  });
 
-    const sharedVoices = [...personasByVoice.entries()]
-      .filter(([, ids]) => ids.length > 1)
-      .map(([voice, ids]) => ({ voice, ids: ids.sort() }));
-
-    expect(sharedVoices).toEqual([{ voice: "aura-luna-en", ids: ["olivia", "pooja"] }]);
+  it("keeps every fallback on Aura-2", () => {
+    for (const persona of ALL_PERSONAS) expect(persona.voice).toMatch(/^aura-2-/);
   });
 
   it.each(ALL_PERSONAS)("$name ships a model the rig can drive", (persona) => {

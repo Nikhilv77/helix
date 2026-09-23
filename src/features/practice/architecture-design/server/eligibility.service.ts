@@ -2,7 +2,7 @@ import {
   ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE,
   type ArchitectureDesignScenarioRankingCandidate
 } from "@/features/practice/architecture-design/domain";
-import { ARCHITECTURE_DESIGN_REVIEW_CANDIDATES } from "@/features/practice/architecture-design/domain/reviewed-scenarios";
+import { ARCHITECTURE_DESIGN_CONTENT_CANDIDATES } from "@/features/practice/architecture-design/domain/content-candidates";
 import type { CandidateProfile } from "@/lib/shared/types";
 import type { ArchitectureScenarioPublicationIdentity } from "./repository-adapter";
 
@@ -51,10 +51,14 @@ export class ArchitectureDesignEligibilityService {
   }
 
   async forProfile(profile: EligibilityProfile): Promise<ArchitectureDesignEligibility> {
-    if (profile.targetRole !== "backend" && profile.targetRole !== "fullstack") {
+    if (
+      profile.targetRole !== "backend" &&
+      profile.targetRole !== "fullstack" &&
+      profile.targetRole !== "ai-ml"
+    ) {
       return unavailable(
         "UNSUPPORTED_ROLE",
-        "Architecture & Design is currently available for backend and full-stack paths."
+        "Architecture & Design is currently available for backend, full-stack, and AI/ML paths."
       );
     }
     const role = profile.targetRole;
@@ -120,7 +124,7 @@ function unavailable(
 function publicScenario(
   candidate: ArchitectureDesignScenarioRankingCandidate
 ): ArchitectureDesignScenarioLibraryEntry {
-  const reviewed = ARCHITECTURE_DESIGN_REVIEW_CANDIDATES.find(
+  const reviewed = ARCHITECTURE_DESIGN_CONTENT_CANDIDATES.find(
     (artifact) => artifact.caseKey === candidate.key
   );
   return {

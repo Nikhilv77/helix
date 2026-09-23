@@ -103,6 +103,58 @@ const profile = {
 } as unknown as CandidateProfile;
 
 describe("Core Technical & Projects frozen plan", () => {
+  it("uses authored AI/ML questions for an AI/ML target even with a generic blueprint", () => {
+    const core = blueprint("core-technical");
+
+    const questions = selectTechnicalProjectMcqs({
+      kit: null,
+      coreBlueprint: core,
+      level: "0-2",
+      targetRole: "ai-ml"
+    });
+
+    expect(questions).toHaveLength(3);
+    expect(questions.every((question) => question.sourceId.startsWith("ai-ml-core:"))).toBe(true);
+    expect(questions[0]?.prompt).toContain("model");
+  });
+
+  it("uses an AI/ML production scenario and Python evaluation task in the combined round", () => {
+    const core = blueprint("core-technical");
+    const applied = blueprint("applied-engineering");
+    const mcqs = selectTechnicalProjectMcqs({
+      kit: null,
+      coreBlueprint: core,
+      level: "0-2",
+      targetRole: "ai-ml"
+    });
+    const project = selectGroundedProjectSource({
+      profile,
+      coreBlueprint: core,
+      appliedBlueprint: applied
+    });
+
+    const plan = buildTechnicalProjectsPlan({
+      coreBlueprint: core,
+      appliedBlueprint: applied,
+      mcqs,
+      project,
+      targetRole: "ai-ml"
+    });
+
+    expect(plan).toHaveLength(7);
+    expect(plan[5]).toMatchObject({
+      kind: "conversation",
+      competency: "Applied AI production diagnosis",
+      projectAct: "failure",
+      topicKey: `project:${project.sourceId}`
+    });
+    expect(plan[6]).toMatchObject({
+      kind: "code",
+      language: "python",
+      codeTask: expect.stringContaining("accuracy by segment")
+    });
+  });
+
   it("builds three deterministic MCQs, three project prompts, and project coding", () => {
     const core = blueprint("core-technical");
     const applied = blueprint("applied-engineering");
@@ -203,5 +255,42 @@ describe("Core Technical & Projects frozen plan", () => {
     });
     expect(unrelatedPlan[6]?.text).not.toContain("Debounce UI input");
     expect(unrelatedPlan[6]?.codeTask).toContain("Ledger Guard");
+  });
+
+  it("keeps AI/ML coding in Python even when the resume contains a matching JavaScript task", () => {
+    const core = blueprint("core-technical");
+    const applied = blueprint("applied-engineering");
+    const project = selectGroundedProjectSource({
+      profile,
+      coreBlueprint: core,
+      appliedBlueprint: applied
+    });
+    const plan = buildTechnicalProjectsPlan({
+      coreBlueprint: core,
+      appliedBlueprint: applied,
+      mcqs: selectTechnicalProjectMcqs({
+        kit: null,
+        coreBlueprint: core,
+        level: "0-2",
+        targetRole: "ai-ml"
+      }),
+      project,
+      targetRole: "ai-ml",
+      codingTask: {
+        skill: "Node.js",
+        language: "javascript",
+        title: "Retry guard",
+        brief: "Implement a replay-safe JavaScript handler.",
+        starterCode: "function handle(event) {}",
+        expects: ["deduplicates retries"]
+      }
+    });
+
+    expect(plan[6]).toMatchObject({
+      language: "python",
+      codeSnippet: expect.stringContaining("def evaluate_predictions"),
+      codeTask: expect.stringContaining("accuracy by segment")
+    });
+    expect(plan[6]?.codeTask).not.toContain("JavaScript handler");
   });
 });

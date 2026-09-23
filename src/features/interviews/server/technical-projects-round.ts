@@ -8,6 +8,7 @@ import type {
 } from "@/lib/shared/types";
 import { buildFundamentalsPlan } from "./fundamentals-round";
 import type { PlannedQuestion } from "./types";
+import { aiMlPracticeSession } from "@/features/practice/ai-ml/domain/ai-ml-practice";
 
 export interface ReviewedTechnicalMcq {
   sourceId: string;
@@ -41,9 +42,11 @@ export function selectTechnicalProjectMcqs(input: {
   kit: ResumeInterviewKit | null | undefined;
   coreBlueprint: SessionBlueprint;
   level: Level | null;
+  targetRole?: CandidateProfile["targetRole"];
   count?: number;
 }): ReviewedTechnicalMcq[] {
   const count = input.count ?? 3;
+  const isAiMl = input.targetRole === "ai-ml" || isAiMlBlueprint(input.coreBlueprint);
   const allowedSkills = new Set(
     input.coreBlueprint.topics.flatMap((topic) => topic.skillKeys.map(normalizeKey))
   );
@@ -55,27 +58,31 @@ export function selectTechnicalProjectMcqs(input: {
       return rightMatch - leftMatch;
     })
     .map((question, index) => kitMcq(question, index));
-  const fallback = buildFundamentalsPlan(input.level, { shuffle: (items) => items })
-    .filter(
-      (question): question is PlannedQuestion & { options: string[]; answerIndex: number } =>
-        question.kind === "mcq" &&
-        Boolean(question.options?.length) &&
-        typeof question.answerIndex === "number"
-    )
-    .map((question) => ({
-      sourceId: `fundamentals:${question.sourceSlug ?? normalizeKey(question.text)}`,
-      sourceVersion: 1,
-      topicKey: question.sourceSlug ?? normalizeKey(question.competency ?? "fundamentals"),
-      skillKeys: [normalizeKey(question.skill ?? question.competency ?? "fundamentals")],
-      prompt: question.text,
-      options: [...question.options],
-      answerIndex: question.answerIndex,
-      explanation: question.explanation ?? "The authored answer follows the described mechanism.",
-      strongSignals: [...question.mustHit]
-    }));
+  const fallback = isAiMl
+    ? aiMlTechnicalQuestions()
+    : buildFundamentalsPlan(input.level, { shuffle: (items) => items })
+        .filter(
+          (question): question is PlannedQuestion & { options: string[]; answerIndex: number } =>
+            question.kind === "mcq" &&
+            Boolean(question.options?.length) &&
+            typeof question.answerIndex === "number"
+        )
+        .map((question) => ({
+          sourceId: `fundamentals:${question.sourceSlug ?? normalizeKey(question.text)}`,
+          sourceVersion: 1,
+          topicKey: question.sourceSlug ?? normalizeKey(question.competency ?? "fundamentals"),
+          skillKeys: [normalizeKey(question.skill ?? question.competency ?? "fundamentals")],
+          prompt: question.text,
+          options: [...question.options],
+          answerIndex: question.answerIndex,
+          explanation:
+            question.explanation ?? "The authored answer follows the described mechanism.",
+          strongSignals: [...question.mustHit]
+        }));
 
   const seen = new Set<string>();
-  return [...kitQuestions, ...fallback]
+  const candidates = isAiMl ? [...fallback, ...kitQuestions] : [...kitQuestions, ...fallback];
+  return candidates
     .filter((question) => {
       const fingerprint = normalizeKey(question.prompt);
       if (seen.has(fingerprint)) return false;
@@ -83,6 +90,41 @@ export function selectTechnicalProjectMcqs(input: {
       return true;
     })
     .slice(0, count);
+}
+
+function isAiMlBlueprint(blueprint: SessionBlueprint): boolean {
+  const signal = [
+    blueprint.title,
+    blueprint.subtitle,
+    ...blueprint.topics.flatMap((topic) => [topic.key, topic.label, ...topic.skillKeys])
+  ]
+    .join(" ")
+    .toLowerCase();
+  return /\b(?:ai|ml|llm|rag|machine-learning|pytorch|tensorflow)\b/.test(signal);
+}
+
+function aiMlTechnicalQuestions(): ReviewedTechnicalMcq[] {
+  return aiMlPracticeSession("core-technical").questions.map((source, index) => {
+    const answerIndex = Math.max(
+      0,
+      source.options.findIndex((option) => option.id === source.correctOptionId)
+    );
+    return {
+      sourceId: `ai-ml-core:${index + 1}`,
+      sourceVersion: 2,
+      topicKey: "ai-ml-core-technical",
+      skillKeys: ["ai-ml", "model-evaluation"],
+      prompt: source.prompt,
+      options: source.options.map((option) => option.label),
+      answerIndex,
+      explanation: source.explanation,
+      strongSignals: [
+        "identifies the relevant model or data boundary",
+        "uses measurable evidence",
+        "connects the decision to production impact"
+      ]
+    };
+  });
 }
 
 /** Chooses one resume-grounded project/work item, with an explicit scenario fallback. */
@@ -145,6 +187,7 @@ export function buildTechnicalProjectsPlan(input: {
   mcqs: readonly ReviewedTechnicalMcq[];
   project: GroundedProjectInterviewSource;
   codingTask?: ResumeCodingTask | null;
+  targetRole?: CandidateProfile["targetRole"];
 }): PlannedQuestion[] {
   if (input.coreBlueprint.kind !== "core-technical") {
     throw new Error("Core Technical & Projects requires a Core Technical blueprint");
@@ -156,8 +199,7 @@ export function buildTechnicalProjectsPlan(input: {
     throw new Error("Core Technical & Projects requires three reviewed technical MCQs");
   }
 
-  return [
-    ...input.mcqs.slice(0, 3).map(toPlannedMcq),
+  const projectQuestions = [
     projectQuestion(input.project, {
       act: "context",
       text:
@@ -181,36 +223,64 @@ export function buildTechnicalProjectsPlan(input: {
       probe: "At which exact boundary does ownership or state change?",
       parameters: ["concept-depth", "technical-reasoning", "practical-execution", "communication"],
       durationMs: 8 * 60_000
-    }),
-    projectQuestion(input.project, {
-      act: "failure",
-      text: `Pressure-test that path: choose a real failure you handled, or a clearly hypothetical one, and show how you would prove the cause.`,
-      competency: "Debugging and verification",
-      mustHit: [
-        "evidence and competing hypotheses",
-        "root cause",
-        "repair and regression protection"
-      ],
-      probe: "What evidence would have disproved your leading diagnosis?",
-      parameters: [
-        "technical-reasoning",
-        "practical-execution",
-        "project-ownership",
-        "communication"
-      ],
-      durationMs: 8 * 60_000
-    }),
-    projectCodingQuestion(input.project, input.codingTask)
+    })
+  ];
+  const finalScenario =
+    input.targetRole === "ai-ml"
+      ? projectQuestion(input.project, {
+          act: "failure",
+          text: `Pressure-test ${input.project.name} as an AI/ML system: imagine a model release lowers task success for one user segment. How would you distinguish a data, model, retrieval, or serving regression, contain the impact, and verify the fix? Treat this as a hypothetical incident unless you actually handled one.`,
+          competency: "Applied AI production diagnosis",
+          mustHit: [
+            "segment-level evidence and a control comparison",
+            "competing data, model, retrieval, and serving hypotheses",
+            "safe mitigation and outcome-based verification"
+          ],
+          probe: "Which slice and control would show whether the model release caused the drop?",
+          parameters: ["technical-reasoning", "practical-execution", "tradeoffs", "communication"],
+          durationMs: 8 * 60_000
+        })
+      : projectQuestion(input.project, {
+          act: "failure",
+          text: `Pressure-test that path: choose a real failure you handled, or a clearly hypothetical one, and show how you would prove the cause.`,
+          competency: "Debugging and verification",
+          mustHit: [
+            "evidence and competing hypotheses",
+            "root cause",
+            "repair and regression protection"
+          ],
+          probe: "What evidence would have disproved your leading diagnosis?",
+          parameters: [
+            "technical-reasoning",
+            "practical-execution",
+            "project-ownership",
+            "communication"
+          ],
+          durationMs: 8 * 60_000
+        });
+
+  return [
+    ...input.mcqs.slice(0, 3).map(toPlannedMcq),
+    ...projectQuestions,
+    finalScenario,
+    projectCodingQuestion(input.project, input.codingTask, input.targetRole)
   ];
 }
 
 function projectCodingQuestion(
   project: GroundedProjectInterviewSource,
-  codingTask: ResumeCodingTask | null | undefined
+  codingTask: ResumeCodingTask | null | undefined,
+  targetRole?: CandidateProfile["targetRole"]
 ): PlannedQuestion {
-  const relevantCodingTask = codingTaskForProject(project, codingTask);
-  const language = relevantCodingTask?.language || projectLanguage(project.skillKeys);
-  const task = relevantCodingTask?.brief?.trim() || fallbackProjectCodeTask(project);
+  const projectCodingTask = codingTaskForProject(project, codingTask);
+  const relevantCodingTask =
+    targetRole === "ai-ml" && projectCodingTask?.language.toLowerCase() !== "python"
+      ? null
+      : projectCodingTask;
+  const language = relevantCodingTask?.language || projectLanguage(project.skillKeys, targetRole);
+  const task =
+    relevantCodingTask?.brief?.trim() ||
+    (targetRole === "ai-ml" ? fallbackAiMlCodeTask(project) : fallbackProjectCodeTask(project));
   const expects = relevantCodingTask?.expects?.filter(Boolean).slice(0, 3) ?? [];
   const groundedFacts = [project.summary, project.outcome].filter((value): value is string =>
     Boolean(value?.trim())
@@ -226,7 +296,9 @@ function projectCodingQuestion(
     answerFormat: "typed",
     language,
     codeTask: `${task}\n\nConnect the implementation to ${project.name}. State any project detail you need to assume rather than inventing it.`,
-    codeSnippet: relevantCodingTask?.starterCode?.trim() || starterCode(language),
+    codeSnippet:
+      relevantCodingTask?.starterCode?.trim() ||
+      (targetRole === "ai-ml" ? aiMlStarterCode() : starterCode(language)),
     competency: "Project-grounded implementation",
     topicKey: `project:${project.sourceId}`,
     skillKeys: [...project.skillKeys],
@@ -240,11 +312,17 @@ function projectCodingQuestion(
     mustHit:
       expects.length > 0
         ? expects
-        : [
-            "a coherent project-specific rule",
-            "input and failure handling",
-            "focused examples or tests"
-          ],
+        : targetRole === "ai-ml"
+          ? [
+              "validated prediction records and empty input handling",
+              "overall and per-segment accuracy",
+              "tests for malformed and regressing segments"
+            ]
+          : [
+              "a coherent project-specific rule",
+              "input and failure handling",
+              "focused examples or tests"
+            ],
     probeIfMissing:
       "Which project constraint does this implementation protect, and how would you test it?",
     maxFollowUps: 1,
@@ -281,8 +359,12 @@ function codingTaskForProject(
   return projectSkills.has(normalizeKey(codingTask.skill)) ? codingTask : null;
 }
 
-function projectLanguage(skillKeys: readonly string[]): string {
+function projectLanguage(
+  skillKeys: readonly string[],
+  targetRole?: CandidateProfile["targetRole"]
+): string {
   const skills = skillKeys.map(normalizeKey);
+  if (targetRole === "ai-ml") return "python";
   if (skills.some((skill) => skill === "python" || skill === "pytorch" || skill === "django"))
     return "python";
   if (skills.some((skill) => skill === "java" || skill === "spring")) return "java";
@@ -290,6 +372,18 @@ function projectLanguage(skillKeys: readonly string[]): string {
   if (skills.some((skill) => skill === "javascript" || skill === "nodejs" || skill === "node-js"))
     return "javascript";
   return "typescript";
+}
+
+function fallbackAiMlCodeTask(project: GroundedProjectInterviewSource): string {
+  return `Implement a small Python evaluation function for ${project.name}. Accept prediction records with a segment, predicted label, actual label, and confidence; reject malformed records; return overall accuracy plus accuracy by segment; and identify segments below a configurable quality threshold. Add focused tests for empty input, malformed data, and one regressing segment. The saved project context is: ${project.summary}`;
+}
+
+function aiMlStarterCode(): string {
+  return `def evaluate_predictions(records, quality_threshold):
+    """Return overall accuracy, per-segment accuracy, and segments below threshold."""
+    raise NotImplementedError
+
+# Add tests for empty input, malformed records, and a regressing segment.`;
 }
 
 function fallbackProjectCodeTask(project: GroundedProjectInterviewSource): string {

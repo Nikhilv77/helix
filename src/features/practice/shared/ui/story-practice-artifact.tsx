@@ -10,6 +10,7 @@ export type StoryPracticeArtifactData = {
   content: string;
   language?: string;
   caption?: string;
+  table?: { columns: string[]; rows: string[][] };
 };
 
 /** Typed renderer shared by the story-driven Practice tracks. */
@@ -68,7 +69,50 @@ export function StoryPracticeArtifact({
               : "Read only"}
           </span>
         </div>
-        {presentation.editor ? (
+        {artifact.table ? (
+          <div className="thin-scroll overflow-auto p-3">
+            <table className="w-full text-left text-sm">
+              <caption className="sr-only">{artifact.title}</caption>
+              <thead>
+                <tr>
+                  {artifact.table.columns.map((column) => (
+                    <th
+                      key={column}
+                      scope="col"
+                      className="whitespace-nowrap border-b border-white/10 px-3 py-3 font-semibold text-cream/60"
+                    >
+                      {column}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {artifact.table.rows.map((row, index) => (
+                  <tr key={index} className="odd:bg-white/[0.025]">
+                    {row.map((cell, column) =>
+                      column === 0 ? (
+                        <th
+                          key={column}
+                          scope="row"
+                          className="px-3 py-3 font-medium text-cream/80"
+                        >
+                          {cell}
+                        </th>
+                      ) : (
+                        <td
+                          key={column}
+                          className="whitespace-nowrap px-3 py-3 font-mono tabular-nums text-cream/65"
+                        >
+                          {cell}
+                        </td>
+                      )
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : presentation.editor ? (
           <PracticeCodeViewer
             code={artifact.content}
             language={artifact.language ?? inferArtifactLanguage(artifact)}

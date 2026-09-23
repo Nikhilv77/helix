@@ -35,6 +35,15 @@ import { POST as architectureLearn } from "../../architecture-design/learn/handl
 import { POST as architectureKnowledgeCheck } from "../../architecture-design/knowledge-check/handler";
 import { POST as architecturePrepare } from "../../architecture-design/prepare/handler";
 import { POST as architectureStartPath } from "../../architecture-design/start-path/handler";
+import {
+  GET as architectureCanvasGet,
+  PUT as architectureCanvasPut
+} from "../../architecture-design/canvas/handler";
+import { POST as aiMlAnswer } from "../../ai-ml/answer/handler";
+import { POST as aiMlDraft } from "../../ai-ml/draft/handler";
+import { POST as aiMlHint } from "../../ai-ml/hint/handler";
+import { POST as aiMlAttempt } from "../../ai-ml/attempt/handler";
+import { POST as aiMlLearn } from "../../ai-ml/learn/handler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -46,6 +55,11 @@ type RouteContext = {
 };
 
 const handlers: Readonly<Record<string, PracticeHandler>> = {
+  "ai-ml/answer": aiMlAnswer,
+  "ai-ml/draft": aiMlDraft,
+  "ai-ml/hint": aiMlHint,
+  "ai-ml/attempt": aiMlAttempt,
+  "ai-ml/learn": aiMlLearn,
   "core-technical/assessment/finalize": coreAssessmentFinalize,
   "core-technical/assessment/start": coreAssessmentStart,
   "core-technical/attempt": coreAttempt,
@@ -102,4 +116,26 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   return handler(request);
+}
+
+export async function GET(request: NextRequest, context: RouteContext) {
+  const { track, action } = await context.params;
+  if (track === "architecture-design" && action.length === 2 && action[0] === "canvas") {
+    return architectureCanvasGet(request, action[1]!);
+  }
+  return apiError(
+    new ApiRouteError(404, "NOT_FOUND", "Practice route not found"),
+    request.nextUrl.pathname
+  );
+}
+
+export async function PUT(request: NextRequest, context: RouteContext) {
+  const { track, action } = await context.params;
+  if (track === "architecture-design" && action.length === 2 && action[0] === "canvas") {
+    return architectureCanvasPut(request, action[1]!);
+  }
+  return apiError(
+    new ApiRouteError(404, "NOT_FOUND", "Practice route not found"),
+    request.nextUrl.pathname
+  );
 }

@@ -3,8 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { GoogleGenAI, Modality } from "@google/genai";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { geminiVoiceForInterviewer } from "@/features/interviews/domain/interviewer-persona";
-import { personaById } from "@/lib/avatars/personas";
+import { MAYA, personaById, type InterviewerPersona } from "@/lib/avatars/personas";
 import { getAppContainer } from "@/server/app-container";
 import { Logger } from "@/server/common/logger";
 import { apiError } from "@/server/http/api-response";
@@ -16,9 +15,9 @@ export const dynamic = "force-dynamic";
 
 const DEEPGRAM_SPEAK_ENDPOINT = "https://api.deepgram.com/v1/speak";
 const GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts";
-const JAMES_TTS_STYLE_VERSION = "conversational-v4";
+const GEMINI_TTS_STYLE_VERSION = "teacher-natural-v1";
 const SPEECH_TIMEOUT_MS = 15_000;
-const JAMES_SPEECH_TIMEOUT_MS = 30_000;
+const GEMINI_SPEECH_TIMEOUT_MS = 30_000;
 
 /** Identical lines are synthesised once per instance instead of on every replay. */
 const CACHE_LIMIT = 64;
@@ -63,16 +62,14 @@ export async function GET(request: NextRequest) {
     }
 
     const config = getAppContainer().config;
-    const useJamesVoice = parsed.data.persona === "james";
-    const useGeminiJamesVoice = useJamesVoice && parsed.data.delivery !== "fast";
-    const model = useJamesVoice
-      ? useGeminiJamesVoice
-        ? GEMINI_TTS_MODEL
-        : (personaById("james")?.voice ?? config.deepgramTtsModel)
-      : (personaById(parsed.data.persona)?.voice ?? config.deepgramTtsModel);
+    const persona = personaById(parsed.data.persona) ?? MAYA;
+    const fallbackModel = persona.voice || config.deepgramTtsModel;
+    const useGemini = parsed.data.delivery !== "fast" && Boolean(config.geminiApiKey);
     const cacheKey = createHash("sha256")
       .update(
-        `${useGeminiJamesVoice ? `gemini:${JAMES_TTS_STYLE_VERSION}` : "deepgram"}:${model}:${parsed.data.text}`
+        useGemini
+          ? `gemini:${GEMINI_TTS_STYLE_VERSION}:${GEMINI_TTS_MODEL}:${persona.geminiVoice}:${persona.id}:${parsed.data.text}`
+          : `deepgram:${fallbackModel}:${parsed.data.text}`
       )
       .digest("hex");
     const cached = audioCache.get(cacheKey);
@@ -85,28 +82,26 @@ export async function GET(request: NextRequest) {
     await guard.enforce(RATE_LIMIT_POLICIES.voiceGeneration, ownerId);
     await guard.enforce(RATE_LIMIT_POLICIES.voiceCharacters, ownerId, parsed.data.text.length);
 
-    if (useGeminiJamesVoice) {
+    if (useGemini) {
       try {
-        const generated = await synthesizeJames({
+        const generated = await synthesizeGemini({
           text: parsed.data.text,
-          apiKey: config.geminiApiKey
+          apiKey: config.geminiApiKey,
+          persona
         });
         rememberAudio(cacheKey, generated);
         return audioResponse(generated, "miss");
       } catch (error) {
-        // Gemini TTS has a small independent quota. James must not become
-        // silent when that quota is temporarily exhausted, so fall back to his
-        // established Deepgram voice while keeping provider details private.
-        const fallbackModel = personaById("james")?.voice ?? config.deepgramTtsModel;
         const fallbackKey = createHash("sha256")
-          .update(`deepgram-fallback:${fallbackModel}:${parsed.data.text}`)
+          .update(`deepgram:${fallbackModel}:${parsed.data.text}`)
           .digest("hex");
         const fallbackCached = audioCache.get(fallbackKey);
         if (fallbackCached) return audioResponse(fallbackCached, "hit");
         if (!config.deepgramApiKey) throw error;
         logger.warn(
           JSON.stringify({
-            event: "voice.james.gemini_fallback",
+            event: "voice.gemini_fallback",
+            personaId: persona.id,
             reason: error instanceof ApiRouteError ? error.code : "SPEECH_PROVIDER_FAILED"
           })
         );
@@ -127,7 +122,11 @@ export async function GET(request: NextRequest) {
         "Trailgrad voice is not configured on this environment."
       );
     }
-    const upstream = await synthesizeDeepgram({ text: parsed.data.text, model, apiKey });
+    const upstream = await synthesizeDeepgram({
+      text: parsed.data.text,
+      model: fallbackModel,
+      apiKey
+    });
     return streamDeepgram(upstream, cacheKey);
   } catch (error) {
     if (!(error instanceof ApiRouteError)) {
@@ -218,21 +217,32 @@ async function synthesizeDeepgram(input: {
   }
 }
 
-async function synthesizeJames(input: { text: string; apiKey: string }): Promise<CachedAudio> {
+async function synthesizeGemini(input: {
+  text: string;
+  apiKey: string;
+  persona: InterviewerPersona;
+}): Promise<CachedAudio> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), JAMES_SPEECH_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), GEMINI_SPEECH_TIMEOUT_MS);
 
   try {
     const client = new GoogleGenAI({ apiKey: input.apiKey });
     const response = await client.models.generateContent({
       model: GEMINI_TTS_MODEL,
-      contents: `Read the transcript exactly as written. James is composed, dryly funny, and conversational. Use a relaxed but responsive natural pace of about 145 words per minute. Pause only where the punctuation calls for it and never sound theatrical.\n\nTranscript:\n${input.text}`,
+      contents: `Read the transcript exactly as written. Do not add, omit, paraphrase, or explain anything.
+
+You are ${input.persona.name}, a one-to-one technical interview coach speaking directly to one learner. Your manner is: ${input.persona.manner}
+
+Understand the sentence before speaking it. Use natural emphasis based on meaning, brief pauses at punctuation, and a comfortable conversational pace around 145 words per minute. Sound present and human, not like an announcer or an audiobook narrator. Never read these directions aloud.
+
+Transcript:
+${input.text}`,
       config: {
         abortSignal: controller.signal,
         responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: geminiVoiceForInterviewer("james") }
+            prebuiltVoiceConfig: { voiceName: input.persona.geminiVoice }
           }
         }
       }

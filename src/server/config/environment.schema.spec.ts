@@ -74,7 +74,7 @@ describe("validateEnvironment", () => {
       livekitApiKey: undefined,
       livekitApiSecret: undefined,
       deepgramApiKey: undefined,
-      deepgramTtsModel: "aura-asteria-en",
+      deepgramTtsModel: "aura-2-asteria-en",
       judge0Url: "https://judge0-ce.p.rapidapi.com",
       rapidApiKey: undefined,
       rapidApiHost: "judge0-ce.p.rapidapi.com"

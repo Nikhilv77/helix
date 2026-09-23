@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
+import {
+  interactiveResponseError,
+  type InteractiveWork,
+  type PracticeInteraction
+} from "../domain/interactive-response";
 
 export type StoryPracticeWork =
+  | InteractiveWork
   | { kind: "choice"; selectedChoiceIndex: number }
   | { kind: "text"; text: string }
   | { kind: "code"; code: string; runId?: string };
@@ -8,6 +14,7 @@ export type StoryPracticeWork =
 type QuestionContract = {
   format: string;
   choices?: readonly string[];
+  interaction?: PracticeInteraction;
 };
 
 type WorkContractErrors = {
@@ -22,6 +29,15 @@ export function assertStoryPracticeWorkMatchesQuestion(
   executableFormats: ReadonlySet<string> = new Set(["debug-repair", "micro-implementation"])
 ): void {
   if (work === null) return;
+  if (question.interaction) {
+    if (
+      work.kind !== "interactive" ||
+      interactiveResponseError(question.interaction, work.response, false)
+    )
+      throw errors.format();
+    return;
+  }
+  if (work.kind === "interactive") throw errors.format();
   const executable = executableFormats.has(question.format);
   if (question.format === "mcq" && work.kind !== "choice") throw errors.format();
   if (executable && work.kind !== "code") throw errors.format();

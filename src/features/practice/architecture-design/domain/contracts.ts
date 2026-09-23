@@ -21,7 +21,7 @@ export const architectureDesignPublicationStatusSchema = z.enum([
   "published",
   "retired"
 ]);
-export const architectureDesignRoleSchema = z.enum(["backend", "fullstack"]);
+export const architectureDesignRoleSchema = z.enum(["backend", "fullstack", "ai-ml"]);
 export const architectureDesignSenioritySchema = z.enum(["junior", "mid", "senior"]);
 export const architectureDesignFamilySchema = z.enum([
   "asynchronous-delivery",

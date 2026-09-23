@@ -50,7 +50,7 @@ describe("Architecture & Design content release", () => {
   });
 
   it("keeps approved artifacts published and incomplete briefs draft-only", () => {
-    expect(ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE).toHaveLength(6);
+    expect(ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE).toHaveLength(8);
     expect(
       ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE.filter(
         ({ publicationStatus }) => publicationStatus === "published"
@@ -61,7 +61,9 @@ describe("Architecture & Design content release", () => {
       "marketplace-checkout-inventory",
       "collaborative-document-editing",
       "global-media-processing",
-      "search-autocomplete-platform"
+      "search-autocomplete-platform",
+      "retrieval-augmented-support-assistant",
+      "real-time-fraud-model-platform"
     ]);
     expect(
       ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE.filter(
@@ -69,10 +71,13 @@ describe("Architecture & Design content release", () => {
       ).map(({ key }) => key)
     ).toEqual(ARCHITECTURE_DESIGN_PROPOSED_SCENARIO_BRIEFS.map(({ key }) => key));
     expect(
+      ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE.filter(
+        ({ publicationStatus }) => publicationStatus === "review"
+      ).map(({ key }) => key)
+    ).toEqual([]);
+    expect(
       ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE.every(
-        ({ roles, dimensionKeys, architectureFamily }) =>
-          roles.includes("backend") &&
-          roles.includes("fullstack") &&
+        ({ dimensionKeys, architectureFamily }) =>
           dimensionKeys.length === architectureDesignDimensionSchema.options.length &&
           architectureFamily.length > 0
       )

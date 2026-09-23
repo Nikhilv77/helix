@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Clock3, Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
+import type { StoryPracticeLibraryExperience } from "./contracts";
+import type { ReactNode } from "react";
 import { humanizeStoryPracticeKey, storyPracticeQuestionMinutes } from "./presentation";
 import { StoryPracticeAssessment, type PublicAssessment } from "./story-practice-assessment";
 import { CoreTechnicalBlockAssessmentPreview } from "@/features/practice/core-technical/ui/core-technical-block-assessment-preview";
@@ -28,6 +30,8 @@ export type StoryPracticeOverviewProps = {
   storyHistory?: StoryPracticeHistoryListView;
   allowEarlyAssessmentStart?: boolean;
   experience: StoryPracticeOverviewExperience;
+  assessmentContent?: ReactNode;
+  libraryContent?: ReactNode;
 };
 
 export function StoryPracticeOverview({
@@ -36,6 +40,8 @@ export function StoryPracticeOverview({
   storyLibrary = [],
   storyHistory = [],
   allowEarlyAssessmentStart = false,
+  assessmentContent,
+  libraryContent,
   experience: resolvedExperience
 }: StoryPracticeOverviewProps) {
   const terminalCount = block.questions.filter(
@@ -148,37 +154,40 @@ export function StoryPracticeOverview({
               })}
             </ul>
 
-            {resolvedExperience.slug === "core-technical" ? (
-              <CoreTechnicalBlockAssessmentPreview
-                block={block}
-                terminalCount={terminalCount}
-                allowEarlyStart={allowEarlyAssessmentStart}
-              />
-            ) : (
-              <StoryPracticeAssessment
-                block={block}
-                terminalCount={terminalCount}
-                allowEarlyStart={allowEarlyAssessmentStart}
-                dedicatedRoom={false}
-                experience={resolvedExperience.assessment}
-              />
-            )}
+            {assessmentContent ??
+              (resolvedExperience.slug === "core-technical" ? (
+                <CoreTechnicalBlockAssessmentPreview
+                  block={block}
+                  terminalCount={terminalCount}
+                  allowEarlyStart={allowEarlyAssessmentStart}
+                />
+              ) : (
+                <StoryPracticeAssessment
+                  block={block}
+                  terminalCount={terminalCount}
+                  allowEarlyStart={allowEarlyAssessmentStart}
+                  dedicatedRoom={false}
+                  experience={resolvedExperience.assessment}
+                />
+              ))}
           </div>
 
-          <StoryLibrary
-            entries={storyLibrary}
-            history={storyHistory}
-            selectedBlockId={block.id}
-            selectedBlock={block}
-            experience={resolvedExperience}
-          />
+          {libraryContent ?? (
+            <StoryPracticePathLibrary
+              entries={storyLibrary}
+              history={storyHistory}
+              selectedBlockId={block.id}
+              selectedBlock={block}
+              experience={resolvedExperience}
+            />
+          )}
         </section>
       </div>
     </section>
   );
 }
 
-function StoryLibrary({
+export function StoryPracticePathLibrary({
   entries,
   history,
   selectedBlockId,
@@ -189,7 +198,7 @@ function StoryLibrary({
   history: StoryPracticeHistoryListView;
   selectedBlockId: string;
   selectedBlock: StoryPracticeBlockView;
-  experience: StoryPracticeOverviewExperience;
+  experience: StoryPracticeLibraryExperience;
 }) {
   const router = useRouter();
   const pendingPaths = useRef(new Set<string>());
@@ -257,9 +266,9 @@ function StoryLibrary({
         Explore all {experience.label}
       </h2>
       <p className="mt-2 max-w-[42rem] text-[14px] leading-6 text-cream/52">
-        {experience.libraryDescription} Practice any question; only the current{" "}
-        {experience.subjectNoun}
-        unlocks an assessment.
+        {experience.libraryDescription}{" "}
+        {experience.libraryHint ??
+          `Practice any question; only the current ${experience.subjectNoun} unlocks an assessment.`}
       </p>
 
       <div className="mt-4 space-y-3">
@@ -357,7 +366,7 @@ function StoryLibraryCard({
   startingOrder: number | null;
   startError: string | null;
   onQuestionOpen: ((order: number) => void) | null;
-  experience: StoryPracticeOverviewExperience;
+  experience: StoryPracticeLibraryExperience;
 }) {
   const totalQuestions = card.questions.length || card.history?.story.stages.length || 8;
   const progressed = card.history
@@ -365,11 +374,13 @@ function StoryLibraryCard({
     : 0;
   const percent = Math.round((progressed / Math.max(totalQuestions, 1)) * 100);
   const status = card.history
-    ? card.history.status === "ASSESSED"
+    ? card.history.status === "ASSESSED" || card.history.status === "COMPLETED"
       ? "Completed"
       : card.history.isCurrent
         ? "Current"
-        : "In progress"
+        : progressed
+          ? "In progress"
+          : "Not started"
     : "Not started";
   const className = `group overflow-hidden rounded-[1.2rem] border bg-[#17181b] transition duration-200 ${selected ? "border-[var(--workspace-accent-border)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_0_0_1px_var(--workspace-accent-soft),0_18px_48px_rgba(0,0,0,0.24)]" : card.history ? "border-white/[0.075] hover:border-white/[0.14] hover:bg-[#191a1e]" : "border-white/[0.055] bg-[#141518] hover:border-white/[0.11]"}`;
   const summary = (

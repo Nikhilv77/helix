@@ -34,6 +34,9 @@ export type ArchitectureDesignScenarioSeed = {
   title: string;
   premise: string;
   candidateRole: string;
+  roles?: Array<"backend" | "fullstack" | "ai-ml">;
+  reviewStatus?: "candidate" | "approved";
+  reviewerId?: string;
   functionalRequirements: string[];
   nonGoals: string[];
   constraints: string[];
@@ -53,6 +56,13 @@ export type ArchitectureDesignScenarioSeed = {
 export function reviewedArchitectureDesignArtifact(
   seed: ArchitectureDesignScenarioSeed
 ): ArchitectureDesignReviewArtifact {
+  if (
+    seed.roles?.includes("ai-ml") &&
+    seed.reviewStatus === "approved" &&
+    (!seed.reviewerId?.trim() || !seed.reviewedAt)
+  ) {
+    throw new Error("AI/ML Architecture approval requires an explicit human reviewer and date");
+  }
   const questions = seed.questions.map((question, index) =>
     questionFrom(seed.key, index, question)
   );
@@ -77,7 +87,7 @@ export function reviewedArchitectureDesignArtifact(
       nonGoals: seed.nonGoals,
       constraints: seed.constraints,
       scaleProfile: seed.scaleProfile,
-      roles: ["backend", "fullstack"],
+      roles: seed.roles ?? ["backend", "fullstack"],
       seniorities: ["junior", "mid", "senior"],
       difficulties: seed.difficulties,
       primaryTopicKey: seed.primaryTopicKey,
@@ -104,12 +114,17 @@ export function reviewedArchitectureDesignArtifact(
     },
     questionBlock: { schemaVersion: 1, scenarioKey: seed.key, questions },
     humanReview: {
-      status: "approved",
-      reviewerId: "project-owner",
-      reviewedAt: seed.reviewedAt ?? "2026-09-08",
-      notes: [
-        "Project owner approved this AI-assisted scenario after its schema, coherence, coverage, and privacy audits passed."
-      ]
+      status: seed.reviewStatus ?? "approved",
+      reviewerId: seed.reviewStatus === "candidate" ? null : (seed.reviewerId ?? "project-owner"),
+      reviewedAt: seed.reviewStatus === "candidate" ? null : (seed.reviewedAt ?? "2026-09-08"),
+      notes:
+        seed.reviewStatus === "candidate"
+          ? [
+              "AI/ML scenario draft: requires project-owner review before publication or candidate delivery."
+            ]
+          : [
+              "Project owner approved this AI-assisted scenario after its schema, coherence, coverage, and privacy audits passed."
+            ]
     }
   });
 }

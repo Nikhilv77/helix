@@ -141,7 +141,7 @@ export const environmentSchema = z
     DEEPGRAM_API_KEY: z.string().optional(),
     // Maya's voice. Matches TRAILGRAD_TTS_MODEL in the agent so the coach in the
     // workspace and the interviewer in the room sound like the same person.
-    DEEPGRAM_TTS_MODEL: z.string().min(1).default("aura-asteria-en"),
+    DEEPGRAM_TTS_MODEL: z.string().min(1).default("aura-2-asteria-en"),
     JUDGE0_URL: z.string().url().default("https://judge0-ce.p.rapidapi.com"),
     RAPIDAPI_KEY: z.string().optional(),
     RAPIDAPI_HOST: z.string().min(1).default("judge0-ce.p.rapidapi.com")

@@ -12,6 +12,10 @@ import { appliedEngineeringPracticeEntry } from "@/features/practice/applied-eng
 import type { AppliedEngineeringEligibility } from "@/features/practice/applied-engineering/server/eligibility.service";
 import { architectureDesignPracticeEntry } from "@/features/practice/architecture-design/domain/ui-state";
 import type { ArchitectureDesignEligibility } from "@/features/practice/architecture-design/server/eligibility.service";
+import { aiMlPracticeQuestionCount } from "@/features/practice/ai-ml/domain/ai-ml-story-catalog";
+import type { AiMlPracticeEntry } from "@/features/practice/shared/domain/practice-roadmap";
+import type { AiMlPracticeSummary } from "@/features/practice/ai-ml/server/ai-ml-practice.service";
+import { includesDsaPulse } from "@/features/preparation-onboarding/domain/preparation-onboarding";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
@@ -25,6 +29,7 @@ export default async function PracticePage() {
   const { ownerId, profile } = await requireOnboardedProfile();
   const container = getAppContainer();
   let generationFailed = false;
+  let aiMlProgressFailed = false;
   const [
     practiceRoadmap,
     activity,
@@ -39,7 +44,8 @@ export default async function PracticePage() {
     appliedEngineeringAnalytics,
     architectureDesignEligibility,
     architectureDesignBlock,
-    architectureDesignAnalytics
+    architectureDesignAnalytics,
+    aiMlSummaries
   ] = await Promise.all([
     container.practiceRoadmapService.home(ownerId).catch((error) => {
       generationFailed = true;
@@ -68,21 +74,40 @@ export default async function PracticePage() {
     container.appliedEngineeringWorkspaceAnalyticsService.practice(ownerId, 7).catch(() => null),
     container.architectureDesign.eligibility
       .forProfile(profile)
-      .catch((): ArchitectureDesignEligibility => unavailableArchitectureDesign()),
+      .catch((error): ArchitectureDesignEligibility => {
+        logger.error({
+          event: "practice.architecture_eligibility_read_failed",
+          ownerId,
+          reason: error instanceof Error ? error.message : "unknown"
+        });
+        return unavailableArchitectureDesign();
+      }),
     container.architectureDesign.practice.current(ownerId).catch(() => null),
-    container.architectureDesign.workspaceAnalytics.practice(ownerId, 7).catch(() => null)
+    container.architectureDesign.workspaceAnalytics.practice(ownerId, 7).catch(() => null),
+    profile.targetRole === "ai-ml"
+      ? container.aiMlPracticeService.summaries(ownerId).catch((error) => {
+          aiMlProgressFailed = true;
+          logger.error({
+            event: "practice.ai_ml_progress_read_failed",
+            ownerId,
+            reason: error instanceof Error ? error.message : "unknown"
+          });
+          return [];
+        })
+      : Promise.resolve([])
   ]);
-  const dsaRecommendation = dsaPlan
-    ? await buildStableDsaRecommendation({
-        ownerId,
-        plan: dsaPlan,
-        profile,
-        evidence: practiceEvidence,
-        statuses: questionStatuses,
-        blockStore: container.dsaPracticeBlockStore,
-        finalizationService: container.dsaBlockAssessmentFinalizationService
-      })
-    : null;
+  const dsaRecommendation =
+    dsaPlan && includesDsaPulse(profile.targetRole ?? "fullstack")
+      ? await buildStableDsaRecommendation({
+          ownerId,
+          plan: dsaPlan,
+          profile,
+          evidence: practiceEvidence,
+          statuses: questionStatuses,
+          blockStore: container.dsaPracticeBlockStore,
+          finalizationService: container.dsaBlockAssessmentFinalizationService
+        })
+      : null;
   const dsaBlockCompletedQuestions =
     dsaRecommendation?.questions.filter(
       (question) => questionStatuses[question.slug] === "COMPLETED"
@@ -135,15 +160,104 @@ export default async function PracticePage() {
           : null
       }
       generationFailed={generationFailed}
+      aiMlProgressFailed={aiMlProgressFailed}
+      aiMlEntries={
+        profile.targetRole === "ai-ml"
+          ? aiMlPracticeEntries(
+              aiMlSummaries,
+              architectureDesignPracticeEntry(
+                architectureDesignEligibility,
+                architectureDesignBlock
+              )
+            )
+          : []
+      }
     />
   );
+}
+
+function aiMlPracticeEntries(
+  summaries: AiMlPracticeSummary[],
+  architecture: ReturnType<typeof architectureDesignPracticeEntry>
+): AiMlPracticeEntry[] {
+  const summaryByTrack = new Map(summaries.map((summary) => [summary.track, summary]));
+  const core = summaryByTrack.get("core-technical");
+  const applied = summaryByTrack.get("applied-engineering");
+  return [
+    {
+      key: "ai-ml-core-technical",
+      order: 1,
+      title: "Core Technical · AI/ML",
+      purpose: "Reason through models, evaluation, data quality, retrieval, and ML fundamentals.",
+      covers: ["Model evaluation", "Data and features", "Retrieval and LLM reasoning"],
+      difficulty: "guided",
+      durationMinutes: 35,
+      availability: "available",
+      status: progressStatus(
+        core?.completedQuestions ?? 0,
+        core?.totalQuestions ?? aiMlPracticeQuestionCount("core-technical")
+      ),
+      totalQuestions: core?.totalQuestions ?? aiMlPracticeQuestionCount("core-technical"),
+      attemptedQuestions: core?.completedQuestions ?? 0,
+      completedQuestions: core?.completedQuestions ?? 0,
+      progressPercent: core?.progressPercent ?? 0,
+      href: "/practice/ai-ml/core-technical"
+    },
+    {
+      key: "ai-ml-applied-engineering",
+      order: 2,
+      title: "Applied Engineering · AI/ML",
+      purpose:
+        "Diagnose realistic production model, retrieval, safety, latency, and rollout problems.",
+      covers: ["Production diagnosis", "Safe model delivery", "Observability and operations"],
+      difficulty: "guided",
+      durationMinutes: 40,
+      availability: "available",
+      status: progressStatus(
+        applied?.completedQuestions ?? 0,
+        applied?.totalQuestions ?? aiMlPracticeQuestionCount("applied-engineering")
+      ),
+      totalQuestions: applied?.totalQuestions ?? aiMlPracticeQuestionCount("applied-engineering"),
+      attemptedQuestions: applied?.completedQuestions ?? 0,
+      completedQuestions: applied?.completedQuestions ?? 0,
+      progressPercent: applied?.progressPercent ?? 0,
+      href: "/practice/ai-ml/applied-engineering"
+    },
+    {
+      key: "ai-ml-architecture-design",
+      order: 3,
+      title: "Architecture & Design · AI/ML",
+      purpose:
+        "Design production AI systems across data, serving, retrieval, evaluation, and safety.",
+      covers: [
+        "Requirements and data flow",
+        "Model and retrieval architecture",
+        "Scale and reliability"
+      ],
+      difficulty: architecture.difficulty ?? "adaptive",
+      durationMinutes: architecture.durationMinutes ?? 45,
+      availability: architecture.availability,
+      availabilityLabel: architecture.availabilityLabel,
+      status: architecture.status,
+      totalQuestions: architecture.totalQuestions,
+      attemptedQuestions: architecture.attemptedQuestions,
+      completedQuestions: architecture.completedQuestions,
+      progressPercent: architecture.progressPercent,
+      href: architecture.href
+    }
+  ];
+}
+
+function progressStatus(completed: number, total: number): "ACTIVE" | "IN_PROGRESS" | "COMPLETED" {
+  if (total > 0 && completed >= total) return "COMPLETED";
+  return completed > 0 ? "IN_PROGRESS" : "ACTIVE";
 }
 
 function unavailableArchitectureDesign(): ArchitectureDesignEligibility {
   return {
     available: false,
     reason: "CONTENT_UNAVAILABLE",
-    message: "The reviewed Architecture & Design scenario path is not available yet.",
+    message: "Architecture & Design availability could not be checked. Please refresh the page.",
     requiredScenarioCount: 2,
     publishedScenarioCount: 0,
     scenarios: []

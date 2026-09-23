@@ -74,6 +74,28 @@ describe("email channel", () => {
     expect(attachment!.content.length).toBeGreaterThan(1_000);
   });
 
+  it("drops malformed persisted HTML and sends the plaintext fallback", async () => {
+    const send = vi.fn().mockResolvedValue({ ok: true });
+    global.fetch = send as unknown as typeof fetch;
+    const channel = new EmailChannel(
+      "re_test",
+      "Trailgrad <hello@trailgrad.com>",
+      async () => "candidate@example.com"
+    );
+
+    await channel.send("candidate-1", {
+      subject: "Your practice path is ready",
+      text: "Your practice path is ready.",
+      html: '<html><body style="margin:0">style="margin:0">Broken</body></html>'
+    });
+
+    const request = send.mock.calls[0]![1] as { body: string };
+    const body = JSON.parse(request.body) as Record<string, unknown>;
+    expect(body.text).toBe("Your practice path is ready.");
+    expect(body).not.toHaveProperty("html");
+    expect(body).not.toHaveProperty("attachments");
+  });
+
   it("keeps email disabled when no API key is configured", async () => {
     const send = vi.fn();
     global.fetch = send as unknown as typeof fetch;

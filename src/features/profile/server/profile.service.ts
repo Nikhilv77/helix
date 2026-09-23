@@ -42,6 +42,30 @@ export type DsaEditorLanguagePreference = "javascript" | "python" | "cpp" | "jav
 export class ProfileService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Small auth/redirect projection for onboarding routes. Avoids loading the
+   * resume JSON and immutable profile snapshot when only flow state is needed. */
+  async onboardingState(ownerId: string): Promise<{
+    onboardingCompletedAt: number | null;
+    teacherId: string | null;
+    level: Level | null;
+  }> {
+    const stored = await this.prisma.candidateProfile.findUnique({
+      where: { ownerId },
+      select: {
+        onboardingCompletedAt: true,
+        teacherId: true,
+        level: true
+      }
+    });
+    const level = stored?.level ?? null;
+
+    return {
+      onboardingCompletedAt: stored?.onboardingCompletedAt?.getTime() ?? null,
+      teacherId: stored?.teacherId ?? null,
+      level: isLevel(level) ? level : null
+    };
+  }
+
   /** Maya's plan is generated once and reused until the resume changes. */
   async curriculum(ownerId: string): Promise<Curriculum | null> {
     const stored = await this.prisma.candidateProfile.findUnique({
@@ -242,7 +266,7 @@ export class ProfileService {
         evidence: ResumeEvidenceSummary;
       };
     }
-  ): Promise<CandidateProfile> {
+  ): Promise<void> {
     const now = new Date();
     const analysis = {
       fullName: input.resume.fullName,
@@ -325,7 +349,6 @@ export class ProfileService {
       });
     });
 
-    return this.get(ownerId);
   }
 
   /**

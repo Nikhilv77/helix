@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   architectureDesignEligibility: vi.fn(),
   architectureDesignCurrent: vi.fn(),
   architectureDesignAnalytics: vi.fn(),
+  aiMlSummaries: vi.fn(),
   logError: vi.fn()
 }));
 
@@ -45,7 +46,8 @@ vi.mock("@/server/app-container", () => ({
       eligibility: { forProfile: mocks.architectureDesignEligibility },
       practice: { current: mocks.architectureDesignCurrent },
       workspaceAnalytics: { practice: mocks.architectureDesignAnalytics }
-    }
+    },
+    aiMlPracticeService: { summaries: mocks.aiMlSummaries }
   })
 }));
 
@@ -97,6 +99,7 @@ describe("PracticePage", () => {
     });
     mocks.architectureDesignCurrent.mockResolvedValue(null);
     mocks.architectureDesignAnalytics.mockResolvedValue(null);
+    mocks.aiMlSummaries.mockResolvedValue([]);
   });
 
   it("does not reach the Practice generator when the onboarding guard rejects access", async () => {
@@ -144,12 +147,77 @@ describe("PracticePage", () => {
     expect(screen.getByRole("link", { name: /DSA.*Start session/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Architecture & Design" })).toBeInTheDocument();
     expect(
-      screen.getByText("The reviewed Architecture & Design scenario path is not available yet.")
+      screen.getByText("Architecture & Design availability could not be checked. Please refresh the page.")
     ).toBeInTheDocument();
     expect(screen.getByRole("article", { name: /Architecture & Design/i })).toHaveAttribute(
       "aria-disabled",
       "true"
     );
+  });
+
+  it("shows the three AI/ML sessions and hides DSA", async () => {
+    mocks.requireOnboardedProfile.mockResolvedValue({
+      userId: "user-1",
+      ownerId: "owner-1",
+      profile: {
+        targetRole: "ai-ml",
+        level: "0-2",
+        resume: { fullName: "Asha Verma" }
+      } as CandidateProfile
+    });
+    mocks.home.mockResolvedValue(practiceRoadmap());
+
+    render(await PracticePage());
+
+    expect(screen.queryByRole("heading", { name: "DSA" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Core Technical · AI/ML" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Applied Engineering · AI/ML" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Architecture & Design · AI/ML" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("article", { name: /Architecture & Design · AI\/ML/i })
+    ).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("links AI/ML Architecture when a reviewed scenario is available", async () => {
+    mocks.requireOnboardedProfile.mockResolvedValue({
+      userId: "user-1",
+      ownerId: "owner-1",
+      profile: { targetRole: "ai-ml", resume: { fullName: "Asha Verma" } } as CandidateProfile
+    });
+    mocks.home.mockResolvedValue(practiceRoadmap());
+    mocks.architectureDesignEligibility.mockResolvedValue({ available: true });
+
+    render(await PracticePage());
+
+    expect(screen.getByRole("link", { name: /Architecture & Design · AI\/ML/i })).toHaveAttribute(
+      "href",
+      "/practice/architecture-design"
+    );
+  });
+
+  it("warns rather than silently claiming zero AI/ML progress when the database read fails", async () => {
+    mocks.requireOnboardedProfile.mockResolvedValue({
+      userId: "user-1",
+      ownerId: "owner-1",
+      profile: { targetRole: "ai-ml", resume: { fullName: "Asha Verma" } } as CandidateProfile
+    });
+    mocks.home.mockResolvedValue(practiceRoadmap());
+    mocks.aiMlSummaries.mockRejectedValue(new Error("temporary database error"));
+
+    render(await PracticePage());
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Your saved AI/ML progress is temporarily unavailable"
+    );
+    expect(mocks.logError).toHaveBeenCalledWith({
+      event: "practice.ai_ml_progress_read_failed",
+      ownerId: "owner-1",
+      reason: "temporary database error"
+    });
   });
 });
 

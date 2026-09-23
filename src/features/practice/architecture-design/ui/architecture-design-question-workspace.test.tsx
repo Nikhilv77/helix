@@ -19,8 +19,8 @@ vi.mock("@/features/practice/shared/ui/story-practice-question-workspace", () =>
 }));
 
 vi.mock("@/features/interviews/ui/voice/components/system-design-canvas", () => ({
-  SystemDesignCanvas: ({ storageKey }: { storageKey?: string }) => (
-    <div data-testid="system-design-canvas">{storageKey}</div>
+  SystemDesignCanvas: ({ practiceBlockId }: { practiceBlockId?: string }) => (
+    <div data-testid="system-design-canvas">{practiceBlockId}</div>
   )
 }));
 
@@ -47,9 +47,7 @@ describe("ArchitectureDesignQuestionWorkspace", () => {
     );
     renderWorkspace(3, "artifact-diagnosis");
 
-    expect(screen.getByTestId("system-design-canvas")).toHaveTextContent(
-      "practice:block-architecture"
-    );
+    expect(screen.getByTestId("system-design-canvas")).toHaveTextContent("block-architecture");
     expect(screen.getByTestId("prompt-labels")).toHaveTextContent(
       "Outcome|Why it happens|Production consequence|How to fix"
     );

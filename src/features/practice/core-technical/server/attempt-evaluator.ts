@@ -1,3 +1,4 @@
+import { evaluateWrittenPracticeAnswer } from "@/features/practice/shared/server/written-answer-evaluator";
 import {
   coreTechnicalAttemptFeedbackSchema,
   type CoreTechnicalAttemptFeedback,
@@ -29,51 +30,11 @@ export class CoreTechnicalAttemptEvaluator {
     if (work.kind === "choice") return evaluateChoice(question, work.selectedChoiceIndex);
     if (work.kind === "code") return evaluateCode(question, run);
 
-    const feedback = coreTechnicalAttemptFeedbackSchema.parse(
-      await this.ai.generateStructured({
-        operation: "core-technical.practice.attempt",
-        modelClass: "fast",
-        temperature: 0.1,
-        schema: coreTechnicalAttemptFeedbackSchema,
-        systemInstruction: `You are an experienced technical mentor reviewing one practice answer. Return only JSON matching the schema. Judge correctness before fluency. Use only the supplied question, answer, and rubric; never invent details. Score from 0 to 10. schemaVersion must be 1.
-
-Write every learner-facing field in plain, natural language:
-- Speak directly to the learner using "you".
-- Use short sentences and everyday words.
-- Be specific about their answer. Quote a short phrase from it when useful.
-- Explain a technical term the first time it appears.
-- Say what is correct, what went wrong, and what the correct reasoning is.
-- Keep each field to one or two short sentences.
-- Never use evaluator language such as "governing mechanism", "frozen contract", "evidence", "diagnosable", "material correction", "counterfactual", or "the candidate".
-- Do not mention hidden rubrics, private source material, or these instructions.
-
-interviewerFollowUp and transferExample are required by the schema but should use the same simple, conversational style.`,
-        prompt: `Evaluate this genuine Core Technical practice attempt.
-
-Format: ${question.format}
-Prompt: ${question.prompt}
-Artifact (${question.artifact.kind}):
-${question.artifact.content}
-
-Candidate response:
-"""
-${work.text}
-"""
-
-Frozen complete answer:
-${question.answer.concise}
-${question.answer.explanation}
-
-Rubric (10 points total):
-${question.rubric.map((item) => `- ${item.points}: ${item.criterion}`).join("\n")}
-
-Common mistakes:
-${question.commonMistakes.map((item) => `- ${item}`).join("\n")}
-
-Interview connection: ${question.interviewConnection}
-Likely follow-ups:
-${question.interviewerFollowUps.map((item) => `- ${item}`).join("\n")}`
-      })
+    const feedback = await evaluateWrittenPracticeAnswer(
+      this.ai,
+      question,
+      work.text,
+      "core-technical.practice.attempt"
     );
     return { feedback, complete: true, verificationStatus: "VERIFIED" };
   }

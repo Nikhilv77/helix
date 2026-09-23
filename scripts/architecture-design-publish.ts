@@ -1,7 +1,7 @@
 import { config as loadEnvFile } from "dotenv";
 
 import {
-  ARCHITECTURE_DESIGN_REVIEW_CANDIDATES,
+  ARCHITECTURE_DESIGN_CONTENT_CANDIDATES,
   ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE,
   auditArchitectureDesignContent
 } from "../src/features/practice/architecture-design/domain";
@@ -9,11 +9,33 @@ import { buildArchitectureDesignPublicationPayloads } from "../src/features/prac
 import { ArchitectureDesignPersistenceService } from "../src/features/practice/architecture-design/server/persistence.service";
 import { PrismaService } from "../src/server/database/prisma.service";
 
-loadEnvFile({ path: ".env.local" });
+// Prisma's import can load .env before this module runs. Force the verified
+// local database back into the process before constructing PrismaService.
+const localEnvironment = loadEnvFile({ path: ".env.local", override: true });
+if (!localEnvironment.parsed?.DATABASE_URL) {
+  throw new Error("Architecture publication requires DATABASE_URL in .env.local.");
+}
 loadEnvFile();
 
 async function main(): Promise<void> {
-  const audits = ARCHITECTURE_DESIGN_REVIEW_CANDIDATES.map((artifact) => ({
+  const requestedScenarioKeys = new Set<string>();
+  for (const argument of process.argv.slice(2)) {
+    if (!argument.startsWith("--scenario=") || argument.length === "--scenario=".length) {
+      throw new Error(`Unsupported argument: ${argument}`);
+    }
+    requestedScenarioKeys.add(argument.slice("--scenario=".length));
+  }
+  const approved = ARCHITECTURE_DESIGN_CONTENT_CANDIDATES.filter(
+    (artifact) =>
+      artifact.humanReview.status === "approved" &&
+      (requestedScenarioKeys.size === 0 || requestedScenarioKeys.has(artifact.caseKey))
+  );
+  for (const requested of requestedScenarioKeys) {
+    if (!approved.some((artifact) => artifact.caseKey === requested)) {
+      throw new Error(`No approved Architecture scenario with key: ${requested}`);
+    }
+  }
+  const audits = approved.map((artifact) => ({
     caseKey: artifact.caseKey,
     ...auditArchitectureDesignContent(artifact)
   }));
@@ -28,7 +50,7 @@ async function main(): Promise<void> {
   }
 
   const payloads = buildArchitectureDesignPublicationPayloads(
-    ARCHITECTURE_DESIGN_REVIEW_CANDIDATES,
+    approved,
     ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE
   );
   const prisma = new PrismaService();
@@ -36,7 +58,7 @@ async function main(): Promise<void> {
     await prisma.connect();
     const persistence = new ArchitectureDesignPersistenceService(prisma);
     const published = [];
-    for (const artifact of ARCHITECTURE_DESIGN_REVIEW_CANDIDATES) {
+    for (const artifact of approved) {
       const scenarioVersion = await persistence.publishReviewedScenarioVersion(artifact);
       const payload = payloads.find(
         ({ scenarioKey }) => scenarioKey === scenarioVersion.scenarioKey

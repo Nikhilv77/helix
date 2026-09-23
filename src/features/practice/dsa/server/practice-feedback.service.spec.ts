@@ -1,3 +1,4 @@
+import { personaById } from "@/lib/avatars/personas";
 import {
   DsaPracticeFeedbackService,
   buildDsaPracticeFeedbackPrompt
@@ -36,7 +37,7 @@ describe("DsaPracticeFeedbackService", () => {
       teacherId: "olivia"
     });
 
-    expect(prompt).toContain("Olivia — Sharp and fast");
+    expect(prompt).toContain(`Olivia — ${personaById("olivia")!.manner}`);
     expect(prompt).toContain("2/2 supplied tests passed");
     expect(prompt).toContain('"### What you did well"');
     expect(prompt).toContain('Do not say "all tests prove this is correct"');

@@ -13,6 +13,7 @@ import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { LEVELS, ROLES } from "@/features/interviews/server/types";
+import { verifyResumePreview } from "@/features/profile/server/resume-preview-token";
 
 export const dynamic = "force-dynamic";
 
@@ -32,9 +33,13 @@ const completeSchema = z.object({
     .max(60)
     .nullish()
     .transform((id) => selectableTeacherById(id)?.id ?? null),
-  resumeFile: resumeFileSchema,
-  extraction: resumeExtractionSchema
-});
+  resumeFile: resumeFileSchema.extend({
+    contentFingerprint: z.string().regex(/^sha256-[a-f0-9]{64}$/)
+  }),
+  extraction: resumeExtractionSchema,
+  confirmationToken: z.string().regex(/^[a-f0-9]{64}$/),
+  previewExpiresAt: z.number().int().positive()
+}).strict();
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +57,27 @@ export async function POST(request: NextRequest) {
 
     const ownerId = authenticatedOwnerId(userId);
     const app = getAppContainer();
-    const existing = await app.profileService.get(ownerId);
+    const { targetRole, level, teacherId, extraction, resumeFile, confirmationToken, previewExpiresAt } =
+      body.data;
+    const signingSecret = app.config.interviewAuthSecret;
+    if (
+      !signingSecret ||
+      !verifyResumePreview(
+        { resumeFile, extraction },
+        ownerId,
+        previewExpiresAt,
+        confirmationToken,
+        signingSecret
+      )
+    ) {
+      throw new ApiRouteError(
+        409,
+        "RESUME_PREVIEW_EXPIRED",
+        "This resume preview expired or changed. Analyse the file again."
+      );
+    }
+
+    const existing = await app.profileService.onboardingState(ownerId);
     if (existing.onboardingCompletedAt) {
       throw new ApiRouteError(
         409,
@@ -60,8 +85,7 @@ export async function POST(request: NextRequest) {
         "Use the resume update review to replace an existing resume."
       );
     }
-    const { targetRole, level, teacherId, extraction, resumeFile } = body.data;
-    const profile = await app.profileService.completeOnboarding(ownerId, {
+    await app.profileService.completeOnboarding(ownerId, {
       targetRole,
       level,
       teacherId,
@@ -88,49 +112,55 @@ export async function POST(request: NextRequest) {
         evidence: extraction.evidence
       }
     });
-    const frontendRoadmap =
-      targetRole === "fullstack"
-        ? await app.frontendRoadmapService.ensureFrontendRoadmap(ownerId)
-        : null;
-
     logger.log(
       JSON.stringify({
         event: "onboarding.completed",
         ownerId,
         targetRole,
         level,
-        frontendRoadmapId: frontendRoadmap?.roadmapId ?? null
+        frontendRoadmapDeferred: targetRole === "fullstack"
       })
     );
 
-    // Welcome delivery is durable and idempotent, but it must never hold the
-    // onboarding response hostage to Clerk or the email provider.
-    after(() =>
-      app.teacherNotificationService
-        .welcome({
+    // These writes are durable/idempotent but are not required for the browser
+    // to enter the product. Run them concurrently after the response instead
+    // of adding roadmap, Clerk, and email latency to the completion click.
+    after(async () => {
+      const [roadmapResult, welcomeResult] = await Promise.allSettled([
+        targetRole === "fullstack"
+          ? app.frontendRoadmapService.ensureFrontendRoadmap(ownerId)
+          : Promise.resolve(null),
+        app.teacherNotificationService.welcome({
           ownerId,
           teacherId,
           candidateName: extraction.fullName,
           targetRole,
           focusAreas: extraction.focusAreas
         })
-        .catch((error) =>
-          logger.error(
-            JSON.stringify({
-              event: "teacher.welcome.failed",
-              ownerId,
-              reason: error instanceof Error ? error.message : String(error)
-            })
-          )
-        )
-    );
-
-    return apiSuccess({
-      profile,
-      resumeFile,
-      extraction,
-      frontendRoadmap
+      ]);
+      if (roadmapResult.status === "rejected") {
+        logger.error(
+          JSON.stringify({
+            event: "onboarding.roadmap.failed",
+            ownerId,
+            reason: describeError(roadmapResult.reason)
+          })
+        );
+      }
+      if (welcomeResult.status === "rejected") {
+        logger.error(
+          JSON.stringify({
+            event: "teacher.welcome.failed",
+            ownerId,
+            reason: describeError(welcomeResult.reason)
+          })
+        );
+      }
     });
+
+    const response = apiSuccess({ completed: true as const });
+    response.headers.set("cache-control", "no-store");
+    return response;
   } catch (error) {
     if (!(error instanceof ApiRouteError)) {
       logger.error(
@@ -143,4 +173,8 @@ export async function POST(request: NextRequest) {
     }
     return apiError(error, request.nextUrl.pathname);
   }
+}
+
+function describeError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

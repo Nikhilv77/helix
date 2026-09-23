@@ -462,14 +462,24 @@ html[data-theme="light"] .trailgrad-auth-close {
 
 .onboarding-theme {
   background:
-    radial-gradient(42rem 28rem at 50% 0%, rgba(242, 110, 1, 0.032), transparent 72%), #080909;
+    radial-gradient(28rem 20rem at 8% 4%, rgba(242, 110, 1, 0.1), transparent 72%),
+    radial-gradient(24rem 18rem at 94% 10%, rgba(255, 208, 157, 0.04), transparent 74%),
+    radial-gradient(26rem 20rem at 92% 96%, rgba(186, 58, 2, 0.06), transparent 74%),
+    linear-gradient(180deg, #090a0b 0%, #080909 100%);
+}
+
+html.dark .onboarding-theme .onboarding-blueprint-backdrop,
+html[data-theme="dark"] .onboarding-theme .onboarding-blueprint-backdrop {
+  display: none;
 }
 
 html.light .onboarding-theme,
 html[data-theme="light"] .onboarding-theme {
   color-scheme: light;
   background:
-    radial-gradient(48rem 32rem at 50% 0%, rgba(242, 110, 1, 0.06), transparent 72%),
+    radial-gradient(28rem 20rem at 8% 4%, rgba(242, 110, 1, 0.12), transparent 72%),
+    radial-gradient(24rem 18rem at 94% 10%, rgba(255, 208, 157, 0.12), transparent 74%),
+    radial-gradient(26rem 20rem at 92% 96%, rgba(242, 110, 1, 0.07), transparent 74%),
     linear-gradient(180deg, #fafafc 0%, #f5f3f0 100%);
   --color-ink-rgb: 15 23 42;
   --color-muted-rgb: 100 116 139;
@@ -678,8 +688,6 @@ html[data-theme="light"] .onboarding-theme .identity-progress-line {
 html.light .onboarding-theme .teacher-carousel-scene,
 html[data-theme="light"] .onboarding-theme .teacher-carousel-scene {
   border: 0;
-  /* The same composition as the public hero, flipped: warm accent enters
-     from the top and settles into clean paper below the teacher. */
   background:
     radial-gradient(50% 34% at 50% -4%, rgba(255, 178, 88, 0.82) 0%, rgba(255, 178, 88, 0) 72%),
     radial-gradient(76% 56% at 50% -9%, rgba(242, 110, 1, 0.78) 0%, rgba(242, 110, 1, 0) 74%),

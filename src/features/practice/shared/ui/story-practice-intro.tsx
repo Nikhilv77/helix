@@ -15,9 +15,15 @@ export type StoryPracticeIntroProps = {
   block: StoryPracticeBlockView;
   terminalCount: number;
   experience: StoryPracticeIntroExperience;
+  hidePathEyebrow?: boolean;
 };
 
-export function StoryPracticeIntro({ block, terminalCount, experience }: StoryPracticeIntroProps) {
+export function StoryPracticeIntro({
+  block,
+  terminalCount,
+  experience,
+  hidePathEyebrow = false
+}: StoryPracticeIntroProps) {
   const teacher = useWorkspaceTeacher();
   const { state, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
   const speaking = state === "speaking";
@@ -99,9 +105,11 @@ export function StoryPracticeIntro({ block, terminalCount, experience }: StoryPr
 
       <section className="relative mt-6 flex flex-col overflow-hidden rounded-2xl border border-white/[0.085] bg-[#141619] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:mt-7 md:block md:min-h-[13.5rem]">
         <div className="relative z-20 order-2 flex max-w-none flex-col items-start justify-start px-5 py-7 sm:px-7 md:min-h-[13.5rem] md:max-w-[52%] md:justify-center lg:px-8">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--workspace-accent)]">
-            {capitalize(experience.subjectNoun)} {block.ordinal} · {block.selection.difficulty}
-          </p>
+          {!hidePathEyebrow ? (
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--workspace-accent)]">
+              {capitalize(experience.subjectNoun)} {block.ordinal} · {block.selection.difficulty}
+            </p>
+          ) : null}
           <h2 className="mt-3 font-display text-[1.55rem] font-semibold leading-tight tracking-[-0.025em] text-cream sm:text-[1.7rem]">
             {block.story.title}
           </h2>
@@ -169,7 +177,6 @@ export function StoryPracticeIntro({ block, terminalCount, experience }: StoryPr
           )}
           Listen
         </button>
-
       </section>
     </div>
   );

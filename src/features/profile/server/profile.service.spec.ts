@@ -8,6 +8,41 @@ const VERSION_ID = "11111111-1111-4111-8111-111111111111";
 const FINGERPRINT = `sha256-${"a".repeat(64)}`;
 const NOW = new Date("2026-09-03T10:00:00.000Z");
 
+describe("onboarding state projection", () => {
+  it("reads only the fields required to enter the onboarding flow", async () => {
+    const findUnique = vi.fn().mockResolvedValue({
+      onboardingCompletedAt: NOW,
+      teacherId: "sophia",
+      level: "3-5"
+    });
+    const service = new ProfileService({
+      candidateProfile: { findUnique }
+    } as unknown as PrismaService);
+
+    await expect(service.onboardingState(OWNER_ID)).resolves.toEqual({
+      onboardingCompletedAt: NOW.getTime(),
+      teacherId: "sophia",
+      level: "3-5"
+    });
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { ownerId: OWNER_ID },
+      select: { onboardingCompletedAt: true, teacherId: true, level: true }
+    });
+  });
+
+  it("returns safe defaults when no profile exists", async () => {
+    const service = new ProfileService({
+      candidateProfile: { findUnique: vi.fn().mockResolvedValue(null) }
+    } as unknown as PrismaService);
+
+    await expect(service.onboardingState(OWNER_ID)).resolves.toEqual({
+      onboardingCompletedAt: null,
+      teacherId: null,
+      level: null
+    });
+  });
+});
+
 function confirmation() {
   return {
     fileName: "new-resume.pdf",

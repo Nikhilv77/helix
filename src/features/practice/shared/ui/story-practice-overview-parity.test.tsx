@@ -28,7 +28,7 @@ vi.mock("@/infrastructure/realtime/use-maya-voice", () => ({
 describe("story-practice overview parity", () => {
   afterEach(() => vi.clearAllMocks());
 
-  it("renders equivalent Core and Applied states with identical structural geometry", () => {
+  it("keeps the shared overview geometry while allowing domain-specific assessment panels", () => {
     const core = render(
       <StoryPracticeOverview
         block={block()}
@@ -36,6 +36,9 @@ describe("story-practice overview parity", () => {
         experience={CORE_TECHNICAL_OVERVIEW_EXPERIENCE}
       />
     );
+    expect(
+      screen.getByRole("complementary", { name: "Core Technical assessment" })
+    ).toBeInTheDocument();
     const coreSignature = classSignature(core.container);
     core.unmount();
 
@@ -48,11 +51,12 @@ describe("story-practice overview parity", () => {
     );
 
     expect(classSignature(applied.container)).toEqual(coreSignature);
-    expect(screen.getByRole("progressbar", { name: /Applied Engineering questions/i })).toHaveAttribute(
-      "aria-valuenow",
-      "1"
-    );
-    expect(screen.getByRole("navigation", { name: /Jump to an Applied Engineering question/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("progressbar", { name: /Applied Engineering questions/i })
+    ).toHaveAttribute("aria-valuenow", "1");
+    expect(
+      screen.getByRole("navigation", { name: /Jump to an Applied Engineering question/i })
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("complementary", { name: "Applied Engineering assessment" })
     ).toBeInTheDocument();
@@ -69,7 +73,13 @@ describe("story-practice overview parity", () => {
 });
 
 function classSignature(container: HTMLElement) {
-  return Array.from(container.querySelectorAll("*")).map(
+  const shared = container.cloneNode(true) as HTMLElement;
+  shared
+    .querySelectorAll(
+      '[aria-label="Core Technical assessment"], [aria-label="Applied Engineering assessment"]'
+    )
+    .forEach((panel) => panel.remove());
+  return Array.from(shared.querySelectorAll("*")).map(
     (element) => `${element.tagName.toLowerCase()}:${element.getAttribute("class") ?? ""}`
   );
 }

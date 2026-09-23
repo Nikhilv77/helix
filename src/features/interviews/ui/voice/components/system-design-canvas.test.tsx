@@ -129,4 +129,49 @@ describe("SystemDesignCanvas", () => {
     });
     expect(await screen.findByText("Saved")).toBeVisible();
   });
+
+  it("loads and saves practice diagrams through the block API without browser storage", async () => {
+    const blockId = "11111111-1111-4111-8111-111111111111";
+    const storageWrite = vi.spyOn(Storage.prototype, "setItem");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
+      if (!init?.method) {
+        return Response.json({
+          success: true,
+          data: { document: EMPTY_SYSTEM_DESIGN_CANVAS, revision: 0, updatedAt: 0 }
+        });
+      }
+      const body = JSON.parse(String(init.body));
+      return Response.json({
+        success: true,
+        data: { document: body.document, revision: 1, updatedAt: 1 }
+      });
+    });
+
+    render(<SystemDesignCanvas practiceBlockId={blockId} embedded />);
+    await screen.findByText("Saved");
+    fireEvent.click(screen.getByRole("button", { name: "Service" }));
+    fireEvent.change(screen.getByLabelText("service label"), {
+      target: { value: "Authorized retriever" }
+    });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2), { timeout: 2_000 });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      `/api/practice/architecture-design/canvas/${blockId}`
+    );
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toMatchObject({
+      expectedRevision: 0,
+      document: { nodes: [expect.objectContaining({ label: "Authorized retriever" })] }
+    });
+    expect(storageWrite).not.toHaveBeenCalled();
+  });
+
+  it("does not overwrite a practice diagram when the initial database load fails", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
+
+    render(<SystemDesignCanvas practiceBlockId="11111111-1111-4111-8111-111111111111" embedded />);
+    await screen.findByRole("button", { name: "Retry sync" });
+    expect(screen.getByRole("status")).toHaveTextContent("Not saved");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ cache: "no-store" });
+  });
 });

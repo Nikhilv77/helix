@@ -73,13 +73,13 @@ export default async function ArchitectureDesignPracticePage({
           allowEarlyAssessmentStart={allowEarlyAssessmentStart}
         />
       ) : (
-        <Unavailable message={eligibility.message} />
+        <Unavailable message={eligibility.message} isAiMl={profile.targetRole === "ai-ml"} />
       )}
     </main>
   );
 }
 
-function Unavailable({ message }: { message: string }) {
+function Unavailable({ message, isAiMl }: { message: string; isAiMl: boolean }) {
   return (
     <section
       role="status"
@@ -91,7 +91,9 @@ function Unavailable({ message }: { message: string }) {
       </h1>
       <p className="mt-3 max-w-xl text-[14px] leading-6 text-cream/56">{message}</p>
       <p className="mt-3 text-[13px] leading-5 text-cream/38">
-        Existing DSA, Core Technical, and Applied Engineering practice remain available.
+        {isAiMl
+          ? "Your AI/ML Core Technical and Applied Engineering practice sessions remain available."
+          : "Existing DSA, Core Technical, and Applied Engineering practice remain available."}
       </p>
     </section>
   );

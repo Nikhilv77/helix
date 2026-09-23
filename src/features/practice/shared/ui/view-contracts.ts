@@ -1,8 +1,9 @@
+import type { InteractiveWork, PracticeInteraction } from "../domain/interactive-response";
 import type { StoryPracticeArtifactData } from "./story-practice-artifact";
 
 export type StoryPracticeDifficulty = "guided" | "standard" | "stretch";
 export type StoryPracticeBlockStatus =
-  "PRACTISING" | "ASSESSMENT_READY" | "ASSESSMENT_IN_PROGRESS" | "ASSESSED";
+  "PRACTISING" | "ASSESSMENT_READY" | "ASSESSMENT_IN_PROGRESS" | "ASSESSED" | "COMPLETED";
 export type StoryPracticeQuestionStatus = "ACTIVE" | "COMPLETED" | "LEARNED";
 export type StoryPracticeAssessmentStatus =
   "LOCKED" | "READY" | "IN_PROGRESS" | "FINALIZING" | "COMPLETED";
@@ -17,6 +18,7 @@ export type StoryPracticeQuestionFormat =
   | "production-decision";
 
 export type StoryPracticeDraftWork =
+  | InteractiveWork
   | { kind: "choice"; selectedChoiceIndex: number }
   | { kind: "text"; text: string }
   | { kind: "code"; code: string };
@@ -75,6 +77,8 @@ export type StoryPracticeQuestionView = {
     hintCount: 3;
     starterCode?: string;
     interviewConnection?: string;
+    revisionNote?: string;
+    interaction?: PracticeInteraction;
   };
   draft: StoryPracticeDraftWork | null;
   revealedHints: string[];

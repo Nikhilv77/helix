@@ -26,8 +26,10 @@ import {
   uploadResume
 } from "@/lib/api/api-client";
 import { selectableTeacherById } from "@/lib/avatars/personas";
+import { preloadVoiceLine } from "@/infrastructure/realtime/use-maya-voice";
 import { pageTitle } from "@/lib/shared/seo";
 import type { CandidateProfile, Level, ResumeExtractionResponse } from "@/lib/shared/types";
+import { preparationWelcomeIntroCopy } from "@/features/preparation-onboarding/ui/welcome-copy";
 import { shouldAutoRetryResumeAnalysis } from "./resume-analysis-retry";
 
 const ANALYSIS_RETRY_NOTICE_MS = 700;
@@ -75,6 +77,15 @@ export function OnboardingFlow({
   const [error, setError] = useState<string | null>(null);
   const selectedTeacherName =
     selectableTeacherById(teacherId ?? DEFAULT_TEACHER_ID)?.name ?? "Your teacher";
+  const selectedTeacherId = teacherId ?? DEFAULT_TEACHER_ID;
+
+  const warmWelcomeVoice = useCallback(() => {
+    if (replacingResume || !result) return;
+    preloadVoiceLine(
+      preparationWelcomeIntroCopy(result.profile, selectedTeacherName).voiceText,
+      selectedTeacherId
+    );
+  }, [replacingResume, result, selectedTeacherId, selectedTeacherName]);
 
   const cancelReplacement = useCallback(() => {
     if (onCancel) onCancel();
@@ -104,6 +115,12 @@ export function OnboardingFlow({
   useEffect(() => {
     onStepChange?.(step);
   }, [onStepChange, step]);
+
+  useEffect(() => {
+    // Resume review gives synthesis several screens of lead time. The shared
+    // media pool then hands this exact audio element to the welcome modal.
+    warmWelcomeVoice();
+  }, [warmWelcomeVoice]);
 
   useEffect(() => {
     if (embedded) return;
@@ -232,6 +249,7 @@ export function OnboardingFlow({
     setError(null);
 
     try {
+      warmWelcomeVoice();
       if (replacingResume) {
         const response = await confirmResumeUpdate(result);
         onCompleted?.(response.profile);
@@ -254,7 +272,16 @@ export function OnboardingFlow({
     } finally {
       setCompleting(false);
     }
-  }, [completing, embedded, onCompleted, replacingResume, result, router, teacherId]);
+  }, [
+    completing,
+    embedded,
+    onCompleted,
+    replacingResume,
+    result,
+    router,
+    teacherId,
+    warmWelcomeVoice
+  ]);
 
   useEffect(() => {
     if (step !== "resume" || !file || uploading || result || error) return;

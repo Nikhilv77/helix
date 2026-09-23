@@ -85,6 +85,7 @@ function permanentInterviewRounds(
   plan: PersonalizedInterviewPlan | null,
   history: InterviewHistoryItem[]
 ): InterviewRoadmapSession[] {
+  const isAiMl = plan?.sourceSnapshot.targetRole.family === "ai-ml";
   const core = plan?.sessions.find((session) => session.kind === "core-technical");
   const applied = plan?.sessions.find((session) => session.kind === "applied-engineering");
   const dsa = plan?.sessions.find((session) => session.kind === "problem-solving");
@@ -120,7 +121,7 @@ function permanentInterviewRounds(
         covers: ["Requirements and scale", "Architecture canvas", "Failures and trade-offs"]
       });
 
-  return [
+  const rounds = [
     { ...resumeRoadmapSession(history), order: 1 },
     { ...technical, order: 2, title: "Core Technical & Projects" },
     {
@@ -145,6 +146,15 @@ function permanentInterviewRounds(
       covers: ["Career motivation", "Leadership and judgement", "Candidate questions"]
     })
   ];
+
+  if (!isAiMl) return rounds;
+
+  // AI/ML interviews assess coding inside role-specific technical and applied
+  // questions. A separate algorithm round would contradict the onboarding
+  // baseline and duplicate evidence, so it is deliberately not rendered.
+  return rounds
+    .filter((round) => round.id !== "dsa")
+    .map((round, index) => ({ ...round, order: index + 1 }));
 }
 
 function systemDesignRoadmapSession(

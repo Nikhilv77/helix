@@ -4,7 +4,7 @@ import {
 } from "./focus-ranking-contracts";
 import type { ArchitectureDesignDimension, ArchitectureDesignFamily } from "./contracts";
 import type { ArchitectureDesignReviewArtifact } from "./review-artifact-contracts";
-import { ARCHITECTURE_DESIGN_REVIEW_CANDIDATES } from "./reviewed-scenarios";
+import { ARCHITECTURE_DESIGN_CONTENT_CANDIDATES } from "./content-candidates";
 import { ARCHITECTURE_DESIGN_PROPOSED_RANKING_CANDIDATES } from "./scenario-briefs";
 
 const ARCHITECTURE_FAMILIES: Readonly<Record<string, ArchitectureDesignFamily>> = {
@@ -13,7 +13,9 @@ const ARCHITECTURE_FAMILIES: Readonly<Record<string, ArchitectureDesignFamily>> 
   "marketplace-checkout-inventory": "transactional-workflow",
   "collaborative-document-editing": "realtime-collaboration",
   "global-media-processing": "media-storage-delivery",
-  "search-autocomplete-platform": "search-indexing"
+  "search-autocomplete-platform": "search-indexing",
+  "retrieval-augmented-support-assistant": "search-indexing",
+  "real-time-fraud-model-platform": "transactional-workflow"
 };
 
 const EMPHASIS_DIMENSIONS: Readonly<Record<string, readonly ArchitectureDesignDimension[]>> = {
@@ -56,6 +58,20 @@ const EMPHASIS_DIMENSIONS: Readonly<Record<string, readonly ArchitectureDesignDi
     "storage-access-patterns",
     "caching-contention",
     "partitioning-hotspots",
+    "observability-slos",
+    "migration-evolution"
+  ],
+  "retrieval-augmented-support-assistant": [
+    "requirements-framing",
+    "data-modeling",
+    "security-privacy",
+    "observability-slos",
+    "migration-evolution"
+  ],
+  "real-time-fraud-model-platform": [
+    "capacity-estimation",
+    "consistency-transactions",
+    "reliability-failure-isolation",
     "observability-slos",
     "migration-evolution"
   ]
@@ -139,7 +155,7 @@ export function buildArchitectureDesignScenarioRankingCatalogue(
 }
 
 export const ARCHITECTURE_DESIGN_SCENARIO_RANKING_CATALOGUE = deepFreeze([
-  ...buildArchitectureDesignScenarioRankingCatalogue(ARCHITECTURE_DESIGN_REVIEW_CANDIDATES),
+  ...buildArchitectureDesignScenarioRankingCatalogue(ARCHITECTURE_DESIGN_CONTENT_CANDIDATES),
   ...ARCHITECTURE_DESIGN_PROPOSED_RANKING_CANDIDATES
 ]);
 

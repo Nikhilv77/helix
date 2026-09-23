@@ -66,13 +66,22 @@ const NODE_KINDS = [...systemDesignCanvasNodeKinds];
 export function SystemDesignCanvas({
   storageKey,
   sessionId,
+  practiceBlockId,
   embedded = false
 }: {
   storageKey?: string;
   sessionId?: string;
+  practiceBlockId?: string;
   /** Removes the interview card chrome when another workspace already owns the surface. */
   embedded?: boolean;
 }) {
+  const serverUrl = practiceBlockId
+    ? `/api/practice/architecture-design/canvas/${encodeURIComponent(practiceBlockId)}`
+    : sessionId
+      ? `/api/interview/${encodeURIComponent(sessionId)}/design-canvas`
+      : null;
+  const persistenceKey =
+    !practiceBlockId && storageKey ? `trailgrad:system-design-canvas:${storageKey}` : null;
   const canvasRef = useRef<HTMLDivElement>(null);
   const nextId = useRef(1);
   const markerId = `design-arrow-${useId().replaceAll(":", "")}`;
@@ -92,18 +101,19 @@ export function SystemDesignCanvas({
   const [viewOffset, setViewOffset] = useState({ x: 0, y: 0 });
   const [hydrated, setHydrated] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [serverReady, setServerReady] = useState(!sessionId);
+  const [serverReady, setServerReady] = useState(!serverUrl);
   const [saveStatus, setSaveStatus] = useState<
     "loading" | "saved" | "saving" | "offline" | "conflict" | "local"
-  >(sessionId ? "loading" : "local");
+  >(serverUrl ? "loading" : "local");
+  const [conflictCurrent, setConflictCurrent] = useState<VersionedSystemDesignCanvas | null>(null);
   const [retryTick, setRetryTick] = useState(0);
   const revisionRef = useRef(0);
   const lastSavedFingerprintRef = useRef("");
   const saveQueueRef = useRef(Promise.resolve());
+  const conflictRef = useRef(false);
 
   const selectedNode = snapshot.nodes.find((node) => node.id === selectedNodeId) ?? null;
   const selectedEdge = snapshot.edges.find((edge) => edge.id === selectedEdgeId) ?? null;
-  const persistenceKey = storageKey ? `trailgrad:system-design-canvas:${storageKey}` : null;
 
   const commit = useCallback((update: (current: CanvasSnapshot) => CanvasSnapshot) => {
     setSnapshot((current) => {
@@ -166,12 +176,10 @@ export function SystemDesignCanvas({
   }, [persistenceKey]);
 
   useEffect(() => {
-    if (!sessionId || !hydrated) return;
+    if (!serverUrl || !hydrated || serverReady) return;
     let cancelled = false;
     setSaveStatus("loading");
-    void fetch(`/api/interview/${encodeURIComponent(sessionId)}/design-canvas`, {
-      cache: "no-store"
-    })
+    void fetch(serverUrl, { cache: "no-store" })
       .then(async (response) => {
         const payload = (await response.json()) as {
           success?: boolean;
@@ -184,8 +192,8 @@ export function SystemDesignCanvas({
         if (cancelled) return;
         revisionRef.current = payload.data.revision;
         const remote = snapshotFromDocument(payload.data.document);
+        lastSavedFingerprintRef.current = snapshotFingerprint(remote);
         if (payload.data.revision > 0) {
-          lastSavedFingerprintRef.current = snapshotFingerprint(remote);
           setSnapshot(remote);
           nextId.current = nextNodeOrdinal(remote.nodes);
         }
@@ -195,12 +203,12 @@ export function SystemDesignCanvas({
       .catch(() => {
         if (cancelled) return;
         setSaveStatus("offline");
-        setServerReady(true);
+        setServerReady(!practiceBlockId);
       });
     return () => {
       cancelled = true;
     };
-  }, [hydrated, sessionId]);
+  }, [hydrated, practiceBlockId, retryTick, serverReady, serverUrl]);
 
   useEffect(() => {
     if (!hydrated || !persistenceKey) return;
@@ -218,25 +226,23 @@ export function SystemDesignCanvas({
   }, []);
 
   useEffect(() => {
-    if (!sessionId || !serverReady) return;
+    if (!serverUrl || !serverReady || conflictCurrent) return;
     const fingerprint = snapshotFingerprint(snapshot);
     if (fingerprint === lastSavedFingerprintRef.current) return;
     setSaveStatus("saving");
     const timer = window.setTimeout(() => {
       const document = documentFromSnapshot(snapshot);
       saveQueueRef.current = saveQueueRef.current.then(async () => {
+        if (conflictRef.current) return;
         try {
-          const response = await fetch(
-            `/api/interview/${encodeURIComponent(sessionId)}/design-canvas`,
-            {
-              method: "PUT",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({
-                expectedRevision: revisionRef.current,
-                document
-              })
-            }
-          );
+          const response = await fetch(serverUrl, {
+            method: "PUT",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              expectedRevision: revisionRef.current,
+              document
+            })
+          });
           const payload = (await response.json()) as {
             success?: boolean;
             data?: VersionedSystemDesignCanvas;
@@ -261,8 +267,13 @@ export function SystemDesignCanvas({
             }
             revisionRef.current = current.revision;
             lastSavedFingerprintRef.current = snapshotFingerprint(remote);
-            setSnapshot(remote);
-            nextId.current = nextNodeOrdinal(remote.nodes);
+            if (practiceBlockId) {
+              conflictRef.current = true;
+              setConflictCurrent(current);
+            } else {
+              setSnapshot(remote);
+              nextId.current = nextNodeOrdinal(remote.nodes);
+            }
             setSaveStatus("conflict");
             return;
           }
@@ -280,7 +291,15 @@ export function SystemDesignCanvas({
       });
     }, 800);
     return () => window.clearTimeout(timer);
-  }, [persistenceKey, retryTick, serverReady, sessionId, snapshot]);
+  }, [
+    conflictCurrent,
+    persistenceKey,
+    practiceBlockId,
+    retryTick,
+    serverReady,
+    serverUrl,
+    snapshot
+  ]);
 
   const addNode = (kind: NodeKind) => {
     if (snapshot.nodes.length >= 100) return;
@@ -438,11 +457,12 @@ export function SystemDesignCanvas({
 
   return (
     <section
-      className={
+      className={`${
         embedded
           ? "overflow-hidden"
           : "mt-6 overflow-hidden rounded-xl border border-white/[0.07] bg-black/20"
-      }
+      } ${practiceBlockId && saveStatus === "loading" ? "pointer-events-none opacity-60" : ""}`}
+      aria-busy={Boolean(practiceBlockId) && saveStatus === "loading"}
       onKeyDown={(event) => {
         if (isEditingTarget(event.target)) return;
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
@@ -474,13 +494,63 @@ export function SystemDesignCanvas({
                 }`}
                 role="status"
               >
-                {canvasSaveLabel(saveStatus)}
+                {canvasSaveLabel(saveStatus, Boolean(practiceBlockId))}
               </span>
             </div>
             <p className="text-[11px] text-cream/38">
               Build as you talk; your diagram is saved in this session.
             </p>
           </div>
+        ) : null}
+        {embedded && serverUrl ? (
+          <span
+            className={`mr-auto text-[11px] font-medium ${saveStatus === "offline" || saveStatus === "conflict" ? "text-amber-300/80" : "text-cream/45"}`}
+            role="status"
+          >
+            {canvasSaveLabel(saveStatus, Boolean(practiceBlockId))}
+          </span>
+        ) : null}
+        {practiceBlockId && conflictCurrent ? (
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Resolve diagram conflict">
+            <button
+              type="button"
+              className="rounded-md border border-white/[0.12] px-2.5 py-1.5 text-[11px] text-cream/75"
+              onClick={() => {
+                const remote = snapshotFromDocument(conflictCurrent.document);
+                setSnapshot(remote);
+                setPast([]);
+                setFuture([]);
+                nextId.current = nextNodeOrdinal(remote.nodes);
+                revisionRef.current = conflictCurrent.revision;
+                lastSavedFingerprintRef.current = snapshotFingerprint(remote);
+                conflictRef.current = false;
+                setConflictCurrent(null);
+                setSaveStatus("saved");
+              }}
+            >
+              Load newer version
+            </button>
+            <button
+              type="button"
+              className="rounded-md border border-amber-300/25 px-2.5 py-1.5 text-[11px] text-amber-200/85"
+              onClick={() => {
+                revisionRef.current = conflictCurrent.revision;
+                conflictRef.current = false;
+                setConflictCurrent(null);
+                setRetryTick((value) => value + 1);
+              }}
+            >
+              Save my version
+            </button>
+          </div>
+        ) : practiceBlockId && saveStatus === "offline" ? (
+          <button
+            type="button"
+            className="rounded-md border border-amber-300/25 px-2.5 py-1.5 text-[11px] text-amber-200/85"
+            onClick={() => setRetryTick((value) => value + 1)}
+          >
+            Retry sync
+          </button>
         ) : null}
         <CanvasButton
           label="Client"
@@ -1056,13 +1126,15 @@ function snapshotFingerprint(snapshot: CanvasSnapshot): string {
 }
 
 function canvasSaveLabel(
-  status: "loading" | "saved" | "saving" | "offline" | "conflict" | "local"
+  status: "loading" | "saved" | "saving" | "offline" | "conflict" | "local",
+  serverOnly = false
 ): string {
   if (status === "loading") return "Loading…";
   if (status === "saving") return "Saving…";
   if (status === "saved") return "Saved";
-  if (status === "conflict") return "Newer tab restored";
-  if (status === "offline") return "Offline backup";
+  if (status === "conflict")
+    return serverOnly ? "Diagram conflict — choose a version" : "Newer tab restored";
+  if (status === "offline") return serverOnly ? "Not saved — retry sync" : "Offline backup";
   return "Local draft";
 }
 

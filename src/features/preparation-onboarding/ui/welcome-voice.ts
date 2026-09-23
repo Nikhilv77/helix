@@ -9,7 +9,7 @@ import {
 } from "../domain/preparation-onboarding-flow";
 import type { BaselineSection, PreparationOnboardingState } from "../domain/preparation-onboarding";
 import type { Role } from "@/lib/shared/types";
-import type { BaselineFlowStage } from "./baseline-assessment";
+import { baselineIntroCopy, type BaselineFlowStage } from "./baseline-assessment";
 import { TARGET_SETUP_COPY } from "./target-setup";
 
 interface VoiceSlide {
@@ -21,6 +21,7 @@ interface VoiceSlide {
 export function useWelcomeVoice({
   teacherId,
   current,
+  playbackKey,
   slides,
   visible,
   step,
@@ -32,6 +33,8 @@ export function useWelcomeVoice({
 }: {
   teacherId: string;
   current: VoiceSlide;
+  /** Changes only when navigation reveals a new spoken screen. */
+  playbackKey: string;
   slides: VoiceSlide[];
   visible: boolean;
   step: number;
@@ -57,6 +60,15 @@ export function useWelcomeVoice({
     },
     [preloadVoice, teacherId]
   );
+  const currentVoiceText = slideVoiceText(current);
+  const currentVoiceTextRef = useRef(currentVoiceText);
+  currentVoiceTextRef.current = currentVoiceText;
+
+  useEffect(() => {
+    // Usually this exact line was already warmed on the onboarding route. This
+    // is also a safe fallback for returning users and direct modal loads.
+    warmVoice(currentVoiceText);
+  }, [currentVoiceText, warmVoice]);
 
   useEffect(() => {
     // Returning candidates can land directly on this final slide. Start its
@@ -67,9 +79,9 @@ export function useWelcomeVoice({
 
   useEffect(() => {
     if (!visible || !voiceEnabled.current || awaitingGesture) return;
-    const start = window.setTimeout(() => void speakLine(slideVoiceText(current)), 60);
+    const start = window.setTimeout(() => void speakLine(currentVoiceTextRef.current), 60);
     return () => window.clearTimeout(start);
-  }, [awaitingGesture, current, speakLine, visible]);
+  }, [awaitingGesture, playbackKey, speakLine, visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -135,8 +147,8 @@ export function useWelcomeVoice({
       return;
     }
     voiceEnabled.current = true;
-    void speakLine(slideVoiceText(current));
-  }, [current, setAwaitingGesture, speakLine, stopVoice, voiceState]);
+    void speakLine(currentVoiceText);
+  }, [currentVoiceText, setAwaitingGesture, speakLine, stopVoice, voiceState]);
 
   return {
     voiceState,
@@ -161,11 +173,7 @@ function slideVoiceText(slide: VoiceSlide): string {
 }
 
 function baselineIntroVoiceText(role: Role) {
-  const body =
-    role === "ai-ml"
-      ? "This is not about measuring everything today. A stack-aware technical pulse, an engineering scenario, and one architecture decision are enough for a useful starting picture."
-      : "This is not about measuring everything today. A short DSA pulse, a stack-aware technical pulse, an engineering scenario, and one architecture decision are enough for a useful starting picture.";
-  return `Let’s find your starting point. ${body}`;
+  return baselineIntroCopy(role).voiceText;
 }
 
 function completionVoiceText() {
