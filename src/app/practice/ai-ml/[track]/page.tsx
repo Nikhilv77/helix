@@ -25,7 +25,7 @@ export default async function AiMlPracticePage({
   const { track } = await params;
   if (!isAiMlPracticeTrack(track)) notFound();
   if (track === "architecture-design") redirect("/practice/architecture-design");
-  const session = await getAppContainer().aiMlStoryPracticeService.session(ownerId, track);
+  const session = await getAppContainer().aiMlStoryPracticeService.session(ownerId, track, profile);
   const query = await searchParams;
   const selected =
     session.blocks.find((block) => block.id === query.block) ??

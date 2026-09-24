@@ -13,8 +13,10 @@ import type { AppliedEngineeringEligibility } from "@/features/practice/applied-
 import { architectureDesignPracticeEntry } from "@/features/practice/architecture-design/domain/ui-state";
 import type { ArchitectureDesignEligibility } from "@/features/practice/architecture-design/server/eligibility.service";
 import { aiMlPracticeQuestionCount } from "@/features/practice/ai-ml/domain/ai-ml-story-catalog";
+import { aiMlResumePracticePath } from "@/features/practice/ai-ml/domain/resume-practice-path";
 import type { AiMlPracticeEntry } from "@/features/practice/shared/domain/practice-roadmap";
 import type { AiMlPracticeSummary } from "@/features/practice/ai-ml/server/ai-ml-practice.service";
+import type { CandidateProfile } from "@/lib/shared/types";
 import { includesDsaPulse } from "@/features/preparation-onboarding/domain/preparation-onboarding";
 
 export const dynamic = "force-dynamic";
@@ -168,7 +170,8 @@ export default async function PracticePage() {
               architectureDesignPracticeEntry(
                 architectureDesignEligibility,
                 architectureDesignBlock
-              )
+              ),
+              profile
             )
           : []
       }
@@ -178,11 +181,22 @@ export default async function PracticePage() {
 
 function aiMlPracticeEntries(
   summaries: AiMlPracticeSummary[],
-  architecture: ReturnType<typeof architectureDesignPracticeEntry>
+  architecture: ReturnType<typeof architectureDesignPracticeEntry>,
+  profile: CandidateProfile
 ): AiMlPracticeEntry[] {
   const summaryByTrack = new Map(summaries.map((summary) => [summary.track, summary]));
   const core = summaryByTrack.get("core-technical");
   const applied = summaryByTrack.get("applied-engineering");
+  const coreTotal = Math.max(
+    core?.totalQuestions ?? 0,
+    aiMlPracticeQuestionCount("core-technical") +
+      (aiMlResumePracticePath(profile, "core-technical")?.questions.length ?? 0)
+  );
+  const appliedTotal = Math.max(
+    applied?.totalQuestions ?? 0,
+    aiMlPracticeQuestionCount("applied-engineering") +
+      (aiMlResumePracticePath(profile, "applied-engineering")?.questions.length ?? 0)
+  );
   return [
     {
       key: "ai-ml-core-technical",
@@ -193,14 +207,11 @@ function aiMlPracticeEntries(
       difficulty: "guided",
       durationMinutes: 35,
       availability: "available",
-      status: progressStatus(
-        core?.completedQuestions ?? 0,
-        core?.totalQuestions ?? aiMlPracticeQuestionCount("core-technical")
-      ),
-      totalQuestions: core?.totalQuestions ?? aiMlPracticeQuestionCount("core-technical"),
+      status: progressStatus(core?.completedQuestions ?? 0, coreTotal),
+      totalQuestions: coreTotal,
       attemptedQuestions: core?.completedQuestions ?? 0,
       completedQuestions: core?.completedQuestions ?? 0,
-      progressPercent: core?.progressPercent ?? 0,
+      progressPercent: Math.round(((core?.completedQuestions ?? 0) / coreTotal) * 100),
       href: "/practice/ai-ml/core-technical"
     },
     {
@@ -213,14 +224,11 @@ function aiMlPracticeEntries(
       difficulty: "guided",
       durationMinutes: 40,
       availability: "available",
-      status: progressStatus(
-        applied?.completedQuestions ?? 0,
-        applied?.totalQuestions ?? aiMlPracticeQuestionCount("applied-engineering")
-      ),
-      totalQuestions: applied?.totalQuestions ?? aiMlPracticeQuestionCount("applied-engineering"),
+      status: progressStatus(applied?.completedQuestions ?? 0, appliedTotal),
+      totalQuestions: appliedTotal,
       attemptedQuestions: applied?.completedQuestions ?? 0,
       completedQuestions: applied?.completedQuestions ?? 0,
-      progressPercent: applied?.progressPercent ?? 0,
+      progressPercent: Math.round(((applied?.completedQuestions ?? 0) / appliedTotal) * 100),
       href: "/practice/ai-ml/applied-engineering"
     },
     {

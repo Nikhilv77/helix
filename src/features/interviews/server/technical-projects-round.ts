@@ -81,7 +81,7 @@ export function selectTechnicalProjectMcqs(input: {
         }));
 
   const seen = new Set<string>();
-  const candidates = isAiMl ? [...fallback, ...kitQuestions] : [...kitQuestions, ...fallback];
+  const candidates = [...kitQuestions, ...fallback];
   return candidates
     .filter((question) => {
       const fingerprint = normalizeKey(question.prompt);
@@ -274,14 +274,17 @@ function projectCodingQuestion(
 ): PlannedQuestion {
   const projectCodingTask = codingTaskForProject(project, codingTask);
   const relevantCodingTask =
-    targetRole === "ai-ml" && projectCodingTask?.language.toLowerCase() !== "python"
+    targetRole === "ai-ml" &&
+    projectCodingTask &&
+    !supportedCodingLanguage(projectCodingTask.language)
       ? null
       : projectCodingTask;
   const language = relevantCodingTask?.language || projectLanguage(project.skillKeys, targetRole);
+  const aiMlFallback = targetRole === "ai-ml" ? fallbackAiMlCodeTask(project) : null;
   const task =
-    relevantCodingTask?.brief?.trim() ||
-    (targetRole === "ai-ml" ? fallbackAiMlCodeTask(project) : fallbackProjectCodeTask(project));
-  const expects = relevantCodingTask?.expects?.filter(Boolean).slice(0, 3) ?? [];
+    relevantCodingTask?.brief?.trim() || (aiMlFallback?.brief ?? fallbackProjectCodeTask(project));
+  const expects =
+    relevantCodingTask?.expects?.filter(Boolean).slice(0, 3) ?? aiMlFallback?.expects ?? [];
   const groundedFacts = [project.summary, project.outcome].filter((value): value is string =>
     Boolean(value?.trim())
   );
@@ -296,9 +299,7 @@ function projectCodingQuestion(
     answerFormat: "typed",
     language,
     codeTask: `${task}\n\nConnect the implementation to ${project.name}. State any project detail you need to assume rather than inventing it.`,
-    codeSnippet:
-      relevantCodingTask?.starterCode?.trim() ||
-      (targetRole === "ai-ml" ? aiMlStarterCode() : starterCode(language)),
+    codeSnippet: relevantCodingTask?.starterCode?.trim() || starterCode(language),
     competency: "Project-grounded implementation",
     topicKey: `project:${project.sourceId}`,
     skillKeys: [...project.skillKeys],
@@ -312,17 +313,11 @@ function projectCodingQuestion(
     mustHit:
       expects.length > 0
         ? expects
-        : targetRole === "ai-ml"
-          ? [
-              "validated prediction records and empty input handling",
-              "overall and per-segment accuracy",
-              "tests for malformed and regressing segments"
-            ]
-          : [
-              "a coherent project-specific rule",
-              "input and failure handling",
-              "focused examples or tests"
-            ],
+        : [
+            "a coherent project-specific rule",
+            "input and failure handling",
+            "focused examples or tests"
+          ],
     probeIfMissing:
       "Which project constraint does this implementation protect, and how would you test it?",
     maxFollowUps: 1,
@@ -364,26 +359,95 @@ function projectLanguage(
   targetRole?: CandidateProfile["targetRole"]
 ): string {
   const skills = skillKeys.map(normalizeKey);
-  if (targetRole === "ai-ml") return "python";
+  if (
+    skillKeys.some((skill) => /c\+\+|\bcuda\b/i.test(skill)) ||
+    skills.includes("cpp") ||
+    skills.includes("c-plus-plus")
+  )
+    return "cpp";
   if (skills.some((skill) => skill === "python" || skill === "pytorch" || skill === "django"))
     return "python";
   if (skills.some((skill) => skill === "java" || skill === "spring")) return "java";
-  if (skills.some((skill) => skill === "cpp" || skill === "c-plus-plus")) return "cpp";
+  if (skills.some((skill) => skill === "typescript" || skill === "ts")) return "typescript";
   if (skills.some((skill) => skill === "javascript" || skill === "nodejs" || skill === "node-js"))
     return "javascript";
-  return "typescript";
+  return targetRole === "ai-ml" ? "python" : "typescript";
 }
 
-function fallbackAiMlCodeTask(project: GroundedProjectInterviewSource): string {
-  return `Implement a small Python evaluation function for ${project.name}. Accept prediction records with a segment, predicted label, actual label, and confidence; reject malformed records; return overall accuracy plus accuracy by segment; and identify segments below a configurable quality threshold. Add focused tests for empty input, malformed data, and one regressing segment. The saved project context is: ${project.summary}`;
+function supportedCodingLanguage(language: string): boolean {
+  return ["python", "javascript", "typescript", "java", "cpp"].includes(
+    language.trim().toLowerCase()
+  );
 }
 
-function aiMlStarterCode(): string {
-  return `def evaluate_predictions(records, quality_threshold):
-    """Return overall accuracy, per-segment accuracy, and segments below threshold."""
-    raise NotImplementedError
-
-# Add tests for empty input, malformed records, and a regressing segment.`;
+function fallbackAiMlCodeTask(project: GroundedProjectInterviewSource): {
+  brief: string;
+  expects: string[];
+} {
+  const evidence = [project.name, project.summary, ...project.skillKeys].join(" ").toLowerCase();
+  const task = /\b(?:rag|retriev\w*|search\w*|embedding\w*|vector\w*|index\w*)\b/.test(evidence)
+    ? {
+        brief:
+          "Given candidate passages with tenantId, documentId, score, and deleted fields, return the top k unique documents for one tenant. Exclude deleted passages and reject an invalid k.",
+        expects: [
+          "tenant and deletion filtering",
+          "stable score ordering with document deduplication",
+          "tests for invalid limits and cross-tenant records"
+        ]
+      }
+    : /\b(?:vision|image\w*|visual|ocr|detect\w*|camera)\b/.test(evidence)
+      ? {
+          brief:
+            "Given image detections with imageId, label, and confidence, group accepted detections by image and return image IDs needing review below a configurable confidence threshold. Reject malformed confidence values.",
+          expects: [
+            "correct threshold and image grouping",
+            "review routing for uncertain detections",
+            "tests for empty and malformed inputs"
+          ]
+        }
+      : /\b(?:llm|language|nlp|prompt\w*|generat\w*|chatbot|text)\b/.test(evidence)
+        ? {
+            brief:
+              "Given response records with promptVersion, grounded, and latencyMs fields, calculate the grounding pass rate and worst latency for each prompt version. Reject malformed records and keep versions separate.",
+            expects: [
+              "per-version quality and latency aggregation",
+              "validation of missing or invalid fields",
+              "tests for empty and mixed-version inputs"
+            ]
+          }
+        : /\b(?:reinforcement|policy|reward|agent|simulation)\b/.test(evidence)
+          ? {
+              brief:
+                "Given episodes with policyId, reward, and steps, compute mean reward and total steps per policy and flag policies below a configurable reward threshold. Handle empty input and invalid numeric values.",
+              expects: [
+                "correct per-policy aggregation",
+                "threshold behavior and invalid-value handling",
+                "tests for empty and mixed-policy episodes"
+              ]
+            }
+          : /\b(?:mlops|serving|inference|deploy\w*|pipeline|monitor\w*|feature.store)\b/.test(evidence)
+            ? {
+                brief:
+                  "Given model release events with eventId, modelVersion, status, and timestamp, deduplicate retried events and return the latest status for each model version. Reject malformed events and make ties deterministic.",
+                expects: [
+                  "idempotent event deduplication",
+                  "correct latest status with deterministic ties",
+                  "tests for retries and malformed events"
+                ]
+              }
+            : {
+                brief:
+                  "Given prediction records with segment, predictedLabel, and actualLabel, return overall accuracy and accuracy by segment, and identify segments below a configurable quality threshold. Reject malformed records.",
+                expects: [
+                  "validated records and empty input handling",
+                  "overall and per-segment accuracy",
+                  "tests for malformed and regressing segments"
+                ]
+              };
+  return {
+    ...task,
+    brief: `${task.brief} Use ${project.name} as context; treat the record shape as an interview assumption, not a claim about the original project. Add focused tests. Saved project context: ${project.summary}`
+  };
 }
 
 function fallbackProjectCodeTask(project: GroundedProjectInterviewSource): string {

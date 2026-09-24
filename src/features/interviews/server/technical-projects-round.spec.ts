@@ -257,7 +257,7 @@ describe("Core Technical & Projects frozen plan", () => {
     expect(unrelatedPlan[6]?.codeTask).toContain("Ledger Guard");
   });
 
-  it("keeps AI/ML coding in Python even when the resume contains a matching JavaScript task", () => {
+  it("keeps a matching AI/ML resume coding task in its supported language", () => {
     const core = blueprint("core-technical");
     const applied = blueprint("applied-engineering");
     const project = selectGroundedProjectSource({
@@ -287,10 +287,9 @@ describe("Core Technical & Projects frozen plan", () => {
     });
 
     expect(plan[6]).toMatchObject({
-      language: "python",
-      codeSnippet: expect.stringContaining("def evaluate_predictions"),
-      codeTask: expect.stringContaining("accuracy by segment")
+      language: "javascript",
+      codeSnippet: "function handle(event) {}",
+      codeTask: expect.stringContaining("replay-safe JavaScript handler")
     });
-    expect(plan[6]?.codeTask).not.toContain("JavaScript handler");
   });
 });

@@ -1,6 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-const PREVIEW_TTL_MS = 20 * 60 * 1_000;
+// Candidates may leave a resume review open while checking extracted details.
+// The token remains bound to the exact preview and authenticated owner.
+const PREVIEW_TTL_MS = 24 * 60 * 60 * 1_000;
 // Preview creation and confirmation can land on different server instances.
 // Permit ordinary clock drift without extending the token's stated expiry.
 const CLOCK_SKEW_TOLERANCE_MS = 60 * 1_000;

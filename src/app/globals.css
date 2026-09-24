@@ -7064,6 +7064,20 @@ html[data-theme="light"] .dashboard-page .dashboard-readiness-chip {
   background: rgba(15, 23, 42, 0.03) !important;
 }
 
+html.light .dashboard-page .dashboard-readiness-delta-improving,
+html[data-theme="light"] .dashboard-page .dashboard-readiness-delta-improving {
+  border-color: #a7d9bd !important;
+  background: #e9f7ee !important;
+  color: #166534 !important;
+}
+
+html.light .dashboard-page .dashboard-readiness-delta-declining,
+html[data-theme="light"] .dashboard-page .dashboard-readiness-delta-declining {
+  border-color: #f3b4b4 !important;
+  background: #fff0f0 !important;
+  color: #b42318 !important;
+}
+
 html.light .dashboard-page .practice-weekly-activity-bar,
 html[data-theme="light"] .dashboard-page .practice-weekly-activity-bar {
   border: 0;
@@ -7074,6 +7088,25 @@ html[data-theme="light"] .dashboard-page .practice-weekly-activity-bar {
 html.light .dashboard-page .practice-weekly-activity-fill,
 html[data-theme="light"] .dashboard-page .practice-weekly-activity-fill {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--workspace-accent) 36%, transparent);
+}
+
+html.light .dashboard-page .practice-weekly-activity-tooltip,
+html[data-theme="light"] .dashboard-page .practice-weekly-activity-tooltip {
+  background: #ffffff !important;
+  color: #1f2937 !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(15, 23, 42, 0.09) !important;
+}
+
+html.light .dashboard-page .practice-weekly-activity-tooltip [class*="text-cream/"],
+html[data-theme="light"] .dashboard-page .practice-weekly-activity-tooltip [class*="text-cream/"] {
+  color: #475569 !important;
+}
+
+@media (max-width: 640px) {
+  .dashboard-page .practice-weekly-activity-tooltip {
+    top: 0.5rem;
+    bottom: auto;
+  }
 }
 
 html.light .dashboard-page .dashboard-progress-track,
@@ -7087,6 +7120,17 @@ html.light .dashboard-page .dashboard-progress-track > span,
 html[data-theme="light"] .dashboard-page .dashboard-progress-track > span {
   background: var(--workspace-accent) !important;
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--workspace-accent) 36%, transparent);
+}
+
+html.light .dashboard-page .dashboard-interview-step-number,
+html[data-theme="light"] .dashboard-page .dashboard-interview-step-number {
+  background: #e9edf2 !important;
+  color: #475569 !important;
+}
+
+html.light .dashboard-page .dashboard-interview-step-connector,
+html[data-theme="light"] .dashboard-page .dashboard-interview-step-connector {
+  background: #cbd5e1 !important;
 }
 
 html.light .dashboard-skeleton [class*="bg-[#17181b]"],

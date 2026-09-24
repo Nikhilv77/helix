@@ -53,16 +53,77 @@ const runSchema = z
     }
   });
 
-// Verified against Judge0 CE's RapidAPI /languages response on 2026-08-27.
 // Node 20 supports the syntax taught by the current editor, and GCC 14
-// supports the C++17 optional values used by the tree harness.
-const languages: Record<z.infer<typeof runSchema>["language"], { id: number; name: string }> = {
+// supports the C++17 optional values used by the tree harness. Python is
+// resolved from this Judge0 host so it cannot silently fall back to 3.8.
+const languages: Record<
+  Exclude<z.infer<typeof runSchema>["language"], "python">,
+  { id: number; name: string }
+> = {
   cpp: { id: 105, name: "C++ (GCC 14.1.0)" },
   java: { id: 62, name: "Java (OpenJDK 13.0.1)" },
   javascript: { id: 97, name: "JavaScript (Node.js 20.17.0)" },
-  typescript: { id: 97, name: "TypeScript (Node.js 20.17.0)" },
-  python: { id: 71, name: "Python (3.8.1)" }
+  typescript: { id: 97, name: "TypeScript (Node.js 20.17.0)" }
 };
+
+const judgeLanguagesSchema = z.array(
+  z.object({ id: z.number().int().positive(), name: z.string() })
+);
+let pythonLanguageCache: {
+  url: string;
+  expiresAt: number;
+  language: { id: number; name: string };
+} | null = null;
+
+async function modernPythonLanguage(
+  url: string,
+  headers: Record<string, string>
+): Promise<{ id: number; name: string }> {
+  if (pythonLanguageCache?.url === url && pythonLanguageCache.expiresAt > Date.now()) {
+    return pythonLanguageCache.language;
+  }
+  let response: Response;
+  try {
+    response = await fetch(`${url}/languages`, {
+      headers,
+      signal: AbortSignal.timeout(5_000)
+    });
+  } catch {
+    throw new ApiRouteError(
+      503,
+      "PYTHON_RUNTIME_UNAVAILABLE",
+      "Could not check the Python runtime."
+    );
+  }
+  const parsed = judgeLanguagesSchema.safeParse(await response.json().catch(() => null));
+  if (!response.ok || !parsed.success) {
+    throw new ApiRouteError(
+      503,
+      "PYTHON_RUNTIME_UNAVAILABLE",
+      "Could not check the Python runtime."
+    );
+  }
+  const modern = parsed.data
+    .map((language) => ({
+      language,
+      version: language.name.match(/^Python \(3\.(\d+)\.(\d+)\)/)
+    }))
+    .filter((entry) => entry.version && Number(entry.version[1]) >= 10)
+    .sort(
+      (left, right) =>
+        Number(right.version![1]) - Number(left.version![1]) ||
+        Number(right.version![2]) - Number(left.version![2])
+    )[0]?.language;
+  if (!modern) {
+    throw new ApiRouteError(
+      503,
+      "PYTHON_RUNTIME_UNAVAILABLE",
+      "This code runner has no supported Python 3.10 or newer runtime."
+    );
+  }
+  pythonLanguageCache = { url, expiresAt: Date.now() + 60 * 60 * 1_000, language: modern };
+  return modern;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -255,7 +316,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const language = languages[parsed.data.language];
     if (parsed.data.language === "typescript") {
       sourceCode = ts.transpileModule(sourceCode, {
         compilerOptions: {
@@ -278,6 +338,10 @@ export async function POST(request: NextRequest) {
     );
 
     try {
+      const language =
+        parsed.data.language === "python"
+          ? await modernPythonLanguage(config.judge0Url, headers)
+          : languages[parsed.data.language];
       const submissionResponse = await fetch(
         `${config.judge0Url}/submissions?base64_encoded=true&wait=true`,
         {

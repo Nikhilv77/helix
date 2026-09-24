@@ -58,7 +58,7 @@ export function PracticeWeeklyActivityChart({
               <span
                 id={tooltipId}
                 role="tooltip"
-                className="pointer-events-none absolute bottom-[calc(100%+0.65rem)] left-1/2 z-10 w-max max-w-40 -translate-x-1/2 rounded-md bg-[#0e0f11] px-2.5 py-2 text-center text-[11px] leading-4 text-cream opacity-0 shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-opacity duration-150 group-hover:opacity-100 group-focus:opacity-100"
+                className="practice-weekly-activity-tooltip pointer-events-none absolute bottom-[calc(100%+0.65rem)] left-1/2 z-10 w-max max-w-40 -translate-x-1/2 rounded-md bg-[#0e0f11] px-2.5 py-2 text-center text-[11px] leading-4 text-cream opacity-0 shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-opacity duration-150 group-hover:opacity-100 group-focus:opacity-100"
               >
                 <span className="block text-cream/58">{FULL_DATE_FORMATTER.format(date)}</span>
                 <span className="block font-medium">

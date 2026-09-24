@@ -13,16 +13,19 @@ import {
   storyPracticeRevealHintInputSchema,
   interactivePracticeSaveDraftInputSchema
 } from "@/features/practice/shared/domain/story-practice-contracts";
-import {
-  aiMlStoryPaths,
-  type AiMlStoryPath,
-  type AiMlStoryQuestion
-} from "../domain/ai-ml-story-catalog";
+import { aiMlStoryPaths, type AiMlStoryQuestion } from "../domain/ai-ml-story-catalog";
 import {
   aiMlQuickCheckPath,
   aiMlQuickCheckQuestionById
 } from "../domain/ai-ml-quick-check-catalog";
 import type { PersistedAiMlPracticeTrack } from "../domain/ai-ml-practice";
+import {
+  recommendAiMlPractice,
+  type AiMlPracticePath,
+  type AiMlPracticeRecommendation
+} from "../domain/personalized-practice";
+import { aiMlResumePracticePath, AI_ML_RESUME_PATH_KEY } from "../domain/resume-practice-path";
+import type { CandidateProfile } from "@/lib/shared/types";
 import type {
   StoryPracticeAttemptWork,
   StoryPracticeAttemptFeedbackView,
@@ -65,6 +68,7 @@ export type AiMlStorySession = {
   blocks: StoryPracticeBlockView[];
   totalQuestions: number;
   terminalQuestions: number;
+  recommendation: AiMlPracticeRecommendation | null;
 };
 
 export class AiMlStoryPracticeService {
@@ -74,13 +78,21 @@ export class AiMlStoryPracticeService {
     private readonly ai: Pick<AiService, "generateStructured">
   ) {}
 
-  async session(ownerId: string, track: PersistedAiMlPracticeTrack): Promise<AiMlStorySession> {
+  async session(
+    ownerId: string,
+    track: PersistedAiMlPracticeTrack,
+    profile?: CandidateProfile
+  ): Promise<AiMlStorySession> {
     await this.legacy.session(ownerId, track);
     const row = await this.prisma.$transaction(async (tx) => {
       await lockAiMlPracticeOwner(tx, ownerId);
       let row = await this.load(ownerId, track, tx);
       if (!row) throw new Error("AI/ML practice session was not created");
-      const authored = aiMlStoryPaths(track).flatMap((path) => path.questions);
+      const resumePath = profile ? aiMlResumePracticePath(profile, track) : null;
+      const authored = [
+        ...aiMlStoryPaths(track).flatMap((path) => path.questions),
+        ...(resumePath?.questions ?? [])
+      ];
       const present = new Set(row.questions.map((question) => question.questionKey));
       const missing = authored.filter((question) => !present.has(question.id));
       if (missing.length) {
@@ -105,6 +117,13 @@ export class AiMlStoryPracticeService {
                 label
               })),
               pathKey: question.pathKey,
+              ...(resumePath && question.pathKey === resumePath.key
+                ? {
+                    pathTitle: resumePath.title,
+                    pathDescription: resumePath.description,
+                    pathExpectedMinutes: resumePath.expectedMinutes
+                  }
+                : {}),
               format: question.format,
               artifact: question.artifact,
               topicKeys: question.topicKeys,
@@ -178,12 +197,21 @@ export class AiMlStoryPracticeService {
       }
       return row;
     });
-    const paths: AiMlStoryPath[] = [...aiMlStoryPaths(track), aiMlQuickCheckPath(track)];
-    const currentPath = paths.find((path) =>
-      row!.questions.some(
-        (question) => pathKey(question) === path.key && question.status === "ACTIVE"
-      )
-    )?.key;
+    const paths: AiMlPracticePath[] = [
+      ...savedPersonalizedPaths(row.questions, AI_ML_RESUME_PATH_KEY),
+      ...aiMlStoryPaths(track),
+      aiMlQuickCheckPath(track)
+    ];
+    const recommendation = profile
+      ? recommendAiMlPractice({ profile, paths, questions: row.questions })
+      : null;
+    const currentPath =
+      recommendation?.blockId ??
+      paths.find((path) =>
+        row!.questions.some(
+          (question) => pathKey(question) === path.key && question.status === "ACTIVE"
+        )
+      )?.key;
     const blocks = paths.map((path, index) => {
       const questions = row!.questions.filter((question) => pathKey(question) === path.key);
       return {
@@ -210,20 +238,28 @@ export class AiMlStoryPracticeService {
             title: stageTitle(question, track, stageIndex)
           }))
         },
-        selection: { difficulty: "guided" as const, reason: path.description },
+        selection: {
+          difficulty: "guided" as const,
+          reason: recommendation?.blockId === path.key ? recommendation.reason : path.description
+        },
         questions: questions.map((question, stageIndex) =>
           publicQuestion(question, path.key, stageIndex + 1, track)
         ),
         assessment: null
       } satisfies StoryPracticeBlockView;
     });
+    const visiblePathKeys = new Set(paths.map((path) => path.key));
+    const visibleQuestions = row.questions.filter((question) =>
+      visiblePathKeys.has(pathKey(question))
+    );
     return {
       track,
       blocks,
-      totalQuestions: row.questions.length,
-      terminalQuestions: row.questions.filter(
+      totalQuestions: visibleQuestions.length,
+      terminalQuestions: visibleQuestions.filter(
         ({ status }) => status !== AiMlPracticeQuestionStatus.ACTIVE
-      ).length
+      ).length,
+      recommendation
     };
   }
 
@@ -503,6 +539,9 @@ type PublicSnapshot = {
   prompt: string;
   options: Array<{ id: string; label: string }>;
   pathKey?: string;
+  pathTitle?: string;
+  pathDescription?: string;
+  pathExpectedMinutes?: number;
   format?: AiMlStoryQuestion["format"];
   artifact?: AiMlStoryQuestion["artifact"];
   topicKeys?: string[];
@@ -594,6 +633,36 @@ const privateData = (row: { privateSnapshot: Prisma.JsonValue }) =>
   row.privateSnapshot as PrivateSnapshot;
 const pathKey = (row: { publicSnapshot: Prisma.JsonValue }) =>
   publicData(row).pathKey ?? "quick-check";
+
+function savedPersonalizedPaths(questions: QuestionRow[], prefix: string): AiMlPracticePath[] {
+  const groups = new Map<string, QuestionRow[]>();
+  for (const question of questions) {
+    const key = pathKey(question);
+    if (!key.startsWith(`${prefix}-`)) continue;
+    const group = groups.get(key) ?? [];
+    group.push(question);
+    groups.set(key, group);
+  }
+  return [...groups.entries()].reverse().map(([key, saved]) => {
+    const first = publicData(saved[0]!);
+    return {
+      key,
+      title: first.pathTitle ?? "Your resume project",
+      description: first.pathDescription ?? "Practise decisions from your resume evidence.",
+      expectedMinutes: first.pathExpectedMinutes ?? 25,
+      questions: saved.map((question) => {
+        const snapshot = publicData(question);
+        return {
+          id: question.questionKey,
+          title: snapshot.title,
+          format: snapshot.format ?? "artifact-diagnosis",
+          topicKeys: snapshot.topicKeys ?? [],
+          interaction: snapshot.interaction
+        };
+      })
+    };
+  });
+}
 
 function stageTitle(row: QuestionRow, track: PersistedAiMlPracticeTrack, index: number): string {
   const snapshot = publicData(row);

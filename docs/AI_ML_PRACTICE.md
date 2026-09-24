@@ -1,6 +1,8 @@
 # AI/ML interactive practice
 
-Open `/practice/ai-ml/applied-engineering` with an onboarded AI/ML profile. The first path is **The production decision lab**: six authored simulations alongside the existing 27 questions. Its numbers are teaching fixtures, not claimed production benchmarks.
+When a confirmed resume includes a project or work summary, Core Technical and Applied Engineering each add a two-question path grounded in that evidence. The prompts match the candidate's level and are frozen with the question snapshots. Replacing the resume or changing level adds a new path without rewriting earlier attempts. Existing path selection prioritizes an uncompleted question using resume topics, baseline review signals, saved drafts, and progress; the authored library remains available. These questions use the existing Practice overview and question workspace without an added panel or route.
+
+Open `/practice/ai-ml/applied-engineering` with an onboarded AI/ML profile. One authored path is **The production decision lab**: six simulations alongside the existing 27 questions. Its numbers are teaching fixtures, not claimed production benchmarks.
 
 | Case                | Response                 | What the learner demonstrates                                                      |
 | ------------------- | ------------------------ | ---------------------------------------------------------------------------------- |

@@ -217,7 +217,8 @@ describe("AI/ML shared question workspace", () => {
           track: "core-technical",
           blocks: [first, second, third, fourth],
           totalQuestions: 4,
-          terminalQuestions: 0
+          terminalQuestions: 0,
+          recommendation: null
         }}
         selected={first}
       />

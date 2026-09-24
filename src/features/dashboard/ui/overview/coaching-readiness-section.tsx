@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { type CSSProperties } from "react";
 import {
   ArrowRight,
   Loader2,
@@ -76,10 +75,10 @@ export function CoachingReadinessSection({
             </div>
 
             <h2 className="relative z-10 mt-3 max-w-[30rem] text-[1.45rem] font-semibold leading-[1.2] tracking-[-0.025em] text-cream sm:text-[1.65rem]">
-              <StaggeredWords text={data.coaching.title} baseMs={70} />
+              {data.coaching.title}
             </h2>
             <p className="relative z-10 mt-4 max-w-[34rem] text-[15px] leading-6 text-cream/60">
-              <StaggeredWords text={data.coaching.body} baseMs={250} stepMs={20} />
+              {data.coaching.body}
             </p>
 
             <div className="relative z-10 mt-auto flex flex-wrap items-center justify-between gap-4 pt-7">
@@ -121,11 +120,9 @@ function ReadinessCard({ readiness }: { readiness: DashboardOverviewData["readin
         className="dashboard-overview-card relative flex min-h-[21rem] min-w-0 flex-col items-start justify-center overflow-hidden rounded-[1.65rem] bg-[#151619] px-7 py-8"
       >
         <h2 className="max-w-[17rem] text-[1.55rem] font-semibold leading-tight tracking-[-0.025em] text-cream">
-          <StaggeredWords text={readiness.label} baseMs={120} />
+          {readiness.label}
         </h2>
-        <p className="mt-4 max-w-[18rem] text-[15px] leading-6 text-cream/58">
-          <StaggeredWords text={readiness.detail} baseMs={260} stepMs={24} />
-        </p>
+        <p className="mt-4 max-w-[18rem] text-[15px] leading-6 text-cream/58">{readiness.detail}</p>
         <Link
           href={readiness.actionHref}
           className="mt-7 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-cream px-4 text-[14px] font-semibold text-[#171a16] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#151619]"
@@ -165,13 +162,11 @@ function ReadinessCard({ readiness }: { readiness: DashboardOverviewData["readin
     >
       <div className="relative flex w-full items-start justify-between gap-3 text-left">
         <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-cream/40">
-          <StaggeredWords text="Interview readiness" baseMs={120} />
+          Interview readiness
         </p>
         <ReadinessDelta delta={readiness.delta} />
       </div>
-      <h2 className="relative mt-2 text-lg font-semibold text-cream">
-        <StaggeredWords text={readiness.label} baseMs={260} />
-      </h2>
+      <h2 className="relative mt-2 text-lg font-semibold text-cream">{readiness.label}</h2>
 
       <DashboardScoreRing
         value={score}
@@ -187,9 +182,7 @@ function ReadinessCard({ readiness }: { readiness: DashboardOverviewData["readin
         <p className="mt-1.5 text-[12.5px] font-medium leading-[1.5] text-cream/74">
           {readinessSummary(score)}
         </p>
-        <p className="mt-1.5 text-[11px] leading-[1.5] text-cream/42">
-          <StaggeredWords text={readiness.detail} baseMs={520} stepMs={30} />
-        </p>
+        <p className="mt-1.5 text-[11px] leading-[1.5] text-cream/42">{readiness.detail}</p>
       </div>
     </article>
   );
@@ -229,50 +222,15 @@ function ReadinessDelta({ delta }: { delta: number | null }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+      className={`dashboard-readiness-delta inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
         improving
-          ? "border-[#9be8c1]/15 bg-[#71d6a5]/10 text-[#a9ebc9]"
-          : "border-[#ffb4b4]/15 bg-[#ff8f8f]/[0.08] text-[#ffc1c1]"
+          ? "dashboard-readiness-delta-improving border-[#9be8c1]/15 bg-[#71d6a5]/10 text-[#a9ebc9]"
+          : "dashboard-readiness-delta-declining border-[#ffb4b4]/15 bg-[#ff8f8f]/[0.08] text-[#ffc1c1]"
       }`}
     >
       <Icon size={11} aria-hidden="true" />
       {improving ? "+" : ""}
       {delta} pts
-    </span>
-  );
-}
-
-function StaggeredWords({
-  text,
-  baseMs = 0,
-  stepMs = 38
-}: {
-  text: string;
-  baseMs?: number;
-  stepMs?: number;
-}) {
-  return (
-    <span
-      aria-label={text}
-      className="stagger-line"
-      data-phase="in"
-      style={
-        {
-          "--base": `${baseMs}ms`,
-          "--step": `${stepMs}ms`
-        } as CSSProperties
-      }
-    >
-      {text.split(/\s+/).map((word, index) => (
-        <span
-          key={`${word}-${index}`}
-          aria-hidden="true"
-          className="stagger-word mr-[0.24em] last:mr-0"
-          style={{ "--i": index } as CSSProperties}
-        >
-          {word}
-        </span>
-      ))}
     </span>
   );
 }

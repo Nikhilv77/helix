@@ -200,14 +200,14 @@ function InterviewVisual({ interviews }: { interviews: DashboardInterviewContinu
             {index < steps.length - 1 ? (
               <span
                 aria-hidden="true"
-                className="absolute left-[0.85rem] top-7 h-[calc(100%-1.25rem)] w-px bg-cream/[0.07]"
+                className="dashboard-interview-step-connector absolute left-[0.85rem] top-7 h-[calc(100%-1.25rem)] w-px bg-cream/[0.07]"
               />
             ) : null}
             <span
               className={`relative z-10 grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-semibold ${
                 index === 0
                   ? "bg-[var(--workspace-accent-soft)] text-[var(--workspace-accent)]"
-                  : "bg-[#202124] text-cream/40"
+                  : "dashboard-interview-step-number bg-[#202124] text-cream/40"
               }`}
             >
               {index + 1}
