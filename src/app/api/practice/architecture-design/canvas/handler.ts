@@ -5,7 +5,7 @@ import { ArchitecturePracticeCanvasConflictError } from "@/features/practice/arc
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiSuccess } from "@/server/http/api-response";
 import { RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
-import { apiError, architectureDesignOwner, parseArchitectureDesignJson } from "../_shared";
+import { apiError, architectureDesignMutationOwner, parseArchitectureDesignJson } from "../_shared";
 
 const blockIdSchema = z.string().uuid();
 const saveSchema = z.object({
@@ -15,7 +15,7 @@ const saveSchema = z.object({
 
 export async function GET(request: NextRequest, blockId: string) {
   try {
-    const { ownerId, app } = await architectureDesignOwner();
+    const { ownerId, app } = await architectureDesignMutationOwner();
     return apiSuccess(
       await app.architectureDesign.canvas.get(ownerId, blockIdSchema.parse(blockId))
     );
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, blockId: string) {
 
 export async function PUT(request: NextRequest, blockId: string) {
   try {
-    const { ownerId, app } = await architectureDesignOwner(RATE_LIMIT_POLICIES.practiceState);
+    const { ownerId, app } = await architectureDesignMutationOwner(RATE_LIMIT_POLICIES.practiceState);
     const input = await parseArchitectureDesignJson(request, saveSchema);
     try {
       return apiSuccess(

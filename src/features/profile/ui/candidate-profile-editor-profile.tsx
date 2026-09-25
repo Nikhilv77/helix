@@ -20,14 +20,12 @@ export function ProfileHero({
   saved,
   onCoverEdit,
   onAvatarEdit,
-  onEdit,
   onResumeUpdate
 }: {
   profile: CandidateProfileInput;
   saved: CandidateProfile;
   onCoverEdit: () => void;
   onAvatarEdit: () => void;
-  onEdit: () => void;
   onResumeUpdate: () => void;
 }) {
   const resume = saved.resume;
@@ -136,7 +134,7 @@ export function ProfileHero({
             <div className="mt-3 flex w-full flex-col items-center">
               <h1 className="mt-3 flex max-w-full items-center justify-center gap-2.5 text-center text-3xl font-semibold tracking-tight text-cream sm:text-[2.25rem]">
                 <span className="min-w-0 truncate">
-                  <AnimatedProfileWords text={name} delay={900} />
+                  <AnimatedProfileWords text={name} delay={80} />
                 </span>
                 {resume ? (
                   <BadgeCheck
@@ -149,27 +147,20 @@ export function ProfileHero({
               <p className="mt-2 max-w-3xl text-center text-sm leading-6 text-cream/58 sm:text-[15px]">
                 <AnimatedProfileWords
                   text={profile.headline || "Add a headline so Trailgrad can frame your rounds."}
-                  delay={1240}
+                  delay={130}
                   copy
                 />
               </p>
 
               <div
                 className="step-in mt-3.5 flex flex-wrap justify-center gap-2.5"
-                style={{ "--step-delay": "1540ms" } as CSSProperties}
+                style={{ "--step-delay": "210ms" } as CSSProperties}
               >
                 <HeroChip icon={Target} label={role?.label ?? "No role set"} muted={!role} />
                 <HeroChip icon={BarChart3} label={level?.label ?? "No level set"} muted={!level} />
               </div>
 
               <div className="mt-5 flex flex-wrap justify-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={onEdit}
-                  className="profile-action-button inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.1] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/70"
-                >
-                  <Pencil size={14} /> Edit profile
-                </button>
                 <button
                   type="button"
                   onClick={onResumeUpdate}
@@ -181,7 +172,7 @@ export function ProfileHero({
 
               <div
                 className="profile-soft-reveal mt-8 h-px w-full max-w-5xl bg-gradient-to-r from-transparent via-cream/22 to-transparent"
-                style={{ "--profile-reveal-delay": "1660ms" } as CSSProperties}
+                style={{ "--profile-reveal-delay": "260ms" } as CSSProperties}
               />
 
               <div className="mt-7 max-w-4xl">
@@ -191,7 +182,7 @@ export function ProfileHero({
                       profile.context ||
                       "Add a short profile summary so your teacher can shape interviews around your real work."
                     }
-                    delay={1760}
+                    delay={290}
                     copy
                   />
                 </p>
@@ -206,7 +197,7 @@ export function ProfileHero({
           <section className="mt-12 w-full max-w-6xl">
             <div
               className="profile-soft-reveal text-center"
-              style={{ "--profile-reveal-delay": "2100ms" } as CSSProperties}
+              style={{ "--profile-reveal-delay": "340ms" } as CSSProperties}
             >
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cream/38">
                 Practice priorities
@@ -223,7 +214,7 @@ export function ProfileHero({
                   <article
                     key={area}
                     className="profile-glass profile-soft-reveal group relative flex w-full items-start gap-4 rounded-2xl px-5 py-5 text-left transition-colors duration-200 hover:bg-white/[0.035] sm:w-[calc(50%-0.375rem)] lg:w-[calc(33.333%-0.5rem)]"
-                    style={{ "--profile-reveal-delay": `${2280 + index * 65}ms` } as CSSProperties}
+                    style={{ "--profile-reveal-delay": `${400 + index * 35}ms` } as CSSProperties}
                   >
                     <span className="mt-0.5 shrink-0 text-[var(--workspace-accent)] transition-transform duration-300 group-hover:-translate-y-0.5">
                       <FocusIcon size={25} strokeWidth={1.5} aria-hidden="true" />
@@ -248,7 +239,7 @@ export function ProfileHero({
           className="profile-soft-reveal relative mx-auto mt-9 max-w-2xl px-8 text-center"
           style={
             {
-              "--profile-reveal-delay": `${profile.focusAreas.length ? 2360 + profile.focusAreas.length * 65 : 2180}ms`
+              "--profile-reveal-delay": `${profile.focusAreas.length ? 440 + profile.focusAreas.length * 35 : 380}ms`
             } as CSSProperties
           }
         >
@@ -296,7 +287,7 @@ function AnimatedProfileWords({
         <span
           key={`${word}-${index}`}
           className={copy ? "onboarding-word profile-copy-word" : "onboarding-word"}
-          style={{ "--word-delay": `${delay + index * 46}ms` } as CSSProperties}
+          style={{ "--word-delay": `${delay + Math.min(index, 20) * 12}ms` } as CSSProperties}
         >
           {word}
           {index < words.length - 1 ? "\u00A0" : ""}

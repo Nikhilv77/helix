@@ -24,6 +24,24 @@ export interface FrontendRoadmapHome {
   insights: FrontendRoadmapInsight[];
 }
 
+/** Only the persisted progress needed by the DSA Practice page. */
+export type DsaPageRoadmap = Pick<
+  FrontendRoadmapHome,
+  | "currentSessionTemplateSlug"
+  | "currentChapterTemplateSlug"
+  | "nextQuestionHref"
+  | "totalQuestions"
+  | "completedQuestions"
+> & {
+  sessions: Array<Pick<FrontendRoadmapSession, "id" | "purpose">>;
+  chapters: Array<
+    Pick<
+      FrontendRoadmapChapter,
+      "id" | "title" | "whyItMatters" | "completedQuestions" | "status" | "progressPercent"
+    >
+  >;
+};
+
 export interface FrontendRoadmapSession {
   id: string;
   order: number;

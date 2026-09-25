@@ -38,7 +38,8 @@ import { selectedStorySchema } from "@/features/practice/core-technical/domain/s
 import {
   coreTechnicalPracticeQuestionPrompt,
   coreTechnicalPracticePathPresentation,
-  coreTechnicalPracticePathReason
+  coreTechnicalPracticePathReason,
+  coreTechnicalPracticePathTitle
 } from "@/features/practice/core-technical/domain/practice-path-presentation";
 import { BadRequestErrorException } from "@/server/common/exceptions/bad-request-error.exception";
 import { ConflictErrorException } from "@/server/common/exceptions/conflict-error.exception";
@@ -152,6 +153,38 @@ export class CoreTechnicalPracticeService {
     return block ? publicBlock(block) : null;
   }
 
+  /** Only the fields used by the Practice landing card. */
+  async currentEntryBlock(ownerId: string) {
+    const block = await this.prisma.coreTechnicalBlock.findFirst({
+      where: { ownerId, isCurrent: true },
+      select: {
+        status: true,
+        storySnapshot: true,
+        selectionSnapshot: true,
+        questions: {
+          select: { status: true, _count: { select: { attempts: true } } }
+        }
+      }
+    });
+    if (!block) return null;
+    const story = selectedStorySchema.parse(block.storySnapshot);
+    const selection = coreTechnicalStorySelectionSchema.parse(block.selectionSnapshot);
+    return {
+      status: block.status,
+      story: {
+        title: coreTechnicalPracticePathTitle(story.key, story.title),
+        premise: coreTechnicalPracticePathPresentation(story).premise,
+        mechanismKeys: story.mechanismKeys,
+        expectedMinutes: story.expectedMinutes
+      },
+      selection: { difficulty: selection.selectedStory.difficulty },
+      questions: block.questions.map((question) => ({
+        status: question.status,
+        latestAttempt: question._count.attempts > 0 ? true : null
+      }))
+    };
+  }
+
   async historyBlock(ownerId: string, blockId: string) {
     const block = await this.prisma.coreTechnicalBlock.findFirst({
       where: { id: blockId, ownerId },
@@ -169,6 +202,46 @@ export class CoreTechnicalPracticeService {
   async question(ownerId: string, questionId: string) {
     const question = await this.findQuestion(ownerId, questionId);
     return publicQuestion(question);
+  }
+
+  /** One question plus small navigation metadata; no other answer or assessment payloads. */
+  async questionWorkspace(ownerId: string, questionId: string, blockId: string | null) {
+    const row = await this.prisma.coreTechnicalBlockQuestion.findFirst({
+      where: {
+        id: questionId,
+        ownerId,
+        block: blockId ? { id: blockId, ownerId } : { isCurrent: true, ownerId }
+      },
+      select: {
+        ...questionReadSelect,
+        block: {
+          select: {
+            id: true,
+            isCurrent: true,
+            status: true,
+            storySnapshot: true,
+            selectionSnapshot: true,
+            questions: { orderBy: { order: "asc" }, select: { id: true, order: true } }
+          }
+        }
+      }
+    });
+    if (!row) return null;
+    const storedStory = selectedStorySchema.parse(row.block.storySnapshot);
+    const selection = coreTechnicalStorySelectionSchema.parse(row.block.selectionSnapshot);
+    return {
+      block: {
+        id: row.block.id,
+        status: row.block.status,
+        story: coreTechnicalPracticePathPresentation(storedStory),
+        selection: {
+          difficulty: selection.selectedStory.difficulty,
+          reason: coreTechnicalPracticePathReason(selection.reason, storedStory.key, storedStory.title)
+        },
+        questions: row.block.questions
+      },
+      question: publicQuestion(row)
+    };
   }
 
   async saveDraft(ownerId: string, rawInput: unknown) {

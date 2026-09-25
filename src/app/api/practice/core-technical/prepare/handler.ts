@@ -7,7 +7,7 @@ import {
   type SharedLease
 } from "@/server/rate-limit/shared-guard";
 import {
-  coreTechnicalMutationOwner,
+  coreTechnicalOwner,
   parseCoreTechnicalJson,
   requireCoreTechnicalLaunchEligibility
 } from "../_shared";
@@ -16,7 +16,7 @@ import {
 export async function POST(request: NextRequest) {
   let lease: SharedLease | undefined;
   try {
-    const { ownerId, app, profile } = await coreTechnicalMutationOwner(
+    const { ownerId, app, profile } = await coreTechnicalOwner(
       RATE_LIMIT_POLICIES.answerEvaluation
     );
     await requireCoreTechnicalLaunchEligibility(app, profile);

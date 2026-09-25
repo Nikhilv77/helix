@@ -22,7 +22,8 @@ export class PersonalizedPerformanceStore {
     const records = await this.prisma.interviewSession.findMany({
       where: { ownerId },
       orderBy: { startedAt: "desc" },
-      take: 100
+      take: 100,
+      select: { state: true, touchedAt: true }
     });
     const sessions = completedAdaptiveSessions(
       records.map((record) => ({

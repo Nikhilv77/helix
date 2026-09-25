@@ -12,6 +12,7 @@ export function questionStatusAfterAction(
   current: RoadmapProgressStatus,
   action: RoadmapQuestionAttemptAction
 ): RoadmapProgressStatus {
+  if (action === "open") return current;
   if (action === "complete") return RoadmapProgressStatus.COMPLETED;
   if (action === "skip") return RoadmapProgressStatus.SKIPPED;
   if (current === RoadmapProgressStatus.COMPLETED) return RoadmapProgressStatus.COMPLETED;

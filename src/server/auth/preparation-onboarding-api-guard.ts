@@ -14,3 +14,19 @@ export function requireCompletedPreparationOnboarding(profile: CandidateProfile)
     );
   }
 }
+
+/** The same gate for endpoints that only need the small workspace projection. */
+export function requireCompletedPreparationOnboardingState(
+  state: { onboardingCompletedAt: number | null; preparationCompletedAt: number | null } | null
+): asserts state is { onboardingCompletedAt: number; preparationCompletedAt: number } {
+  if (!state?.onboardingCompletedAt) {
+    throw new ApiRouteError(409, "ONBOARDING_REQUIRED", "Finish onboarding first.");
+  }
+  if (!state.preparationCompletedAt) {
+    throw new ApiRouteError(
+      409,
+      "PREPARATION_ONBOARDING_REQUIRED",
+      "Finish your preparation setup and baseline first."
+    );
+  }
+}

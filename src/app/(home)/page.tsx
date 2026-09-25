@@ -1,21 +1,27 @@
-import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { MarketingHome } from "@/features/marketing/ui/home/marketing-home";
 import { DashboardOverview } from "@/features/dashboard/ui/overview/dashboard-overview";
-import { DashboardSkeleton } from "@/features/dashboard/ui/overview/dashboard-skeleton";
 import { PreparationWelcomeLoading } from "@/features/preparation-onboarding/ui/preparation-welcome-loading";
 import { PreparationWelcomeScreen } from "@/features/preparation-onboarding/ui/preparation-welcome-screen";
 import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
 import { loadDashboardOverview } from "@/features/dashboard/server/load-dashboard-overview";
 import { appUrl, defaultDescription, defaultTitle, siteName } from "@/lib/shared/seo";
-import type { CandidateProfile } from "@/lib/shared/types";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
-import { getProfileForRequest } from "@/features/profile/server/profile-query";
+import {
+  getProfileForRequest,
+  getWorkspaceShellStateForRequest
+} from "@/features/profile/server/profile-query";
 import { resolveHomeSurface } from "./home-route-state";
+import { getUserIdForRequest } from "@/server/auth/request-user";
 
 const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
+// Keep a recently visited Overview in the client router cache. This does not
+// cache the authenticated response on the server or in a shared HTTP cache.
+export const unstable_dynamicStaleTime = 30;
+export const maxDuration = 60;
 
 export const metadata: Metadata = {
   title: { absolute: defaultTitle },
@@ -51,7 +57,7 @@ export default async function HomePage({
     );
   }
 
-  const { userId } = await auth();
+  const userId = await getUserIdForRequest();
   if (!userId) {
     return (
       <>
@@ -61,18 +67,20 @@ export default async function HomePage({
     );
   }
 
-  let profile;
+  const ownerId = authenticatedOwnerId(userId);
+  const shellProfile = await getWorkspaceShellStateForRequest(ownerId);
 
-  try {
-    profile = await getProfileForRequest(authenticatedOwnerId(userId));
-  } catch {
-    redirect("/onboarding");
-  }
+  const routeProfile = shellProfile
+    ? {
+        onboardingCompletedAt: shellProfile.onboardingCompletedAt,
+        preparationOnboarding: { completedAt: shellProfile.preparationCompletedAt }
+      }
+    : null;
 
   const onboardingSurface = resolveHomeSurface({
     clerkEnabled,
     userId,
-    profile,
+    profile: routeProfile,
     welcomeRequested: false
   });
   if (onboardingSurface === "onboarding") redirect("/onboarding");
@@ -81,41 +89,27 @@ export default async function HomePage({
   const welcomePersona = welcomePersonaFromQuery(
     typeof query.welcome === "string" ? query.welcome : null
   );
-  const preparationRequired = profile.preparationOnboarding.completedAt === null;
+  const preparationRequired = shellProfile?.preparationCompletedAt === null;
   const surface = resolveHomeSurface({
     clerkEnabled,
     userId,
-    profile,
+    profile: routeProfile,
     welcomeRequested: welcomePersona !== null
   });
 
   if (surface === "overview") {
-    return (
-      <Suspense fallback={<DashboardSkeleton />}>
-        <DashboardOverviewHome userId={userId} profile={profile} />
-      </Suspense>
-    );
+    // The root boundary already covers this request. A nested fallback swaps
+    // its neutral loader for a second, different skeleton before the page lands.
+    const overviewData = await loadDashboardOverview({ ownerId, now: Date.now() });
+    return <DashboardOverview overviewData={overviewData} />;
   }
 
+  const profile = await getProfileForRequest(ownerId);
   return (
     <Suspense fallback={<PreparationWelcomeLoading />}>
       <PreparationWelcomeScreen profile={profile} blocking={preparationRequired} />
     </Suspense>
   );
-}
-
-async function DashboardOverviewHome({
-  userId,
-  profile
-}: {
-  userId: string;
-  profile: CandidateProfile;
-}) {
-  const ownerId = authenticatedOwnerId(userId);
-  const now = Date.now();
-  const overviewData = await loadDashboardOverview({ ownerId, profile, now });
-
-  return <DashboardOverview overviewData={overviewData} />;
 }
 
 function SoftwareJsonLd() {

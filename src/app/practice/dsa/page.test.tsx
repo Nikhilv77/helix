@@ -3,30 +3,43 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   events: [] as string[],
-  requireOnboardedProfile: vi.fn(),
+  requireOnboardedOwner: vi.fn(),
   recoverCurrent: vi.fn(),
   fullPlan: vi.fn(),
-  home: vi.fn(),
-  statuses: vi.fn(),
+  dsaPage: vi.fn(),
+  cachedDsaPage: vi.fn(),
+  historyRows: vi.fn(),
+  current: vi.fn(),
+  currentWithReadiness: vi.fn(),
   evidence: vi.fn(),
   stable: vi.fn(),
   historyRead: vi.fn()
 }));
 
 vi.mock("@/server/auth/onboarding-guard", () => ({
-  requireOnboardedProfile: mocks.requireOnboardedProfile
+  requireOnboardedOwner: mocks.requireOnboardedOwner
+}));
+vi.mock("@/features/practice/dsa/server/dsa-practice-block.store", () => ({
+  recommendationFromSnapshot: () => ({ questions: [] })
 }));
 vi.mock("@/features/practice/dsa/server/stable-dsa-recommendation", () => ({
   buildStableDsaRecommendation: mocks.stable
+}));
+vi.mock("@/features/practice/dsa/server/cached-dsa-page", () => ({
+  cachedDsaPage: mocks.cachedDsaPage
 }));
 vi.mock("@/server/app-container", () => ({
   getAppContainer: () => ({
     config: { nodeEnv: "test" },
     dsaBlockAssessmentFinalizationService: { recoverCurrent: mocks.recoverCurrent },
     dsaService: { fullPlan: mocks.fullPlan },
-    frontendRoadmapService: { home: mocks.home, questionStatuses: mocks.statuses },
+    frontendRoadmapService: { dsaPage: mocks.dsaPage },
     practiceEvidenceStore: { refresh: mocks.evidence },
-    dsaPracticeBlockStore: {},
+    dsaPracticeBlockStore: {
+      history: mocks.historyRows,
+      current: mocks.current,
+      currentWithReadiness: mocks.currentWithReadiness
+    },
     dsaBlockHistoryService: { read: mocks.historyRead }
   })
 }));
@@ -46,10 +59,7 @@ describe("DsaPracticePage block history read", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.events.length = 0;
-    mocks.requireOnboardedProfile.mockResolvedValue({
-      ownerId: "owner-a",
-      profile: { targetRole: "frontend" }
-    });
+    mocks.requireOnboardedOwner.mockResolvedValue({ ownerId: "owner-a" });
     mocks.recoverCurrent.mockImplementation(async () => {
       mocks.events.push("recover");
     });
@@ -63,8 +73,17 @@ describe("DsaPracticePage block history read", () => {
         firstQuestionSlug: null
       };
     });
-    mocks.home.mockResolvedValue(null);
-    mocks.statuses.mockResolvedValue({ "saved-question": "COMPLETED" });
+    mocks.cachedDsaPage.mockResolvedValue({
+      roadmap: null,
+      questionStatuses: { "saved-question": "COMPLETED" }
+    });
+    mocks.historyRows.mockResolvedValue([{
+      id: "11111111-1111-4111-8111-111111111111",
+      isCurrent: true,
+      status: "PRACTISING",
+      questionSlugs: ["unsolved-question"],
+      recommendationSnapshot: {}
+    }]);
     mocks.evidence.mockResolvedValue(null);
     mocks.stable.mockResolvedValue(null);
     mocks.historyRead.mockResolvedValue({
@@ -75,7 +94,7 @@ describe("DsaPracticePage block history read", () => {
     });
   });
 
-  it("recovers finalization before reading Practice and passes the URL-selected owned block", async () => {
+  it("uses the saved block without rebuilding evidence and passes the URL-selected owned block", async () => {
     render(
       await DsaPracticePage({
         searchParams: Promise.resolve({
@@ -85,11 +104,15 @@ describe("DsaPracticePage block history read", () => {
       })
     );
 
-    expect(mocks.events.slice(0, 2)).toEqual(["recover", "plan"]);
+    expect(mocks.recoverCurrent).not.toHaveBeenCalled();
+    expect(mocks.evidence).not.toHaveBeenCalled();
+    expect(mocks.stable).not.toHaveBeenCalled();
     expect(mocks.historyRead).toHaveBeenCalledWith(
       "owner-a",
       "11111111-1111-4111-8111-111111111111",
-      { "saved-question": "COMPLETED" }
+      { "saved-question": "COMPLETED" },
+      true,
+      await mocks.historyRows.mock.results[0]?.value
     );
     expect(screen.getByTestId("topics")).toHaveAttribute(
       "data-block",

@@ -1,5 +1,7 @@
 "use client";
 
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
+
 import { Check, Loader2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -33,7 +35,7 @@ export function HelpRating({
       setError(null);
 
       try {
-        const response = await fetch(`/api/help/session/${encodeURIComponent(requestId)}`, {
+        const response = await workspaceMutationFetch(`/api/help/session/${encodeURIComponent(requestId)}`, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ action: "rate", rating: helped ? 5 : 1 })

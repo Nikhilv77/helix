@@ -5,7 +5,7 @@ import { PracticeCoachCard, PracticeIntro } from "@/features/practice/shared/ui/
 import type { DsaRecommendation } from "@/features/practice/dsa/domain/dsa-recommendation";
 import type { DsaChapter, FrontendDsaPlan, PlanQuestion } from "@/lib/roadmap/frontend-plan";
 import { PREP_SESSIONS } from "@/lib/roadmap/frontend-plan";
-import type { FrontendRoadmapChapter, FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
+import type { DsaPageRoadmap } from "@/lib/roadmap/roadmap";
 import type { DsaBlockHistoryView } from "@/features/practice/dsa/server/dsa-block-history.service";
 
 /** The DSA roadmap: current pattern first, then the complete numbered path. */
@@ -19,7 +19,7 @@ export function DsaTopics({
   allowEarlyAssessmentStart = false
 }: {
   plan: FrontendDsaPlan;
-  roadmap?: FrontendRoadmapHome | null;
+  roadmap?: DsaPageRoadmap | null;
   questionStatuses?: Record<string, string>;
   recommendation?: DsaRecommendation | null;
   blockHistory?: DsaBlockHistoryView | null;
@@ -335,7 +335,7 @@ function ChapterBlock({
 }: {
   chapter: DsaChapter;
   index: number;
-  progress: FrontendRoadmapChapter | null;
+  progress: DsaPageRoadmap["chapters"][number] | null;
   statusBySlug: Map<string, string> | null;
   current: boolean;
 }) {
@@ -445,7 +445,10 @@ function QuestionStepper({
   const currentStepIndex = Math.min(completedQuestions, Math.max(questions.length - 1, 0));
 
   return (
-    <nav className="dsa-question-stepper flex gap-1.5" aria-label="Jump to a question in this pattern">
+    <nav
+      className="dsa-question-stepper flex gap-1.5"
+      aria-label="Jump to a question in this pattern"
+    >
       {questions.map((question, index) => {
         const status = statusBySlug?.get(question.slug) ?? null;
         const isPassed = index < completedQuestions;

@@ -79,8 +79,10 @@ export async function GET(request: NextRequest) {
     // request and character budgets.
     const guard = getSharedGuard(config);
     const ownerId = authenticatedOwnerId(userId);
-    await guard.enforce(RATE_LIMIT_POLICIES.voiceGeneration, ownerId);
-    await guard.enforce(RATE_LIMIT_POLICIES.voiceCharacters, ownerId, parsed.data.text.length);
+    await Promise.all([
+      guard.enforce(RATE_LIMIT_POLICIES.voiceGeneration, ownerId),
+      guard.enforce(RATE_LIMIT_POLICIES.voiceCharacters, ownerId, parsed.data.text.length)
+    ]);
 
     if (useGemini) {
       try {

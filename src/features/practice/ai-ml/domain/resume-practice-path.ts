@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { CandidateProfile } from "@/lib/shared/types";
 import type { PersistedAiMlPracticeTrack } from "./ai-ml-practice";
-import type { AiMlStoryPath, AiMlStoryQuestion } from "./ai-ml-story-catalog";
+import { aiMlStoryPaths, type AiMlStoryPath, type AiMlStoryQuestion } from "./ai-ml-story-catalog";
 
 export const AI_ML_RESUME_PATH_KEY = "resume-project";
 
@@ -178,10 +178,8 @@ function resumeTopicKeys(evidence: string): string[] {
   const keys = ["project-reasoning"];
   if (/\b(?:rag|retriev\w*|search\w*|embedding\w*|vector\w*)\b/i.test(evidence))
     keys.push("retrieval");
-  if (/\b(?:llm|nlp|language|prompt\w*|text)\b/i.test(evidence))
-    keys.push("language-models");
-  if (/\b(?:vision|image\w*|visual|ocr|detect\w*)\b/i.test(evidence))
-    keys.push("computer-vision");
+  if (/\b(?:llm|nlp|language|prompt\w*|text)\b/i.test(evidence)) keys.push("language-models");
+  if (/\b(?:vision|image\w*|visual|ocr|detect\w*)\b/i.test(evidence)) keys.push("computer-vision");
   if (/\b(?:mlops|serving|inference|deploy\w*|pipeline|monitor\w*)\b/i.test(evidence))
     keys.push("model-delivery");
   if (/\b(?:evaluat\w*|classif\w*|predict\w*|metric\w*|fraud)\b/i.test(evidence))
@@ -191,4 +189,39 @@ function resumeTopicKeys(evidence: string): string[] {
 
 function clean(value: string, limit: number): string {
   return value.replace(/\s+/g, " ").trim().slice(0, limit);
+}
+
+export type AiMlStarterPractice = {
+  title: string;
+  difficulty: null;
+  minutes: number;
+  href: string;
+  chapterTitle: string;
+};
+
+/**
+ * Progress suggestions for an AI/ML candidate who has not solved anything yet.
+ * Cards open the track, which publishes the cohort before questions have ids.
+ */
+export function aiMlStarterPractice(profile: CandidateProfile): AiMlStarterPractice[] {
+  const card = (
+    path: Pick<AiMlStoryPath, "title" | "expectedMinutes">,
+    track: PersistedAiMlPracticeTrack
+  ): AiMlStarterPractice => ({
+    title: path.title,
+    difficulty: null,
+    minutes: path.expectedMinutes,
+    href: `/practice/ai-ml/${track}`,
+    chapterTitle:
+      track === "core-technical" ? "Core Technical · AI/ML" : "Applied Engineering · AI/ML"
+  });
+  const resumePath = aiMlResumePracticePath(profile, "core-technical");
+  const [firstCore] = aiMlStoryPaths("core-technical");
+  const [firstApplied, secondApplied] = aiMlStoryPaths("applied-engineering");
+  const third = resumePath ?? secondApplied;
+  return [
+    firstCore && card(firstCore, "core-technical"),
+    firstApplied && card(firstApplied, "applied-engineering"),
+    third && card(third, resumePath ? "core-technical" : "applied-engineering")
+  ].filter((item): item is AiMlStarterPractice => Boolean(item));
 }

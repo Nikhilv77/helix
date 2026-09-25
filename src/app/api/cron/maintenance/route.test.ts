@@ -2,7 +2,6 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  dispatchDaily: vi.fn(),
   secret: "1234567890abcdef",
   expireStaleAndReport: vi.fn(),
   reconcileStale: vi.fn(),
@@ -10,13 +9,17 @@ const mocks = vi.hoisted(() => ({
   purgeAllExpiredHelpRequestNotifications: vi.fn(),
   retryPending: vi.fn(),
   runEvaluationRecovery: vi.fn(),
-  enforceInterviewRetention: vi.fn()
+  enforceInterviewRetention: vi.fn(),
+  recoverDirtySnapshots: vi.fn()
+}));
+
+vi.mock("@/features/analytics/server/recover-dirty-snapshots", () => ({
+  recoverDirtySnapshots: mocks.recoverDirtySnapshots
 }));
 
 vi.mock("@/server/app-container", () => ({
   getAppContainer: () => ({
     config: { cronSecret: mocks.secret },
-    teacherNotificationService: { dispatchDaily: mocks.dispatchDaily },
     interviewEvaluationRecoveryService: { runBatch: mocks.runEvaluationRecovery },
     interviewOperationsService: { enforceRetention: mocks.enforceInterviewRetention },
     helpRequestService: { expireStaleAndReport: mocks.expireStaleAndReport },
@@ -33,10 +36,9 @@ vi.mock("@/server/app-container", () => ({
 
 import { GET } from "./route";
 
-describe("GET /api/cron/teacher-notifications", () => {
+describe("GET /api/cron/maintenance", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.dispatchDaily.mockResolvedValue({ candidates: 2, recorded: 3, failed: 0 });
     mocks.expireStaleAndReport.mockResolvedValue([
       {
         id: "00000000-0000-4000-8000-000000000001",
@@ -70,24 +72,23 @@ describe("GET /api/cron/teacher-notifications", () => {
       batchLimit: 250,
       batchSaturated: false
     });
+    mocks.recoverDirtySnapshots.mockResolvedValue({ attempted: 0, failed: 0 });
   });
 
   it("rejects calls without the scheduler bearer token", async () => {
     const response = await GET(request());
 
     expect(response.status).toBe(401);
-    expect(mocks.dispatchDaily).not.toHaveBeenCalled();
     expect(mocks.expireStaleAndReport).not.toHaveBeenCalled();
   });
 
-  it("runs teacher notifications and global maintenance in one daily function", async () => {
+  it("runs global help and interview maintenance in one daily function", async () => {
     const response = await GET(request(`Bearer ${mocks.secret}`));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
       success: true,
       data: {
-        teacherNotifications: { candidates: 2, recorded: 3, failed: 0 },
         maintenance: {
           expiredRequests: 1,
           reconciledSessions: 0,
@@ -117,10 +118,10 @@ describe("GET /api/cron/teacher-notifications", () => {
           },
           batchLimit: 250,
           batchSaturated: false
-        }
+        },
+        snapshotRecovery: { attempted: 0, failed: 0 }
       }
     });
-    expect(mocks.dispatchDaily).toHaveBeenCalledTimes(1);
     expect(mocks.enforceInterviewRetention).toHaveBeenCalledTimes(1);
     expect(mocks.dispatch).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -133,7 +134,7 @@ describe("GET /api/cron/teacher-notifications", () => {
 });
 
 function request(authorization?: string): NextRequest {
-  return new NextRequest("http://localhost/api/cron/teacher-notifications", {
+  return new NextRequest("http://localhost/api/cron/maintenance", {
     headers: authorization ? { authorization } : undefined
   });
 }

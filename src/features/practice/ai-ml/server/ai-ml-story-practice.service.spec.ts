@@ -6,6 +6,7 @@ import type { AiMlPracticeService } from "./ai-ml-practice.service";
 import { aiMlStoryPaths } from "../domain/ai-ml-story-catalog";
 import { appliedEngineeringLab } from "../domain/applied-engineering-lab";
 import { aiMlQuickCheckPath } from "../domain/ai-ml-quick-check-catalog";
+import { frontendStoryPaths } from "@/features/practice/story-tracks/domain/frontend-story-catalog";
 import { AiMlStoryPracticeService } from "./ai-ml-story-practice.service";
 
 const ownerId = "user:ai-ml-test";
@@ -58,7 +59,11 @@ function questionRow(overrides: Record<string, unknown> = {}) {
     draft: null,
     revealedHintCount: 0,
     attempt: null,
-    session: { track: AiMlPracticeTrack.CORE_TECHNICAL },
+    session: {
+      track: AiMlPracticeTrack.CORE_TECHNICAL,
+      // question() reads path peers from the row's session in the same query.
+      questions: [{ id: questionId, publicSnapshot }]
+    },
     ...overrides
   };
 }
@@ -124,6 +129,8 @@ describe("AiMlStoryPracticeService", () => {
     );
     const findUnique = vi
       .fn()
+      // The lock-free published check reads the unpublished session first.
+      .mockResolvedValueOnce({ id: "session-1", questions: legacyRows })
       .mockResolvedValueOnce({ id: "session-1", questions: legacyRows })
       .mockResolvedValueOnce({ id: "session-1", questions: [...legacyRows, ...createdRows] });
     const createMany = vi.fn().mockResolvedValue({ count: 19 });
@@ -146,6 +153,120 @@ describe("AiMlStoryPracticeService", () => {
     expect(result.totalQuestions).toBe(27);
     expect(result.blocks[0]!.questions[0]!.authorizedAnswer).toBeNull();
     expect(result.blocks[3]!.questions[0]!.id).toBe("legacy-1");
+  });
+
+  it("serves an already-published session without a transaction or owner lock", async () => {
+    const required = [
+      ...aiMlStoryPaths("core-technical").flatMap((path) => path.questions),
+      ...aiMlQuickCheckPath("core-technical").questions
+    ];
+    const rows = required.map((question, index) =>
+      questionRow({
+        id: `row-${question.id}`,
+        questionKey: question.id,
+        order: index + 1,
+        contentVersion: 99,
+        publicSnapshot: {
+          ...publicSnapshot,
+          id: question.id,
+          pathKey: question.pathKey,
+          title: question.title,
+          prompt: question.prompt,
+          format: question.format,
+          artifact: question.artifact,
+          options: (question.choices ?? []).map((label, choice) => ({ id: String(choice), label }))
+        }
+      })
+    );
+    const findUnique = vi.fn().mockResolvedValue({ id: "session-1", questions: rows });
+    const transaction = vi.fn();
+    const legacySession = vi.fn();
+    const subject = new AiMlStoryPracticeService(
+      {
+        $transaction: transaction,
+        aiMlPracticeSession: { findUnique }
+      } as unknown as PrismaService,
+      { session: legacySession } as unknown as AiMlPracticeService,
+      { generateStructured: vi.fn() } as unknown as Pick<AiService, "generateStructured">
+    );
+
+    const result = await subject.session(ownerId, "core-technical");
+
+    expect(findUnique).toHaveBeenCalledOnce();
+    expect(transaction).not.toHaveBeenCalled();
+    expect(legacySession).not.toHaveBeenCalled();
+    expect(result.totalQuestions).toBe(required.length);
+  });
+
+  it("creates a frontend cohort from its own catalog without the AI/ML legacy questions", async () => {
+    const authored = frontendStoryPaths("core-technical").flatMap((path) => path.questions);
+    const rows = authored.map((question, index) =>
+      questionRow({
+        id: `row-${question.id}`,
+        questionKey: question.id,
+        order: index + 1,
+        publicSnapshot: {
+          ...publicSnapshot,
+          id: question.id,
+          pathKey: question.pathKey,
+          title: question.title,
+          prompt: question.prompt,
+          format: question.format,
+          artifact: question.artifact,
+          options: (question.choices ?? []).map((label, choice) => ({ id: String(choice), label }))
+        }
+      })
+    );
+    const findUnique = vi
+      .fn()
+      .mockResolvedValueOnce(null) // lock-free published check
+      .mockResolvedValueOnce(null) // inside the transaction
+      .mockResolvedValueOnce({ id: "session-f", questions: [] }) // after create
+      .mockResolvedValueOnce({ id: "session-f", questions: rows }); // after createMany
+    const create = vi.fn().mockResolvedValue({});
+    const createMany = vi.fn().mockResolvedValue({ count: authored.length });
+    const legacySession = vi.fn();
+    const database = {
+      aiMlPracticeSession: { findUnique, create, update: vi.fn() },
+      aiMlPracticeQuestion: { createMany }
+    };
+    const subject = new AiMlStoryPracticeService(
+      {
+        $transaction: async (work: (tx: unknown) => Promise<unknown>) =>
+          work({ $executeRaw: vi.fn(), ...database }),
+        ...database
+      } as unknown as PrismaService,
+      { session: legacySession } as unknown as AiMlPracticeService,
+      { generateStructured: vi.fn() } as unknown as Pick<AiService, "generateStructured">
+    );
+
+    const result = await subject.session(ownerId, "core-technical", undefined, "frontend");
+
+    expect(legacySession).not.toHaveBeenCalled();
+    expect(create.mock.calls[0]![0].data).toMatchObject({
+      ownerId,
+      discipline: "frontend",
+      track: AiMlPracticeTrack.CORE_TECHNICAL
+    });
+    expect(findUnique.mock.calls[0]![0].where).toEqual({
+      ownerId_discipline_track: {
+        ownerId,
+        discipline: "frontend",
+        track: AiMlPracticeTrack.CORE_TECHNICAL
+      }
+    });
+    const created = createMany.mock.calls[0]![0].data as Array<{
+      questionKey: string;
+      order: number;
+    }>;
+    expect(created.map((item) => item.questionKey)).toEqual(
+      authored.map((question) => question.id)
+    );
+    // No reserved legacy slots: frontend questions start at order 1.
+    expect(created[0]!.order).toBe(1);
+    expect(result.discipline).toBe("frontend");
+    expect(result.totalQuestions).toBe(authored.length);
+    expect(result.blocks[0]!.story.candidateRole).toBe("frontend engineer");
   });
 
   it("appends new first-path questions after occupied order slots in an existing session", async () => {
@@ -206,6 +327,8 @@ describe("AiMlStoryPracticeService", () => {
       .map((question, index) => authoredRow(question, 23 + index));
     const findUnique = vi
       .fn()
+      // The lock-free published check reads the unpublished session first.
+      .mockResolvedValueOnce({ id: "session-1", questions: [...legacy, ...oldAuthored] })
       .mockResolvedValueOnce({ id: "session-1", questions: [...legacy, ...oldAuthored] })
       .mockResolvedValueOnce({
         id: "session-1",
@@ -329,6 +452,8 @@ describe("AiMlStoryPracticeService", () => {
     };
     const findUnique = vi
       .fn()
+      // The lock-free published check reads the unpublished session first.
+      .mockResolvedValueOnce({ id: "session-1", questions: initial })
       .mockResolvedValueOnce({ id: "session-1", questions: initial })
       .mockResolvedValueOnce({
         id: "session-1",
@@ -515,6 +640,49 @@ describe("AiMlStoryPracticeService", () => {
         })
       })
     });
+  });
+
+  it("grades a data-discipline answer as a data engineer would", async () => {
+    const generateStructured = vi.fn().mockResolvedValue(feedback);
+    const tx = {
+      $executeRaw: vi.fn(),
+      aiMlPracticeQuestion: {
+        findFirst: vi.fn().mockResolvedValue({
+          status: AiMlPracticeQuestionStatus.ACTIVE,
+          contentFingerprint: "sha256:question",
+          attempt: null
+        }),
+        update: vi.fn().mockResolvedValue({}),
+        count: vi.fn().mockResolvedValue(1)
+      },
+      aiMlPracticeAttempt: { create: vi.fn().mockResolvedValue({}) },
+      aiMlPracticeSession: { update: vi.fn() }
+    };
+    const row = questionRow();
+    const subject = service(
+      {
+        aiMlPracticeQuestion: {
+          findFirst: vi
+            .fn()
+            .mockResolvedValue({ ...row, session: { ...row.session, discipline: "data" } })
+        },
+        $transaction: vi.fn(async (work: (client: typeof tx) => Promise<unknown>) => work(tx))
+      },
+      generateStructured
+    );
+
+    await subject.submitAttempt(ownerId, {
+      questionId,
+      requestId,
+      work: { kind: "text", text: "Aggregate at the order grain before joining line items." }
+    });
+
+    expect(generateStructured).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operation: "data.practice.attempt",
+        systemInstruction: expect.stringContaining("experienced senior data engineer")
+      })
+    );
   });
 
   it("grades written evidence with the frozen rubric and persists the reviewed attempt", async () => {

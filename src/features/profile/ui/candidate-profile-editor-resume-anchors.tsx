@@ -89,7 +89,7 @@ export function ProfileResumeAnchors({ resume }: { resume: CandidateProfile["res
   return (
     <section
       className="profile-soft-reveal mt-14 w-full max-w-6xl text-left"
-      style={{ "--profile-reveal-delay": "2580ms" } as CSSProperties}
+      style={{ "--profile-reveal-delay": "520ms" } as CSSProperties}
     >
       <div className="flex flex-col items-center text-center">
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cream/38">
@@ -139,7 +139,7 @@ function ResumeSummaryTile({
   return (
     <article
       className="profile-glass profile-soft-reveal flex items-center gap-3 rounded-xl px-4 py-4 text-left"
-      style={{ "--profile-reveal-delay": `${2700 + index * 70}ms` } as CSSProperties}
+      style={{ "--profile-reveal-delay": `${570 + index * 35}ms` } as CSSProperties}
     >
       <Icon size={23} strokeWidth={1.55} className="shrink-0 text-[var(--workspace-accent)]" />
       <div className="min-w-0">
@@ -152,7 +152,7 @@ function ResumeSummaryTile({
 
 function ResumeAnchorGroup({ title, cards }: { title: string; cards: ProfileResumeAnchor[] }) {
   if (!cards.length) return null;
-  const groupDelay = 2860 + ["Work", "Projects", "Education", "Proof"].indexOf(title) * 130;
+  const groupDelay = 660 + ["Work", "Projects", "Education", "Proof"].indexOf(title) * 55;
 
   return (
     <section
@@ -182,14 +182,14 @@ function ResumeWorkTimeline({ cards }: { cards: ProfileResumeAnchor[] }) {
   return (
     <section
       className="profile-soft-reveal"
-      style={{ "--profile-reveal-delay": "2860ms" } as CSSProperties}
+      style={{ "--profile-reveal-delay": "660ms" } as CSSProperties}
     >
       <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-cream/42">
         Work experience
       </h3>
       <div className="grid gap-3 lg:grid-cols-2">
         {cards.map((card, index) => (
-          <ProfileResumeAnchorCard key={card.id} card={card} index={index} groupDelay={2860} />
+          <ProfileResumeAnchorCard key={card.id} card={card} index={index} groupDelay={660} />
         ))}
       </div>
     </section>
@@ -212,7 +212,7 @@ function ProfileResumeAnchorCard({
       className="profile-glass profile-soft-reveal relative flex flex-col overflow-hidden rounded-2xl p-5 text-left transition-colors hover:bg-white/[0.035]"
       style={
         {
-          "--profile-reveal-delay": `${groupDelay + 90 + Math.min(index, 4) * 65}ms`
+          "--profile-reveal-delay": `${groupDelay + 45 + Math.min(index, 4) * 30}ms`
         } as CSSProperties
       }
     >

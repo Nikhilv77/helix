@@ -68,8 +68,7 @@ function blockStore(
   advanced: DsaPracticeBlockRecord | null = null
 ) {
   return {
-    current: vi.fn().mockResolvedValue(current),
-    refreshReadiness: vi.fn().mockResolvedValue(refreshed),
+    currentWithReadiness: vi.fn().mockResolvedValue(refreshed),
     createOrAdvance: vi.fn().mockResolvedValue(advanced ?? current)
   } as unknown as DsaPracticeBlockStore;
 }
@@ -97,10 +96,9 @@ describe("buildStableDsaRecommendation", () => {
   });
 
   it("fails closed when the durable current-block read fails", async () => {
-    const current = vi.fn().mockRejectedValue(new Error("database unavailable"));
+    const currentWithReadiness = vi.fn().mockRejectedValue(new Error("database unavailable"));
     const store = {
-      current,
-      refreshReadiness: vi.fn(),
+      currentWithReadiness,
       createOrAdvance: vi.fn()
     } as unknown as DsaPracticeBlockStore;
 
@@ -120,8 +118,7 @@ describe("buildStableDsaRecommendation", () => {
 
   it("fails closed when refreshing durable readiness fails", async () => {
     const store = {
-      current: vi.fn().mockResolvedValue(block(DsaPracticeBlockStatus.PRACTISING)),
-      refreshReadiness: vi.fn().mockRejectedValue(new Error("readiness unavailable")),
+      currentWithReadiness: vi.fn().mockRejectedValue(new Error("readiness unavailable")),
       createOrAdvance: vi.fn()
     } as unknown as DsaPracticeBlockStore;
 
@@ -142,8 +139,7 @@ describe("buildStableDsaRecommendation", () => {
   it("fails closed when persisting a new cohort fails", async () => {
     const createOrAdvance = vi.fn().mockRejectedValue(new Error("write unavailable"));
     const store = {
-      current: vi.fn().mockResolvedValue(null),
-      refreshReadiness: vi.fn(),
+      currentWithReadiness: vi.fn().mockResolvedValue(null),
       createOrAdvance
     } as unknown as DsaPracticeBlockStore;
 

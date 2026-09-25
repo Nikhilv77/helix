@@ -372,7 +372,8 @@ describe("CoreTechnicalQuestionWorkspace", () => {
       within(dialog).getByText("The promise callback runs before the timer callback.")
     ).toBeInTheDocument();
     expect(within(dialog).queryByRole("button", { name: "Try a variation" })).toBeNull();
-    expect(mocks.refresh).toHaveBeenCalled();
+    // The returned question is applied locally without a full server re-render.
+    expect(mocks.refresh).not.toHaveBeenCalled();
   });
 
   it("binds executable submission to the accepted run for the exact editor code", async () => {

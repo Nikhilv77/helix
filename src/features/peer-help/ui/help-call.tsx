@@ -1,5 +1,7 @@
 "use client";
 
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
+
 import { Check, Loader2, Mic, MicOff, PhoneOff, Send, Volume2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Room } from "livekit-client";
@@ -127,7 +129,7 @@ export function HelpCall({
     setPeerPresent(false);
     setAudioBlocked(false);
 
-    const closeResult = await fetch(`/api/help/session/${encodeURIComponent(requestId)}`, {
+    const closeResult = await workspaceMutationFetch(`/api/help/session/${encodeURIComponent(requestId)}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ action: "leave" })
@@ -292,7 +294,7 @@ export function HelpCall({
     setError(null);
 
     try {
-      const response = await fetch(`/api/help/session/${encodeURIComponent(requestId)}`, {
+      const response = await workspaceMutationFetch(`/api/help/session/${encodeURIComponent(requestId)}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ action: "join" })
@@ -386,7 +388,7 @@ export function HelpCall({
       await active.localParticipant.setMicrophoneEnabled(true);
       await active.startAudio().catch(() => undefined);
 
-      const presenceResponse = await fetch(`/api/help/session/${encodeURIComponent(requestId)}`, {
+      const presenceResponse = await workspaceMutationFetch(`/api/help/session/${encodeURIComponent(requestId)}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ action: "connected" })

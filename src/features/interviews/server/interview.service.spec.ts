@@ -2186,6 +2186,52 @@ describe("InterviewService conversation", () => {
     expect(result.decision.utterance).toContain("career choices");
   });
 
+  it("requires a live proposal for a Gemini-led round before saving anything", async () => {
+    const { service, store } = harness();
+    const started = await service.start(
+      { ...setup, roundType: "hiring-manager", resumeRound: true },
+      "user-1",
+      1_000
+    );
+    const beginAnswer = vi.spyOn(store, "beginAnswer");
+
+    await expect(
+      service.answer(
+        started.state.id,
+        { text: "My answer." },
+        3_000,
+        "turn-1",
+        undefined,
+        "voice",
+        { requireLiveProposal: true }
+      )
+    ).rejects.toMatchObject({ code: "LIVE_PROPOSAL_REQUIRED" });
+    expect(beginAnswer).not.toHaveBeenCalled();
+  });
+
+  it("fills omitted answer timing from the session start", async () => {
+    const { service, decide } = harness();
+    decide.mockResolvedValue({
+      action: "move_on",
+      missing: "none",
+      reason: "complete",
+      acknowledgement: "",
+      line: ""
+    });
+    const started = await service.start(setup, "user-1", 1_000);
+
+    const result = await service.answer(
+      started.state.id,
+      { text: "I owned the sync engine." },
+      4_000
+    );
+
+    expect(result.state.turns.find((turn) => turn.speaker === "user")).toMatchObject({
+      startMs: 3_000,
+      endMs: 3_000
+    });
+  });
+
   it("rejects Gemini-led decisions outside the hiring-manager round", async () => {
     const { service } = harness();
     const started = await service.start(setup, "user-1", 1_000);

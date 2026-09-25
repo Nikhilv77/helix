@@ -1,5 +1,7 @@
 import { PracticeSessionAvailability, Prisma, RoadmapProgressStatus } from "@prisma/client";
 import type { PersonalizedInterviewPlan } from "@/features/interviews/domain/personalized-plan";
+import type { CandidatePracticeEvidence } from "@/features/practice/shared/domain/practice-evidence";
+import type { CandidateProfile } from "@/lib/shared/types";
 import {
   PRACTICE_KEY_BY_TEMPLATE_SLUG,
   PRACTICE_ROADMAP_GENERATION_VERSION,
@@ -16,8 +18,14 @@ const PRACTICE_ROADMAP_ROLE = "fullstack";
 const DAY_MS = 86_400_000;
 const DEFAULT_ACTIVITY_DAYS = 7;
 
-type RoadmapProvisioner = Pick<FrontendRoadmapService, "home">;
+type RoadmapProvisioner = Pick<FrontendRoadmapService, "ensureAvailable">;
 type PlanReader = Pick<PersonalizedInterviewPlanningService, "activePlan">;
+
+export type PracticeRoadmapCache = (
+  stamp: { updatedAt: Date; templateVersion: number | null },
+  plan: PersonalizedInterviewPlan,
+  load: () => Promise<PracticeRoadmapHome>
+) => Promise<PracticeRoadmapHome>;
 
 const practiceProgressSelect = {
   id: true,
@@ -56,14 +64,134 @@ export class PracticeRoadmapService {
     private readonly plans: PlanReader
   ) {}
 
-  async home(ownerId: string): Promise<PracticeRoadmapHome | null> {
+  async home(
+    ownerId: string,
+    practiceEvidence?: Promise<CandidatePracticeEvidence | null>,
+    profile?: CandidateProfile,
+    planPromise?: Promise<PersonalizedInterviewPlan>,
+    cache?: PracticeRoadmapCache
+  ): Promise<PracticeRoadmapHome | null> {
     const [plan, provisioned] = await Promise.all([
-      this.plans.activePlan(ownerId),
-      this.roadmaps.home(ownerId)
+      planPromise ??
+        (practiceEvidence || profile
+          ? this.plans.activePlan(ownerId, Date.now(), { practiceEvidence, profile })
+          : this.plans.activePlan(ownerId)),
+      this.roadmaps.ensureAvailable(ownerId)
     ]);
     if (!provisioned) return null;
+    const load = async () =>
+      (await this.readCurrent(ownerId, plan)) ?? this.reconcile(ownerId, plan);
+    const stamp = cache
+      ? await this.prisma.userRoadmap.findUnique({
+          where: { ownerId_role: { ownerId, role: PRACTICE_ROADMAP_ROLE } },
+          select: { updatedAt: true, templateVersion: true }
+        })
+      : null;
+    return stamp && cache ? cache(stamp, plan, load) : load();
+  }
 
-    return this.reconcile(ownerId, plan);
+  /** Stable plans need only one read and no per-owner write lock. */
+  private async readCurrent(
+    ownerId: string,
+    plan: PersonalizedInterviewPlan
+  ): Promise<PracticeRoadmapHome | null> {
+    const projected = projectPracticeSessions(plan);
+    const keys = projected.map((session) => session.key);
+    const templateSlugs = Object.entries(PRACTICE_KEY_BY_TEMPLATE_SLUG)
+      .filter(([, key]) => keys.includes(key))
+      .map(([slug]) => slug);
+    const roadmap = await this.prisma.userRoadmap.findUnique({
+      where: { ownerId_role: { ownerId, role: PRACTICE_ROADMAP_ROLE } },
+      select: {
+        id: true,
+        title: true,
+        generatedAt: true,
+        sourceInterviewPlanId: true,
+        sourceInterviewPlanRevision: true,
+        sourceProfileVersionId: true,
+        sourceProfileRevision: true,
+        practiceGenerationVersion: true,
+        sessionProgress: {
+          where: { practiceSessionKey: { in: keys } },
+          select: practiceProgressSelect
+        },
+        template: {
+          select: {
+            sessions: {
+              where: { slug: { in: templateSlugs } },
+              select: { id: true, slug: true, _count: { select: { questions: true } } }
+            }
+          }
+        }
+      }
+    });
+    const sourceProfile = plan.sourceSnapshot.candidateProfile;
+    if (
+      !roadmap?.template ||
+      roadmap.sourceInterviewPlanId !== plan.id ||
+      roadmap.sourceInterviewPlanRevision !== plan.revision ||
+      roadmap.sourceProfileVersionId !== sourceProfile.id ||
+      roadmap.sourceProfileRevision !== sourceProfile.revision ||
+      roadmap.practiceGenerationVersion !== PRACTICE_ROADMAP_GENERATION_VERSION
+    )
+      return null;
+
+    const templates = new Map(
+      roadmap.template.sessions.map((template) => [
+        PRACTICE_KEY_BY_TEMPLATE_SLUG[template.slug],
+        template
+      ])
+    );
+    const progress = new Map(roadmap.sessionProgress.map((row) => [row.sessionTemplateId, row]));
+    const sessions: PracticeRoadmapSession[] = [];
+    for (const session of projected) {
+      const template = templates.get(session.key);
+      const row = template && progress.get(template.id);
+      if (!template || !row) return null;
+      const questionCount = session.key === "dsa" ? template._count.questions : row.totalQuestions;
+      const availability =
+        questionCount > 0
+          ? PracticeSessionAvailability.AVAILABLE
+          : PracticeSessionAvailability.UNAVAILABLE;
+      if (
+        row.practiceSessionKey !== session.key ||
+        row.order !== session.order ||
+        row.totalQuestions !== questionCount ||
+        row.availability !== availability ||
+        row.titleSnapshot !== session.title ||
+        row.purposeSnapshot !== session.purpose ||
+        !sameStrings(row.coversSnapshot, session.covers) ||
+        row.difficultySnapshot !== session.difficulty ||
+        row.durationMinutesSnapshot !== session.durationMinutes ||
+        row.sourceBlueprintId !== session.sourceBlueprintId ||
+        row.sourceBlueprintKind !== session.sourceBlueprintKind
+      )
+        return null;
+      sessions.push({
+        ...session,
+        availability:
+          availability === PracticeSessionAvailability.AVAILABLE ? "available" : "unavailable",
+        status: row.status,
+        totalQuestions: row.totalQuestions,
+        attemptedQuestions: row.attemptedQuestions,
+        completedQuestions: row.completedQuestions,
+        progressPercent: row.progressPercent,
+        href: availability === PracticeSessionAvailability.AVAILABLE ? "/practice/dsa" : null
+      });
+    }
+    return {
+      roadmapId: roadmap.id,
+      title: roadmap.title,
+      generationVersion: PRACTICE_ROADMAP_GENERATION_VERSION,
+      generatedAt: roadmap.generatedAt.getTime(),
+      sourcePlan: {
+        id: plan.id,
+        revision: plan.revision,
+        profileVersionId: sourceProfile.id,
+        profileRevision: sourceProfile.revision
+      },
+      sessions: sessions.sort((left, right) => left.order - right.order)
+    };
   }
 
   /** Completed Practice questions, bucketed by UTC day for the entry-page chart. */

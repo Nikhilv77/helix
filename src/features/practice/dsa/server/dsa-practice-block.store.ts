@@ -80,6 +80,66 @@ export class DsaPracticeBlockStore {
     );
   }
 
+  /** One read on normal navigation; the transaction remains for legacy import. */
+  async currentForDisplay(ownerId: string): Promise<DsaPracticeBlockRecord | null> {
+    const block = await this.prisma.dsaPracticeBlock.findFirst({
+      where: { ownerId, isCurrent: true },
+      select: blockSelect
+    });
+    return block ?? this.current(ownerId);
+  }
+
+  /** Keep the common incomplete/read-only path outside a write transaction. */
+  async currentWithReadiness(ownerId: string): Promise<DsaPracticeBlockRecord | null> {
+    const current = await this.prisma.dsaPracticeBlock.findFirst({
+      where: { ownerId, isCurrent: true },
+      select: blockSelect
+    });
+    if (current) {
+      if (current.status !== DsaPracticeBlockStatus.PRACTISING) return current;
+      if (!(await everyBlockQuestionCompleted(this.prisma, ownerId, current.questionSlugs))) {
+        return current;
+      }
+    }
+
+    // Legacy import and readiness promotion still recheck under the owner
+    // lock, so concurrent answer writes and block advancement stay correct.
+    return this.prisma.$transaction(
+      async (tx) => {
+        await lockOwner(tx, ownerId);
+        let block = await tx.dsaPracticeBlock.findFirst({
+          where: { ownerId, isCurrent: true },
+          select: blockSelect
+        });
+        if (!block) {
+          const legacySlugs = await legacyBlockSlugs(tx, ownerId);
+          if (!legacySlugs.length) return null;
+          block = await createBlock(tx, {
+            ownerId,
+            ordinal: 1,
+            questionSlugs: legacySlugs,
+            recommendationSnapshot: {
+              schemaVersion: 0,
+              source: "legacy-user-session-progress",
+              questionSlugs: legacySlugs
+            }
+          });
+        }
+        if (block.status !== DsaPracticeBlockStatus.PRACTISING) return block;
+        if (!(await everyBlockQuestionCompleted(tx, ownerId, block.questionSlugs))) return block;
+        return tx.dsaPracticeBlock.update({
+          where: { id: block.id },
+          data: {
+            status: DsaPracticeBlockStatus.ASSESSMENT_READY,
+            assessmentReadyAt: new Date()
+          },
+          select: blockSelect
+        });
+      },
+      { maxWait: 20_000, timeout: 120_000 }
+    );
+  }
+
   /**
    * Promotes only the current practising cohort after every saved question has
    * a verified COMPLETED roadmap state. A ready state is never demoted: after
@@ -294,7 +354,7 @@ async function createBlock(
 }
 
 async function everyBlockQuestionCompleted(
-  tx: DsaPracticeBlockTransaction,
+  tx: Pick<DsaPracticeBlockTransaction, "userQuestionProgress">,
   ownerId: string,
   questionSlugs: string[]
 ): Promise<boolean> {

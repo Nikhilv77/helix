@@ -1,4 +1,5 @@
 import {
+  DsaPracticeBlockStatus,
   MayaInsightKind,
   Prisma,
   RoadmapProgressStatus,
@@ -13,11 +14,12 @@ import type {
   FrontendRoadmapChapter,
   FrontendRoadmapChapterDetail,
   FrontendRoadmapHome,
-  FrontendRoadmapSession
+  FrontendRoadmapSession,
+  DsaPageRoadmap
 } from "@/lib/roadmap/roadmap";
 import type { PrismaService } from "../../database/prisma.service";
 import type { CodeRunnerLanguage } from "@/features/practice/dsa/server/code-test-harness";
-import { dsaChapterIdForPattern } from "@/lib/roadmap/frontend-plan";
+import { DSA_CHAPTERS, dsaChapterIdForPattern } from "@/lib/roadmap/frontend-plan";
 import { attemptStatus, normalizedScore, questionStatusAfterAction } from "./question-actions";
 import { buildPersonalization } from "./personalization";
 import { analyzeAttemptHistory, displayPattern, streakInsightBody } from "./insight-analysis";
@@ -35,6 +37,7 @@ const dsaAttemptProgressSelect = {
   prepQuestionTemplateId: true,
   status: true,
   bestScore: true,
+  completedAt: true,
   dsaQuestion: { select: { contentVersion: true } }
 } satisfies Prisma.UserQuestionProgressSelect;
 
@@ -153,11 +156,49 @@ export class FrontendRoadmapService {
                 ? undefined
                 : Math.max(progress.bestScore ?? Number.NEGATIVE_INFINITY, score),
             lastAttemptedAt: now,
-            completedAt: nextStatus === RoadmapProgressStatus.COMPLETED ? now : null
+            completedAt:
+              nextStatus === RoadmapProgressStatus.COMPLETED ? (progress.completedAt ?? now) : null
           }
         });
 
-        await recalculateRoadmap(tx, roadmap.id, ownerId, false, now);
+        // Opening records engagement without changing roadmap progress.
+        if (input.action !== "open") {
+          await recalculateRoadmap(tx, roadmap.id, ownerId, false, now);
+        }
+
+        // Readiness changes when a block question is solved. Keep the block
+        // transition in the same transaction as the attempt so page loads can
+        // read its saved status instead of recounting the cohort every time.
+        if (
+          nextStatus === RoadmapProgressStatus.COMPLETED &&
+          progress.status !== RoadmapProgressStatus.COMPLETED
+        ) {
+          const block = await tx.dsaPracticeBlock.findFirst({
+            where: { ownerId, isCurrent: true, status: DsaPracticeBlockStatus.PRACTISING },
+            select: { id: true, questionSlugs: true }
+          });
+          if (block?.questionSlugs.includes(input.dsaQuestionSlug)) {
+            const completedRows = await tx.userQuestionProgress.findMany({
+              where: {
+                roadmapId: roadmap.id,
+                sourceType: RoadmapQuestionSourceType.DSA,
+                dsaQuestionSlug: { in: block.questionSlugs },
+                status: RoadmapProgressStatus.COMPLETED
+              },
+              select: { dsaQuestionSlug: true }
+            });
+            const completedSlugs = new Set(completedRows.map((row) => row.dsaQuestionSlug));
+            if (block.questionSlugs.every((slug) => completedSlugs.has(slug))) {
+              await tx.dsaPracticeBlock.update({
+                where: { id: block.id },
+                data: {
+                  status: DsaPracticeBlockStatus.ASSESSMENT_READY,
+                  assessmentReadyAt: now
+                }
+              });
+            }
+          }
+        }
       },
       // Writes are serialised per user by the advisory lock above, so a burst
       // of clicks queues rather than racing. The ceiling is generous enough
@@ -452,6 +493,130 @@ export class FrontendRoadmapService {
   }
 
   async home(ownerId: string): Promise<FrontendRoadmapHome | null> {
+    if (!(await this.ensureAvailable(ownerId))) return null;
+    return readFrontendRoadmapHome(this.prisma, ownerId);
+  }
+
+  /** One compact progress read for DSA Practice, including per-question status. */
+  async dsaPage(ownerId: string): Promise<{
+    roadmap: DsaPageRoadmap | null;
+    questionStatuses: Record<string, RoadmapProgressStatus>;
+  }> {
+    const roadmapWhere = { ownerId, role: FRONTEND_ROADMAP_ROLE };
+    // These rows already carry the authored session/chapter snapshots. Flat,
+    // parallel reads avoid Prisma's sequential relation reads over a remote DB.
+    const readProgress = async () => {
+      const [row, sessions, chapters, questions] = await Promise.all([
+        this.prisma.userRoadmap.findUnique({
+          where: { ownerId_role: roadmapWhere },
+          select: {
+            templateVersion: true,
+            currentSessionTemplateSlug: true,
+            currentChapterTemplateSlug: true,
+            nextQuestionKey: true,
+            totalQuestions: true,
+            completedQuestions: true
+          }
+        }),
+        this.prisma.userSessionProgress.findMany({
+          where: { roadmap: roadmapWhere },
+          orderBy: { order: "asc" },
+          select: { practiceSessionKey: true, purposeSnapshot: true, metadata: true }
+        }),
+        this.prisma.userChapterProgress.findMany({
+          where: { roadmap: roadmapWhere },
+          orderBy: { order: "asc" },
+          select: {
+            order: true,
+            completedQuestions: true,
+            status: true,
+            progressPercent: true,
+            metadata: true
+          }
+        }),
+        this.prisma.userQuestionProgress.findMany({
+          where: {
+            roadmap: roadmapWhere,
+            sourceType: RoadmapQuestionSourceType.DSA,
+            dsaQuestionSlug: { not: null }
+          },
+          select: { dsaQuestionSlug: true, status: true }
+        })
+      ]);
+      return { row, sessions, chapters, questions };
+    };
+    const [initialProgress, template] = await Promise.all([
+      readProgress(),
+      this.prisma.roadmapTemplate.findFirst({
+        where: { slug: FRONTEND_ROADMAP_SLUG, status: RoadmapTemplateStatus.ACTIVE },
+        select: { version: true, _count: { select: { sessions: true } } }
+      })
+    ]);
+    let progress = initialProgress;
+    let { row, sessions, chapters, questions } = progress;
+    if (
+      template &&
+      (!row ||
+        row.templateVersion !== template.version ||
+        sessions.length !== template._count.sessions)
+    ) {
+      await this.ensureFrontendRoadmap(ownerId);
+      progress = await readProgress();
+      ({ row, sessions, chapters, questions } = progress);
+    }
+    if (!row) return { roadmap: null, questionStatuses: {} };
+    const questionStatuses: Record<string, RoadmapProgressStatus> = {};
+    for (const question of questions) {
+      if (question.dsaQuestionSlug) questionStatuses[question.dsaQuestionSlug] = question.status;
+    }
+    const nextSlug = row.nextQuestionKey;
+    return {
+      roadmap: {
+        currentSessionTemplateSlug: row.currentSessionTemplateSlug,
+        currentChapterTemplateSlug: row.currentChapterTemplateSlug,
+        nextQuestionHref:
+          nextSlug && questionStatuses[nextSlug]
+            ? `/dsa-questions/${encodeURIComponent(nextSlug)}`
+            : "/practice",
+        totalQuestions: row.totalQuestions,
+        completedQuestions: row.completedQuestions,
+        sessions: sessions.map((session) => {
+          const metadata = jsonRecord(session.metadata);
+          return {
+            id: typeof metadata.slug === "string" ? metadata.slug : session.practiceSessionKey,
+            purpose:
+              typeof metadata.purpose === "string"
+                ? metadata.purpose
+                : (session.purposeSnapshot ?? "")
+          };
+        }),
+        chapters: chapters.flatMap((chapter) => {
+          const metadata = jsonRecord(chapter.metadata);
+          const id =
+            typeof metadata.slug === "string" ? metadata.slug : DSA_CHAPTERS[chapter.order - 1]?.id;
+          const authored = DSA_CHAPTERS.find((candidate) => candidate.id === id);
+          if (!id || !authored) return [];
+          return [
+            {
+              id,
+              title: typeof metadata.title === "string" ? metadata.title : (authored?.title ?? id),
+              whyItMatters:
+                typeof metadata.purpose === "string"
+                  ? metadata.purpose
+                  : (authored?.whyItMatters ?? ""),
+              completedQuestions: chapter.completedQuestions,
+              status: chapter.status,
+              progressPercent: chapter.progressPercent
+            }
+          ];
+        })
+      },
+      questionStatuses
+    };
+  }
+
+  /** Ensure the roadmap exists without loading the full home projection. */
+  async ensureAvailable(ownerId: string): Promise<boolean> {
     const existing = await this.prisma.userRoadmap.findUnique({
       where: {
         ownerId_role: {
@@ -468,7 +633,7 @@ export class FrontendRoadmapService {
 
     if (!existing) {
       const created = await this.ensureFrontendRoadmap(ownerId);
-      if (!created) return null;
+      if (!created) return false;
     } else if (
       await this.templateOutOfDate(existing._count.sessionProgress, existing.templateVersion)
     ) {
@@ -477,8 +642,7 @@ export class FrontendRoadmapService {
       // re-onboarding, while the stable-version happy path remains read-only.
       await this.ensureFrontendRoadmap(ownerId);
     }
-
-    return readFrontendRoadmapHome(this.prisma, ownerId);
+    return true;
   }
 
   /** One small template read against the active template on the happy path. */
@@ -1012,7 +1176,7 @@ async function readFrontendRoadmapHome(
     totalQuestions: progress.totalQuestions,
     completedQuestions: progress.completedQuestions,
     progressPercent: progress.progressPercent,
-    href: sessionHref(progress.sessionTemplate.slug, progress.sessionTemplate.title)
+    href: sessionHref(progress.sessionTemplate.slug)
   }));
 
   const chapters: FrontendRoadmapChapter[] = roadmap.chapterProgress.map((progress) => {
@@ -1113,11 +1277,9 @@ function groupQuestionsBy<Row>(rows: Row[], key: (row: Row) => string | null): M
   return groups;
 }
 
-function sessionHref(slug: string, title: string): string {
+function sessionHref(slug: string): string {
   if (slug === "dsa") return "/practice/dsa";
-
-  const params = new URLSearchParams({ focus: title });
-  return `/interview?${params.toString()}`;
+  return "/interviews";
 }
 
 interface ProgressRowUpdate {

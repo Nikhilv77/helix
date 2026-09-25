@@ -5,8 +5,10 @@ import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authorizeInterviewSession } from "@/features/interviews/server/session-access";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
+import { refreshPracticeHome } from "@/features/practice/shared/server/refresh-practice-home";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const skipSchema = z.object({
   sessionId: z.string().uuid(),
@@ -62,6 +64,7 @@ export async function POST(request: NextRequest) {
             parsed.data.sessionId
           )
         ]);
+        if (access.ownerId.startsWith("user:")) await refreshPracticeHome(access.ownerId);
       });
     }
     return apiSuccess(result.response);

@@ -129,6 +129,11 @@ export interface BlockAssessmentMcqGrader {
 const ANSWER_REPLAY_WAIT_MS = 5_000;
 const ANSWER_REPLAY_POLL_MS = 100;
 
+export interface AnswerOptions {
+  /** Live voice turns must carry the Gemini proposal for Gemini-led rounds. */
+  requireLiveProposal?: boolean;
+}
+
 export class InterviewService {
   private readonly logger = new Logger(InterviewService.name);
   private blockAssessmentMcqGrader?: BlockAssessmentMcqGrader;
@@ -272,11 +277,14 @@ export class InterviewService {
     ownerId: string,
     limit = 50,
     now = Date.now(),
-    additionalReports: InterviewReport[] = []
+    additionalReports: InterviewReport[] | Promise<InterviewReport[]> = []
   ): Promise<ReportsOverview> {
     const boundedLimit = Math.max(1, Math.min(limit, 50));
-    const stored = await this.store.listReportsByOwner(ownerId, boundedLimit, now);
-    const combined = [...stored, ...additionalReports]
+    const [stored, additional] = await Promise.all([
+      this.store.listReportsByOwner(ownerId, boundedLimit, now),
+      additionalReports
+    ]);
+    const combined = [...stored, ...additional]
       .sort((left, right) => right.startedAt - left.startedAt)
       .slice(0, boundedLimit);
     return createReportsOverview(combined, now);
@@ -416,11 +424,12 @@ export class InterviewService {
    */
   async answer(
     sessionId: string,
-    answer: { text: string; startMs: number; endMs: number },
+    answer: { text: string; startMs?: number; endMs?: number },
     now = Date.now(),
     turnId?: string,
     liveProposal?: LiveConversationProposal,
-    submissionSource: CandidateSubmissionSource = "voice"
+    submissionSource: CandidateSubmissionSource = "voice",
+    options: AnswerOptions = {}
   ): Promise<AnswerResult> {
     return this.answerInternal(
       sessionId,
@@ -430,18 +439,20 @@ export class InterviewService {
       turnId,
       "answer",
       liveProposal,
-      submissionSource
+      submissionSource,
+      options
     );
   }
 
   async answerOwned(
     ownerId: string,
     sessionId: string,
-    answer: { text: string; startMs: number; endMs: number },
+    answer: { text: string; startMs?: number; endMs?: number },
     now = Date.now(),
     turnId?: string,
     liveProposal?: LiveConversationProposal,
-    submissionSource: CandidateSubmissionSource = "voice"
+    submissionSource: CandidateSubmissionSource = "voice",
+    options: AnswerOptions = {}
   ): Promise<AnswerResult> {
     return this.answerInternal(
       sessionId,
@@ -451,7 +462,8 @@ export class InterviewService {
       turnId,
       "answer",
       liveProposal,
-      submissionSource
+      submissionSource,
+      options
     );
   }
 
@@ -474,17 +486,37 @@ export class InterviewService {
 
   private async answerInternal(
     sessionId: string,
-    answer: { text: string; startMs: number; endMs: number },
+    submitted: { text: string; startMs?: number; endMs?: number },
     now: number,
     ownerId?: string,
     turnId?: string,
     mode: AnswerMode = "answer",
     liveProposal?: LiveConversationProposal,
-    submissionSource: CandidateSubmissionSource = "voice"
+    submissionSource: CandidateSubmissionSource = "voice",
+    options: AnswerOptions = {}
   ): Promise<AnswerResult> {
     // Establish ownership/capability-backed access before creating an
     // idempotency row, so a guessed UUID cannot cause writes to another user.
     const session = await this.versionedSession(sessionId, ownerId);
+    // Checked here rather than by the route so each turn reads the session once.
+    if (
+      options.requireLiveProposal &&
+      mode === "answer" &&
+      !liveProposal &&
+      usesGeminiLedConversation(session.state.setup)
+    ) {
+      throw new BadRequestErrorException(
+        "LIVE_PROPOSAL_REQUIRED",
+        "The live interviewer must complete this turn before it can be saved.",
+        { sessionId }
+      );
+    }
+    const defaultEnd = Math.max(0, now - session.state.startedAt);
+    const answer = {
+      text: submitted.text,
+      startMs: submitted.startMs ?? defaultEnd,
+      endMs: submitted.endMs ?? defaultEnd
+    };
     const answerHash = turnId ? answerPayloadHash(answer) : null;
     if (turnId && answerHash) {
       const claim = await this.store.beginAnswer(sessionId, turnId, answerHash, now);

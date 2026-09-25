@@ -12,11 +12,11 @@ import {
 } from "@/features/preparation-onboarding/domain/preparation-onboarding";
 import { LEVELS, ROLES } from "@/features/interviews/server/types";
 import { publicPreparationOnboardingState } from "@/features/preparation-onboarding/server/preparation-onboarding-state";
-import { Logger } from "@/server/common/logger";
+import { refreshPracticeHome } from "@/features/practice/shared/server/refresh-practice-home";
+import { refreshWorkspacePagesAfterOnboarding } from "@/features/analytics/server/refresh-workspace-pages";
 
 export const dynamic = "force-dynamic";
-
-const logger = new Logger("PreparationOnboarding");
+export const maxDuration = 60;
 
 const requestSchema = z.discriminatedUnion("action", [
   z
@@ -84,21 +84,11 @@ export async function POST(request: NextRequest) {
     // The baseline is durable before planning starts. A later page request can
     // still build a plan if this non-critical eager generation ever fails.
     if (state.completedAt) {
-      // The answer is already durable. Plan generation performs several reads
-      // and can call an AI provider, so it must not hold the final UI response.
+      // The answer is durable. Page preparation may generate the interview
+      // plan, so run it after the response and before the next navigation.
       after(async () => {
-        try {
-          await app.personalizedInterviewPlanningService.activePlan(ownerId);
-        } catch (error) {
-          logger.error(
-            JSON.stringify({
-              event: "preparation.plan.failed",
-              ownerId,
-              reason: error instanceof Error ? error.message : String(error)
-            }),
-            error
-          );
-        }
+        await refreshPracticeHome(ownerId);
+        await refreshWorkspacePagesAfterOnboarding(ownerId);
       });
     }
     return noStore(

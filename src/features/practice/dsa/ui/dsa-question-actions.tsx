@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, SkipForward } from "lucide-react";
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
 
 type AttemptAction = "open" | "skip";
 type Marked = "none" | "complete" | "skip";
@@ -134,7 +135,11 @@ async function recordAttempt(
   action: AttemptAction,
   requestId: string
 ): Promise<void> {
-  const response = await fetch("/api/roadmap/question-attempt", {
+  // Opening a question only records engagement. The server marks summaries
+  // dirty, so broadcasting a workspace-wide refresh on every navigation adds
+  // requests without improving the question's initial state.
+  const request = action === "open" ? fetch : workspaceMutationFetch;
+  const response = await request("/api/roadmap/question-attempt", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     cache: "no-store",

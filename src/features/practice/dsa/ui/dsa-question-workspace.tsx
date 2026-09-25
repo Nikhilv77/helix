@@ -1,5 +1,7 @@
 "use client";
 
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -389,7 +391,7 @@ export function DsaQuestionWorkspace({
 }
 
 async function recordSolved(slug: string): Promise<void> {
-  const response = await fetch("/api/roadmap/question-attempt", {
+  const response = await workspaceMutationFetch("/api/roadmap/question-attempt", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     cache: "no-store",

@@ -2,13 +2,10 @@
 
 import { StoryPracticeQuestionWorkspace } from "@/features/practice/shared/ui/story-practice-question-workspace";
 import type {
-  AppliedEngineeringPublicBlock,
   AppliedEngineeringPublicQuestion
 } from "@/features/practice/applied-engineering/server/practice.service";
-import {
-  appliedEngineeringBlockView,
-  appliedEngineeringQuestionView
-} from "./applied-engineering-adapter";
+import type { StoryPracticeQuestionBlockView } from "@/features/practice/shared/ui/view-contracts";
+import { appliedEngineeringQuestionView } from "./applied-engineering-adapter";
 import { APPLIED_ENGINEERING_WORKSPACE_EXPERIENCE } from "./applied-engineering-experience";
 
 export function AppliedEngineeringQuestionWorkspace({
@@ -16,13 +13,13 @@ export function AppliedEngineeringQuestionWorkspace({
   initialQuestion,
   stageTitle
 }: {
-  block: AppliedEngineeringPublicBlock;
+  block: StoryPracticeQuestionBlockView;
   initialQuestion: AppliedEngineeringPublicQuestion;
   stageTitle: string;
 }) {
   return (
     <StoryPracticeQuestionWorkspace
-      block={appliedEngineeringBlockView(block)}
+      block={block}
       initialQuestion={appliedEngineeringQuestionView(initialQuestion)}
       stageTitle={stageTitle}
       experience={APPLIED_ENGINEERING_WORKSPACE_EXPERIENCE}

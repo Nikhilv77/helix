@@ -5,25 +5,34 @@ import {
   type StoryPracticeWorkspaceExperience
 } from "@/features/practice/shared/ui/story-practice-question-workspace";
 import type {
-  StoryPracticeBlockView,
+  StoryPracticeQuestionBlockView,
   StoryPracticeQuestionView
 } from "@/features/practice/shared/ui/view-contracts";
 import type { PersistedAiMlPracticeTrack } from "../domain/ai-ml-practice";
+import {
+  storyDiscipline,
+  storyTrackHref,
+  type StoryDiscipline
+} from "@/features/practice/story-tracks/domain/story-disciplines";
 
 export function AiMlStoryWorkspace({
+  discipline = "ai-ml",
   track,
   block,
   question
 }: {
+  discipline?: StoryDiscipline;
   track: PersistedAiMlPracticeTrack;
-  block: StoryPracticeBlockView;
+  block: StoryPracticeQuestionBlockView;
   question: StoryPracticeQuestionView;
 }) {
+  const disciplineLabel = storyDiscipline(discipline).label;
   const experience: StoryPracticeWorkspaceExperience = {
     slug: track,
-    label: track === "core-technical" ? "AI/ML Core Technical" : "AI/ML Applied Engineering",
+    label: `${disciplineLabel} ${track === "core-technical" ? "Core Technical" : "Applied Engineering"}`,
+    // Every discipline shares the story-practice API; questions are owner-scoped by id.
     apiBase: "/api/practice/ai-ml",
-    routeBase: `/practice/ai-ml/${track}`,
+    routeBase: storyTrackHref(discipline, track),
     subjectNoun: "case",
     environmentLabel: null,
     answerReview: "modal",

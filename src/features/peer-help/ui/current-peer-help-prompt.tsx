@@ -1,5 +1,7 @@
 "use client";
 
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
+
 import Image from "next/image";
 import { ArrowRight, HandHelping, Loader2, LogOut, Mic, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -72,10 +74,10 @@ export function CurrentPeerHelpPrompt() {
     try {
       const learnerWaiting = engagement.seat === "learner" && engagement.status === "OPEN";
       const response = learnerWaiting
-        ? await fetch(`/api/help/request?id=${encodeURIComponent(engagement.requestId)}`, {
+        ? await workspaceMutationFetch(`/api/help/request?id=${encodeURIComponent(engagement.requestId)}`, {
             method: "DELETE"
           })
-        : await fetch(`/api/help/request/${encodeURIComponent(engagement.requestId)}`, {
+        : await workspaceMutationFetch(`/api/help/request/${encodeURIComponent(engagement.requestId)}`, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ action: "release" })

@@ -35,7 +35,7 @@ import {
   saveWorkspaceAccent,
   saveWorkspaceTeacher
 } from "@/lib/api/api-client";
-import type { CandidateProfile } from "@/lib/shared/types";
+import type { ManageAccountProfile } from "@/features/account/contracts/manage-account";
 import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
 import { type WorkspaceAccent, WORKSPACE_ACCENT_CHANGE_EVENT } from "@/lib/workspace/accent";
 
@@ -65,7 +65,7 @@ const accentOptions: Array<{
   { value: "mono", label: "Mono", color: "#d3d0c7", dots: ["#85837e", "#b2afa8", "#d3d0c7"] }
 ];
 
-export function ManageAccount({ profile }: { profile: CandidateProfile }) {
+export function ManageAccount({ profile }: { profile: ManageAccountProfile }) {
   const { user } = useUser();
   const [deleting, setDeleting] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
@@ -80,7 +80,7 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
   >(null);
   const [error, setError] = useState<string | null>(null);
   const name =
-    profile.resume?.fullName?.trim() ||
+    profile.resumeFullName?.trim() ||
     user?.fullName ||
     user?.firstName ||
     user?.primaryEmailAddress?.emailAddress ||
@@ -274,7 +274,7 @@ export function ManageAccount({ profile }: { profile: CandidateProfile }) {
               <NotificationPreferenceRow
                 icon={Bell}
                 title="Teacher coaching"
-                description="One daily practice recommendation, with a second nudge only when unfinished work is waiting."
+                description="A practice recommendation or encouragement on days you visit, with a second nudge only when unfinished work is waiting."
                 enabled={notificationPreferences.teacherNotificationsEnabled}
                 saving={savingPreference === "teacherNotificationsEnabled"}
                 onToggle={() => void onNotificationPreferenceChange("teacherNotificationsEnabled")}
@@ -603,18 +603,14 @@ function AccentThemeCard({
       aria-pressed={selected}
       style={{ "--card-accent": option.color } as CSSProperties}
       className={`
-        manage-accent-card group relative min-w-0 rounded-[16px] border p-2.5 text-left
-        transition-[background-color,border-color,box-shadow,opacity] duration-200
+        manage-accent-card group relative min-w-0 rounded-[16px] p-2.5 text-left
+        focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--card-accent)]
+        transition-[background-color,opacity,transform] duration-200
         disabled:cursor-wait disabled:opacity-60
-        ${
-          selected
-            ? "border-[var(--card-accent)] bg-[#1a1b1f] shadow-[0_0_0_1px_var(--card-accent)]"
-            : "border-white/[0.1] bg-[#191a1d] hover:border-white/[0.18] hover:bg-[#1b1c20]"
-        }
       `}
     >
       {/* preview */}
-      <div className="manage-accent-preview relative aspect-[1.32/1] overflow-hidden rounded-[11px] border border-white/[0.07] bg-[#0d0e10]">
+      <div className="manage-accent-preview relative aspect-[1.32/1] overflow-hidden rounded-[11px] bg-[#0d0e10]">
         <div className="flex h-full">
           {/* empty accent sidebar */}
           <div
@@ -735,40 +731,54 @@ function DeleteAccountWarningModal({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[90] grid place-items-center px-5">
+    <div className="fixed inset-0 z-[90] grid place-items-center px-4 py-6 sm:px-6">
       <button
         type="button"
         aria-label="Close delete account warning"
-        className={`absolute inset-0 bg-[#050814]/82 transition-opacity duration-200 ease-out ${
+        className={`absolute inset-0 bg-[#10141c]/55 backdrop-blur-[4px] transition-opacity duration-200 ease-out dark:bg-black/65 ${
           visible ? "opacity-100" : "opacity-0"
         }`}
         onClick={close}
       />
-      <div
+      <section
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="delete-account-warning-title"
-        className={`relative w-full max-w-md rounded-2xl border border-cream/20 bg-[#151619] p-6 text-cream outline-none transition duration-200 ease-out ${
-          visible ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-[0.97] opacity-0"
+        aria-describedby="delete-account-warning-description"
+        onKeyDown={(event) => {
+          if (event.key === "Escape") close();
+        }}
+        className={`relative w-full max-w-[27rem] overflow-hidden rounded-[1.5rem] bg-white p-6 text-[#20232a] shadow-[0_30px_90px_-24px_rgba(8,12,20,0.4)] outline-none transition-[opacity,transform] duration-200 ease-out dark:bg-[#202124] dark:text-[#f4f1eb] dark:shadow-[0_32px_100px_-22px_rgba(0,0,0,0.8)] sm:p-7 ${
+          visible ? "translate-y-0 scale-100 opacity-100" : "translate-y-2 scale-[0.98] opacity-0"
         }`}
       >
-        <p
-          id="delete-account-warning-title"
-          className="text-center text-[1.55rem] font-medium leading-tight"
-        >
-          Delete account forever?
+        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#fce9ed] text-[#ae3e57] dark:bg-[#f0528a]/10 dark:text-[#f18ca5]">
+          <Trash2 size={20} strokeWidth={1.8} aria-hidden="true" />
+        </span>
+        <p className="mt-5 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#ae3e57] dark:text-[#f18ca5]">
+          Permanent action
         </p>
-        <p className="mx-auto mt-4 max-w-sm text-center text-[0.98rem] leading-7 text-cream/68">
-          This removes your Trailgrad profile, progress, interviews, and Clerk account. You cannot
-          undo this later.
+        <h2
+          id="delete-account-warning-title"
+          className="mt-1.5 text-[1.55rem] font-semibold leading-tight tracking-[-0.035em] sm:text-[1.7rem]"
+        >
+          Delete your account?
+        </h2>
+        <p
+          id="delete-account-warning-description"
+          className="mt-3 max-w-sm text-[0.9rem] leading-[1.6] text-[#667085] dark:text-[#b4b4ba]"
+        >
+          Your profile, practice progress, interviews, and account will be permanently deleted.
+          This cannot be undone.
         </p>
 
-        <div className="mt-7 grid gap-3 sm:grid-cols-2">
+        <div className="mt-7 flex flex-col gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={close}
             disabled={deleting}
-            className="inline-flex h-11 items-center justify-center rounded-lg border border-cream/20 bg-cream/[0.035] px-5 text-[0.95rem] font-medium text-cream/82 transition hover:bg-cream/[0.07] hover:text-cream disabled:cursor-not-allowed disabled:opacity-50"
+            autoFocus
+            className="inline-flex h-11 items-center justify-center rounded-xl px-5 text-sm font-medium text-[#566070] transition-colors hover:bg-[#f1f3f5] hover:text-[#20232a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ae3e57] disabled:cursor-not-allowed disabled:opacity-50 dark:text-[#c2c2c7] dark:hover:bg-white/[0.07] dark:hover:text-white"
           >
             Cancel
           </button>
@@ -776,13 +786,13 @@ function DeleteAccountWarningModal({
             type="button"
             onClick={onConfirm}
             disabled={deleting}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#ffe3d0] px-5 text-[0.95rem] font-medium text-[#251815] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-11 min-w-40 items-center justify-center gap-2 rounded-xl bg-[#ae3e57] px-5 text-sm font-semibold text-white transition-[background-color,transform] hover:bg-[#97324b] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ae3e57] disabled:cursor-wait disabled:opacity-60 dark:bg-[#e37a92] dark:text-[#241115] dark:hover:bg-[#f18ca5]"
           >
-            <Trash2 className="h-4 w-4" strokeWidth={1.8} />
-            {deleting ? "Deleting" : "Delete forever"}
+            {deleting ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : null}
+            {deleting ? "Deleting…" : "Delete forever"}
           </button>
         </div>
-      </div>
+      </section>
     </div>,
     document.body
   );

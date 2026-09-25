@@ -12,8 +12,16 @@ import {
   type AiMlPracticePublicSession,
   type PersistedAiMlPracticeTrack
 } from "@/features/practice/ai-ml/domain/ai-ml-practice";
-import { aiMlPracticeQuestionCount } from "@/features/practice/ai-ml/domain/ai-ml-story-catalog";
+import {
+  storyDiscipline,
+  storyTrackHref,
+  storyTrackQuestionTotal,
+  type StoryDiscipline
+} from "@/features/practice/story-tracks/domain/story-disciplines";
+import type { CoreTechnicalPracticeAnalytics } from "@/features/practice/core-technical/domain/workspace-analytics";
+import { practiceEntrySummary } from "@/features/practice/shared/server/practice-entry-summary";
 import { storyPracticeFingerprint } from "@/features/practice/shared/server/practice-orchestrator";
+import type { CandidateProfile } from "@/lib/shared/types";
 import { BadRequestErrorException } from "@/server/common/exceptions/bad-request-error.exception";
 import { ConflictErrorException } from "@/server/common/exceptions/conflict-error.exception";
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
@@ -73,6 +81,7 @@ export class AiMlPracticeService {
       const created = await this.prisma.aiMlPracticeSession.create({
         data: {
           ownerId,
+          discipline: "ai-ml",
           track: databaseTrack(track),
           schemaVersion: SCHEMA_VERSION,
           contentVersion: CONTENT_VERSION,
@@ -124,7 +133,7 @@ export class AiMlPracticeService {
           where: {
             id: input.questionId,
             ownerId,
-            session: { track: databaseTrack(input.track) }
+            session: { discipline: "ai-ml", track: databaseTrack(input.track) }
           },
           include: { attempt: true }
         });
@@ -229,14 +238,20 @@ export class AiMlPracticeService {
     return this.session(ownerId, input.track);
   }
 
-  async summaries(ownerId: string): Promise<AiMlPracticeSummary[]> {
+  async summaries(
+    ownerId: string,
+    discipline: StoryDiscipline = "ai-ml"
+  ): Promise<AiMlPracticeSummary[]> {
     const sessions = await this.prisma.aiMlPracticeSession.findMany({
-      where: { ownerId },
-      include: { questions: { select: { status: true } } }
+      where: { ownerId, discipline },
+      select: { track: true, questions: { select: { status: true } } }
     });
     return sessions.map((session) => {
       const track = applicationTrack(session.track);
-      const totalQuestions = Math.max(session.questions.length, aiMlPracticeQuestionCount(track));
+      const totalQuestions = Math.max(
+        session.questions.length,
+        storyDiscipline(discipline).catalogQuestionCount(track)
+      );
       const completedQuestions = session.questions.filter(
         ({ status }) => status !== AiMlPracticeQuestionStatus.ACTIVE
       ).length;
@@ -251,9 +266,118 @@ export class AiMlPracticeService {
     });
   }
 
+  /**
+   * Overview projection in the Core Technical analytics shape. Story-track
+   * practice lives outside the DSA roadmap, so without this the Overview
+   * ignored it in totals, the streak, and the weekly rhythm.
+   */
+  async dashboardPractice(
+    ownerId: string,
+    profile: CandidateProfile,
+    days = 126,
+    now: Date = new Date(),
+    discipline: StoryDiscipline = "ai-ml"
+  ): Promise<CoreTechnicalPracticeAnalytics> {
+    const definition = storyDiscipline(discipline);
+    const sessions = await this.prisma.aiMlPracticeSession.findMany({
+      where: { ownerId, discipline },
+      select: {
+        track: true,
+        questions: {
+          orderBy: { order: "asc" },
+          select: {
+            id: true,
+            status: true,
+            publicSnapshot: true,
+            completedAt: true,
+            learnedAt: true,
+            attempt: { select: { createdAt: true } }
+          }
+        }
+      }
+    });
+    const questions = sessions.flatMap((session) => session.questions);
+    const solved = practiceEntrySummary(
+      questions,
+      new Set([AiMlPracticeQuestionStatus.COMPLETED, AiMlPracticeQuestionStatus.LEARNED]),
+      days,
+      now
+    );
+    const attemptsByDay = new Map<string, number>();
+    const windowStart = solved.activity[0]?.date ?? "";
+    let totalAttempts = 0;
+    let lastActiveAt: number | null = null;
+    for (const question of questions) {
+      const attemptedAt = question.attempt?.createdAt;
+      if (!attemptedAt) continue;
+      lastActiveAt = Math.max(lastActiveAt ?? 0, attemptedAt.getTime());
+      const date = attemptedAt.toISOString().slice(0, 10);
+      if (date < windowStart) continue;
+      totalAttempts += 1;
+      attemptsByDay.set(date, (attemptsByDay.get(date) ?? 0) + 1);
+    }
+    const activity = solved.activity.map((day) => ({
+      ...day,
+      attempts: attemptsByDay.get(day.date) ?? 0
+    }));
+    const weekStart = startOfUtcWeek(now);
+
+    let totalQuestions = 0;
+    let nextUp: CoreTechnicalPracticeAnalytics["nextUp"] = null;
+    for (const track of ["core-technical", "applied-engineering"] as const) {
+      const session = sessions.find((item) => applicationTrack(item.track) === track);
+      totalQuestions += storyTrackQuestionTotal(
+        profile,
+        discipline,
+        track,
+        session?.questions.length
+      );
+      if (nextUp) continue;
+      const label = definition.tracks[track].title;
+      if (!session) {
+        // The cohort is published on the first visit to the track.
+        nextUp = {
+          title: label,
+          href: storyTrackHref(discipline, track),
+          chapterTitle: null,
+          difficulty: null,
+          minutes: null
+        };
+        continue;
+      }
+      const index = session.questions.findIndex(
+        (question) => question.status === AiMlPracticeQuestionStatus.ACTIVE
+      );
+      const active = session.questions[index];
+      if (!active) continue;
+      nextUp = {
+        title: questionTitle(active.publicSnapshot, index),
+        href: `${storyTrackHref(discipline, track)}/questions/${encodeURIComponent(active.id)}`,
+        chapterTitle: label,
+        difficulty: null,
+        minutes: null
+      };
+    }
+
+    return {
+      totalQuestions,
+      completedQuestions: solved.completedQuestions,
+      totalAttempts,
+      solvedThisWeek: activity
+        .filter((day) => day.date >= weekStart)
+        .reduce((total, day) => total + day.solved, 0),
+      currentStreakDays: trailingSolvedDays(activity),
+      lastActiveAt,
+      activity,
+      nextUp
+    };
+  }
+
   private load(ownerId: string, track: PersistedAiMlPracticeTrack) {
     return this.prisma.aiMlPracticeSession.findUnique({
-      where: { ownerId_track: { ownerId, track: databaseTrack(track) } },
+      where: {
+        ownerId_discipline_track: { ownerId, discipline: "ai-ml", track: databaseTrack(track) }
+      },
       include: { questions: { include: { attempt: true }, orderBy: { order: "asc" } } }
     });
   }
@@ -294,6 +418,30 @@ function publicSession(session: SessionRecord): AiMlPracticePublicSession {
     completedQuestions,
     progressPercent: Math.round((completedQuestions / questions.length) * 100)
   };
+}
+
+function questionTitle(snapshot: Prisma.JsonValue, index: number): string {
+  const value = snapshot as { title?: unknown; prompt?: unknown } | null;
+  return typeof value?.title === "string" && value.title && value.title !== value.prompt
+    ? value.title
+    : `Question ${index + 1}`;
+}
+
+/** Consecutive solved days ending today; an empty today does not break it. */
+function trailingSolvedDays(activity: Array<{ solved: number }>): number {
+  let streak = 0;
+  for (let index = activity.length - 1; index >= 0; index -= 1) {
+    if (activity[index]!.solved > 0) streak += 1;
+    else if (index !== activity.length - 1) break;
+  }
+  return streak;
+}
+
+/** `YYYY-MM-DD` of the Monday starting the current UTC week. */
+function startOfUtcWeek(now: Date): string {
+  const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
+  return day.toISOString().slice(0, 10);
 }
 
 function databaseTrack(track: PersistedAiMlPracticeTrack): DatabaseTrack {

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import type {
   CandidateInterviewProfile,
@@ -16,6 +16,7 @@ import { ConflictErrorException } from "@/server/common/exceptions/conflict-erro
 import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 import type { PrismaService } from "@/server/database/prisma.service";
 import type { ProfileService } from "@/features/profile/server/profile.service";
+import type { CandidateProfile } from "@/lib/shared/types";
 import { compileCandidateInterviewProfile } from "./candidate-profile-compiler";
 
 type StoredPlan = Prisma.PersonalizedInterviewPlanVersionGetPayload<{
@@ -46,11 +47,37 @@ export class PersonalizedPlanningStore {
     private readonly profiles: ProfileReader
   ) {}
 
+  /** Cheap source revision for the cross-request plan cache. */
+  async sourceWatermark(ownerId: string): Promise<string> {
+    const [sessions, attempt] = await Promise.all([
+      this.prisma.interviewSession.findMany({
+        where: { ownerId },
+        orderBy: [{ startedAt: "desc" }, { id: "desc" }],
+        take: 100,
+        select: { id: true, touchedAt: true }
+      }),
+      this.prisma.userQuestionAttempt.findFirst({
+        where: { ownerId },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: { id: true, updatedAt: true }
+      })
+    ]);
+    return createHash("sha256")
+      .update(
+        JSON.stringify({
+          sessions: sessions.map((session) => [session.id, session.touchedAt.getTime()]),
+          attempt: attempt ? [attempt.id, attempt.updatedAt.getTime()] : null
+        })
+      )
+      .digest("hex");
+  }
+
   async ensureCandidateProfile(
     ownerId: string,
-    now = Date.now()
+    now = Date.now(),
+    sourceProfile?: CandidateProfile
   ): Promise<CandidateInterviewProfile> {
-    return this.ensureCandidateProfileVersion(ownerId, now);
+    return this.ensureCandidateProfileVersion(ownerId, now, sourceProfile);
   }
 
   /**
@@ -59,9 +86,10 @@ export class PersonalizedPlanningStore {
    */
   async ensureCandidateProfileVersion(
     ownerId: string,
-    now = Date.now()
+    now = Date.now(),
+    sourceProfile?: CandidateProfile
   ): Promise<CandidateInterviewProfile> {
-    const source = await this.profiles.get(ownerId);
+    const source = sourceProfile ?? (await this.profiles.get(ownerId));
     if (!source.resume) {
       throw new BadRequestErrorException(
         "RESUME_REQUIRED",

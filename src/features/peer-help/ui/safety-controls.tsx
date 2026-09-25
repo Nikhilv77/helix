@@ -1,5 +1,7 @@
 "use client";
 
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
+
 import { Flag, ShieldBan } from "lucide-react";
 import { useCallback, useState } from "react";
 import { announcePeerHelpEnded } from "@/features/peer-help/ui/help-ui-events";
@@ -39,7 +41,7 @@ export function SafetyControls({
       setBusy(true);
       setError(null);
       try {
-        const response = await fetch("/api/help/safety", {
+        const response = await workspaceMutationFetch("/api/help/safety", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(body)

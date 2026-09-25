@@ -18,6 +18,8 @@ import {
   ResumeRoastTimeoutError
 } from "@/features/resume-roast/server/resume-roast.service";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
+import { scheduleCandidateAnalyticsRefresh } from "@/features/analytics/server/refresh-candidate-analytics";
+import { loadResumeRoastPageData } from "@/features/resume-roast/server/resume-roast-page-data";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +35,7 @@ const SSE_HEADERS = {
 export async function GET(request: NextRequest) {
   try {
     const ownerId = await requireOwner();
-    const response = apiSuccess(await getAppContainer().resumeRoastService.state(ownerId));
+    const response = apiSuccess((await loadResumeRoastPageData(ownerId)).state);
     response.headers.set("cache-control", "no-store");
     return response;
   } catch (error) {
@@ -66,6 +68,7 @@ export async function DELETE(request: NextRequest) {
       throw new ApiRouteError(400, "BAD_REQUEST", "Resume Roast deletion failed.");
 
     const deleted = await getAppContainer().resumeRoastService.delete(ownerId, parsed.data.roastId);
+    if (deleted) scheduleCandidateAnalyticsRefresh(ownerId);
     const response = apiSuccess({ deleted });
     response.headers.set("cache-control", "no-store");
     return response;

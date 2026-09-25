@@ -478,7 +478,8 @@ export class PrismaSessionStore implements SessionStore {
     const sessions = await this.prisma.interviewSession.findMany({
       where: { ownerId },
       orderBy: { startedAt: "desc" },
-      take: limit
+      take: limit,
+      select: { state: true, touchedAt: true }
     });
 
     return sessions.map((session) => ({
@@ -640,6 +641,12 @@ export class PrismaSessionStore implements SessionStore {
         }
       });
       if (result.count !== 1) throw new SessionVersionConflictError(state.id);
+      if (state.phase === "done") {
+        await transaction.interviewSession.updateMany({
+          where: { id: state.id, completedAt: null },
+          data: { completedAt: touchedAt }
+        });
+      }
       await applyEvaluationRecoveryMutation(transaction, state.id, evaluationRecovery);
       await recordInterviewReportNotification(transaction, state, reportSnapshot);
     });
@@ -721,6 +728,12 @@ export class PrismaSessionStore implements SessionStore {
         }
       });
       if (updated.count !== 1) throw new SessionVersionConflictError(state.id);
+      if (state.phase === "done") {
+        await transaction.interviewSession.updateMany({
+          where: { id: state.id, completedAt: null },
+          data: { completedAt: touchedAt }
+        });
+      }
 
       const completed = await transaction.interviewAnswerRequest.updateMany({
         where: { sessionId: state.id, turnId, status: ANSWER_PROCESSING },

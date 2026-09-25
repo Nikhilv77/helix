@@ -2,8 +2,7 @@ import { redirect } from "next/navigation";
 import { ArchitectureDesignQuestionWorkspace } from "@/features/practice/architecture-design/ui/architecture-design-question-workspace";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
-import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
-import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
+import { requireOnboardedOwner } from "@/server/auth/onboarding-guard";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
@@ -18,33 +17,27 @@ export default async function ArchitectureDesignQuestionPage({
   params: Promise<{ questionId: string }>;
   searchParams: Promise<{ block?: string | string[] }>;
 }) {
-  const { ownerId } = await requireOnboardedProfile();
-  const [{ questionId }, query] = await Promise.all([params, searchParams]);
+  const [{ ownerId }, { questionId }, query] = await Promise.all([
+    requireOnboardedOwner(),
+    params,
+    searchParams
+  ]);
   const requestedBlockId = typeof query.block === "string" ? query.block : null;
-  const services = getAppContainer().architectureDesign;
-  let block;
-  try {
-    block = requestedBlockId
-      ? await services.history.read(ownerId, requestedBlockId)
-      : await services.practice.current(ownerId);
-  } catch (error) {
-    if (
-      error instanceof NotFoundErrorException &&
-      error.code === "ARCHITECTURE_DESIGN_BLOCK_NOT_FOUND"
-    ) {
-      redirect("/practice/architecture-design");
-    }
-    throw error;
-  }
-  const question = block?.questions.find(({ id }) => id === questionId);
-  if (!block || !question) redirect("/practice/architecture-design");
+  const workspace = await getAppContainer().architectureDesign.practice.questionWorkspace(
+    ownerId,
+    questionId,
+    requestedBlockId
+  );
+  if (!workspace) redirect("/practice/architecture-design");
+  const { block, question } = workspace;
   const stageTitle =
-    block.scenario.stages.find(({ order }) => order === question.order)?.title ??
+    block.story.stages.find(({ order }) => order === question.order)?.title ??
     `Question ${question.order}`;
 
   return (
     <main className="practice-question-page w-full bg-black p-2 sm:p-3 xl:h-[calc(100svh-4.25rem)] xl:overflow-hidden">
       <ArchitectureDesignQuestionWorkspace
+        key={questionId}
         block={block}
         initialQuestion={question}
         stageTitle={stageTitle}

@@ -6,13 +6,13 @@ import {
   getSharedGuard,
   type SharedLease
 } from "@/server/rate-limit/shared-guard";
-import { apiError, architectureDesignOwner, parseArchitectureDesignJson } from "../_shared";
+import { apiError, architectureDesignMutationOwner, parseArchitectureDesignJson } from "../_shared";
 
 
 export async function POST(request: NextRequest) {
   let lease: SharedLease | undefined;
   try {
-    const { ownerId, app } = await architectureDesignOwner(RATE_LIMIT_POLICIES.answerEvaluation);
+    const { ownerId, app } = await architectureDesignMutationOwner(RATE_LIMIT_POLICIES.answerEvaluation);
     const input = await parseArchitectureDesignJson(request, architectureDesignAttemptInputSchema);
     lease = await getSharedGuard(app.config).acquire(
       {

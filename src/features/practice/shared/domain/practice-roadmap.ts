@@ -92,8 +92,9 @@ export interface ArchitectureDesignPracticeEntry {
 }
 
 /** AI/ML uses the shared Practice card shell while its questions stay role-specific. */
-export interface AiMlPracticeEntry {
-  key: "ai-ml-core-technical" | "ai-ml-applied-engineering" | "ai-ml-architecture-design";
+/** A story-practice track card for the AI/ML, frontend, or data discipline. */
+export interface StoryPracticeEntry {
+  key: `${"ai-ml" | "frontend" | "data"}-${"core-technical" | "applied-engineering" | "architecture-design"}`;
   order: number;
   title: string;
   purpose: string;
@@ -108,9 +109,7 @@ export interface AiMlPracticeEntry {
   completedQuestions: number;
   progressPercent: number;
   href:
-    | "/practice/ai-ml/core-technical"
-    | "/practice/ai-ml/applied-engineering"
-    | "/practice/ai-ml/architecture-design"
+    | `/practice/${"ai-ml" | "frontend" | "data"}/${"core-technical" | "applied-engineering"}`
     | "/practice/architecture-design"
     | null;
 }
@@ -120,7 +119,7 @@ export type PracticeDisplaySession =
   | CoreTechnicalPracticeEntry
   | AppliedEngineeringPracticeEntry
   | ArchitectureDesignPracticeEntry
-  | AiMlPracticeEntry;
+  | StoryPracticeEntry;
 
 export interface PracticeRoadmapHome {
   roadmapId: string;

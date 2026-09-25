@@ -222,6 +222,12 @@ function languageExtension(language: string | undefined): string {
     case "csharp":
     case "c#":
       return "cs";
+    case "sql":
+      return "sql";
+    case "tsx":
+      return "tsx";
+    case "jsx":
+      return "jsx";
     default:
       return "js";
   }

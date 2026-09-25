@@ -1,4 +1,5 @@
 import type {
+  ProgressBriefingOverview,
   ProgressDashboardOverview,
   ProgressDay,
   ProgressNextUp
@@ -46,6 +47,50 @@ export function mergeDashboardPractice(
     activity,
     nextUp: roadmap?.nextUp ?? coreTechnical.nextUp
   };
+}
+
+/**
+ * Adds a non-roadmap practice source to the Progress briefing. Only the
+ * current and longest runs are read from the streak by the Progress page, so
+ * those are the fields reconciled here.
+ */
+export function mergeBriefingPractice(
+  briefing: ProgressBriefingOverview,
+  practice: CoreTechnicalPracticeAnalytics
+): ProgressBriefingOverview {
+  const activity = mergePracticeActivity(briefing.activity, practice.activity);
+  return {
+    ...briefing,
+    totals: {
+      totalAttempts: briefing.totals.totalAttempts + practice.totalAttempts,
+      completedQuestions: briefing.totals.completedQuestions + practice.completedQuestions
+    },
+    streak: {
+      ...briefing.streak,
+      currentDays: Math.max(
+        mergedCurrentStreak(activity),
+        briefing.streak.currentDays,
+        practice.currentStreakDays
+      ),
+      longestDays: Math.max(
+        briefing.streak.longestDays,
+        longestSolvedRun(practice.activity),
+        longestSolvedRun(activity)
+      ),
+      lastActiveAt: latestTimestamp(briefing.streak.lastActiveAt, practice.lastActiveAt)
+    },
+    activity
+  };
+}
+
+function longestSolvedRun(activity: ProgressDay[]): number {
+  let longest = 0;
+  let run = 0;
+  for (const day of activity) {
+    run = day.solved > 0 ? run + 1 : 0;
+    longest = Math.max(longest, run);
+  }
+  return longest;
 }
 
 /**

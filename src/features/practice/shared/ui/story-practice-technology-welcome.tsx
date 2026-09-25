@@ -7,6 +7,7 @@ import { DocumentTitle } from "@/components/document-title";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import type { StoryPracticeTechnologyWelcomeExperience } from "./contracts";
 import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
 
 type PreparationPhase = "choosing" | "confirming" | "generating";
 
@@ -193,7 +194,7 @@ export function StoryPracticeTechnologyWelcome<TValue extends string>({
 }
 
 async function post(url: string, body: unknown): Promise<unknown> {
-  const response = await fetch(url, {
+  const response = await workspaceMutationFetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body)

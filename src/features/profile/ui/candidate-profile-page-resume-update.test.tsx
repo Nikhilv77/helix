@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CandidateProfile } from "@/lib/shared/types";
-import { CandidateProfileEditor } from "./candidate-profile-editor";
+import { CandidateProfilePage } from "./candidate-profile-page";
 
 const apiMocks = vi.hoisted(() => ({
   uploadResume: vi.fn(),
@@ -89,25 +89,8 @@ describe("Profile resume update", () => {
     apiMocks.confirmResumeUpdate.mockReset();
   });
 
-  it("opens the saved onboarding role and level for correction", () => {
-    render(<CandidateProfileEditor initialProfile={profile} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Edit profile" }));
-
-    expect(
-      screen.getByRole("heading", { name: /Shape the way your teacher interviews you/i })
-    ).toBeVisible();
-    expect(screen.getByRole("button", { name: /BackendAPIs, data, reliability/i })).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
-    expect(
-      screen.getByRole("button", { name: /Level3–5 yearsOwns meaningful scope/i })
-    ).toHaveAttribute("aria-pressed", "true");
-  });
-
   it("opens the update workflow in a modal without navigating away", () => {
-    render(<CandidateProfileEditor initialProfile={profile} />);
+    render(<CandidateProfilePage initialProfile={profile} />);
 
     const update = screen.getByRole("button", { name: "Update resume" });
     expect(update.closest("a")).toBeNull();
@@ -129,7 +112,7 @@ describe("Profile resume update", () => {
 
   it("replaces the uploader with one simple update loader after file selection", async () => {
     apiMocks.uploadResume.mockImplementation(() => new Promise(() => undefined));
-    render(<CandidateProfileEditor initialProfile={profile} />);
+    render(<CandidateProfilePage initialProfile={profile} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Update resume" }));
     const input = document.querySelector<HTMLInputElement>('input[type="file"]');
@@ -152,7 +135,7 @@ describe("Profile resume update", () => {
   it("shows the save phase after resume analysis finishes", async () => {
     apiMocks.uploadResume.mockResolvedValue({});
     apiMocks.confirmResumeUpdate.mockImplementation(() => new Promise(() => undefined));
-    render(<CandidateProfileEditor initialProfile={profile} />);
+    render(<CandidateProfilePage initialProfile={profile} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Update resume" }));
     const input = document.querySelector<HTMLInputElement>('input[type="file"]');

@@ -25,28 +25,32 @@ export default async function CoreTechnicalPracticePage({
   const allowEarlyAssessmentStart = app.config?.nodeEnv === "development";
   const query = await searchParams;
   const requestedBlockId = typeof query.block === "string" ? query.block : null;
-  // Match DSA recovery: a terminal voice room remains authoritative even if
-  // deferred report generation was interrupted after the final answer.
-  await app.coreTechnicalAssessmentService.recoverCurrentInterview(ownerId).catch(() => null);
-  const [eligibility, currentBlock, historyList] = await Promise.all([
+  const [eligibility, initialBlock, initialHistory] = await Promise.all([
     app.coreTechnicalEligibilityService.forProfile(profile),
-    app.coreTechnicalPracticeService.current(ownerId),
+    requestedBlockId
+      ? app.coreTechnicalHistoryService.read(ownerId, requestedBlockId).catch((error) => {
+          if (
+            error instanceof NotFoundErrorException &&
+            error.code === "CORE_TECHNICAL_BLOCK_NOT_FOUND"
+          ) redirect("/practice/core-technical");
+          throw error;
+        })
+      : app.coreTechnicalPracticeService.current(ownerId),
     app.coreTechnicalHistoryService.list(ownerId)
   ]);
-
-  let block = currentBlock;
-  if (requestedBlockId) {
-    try {
-      block = await app.coreTechnicalHistoryService.read(ownerId, requestedBlockId);
-    } catch (error) {
-      if (
-        error instanceof NotFoundErrorException &&
-        error.code === "CORE_TECHNICAL_BLOCK_NOT_FOUND"
-      ) {
-        redirect("/practice/core-technical");
-      }
-      throw error;
-    }
+  let block = initialBlock;
+  let historyList = initialHistory;
+  if (
+    !requestedBlockId &&
+    block?.assessment &&
+    ["IN_PROGRESS", "FINALIZING"].includes(block.assessment.status)
+  ) {
+    // A terminal room remains authoritative if deferred finalization failed.
+    await app.coreTechnicalAssessmentService.recoverCurrentInterview(ownerId).catch(() => null);
+    [block, historyList] = await Promise.all([
+      app.coreTechnicalPracticeService.current(ownerId),
+      app.coreTechnicalHistoryService.list(ownerId)
+    ]);
   }
 
   const needsFirstStory =

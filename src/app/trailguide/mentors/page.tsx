@@ -1,15 +1,16 @@
 import { MentorDirectoryView } from "@/features/trailguide/ui/mentors-view";
 import { privatePageMetadata } from "@/lib/shared/seo";
-import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
+import { requireOnboardedOwner } from "@/server/auth/onboarding-guard";
 
 export const dynamic = "force-dynamic";
+export const unstable_dynamicStaleTime = 60;
 export const metadata = privatePageMetadata(
   "Trailguide mentors",
   "Explore Trailguide mentors across software engineering, AI, data and platform careers."
 );
 
 export default async function TrailguideMentorsPage() {
-  await requireOnboardedProfile();
+  await requireOnboardedOwner();
 
   return <MentorDirectoryView />;
 }

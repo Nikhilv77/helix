@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/app/api/practice/architecture-design/_shared", () => ({
   apiError: mocks.apiError,
   architectureDesignOwner: mocks.owner,
+  architectureDesignMutationOwner: mocks.owner,
   parseArchitectureDesignJson: mocks.parseJson,
   requireArchitectureDesignEligibility: mocks.eligibility
 }));

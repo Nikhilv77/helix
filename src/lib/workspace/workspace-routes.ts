@@ -1,5 +1,4 @@
 export function isWorkspaceChromeRoute(pathname: string): boolean {
-  if (pathname === "/practice/dsa/assessment") return false;
   if (
     pathname === "/practice/dsa/assessment" ||
     pathname === "/practice/core-technical/assessment" ||
@@ -35,7 +34,6 @@ export function isWorkspaceCanvasRoute(pathname: string): boolean {
     pathname === "/practice/core-technical/assessment" ||
     pathname.startsWith("/practice/core-technical/assessment/") ||
     isWorkspaceChromeRoute(pathname) ||
-    pathname === "/interview" ||
     pathname.startsWith("/interview/")
   );
 }

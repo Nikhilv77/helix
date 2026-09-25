@@ -400,6 +400,7 @@ model InterviewSession {
   reportSnapshot Json?
   version        Int                      @default(0)
   startedAt      DateTime
+  completedAt    DateTime?
   touchedAt      DateTime                 @updatedAt
   createdAt      DateTime                 @default(now())
   answerRequests InterviewAnswerRequest[]
@@ -407,18 +408,19 @@ model InterviewSession {
   designCanvas   InterviewDesignCanvas?
 
   @@index([ownerId, startedAt])
+  @@index([ownerId, completedAt])
   @@index([touchedAt])
 }
 
 /// Independently versioned diagram state. Canvas autosaves never contend with
 /// the interview turn version used by voice and answer persistence.
 model InterviewDesignCanvas {
-  sessionId  String           @id @db.Uuid
-  document   Json
-  revision   Int              @default(1)
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
-  session    InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String           @id @db.Uuid
+  document  Json
+  revision  Int              @default(1)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  session   InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([updatedAt])
 }
@@ -486,6 +488,11 @@ model CandidateProfile {
   helpNotificationsEnabled                Boolean                                @default(true)
   /// False pauses the teacher's optional daily practice recommendations.
   teacherNotificationsEnabled             Boolean                                @default(true)
+  /// One daily in-app coaching decision for active users; no offline fan-out.
+  teacherCoachingLastDay                  String?                                @db.VarChar(10)
+  teacherCoachingNextAt                   DateTime?
+  teacherCoachingLeaseUntil               DateTime?
+  teacherCoachingLeaseToken               String?                                @db.Uuid
   focusAreas                              Json
   stories                                 Json
   resumeFileName                          String?
@@ -521,6 +528,10 @@ model CandidateProfile {
   createdAt                               DateTime                               @default(now())
   updatedAt                               DateTime                               @updatedAt
   roadmaps                                UserRoadmap[]
+  practiceHomeSnapshot                    PracticeHomeSnapshot?
+  analyticsSnapshot                       CandidateAnalyticsSnapshot?
+  workspacePageSnapshots                  WorkspacePageSnapshot[]
+  activityDays                            CandidateActivityDaily[]
   questionAttempts                        UserQuestionAttempt[]
   mayaInsights                            UserMayaInsight[]
   dsaNotes                                UserDsaQuestionNote[]
@@ -584,6 +595,66 @@ model CandidateProfile {
   @@index([activeArchitectureFocusRevisionId])
 }
 
+/// Prepared Practice landing-page data. Source writes bump dirtyVersion so a
+/// concurrent refresh cannot publish an obsolete snapshot.
+model PracticeHomeSnapshot {
+  ownerId       String           @id
+  payload       Json?
+  schemaVersion Int              @default(1)
+  dirtyVersion  Int              @default(1)
+  builtVersion  Int              @default(0)
+  builtDay      String?
+  builtAt       DateTime?
+  owner         CandidateProfile @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+}
+
+/// Prepared owner-scoped payloads for workspace entry pages that need data
+/// beyond the shared analytics summary. Source writes mark only affected pages.
+model WorkspacePageSnapshot {
+  ownerId       String
+  page          String
+  payload       Json?
+  schemaVersion Int              @default(1)
+  dirtyVersion  Int              @default(1)
+  builtVersion  Int              @default(0)
+  builtAt       DateTime?
+  expiresAt     DateTime?
+  owner         CandidateProfile @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+
+  @@id([ownerId, page])
+}
+
+/// Materialized, per-candidate read model shared by Home and Progress.
+/// Source writes mark it dirty; a saved payload is refreshed after navigation.
+model CandidateAnalyticsSnapshot {
+  ownerId        String           @id
+  payload        Json?
+  reportsPayload Json?
+  schemaVersion  Int              @default(1)
+  dirtyVersion   Int              @default(1)
+  builtVersion   Int              @default(0)
+  builtDay       String?
+  builtAt        DateTime?
+  owner          CandidateProfile @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+}
+
+/// Rebuildable UTC daily totals. The detailed attempts and reports remain the
+/// source of truth; these small rows support charts as histories grow.
+model CandidateActivityDaily {
+  ownerId             String
+  day                 DateTime         @db.Date
+  practiceAttempts    Int              @default(0)
+  practiceSolved      Int              @default(0)
+  interviewsStarted   Int              @default(0)
+  interviewsCompleted Int              @default(0)
+  roastsCompleted     Int              @default(0)
+  trailmateResolved   Int              @default(0)
+  owner               CandidateProfile @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
+
+  @@id([ownerId, day])
+  @@index([day])
+}
+
 /// The exact question and answer-key shown in one candidate's baseline. The
 /// source question banks may evolve, but a started assessment must not.
 model PreparationBaselineQuestion {
@@ -601,9 +672,13 @@ model PreparationBaselineQuestion {
 
 /// One immutable AI/ML question cohort per candidate and practice track.
 /// The frozen snapshots keep in-progress sessions stable when authored banks evolve.
+/// Story-practice cohort for one role discipline and track. The model name is
+/// historical: frontend and data disciplines share the same engine as AI/ML.
 model AiMlPracticeSession {
   id                  String                    @id @default(uuid()) @db.Uuid
   ownerId             String
+  /// "ai-ml", "frontend", or "data". Existing AI/ML cohorts default to "ai-ml".
+  discipline          String                    @default("ai-ml") @db.VarChar(16)
   track               AiMlPracticeTrack
   status              AiMlPracticeSessionStatus @default(ACTIVE)
   schemaVersion       Int
@@ -618,7 +693,7 @@ model AiMlPracticeSession {
   owner               CandidateProfile          @relation(fields: [ownerId], references: [ownerId], onDelete: Cascade)
   questions           AiMlPracticeQuestion[]
 
-  @@unique([ownerId, track])
+  @@unique([ownerId, discipline, track])
   @@unique([id, ownerId])
   @@index([ownerId, status])
   @@index([contentFingerprint])
@@ -1683,7 +1758,7 @@ model HelpRequest {
   @@index([status, expiresAt])
   @@index([questionSlug, status])
   @@index([learnerId, createdAt])
-  @@index([helperId])
+  @@index([helperId, createdAt])
 }
 
 /// A helper passing on one request without changing it for anybody else.
@@ -1973,6 +2048,7 @@ model ResumeRoast {
   resumeProfileVersion   CandidateInterviewProfileVersion @relation("CandidateInterviewProfileVersionResumeRoasts", fields: [ownerId, resumeProfileVersionId], references: [ownerId, id], onDelete: Cascade)
 
   @@index([ownerId, status, createdAt])
+  @@index([ownerId, status, updatedAt])
   @@index([resumeProfileVersionId])
 }
 

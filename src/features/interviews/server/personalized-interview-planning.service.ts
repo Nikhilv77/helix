@@ -50,13 +50,25 @@ export class PersonalizedInterviewPlanningService {
     private readonly practiceEvidence?: PracticeEvidenceReader
   ) {}
 
-  async activePlan(ownerId: string, now = Date.now()): Promise<PersonalizedInterviewPlan> {
+  async activePlan(
+    ownerId: string,
+    now = Date.now(),
+    options: {
+      practiceEvidence?: Promise<CandidatePracticeEvidence | null>;
+      profile?: CandidateProfile;
+    } = {}
+  ): Promise<PersonalizedInterviewPlan> {
+    const profilePromise = options.profile
+      ? Promise.resolve(options.profile)
+      : this.profiles.get(ownerId);
     const [candidateProfile, profile, observedPerformanceProfile, practiceEvidence, existing] =
       await Promise.all([
-        this.store.ensureCandidateProfile(ownerId, now),
-        this.profiles.get(ownerId),
+        profilePromise.then((source) => this.store.ensureCandidateProfile(ownerId, now, source)),
+        profilePromise,
         this.performanceProfiles?.refresh(ownerId, now) ?? Promise.resolve(null),
-        this.practiceEvidence?.refresh(ownerId, now) ?? Promise.resolve(null),
+        options.practiceEvidence ??
+          this.practiceEvidence?.refresh(ownerId, now) ??
+          Promise.resolve(null),
         this.store.getActivePlan(ownerId)
       ]);
     const performanceProfile =

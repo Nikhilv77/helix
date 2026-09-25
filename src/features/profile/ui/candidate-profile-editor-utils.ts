@@ -28,11 +28,3 @@ export function toInput(profile: CandidateProfile): CandidateProfileInput {
     profileImage
   };
 }
-
-export function formatTimestamp(value: number): string {
-  return new Date(value).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric"
-  });
-}

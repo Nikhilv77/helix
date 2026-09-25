@@ -42,6 +42,19 @@ const PRACTICE_TEACHER_ADVICE = [
   "When two approaches work, choose the one you can explain under pressure."
 ] as const;
 
+const AI_ML_TEACHER_ADVICE = [
+  "Name the user outcome the model serves before judging any offline score.",
+  "Compare the failing live inputs with the evaluation data before changing the model.",
+  "Check the retrieved evidence first; generation cannot fix the wrong context.",
+  "Choose a threshold from the real cost of false positives and false negatives.",
+  "Slice the metric by segment; a healthy average can hide the case that matters.",
+  "Keep training and serving features on one versioned definition.",
+  "Say what you would log to tell a retrieval error from a generation error.",
+  "Treat a rollout as an experiment: define the guardrail metric before shipping.",
+  "Explain the trade-off between latency, cost, and quality in one sentence.",
+  "Before tuning anything, state how you would reproduce the failure."
+] as const;
+
 export function buildContinuation(
   profile: CandidateProfile,
   reports: ReportsOverview | null,
@@ -66,7 +79,7 @@ function buildPracticeContinuation(
       detail: "Your saved work is safe. Open Practice directly or try this overview again shortly.",
       actionLabel: "Open practice",
       actionHref: "/practice",
-      teacherAdvice: randomPracticeAdvice(),
+      teacherAdvice: randomPracticeAdvice(profile),
       completedQuestions: 0,
       totalQuestions: 0,
       progressPercent: 0,
@@ -91,7 +104,7 @@ function buildPracticeContinuation(
         "Review any session or repeat a question to keep the patterns fresh before your next interview.",
       actionLabel: "Review practice",
       actionHref: "/practice",
-      teacherAdvice: randomPracticeAdvice(),
+      teacherAdvice: randomPracticeAdvice(profile),
       completedQuestions: completed,
       totalQuestions: total,
       progressPercent,
@@ -129,7 +142,7 @@ function buildPracticeContinuation(
       actionHref: next.href,
       teacherAdvice: startingFromBaseline
         ? "Show your reasoning, test one edge case, and finish cleanly—this attempt starts shaping your plan."
-        : randomPracticeAdvice(),
+        : randomPracticeAdvice(profile),
       completedQuestions: completed,
       totalQuestions: total,
       progressPercent,
@@ -146,7 +159,7 @@ function buildPracticeContinuation(
       : "Choose one focused question and take it to a clear stopping point.",
     actionLabel: hasActivity ? "Continue practice" : "Start practice",
     actionHref: "/practice",
-    teacherAdvice: randomPracticeAdvice(),
+    teacherAdvice: randomPracticeAdvice(profile),
     completedQuestions: completed,
     totalQuestions: total,
     progressPercent,
@@ -154,8 +167,9 @@ function buildPracticeContinuation(
   };
 }
 
-function randomPracticeAdvice(): string {
-  return PRACTICE_TEACHER_ADVICE[Math.floor(Math.random() * PRACTICE_TEACHER_ADVICE.length)]!;
+function randomPracticeAdvice(profile: CandidateProfile): string {
+  const advice = profile.targetRole === "ai-ml" ? AI_ML_TEACHER_ADVICE : PRACTICE_TEACHER_ADVICE;
+  return advice[Math.floor(Math.random() * advice.length)]!;
 }
 
 function buildInterviewContinuation(

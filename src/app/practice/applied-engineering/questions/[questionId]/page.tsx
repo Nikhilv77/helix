@@ -2,8 +2,7 @@ import { redirect } from "next/navigation";
 import { AppliedEngineeringQuestionWorkspace } from "@/features/practice/applied-engineering/ui/applied-engineering-question-workspace";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
-import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
-import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
+import { requireOnboardedOwner } from "@/server/auth/onboarding-guard";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
@@ -18,34 +17,27 @@ export default async function AppliedEngineeringQuestionPage({
   params: Promise<{ questionId: string }>;
   searchParams: Promise<{ block?: string | string[] }>;
 }) {
-  const { ownerId } = await requireOnboardedProfile();
-  const { questionId } = await params;
-  const query = await searchParams;
+  const [{ ownerId }, { questionId }, query] = await Promise.all([
+    requireOnboardedOwner(),
+    params,
+    searchParams
+  ]);
   const requestedBlockId = typeof query.block === "string" ? query.block : null;
-  const app = getAppContainer();
-  let block;
-  try {
-    block = requestedBlockId
-      ? await app.appliedEngineeringHistoryService.read(ownerId, requestedBlockId)
-      : await app.appliedEngineeringPracticeService.current(ownerId);
-  } catch (error) {
-    if (
-      error instanceof NotFoundErrorException &&
-      error.code === "APPLIED_ENGINEERING_BLOCK_NOT_FOUND"
-    ) {
-      redirect("/practice/applied-engineering");
-    }
-    throw error;
-  }
-  const question = block?.questions.find(({ id }) => id === questionId);
-  if (!block || !question) redirect("/practice/applied-engineering");
+  const workspace = await getAppContainer().appliedEngineeringPracticeService.questionWorkspace(
+    ownerId,
+    questionId,
+    requestedBlockId
+  );
+  if (!workspace) redirect("/practice/applied-engineering");
+  const { block, question } = workspace;
   const stageTitle =
-    block.incident.stages.find(({ order }) => order === question.order)?.title ??
+    block.story.stages.find(({ order }) => order === question.order)?.title ??
     `Question ${question.order}`;
 
   return (
     <main className="practice-question-page w-full bg-black p-2 sm:p-3 xl:h-[calc(100svh-4.25rem)] xl:overflow-hidden">
       <AppliedEngineeringQuestionWorkspace
+        key={questionId}
         block={block}
         initialQuestion={question}
         stageTitle={stageTitle}

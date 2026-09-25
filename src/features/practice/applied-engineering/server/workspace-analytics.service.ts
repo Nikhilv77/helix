@@ -20,6 +20,7 @@ import type {
   Turn
 } from "@/lib/shared/types";
 import type { PrismaService } from "@/server/database/prisma.service";
+import { practiceEntrySummary } from "@/features/practice/shared/server/practice-entry-summary";
 
 const DAY_MS = 86_400_000;
 const APPLIED_ENGINEERING_TEMPLATE_ID = "applied-engineering";
@@ -60,6 +61,19 @@ export interface AppliedEngineeringRoundAnalytics {
 /** Read-only bridge from Applied Engineering snapshots into workspace analytics. */
 export class AppliedEngineeringWorkspaceAnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Small read for the Practice landing page; avoids question and incident JSON. */
+  async entrySummary(ownerId: string, days = 7) {
+    const questions = await this.prisma.appliedEngineeringBlockQuestion.findMany({
+      where: { ownerId },
+      select: { status: true, completedAt: true, learnedAt: true }
+    });
+    return practiceEntrySummary(
+      questions,
+      new Set([AppliedEngineeringQuestionStatus.COMPLETED, AppliedEngineeringQuestionStatus.LEARNED]),
+      days
+    );
+  }
 
   async practice(
     ownerId: string,

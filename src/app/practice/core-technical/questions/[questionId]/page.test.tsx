@@ -1,28 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 
-const mocks = vi.hoisted(() => ({
-  requireOnboardedProfile: vi.fn(),
-  current: vi.fn(),
-  historyRead: vi.fn(),
-  notFound: vi.fn(() => {
-    throw new Error("NEXT_NOT_FOUND");
-  })
-}));
+const mocks = vi.hoisted(() => ({ questionWorkspace: vi.fn() }));
 
 vi.mock("@/server/auth/onboarding-guard", () => ({
-  requireOnboardedProfile: mocks.requireOnboardedProfile
+  requireOnboardedOwner: () => Promise.resolve({ ownerId: "owner-one" })
 }));
 vi.mock("@/server/app-container", () => ({
   getAppContainer: () => ({
-    coreTechnicalPracticeService: { current: mocks.current },
-    coreTechnicalHistoryService: { read: mocks.historyRead }
+    coreTechnicalPracticeService: { questionWorkspace: mocks.questionWorkspace }
   })
-}));
-vi.mock("next/navigation", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("next/navigation")>()),
-  notFound: mocks.notFound
 }));
 vi.mock("@/features/practice/core-technical/ui/core-technical-question-workspace", () => ({
   CoreTechnicalQuestionWorkspace: (props: {
@@ -42,13 +29,10 @@ vi.mock("@/features/practice/core-technical/ui/core-technical-question-workspace
 import CoreTechnicalQuestionPage from "./page";
 
 describe("CoreTechnicalQuestionPage", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.requireOnboardedProfile.mockResolvedValue({ ownerId: "owner-one" });
-  });
+  beforeEach(() => vi.clearAllMocks());
 
-  it("reads an owned historical question from the URL-selected frozen block", async () => {
-    mocks.historyRead.mockResolvedValue(block("historical-block", "question-one", false));
+  it("reads the question from the URL-selected block for the signed-in owner", async () => {
+    mocks.questionWorkspace.mockResolvedValue(workspace("historical-block", "question-one"));
 
     render(
       await CoreTechnicalQuestionPage({
@@ -57,14 +41,17 @@ describe("CoreTechnicalQuestionPage", () => {
       })
     );
 
-    expect(mocks.historyRead).toHaveBeenCalledWith("owner-one", "historical-block");
-    expect(mocks.current).not.toHaveBeenCalled();
-    expect(screen.getByTestId("workspace")).toHaveAttribute("data-question", "question-one");
+    expect(mocks.questionWorkspace).toHaveBeenCalledWith(
+      "owner-one",
+      "question-one",
+      "historical-block"
+    );
+    expect(screen.getByTestId("workspace")).toHaveAttribute("data-block", "historical-block");
     expect(screen.getByTestId("workspace")).toHaveAttribute("data-stage", "Trace the runtime");
   });
 
-  it("uses the current server-owned block when the URL has no block selection", async () => {
-    mocks.current.mockResolvedValue(block("current-block", "question-one", true));
+  it("lets the service choose the current block when the URL has none", async () => {
+    mocks.questionWorkspace.mockResolvedValue(workspace("current-block", "question-one"));
 
     render(
       await CoreTechnicalQuestionPage({
@@ -73,25 +60,13 @@ describe("CoreTechnicalQuestionPage", () => {
       })
     );
 
-    expect(mocks.current).toHaveBeenCalledWith("owner-one");
+    expect(mocks.questionWorkspace).toHaveBeenCalledWith("owner-one", "question-one", null);
     expect(screen.getByTestId("workspace")).toHaveAttribute("data-block", "current-block");
   });
 
-  it("returns to Core Technical for a missing question or foreign block", async () => {
-    mocks.historyRead.mockResolvedValue(block("owned-block", "different-question", false));
-    await expect(
-      CoreTechnicalQuestionPage({
-        params: Promise.resolve({ questionId: "missing-question" }),
-        searchParams: Promise.resolve({ block: "owned-block" })
-      })
-    ).rejects.toThrow("NEXT_REDIRECT");
+  it("returns to Core Technical for a missing question or a foreign block", async () => {
+    mocks.questionWorkspace.mockResolvedValue(null);
 
-    mocks.historyRead.mockRejectedValue(
-      new NotFoundErrorException(
-        "CORE_TECHNICAL_BLOCK_NOT_FOUND",
-        "Core Technical story block not found."
-      )
-    );
     await expect(
       CoreTechnicalQuestionPage({
         params: Promise.resolve({ questionId: "question-one" }),
@@ -101,11 +76,9 @@ describe("CoreTechnicalQuestionPage", () => {
   });
 });
 
-function block(id: string, questionId: string, isCurrent: boolean) {
+function workspace(blockId: string, questionId: string) {
   return {
-    id,
-    isCurrent,
-    story: { stages: [{ order: 1, title: "Trace the runtime" }] },
-    questions: [{ id: questionId, order: 1 }]
+    block: { id: blockId, story: { stages: [{ order: 1, title: "Trace the runtime" }] } },
+    question: { id: questionId, order: 1 }
   };
 }

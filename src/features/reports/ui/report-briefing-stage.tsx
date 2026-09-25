@@ -546,7 +546,7 @@ export function ReportEmptyStage({
             style={{ "--report-delay": "2100ms" } as CSSProperties}
           >
             <Link
-              href="/interview?resume=1"
+              href="/interviews"
               aria-disabled={exhausted}
               className={[
                 "report-primary-action inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-cream px-6 text-[0.95rem] font-semibold text-[#18130d] transition hover:-translate-y-0.5 hover:bg-white",

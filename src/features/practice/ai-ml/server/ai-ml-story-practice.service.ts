@@ -13,18 +13,21 @@ import {
   storyPracticeRevealHintInputSchema,
   interactivePracticeSaveDraftInputSchema
 } from "@/features/practice/shared/domain/story-practice-contracts";
-import { aiMlStoryPaths, type AiMlStoryQuestion } from "../domain/ai-ml-story-catalog";
+import type { AiMlStoryQuestion } from "../domain/ai-ml-story-catalog";
+import { aiMlQuickCheckQuestionById } from "../domain/ai-ml-quick-check-catalog";
 import {
-  aiMlQuickCheckPath,
-  aiMlQuickCheckQuestionById
-} from "../domain/ai-ml-quick-check-catalog";
+  storyDiscipline,
+  storyDisciplinePaths,
+  isStoryDiscipline,
+  type StoryDiscipline
+} from "@/features/practice/story-tracks/domain/story-disciplines";
 import type { PersistedAiMlPracticeTrack } from "../domain/ai-ml-practice";
 import {
   recommendAiMlPractice,
   type AiMlPracticePath,
   type AiMlPracticeRecommendation
 } from "../domain/personalized-practice";
-import { aiMlResumePracticePath, AI_ML_RESUME_PATH_KEY } from "../domain/resume-practice-path";
+import { AI_ML_RESUME_PATH_KEY } from "../domain/resume-practice-path";
 import type { CandidateProfile } from "@/lib/shared/types";
 import type {
   StoryPracticeAttemptWork,
@@ -64,6 +67,7 @@ type SessionRow = Prisma.AiMlPracticeSessionGetPayload<{
 type QuestionRow = SessionRow["questions"][number];
 
 export type AiMlStorySession = {
+  discipline: StoryDiscipline;
   track: PersistedAiMlPracticeTrack;
   blocks: StoryPracticeBlockView[];
   totalQuestions: number;
@@ -81,16 +85,26 @@ export class AiMlStoryPracticeService {
   async session(
     ownerId: string,
     track: PersistedAiMlPracticeTrack,
-    profile?: CandidateProfile
+    profile?: CandidateProfile,
+    discipline: StoryDiscipline = "ai-ml"
   ): Promise<AiMlStorySession> {
-    await this.legacy.session(ownerId, track);
+    const definition = storyDiscipline(discipline);
+    // Published sessions are immutable apart from answers and drafts. The
+    // usual GET can read them without a transaction or an owner-wide lock.
+    const existing = await this.load(ownerId, discipline, track);
+    if (existing && this.isPublished(existing, discipline, track, profile)) {
+      return this.view(existing, discipline, track, profile);
+    }
+    // AI/ML cohorts start from the original eight-question quick check.
+    if (discipline === "ai-ml") await this.legacy.session(ownerId, track);
     const row = await this.prisma.$transaction(async (tx) => {
       await lockAiMlPracticeOwner(tx, ownerId);
-      let row = await this.load(ownerId, track, tx);
-      if (!row) throw new Error("AI/ML practice session was not created");
-      const resumePath = profile ? aiMlResumePracticePath(profile, track) : null;
+      let row: SessionRow | null =
+        (await this.load(ownerId, discipline, track, tx)) ??
+        (await this.createSession(tx, ownerId, discipline, track));
+      const resumePath = profile ? definition.resumePath(profile, track) : null;
       const authored = [
-        ...aiMlStoryPaths(track).flatMap((path) => path.questions),
+        ...definition.paths(track).flatMap((path) => path.questions),
         ...(resumePath?.questions ?? [])
       ];
       const present = new Set(row.questions.map((question) => question.questionKey));
@@ -99,7 +113,9 @@ export class AiMlStoryPracticeService {
         const sessionId = row.id;
         // Existing sessions may already occupy the earlier story order slots.
         // New authored questions append instead of colliding with frozen rows.
-        const nextOrder = Math.max(8, ...row.questions.map((question) => question.order)) + 1;
+        const reservedOrders = discipline === "ai-ml" ? 8 : 0;
+        const nextOrder =
+          Math.max(reservedOrders, ...row.questions.map((question) => question.order)) + 1;
         const result = await tx.aiMlPracticeQuestion.createMany({
           data: missing.map((question, index) => ({
             sessionId,
@@ -148,13 +164,15 @@ export class AiMlStoryPracticeService {
             data: { status: AiMlPracticeSessionStatus.ACTIVE, completedAt: null }
           });
         }
-        row = await this.load(ownerId, track, tx);
-        if (!row) throw new Error("AI/ML practice session disappeared");
+        row = await this.load(ownerId, discipline, track, tx);
+        if (!row) throw new Error("Story practice session disappeared");
       }
       // Submitted answers stay frozen. Unsubmitted selections and hints are
       // archived with the old snapshot before an active question is revised.
-      const quickCheck = aiMlQuickCheckPath(track);
-      const quickByKey = new Map(quickCheck.questions.map((question) => [question.id, question]));
+      const quickCheck = definition.quickCheck(track);
+      const quickByKey = new Map(
+        (quickCheck?.questions ?? []).map((question) => [question.id, question])
+      );
       const candidates = row.questions.filter(
         (question) =>
           quickByKey.has(question.questionKey) &&
@@ -191,16 +209,76 @@ export class AiMlStoryPracticeService {
           })
         );
         if (changed.some((result) => result.count > 0)) {
-          row = await this.load(ownerId, track, tx);
-          if (!row) throw new Error("AI/ML practice session disappeared");
+          row = await this.load(ownerId, discipline, track, tx);
+          if (!row) throw new Error("Story practice session disappeared");
         }
       }
       return row;
     });
+    return this.view(row, discipline, track, profile);
+  }
+
+  /** Non-AI/ML cohorts have no legacy questions, so the row starts empty. */
+  private async createSession(
+    tx: Prisma.TransactionClient,
+    ownerId: string,
+    discipline: StoryDiscipline,
+    track: PersistedAiMlPracticeTrack
+  ): Promise<SessionRow> {
+    const copy = storyDiscipline(discipline).tracks[track];
+    await tx.aiMlPracticeSession.create({
+      data: {
+        ownerId,
+        discipline,
+        track: databaseTrack(track),
+        schemaVersion: 1,
+        contentVersion: CONTENT_VERSION,
+        contentFingerprint: storyPracticeFingerprint(storyDisciplinePaths(discipline, track)),
+        titleSnapshot: copy.title,
+        descriptionSnapshot: copy.purpose
+      }
+    });
+    const row = await this.load(ownerId, discipline, track, tx);
+    if (!row) throw new Error("Story practice session was not created");
+    return row;
+  }
+
+  private isPublished(
+    row: SessionRow,
+    discipline: StoryDiscipline,
+    track: PersistedAiMlPracticeTrack,
+    profile?: CandidateProfile
+  ): boolean {
+    const definition = storyDiscipline(discipline);
+    const resumePath = profile ? definition.resumePath(profile, track) : null;
+    const required = [
+      ...storyDisciplinePaths(discipline, track).flatMap((path) => path.questions),
+      ...(resumePath?.questions ?? [])
+    ];
+    const present = new Map(row.questions.map((question) => [question.questionKey, question]));
+    if (required.some((question) => !present.has(question.id))) return false;
+    const quickKeys = new Set(
+      (definition.quickCheck(track)?.questions ?? []).map((question) => question.id)
+    );
+    return !row.questions.some(
+      (question) =>
+        quickKeys.has(question.questionKey) &&
+        question.contentVersion < QUICK_CHECK_CONTENT_VERSION &&
+        question.status === AiMlPracticeQuestionStatus.ACTIVE &&
+        !question.attempt
+    );
+  }
+
+  private view(
+    row: SessionRow,
+    discipline: StoryDiscipline,
+    track: PersistedAiMlPracticeTrack,
+    profile?: CandidateProfile
+  ): AiMlStorySession {
+    const candidateRole = storyDiscipline(discipline).candidateRole;
     const paths: AiMlPracticePath[] = [
       ...savedPersonalizedPaths(row.questions, AI_ML_RESUME_PATH_KEY),
-      ...aiMlStoryPaths(track),
-      aiMlQuickCheckPath(track)
+      ...storyDisciplinePaths(discipline, track)
     ];
     const recommendation = profile
       ? recommendAiMlPractice({ profile, paths, questions: row.questions })
@@ -227,7 +305,7 @@ export class AiMlStoryPracticeService {
           title: path.title,
           premise: path.description,
           incident: path.description,
-          candidateRole: "AI/ML engineer",
+          candidateRole,
           primaryTopicKey: path.key,
           secondaryTopicKeys: [],
           mechanismKeys: [],
@@ -253,6 +331,7 @@ export class AiMlStoryPracticeService {
       visiblePathKeys.has(pathKey(question))
     );
     return {
+      discipline,
       track,
       blocks,
       totalQuestions: visibleQuestions.length,
@@ -266,20 +345,87 @@ export class AiMlStoryPracticeService {
   async question(ownerId: string, questionId: string): Promise<StoryPracticeQuestionView> {
     const row = await this.prisma.aiMlPracticeQuestion.findFirst({
       where: { id: questionId, ownerId },
-      include: { attempt: true, session: { select: { track: true } } }
+      include: {
+        attempt: true,
+        session: {
+          select: {
+            track: true,
+            questions: {
+              select: { id: true, publicSnapshot: true },
+              orderBy: { order: "asc" }
+            }
+          }
+        }
+      }
     });
     if (!row) throw new NotFoundErrorException("AI_ML_QUESTION_NOT_FOUND", "Question not found.");
     const track =
       row.session.track === DatabaseTrack.CORE_TECHNICAL ? "core-technical" : "applied-engineering";
-    const peers = await this.prisma.aiMlPracticeQuestion.findMany({
-      where: { sessionId: row.sessionId },
-      select: { id: true, publicSnapshot: true },
-      orderBy: { order: "asc" }
-    });
+    const peers = row.session.questions;
     const key = pathKey(row);
     const order =
       peers.filter((peer) => pathKey(peer) === key).findIndex((peer) => peer.id === row.id) + 1;
     return publicQuestion(row, key, order, track);
+  }
+
+  /** Read one answer-bearing row and only public navigation fields for its peers. */
+  async questionWorkspace(
+    ownerId: string,
+    track: PersistedAiMlPracticeTrack,
+    questionId: string,
+    discipline: StoryDiscipline = "ai-ml"
+  ) {
+    const row = await this.prisma.aiMlPracticeQuestion.findFirst({
+      where: { id: questionId, ownerId, session: { discipline, track: databaseTrack(track) } },
+      include: {
+        attempt: true,
+        session: {
+          select: {
+            questions: {
+              select: { id: true, questionKey: true, publicSnapshot: true, status: true },
+              orderBy: { order: "asc" }
+            }
+          }
+        }
+      }
+    });
+    if (!row) return null;
+    const peers = row.session.questions;
+    const key = pathKey(row);
+    const pathQuestions = peers.filter((peer) => pathKey(peer) === key);
+    const order = pathQuestions.findIndex((peer) => peer.id === row.id) + 1;
+    const path = [
+      ...savedPersonalizedPaths(peers, AI_ML_RESUME_PATH_KEY),
+      ...storyDisciplinePaths(discipline, track)
+    ].find((candidate) => candidate.key === key);
+    if (!path || order === 0) return null;
+    return {
+      block: {
+        id: path.key,
+        status: pathQuestions.every((peer) => peer.status !== AiMlPracticeQuestionStatus.ACTIVE)
+          ? ("COMPLETED" as const)
+          : ("PRACTISING" as const),
+        story: {
+          key: path.key,
+          title: path.title,
+          premise: path.description,
+          incident: path.description,
+          candidateRole: storyDiscipline(discipline).candidateRole,
+          primaryTopicKey: path.key,
+          secondaryTopicKeys: [],
+          mechanismKeys: [],
+          difficulty: "guided" as const,
+          expectedMinutes: path.expectedMinutes,
+          stages: pathQuestions.map((peer, index) => ({
+            order: index + 1,
+            title: stageTitle(peer, track, index)
+          }))
+        },
+        selection: { difficulty: "guided" as const, reason: path.description },
+        questions: pathQuestions.map((peer, index) => ({ id: peer.id, order: index + 1 }))
+      },
+      question: publicQuestion(row, path.key, order, track)
+    };
   }
 
   async saveDraft(ownerId: string, raw: unknown) {
@@ -327,11 +473,11 @@ export class AiMlStoryPracticeService {
     if (input.work.kind === "code")
       throw new BadRequestErrorException(
         "AI_ML_CODE_UNSUPPORTED",
-        "This AI/ML question does not accept code."
+        "This practice question does not accept code."
       );
     const row = await this.prisma.aiMlPracticeQuestion.findFirst({
       where: { id: input.questionId, ownerId },
-      include: { attempt: true }
+      include: { attempt: true, session: { select: { discipline: true } } }
     });
     if (!row) throw new NotFoundErrorException("AI_ML_QUESTION_NOT_FOUND", "Question not found.");
     const workFingerprint = storyPracticeFingerprint(input.work);
@@ -390,7 +536,12 @@ export class AiMlStoryPracticeService {
       feedback =
         input.work.kind === "choice"
           ? choiceFeedback(publicSnapshot, privateSnapshot, input.work.selectedChoiceIndex)
-          : await this.evaluateText(publicSnapshot, privateSnapshot, input.work.text);
+          : await this.evaluateText(
+              publicSnapshot,
+              privateSnapshot,
+              input.work.text,
+              isStoryDiscipline(row.session.discipline) ? row.session.discipline : "ai-ml"
+            );
     }
     try {
       await this.prisma.$transaction(async (tx) => {
@@ -500,7 +651,8 @@ export class AiMlStoryPracticeService {
   private async evaluateText(
     question: PublicSnapshot,
     answer: PrivateSnapshot,
-    response: string
+    response: string,
+    discipline: StoryDiscipline
   ): Promise<StoryPracticeAttemptFeedbackView> {
     if (!answer.answer || !answer.rubric) throw new Error("The frozen answer rubric is missing");
     return evaluateWrittenPracticeAnswer(
@@ -516,18 +668,21 @@ export class AiMlStoryPracticeService {
         interviewConnection: question.interviewConnection ?? "Explain the production decision."
       },
       response,
-      "ai-ml.practice.attempt",
-      "experienced AI/ML engineer"
+      `${discipline}.practice.attempt`,
+      storyDiscipline(discipline).reviewer
     );
   }
 
   private load(
     ownerId: string,
+    discipline: StoryDiscipline,
     track: PersistedAiMlPracticeTrack,
     database: Pick<PrismaService, "aiMlPracticeSession"> = this.prisma
   ) {
     return database.aiMlPracticeSession.findUnique({
-      where: { ownerId_track: { ownerId, track: databaseTrack(track) } },
+      where: {
+        ownerId_discipline_track: { ownerId, discipline, track: databaseTrack(track) }
+      },
       include: { questions: { include: { attempt: true }, orderBy: { order: "asc" } } }
     });
   }
@@ -634,8 +789,11 @@ const privateData = (row: { privateSnapshot: Prisma.JsonValue }) =>
 const pathKey = (row: { publicSnapshot: Prisma.JsonValue }) =>
   publicData(row).pathKey ?? "quick-check";
 
-function savedPersonalizedPaths(questions: QuestionRow[], prefix: string): AiMlPracticePath[] {
-  const groups = new Map<string, QuestionRow[]>();
+function savedPersonalizedPaths(
+  questions: Array<Pick<QuestionRow, "questionKey" | "publicSnapshot">>,
+  prefix: string
+): AiMlPracticePath[] {
+  const groups = new Map<string, Array<Pick<QuestionRow, "questionKey" | "publicSnapshot">>>();
   for (const question of questions) {
     const key = pathKey(question);
     if (!key.startsWith(`${prefix}-`)) continue;
@@ -664,7 +822,11 @@ function savedPersonalizedPaths(questions: QuestionRow[], prefix: string): AiMlP
   });
 }
 
-function stageTitle(row: QuestionRow, track: PersistedAiMlPracticeTrack, index: number): string {
+function stageTitle(
+  row: Pick<QuestionRow, "questionKey" | "publicSnapshot">,
+  track: PersistedAiMlPracticeTrack,
+  index: number
+): string {
   const snapshot = publicData(row);
   if (snapshot.title !== snapshot.prompt) return snapshot.title;
   if (track === "core-technical" && row.questionKey === "ai-ml-core-7") {

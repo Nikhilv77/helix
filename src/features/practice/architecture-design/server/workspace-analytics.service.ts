@@ -18,6 +18,7 @@ import type {
   Turn
 } from "@/lib/shared/types";
 import type { PrismaService } from "@/server/database/prisma.service";
+import { practiceEntrySummary } from "@/features/practice/shared/server/practice-entry-summary";
 
 const DAY_MS = 86_400_000;
 const TEMPLATE_ID = "architecture-design";
@@ -63,6 +64,19 @@ export interface ArchitectureDesignRoundAnalytics {
 /** Read-only projection from immutable Architecture snapshots into workspace analytics. */
 export class ArchitectureDesignWorkspaceAnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Small read for the Practice landing page; avoids question and scenario JSON. */
+  async entrySummary(ownerId: string, days = 7) {
+    const questions = await this.prisma.architectureBlockQuestion.findMany({
+      where: { ownerId },
+      select: { status: true, completedAt: true, learnedAt: true }
+    });
+    return practiceEntrySummary(
+      questions,
+      new Set([ArchitectureQuestionStatus.COMPLETED, ArchitectureQuestionStatus.LEARNED]),
+      days
+    );
+  }
 
   async practice(
     ownerId: string,

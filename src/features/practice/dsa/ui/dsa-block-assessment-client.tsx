@@ -71,16 +71,24 @@ export function DsaBlockAssessmentClient({
   const questionStartedAt = useRef(Date.now());
   const lastQuestionIndex = useRef<number | null>(null);
   const spoken = useRef(new Set<string>());
+  const latestSessionRead = useRef(0);
+  const activeSessionReads = useRef(0);
+  const lastSessionReadAt = useRef(0);
 
   const poll = useCallback(async () => {
+    const readId = ++latestSessionRead.current;
+    activeSessionReads.current += 1;
+    lastSessionReadAt.current = Date.now();
     try {
       const next = await getSession(sessionId);
       if (next.setup.dsaBlockAssessment?.kind !== "dsa-block-assessment") {
         throw new Error("This session is not a DSA block assessment.");
       }
+      if (readId !== latestSessionRead.current) return;
       setSession(next);
       setError(null);
     } catch (caught) {
+      if (readId !== latestSessionRead.current) return;
       const message =
         caught instanceof ApiClientError && caught.code === "SESSION_NOT_FOUND"
           ? "This assessment session could not be found."
@@ -89,15 +97,34 @@ export function DsaBlockAssessmentClient({
             : "The assessment could not be loaded.";
       setError(message);
     } finally {
-      setLoading(false);
+      activeSessionReads.current -= 1;
+      if (readId === latestSessionRead.current) setLoading(false);
     }
   }, [sessionId]);
 
   useEffect(() => {
     void poll();
-    const timer = window.setInterval(() => void poll(), 3_000);
-    return () => window.clearInterval(timer);
+    return () => {
+      latestSessionRead.current += 1;
+    };
   }, [poll]);
+
+  useEffect(() => {
+    if (session?.phase === "done" || sending) return;
+    const onReturn = () => {
+      if (document.visibilityState !== "visible" || navigator.onLine === false) return;
+      if (activeSessionReads.current > 0 || Date.now() - lastSessionReadAt.current < 1_000) return;
+      void poll();
+    };
+    window.addEventListener("focus", onReturn);
+    window.addEventListener("online", onReturn);
+    document.addEventListener("visibilitychange", onReturn);
+    return () => {
+      window.removeEventListener("focus", onReturn);
+      window.removeEventListener("online", onReturn);
+      document.removeEventListener("visibilitychange", onReturn);
+    };
+  }, [poll, sending, session?.phase]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1_000);

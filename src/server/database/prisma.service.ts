@@ -9,3 +9,12 @@ export class PrismaService extends PrismaClient {
     await this.$disconnect();
   }
 }
+
+const prismaGlobal = globalThis as typeof globalThis & {
+  trailgradPrisma?: PrismaService;
+};
+
+/** One pool per running server instance, including production warm starts. */
+export function getPrismaService(): PrismaService {
+  return (prismaGlobal.trailgradPrisma ??= new PrismaService());
+}

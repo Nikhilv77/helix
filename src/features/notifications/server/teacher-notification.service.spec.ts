@@ -63,9 +63,11 @@ describe("teacher notifications", () => {
   it("sends one recommendation plus a second nudge only for unfinished work", async () => {
     const dispatch = vi.fn().mockResolvedValue({ recorded: true, emailed: false });
     const prisma = {
-      candidateProfile: {
-        findMany: vi.fn().mockResolvedValue([{ ownerId: "candidate-1", teacherId: "maya" }])
-      },
+      $queryRaw: vi
+        .fn()
+        .mockResolvedValue([{ teacherId: "maya", targetRole: "backend", focusAreas: [] }]),
+      $executeRaw: vi.fn().mockResolvedValue(1),
+      practiceHomeSnapshot: { findUnique: vi.fn().mockResolvedValue(null) },
       userQuestionProgress: {
         findMany: vi.fn().mockResolvedValue([
           {
@@ -101,10 +103,11 @@ describe("teacher notifications", () => {
       dispatch
     } as unknown as NotificationDispatcher);
 
-    await expect(service.dispatchDaily(new Date("2026-08-28T04:00:00.000Z"))).resolves.toEqual({
-      candidates: 1,
-      recorded: 2,
-      failed: 0
+    await expect(
+      service.dispatchDueForOwner("candidate-1", new Date("2026-08-28T04:00:00.000Z"))
+    ).resolves.toEqual({
+      claimed: true,
+      recorded: 2
     });
 
     expect(dispatch).toHaveBeenNthCalledWith(
@@ -128,19 +131,22 @@ describe("teacher notifications", () => {
   it("sends only one generic recommendation when no roadmap question is available", async () => {
     const dispatch = vi.fn().mockResolvedValue({ recorded: true, emailed: false });
     const prisma = {
-      candidateProfile: {
-        findMany: vi.fn().mockResolvedValue([{ ownerId: "candidate-1", teacherId: "claire" }])
-      },
+      $queryRaw: vi
+        .fn()
+        .mockResolvedValue([{ teacherId: "claire", targetRole: "backend", focusAreas: [] }]),
+      $executeRaw: vi.fn().mockResolvedValue(1),
+      practiceHomeSnapshot: { findUnique: vi.fn().mockResolvedValue(null) },
       userQuestionProgress: { findMany: vi.fn().mockResolvedValue([]) }
     } as unknown as PrismaService;
     const service = new TeacherNotificationService(prisma, {
       dispatch
     } as unknown as NotificationDispatcher);
 
-    await expect(service.dispatchDaily(new Date("2026-08-28T04:00:00.000Z"))).resolves.toEqual({
-      candidates: 1,
-      recorded: 1,
-      failed: 0
+    await expect(
+      service.dispatchDueForOwner("candidate-1", new Date("2026-08-28T04:00:00.000Z"))
+    ).resolves.toEqual({
+      claimed: true,
+      recorded: 1
     });
     expect(dispatch).toHaveBeenCalledTimes(1);
     expect(dispatch).toHaveBeenCalledWith(
@@ -151,17 +157,19 @@ describe("teacher notifications", () => {
   it("occasionally replaces the daily question prompt with a warm teacher note", async () => {
     const dispatch = vi.fn().mockResolvedValue({ recorded: true, emailed: false });
     const prisma = {
-      candidateProfile: {
-        findMany: vi.fn().mockResolvedValue([{ ownerId: "candidate-1", teacherId: "claire" }])
-      },
+      $queryRaw: vi
+        .fn()
+        .mockResolvedValue([{ teacherId: "claire", targetRole: "backend", focusAreas: [] }]),
+      $executeRaw: vi.fn().mockResolvedValue(1),
+      practiceHomeSnapshot: { findUnique: vi.fn().mockResolvedValue(null) },
       userQuestionProgress: { findMany: vi.fn().mockResolvedValue([]) }
     } as unknown as PrismaService;
     const service = new TeacherNotificationService(prisma, {
       dispatch
     } as unknown as NotificationDispatcher);
 
-    await service.dispatchDaily(new Date("2026-08-27T04:00:00.000Z"));
-    await service.dispatchDaily(new Date("2026-08-28T04:00:00.000Z"));
+    await service.dispatchDueForOwner("candidate-1", new Date("2026-08-27T04:00:00.000Z"));
+    await service.dispatchDueForOwner("candidate-1", new Date("2026-08-28T04:00:00.000Z"));
 
     expect(dispatch).toHaveBeenNthCalledWith(
       1,

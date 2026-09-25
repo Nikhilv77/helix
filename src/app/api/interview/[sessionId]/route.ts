@@ -14,6 +14,7 @@ import { findFundamentalsQuestion } from "@/lib/fundamentals/fundamentals";
 import { authorizeInterviewSession } from "@/features/interviews/server/session-access";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 type RouteContext = { params: Promise<{ sessionId: string }> | { sessionId: string } };
 

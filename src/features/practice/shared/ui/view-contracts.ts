@@ -211,6 +211,15 @@ export type StoryPracticeBlockView = {
   assessment: StoryPracticeAssessmentView | null;
 };
 
+/** The question screen only needs navigation IDs and its block heading. */
+export type StoryPracticeQuestionBlockView = Pick<
+  StoryPracticeBlockView,
+  "id" | "status" | "story" | "selection"
+> & {
+  isCurrent?: boolean;
+  questions: Array<Pick<StoryPracticeQuestionView, "id" | "order">>;
+};
+
 export type StoryPracticeLibraryEntryView = {
   key: string;
   version: number;

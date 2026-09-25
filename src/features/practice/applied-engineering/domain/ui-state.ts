@@ -9,6 +9,18 @@ import type {
 } from "@/features/practice/applied-engineering/server/history.service";
 import type { AppliedEngineeringPublicBlock } from "@/features/practice/applied-engineering/server/practice.service";
 
+export type AppliedEngineeringEntryBlock = Pick<AppliedEngineeringPublicBlock, "status"> & {
+  incident: Pick<
+    AppliedEngineeringPublicBlock["incident"],
+    "title" | "premise" | "productionSignalKeys" | "expectedMinutes"
+  >;
+  selection: Pick<AppliedEngineeringPublicBlock["selection"], "difficulty">;
+  questions: Array<{
+    status: AppliedEngineeringPublicBlock["questions"][number]["status"];
+    latestAttempt: unknown;
+  }>;
+};
+
 export type AppliedEngineeringHistoryNavigation = {
   selected: AppliedEngineeringHistorySummary;
   previousBlockId: string | null;
@@ -34,7 +46,7 @@ export function appliedEngineeringHistoryNavigation(
 
 export function appliedEngineeringPracticeEntry(
   eligibility: Pick<AppliedEngineeringEligibility, "available">,
-  block: AppliedEngineeringPublicBlock | null
+  block: AppliedEngineeringEntryBlock | null
 ): AppliedEngineeringPracticeEntry | null {
   if (!eligibility.available && !block) return null;
   const completedQuestions =

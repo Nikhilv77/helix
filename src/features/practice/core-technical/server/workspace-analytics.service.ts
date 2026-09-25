@@ -18,6 +18,7 @@ import type {
   Turn
 } from "@/lib/shared/types";
 import type { PrismaService } from "@/server/database/prisma.service";
+import { practiceEntrySummary } from "@/features/practice/shared/server/practice-entry-summary";
 
 const DAY_MS = 86_400_000;
 const CORE_TECHNICAL_TEMPLATE_ID = "core-technical";
@@ -76,6 +77,19 @@ export interface CoreTechnicalRoundAnalytics {
  */
 export class CoreTechnicalWorkspaceAnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Small read for the Practice landing page; avoids question and story JSON. */
+  async entrySummary(ownerId: string, days = 7) {
+    const questions = await this.prisma.coreTechnicalBlockQuestion.findMany({
+      where: { ownerId },
+      select: { status: true, completedAt: true, learnedAt: true }
+    });
+    return practiceEntrySummary(
+      questions,
+      new Set([CoreTechnicalQuestionStatus.COMPLETED, CoreTechnicalQuestionStatus.LEARNED]),
+      days
+    );
+  }
 
   async practice(
     ownerId: string,

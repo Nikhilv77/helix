@@ -1,8 +1,9 @@
-import { CandidateProfileEditor } from "@/features/profile/ui/candidate-profile-editor";
+import { CandidateProfilePage } from "@/features/profile/ui/candidate-profile-page";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
 
 export const dynamic = "force-dynamic";
+export const unstable_dynamicStaleTime = 30;
 export const metadata = privatePageMetadata(
   "My Profile",
   "Review and edit the resume-grounded interview memory Trailgrad uses for practice."
@@ -10,5 +11,5 @@ export const metadata = privatePageMetadata(
 
 export default async function ProfilePage() {
   const { profile } = await requireOnboardedProfile();
-  return <CandidateProfileEditor initialProfile={profile} />;
+  return <CandidateProfilePage initialProfile={profile} />;
 }

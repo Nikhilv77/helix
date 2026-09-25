@@ -12,6 +12,10 @@ import type {
   StoryPracticeLibraryEntryView
 } from "@/features/practice/shared/ui/view-contracts";
 import type { AiMlStorySession } from "../server/ai-ml-story-practice.service";
+import {
+  storyDiscipline,
+  storyTrackHref
+} from "@/features/practice/story-tracks/domain/story-disciplines";
 
 export function AiMlStoryOverview({
   session,
@@ -20,7 +24,7 @@ export function AiMlStoryOverview({
   session: AiMlStorySession;
   selected: StoryPracticeBlockView;
 }) {
-  const routeBase = `/practice/ai-ml/${session.track}` as const;
+  const routeBase = storyTrackHref(session.discipline, session.track);
   const label = session.track === "core-technical" ? "Core Technical" : "Applied Engineering";
   const experience: StoryPracticeLibraryExperience & { intro: StoryPracticeIntroExperience } = {
     slug: session.track,
@@ -34,7 +38,7 @@ export function AiMlStoryOverview({
       routeBase,
       subjectNoun: "path",
       label,
-      description: "Work through practical AI/ML decisions, one piece of evidence at a time.",
+      description: storyDiscipline(session.discipline).overviewDescription,
       script: (title) =>
         `Let's work through ${title}. Read the evidence, explain your decision, and check what would change it.`
     }

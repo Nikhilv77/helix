@@ -4,7 +4,7 @@ import { briefBeats, buildChapterBrief } from "@/lib/roadmap/chapter-brief";
 import { findQuestion } from "@/features/practice/dsa/domain/dsa";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
-import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
+import { requireOnboardedOwner } from "@/server/auth/onboarding-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -30,12 +30,12 @@ export default async function ChapterSessionPage({
 }: {
   params: Promise<{ chapter: string }>;
 }) {
-  const { ownerId } = await requireOnboardedProfile();
+  const { ownerId } = await requireOnboardedOwner();
   const container = getAppContainer();
 
   const { chapter } = await params;
   const [plan, detail] = await Promise.all([
-    container.dsaService.frontendPlan().catch(() => null),
+    container.dsaService.frontendPlan(),
     // A missing roadmap must not break the session page — the briefing still
     // works, it just cannot show progress.
     container.frontendRoadmapService.chapterDetail(ownerId, chapter).catch(() => null)

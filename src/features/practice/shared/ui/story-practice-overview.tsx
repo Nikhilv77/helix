@@ -1,5 +1,7 @@
 "use client";
 
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Clock3, Loader2 } from "lucide-react";
@@ -500,7 +502,7 @@ function StoryLibraryCard({
 }
 
 async function postLibraryPath(url: string, body: unknown): Promise<unknown> {
-  const response = await fetch(url, {
+  const response = await workspaceMutationFetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body)

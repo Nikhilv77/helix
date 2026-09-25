@@ -1,12 +1,14 @@
-import {
-  ProgressView,
-  type ProgressStarterQuestion
-} from "@/features/progress/ui/progress-view";
+import { ProgressView } from "@/features/progress/ui/progress-view";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
-import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
+import { buildCandidateAnalytics } from "@/features/analytics/server/candidate-analytics-loader";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { getUserIdForRequest } from "@/server/auth/request-user";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
+export const unstable_dynamicStaleTime = 30;
+export const maxDuration = 60;
 export const metadata = privatePageMetadata(
   "Progress",
   "How far you are through your preparation path, measured from what you have actually practised."
@@ -14,37 +16,19 @@ export const metadata = privatePageMetadata(
 
 /** Practice progress and interview evidence, on one page. */
 export default async function ProgressPage() {
-  const { ownerId, profile } = await requireOnboardedProfile();
-  const container = getAppContainer();
-
-  const insights = await container.interviewService.insights(ownerId).catch(() => null);
-
-  const interview = { completedSessions: insights?.completedSessions ?? 0 };
-
-  const overview = await container.progressService.briefing(ownerId, interview);
-  const hasPracticeProgress = overview.totals.completedQuestions > 0;
-  const plan = hasPracticeProgress
-    ? null
-    : await container.dsaService.frontendPlan().catch(() => null);
-  const starterQuestions: ProgressStarterQuestion[] =
-    plan?.chapters
-      .flatMap((chapter) =>
-        chapter.questions.map((question) => ({
-          title: question.title,
-          difficulty: question.difficulty,
-          minutes: question.expectedTimeMinutes,
-          href: `/dsa-questions/${question.slug}`,
-          chapterTitle: chapter.title
-        }))
-      )
-      .filter((question) => question.difficulty === "easy")
-      .slice(0, 3) ?? [];
+  const userId = await getUserIdForRequest();
+  if (!userId) redirect("/");
+  const ownerId = authenticatedOwnerId(userId);
+  const analytics = await getAppContainer().candidateAnalyticsSnapshotStore.readSummary(
+    ownerId,
+    () => buildCandidateAnalytics(ownerId)
+  );
 
   return (
     <ProgressView
-      overview={overview}
-      firstName={profile.resume?.fullName?.trim().split(/\s+/)[0] ?? ""}
-      starterQuestions={starterQuestions}
+      overview={analytics.progressBriefing}
+      firstName={analytics.progressPage.firstName}
+      starterQuestions={analytics.progressPage.starterQuestions}
     />
   );
 }

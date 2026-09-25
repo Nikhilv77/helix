@@ -6,6 +6,7 @@ import type { AppConfigService } from "@/server/config/app-config.service";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { requireCompletedPreparationOnboardingState } from "@/server/auth/preparation-onboarding-api-guard";
 import {
   getSharedGuard,
   type LockPolicy,
@@ -16,7 +17,14 @@ import type { StoryPracticeEligibility, StoryPracticeOwnerContext } from "./cont
 
 type RouteApp = {
   config: AppConfigService;
-  profileService: { get(ownerId: string): Promise<CandidateProfile> };
+  profileService: {
+    get(ownerId: string): Promise<CandidateProfile>;
+    workspaceShellState(ownerId: string): Promise<{
+      onboardingCompletedAt: number | null;
+      preparationCompletedAt: number | null;
+      targetRole: CandidateProfile["targetRole"];
+    } | null>;
+  };
 };
 
 type RouteErrorResponder = (error: unknown, path: string) => Response;
@@ -39,6 +47,17 @@ export function createStoryPracticeRouteAccess<TApp extends RouteApp>(config: {
     config.requireOnboarding(profile);
     if (policy) await getSharedGuard(app.config).enforce(policy, ownerId);
     return { ownerId, app, profile };
+  }
+
+  async function compactOwner(policy?: RateLimitPolicy) {
+    const { userId } = await auth();
+    if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
+    const ownerId = authenticatedOwnerId(userId);
+    const app = config.getApp();
+    const state = await app.profileService.workspaceShellState(ownerId);
+    requireCompletedPreparationOnboardingState(state);
+    if (policy) await getSharedGuard(app.config).enforce(policy, ownerId);
+    return { ownerId, app, targetRole: state.targetRole };
   }
 
   async function requireEligibility(app: TApp, profile: CandidateProfile) {
@@ -71,7 +90,7 @@ export function createStoryPracticeRouteAccess<TApp extends RouteApp>(config: {
     return parsed.data;
   }
 
-  return { owner, parseJson, requireEligibility };
+  return { owner, compactOwner, parseJson, requireEligibility };
 }
 
 export function createStoryPracticeReadHandler<TApp, TProfile, TResult>(config: {

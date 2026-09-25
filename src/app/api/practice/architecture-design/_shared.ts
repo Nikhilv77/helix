@@ -19,6 +19,10 @@ export function architectureDesignOwner(policy?: RateLimitPolicy) {
   return routeAccess.owner(policy);
 }
 
+export function architectureDesignMutationOwner(policy?: RateLimitPolicy) {
+  return routeAccess.compactOwner(policy);
+}
+
 export function requireArchitectureDesignEligibility(
   app: ReturnType<typeof getAppContainer>,
   profile: CandidateProfile

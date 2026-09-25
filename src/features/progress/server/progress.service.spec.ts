@@ -87,6 +87,8 @@ describe("ProgressService dashboard", () => {
         select: {
           id: true,
           nextQuestionKey: true,
+          updatedAt: true,
+          recalculatedAt: true,
           totalQuestions: true,
           completedQuestions: true
         }

@@ -515,7 +515,8 @@ describe("createReportsOverview", () => {
     expect(labels).not.toContain("Impact");
     // Unanswered is a coverage problem, not a recurring gap.
     expect(labels).not.toContain("Never answered");
-    expect(overview.recurringGaps[0]?.practiceHref).toContain("focus=Ownership");
+    // Interviews has no per-competency entry point, so gaps link to it directly.
+    expect(overview.recurringGaps[0]?.practiceHref).toBe("/interviews");
   });
 
   it("groups round types with their own averages", () => {

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
+import { requireOnboardedOwner } from "@/server/auth/onboarding-guard";
 import { DsaBlockAssessmentClient } from "@/features/practice/dsa/ui/dsa-block-assessment-client";
 
 export default async function DsaBlockAssessmentPage({
@@ -8,14 +8,14 @@ export default async function DsaBlockAssessmentPage({
 }: {
   searchParams: Promise<{ session?: string | string[] }>;
 }) {
-  const { profile } = await requireOnboardedProfile();
+  const { workspaceAccent } = await requireOnboardedOwner();
   const query = await searchParams;
   const sessionId = typeof query.session === "string" ? query.session.trim() : "";
   if (!sessionId) redirect("/practice/dsa");
 
   return (
     <Suspense fallback={<AssessmentLoading />}>
-      <DsaBlockAssessmentClient sessionId={sessionId} workspaceAccent={profile.workspaceAccent} />
+      <DsaBlockAssessmentClient sessionId={sessionId} workspaceAccent={workspaceAccent} />
     </Suspense>
   );
 }

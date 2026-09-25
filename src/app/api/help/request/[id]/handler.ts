@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { findQuestion } from "@/features/practice/dsa/domain/dsa";
 import { getAppContainer } from "@/server/app-container";
+import { scheduleCandidateAnalyticsRefresh } from "@/features/analytics/server/refresh-candidate-analytics";
 import { Logger } from "@/server/common/logger";
 import { HelpRequestError } from "@/features/peer-help/server/help-request.types";
 import { ApiRouteError } from "@/server/http/api-error";
@@ -12,7 +13,6 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { NotificationKind } from "@/features/notifications/server/notification.service";
 import { reconcileHelpForOwnerBestEffort } from "@/features/peer-help/server/help-maintenance";
-
 
 const logger = new Logger("HelpRequestAction");
 
@@ -191,6 +191,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       });
     }
 
+    if (parsed.data.action !== "decline") {
+      scheduleCandidateAnalyticsRefresh(updated.learnerId);
+      if (updated.helperId) scheduleCandidateAnalyticsRefresh(updated.helperId);
+    }
     return apiSuccess({ id: updated.id, status: updated.status });
   } catch (error) {
     return apiError(translate(error), request.nextUrl.pathname);

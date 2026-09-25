@@ -1,5 +1,7 @@
 "use client";
 
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
+
 import Image from "next/image";
 import { HandHelping, Loader2, Mic } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -60,7 +62,7 @@ export function HelpRequestToast() {
       setError(null);
 
       try {
-        const response = await fetch(`/api/help/request/${encodeURIComponent(request.id)}`, {
+        const response = await workspaceMutationFetch(`/api/help/request/${encodeURIComponent(request.id)}`, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ action })

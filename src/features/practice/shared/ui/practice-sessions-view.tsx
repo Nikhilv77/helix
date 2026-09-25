@@ -6,7 +6,7 @@ import { PracticeWeeklyActivityChart } from "@/components/workspace/shared/pract
 import type { DsaRecommendation } from "@/features/practice/dsa/domain/dsa-recommendation";
 import type {
   AppliedEngineeringPracticeEntry,
-  AiMlPracticeEntry,
+  StoryPracticeEntry,
   ArchitectureDesignPracticeEntry,
   CoreTechnicalPracticeEntry,
   PracticeDisplaySession,
@@ -25,8 +25,8 @@ export function PracticeSessionsView({
   architectureDesignEntry = null,
   architectureDesignTotals = null,
   generationFailed = false,
-  aiMlProgressFailed = false,
-  aiMlEntries = []
+  storyProgressFailed = false,
+  storyEntries = []
 }: {
   practiceRoadmap: PracticeRoadmapHome | null;
   activity?: Array<{ date: string; solved: number }>;
@@ -39,32 +39,31 @@ export function PracticeSessionsView({
   architectureDesignEntry?: ArchitectureDesignPracticeEntry | null;
   architectureDesignTotals?: { totalQuestions: number; completedQuestions: number } | null;
   generationFailed?: boolean;
-  aiMlProgressFailed?: boolean;
-  aiMlEntries?: AiMlPracticeEntry[];
+  storyProgressFailed?: boolean;
+  storyEntries?: StoryPracticeEntry[];
 }) {
   const sessions = practiceRoadmap?.sessions ?? [];
-  const displaySessions: PracticeDisplaySession[] = (
-    aiMlEntries.length
-      ? aiMlEntries
-      : [
-          ...sessions,
-          ...(coreTechnicalEntry ? [coreTechnicalEntry] : []),
-          ...(appliedEngineeringEntry ? [appliedEngineeringEntry] : []),
-          ...(architectureDesignEntry ? [architectureDesignEntry] : [])
-        ]
-  ).sort((left, right) => left.order - right.order);
-  const totalQuestions = aiMlEntries.length
-    ? aiMlEntries.reduce((total, session) => total + session.totalQuestions, 0)
-    : sessions.reduce((total, session) => total + session.totalQuestions, 0) +
-      (coreTechnicalTotals?.totalQuestions ?? 0) +
-      (appliedEngineeringTotals?.totalQuestions ?? 0) +
-      (architectureDesignTotals?.totalQuestions ?? 0);
-  const completedQuestions = aiMlEntries.length
-    ? aiMlEntries.reduce((total, session) => total + session.completedQuestions, 0)
-    : sessions.reduce((total, session) => total + session.completedQuestions, 0) +
-      (coreTechnicalTotals?.completedQuestions ?? 0) +
-      (appliedEngineeringTotals?.completedQuestions ?? 0) +
-      (architectureDesignTotals?.completedQuestions ?? 0);
+  // AI/ML shows only story entries (no roadmap); frontend and data show DSA
+  // plus their story entries; backend and full-stack show the Node.js tracks.
+  const displaySessions: PracticeDisplaySession[] = [
+    ...sessions,
+    ...(coreTechnicalEntry ? [coreTechnicalEntry] : []),
+    ...(appliedEngineeringEntry ? [appliedEngineeringEntry] : []),
+    ...(architectureDesignEntry ? [architectureDesignEntry] : []),
+    ...storyEntries
+  ].sort((left, right) => left.order - right.order);
+  const totalQuestions =
+    sessions.reduce((total, session) => total + session.totalQuestions, 0) +
+    (coreTechnicalTotals?.totalQuestions ?? 0) +
+    (appliedEngineeringTotals?.totalQuestions ?? 0) +
+    (architectureDesignTotals?.totalQuestions ?? 0) +
+    storyEntries.reduce((total, session) => total + session.totalQuestions, 0);
+  const completedQuestions =
+    sessions.reduce((total, session) => total + session.completedQuestions, 0) +
+    (coreTechnicalTotals?.completedQuestions ?? 0) +
+    (appliedEngineeringTotals?.completedQuestions ?? 0) +
+    (architectureDesignTotals?.completedQuestions ?? 0) +
+    storyEntries.reduce((total, session) => total + session.completedQuestions, 0);
   return (
     <main className="practice-page relative isolate mx-auto flex w-full max-w-[92rem] flex-col overflow-x-clip px-4 pb-20 pt-10 sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
       <DocumentTitle title="Practice" />
@@ -73,13 +72,13 @@ export function PracticeSessionsView({
         className="interviews-intro-in order-2 mt-12 md:order-1 md:mt-0"
         aria-label="Practice overview"
       >
-        {aiMlProgressFailed ? (
+        {storyProgressFailed ? (
           <p
             role="alert"
             className="mb-5 rounded-xl border border-orange-400/25 bg-orange-400/[0.06] px-4 py-3 text-sm text-cream/75"
           >
-            Your saved AI/ML progress is temporarily unavailable. Your answers are safe; refresh to
-            try again.
+            Your saved practice progress is temporarily unavailable. Your answers are safe; refresh
+            to try again.
           </p>
         ) : null}
         <div className="grid gap-4 sm:grid-cols-2 lg:gap-5 xl:grid-cols-4">
@@ -217,14 +216,13 @@ function PracticeSessionCard({
   dsaRecommendation?: DsaRecommendation | null;
   dsaBlockCompletedQuestions?: number;
 }) {
-  const SessionIcon =
-    session.key === "core-technical" || session.key === "ai-ml-core-technical"
-      ? Atom
-      : session.key === "applied-engineering" || session.key === "ai-ml-applied-engineering"
-        ? Wrench
-        : session.key === "architecture-design" || session.key === "ai-ml-architecture-design"
-          ? Network
-          : CodeXml;
+  const SessionIcon = session.key.endsWith("core-technical")
+    ? Atom
+    : session.key.endsWith("applied-engineering")
+      ? Wrench
+      : session.key.endsWith("architecture-design")
+        ? Network
+        : CodeXml;
   const href = session.href;
   const available = session.availability === "available" && Boolean(href);
   const availabilityLabel = "availabilityLabel" in session ? session.availabilityLabel : null;

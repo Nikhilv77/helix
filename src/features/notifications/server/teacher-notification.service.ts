@@ -1,11 +1,14 @@
+import { randomUUID } from "node:crypto";
+import { Prisma } from "@prisma/client";
 import { MAYA, personaById } from "@/lib/avatars/personas";
 import type { PrismaService } from "@/server/database/prisma.service";
+import { Logger } from "@/server/common/logger";
 import type { NotificationDispatcher } from "./notification-dispatcher";
 import { teacherWelcomeEmailHtml } from "./email-template";
 import { NotificationKind } from "./notification.service";
 
-const DAILY_BATCH_LIMIT = 250;
 const ENCOURAGEMENT_INTERVAL_DAYS = 3;
+const logger = new Logger("TeacherNotificationService");
 
 const ENCOURAGEMENTS = [
   {
@@ -38,18 +41,12 @@ export interface WelcomeNotificationInput {
   focusAreas: string[];
 }
 
-export interface DailyDispatchSummary {
-  candidates: number;
-  recorded: number;
-  failed: number;
-}
-
 /**
  * Teacher-authored lifecycle messaging.
  *
  * Copy selection is deliberately deterministic. Recommendations use the same
  * saved roadmap and draft state the learner sees, cost no model call, and are
- * reproducible when a cron invocation is retried.
+ * reproducible if a leased daily attempt is retried.
  */
 export class TeacherNotificationService {
   constructor(
@@ -101,75 +98,100 @@ export class TeacherNotificationService {
     });
   }
 
-  async dispatchDaily(now = new Date()): Promise<DailyDispatchSummary> {
-    const profiles = await this.prisma.candidateProfile.findMany({
-      where: {
-        onboardingCompletedAt: { not: null },
-        teacherNotificationsEnabled: true
-      },
-      select: {
-        ownerId: true,
-        teacherId: true
-      },
-      orderBy: { ownerId: "asc" },
-      take: DAILY_BATCH_LIMIT
-    });
-
-    const summary: DailyDispatchSummary = {
-      candidates: profiles.length,
-      recorded: 0,
-      failed: 0
-    };
+  /** The status request schedules this only when its owner-row due check succeeds. */
+  async dispatchDueForOwner(
+    ownerId: string,
+    now = new Date()
+  ): Promise<{ claimed: boolean; recorded: number }> {
     const dateKey = utcDateKey(now);
+    const token = randomUUID();
+    const claimed = await this.prisma.$queryRaw<
+      Array<{ teacherId: string | null; targetRole: string | null; focusAreas: Prisma.JsonValue }>
+    >(Prisma.sql`
+      UPDATE "CandidateProfile"
+      SET "teacherCoachingLeaseUntil" = CURRENT_TIMESTAMP + INTERVAL '2 minutes',
+          "teacherCoachingLeaseToken" = ${token}::uuid
+      WHERE "ownerId" = ${ownerId}
+        AND "teacherNotificationsEnabled" = true
+        AND "onboardingCompletedAt" IS NOT NULL
+        AND (
+          "preparationOnboardingCompletedAt" IS NOT NULL
+          OR "preparationOnboarding"->>'completedAt' IS NOT NULL
+        )
+        AND ("teacherCoachingLastDay" IS NULL OR "teacherCoachingLastDay" < ${dateKey})
+        AND ("teacherCoachingNextAt" IS NULL OR "teacherCoachingNextAt" <= CURRENT_TIMESTAMP)
+        AND ("teacherCoachingLeaseUntil" IS NULL OR "teacherCoachingLeaseUntil" <= CURRENT_TIMESTAMP)
+      RETURNING "teacherId", "targetRole", "focusAreas"
+    `);
+    const profile = claimed[0];
+    if (!profile) return { claimed: false, recorded: 0 };
 
-    for (const profile of profiles) {
+    try {
+      const recorded = await this.dispatchForCandidate(ownerId, profile, dateKey);
+      await this.prisma.$executeRaw(Prisma.sql`
+        UPDATE "CandidateProfile"
+        SET "teacherCoachingLastDay" = ${dateKey},
+            "teacherCoachingNextAt" = CURRENT_TIMESTAMP + INTERVAL '1 day',
+            "teacherCoachingLeaseUntil" = NULL,
+            "teacherCoachingLeaseToken" = NULL
+        WHERE "ownerId" = ${ownerId}
+          AND "teacherCoachingLeaseToken" = ${token}::uuid
+      `);
+      return { claimed: true, recorded };
+    } catch (error) {
       try {
-        summary.recorded += await this.dispatchForCandidate(
-          profile.ownerId,
-          profile.teacherId,
-          dateKey
-        );
-      } catch {
-        // One malformed legacy roadmap must not prevent everyone after it from
-        // receiving a recommendation in the same bounded cron invocation.
-        summary.failed += 1;
+        await this.prisma.$executeRaw(Prisma.sql`
+          UPDATE "CandidateProfile"
+          SET "teacherCoachingLeaseUntil" = NULL,
+              "teacherCoachingLeaseToken" = NULL
+          WHERE "ownerId" = ${ownerId}
+            AND "teacherCoachingLeaseToken" = ${token}::uuid
+        `);
+      } catch (releaseError) {
+        logger.error({
+          event: "teacher.coaching.lease_release_failed",
+          ownerId,
+          reason: releaseError instanceof Error ? releaseError.message : String(releaseError)
+        });
       }
+      throw error;
     }
-
-    return summary;
   }
 
   private async dispatchForCandidate(
     ownerId: string,
-    teacherId: string | null,
+    profile: { teacherId: string | null; targetRole: string | null; focusAreas: Prisma.JsonValue },
     dateKey: string
   ): Promise<number> {
-    const teacher = personaById(teacherId) ?? MAYA;
-    const questions = await this.prisma.userQuestionProgress.findMany({
-      where: {
-        roadmap: { ownerId },
-        dsaQuestionSlug: { not: null },
-        completedAt: null,
-        status: { in: ["ACTIVE", "IN_PROGRESS"] }
-      },
-      select: {
-        id: true,
-        order: true,
-        attemptCount: true,
-        lastAttemptedAt: true,
-        draftUpdatedAt: true,
-        dsaQuestionSlug: true,
-        dsaQuestion: {
-          select: {
-            title: true,
-            primaryPattern: true,
-            promptSummary: true
-          }
-        }
-      },
-      orderBy: [{ order: "asc" }],
-      take: 12
-    });
+    const teacher = personaById(profile.teacherId) ?? MAYA;
+    const questions =
+      profile.targetRole === "ai-ml"
+        ? []
+        : await this.prisma.userQuestionProgress.findMany({
+            where: {
+              roadmap: { ownerId },
+              dsaQuestionSlug: { not: null },
+              completedAt: null,
+              status: { in: ["ACTIVE", "IN_PROGRESS"] }
+            },
+            select: {
+              id: true,
+              order: true,
+              attemptCount: true,
+              lastAttemptedAt: true,
+              draftUpdatedAt: true,
+              dsaQuestionSlug: true,
+              dsaQuestion: {
+                select: {
+                  title: true,
+                  primaryPattern: true,
+                  promptSummary: true
+                }
+              }
+            },
+            orderBy: [{ order: "asc" }],
+            take: 12
+          });
 
     const unfinished = questions
       .filter(
@@ -204,12 +226,22 @@ export class TeacherNotificationService {
       });
       if (result.recorded) recorded += 1;
     } else if (!unfinished) {
+      const practice = await this.practiceSuggestion(ownerId);
+      const focus = Array.isArray(profile.focusAreas)
+        ? profile.focusAreas.find(
+            (area): area is string => typeof area === "string" && Boolean(area.trim())
+          )
+        : null;
       const result = await this.dispatcher.dispatch({
         ownerId,
         kind: NotificationKind.TEACHER_RECOMMENDATION,
-        title: `${teacher.name} has one small step for today`,
-        body: "Open your practice path and complete one focused question. Consistency matters more than a long session.",
-        href: "/practice",
+        title: practice
+          ? `Try ${practice.title} today`
+          : `${teacher.name} has one small step for today`,
+        body: practice
+          ? `Continue your ${focus ?? practice.title} practice path. One complete answer is enough for today.`
+          : `Open your ${focus ?? humanizeRole(profile.targetRole ?? "")} practice path and complete one focused question.`,
+        href: practice?.href ?? "/practice",
         subjectId: `${dateKey}:primary`
       });
       if (result.recorded) recorded += 1;
@@ -230,6 +262,56 @@ export class TeacherNotificationService {
 
     return recorded;
   }
+
+  /** Reuse the prepared Practice path; never build a new plan in notification work. */
+  private async practiceSuggestion(
+    ownerId: string
+  ): Promise<{ title: string; href: string } | null> {
+    if (!this.prisma.practiceHomeSnapshot) return null;
+    const snapshot = await this.prisma.practiceHomeSnapshot.findUnique({
+      where: { ownerId },
+      select: { payload: true, dirtyVersion: true, builtVersion: true }
+    });
+    if (!snapshot?.payload || snapshot.dirtyVersion !== snapshot.builtVersion) return null;
+    return suggestionFromPracticeSnapshot(snapshot.payload);
+  }
+}
+
+function suggestionFromPracticeSnapshot(
+  value: Prisma.JsonValue
+): { title: string; href: string } | null {
+  if (!isRecord(value)) return null;
+  const roadmap = isRecord(value.practiceRoadmap) ? value.practiceRoadmap : null;
+  const entries: unknown[] = [
+    ...(Array.isArray(value.storyEntries) ? value.storyEntries : []),
+    // Snapshots saved before story entries covered frontend and data.
+    ...(Array.isArray(value.aiMlEntries) ? value.aiMlEntries : []),
+    ...(roadmap && Array.isArray(roadmap.sessions) ? roadmap.sessions : []),
+    value.coreTechnicalEntry,
+    value.appliedEngineeringEntry,
+    value.architectureDesignEntry
+  ];
+  const next = entries
+    .filter(isRecord)
+    .filter(
+      (entry) =>
+        entry.availability === "available" &&
+        entry.status !== "COMPLETED" &&
+        entry.status !== "SKIPPED" &&
+        typeof entry.title === "string" &&
+        typeof entry.href === "string" &&
+        entry.href.startsWith("/practice/")
+    )
+    .sort(
+      (left, right) =>
+        Number(right.status === "IN_PROGRESS") - Number(left.status === "IN_PROGRESS") ||
+        Number(left.order ?? 99) - Number(right.order ?? 99)
+    )[0];
+  return next ? { title: next.title as string, href: next.href as string } : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 interface DailyQuestion {

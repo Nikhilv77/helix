@@ -61,6 +61,21 @@ type RoastRecord = {
 export class ResumeRoastStore {
   constructor(private readonly prisma: PrismaService) {}
 
+  async countReady(ownerId: string): Promise<number> {
+    return this.prisma.resumeRoast.count({
+      where: { ownerId, status: ResumeRoastStatus.READY }
+    });
+  }
+
+  async latestReadyAt(ownerId: string): Promise<Date | null> {
+    const latest = await this.prisma.resumeRoast.findFirst({
+      where: { ownerId, status: ResumeRoastStatus.READY },
+      orderBy: { updatedAt: "desc" },
+      select: { updatedAt: true }
+    });
+    return latest?.updatedAt ?? null;
+  }
+
   async getTarget(ownerId: string): Promise<ResumeRoastTarget | null> {
     const target = await this.prisma.resumeRoastTarget.findUnique({ where: { ownerId } });
     return target ? parseTarget(target) : null;

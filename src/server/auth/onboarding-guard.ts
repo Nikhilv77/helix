@@ -1,15 +1,18 @@
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import type { CandidateProfile } from "@/lib/shared/types";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
-import { getProfileForRequest } from "@/features/profile/server/profile-query";
+import {
+  getProfileForRequest,
+  getWorkspaceShellStateForRequest
+} from "@/features/profile/server/profile-query";
+import { getUserIdForRequest } from "@/server/auth/request-user";
 
 export async function requireOnboardedProfile(): Promise<{
   userId: string;
   ownerId: string;
   profile: CandidateProfile;
 }> {
-  const { userId } = await auth();
+  const userId = await getUserIdForRequest();
   if (!userId) redirect("/");
 
   const ownerId = authenticatedOwnerId(userId);
@@ -18,4 +21,26 @@ export async function requireOnboardedProfile(): Promise<{
   if (!profile.preparationOnboarding.completedAt) redirect("/");
 
   return { userId, ownerId, profile };
+}
+
+/** Gate pages that do not need the resume-backed profile payload. */
+export async function requireOnboardedOwner(): Promise<{
+  userId: string;
+  ownerId: string;
+  targetRole: CandidateProfile["targetRole"];
+  workspaceAccent: CandidateProfile["workspaceAccent"];
+}> {
+  const userId = await getUserIdForRequest();
+  if (!userId) redirect("/");
+
+  const ownerId = authenticatedOwnerId(userId);
+  const profile = await getWorkspaceShellStateForRequest(ownerId);
+  if (!profile?.onboardingCompletedAt) redirect("/onboarding");
+  if (!profile.preparationCompletedAt) redirect("/");
+  return {
+    userId,
+    ownerId,
+    targetRole: profile.targetRole,
+    workspaceAccent: profile.workspaceAccent
+  };
 }

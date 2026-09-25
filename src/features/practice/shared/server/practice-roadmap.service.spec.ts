@@ -1,6 +1,9 @@
 import { PracticeSessionAvailability, RoadmapProgressStatus } from "@prisma/client";
 import type { PersonalizedInterviewPlan } from "@/features/interviews/domain/personalized-plan";
-import { PRACTICE_SESSION_KEYS, projectPracticeSessions } from "@/features/practice/shared/domain/practice-roadmap";
+import {
+  PRACTICE_SESSION_KEYS,
+  projectPracticeSessions
+} from "@/features/practice/shared/domain/practice-roadmap";
 import type { PrismaService } from "@/server/database/prisma.service";
 import type { PersonalizedInterviewPlanningService } from "@/features/interviews/server/personalized-interview-planning.service";
 import type { FrontendRoadmapService } from "@/server/roadmap/frontend-roadmap.service";
@@ -86,10 +89,11 @@ describe("PracticeRoadmapService", () => {
     const activePlan = plan();
     const transaction = practiceTransaction(activePlan, true);
     const prisma = {
+      userRoadmap: { findUnique: vi.fn().mockResolvedValue(null) },
       $transaction: vi.fn().mockImplementation((work) => work(transaction))
     } as unknown as PrismaService;
     const roadmaps = {
-      home: vi.fn().mockResolvedValue({ roadmapId: "roadmap" })
+      ensureAvailable: vi.fn().mockResolvedValue(true)
     } as unknown as FrontendRoadmapService;
     const plans = {
       activePlan: vi.fn().mockResolvedValue(activePlan)
@@ -120,12 +124,13 @@ describe("PracticeRoadmapService", () => {
     const activePlan = plan();
     const transaction = practiceTransaction(activePlan, false);
     const prisma = {
+      userRoadmap: { findUnique: vi.fn().mockResolvedValue(null) },
       $transaction: vi.fn().mockImplementation((work) => work(transaction))
     } as unknown as PrismaService;
     const service = new PracticeRoadmapService(
       prisma,
       {
-        home: vi.fn().mockResolvedValue({ roadmapId: "roadmap" })
+        ensureAvailable: vi.fn().mockResolvedValue(true)
       } as unknown as FrontendRoadmapService,
       {
         activePlan: vi.fn().mockResolvedValue(activePlan)

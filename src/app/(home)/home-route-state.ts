@@ -5,7 +5,11 @@ export type HomeSurface = "marketing" | "onboarding" | "preparation" | "overview
 interface HomeRouteStateInput {
   clerkEnabled: boolean;
   userId: string | null;
-  profile: Pick<CandidateProfile, "onboardingCompletedAt" | "preparationOnboarding"> | null;
+  profile:
+    | (Pick<CandidateProfile, "onboardingCompletedAt"> & {
+        preparationOnboarding: Pick<CandidateProfile["preparationOnboarding"], "completedAt">;
+      })
+    | null;
   welcomeRequested: boolean;
 }
 

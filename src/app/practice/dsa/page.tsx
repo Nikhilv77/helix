@@ -4,9 +4,13 @@ import { ArrowLeft } from "lucide-react";
 import { DsaTopics } from "@/features/practice/dsa/ui/dsa-topics";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
-import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
+import { requireOnboardedOwner } from "@/server/auth/onboarding-guard";
 import { buildStableDsaRecommendation } from "@/features/practice/dsa/server/stable-dsa-recommendation";
 import { DsaBlockHistoryError } from "@/features/practice/dsa/server/dsa-block-history.service";
+import { DsaPracticeBlockStatus } from "@prisma/client";
+import { recommendationFromSnapshot } from "@/features/practice/dsa/server/dsa-practice-block.store";
+import { getProfileForRequest } from "@/features/profile/server/profile-query";
+import { cachedDsaPage } from "@/features/practice/dsa/server/cached-dsa-page";
 
 export const dynamic = "force-dynamic";
 export const metadata = privatePageMetadata(
@@ -23,37 +27,90 @@ export default async function DsaPracticePage({
     panel?: string | string[];
   }>;
 }) {
-  const { ownerId, profile } = await requireOnboardedProfile();
+  const { ownerId } = await requireOnboardedOwner();
   const container = getAppContainer();
   const query = await searchParams;
   const requestedBlockId = typeof query.block === "string" ? query.block : null;
   const panel = query.panel === "transcript" ? "transcript" : "overview";
-  // This is deliberately awaited before recommendation/history reads. It
-  // repairs a terminal interview whose deferred finalizer failed.
-  await container.dsaBlockAssessmentFinalizationService.recoverCurrent(ownerId);
-  const [plan, roadmap, questionStatuses, practiceEvidence] = await Promise.all([
-    container.dsaService.fullPlan().catch(() => null),
-    container.frontendRoadmapService.home(ownerId).catch(() => null),
-    container.frontendRoadmapService.questionStatuses(ownerId).catch(() => ({})),
-    container.practiceEvidenceStore.refresh(ownerId).catch(() => null)
+  const [plan, pageProgress, initialHistory] = await Promise.all([
+    timedDsaRead(
+      "plan",
+      container.dsaService.fullPlan().catch(() => null)
+    ),
+    timedDsaRead("progress", cachedDsaPage(ownerId)),
+    timedDsaRead("blocks", container.dsaPracticeBlockStore.history(ownerId))
   ]);
-  const recommendation = plan
-    ? await buildStableDsaRecommendation({
+  const { roadmap, questionStatuses } = pageProgress;
+  let block = initialHistory.find((item) => item.isCurrent) ?? null;
+  let historyRows: typeof initialHistory | undefined = initialHistory;
+  if (!block) {
+    block = await timedDsaRead("legacyBlock", container.dsaPracticeBlockStore.current(ownerId));
+    if (block) historyRows = undefined;
+  }
+  // Existing cohorts from before write-time promotion may still be practising.
+  // Reuse the already loaded status map and touch the database only when the
+  // cohort has actually become ready.
+  if (
+    block?.status === DsaPracticeBlockStatus.PRACTISING &&
+    block.questionSlugs.length > 0 &&
+    block.questionSlugs.every((slug) => questionStatuses[slug] === "COMPLETED")
+  ) {
+    block = await timedDsaRead(
+      "readinessPromotion",
+      container.dsaPracticeBlockStore.refreshReadiness(ownerId)
+    );
+    historyRows = undefined;
+  }
+  if (block?.status === DsaPracticeBlockStatus.ASSESSMENT_IN_PROGRESS) {
+    const recovered = await timedDsaRead(
+      "assessmentRecovery",
+      container.dsaBlockAssessmentFinalizationService.recoverCurrent(ownerId)
+    );
+    if (recovered) {
+      block = await container.dsaPracticeBlockStore.currentForDisplay(ownerId);
+      historyRows = undefined;
+    }
+  }
+
+  let recommendation =
+    block && block.status !== DsaPracticeBlockStatus.ASSESSED
+      ? recommendationFromSnapshot(block.recommendationSnapshot)
+      : null;
+  if (!recommendation && plan) {
+    // Verified evidence and the full resume profile are only needed when a
+    // first, legacy, or post-assessment cohort must actually be selected.
+    const [profile, practiceEvidence] = await Promise.all([
+      timedDsaRead("profileForNewBlock", getProfileForRequest(ownerId)),
+      timedDsaRead(
+        "evidenceForNewBlock",
+        container.practiceEvidenceStore.refresh(ownerId).catch(() => null)
+      )
+    ]);
+    recommendation = await timedDsaRead(
+      "newRecommendation",
+      buildStableDsaRecommendation({
         ownerId,
         plan,
         profile,
         evidence: practiceEvidence,
         statuses: questionStatuses,
-        blockStore: container.dsaPracticeBlockStore
-        // Recovery already ran above, before every Practice read.
+        blockStore: container.dsaPracticeBlockStore,
+        currentBlock: Promise.resolve(block)
       })
-    : null;
+    );
+    historyRows = undefined;
+  }
   let blockHistory = null;
   try {
-    blockHistory = await container.dsaBlockHistoryService.read(
-      ownerId,
-      requestedBlockId,
-      questionStatuses
+    blockHistory = await timedDsaRead(
+      "history",
+      container.dsaBlockHistoryService.read(
+        ownerId,
+        requestedBlockId,
+        questionStatuses,
+        panel === "transcript",
+        historyRows
+      )
     );
   } catch (error) {
     if (error instanceof DsaBlockHistoryError && error.code === "BLOCK_NOT_FOUND") {
@@ -91,4 +148,19 @@ export default async function DsaPracticePage({
       )}
     </div>
   );
+}
+
+async function timedDsaRead<T>(source: string, read: Promise<T>): Promise<T> {
+  const startedAt = performance.now();
+  try {
+    return await read;
+  } finally {
+    const durationMs = Math.round(performance.now() - startedAt);
+    if (durationMs >= 1_000) {
+      console.warn(
+        "[DsaPracticePage]",
+        JSON.stringify({ event: "dsa_read_slow", source, durationMs })
+      );
+    }
+  }
 }

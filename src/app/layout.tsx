@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Geist_Mono, Josefin_Sans, Raleway } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
-import { auth } from "@clerk/nextjs/server";
 import { Analytics } from "@vercel/analytics/next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -16,7 +15,12 @@ import type { WorkspaceAccent } from "@/lib/workspace/accent";
 import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
 import { isWorkspaceCanvasRoute, isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
-import { getProfileForRequest } from "@/features/profile/server/profile-query";
+import {
+  getManageAccountStateForRequest,
+  getProfileForRequest,
+  getWorkspaceShellStateForRequest
+} from "@/features/profile/server/profile-query";
+import { getUserIdForRequest } from "@/server/auth/request-user";
 import { ThemeProvider, ThemeScript } from "@/lib/theme/theme-context";
 import "./globals.css";
 
@@ -147,12 +151,23 @@ export const dynamic = "force-dynamic";
 export default async function RootLayout({ children }: { children: ReactNode }) {
   // Resolved on the server so the workspace chrome is never wrong on first
   // paint, and signed-in users never see the marketing page flash through.
-  const { userId } = clerkPublishableKey ? await auth() : { userId: null };
   const requestHeaders = await headers();
-  const pathname = requestHeaders.get("x-trailgrad-pathname") ?? "";
+  const proxiedPathname = requestHeaders.get("x-trailgrad-pathname");
+  // The proxy intentionally skips static file extensions. A missing asset
+  // still reaches this layout's not-found route, but Clerk has no middleware
+  // context there; it must remain a 404 rather than an auth() 500.
+  const userId =
+    clerkPublishableKey && proxiedPathname !== null ? await getUserIdForRequest() : null;
+  const pathname = proxiedPathname ?? "";
   const search = requestHeaders.get("x-trailgrad-search") ?? "";
   const workspaceRoute = isWorkspaceChromeRoute(pathname);
   const workspaceCanvasRoute = isWorkspaceCanvasRoute(pathname);
+  const dsaPracticeRoute = pathname === "/practice/dsa" || pathname.startsWith("/practice/dsa/");
+  const fullProfileRoute =
+    pathname === "/profile" ||
+    (pathname.startsWith("/practice/") && !dsaPracticeRoute) ||
+    (pathname.startsWith("/interview/") && pathname !== "/interview/text") ||
+    pathname.startsWith("/trailmate/room/");
   const welcomeHome =
     pathname === "/" &&
     welcomePersonaFromQuery(new URLSearchParams(search).get("welcome")) !== null;
@@ -163,14 +178,31 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   let initialTeacherId: string | null = null;
   let initialProfileImage: string | null = null;
 
+  // The shell persists across public and workspace navigation. Seed its
+  // teacher and accent even on public routes so entering the app is stable.
   if (userId) {
-    const profile = await getProfileForRequest(authenticatedOwnerId(userId)).catch(() => null);
+    const ownerId = authenticatedOwnerId(userId);
+    // Detail pages already load the full profile. Reuse that request-cached
+    // read for the shell instead of fetching the shell row separately.
+    const profile = await (pathname === "/manage"
+      ? getManageAccountStateForRequest(ownerId)
+      : fullProfileRoute
+        ? getProfileForRequest(ownerId).then((full) => ({
+            onboardingCompletedAt: full.onboardingCompletedAt,
+            preparationCompletedAt: full.preparationOnboarding.completedAt,
+            teacherId: full.teacherId,
+            profileImage: full.profileImage,
+            workspaceAccent: full.workspaceAccent
+          }))
+        : getWorkspaceShellStateForRequest(ownerId));
+    // A failed profile read is not an incomplete onboarding profile. Let the
+    // request fail so a transient database issue cannot change the user's route.
     if (workspaceRoute && !welcomeHome && !profile?.onboardingCompletedAt) redirect("/onboarding");
     if (
       workspaceRoute &&
       pathname !== "/" &&
       profile?.onboardingCompletedAt &&
-      profile.preparationOnboarding.completedAt === null
+      profile.preparationCompletedAt === null
     ) {
       redirect("/");
     }
@@ -187,6 +219,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       {userId ? (
         <WorkspaceTeacherProvider teacherId={initialTeacherId}>
           <WorkspaceShell
+            initialUserId={userId}
             initialAccent={initialWorkspaceAccent}
             initialProfileImage={initialProfileImage}
           >

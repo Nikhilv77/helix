@@ -9,6 +9,18 @@ import type {
 } from "@/features/practice/architecture-design/server/history.service";
 import type { ArchitectureDesignPublicBlock } from "@/features/practice/architecture-design/server/practice.service";
 
+export type ArchitectureDesignEntryBlock = Pick<ArchitectureDesignPublicBlock, "status"> & {
+  scenario: Pick<
+    ArchitectureDesignPublicBlock["scenario"],
+    "title" | "premise" | "dimensionKeys" | "expectedMinutes"
+  >;
+  selection: Pick<ArchitectureDesignPublicBlock["selection"], "difficulty">;
+  questions: Array<{
+    status: ArchitectureDesignPublicBlock["questions"][number]["status"];
+    latestAttempt: unknown;
+  }>;
+};
+
 export type ArchitectureDesignHistoryNavigation = {
   selected: ArchitectureDesignHistorySummary;
   previousBlockId: string | null;
@@ -35,7 +47,7 @@ export function architectureDesignHistoryNavigation(
 export function architectureDesignPracticeEntry(
   eligibility: Pick<ArchitectureDesignEligibility, "available"> &
     Partial<Pick<ArchitectureDesignEligibility, "message">>,
-  block: ArchitectureDesignPublicBlock | null
+  block: ArchitectureDesignEntryBlock | null
 ): ArchitectureDesignPracticeEntry {
   const available = eligibility.available || Boolean(block);
   const completedQuestions =

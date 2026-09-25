@@ -171,7 +171,9 @@ describe("AI/ML shared question workspace", () => {
       "/api/practice/ai-ml/attempt",
       expect.objectContaining({ method: "POST" })
     );
-    await waitFor(() => expect(navigation.refresh).toHaveBeenCalled());
+    // The workspace applies the returned question locally; a full server
+    // re-render after every answer is deliberately avoided.
+    expect(navigation.refresh).not.toHaveBeenCalled();
   });
 
   it("uses the choice response control for an MCQ", () => {
@@ -214,6 +216,7 @@ describe("AI/ML shared question workspace", () => {
     render(
       <AiMlStoryOverview
         session={{
+          discipline: "ai-ml",
           track: "core-technical",
           blocks: [first, second, third, fourth],
           totalQuestions: 4,

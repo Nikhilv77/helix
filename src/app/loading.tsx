@@ -1,102 +1,36 @@
-import { headers } from "next/headers";
-import { ManageSkeleton } from "@/features/account/ui/manage-skeleton";
-import { PreparationWelcomeLoading } from "@/features/preparation-onboarding/ui/preparation-welcome-loading";
-import { HelpHubSkeleton } from "@/features/peer-help/ui/help-hub-skeleton";
-import { InterviewsSkeleton } from "@/features/interviews/ui/history/interviews-skeleton";
-import {
-  DsaPracticeSkeleton,
-  PracticeSkeleton
-} from "@/features/practice/shared/ui/practice-skeleton";
-import { ProfileSkeleton } from "@/features/profile/ui/profile-skeleton";
-import { RouteProgress, Waveform } from "@/components/workspace/shared/loading/primitives";
-import { isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
-import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
+/**
+ * The root boundary can be reused while navigating between routes. Its request
+ * headers can still describe the previous route, so it must not choose a page
+ * skeleton from the pathname. Each route owns its page-specific loading UI.
+ */
 
 /** Root fallback shared by the public home and signed-in workspace routes. */
-export default async function RootLoading() {
-  const requestHeaders = await headers();
-  const pathname = requestHeaders.get("x-trailgrad-pathname") ?? "";
-  const search = requestHeaders.get("x-trailgrad-search") ?? "";
+export default function RootLoading() {
+  return <UnknownRouteSkeleton />;
+}
 
-  // Next's internal navigation request can reach this boundary without the
-  // proxy pathname header. Showing the generic loader in that case causes a
-  // wrong full-page flash before the route-specific fallback mounts.
-  if (!pathname) return null;
-
-  const interviewRoute = pathname === "/interview" || pathname.startsWith("/interview/");
-  const dsaAssessmentRoute = pathname === "/practice/dsa/assessment";
-  const assessmentRoute =
-    pathname === "/practice/dsa/assessment" ||
-    pathname === "/practice/core-technical/assessment" ||
-    pathname.startsWith("/practice/core-technical/assessment/");
-  const progressRoute = pathname === "/progress";
-  const manageRoute = pathname === "/manage";
-  const profileRoute = pathname === "/profile";
-  const workspaceRoute = isWorkspaceChromeRoute(pathname) && pathname !== "/";
-  const welcomeHome =
-    pathname === "/" &&
-    welcomePersonaFromQuery(new URLSearchParams(search).get("welcome")) !== null;
-  if (welcomeHome) return <PreparationWelcomeLoading />;
-
-  // `/` resolves to either the public home, onboarding, or the signed-in
-  // overview. Its page owns the correct fallback once that surface is known;
-  // rendering another root fallback first causes a full-graphite flash.
-  if (pathname === "/") return null;
-
-  if (interviewRoute || progressRoute) return null;
-
-  if (assessmentRoute) {
-    return <div className="fixed inset-0 z-[100] bg-black" aria-label="Loading assessment" />;
-  }
-
-  if (pathname === "/interviews") return <InterviewsSkeleton />;
-
-  if (pathname === "/practice") {
-    return <PracticeSkeleton />;
-  }
-
-  if (pathname.startsWith("/practice/")) return <DsaPracticeSkeleton />;
-
-  if (pathname === "/trailmate") return <HelpHubSkeleton />;
-
-  if (manageRoute) {
-    return (
-      <div className="app-root-loader blueprint relative min-h-[100svh]" aria-busy="true" aria-label="Loading">
-        <div className="relative z-10">
-          <ManageSkeleton />
-        </div>
-      </div>
-    );
-  }
-
-  if (profileRoute) {
-    return (
-      <div className="app-root-loader blueprint relative min-h-[100svh]" aria-busy="true" aria-label="Loading">
-        <div className="blueprint-glow" />
-        <div className="relative z-10">
-          <ProfileSkeleton />
-        </div>
-      </div>
-    );
-  }
-
-  if (workspaceRoute) {
-    return (
-      <div className="app-root-loader blueprint relative min-h-[100svh]" aria-busy="true" aria-label="Loading">
-        <RouteProgress />
-      </div>
-    );
-  }
-
+function UnknownRouteSkeleton() {
   return (
     <div
-      className="app-root-loader blueprint relative grid min-h-[100svh] place-items-center"
+      className="app-root-loader blueprint relative min-h-[100svh] px-4 pb-20 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10"
       aria-busy="true"
-      aria-label="Loading"
+      aria-label="Loading page"
     >
-      <div className="blueprint-glow" />
-      <RouteProgress />
-      <Waveform className="relative z-10" />
+      <div className="mx-auto w-full max-w-[84rem]">
+        <div className="skeleton h-7 w-44" />
+        <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)] lg:gap-5">
+          <div className="app-root-loader-panel min-h-[16rem] rounded-[1.65rem] p-6">
+            <div className="skeleton h-5 w-2/5" />
+            <div className="skeleton mt-8 h-3 w-4/5" />
+            <div className="skeleton mt-3 h-3 w-3/5" />
+          </div>
+          <div className="app-root-loader-panel min-h-[16rem] rounded-[1.65rem] p-6">
+            <div className="skeleton h-5 w-3/5" />
+            <div className="skeleton mt-8 h-3 w-full" />
+            <div className="skeleton mt-3 h-3 w-4/5" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

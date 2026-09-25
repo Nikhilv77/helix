@@ -1,5 +1,7 @@
 "use client";
 
+import { markSummaryDataChanged } from "@/lib/workspace/summary-cache-invalidation";
+
 import Link from "next/link";
 import {
   useCallback,
@@ -36,6 +38,7 @@ import {
   INTERVIEW_PANEL_RULE,
   INTERVIEW_PANEL_SHELL
 } from "@/features/interviews/ui/voice/components/panel-surface";
+import { ResumeRoastLoading } from "./resume-roast-skeleton";
 
 interface RoastRecord {
   id: string;
@@ -92,7 +95,13 @@ function apiFailureMessage(code: string | undefined): string {
 
 class ResumeRoastClientError extends Error {}
 
-export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | null }) {
+export function ResumeRoastWorkspace({
+  resume,
+  initialState = null
+}: {
+  resume: CandidateResume | null;
+  initialState?: RoastState | null;
+}) {
   const mounted = useRef(true);
   const requestId = useRef(0);
   const stateController = useRef<AbortController | null>(null);
@@ -100,11 +109,31 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
   const spokenLine = useRef("");
   const spokenRoast = useRef("");
   const spokenRoastAttempts = useRef({ roastId: "", count: 0 });
-  const [state, setState] = useState<RoastState | null>(null);
-  const [screen, setScreen] = useState<ScreenState>("loading");
-  const [target, setTarget] = useState<Partial<ResumeRoastTarget>>({});
-  const [events, setEvents] = useState<ResumeRoastStreamEvent[]>([]);
-  const [showingPrevious, setShowingPrevious] = useState(false);
+  const hasInitialState = useRef(initialState !== null);
+  const [state, setState] = useState<RoastState | null>(initialState);
+  const [screen, setScreen] = useState<ScreenState>(() =>
+    initialState
+      ? initialState.previousRoast || !initialState.hasResume
+        ? "ready"
+        : "selecting"
+      : "loading"
+  );
+  const [target, setTarget] = useState<Partial<ResumeRoastTarget>>(
+    initialState?.previousRoast?.target ?? {}
+  );
+  const [events, setEvents] = useState<ResumeRoastStreamEvent[]>(() =>
+    initialState?.previousRoast
+      ? resumeRoastResultEvents({
+          roastId: initialState.previousRoast.id,
+          replayed: true,
+          target: initialState.previousRoast.target,
+          result: initialState.previousRoast.result
+        })
+      : []
+  );
+  const [showingPrevious, setShowingPrevious] = useState(
+    Boolean(initialState?.previousRoast)
+  );
   const [failure, setFailure] = useState<string | null>(null);
   const [analysisElapsedSeconds, setAnalysisElapsedSeconds] = useState(0);
   const [roastVoiceRetry, setRoastVoiceRetry] = useState(0);
@@ -276,7 +305,7 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
 
   useEffect(() => {
     mounted.current = true;
-    requestState();
+    if (!hasInitialState.current) requestState();
     return () => {
       mounted.current = false;
       stateController.current?.abort();
@@ -330,6 +359,7 @@ export function ResumeRoastWorkspace({ resume }: { resume: CandidateResume | nul
         setEvents((current) => [...current, event]);
         if (event.type === "done" && !finished) {
           finished = true;
+          markSummaryDataChanged();
           notifyWorkspaceNotificationsChanged();
         }
         return true;
@@ -1104,22 +1134,6 @@ function LoadFailure({ message, onRetry }: { message: string | null; onRetry: ()
         >
           Try again
         </button>
-      </div>
-    </main>
-  );
-}
-
-export function ResumeRoastLoading() {
-  return (
-    <main
-      aria-busy="true"
-      aria-label="Loading Resume Roast"
-      className="resume-roast-skeleton h-[calc(100dvh-4.25rem)] overflow-hidden bg-black px-3 py-3 sm:px-5"
-    >
-      <div className="thin-scroll mx-auto flex h-full w-full max-w-[96rem] min-h-0 flex-col gap-3 overflow-y-auto pb-3 xl:grid xl:grid-cols-[minmax(0,23rem)_minmax(0,1fr)_19rem] xl:overflow-hidden xl:pb-0">
-        <div className={`${INTERVIEW_PANEL_SHELL} min-h-[24rem] animate-pulse`} />
-        <div className={`${INTERVIEW_PANEL_SHELL} min-h-[32rem] animate-pulse`} />
-        <div className={`${INTERVIEW_PANEL_SHELL} min-h-[28rem] animate-pulse`} />
       </div>
     </main>
   );

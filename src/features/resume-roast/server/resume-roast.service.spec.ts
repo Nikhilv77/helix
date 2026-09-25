@@ -153,7 +153,7 @@ function setup(
 }
 
 describe("ResumeRoastService", () => {
-  it("returns a normal missing-resume handoff without querying history", async () => {
+  it("returns a normal missing-resume handoff without resolving a resume version", async () => {
     const { service, store, planningStore } = setup({ getProfile: profile(false) });
 
     await expect(service.state("user-a")).resolves.toEqual({
@@ -163,8 +163,9 @@ describe("ResumeRoastService", () => {
       previousRoast: null,
       history: []
     });
+    // Target and history are read in parallel with the profile to save a round
+    // trip; without a resume nothing version-specific is resolved or returned.
     expect(planningStore.ensureActiveResumeVersion).not.toHaveBeenCalled();
-    expect(store.getTarget).not.toHaveBeenCalled();
     expect(store.getLatestReady).not.toHaveBeenCalled();
   });
 
@@ -190,6 +191,30 @@ describe("ResumeRoastService", () => {
       history: [
         expect.objectContaining({ id: ROAST_ID, resumeVersionId: VERSION_ID, target, result })
       ]
+    });
+    expect(store.getReadyHistory).toHaveBeenCalledWith("user-a");
+    // The roast for the current version was already in history.
+    expect(store.getLatestReady).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the latest roast for the current version when history lacks it", async () => {
+    const previous = {
+      id: ROAST_ID,
+      ownerId: "user-a",
+      resumeProfileVersionId: VERSION_ID,
+      promptVersion: "resume-roast-v6",
+      ...target,
+      status: "READY" as const,
+      result,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    const { service, store } = setup({ target, previous });
+    store.getReadyHistory.mockResolvedValue([]);
+
+    await expect(service.state("user-a")).resolves.toMatchObject({
+      previousRoast: { id: ROAST_ID, target, result },
+      history: []
     });
     expect(store.getLatestReady).toHaveBeenCalledWith("user-a", VERSION_ID);
   });

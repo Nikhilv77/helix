@@ -81,8 +81,8 @@ Primary implementation:
 
 ### Daily teacher coaching — shipped
 
-An authenticated cron route creates one or two in-app coaching notifications
-per candidate per day. The primary message alternates between focused practice
+The notification status request schedules one or two in-app coaching notifications
+for an active candidate when their daily decision is due. The primary message alternates between focused practice
 and warmth so the teacher does not feel like a question-delivery bot:
 
 - A recommendation for an active, incomplete roadmap question on practice days
@@ -99,24 +99,38 @@ Supported candidate states include:
 - Active question but no unfinished work: recommend the next question
 - Active question plus unfinished work: recommend one question and remind the
   candidate about the saved unfinished question
-- No eligible question: give one small, general Practice action
+- No eligible DSA question: use the saved Practice page snapshot to recommend
+  an available AI/ML, Core Technical, Applied Engineering, or Architecture path;
+  fall back to a role/focus-aware Practice action when no clean snapshot exists
 - Encouragement day: replace the primary Practice action with a warm note; an
   evidence-backed unfinished-work reminder may still appear separately
 
 Notifications link directly to the relevant DSA or non-DSA workspace whenever
-possible. Stable per-day subject ids prevent duplicate rows if cron is retried.
+possible. Stable per-day subject ids prevent duplicate rows when a leased attempt is retried.
 
-Current schedule:
+Current delivery:
 
-- `vercel.json` calls `/api/cron/teacher-notifications` at `0 4 * * *`
-- That one Hobby-compatible function runs both teacher notifications and the
-  global notification/Trailmate maintenance safety sweep
+- Only signed-in users who open the workspace are considered; inactive users do
+  not accumulate unseen daily coaching rows.
+- The existing notification-status query checks the profile's due date. A
+  two-minute database lease allows one instance to build the daily message,
+  with retry after a crash. Successful delivery moves the next due time one
+  day forward, spreading work across active users instead of concentrating it
+  at midnight. While coaching is pending, the client checks status roughly 4,
+  8, 16, and 30 seconds apart with jitter, then returns to ordinary polling. It refreshes the inbox
+  when the coaching decision finishes, including after another instance's lease.
+- The daily scan of the first 250 profiles has been removed.
+- Apply `20260925108000_teacher_coaching_on_demand` before deploying the new
+  notification-status code; that read uses the added profile columns.
+
+Current maintenance schedule:
+
+- `vercel.json` calls `/api/cron/maintenance` at `0 4 * * *`
+- That one function runs global Trailmate and notification cleanup, interview
+  evaluation recovery, and interview retention. It does not generate coaching.
 - The route requires `Authorization: Bearer <CRON_SECRET>`
-- The implementation processes a bounded batch of 250 candidates
-- A malformed profile/roadmap does not stop later candidates in the batch
 
-The combined teacher-notification and maintenance cron is deliberately daily so
-it is valid on Vercel Hobby. It is a safety sweep, not the authority for
+The maintenance cron is deliberately daily. It is a safety sweep, not the authority for
 time-sensitive Trailmate behaviour.
 Authenticated help status, inbox, overview, create, and claim requests reconcile
 stale state for the active owner. Expired help invitations are excluded from
@@ -131,10 +145,10 @@ the fallback for pending rows when nobody has the app open.
 
 Primary implementation:
 
-- `src/app/api/cron/teacher-notifications/route.ts`
+- `src/app/api/cron/maintenance/route.ts`
 - `src/app/api/notifications/status/route.ts`
 - `src/features/notifications/server/notification-dispatcher.ts`
-- `src/server/notifications/teacher-notification.service.ts`
+- `src/features/notifications/server/teacher-notification.service.ts`
 - `vercel.json`
 
 ### Notification inbox — shipped
@@ -251,8 +265,7 @@ independent SPF TXT records at the same hostname.
 
 These items are not required for the current notification feature to work:
 
-- Candidate-timezone delivery rather than one global UTC time
-- Cursor-based cron batching beyond the current 250-profile limit
+- Candidate-timezone coaching cadence rather than the current UTC day key
 - Queue retry/DLQ monitoring
 - Delivery/bounce webhooks and an internal delivery-status screen
 - Per-category quiet hours
@@ -739,8 +752,8 @@ Do not reproduce the entire desktop dashboard grid inside a narrow viewport.
   never fail because email is unavailable
 - With Resend configured, welcome email uses the selected teacher and contains
   an absolute Practice link
-- Daily cron creates no duplicate recommendation/reminder for the same
-  candidate and date
+- Concurrent active-user requests create no duplicate recommendation/reminder
+  for the same candidate and date; an expired lease can retry after a crash
 - Disabling teacher coaching stops future optional teacher recommendations and
   reminders
 - Disabling help requests stops future optional invitations to help but does

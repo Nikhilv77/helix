@@ -184,15 +184,17 @@ export async function POST(request: NextRequest) {
         );
       }
       const guard = getSharedGuard(config);
-      await guard.enforce(RATE_LIMIT_POLICIES.codeExecution, ownerId);
-      const lease = await guard.acquire(
+      const lease = await guard.enforceAndAcquire(
+        { policy: RATE_LIMIT_POLICIES.codeExecution, identity: ownerId },
         {
-          namespace: "code-run",
-          ttlMs: 25_000,
-          code: "CODE_RUN_IN_PROGRESS",
-          message: "Your previous code run is still in progress."
-        },
-        ownerId
+          policy: {
+            namespace: "code-run",
+            ttlMs: 25_000,
+            code: "CODE_RUN_IN_PROGRESS",
+            message: "Your previous code run is still in progress."
+          },
+          identity: ownerId
+        }
       );
       try {
         const result = await app.coreTechnicalRunnerService.run(
@@ -326,15 +328,17 @@ export async function POST(request: NextRequest) {
     }
 
     const guard = getSharedGuard(config);
-    await guard.enforce(RATE_LIMIT_POLICIES.codeExecution, ownerId);
-    const lease = await guard.acquire(
+    const lease = await guard.enforceAndAcquire(
+      { policy: RATE_LIMIT_POLICIES.codeExecution, identity: ownerId },
       {
-        namespace: "code-run",
-        ttlMs: 25_000,
-        code: "CODE_RUN_IN_PROGRESS",
-        message: "Your previous code run is still in progress."
-      },
-      ownerId
+        policy: {
+          namespace: "code-run",
+          ttlMs: 25_000,
+          code: "CODE_RUN_IN_PROGRESS",
+          message: "Your previous code run is still in progress."
+        },
+        identity: ownerId
+      }
     );
 
     try {

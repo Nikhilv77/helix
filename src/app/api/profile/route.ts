@@ -7,8 +7,10 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { LEVELS, ROLES } from "@/features/interviews/server/types";
+import { schedulePracticeHomeRefresh } from "@/features/practice/shared/server/refresh-practice-home";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const storySchema = z.object({
   id: z.string().trim().min(1).max(80),
@@ -68,7 +70,9 @@ export async function PUT(request: NextRequest) {
       });
     }
 
-    return apiSuccess(await getAppContainer().profileService.save(ownerId, parsed.data));
+    const profile = await getAppContainer().profileService.save(ownerId, parsed.data);
+    schedulePracticeHomeRefresh(ownerId);
+    return apiSuccess(profile);
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);
   }

@@ -8,6 +8,7 @@ import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
 
 export interface InterviewLaunchCopy {
   /** Small label above the headline. */
@@ -39,7 +40,7 @@ export async function startInterviewWhenReady(
   signal: AbortSignal
 ): Promise<{ sessionId: string }> {
   while (!signal.aborted) {
-    const response = await fetch(startPath, {
+    const response = await workspaceMutationFetch(startPath, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       signal

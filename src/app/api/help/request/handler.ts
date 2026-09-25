@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { findQuestion } from "@/features/practice/dsa/domain/dsa";
 import { getAppContainer } from "@/server/app-container";
+import { scheduleCandidateAnalyticsRefresh } from "@/features/analytics/server/refresh-candidate-analytics";
 import { Logger } from "@/server/common/logger";
 import { HelpRequestError } from "@/features/peer-help/server/help-request.types";
 import { ApiRouteError } from "@/server/http/api-error";
@@ -12,7 +13,6 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import { reconcileHelpForOwnerBestEffort } from "@/features/peer-help/server/help-maintenance";
-
 
 const logger = new Logger("HelpRequest");
 
@@ -175,6 +175,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    scheduleCandidateAnalyticsRefresh(ownerId);
     return apiSuccess({
       id: helpRequest.id,
       status: helpRequest.status,
@@ -202,21 +203,17 @@ export async function GET(request: NextRequest) {
 
     const app = getAppContainer();
     await reconcileHelpForOwnerBestEffort(app, ownerId);
-    const [live, helperCount, pendingRating] = await Promise.all([
+    const [live, pendingRating] = await Promise.all([
       app.helpRequestService.liveForLearner(ownerId, slug),
-      app.helperMatchingService.countHelpers(slug, ownerId, language),
       app.helpSessionService.pendingRatingForLearner(ownerId, slug)
     ]);
     const helper = live?.helperId ? await app.helpHistoryService.participant(live.helperId) : null;
 
-    // helperCount is who *could* answer, not who will. Describe the pool without
-    // promising that one of them is online or will accept.
     return apiSuccess({
       id: live?.id ?? null,
       status: live?.status ?? null,
       helper,
       createdAt: live?.createdAt.getTime() ?? null,
-      helperCount,
       ratingRequestId: live ? null : (pendingRating?.requestId ?? null)
     });
   } catch (error) {

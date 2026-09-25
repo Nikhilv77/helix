@@ -37,17 +37,20 @@ describe("consolidated help route", () => {
     [POST, "POST", ["request", "request-1"], mocks.requestIdPost],
     [GET, "GET", ["room", "request-1"], mocks.roomGet],
     [PUT, "PUT", ["room", "request-1"], mocks.roomPut]
-  ])("passes dynamic ids through %s /%s", async (route, method, path, handler: any) => {
-    const request = makeRequest(method as string, path as string[]);
-    const response = await route(request, context(path as string[]));
+  ])(
+    "passes dynamic ids through %s /%s",
+    async (route, method, path, handler: ReturnType<typeof vi.fn>) => {
+      const request = makeRequest(method as string, path as string[]);
+      const response = await route(request, context(path as string[]));
 
-    expect(response.status).toBe(200);
-    expect(handler).toHaveBeenCalledWith(
-      request,
-      expect.objectContaining({ params: expect.any(Promise) })
-    );
-    await expect(handler.mock.calls.at(-1)?.[1].params).resolves.toEqual({ id: "request-1" });
-  });
+      expect(response.status).toBe(200);
+      expect(handler).toHaveBeenCalledWith(
+        request,
+        expect.objectContaining({ params: expect.any(Promise) })
+      );
+      await expect(handler.mock.calls.at(-1)?.[1].params).resolves.toEqual({ id: "request-1" });
+    }
+  );
 
   it("returns 404 for an unknown help path", async () => {
     const path = ["unknown"];

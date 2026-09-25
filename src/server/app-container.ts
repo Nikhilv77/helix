@@ -5,7 +5,7 @@ import { GroqProvider } from "./ai/providers/groq.provider";
 import { FallbackAiService } from "./ai/fallback-ai.service";
 import { AppConfigService } from "./config/app-config.service";
 import { validateEnvironment } from "./config/environment.schema";
-import { PrismaService } from "./database/prisma.service";
+import { getPrismaService } from "./database/prisma.service";
 import { HealthService } from "./health/health.service";
 import { InterviewDecider } from "@/features/interviews/server/decider";
 import { InterviewPlanner } from "@/features/interviews/server/planner";
@@ -117,6 +117,9 @@ import { NODEJS_CORE_TECHNICAL_STORY_RANKING_CATALOGUE } from "@/features/practi
 import { NODEJS_CORE_TECHNICAL_DOMAIN_MAP } from "@/features/practice/core-technical/domain/domain-map";
 import { AiMlPracticeService } from "@/features/practice/ai-ml/server/ai-ml-practice.service";
 import { AiMlStoryPracticeService } from "@/features/practice/ai-ml/server/ai-ml-story-practice.service";
+import { PracticeHomeSnapshotStore } from "@/features/practice/shared/server/practice-home-snapshot.store";
+import { CandidateAnalyticsSnapshotStore } from "@/features/analytics/server/candidate-analytics-snapshot.store";
+import { WorkspacePageSnapshotStore } from "@/features/analytics/server/workspace-page-snapshot.store";
 import {
   CORE_TECHNICAL_INTERVIEW_EVIDENCE,
   CORE_TECHNICAL_SOURCES,
@@ -160,10 +163,14 @@ export interface AppContainer {
   personalizedInterviewPlanGenerator: PersonalizedInterviewPlanGenerator;
   personalizedInterviewPlanningService: PersonalizedInterviewPlanningService;
   practiceRoadmapService: PracticeRoadmapService;
+  practiceHomeSnapshotStore: PracticeHomeSnapshotStore;
+  candidateAnalyticsSnapshotStore: CandidateAnalyticsSnapshotStore;
+  workspacePageSnapshotStore: WorkspacePageSnapshotStore;
   aiMlPracticeService: AiMlPracticeService;
   aiMlStoryPracticeService: AiMlStoryPracticeService;
   workspaceSearchService: WorkspaceSearchService;
   resumeRoastService: ResumeRoastService;
+  resumeRoastStore: ResumeRoastStore;
   preparationOnboardingService: PreparationOnboardingService;
   coreTechnicalStoryGenerator: CoreTechnicalStoryGenerator;
   coreTechnicalQuestionGenerator: CoreTechnicalQuestionGenerator;
@@ -228,7 +235,7 @@ export function getAppContainer(): AppContainer {
   }
 
   const config = new AppConfigService(validateEnvironment(process.env));
-  const prisma = new PrismaService();
+  const prisma = getPrismaService();
   const geminiClient = new GoogleGenAI({ apiKey: config.geminiApiKey });
 
   const geminiAi = new AiService(new GeminiProvider(config, geminiClient));
@@ -534,6 +541,9 @@ export function getAppContainer(): AppContainer {
   const aiMlPracticeService = new AiMlPracticeService(prisma);
   container = {
     config,
+    practiceHomeSnapshotStore: new PracticeHomeSnapshotStore(prisma),
+    candidateAnalyticsSnapshotStore: new CandidateAnalyticsSnapshotStore(prisma),
+    workspacePageSnapshotStore: new WorkspacePageSnapshotStore(prisma),
     healthService: new HealthService(config, prisma),
     profileService,
     preparationOnboardingService,
@@ -640,6 +650,7 @@ export function getAppContainer(): AppContainer {
     // Resume Roast reuses the profile's immutable candidate revision and the
     // same Gemini client as structured resume extraction.
     resumeRoastService,
+    resumeRoastStore,
     // Curriculum generation remains independent from the adaptive interview plan.
     curriculumService: new CurriculumService(geminiAi),
     // Resume classification benefits from the document-oriented model path;

@@ -85,6 +85,31 @@ describe("SharedGuard", () => {
     await expect(guard.acquire(lockPolicy, "session-a")).resolves.toBeDefined();
   });
 
+  it("releases a lease taken alongside a rejected rate limit", async () => {
+    const rate = { policy: ratePolicy, identity: "session-a" };
+    const lock = { policy: lockPolicy, identity: "session-a" };
+    await guard.enforce(ratePolicy, "session-a", 2);
+
+    await expect(guard.enforceAndAcquire(rate, lock)).rejects.toMatchObject({
+      statusCode: 429,
+      code: "TEST_RATE_LIMITED"
+    });
+    await expect(guard.acquire(lockPolicy, "session-a")).resolves.toBeDefined();
+  });
+
+  it("returns a held lease when the rate limit allows the request", async () => {
+    const lease = await guard.enforceAndAcquire(
+      { policy: ratePolicy, identity: "session-a" },
+      { policy: lockPolicy, identity: "session-a" }
+    );
+
+    await expect(guard.acquire(lockPolicy, "session-a")).rejects.toMatchObject({
+      code: "TEST_BUSY"
+    });
+    await lease.release();
+    await expect(guard.acquire(lockPolicy, "session-a")).resolves.toBeDefined();
+  });
+
   it("recovers an abandoned lease after its TTL", async () => {
     await guard.acquire(lockPolicy, "session-a");
     now += lockPolicy.ttlMs + 1;

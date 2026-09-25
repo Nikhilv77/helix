@@ -1,47 +1,29 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 
-const mocks = vi.hoisted(() => ({
-  current: vi.fn(),
-  historyRead: vi.fn(),
-  notFound: vi.fn(() => {
-    throw new Error("NEXT_NOT_FOUND");
-  })
-}));
+const mocks = vi.hoisted(() => ({ questionWorkspace: vi.fn() }));
 
 vi.mock("@/server/auth/onboarding-guard", () => ({
-  requireOnboardedProfile: () => Promise.resolve({ ownerId: "owner-one" })
+  requireOnboardedOwner: () => Promise.resolve({ ownerId: "owner-one" })
 }));
 vi.mock("@/server/app-container", () => ({
   getAppContainer: () => ({
-    architectureDesign: {
-      practice: { current: mocks.current },
-      history: { read: mocks.historyRead }
-    }
+    architectureDesign: { practice: { questionWorkspace: mocks.questionWorkspace } }
   })
-}));
-vi.mock("next/navigation", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("next/navigation")>()),
-  notFound: mocks.notFound
 }));
 vi.mock(
   "@/features/practice/architecture-design/ui/architecture-design-question-workspace",
   () => ({
-    ArchitectureDesignQuestionWorkspace: ({
-      block,
-      initialQuestion,
-      stageTitle
-    }: {
+    ArchitectureDesignQuestionWorkspace: (props: {
       block: { id: string };
       initialQuestion: { id: string };
       stageTitle: string;
     }) => (
       <div
         data-testid="workspace"
-        data-block={block.id}
-        data-question={initialQuestion.id}
-        data-stage={stageTitle}
+        data-block={props.block.id}
+        data-question={props.initialQuestion.id}
+        data-stage={props.stageTitle}
       />
     )
   })
@@ -52,38 +34,54 @@ import ArchitectureDesignQuestionPage from "./page";
 describe("ArchitectureDesignQuestionPage", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("reads an owned historical question from its frozen scenario", async () => {
-    mocks.historyRead.mockResolvedValue(block("old", "question-one"));
+  it("reads the question from the URL-selected block for the signed-in owner", async () => {
+    mocks.questionWorkspace.mockResolvedValue(workspace("historical-block", "question-one"));
+
     render(
       await ArchitectureDesignQuestionPage({
         params: Promise.resolve({ questionId: "question-one" }),
-        searchParams: Promise.resolve({ block: "old" })
+        searchParams: Promise.resolve({ block: "historical-block" })
       })
     );
-    expect(mocks.historyRead).toHaveBeenCalledWith("owner-one", "old");
-    expect(screen.getByTestId("workspace")).toHaveAttribute(
-      "data-stage",
-      "Requirements and scale"
+
+    expect(mocks.questionWorkspace).toHaveBeenCalledWith(
+      "owner-one",
+      "question-one",
+      "historical-block"
     );
+    expect(screen.getByTestId("workspace")).toHaveAttribute("data-block", "historical-block");
+    expect(screen.getByTestId("workspace")).toHaveAttribute("data-stage", "Frame the requirements");
   });
 
-  it("returns to Architecture & Design for missing and foreign resources", async () => {
-    mocks.historyRead.mockRejectedValue(
-      new NotFoundErrorException("ARCHITECTURE_DESIGN_BLOCK_NOT_FOUND", "not found")
+  it("lets the service choose the current block when the URL has none", async () => {
+    mocks.questionWorkspace.mockResolvedValue(workspace("current-block", "question-one"));
+
+    render(
+      await ArchitectureDesignQuestionPage({
+        params: Promise.resolve({ questionId: "question-one" }),
+        searchParams: Promise.resolve({})
+      })
     );
+
+    expect(mocks.questionWorkspace).toHaveBeenCalledWith("owner-one", "question-one", null);
+    expect(screen.getByTestId("workspace")).toHaveAttribute("data-block", "current-block");
+  });
+
+  it("returns to Architecture & Design for a missing question or a foreign block", async () => {
+    mocks.questionWorkspace.mockResolvedValue(null);
+
     await expect(
       ArchitectureDesignQuestionPage({
         params: Promise.resolve({ questionId: "question-one" }),
-        searchParams: Promise.resolve({ block: "foreign" })
+        searchParams: Promise.resolve({ block: "foreign-block" })
       })
     ).rejects.toThrow("NEXT_REDIRECT");
   });
 });
 
-function block(id: string, questionId: string) {
+function workspace(blockId: string, questionId: string) {
   return {
-    id,
-    scenario: { stages: [{ order: 1, title: "Requirements and scale" }] },
-    questions: [{ id: questionId, order: 1 }]
+    block: { id: blockId, story: { stages: [{ order: 1, title: "Frame the requirements" }] } },
+    question: { id: questionId, order: 1 }
   };
 }

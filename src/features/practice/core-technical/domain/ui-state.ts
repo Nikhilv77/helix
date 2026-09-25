@@ -10,6 +10,18 @@ import type {
 } from "@/features/practice/core-technical/server/history.service";
 import type { CoreTechnicalPublicBlock } from "@/features/practice/core-technical/server/practice.service";
 
+export type CoreTechnicalEntryBlock = Pick<CoreTechnicalPublicBlock, "status"> & {
+  story: Pick<
+    CoreTechnicalPublicBlock["story"],
+    "title" | "premise" | "mechanismKeys" | "expectedMinutes"
+  >;
+  selection: Pick<CoreTechnicalPublicBlock["selection"], "difficulty">;
+  questions: Array<{
+    status: CoreTechnicalPublicBlock["questions"][number]["status"];
+    latestAttempt: unknown;
+  }>;
+};
+
 export type CoreTechnicalViewState =
   | "unavailable"
   | "confirmation"
@@ -106,7 +118,7 @@ export function coreTechnicalHistoryNavigation(
 
 export function coreTechnicalPracticeEntry(
   eligibility: Pick<CoreTechnicalEligibility, "available">,
-  block: CoreTechnicalPublicBlock | null
+  block: CoreTechnicalEntryBlock | null
 ): CoreTechnicalPracticeEntry | null {
   if (!eligibility.available && !block) return null;
   const terminalCount =

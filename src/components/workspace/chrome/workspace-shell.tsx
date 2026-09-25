@@ -40,6 +40,10 @@ import {
 import { isWorkspaceCanvasRoute, isWorkspaceChromeRoute } from "@/lib/workspace/workspace-routes";
 import { useWorkspaceProfileImage } from "@/lib/workspace/profile-image";
 import { welcomePersonaFromQuery } from "@/lib/avatars/personas";
+import {
+  SUMMARY_DATA_CHANGED_EVENT,
+  SUMMARY_DATA_CHANGED_STORAGE_KEY
+} from "@/lib/workspace/summary-cache-invalidation";
 
 const navGroups = [
   {
@@ -86,6 +90,19 @@ function NavPending() {
 // user's sidebar back to the default. Nobody sees the string.
 const SIDEBAR_STORAGE_KEY = "helix:sidebar-collapsed";
 
+function isCachedSummaryPage(pathname: string | null): boolean {
+  return (
+    pathname === "/" ||
+    pathname === "/practice" ||
+    pathname === "/interviews" ||
+    pathname === "/trailmate" ||
+    pathname === "/profile" ||
+    pathname === "/manage" ||
+    pathname === "/progress" ||
+    pathname === "/reports"
+  );
+}
+
 function WorkspacePollingProviders({ children }: { children: ReactNode }) {
   return (
     <WorkspaceHelpPollingProvider>
@@ -97,17 +114,21 @@ function WorkspacePollingProviders({ children }: { children: ReactNode }) {
 /** Signed-in workspace chrome, mounted persistently but shown only on app routes. */
 export function WorkspaceShell({
   children,
+  initialUserId,
   initialAccent,
   initialProfileImage = null
 }: {
   children: ReactNode;
+  initialUserId: string;
   initialAccent?: WorkspaceAccent;
   initialProfileImage?: string | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
+  const lastRefreshedAccount = useRef<string | null>(null);
+  const pendingSummaryRefresh = useRef(false);
   const welcomeHome =
     pathname === "/" && welcomePersonaFromQuery(searchParams.get("welcome")) !== null;
   const showChrome = pathname ? isWorkspaceChromeRoute(pathname) && !welcomeHome : false;
@@ -120,6 +141,61 @@ export function WorkspaceShell({
   );
   const [accentShimmerKey, setAccentShimmerKey] = useState(0);
   const profileImage = useWorkspaceProfileImage(initialProfileImage);
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (user?.id === initialUserId) {
+      lastRefreshedAccount.current = null;
+      return;
+    }
+    const observedAccount = user?.id ?? "signed-out";
+    if (lastRefreshedAccount.current === observedAccount) return;
+    // A different (or signed-out) Clerk session must not reuse private pages
+    // retained by the client router cache.
+    lastRefreshedAccount.current = observedAccount;
+    router.refresh();
+  }, [initialUserId, isLoaded, router, user?.id]);
+  useEffect(() => {
+    if (pathname !== "/" || !isLoaded || user?.id !== initialUserId) return;
+    const state = window.history.state;
+    if (!state || typeof state !== "object" || state.__trailgradHomeUserId === initialUserId) {
+      return;
+    }
+    // Mark only a Home history entry rendered for this account. An older
+    // public Home entry remains unmarked and must still be refreshed on return.
+    window.history.replaceState({ ...state, __trailgradHomeUserId: initialUserId }, "");
+  }, [initialUserId, isLoaded, pathname, user?.id]);
+  useEffect(() => {
+    if (!isCachedSummaryPage(pathname) || !pendingSummaryRefresh.current) return;
+    pendingSummaryRefresh.current = false;
+    router.refresh();
+  }, [pathname, router]);
+  useEffect(() => {
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    const onChange = () => {
+      pendingSummaryRefresh.current = true;
+      if (refreshTimer) clearTimeout(refreshTimer);
+      // Give a completed action time to navigate away before refreshing the
+      // current page. Detail workspaces should not be interrupted mid-flow.
+      refreshTimer = setTimeout(() => {
+        refreshTimer = null;
+        if (!pendingSummaryRefresh.current || !isCachedSummaryPage(window.location.pathname)) {
+          return;
+        }
+        pendingSummaryRefresh.current = false;
+        router.refresh();
+      }, 400);
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === SUMMARY_DATA_CHANGED_STORAGE_KEY) onChange();
+    };
+    window.addEventListener(SUMMARY_DATA_CHANGED_EVENT, onChange);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      window.removeEventListener(SUMMARY_DATA_CHANGED_EVENT, onChange);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [router]);
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true");
   }, []);
@@ -165,16 +241,16 @@ export function WorkspaceShell({
   }, [pathname]);
 
   useEffect(() => {
-    // The App Router may restore an earlier public `/` payload from browser
-    // history while this signed-in shell stays mounted. Refresh only that
-    // restored route so Home is resolved again against the current profile.
-    const refreshRestoredHome = () => {
+    // A signed-in Home history entry can use Next's browser cache. An older
+    // public Home entry needs a server refresh to resolve the current session.
+    const refreshRestoredHome = (event: PopStateEvent) => {
       if (window.location.pathname !== "/") return;
+      if (event.state?.__trailgradHomeUserId === initialUserId) return;
       window.requestAnimationFrame(() => router.refresh());
     };
 
     const refreshPersistedHome = (event: PageTransitionEvent) => {
-      if (event.persisted) refreshRestoredHome();
+      if (event.persisted && window.location.pathname === "/") router.refresh();
     };
 
     window.addEventListener("popstate", refreshRestoredHome);
@@ -183,7 +259,7 @@ export function WorkspaceShell({
       window.removeEventListener("popstate", refreshRestoredHome);
       window.removeEventListener("pageshow", refreshPersistedHome);
     };
-  }, [router]);
+  }, [initialUserId, router]);
 
   useEffect(() => {
     if (!menuOpen) return;

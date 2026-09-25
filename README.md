@@ -79,7 +79,17 @@ separate API calls may run in different serverless instances.
 
 ## Production
 
-Link the repository once with `npx vercel link`, then deploy the Next.js app with:
+Link the repository once with `npx vercel link`. When a release includes schema changes, migrate
+the Production database before deploying code that uses the new schema:
+
+```bash
+pnpm db:migrate:production
+```
+
+This pulls the linked Vercel project's Production environment into a temporary file, checks that
+both database URLs name `trailgrad-production`, runs all pending migrations, and removes the file.
+`vercel env run` can inherit `.env.local` in this workspace, so it must not be used for production
+migrations. Then deploy the Next.js app with:
 
 ```bash
 pnpm deploy:production
@@ -87,15 +97,7 @@ pnpm deploy:production
 
 This builds locally, verifies that the generated output stays within Vercel Hobby's 12-function
 limit, and deploys the exact prebuilt artifact. Automatic Git deployments are disabled because
-Vercel's Git `patchBuild` step incorrectly rejects this project after a successful build. Also run
-database migrations when a release includes schema changes:
-
-```bash
-npx --yes vercel@59.14.0 env run -e production -- pnpm exec prisma migrate deploy
-```
-
-That command injects the Vercel Production environment explicitly. Do not use `.env.local` for a
-production migration.
+Vercel's Git `patchBuild` step incorrectly rejects this project after a successful build.
 
 ## Verification
 

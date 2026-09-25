@@ -5,7 +5,9 @@ import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
-import { requireCompletedPreparationOnboarding } from "@/server/auth/preparation-onboarding-api-guard";
+import { requireCompletedPreparationOnboardingState } from "@/server/auth/preparation-onboarding-api-guard";
+import { schedulePracticeHomeRefresh } from "@/features/practice/shared/server/refresh-practice-home";
+import { invalidateDsaPage } from "@/features/practice/dsa/server/cached-dsa-page";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +30,8 @@ export async function POST(request: NextRequest) {
     const { userId } = await auth();
     if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
     const ownerId = authenticatedOwnerId(userId);
-    const profile = await getAppContainer().profileService.get(ownerId);
-    requireCompletedPreparationOnboarding(profile);
+    const state = await getAppContainer().profileService.workspaceShellState(ownerId);
+    requireCompletedPreparationOnboardingState(state);
 
     const parsed = attemptSchema.safeParse(await readJson(request));
     if (!parsed.success) {
@@ -50,6 +52,12 @@ export async function POST(request: NextRequest) {
       throw new ApiRouteError(409, "ROADMAP_REQUIRED", "Roadmap is not active.");
     }
 
+    if (parsed.data.action !== "open") invalidateDsaPage(ownerId);
+
+    // An open is an activity write, not a completed practice outcome. The
+    // source-table trigger still marks summaries dirty for the next reader;
+    // rebuilding them now would compete with the question the user is opening.
+    if (parsed.data.action !== "open") schedulePracticeHomeRefresh(ownerId);
     return apiSuccess({ recorded: true });
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);

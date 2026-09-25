@@ -217,6 +217,26 @@ export class SharedGuard {
     };
   }
 
+  /**
+   * Rate-limit and lock in one parallel round trip. A lease taken alongside a
+   * rejected limit is released at once rather than left to its TTL.
+   */
+  async enforceAndAcquire(
+    rate: { policy: RateLimitPolicy; identity: string; cost?: number },
+    lock: { policy: LockPolicy; identity: string }
+  ): Promise<SharedLease> {
+    const [limit, lease] = await Promise.allSettled([
+      this.enforce(rate.policy, rate.identity, rate.cost),
+      this.acquire(lock.policy, lock.identity)
+    ]);
+    if (limit.status === "rejected") {
+      if (lease.status === "fulfilled") await lease.value.release();
+      throw limit.reason;
+    }
+    if (lease.status === "rejected") throw lease.reason;
+    return lease.value;
+  }
+
   async getCached<T>(namespace: string, identity: string): Promise<T | null> {
     try {
       const value = await this.backend.get(cacheKey(namespace, identity));

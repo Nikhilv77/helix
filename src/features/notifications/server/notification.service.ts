@@ -100,6 +100,8 @@ interface NotificationPollingStatusRow {
   total: number;
   unread: number;
   latestCreatedAt: Date | null;
+  coachingDue?: boolean;
+  coachingPending?: boolean;
 }
 
 /**
@@ -168,24 +170,66 @@ export class NotificationService {
 
   /** One indexed aggregate for the background change detector. */
   async pollingStatus(ownerId: string): Promise<{ version: string; unread: number }> {
-    const invitationCutoff = new Date(Date.now() - DEFAULT_TTL_MS);
+    const { version, unread } = await this.pollingStatusWithCoaching(ownerId);
+    return { version, unread };
+  }
+
+  /** Include a cheap owner-row due check in the existing badge query. */
+  async pollingStatusWithCoaching(
+    ownerId: string,
+    now = new Date()
+  ): Promise<{ version: string; unread: number; coachingDue: boolean; coachingPending: boolean }> {
+    const invitationCutoff = new Date(now.getTime() - DEFAULT_TTL_MS);
+    const day = now.toISOString().slice(0, 10);
     const rows = await this.prisma.$queryRaw<NotificationPollingStatusRow[]>(Prisma.sql`
       SELECT
-        COUNT(*)::int AS "total",
-        COUNT(*) FILTER (WHERE notification."readAt" IS NULL)::int AS "unread",
-        MAX(notification."createdAt") AS "latestCreatedAt"
-      FROM "Notification" notification
-      WHERE notification."ownerId" = ${ownerId}
-        AND (
-          notification."kind" <> 'HELP_REQUEST_OPENED'::"NotificationKind"
-          OR notification."createdAt" > ${invitationCutoff}
-        )
+        stats."total",
+        stats."unread",
+        stats."latestCreatedAt",
+        coaching."pending"
+          AND (profile."teacherCoachingLeaseUntil" IS NULL
+            OR profile."teacherCoachingLeaseUntil" <= ${now}) AS "coachingDue",
+        coaching."pending" AS "coachingPending"
+      FROM (
+        SELECT
+          COUNT(*)::int AS "total",
+          COUNT(*) FILTER (WHERE notification."readAt" IS NULL)::int AS "unread",
+          MAX(notification."createdAt") AS "latestCreatedAt"
+        FROM "Notification" notification
+        WHERE notification."ownerId" = ${ownerId}
+          AND (
+            notification."kind" <> 'HELP_REQUEST_OPENED'::"NotificationKind"
+            OR notification."createdAt" > ${invitationCutoff}
+          )
+      ) stats
+      LEFT JOIN "CandidateProfile" profile ON profile."ownerId" = ${ownerId}
+      CROSS JOIN LATERAL (
+        SELECT COALESCE(
+          profile."teacherNotificationsEnabled"
+            AND profile."onboardingCompletedAt" IS NOT NULL
+            AND (
+              profile."preparationOnboardingCompletedAt" IS NOT NULL
+              OR profile."preparationOnboarding"->>'completedAt' IS NOT NULL
+            )
+            AND (profile."teacherCoachingLastDay" IS NULL OR profile."teacherCoachingLastDay" < ${day})
+            AND (profile."teacherCoachingNextAt" IS NULL OR profile."teacherCoachingNextAt" <= ${now}),
+          false
+        ) AS "pending"
+      ) coaching
     `);
-    const row = rows[0] ?? { total: 0, unread: 0, latestCreatedAt: null };
+    const row = rows[0] ?? {
+      total: 0,
+      unread: 0,
+      latestCreatedAt: null,
+      coachingDue: false,
+      coachingPending: false
+    };
 
     return {
       version: `${row.total}:${row.unread}:${row.latestCreatedAt?.getTime() ?? 0}`,
-      unread: row.unread
+      unread: row.unread,
+      coachingDue: row.coachingDue ?? false,
+      coachingPending: row.coachingPending ?? false
     };
   }
 

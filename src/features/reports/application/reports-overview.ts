@@ -91,7 +91,7 @@ export function createReportsOverview(
     roundTypes: buildRoundTypes(scored),
     families: buildFamilies(scored),
     pressure: buildPressure(scored),
-    recurringGaps: buildRecurringGaps(competencies, scored),
+    recurringGaps: buildRecurringGaps(competencies),
     rounds,
     latest: latestRound ? toRoundRow(latestRound) : null,
     best: bestRound ? toRoundRow(bestRound) : null,
@@ -464,12 +464,7 @@ function buildPressure(scored: InterviewReport[]): ReportsOverview["pressure"] {
  * from competencies you actually answered — never answering something is a
  * coverage problem, not a recurring gap.
  */
-function buildRecurringGaps(
-  competencies: ReportCompetencyRow[],
-  scored: InterviewReport[]
-): ReportGap[] {
-  const latest = scored.at(-1);
-
+function buildRecurringGaps(competencies: ReportCompetencyRow[]): ReportGap[] {
   return competencies
     .filter((competency) => competency.answered > 0 && competency.averageScore < 75)
     .sort((left, right) => left.averageScore - right.averageScore || right.rounds - left.rounds)
@@ -481,17 +476,8 @@ function buildRecurringGaps(
       nextStep:
         competency.nextStep ??
         "Retry this question and give one concrete example from your own work.",
-      practiceHref: practiceHref(competency.label, latest)
+      practiceHref: "/interviews"
     }));
-}
-
-function practiceHref(focus: string, latest: InterviewReport | undefined): string {
-  const params = new URLSearchParams({ focus });
-  if (latest) {
-    params.set("role", latest.setup.role);
-    params.set("level", latest.setup.level);
-  }
-  return `/interview?${params.toString()}`;
 }
 
 function normaliseCompetency(value: string): string {

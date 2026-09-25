@@ -1,5 +1,7 @@
 "use client";
 
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
+
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Check, ChevronDown, Loader2, Play, X } from "lucide-react";
@@ -68,7 +70,7 @@ export function BlockAssessmentPreview({
     setStarting(true);
     setStartError(null);
     try {
-      const response = await fetch("/api/interview/dsa/block-assessment/start", {
+      const response = await workspaceMutationFetch("/api/interview/dsa/block-assessment/start", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ blockId: block.id })

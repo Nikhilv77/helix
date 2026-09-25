@@ -1,5 +1,7 @@
 "use client";
 
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
+
 import { Check, Loader2, UserRound, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { hintsUsedFor } from "@/features/practice/dsa/domain/hint-tracker";
@@ -55,8 +57,6 @@ export function AskSomeone({
 }) {
   const router = useRouter();
   const [live, setLive] = useState<LiveRequest | null>(null);
-  /** How many people have finished this problem. Null until the check returns. */
-  const [helperCount, setHelperCount] = useState<number | null>(null);
   /** Set once a conversation ends, so the rating replaces the call controls. */
   const [rateFor, setRateFor] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -83,13 +83,10 @@ export function AskSomeone({
   useEffect(() => {
     let cancelled = false;
 
-    void fetch(
-      `/api/help/request?slug=${encodeURIComponent(slug)}&language=${encodeURIComponent(language)}`
-    )
+    void fetch(`/api/help/request?slug=${encodeURIComponent(slug)}`)
       .then((response) => (response.ok ? response.json() : null))
       .then((payload) => {
         if (cancelled || !payload?.success || !payload.data) return;
-        setHelperCount(payload.data.helperCount ?? 0);
         if (payload.data.id) {
           setLive({
             id: payload.data.id,
@@ -105,15 +102,14 @@ export function AskSomeone({
     return () => {
       cancelled = true;
     };
-  }, [language, slug]);
+  }, [slug]);
 
   const refresh = useCallback(async () => {
-    const response = await fetch(
-      `/api/help/request?slug=${encodeURIComponent(slug)}&language=${encodeURIComponent(language)}`
-    ).catch(() => null);
+    const response = await fetch(`/api/help/request?slug=${encodeURIComponent(slug)}`).catch(
+      () => null
+    );
     const payload = await response?.json().catch(() => null);
     if (!payload?.success || !payload.data) return;
-    setHelperCount(payload.data.helperCount ?? 0);
     const nextLive = payload.data.id
       ? {
           id: payload.data.id,
@@ -125,7 +121,7 @@ export function AskSomeone({
     if (!nextLive && payload.data.ratingRequestId) {
       setRateFor(payload.data.ratingRequestId);
     }
-  }, [language, slug]);
+  }, [slug]);
 
   // Keep every live transition authoritative. A helper claim can return to OPEN
   // if they never enter the room, so CLAIMED must keep polling too.
@@ -176,19 +172,11 @@ export function AskSomeone({
 
   const ask = useCallback(async () => {
     if (pending || live || cooldownSeconds > 0) return;
-    if (helperCount === 0) {
-      setNotice({
-        kind: "error",
-        title: "No Trailmates are available",
-        message: "Your invitation was not sent. Keep working with Maya and try again shortly."
-      });
-      return;
-    }
     setPending(true);
     setNotice(null);
 
     try {
-      const response = await fetch("/api/help/request", {
+      const response = await workspaceMutationFetch("/api/help/request", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -266,16 +254,19 @@ export function AskSomeone({
     } finally {
       setPending(false);
     }
-  }, [beginCooldown, cooldownSeconds, helperCount, live, pending, slug, startedAt]);
+  }, [beginCooldown, cooldownSeconds, live, pending, slug, startedAt]);
 
   const withdraw = useCallback(async () => {
     if (!live || pending) return;
     setPending(true);
 
     try {
-      const response = await fetch(`/api/help/request?id=${encodeURIComponent(live.id)}`, {
-        method: "DELETE"
-      });
+      const response = await workspaceMutationFetch(
+        `/api/help/request?id=${encodeURIComponent(live.id)}`,
+        {
+          method: "DELETE"
+        }
+      );
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.success) {
         throw new Error(payload?.error?.message ?? "Could not withdraw that request.");

@@ -1,5 +1,8 @@
 import { DsaPracticeBlockStatus } from "@prisma/client";
-import { buildDsaRecommendation, type DsaRecommendation } from "@/features/practice/dsa/domain/dsa-recommendation";
+import {
+  buildDsaRecommendation,
+  type DsaRecommendation
+} from "@/features/practice/dsa/domain/dsa-recommendation";
 import type { CandidatePracticeEvidence } from "@/features/practice/shared/domain/practice-evidence";
 import type { FrontendDsaPlan } from "@/lib/roadmap/frontend-plan";
 import type { CandidateProfile } from "@/lib/shared/types";
@@ -7,7 +10,8 @@ import { parseDsaBlockAssessmentReport } from "@/features/practice/dsa/domain/bl
 import type { DsaBlockAssessmentFinalizationService } from "./dsa-block-assessment-finalization.service";
 import {
   DsaPracticeBlockStore,
-  recommendationFromSnapshot
+  recommendationFromSnapshot,
+  type DsaPracticeBlockRecord
 } from "@/features/practice/dsa/server/dsa-practice-block.store";
 
 /**
@@ -20,32 +24,35 @@ export async function buildStableDsaRecommendation(input: {
   plan: FrontendDsaPlan;
   profile: CandidateProfile;
   evidence: CandidatePracticeEvidence | null;
+  loadEvidence?: () => Promise<CandidatePracticeEvidence | null>;
   statuses: Record<string, string>;
   blockStore: DsaPracticeBlockStore;
   finalizationService?: DsaBlockAssessmentFinalizationService;
+  currentBlock?: Promise<DsaPracticeBlockRecord | null>;
 }): Promise<DsaRecommendation | null> {
   // This is lifecycle authority, not a best-effort display enhancement. If a
   // durable read or transition fails, fail the page request rather than show a
   // freshly calculated cohort that may contradict the persisted current one.
-  await input.finalizationService?.recoverCurrent(input.ownerId);
-  let current = await input.blockStore.current(input.ownerId);
+  let current = await (input.currentBlock ?? input.blockStore.currentWithReadiness(input.ownerId));
+  if (current?.status === DsaPracticeBlockStatus.ASSESSMENT_IN_PROGRESS) {
+    const recovered = await input.finalizationService?.recoverCurrent(input.ownerId);
+    if (recovered) current = await input.blockStore.currentWithReadiness(input.ownerId);
+  }
   if (current) {
-    current = await input.blockStore.refreshReadiness(input.ownerId);
     if (current && current.status !== DsaPracticeBlockStatus.ASSESSED) {
       // Durable snapshots preserve the exact recommendation copy as well as
       // the cohort. Legacy JSON rows lack that copy, so reconstruct only their
       // frozen question set while preserving backward compatibility.
-      return (
-        recommendationFromSnapshot(current.recommendationSnapshot) ??
-        buildDsaRecommendation({
-          plan: input.plan,
-          profile: input.profile,
-          evidence: input.evidence,
-          statuses: input.statuses,
-          blockQuestionSlugs: current.questionSlugs,
-          retainCompletedQuestions: true
-        })
-      );
+      const snapshot = recommendationFromSnapshot(current.recommendationSnapshot);
+      if (snapshot) return snapshot;
+      return buildDsaRecommendation({
+        plan: input.plan,
+        profile: input.profile,
+        evidence: input.evidence ?? (await input.loadEvidence?.()) ?? null,
+        statuses: input.statuses,
+        blockQuestionSlugs: current.questionSlugs,
+        retainCompletedQuestions: true
+      });
     }
   }
 
@@ -55,7 +62,7 @@ export async function buildStableDsaRecommendation(input: {
   const nextRecommendation = buildDsaRecommendation({
     plan: input.plan,
     profile: input.profile,
-    evidence: input.evidence,
+    evidence: input.evidence ?? (await input.loadEvidence?.()) ?? null,
     statuses: input.statuses,
     assessmentReport
   });

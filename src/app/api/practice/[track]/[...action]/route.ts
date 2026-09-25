@@ -1,4 +1,8 @@
 import type { NextRequest } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { after } from "next/server";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { refreshPracticeHome } from "@/features/practice/shared/server/refresh-practice-home";
 
 import { ApiRouteError } from "@/server/http/api-error";
 import { apiError } from "@/server/http/api-response";
@@ -115,7 +119,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
     );
   }
 
-  return handler(request);
+  const response = await handler(request);
+  if (response.ok && !["draft", "hint", "run"].includes(action.at(-1) ?? "")) {
+    after(async () => {
+      const { userId } = await auth();
+      if (userId) await refreshPracticeHome(authenticatedOwnerId(userId));
+    });
+  }
+  return response;
 }
 
 export async function GET(request: NextRequest, context: RouteContext) {

@@ -58,9 +58,16 @@ export class ResumeRoastService {
     private readonly generator: Pick<ResumeRoastGenerator, "generate">
   ) {}
 
-  async state(ownerId: string): Promise<ResumeRoastState> {
-    const current = await this.currentResume(ownerId);
-    if (!current) {
+  async state(
+    ownerId: string,
+    suppliedProfile?: CandidateProfile | Promise<CandidateProfile>
+  ): Promise<ResumeRoastState> {
+    const [profile, target, history] = await Promise.all([
+      suppliedProfile ?? this.profiles.get(ownerId),
+      this.store.getTarget(ownerId),
+      this.store.getReadyHistory(ownerId)
+    ]);
+    if (!buildResumeRoastSnapshot(profile.resume)) {
       return {
         hasResume: false,
         target: null,
@@ -70,13 +77,34 @@ export class ResumeRoastService {
       };
     }
 
-    const target = await this.store.getTarget(ownerId);
-    const previousRoast = await this.store.getLatestReady(ownerId, current.version.id);
-    const history = await this.store.getReadyHistory(ownerId);
+    // Existing profiles normally already have a version. Preserve the legacy
+    // first-read repair only for profiles created before version persistence.
+    let versionId = profile.resume?.versionId;
+    if (!versionId) {
+      try {
+        versionId = (await this.profiles.ensureActiveResumeVersion(ownerId)).id;
+      } catch (error) {
+        if (hasCode(error, "RESUME_REQUIRED")) {
+          return {
+            hasResume: false,
+            target: null,
+            suggestedTarget: null,
+            previousRoast: null,
+            history: []
+          };
+        }
+        throw error;
+      }
+    }
+    let previousRoast = history.find((roast) => roast.resumeProfileVersionId === versionId);
+    if (!previousRoast) {
+      previousRoast =
+        (await this.store.getLatestReady(ownerId, versionId)) ?? undefined;
+    }
     return {
       hasResume: true,
       target,
-      suggestedTarget: suggestTarget(current.profile),
+      suggestedTarget: suggestTarget(profile),
       previousRoast: previousRoast ? publicRecord(previousRoast) : null,
       history: history.map(publicHistoryRecord)
     };

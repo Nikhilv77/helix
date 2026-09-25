@@ -52,7 +52,21 @@ describe("AppliedEngineeringPracticePage", () => {
   it("shows the shared confirmation gate only for an eligible path", async () => {
     render(await AppliedEngineeringPracticePage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByTestId("technology-welcome")).toBeInTheDocument();
+    // No current block means no assessment to recover.
+    expect(mocks.recoverCurrentInterview).not.toHaveBeenCalled();
+  });
+
+  it("recovers an interrupted assessment before showing the current incident", async () => {
+    mocks.current
+      .mockResolvedValueOnce({ id: "current", ordinal: 1, assessment: { status: "IN_PROGRESS" } })
+      .mockResolvedValueOnce({ id: "current", ordinal: 1, assessment: { status: "COMPLETED" } });
+    mocks.historyList.mockResolvedValue([{ id: "current", ordinal: 1, isCurrent: true }]);
+
+    render(await AppliedEngineeringPracticePage({ searchParams: Promise.resolve({}) }));
+
     expect(mocks.recoverCurrentInterview).toHaveBeenCalledWith("owner-one");
+    expect(mocks.current).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId("incident")).toHaveAttribute("data-block", "current");
   });
 
   it("loads only the owner's requested history block and derives navigation", async () => {

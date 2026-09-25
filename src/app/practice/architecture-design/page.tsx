@@ -24,29 +24,33 @@ export default async function ArchitectureDesignPracticePage({
   const app = getAppContainer();
   const services = app.architectureDesign;
   const allowEarlyAssessmentStart = app.config.nodeEnv === "development";
-  const recovery = services.assessment.recoverCurrentInterview(ownerId).catch(() => null);
   const query = await searchParams;
   const requestedBlockId = typeof query.block === "string" ? query.block : null;
-  await recovery;
-  const [eligibility, currentBlock, historyList] = await Promise.all([
+  const [eligibility, initialBlock, initialHistory] = await Promise.all([
     services.eligibility.forProfile(profile),
-    services.practice.current(ownerId),
+    requestedBlockId
+      ? services.history.read(ownerId, requestedBlockId).catch((error) => {
+          if (
+            error instanceof NotFoundErrorException &&
+            error.code === "ARCHITECTURE_DESIGN_BLOCK_NOT_FOUND"
+          ) redirect("/practice/architecture-design");
+          throw error;
+        })
+      : services.practice.current(ownerId),
     services.history.list(ownerId)
   ]);
-
-  let block = currentBlock;
-  if (requestedBlockId) {
-    try {
-      block = await services.history.read(ownerId, requestedBlockId);
-    } catch (error) {
-      if (
-        error instanceof NotFoundErrorException &&
-        error.code === "ARCHITECTURE_DESIGN_BLOCK_NOT_FOUND"
-      ) {
-        redirect("/practice/architecture-design");
-      }
-      throw error;
-    }
+  let block = initialBlock;
+  let historyList = initialHistory;
+  if (
+    !requestedBlockId &&
+    block?.assessment &&
+    ["IN_PROGRESS", "FINALIZING"].includes(block.assessment.status)
+  ) {
+    await services.assessment.recoverCurrentInterview(ownerId).catch(() => null);
+    [block, historyList] = await Promise.all([
+      services.practice.current(ownerId),
+      services.history.list(ownerId)
+    ]);
   }
 
   const needsFirstScenario = !block && eligibility.available;

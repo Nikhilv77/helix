@@ -18,6 +18,7 @@ import type {
   PreparationOnboardingState
 } from "@/features/preparation-onboarding/domain/preparation-onboarding";
 import type { PersonalizedInterviewPlan } from "@/features/interviews/domain/personalized-plan";
+import { markSummaryDataChanged } from "@/lib/workspace/summary-cache-invalidation";
 
 export class ApiClientError extends Error {
   readonly code: string;
@@ -78,6 +79,7 @@ async function request<TData>(
     });
   }
 
+  if (options.method && options.method !== "GET") markSummaryDataChanged();
   return payload.data as TData;
 }
 
@@ -133,8 +135,8 @@ export function skipDsaBlockAssessmentCode(params: {
 
 export const skipBlockAssessmentCode = skipDsaBlockAssessmentCode;
 
-export function getSession(sessionId: string): Promise<SessionResponse> {
-  return request<SessionResponse>(`/api/interview/${sessionId}`);
+export function getSession(sessionId: string, signal?: AbortSignal): Promise<SessionResponse> {
+  return request<SessionResponse>(`/api/interview/${sessionId}`, { signal });
 }
 
 export function endInterview(sessionId: string): Promise<SessionResponse> {

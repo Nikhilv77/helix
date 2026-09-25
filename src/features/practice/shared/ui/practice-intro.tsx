@@ -6,7 +6,7 @@ import { ArrowRight, Loader2, Play, Volume2 } from "lucide-react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import type { DsaRecommendation } from "@/features/practice/dsa/domain/dsa-recommendation";
-import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
+import type { DsaPageRoadmap } from "@/lib/roadmap/roadmap";
 import { useMayaVoice, voiceUrl } from "@/infrastructure/realtime/use-maya-voice";
 
 /** The compact roadmap heading and active-pattern teacher panel. */
@@ -20,7 +20,7 @@ export function PracticeIntro({
   nextQuestionTitle
 }: {
   purpose: string;
-  roadmap: FrontendRoadmapHome | null;
+  roadmap: DsaPageRoadmap | null;
   recommendation?: DsaRecommendation | null;
   completedQuestions?: number;
   nextHref: string | null;

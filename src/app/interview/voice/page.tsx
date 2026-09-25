@@ -19,6 +19,7 @@ export default async function VoiceInterviewPage({
       {/* The resume backs the document preview in a resume round. It is already
           loaded here, so passing it costs nothing extra. */}
       <VoiceInterviewClient
+        key={sessionId}
         sessionId={sessionId}
         workspaceAccent={profile.workspaceAccent}
         resume={profile.resume}

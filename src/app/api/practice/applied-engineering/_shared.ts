@@ -19,6 +19,10 @@ export function appliedEngineeringOwner(policy?: RateLimitPolicy) {
   return routeAccess.owner(policy);
 }
 
+export function appliedEngineeringMutationOwner(policy: RateLimitPolicy) {
+  return routeAccess.compactOwner(policy);
+}
+
 export function requireAppliedEngineeringEligibility(
   app: ReturnType<typeof getAppContainer>,
   profile: CandidateProfile

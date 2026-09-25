@@ -142,8 +142,85 @@ export class ArchitectureDesignPracticeService {
     return block ? publicBlock(block) : null;
   }
 
+  /** Only the fields used by the Practice landing card. */
+  async currentEntryBlock(ownerId: string) {
+    const block = await this.prisma.architectureBlock.findFirst({
+      where: { ownerId, isCurrent: true },
+      select: {
+        status: true,
+        scenarioSnapshot: true,
+        selectionSnapshot: true,
+        questions: {
+          select: { status: true, _count: { select: { attempts: true } } }
+        }
+      }
+    });
+    if (!block) return null;
+    const scenario = architectureDesignScenarioSchema.parse(block.scenarioSnapshot);
+    const selection = architectureDesignScenarioSelectionSchema.parse(block.selectionSnapshot);
+    return {
+      status: block.status,
+      scenario: {
+        title: scenario.title,
+        premise: scenario.premise,
+        dimensionKeys: scenario.dimensionKeys,
+        expectedMinutes: scenario.expectedMinutes
+      },
+      selection: { difficulty: selection.selectedScenario.difficulty },
+      questions: block.questions.map((question) => ({
+        status: question.status,
+        latestAttempt: question._count.attempts > 0 ? true : null
+      }))
+    };
+  }
+
   async question(ownerId: string, questionId: string) {
     return publicQuestion(await this.findQuestion(ownerId, questionId));
+  }
+
+  /** One question plus small navigation metadata; no other answer or assessment payloads. */
+  async questionWorkspace(ownerId: string, questionId: string, blockId: string | null) {
+    const row = await this.prisma.architectureBlockQuestion.findFirst({
+      where: {
+        id: questionId,
+        ownerId,
+        block: blockId ? { id: blockId, ownerId } : { isCurrent: true, ownerId }
+      },
+      select: {
+        ...questionReadSelect,
+        block: {
+          select: {
+            id: true,
+            isCurrent: true,
+            status: true,
+            scenarioSnapshot: true,
+            selectionSnapshot: true,
+            questions: { orderBy: { order: "asc" }, select: { id: true, order: true } }
+          }
+        }
+      }
+    });
+    if (!row) return null;
+    const scenario = architectureDesignScenarioSchema.parse(row.block.scenarioSnapshot);
+    const selection = architectureDesignScenarioSelectionSchema.parse(row.block.selectionSnapshot);
+    return {
+      block: {
+        id: row.block.id,
+        status: row.block.status,
+        story: {
+          ...scenario,
+          incident: scenario.premise,
+          difficulty: selection.selectedScenario.difficulty,
+          mechanismKeys: scenario.dimensionKeys
+        },
+        selection: {
+          difficulty: selection.selectedScenario.difficulty,
+          reason: selection.reason
+        },
+        questions: row.block.questions
+      },
+      question: publicQuestion(row)
+    };
   }
 
   async checkKnowledge(ownerId: string, rawInput: unknown) {

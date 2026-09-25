@@ -14,6 +14,7 @@ import { WORKSPACE_HELP_CHANGED_EVENT } from "@/features/peer-help/ui/help-ui-ev
 import { WORKSPACE_NOTIFICATIONS_CHANGED_EVENT } from "@/features/notifications/ui/notification-ui-events";
 
 const POLL_BACKOFF_MS = [60_000, 120_000, 300_000] as const;
+const COACHING_RECHECK_MS = [4_000, 8_000, 16_000, 30_000] as const;
 
 export interface NotificationSender {
   label: string;
@@ -96,11 +97,31 @@ export function WorkspaceNotificationPollingProvider({ children }: { children: R
     let timer: number | null = null;
     let statusInFlight = false;
     let forceRefreshQueued = false;
+    let coachingRecheckIndex: number = COACHING_RECHECK_MS.length;
+    let coachingRecheckDay: string | null = null;
+    let coachingWasPending = false;
+    let coachingFallbackStarted = false;
 
     function scheduleNext() {
       if (timer !== null) window.clearTimeout(timer);
       if (!mountedRef.current || document.visibilityState !== "visible") return;
-      timer = window.setTimeout(() => void checkStatus(), POLL_BACKOFF_MS[backoffIndex]);
+      if (
+        coachingWasPending &&
+        coachingRecheckIndex === COACHING_RECHECK_MS.length &&
+        !coachingFallbackStarted
+      ) {
+        // Return to the one-minute poll even if the last quick check failed.
+        coachingFallbackStarted = true;
+        backoffIndex = 0;
+      }
+      const coachingDelay = COACHING_RECHECK_MS[coachingRecheckIndex];
+      if (coachingDelay !== undefined) coachingRecheckIndex += 1;
+      // Spread simultaneous sign-ins across a wider window of status reads.
+      const delay =
+        coachingDelay === undefined
+          ? POLL_BACKOFF_MS[backoffIndex]
+          : Math.round(coachingDelay * (0.75 + Math.random() * 0.5));
+      timer = window.setTimeout(() => void checkStatus(), delay);
     }
 
     async function checkStatus(forceFullRefresh = false): Promise<void> {
@@ -133,9 +154,24 @@ export function WorkspaceNotificationPollingProvider({ children }: { children: R
         statusVersion = nextVersion;
         setUnread(payload.data?.unread ?? 0);
 
-        if (forceFullRefresh || changed) await refresh();
+        const coachingPending = payload.data?.coachingPending === true;
+        const coachingFinished = coachingWasPending && !coachingPending;
+        coachingWasPending = coachingPending;
+        const today = new Date().toISOString().slice(0, 10);
+        if (coachingPending && coachingRecheckDay !== today) {
+          coachingRecheckDay = today;
+          coachingRecheckIndex = 0;
+          coachingFallbackStarted = false;
+        }
+        if (!coachingPending) {
+          coachingRecheckIndex = COACHING_RECHECK_MS.length;
+        }
+
+        if (forceFullRefresh || changed || coachingFinished) await refresh();
         backoffIndex =
-          forceFullRefresh || changed ? 0 : Math.min(backoffIndex + 1, POLL_BACKOFF_MS.length - 1);
+          forceFullRefresh || changed || coachingFinished
+            ? 0
+            : Math.min(backoffIndex + 1, POLL_BACKOFF_MS.length - 1);
       } catch {
         // Preserve the current inbox and retry on the next scheduled check.
         if (forceFullRefresh) await refresh();

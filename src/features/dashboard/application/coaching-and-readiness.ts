@@ -108,7 +108,8 @@ export function buildCoaching(
         eyebrow: "Welcome back",
         title: "Restart small; your progress is still here.",
         body: `You already completed ${completed} ${plural(completed, "question")}. It has been ${daysAway} days since your last activity.${next} There is no need to catch up all at once.`,
-        spokenSummary: "Welcome back. Your progress is still here, so restart with one focused question.",
+        spokenSummary:
+          "Welcome back. Your progress is still here, so restart with one focused question.",
         actionLabel: nextQuestion ? "Continue next question" : "Continue practice",
         actionHref: nextQuestionHref
       };
@@ -270,7 +271,7 @@ export function buildReadiness(
       label: "Still forming",
       detail: "Answer at least one interview question to establish a readiness signal.",
       actionLabel: "Start interview",
-      actionHref: "/interview"
+      actionHref: "/interviews"
     };
   }
 

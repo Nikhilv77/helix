@@ -40,6 +40,18 @@ const DASHBOARD_NEXT_QUESTION_SELECT = {
   chapterProgress: { select: { chapterTemplate: { select: { title: true } } } }
 } satisfies Prisma.UserQuestionProgressSelect;
 
+export interface DashboardNextQuestionCacheKey {
+  id: string;
+  nextQuestionKey: string | null;
+  updatedAt: Date;
+  recalculatedAt: Date | null;
+}
+
+export type DashboardNextQuestionCache = (
+  roadmap: DashboardNextQuestionCacheKey,
+  load: () => Promise<ProgressNextUp | null>
+) => Promise<ProgressNextUp | null>;
+
 /**
  * Reads the /progress page's data. Strictly read-only — unlike
  * `FrontendRoadmapService.home`, opening this page can never seed a roadmap,
@@ -88,7 +100,11 @@ export class ProgressService {
    * one next question instead of hydrating every session, chapter, and
    * question needed by the full analytics page.
    */
-  async dashboard(ownerId: string, now: Date = new Date()): Promise<ProgressDashboardOverview> {
+  async dashboard(
+    ownerId: string,
+    now: Date = new Date(),
+    cacheNextQuestion?: DashboardNextQuestionCache
+  ): Promise<ProgressDashboardOverview> {
     const windowStart = startOfUtcDay(new Date(now.getTime() - (WINDOW_DAYS - 1) * DAY_MS));
     const [roadmap, attempts] = await Promise.all([
       this.prisma.userRoadmap.findUnique({
@@ -96,6 +112,8 @@ export class ProgressService {
         select: {
           id: true,
           nextQuestionKey: true,
+          updatedAt: true,
+          recalculatedAt: true,
           totalQuestions: true,
           completedQuestions: true
         }
@@ -106,10 +124,15 @@ export class ProgressService {
         select: { status: true, createdAt: true }
       })
     ]);
-
     const activity = buildActivity(attempts, windowStart, now);
     const streak = buildStreak(attempts, now);
-    const nextQuestion = roadmap ? await this.findDashboardNextQuestion(roadmap) : null;
+    const nextUp = roadmap
+      ? await (cacheNextQuestion
+          ? cacheNextQuestion(roadmap, async () =>
+              buildDashboardNextUp(await this.findDashboardNextQuestion(roadmap))
+            )
+          : this.findDashboardNextQuestion(roadmap).then(buildDashboardNextUp))
+      : null;
 
     return {
       totals: {
@@ -124,7 +147,7 @@ export class ProgressService {
         lastActiveAt: streak.lastActiveAt
       },
       activity: activity.slice(-7),
-      nextUp: buildDashboardNextUp(nextQuestion)
+      nextUp
     };
   }
 
@@ -561,7 +584,7 @@ function buildSessions(roadmap: RoadmapRow): ProgressSessionRow[] {
     totalQuestions: session.totalQuestions,
     completedQuestions: session.completedQuestions,
     percent: percent(session.completedQuestions, session.totalQuestions),
-    href: sessionHref(session.sessionTemplate.slug, session.sessionTemplate.title)
+    href: sessionHref(session.sessionTemplate.slug)
   }));
 }
 
@@ -694,9 +717,9 @@ function expectedMinutesOf(question: QuestionRow): number {
   );
 }
 
-function sessionHref(slug: string, title: string): string {
+function sessionHref(slug: string): string {
   if (slug === "dsa") return "/practice";
-  return `/interview?${new URLSearchParams({ focus: title }).toString()}`;
+  return "/interviews";
 }
 
 function dayKey(date: Date): string {

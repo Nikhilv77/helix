@@ -74,9 +74,9 @@ export class HelpSessionService {
    * Repair conversations whose browser disappeared before it could close them.
    *
    * A helper claim with no room is released after a short grace period. A room
-   * that reached the normal call cap is ended and resolved. This runs before an
-   * inbox is listed, so abandoned rows cannot leave both people permanently
-   * "busy" and silently suppress future notifications.
+   * that reached the normal call cap is ended and resolved. Workspace polling
+   * schedules this cleanup for active owners so abandoned rows cannot leave
+   * both people permanently "busy" and suppress future notifications.
    */
   async reconcileStale(now = new Date()): Promise<ReconciledHelpConversation[]> {
     return this.reconcileStaleWhere(now);

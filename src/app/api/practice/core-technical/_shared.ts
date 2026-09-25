@@ -15,12 +15,12 @@ const routeAccess = createStoryPracticeRouteAccess({
   eligibility: (app, profile) => app.coreTechnicalEligibilityService.forProfile(profile)
 });
 
-export function coreTechnicalOwner(): Promise<{
+export function coreTechnicalOwner(policy?: RateLimitPolicy): Promise<{
   ownerId: string;
   app: AppContainer;
   profile: CandidateProfile;
 }> {
-  return routeAccess.owner();
+  return routeAccess.owner(policy);
 }
 
 /** Prevents direct mutation calls from bypassing the fail-closed launch card and page. */
@@ -32,7 +32,7 @@ export function requireCoreTechnicalLaunchEligibility(
 }
 
 export function coreTechnicalMutationOwner(policy: RateLimitPolicy) {
-  return routeAccess.owner(policy);
+  return routeAccess.compactOwner(policy);
 }
 
 export function parseCoreTechnicalJson<TSchema extends z.ZodTypeAny>(

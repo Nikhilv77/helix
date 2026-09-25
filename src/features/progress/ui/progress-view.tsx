@@ -26,7 +26,8 @@ type ProgressBriefing = {
 
 export type ProgressStarterQuestion = {
   title: string;
-  difficulty: "easy" | "medium" | "hard";
+  /** AI/ML paths have no difficulty rating. */
+  difficulty: "easy" | "medium" | "hard" | null;
   minutes: number;
   href: string;
   chapterTitle: string;
@@ -177,7 +178,8 @@ function StarterQuestionCards({ questions }: { questions: ProgressStarterQuestio
             <p className="mt-3 text-base leading-6 text-cream/72">{question.chapterTitle}</p>
             <div className="mt-8 flex items-center justify-between gap-3 text-[15px] font-medium text-cream/82">
               <span>
-                {question.difficulty} · {question.minutes} min
+                {question.difficulty ? `${question.difficulty} · ` : ""}
+                {question.minutes} min
               </span>
               <span className="inline-flex items-center gap-1.5">
                 Start

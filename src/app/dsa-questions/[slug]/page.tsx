@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
 import { ArrowLeft, ChevronRight, Clock, ExternalLink } from "lucide-react";
 import { DsaProblemPanel } from "@/features/practice/dsa/ui/dsa-problem-panel";
 import { DsaQuestionActions } from "@/features/practice/dsa/ui/dsa-question-actions";
@@ -11,6 +10,8 @@ import { dsaPhases, findQuestion } from "@/features/practice/dsa/domain/dsa";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { getUserIdForRequest } from "@/server/auth/request-user";
+import { getWorkspaceShellStateForRequest } from "@/features/profile/server/profile-query";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export async function generateMetadata({
 
 /** A compact, viewport-sized practice workspace inspired by coding platforms. */
 export default async function DsaQuestionPage({ params }: { params: Promise<{ slug: string }> }) {
+  const startedAt = performance.now();
   const { slug } = await params;
   const found = findQuestion(slug);
   if (!found) redirect("/practice/dsa");
@@ -41,17 +43,26 @@ export default async function DsaQuestionPage({ params }: { params: Promise<{ sl
     patternQuestions.findIndex((item) => item.slug === question.slug)
   );
   const next = patternQuestions[currentIndex + 1] ?? found.next;
-  const { userId } = await auth();
-  const [progress, initialLanguage] = userId
+  const userId = await getUserIdForRequest();
+  const [progress, shell] = userId
     ? await Promise.all([
-        getAppContainer()
-          .frontendRoadmapService.questionState(authenticatedOwnerId(userId), slug)
-          .catch(() => null),
-        getAppContainer()
-          .profileService.dsaEditorLanguage(authenticatedOwnerId(userId))
-          .catch(() => "javascript" as const)
+        timedQuestionRead(
+          "progress",
+          getAppContainer()
+            .frontendRoadmapService.questionState(authenticatedOwnerId(userId), slug)
+            .catch(() => null)
+        ),
+        getWorkspaceShellStateForRequest(authenticatedOwnerId(userId)).catch(() => null)
       ])
-    : [null, "javascript" as const];
+    : [null, null];
+  const initialLanguage = shell?.dsaEditorLanguage ?? "javascript";
+  const durationMs = Math.round(performance.now() - startedAt);
+  if (durationMs >= 1_000) {
+    console.warn(
+      "[DsaQuestionPage]",
+      JSON.stringify({ event: "dsa_question_page_slow", durationMs })
+    );
+  }
 
   return (
     <main className="practice-question-page w-full bg-black p-2 sm:p-3 xl:h-[calc(100svh-4.25rem)] xl:overflow-hidden">
@@ -119,6 +130,21 @@ export default async function DsaQuestionPage({ params }: { params: Promise<{ sl
       </div>
     </main>
   );
+}
+
+async function timedQuestionRead<T>(source: string, read: Promise<T>): Promise<T> {
+  const startedAt = performance.now();
+  try {
+    return await read;
+  } finally {
+    const durationMs = Math.round(performance.now() - startedAt);
+    if (durationMs >= 1_000) {
+      console.warn(
+        "[DsaQuestionPage]",
+        JSON.stringify({ event: "dsa_question_read_slow", source, durationMs })
+      );
+    }
+  }
 }
 
 function QuestionMeta({ question }: { question: DsaQuestion }) {

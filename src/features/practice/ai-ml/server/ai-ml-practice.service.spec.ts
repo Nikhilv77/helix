@@ -5,6 +5,9 @@ import {
   type Prisma
 } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
+import { aiMlPracticeQuestionCount } from "@/features/practice/ai-ml/domain/ai-ml-story-catalog";
+import { aiMlStarterPractice } from "@/features/practice/ai-ml/domain/resume-practice-path";
+import type { CandidateProfile } from "@/lib/shared/types";
 import type { PrismaService } from "@/server/database/prisma.service";
 import { AiMlPracticeService } from "./ai-ml-practice.service";
 
@@ -248,6 +251,81 @@ describe("AiMlPracticeService", () => {
       }
     ]);
   });
+  it("projects AI/ML practice into the Overview counters and next question", async () => {
+    const now = new Date("2026-09-24T12:00:00.000Z"); // Thursday
+    const service = new AiMlPracticeService(
+      prisma({
+        aiMlPracticeSession: {
+          findMany: vi.fn().mockResolvedValue([
+            {
+              track: AiMlPracticeTrack.CORE_TECHNICAL,
+              questions: [
+                dashboardQuestion(
+                  "q1",
+                  AiMlPracticeQuestionStatus.COMPLETED,
+                  "2026-09-23T10:00:00Z"
+                ),
+                dashboardQuestion("q2", AiMlPracticeQuestionStatus.LEARNED, "2026-09-24T09:00:00Z"),
+                dashboardQuestion(
+                  "q3",
+                  AiMlPracticeQuestionStatus.ACTIVE,
+                  null,
+                  "Pick the threshold"
+                )
+              ]
+            }
+          ])
+        }
+      })
+    );
+    const profile = { resume: null, level: "0-2" } as unknown as CandidateProfile;
+
+    const result = await service.dashboardPractice(ownerId, profile, 7, now);
+
+    expect(result).toMatchObject({
+      totalQuestions:
+        aiMlPracticeQuestionCount("core-technical") +
+        aiMlPracticeQuestionCount("applied-engineering"),
+      completedQuestions: 2,
+      totalAttempts: 2,
+      solvedThisWeek: 2,
+      currentStreakDays: 2,
+      lastActiveAt: Date.parse("2026-09-24T09:00:00Z"),
+      nextUp: {
+        title: "Pick the threshold",
+        href: "/practice/ai-ml/core-technical/questions/q3",
+        chapterTitle: "Core Technical · AI/ML"
+      }
+    });
+    expect(result.activity.slice(-2)).toEqual([
+      { date: "2026-09-23", solved: 1, attempts: 1 },
+      { date: "2026-09-24", solved: 1, attempts: 1 }
+    ]);
+  });
+
+  it("points a new AI/ML candidate at the first track before any cohort exists", async () => {
+    const service = new AiMlPracticeService(
+      prisma({ aiMlPracticeSession: { findMany: vi.fn().mockResolvedValue([]) } })
+    );
+    const profile = { resume: null, level: "0-2" } as unknown as CandidateProfile;
+
+    const result = await service.dashboardPractice(ownerId, profile);
+
+    expect(result.completedQuestions).toBe(0);
+    expect(result.totalQuestions).toBeGreaterThan(0);
+    expect(result.nextUp).toMatchObject({ href: "/practice/ai-ml/core-technical" });
+  });
+
+  it("suggests AI/ML starter paths instead of DSA questions", () => {
+    const profile = { resume: null, level: "0-2" } as unknown as CandidateProfile;
+
+    const starters = aiMlStarterPractice(profile);
+
+    expect(starters).toHaveLength(3);
+    expect(starters.every((starter) => starter.href.startsWith("/practice/ai-ml/"))).toBe(true);
+    expect(starters.every((starter) => starter.difficulty === null)).toBe(true);
+  });
+
   it("does not submit a legacy choice after the question was learned", async () => {
     const learned = sessionRecord({ questionStatus: AiMlPracticeQuestionStatus.LEARNED });
     const create = vi.fn();
@@ -337,4 +415,21 @@ function prisma(value: Record<string, unknown>): PrismaService {
       )((client) => work({ $executeRaw: vi.fn(), ...client }));
   }
   return value as unknown as PrismaService;
+}
+
+function dashboardQuestion(
+  id: string,
+  status: AiMlPracticeQuestionStatus,
+  finishedAt: string | null,
+  title = `Title ${id}`
+) {
+  const at = finishedAt ? new Date(finishedAt) : null;
+  return {
+    id,
+    status,
+    publicSnapshot: { title, prompt: `Prompt ${id}` },
+    completedAt: status === AiMlPracticeQuestionStatus.COMPLETED ? at : null,
+    learnedAt: status === AiMlPracticeQuestionStatus.LEARNED ? at : null,
+    attempt: at ? { createdAt: at } : null
+  };
 }

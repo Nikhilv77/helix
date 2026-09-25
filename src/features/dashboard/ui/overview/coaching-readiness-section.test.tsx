@@ -97,7 +97,7 @@ describe("CoachingReadinessSection", () => {
             label: "Still forming",
             detail: "Answer an interview question to establish a signal.",
             actionLabel: "Start interview",
-            actionHref: "/interview"
+            actionHref: "/interviews"
           }
         }}
       />
@@ -107,7 +107,7 @@ describe("CoachingReadinessSection", () => {
     expect(screen.queryByText("0")).toBeNull();
     expect(screen.queryByRole("img")).toBeNull();
     expect(screen.getByRole("link", { name: "Start interview" }).getAttribute("href")).toBe(
-      "/interview"
+      "/interviews"
     );
   });
 

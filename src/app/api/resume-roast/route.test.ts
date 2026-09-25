@@ -43,7 +43,8 @@ const mocks = vi.hoisted(() => ({
   state: vi.fn(),
   prepare: vi.fn(),
   finishClaim: vi.fn(),
-  delete: vi.fn()
+  delete: vi.fn(),
+  scheduleAnalyticsRefresh: vi.fn()
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: mocks.auth }));
@@ -53,6 +54,13 @@ vi.mock("@/features/interviews/server/owner", () => ({
 vi.mock("@/server/rate-limit/shared-guard", () => ({
   RATE_LIMIT_POLICIES: { resumeRoastGeneration: { namespace: "resume-roast-generate" } },
   getSharedGuard: () => ({ enforce: mocks.enforce })
+}));
+// GET reads the prepared page snapshot; its builder calls the service state.
+vi.mock("@/features/resume-roast/server/resume-roast-page-data", () => ({
+  loadResumeRoastPageData: async (ownerId: string) => ({ state: await mocks.state(ownerId) })
+}));
+vi.mock("@/features/analytics/server/refresh-candidate-analytics", () => ({
+  scheduleCandidateAnalyticsRefresh: mocks.scheduleAnalyticsRefresh
 }));
 vi.mock("@/server/app-container", () => ({
   getAppContainer: () => ({
@@ -254,6 +262,7 @@ describe("/api/resume-roast", () => {
 
     expect(response.status).toBe(200);
     expect(mocks.delete).toHaveBeenCalledWith("user:clerk-1", roast.id);
+    expect(mocks.scheduleAnalyticsRefresh).toHaveBeenCalledWith("user:clerk-1");
   });
 });
 

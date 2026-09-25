@@ -118,7 +118,7 @@ describe("Core Technical & Projects frozen plan", () => {
     expect(questions[0]?.prompt).toContain("model");
   });
 
-  it("uses an AI/ML production scenario and Python evaluation task in the combined round", () => {
+  it("uses an AI/ML production scenario and an evaluation task in the project's language", () => {
     const core = blueprint("core-technical");
     const applied = blueprint("applied-engineering");
     const mcqs = selectTechnicalProjectMcqs({
@@ -148,11 +148,22 @@ describe("Core Technical & Projects frozen plan", () => {
       projectAct: "failure",
       topicKey: `project:${project.sourceId}`
     });
+    // AI/ML candidates code in their project's language (Node here); Python is
+    // only the default when the project names no supported language.
     expect(plan[6]).toMatchObject({
       kind: "code",
-      language: "python",
+      language: "javascript",
       codeTask: expect.stringContaining("accuracy by segment")
     });
+
+    const languageless = buildTechnicalProjectsPlan({
+      coreBlueprint: core,
+      appliedBlueprint: applied,
+      mcqs,
+      project: { ...project, skillKeys: ["model-evaluation"] },
+      targetRole: "ai-ml"
+    });
+    expect(languageless[6]).toMatchObject({ kind: "code", language: "python" });
   });
 
   it("builds three deterministic MCQs, three project prompts, and project coding", () => {

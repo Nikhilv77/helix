@@ -92,7 +92,10 @@ const DEFAULT_HARD_CAP_MS = 15 * 60 * 1000;
  */
 const AVATAR_OVERRIDE = process.env.NEXT_PUBLIC_AVATAR_URL ?? "";
 const AVATAR_DISABLED = AVATAR_OVERRIDE.toLowerCase() === "off";
-const POLL_MS = 1500;
+const SESSION_RETRY_MS = 5_000;
+const SESSION_CONNECTING_RECOVERY_MS = 10_000;
+const SESSION_LIVE_RECOVERY_MS = 30_000;
+const SESSION_READ_TIMEOUT_MS = 15_000;
 const MIC_SILENCE_WARNING_MS = 6_000;
 const MIC_DEVICE_STORAGE_KEY = "trailgrad.preferredMicrophone";
 const LEGACY_CORE_TECHNICAL_ASSESSMENT_STAGES = [
@@ -206,6 +209,8 @@ export function VoiceInterviewClient({
   const [candidateCameraStream, setCandidateCameraStream] = useState<MediaStream | null>(null);
 
   const stopPollingRef = useRef(false);
+  const sessionRefreshRef = useRef<Promise<void> | null>(null);
+  const queuedSessionRefreshRef = useRef<Promise<void> | null>(null);
   const sessionCompleteRef = useRef(false);
   const reportNotificationRef = useRef(false);
   const liveTurnPendingRef = useRef(false);
@@ -651,12 +656,15 @@ export function VoiceInterviewClient({
 
   */
 
-  // The transcript comes from the brain, which records every turn with
-  // millisecond timings.
-  const poll = useCallback(async () => {
+  // The saved session is authoritative. Gemini's live transcript is only the
+  // immediate preview until a completed turn has been persisted.
+  const readSession = useCallback(async () => {
     if (!sessionId || stopPollingRef.current) return;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), SESSION_READ_TIMEOUT_MS);
     try {
-      const session = await getSession(sessionId);
+      const session = await getSession(sessionId, controller.signal);
+      if (queuedSessionRefreshRef.current) return;
       turnsRef.current = session.turns;
       setTurns(session.turns);
       setOptimisticUserTurn((pending) =>
@@ -697,6 +705,7 @@ export function VoiceInterviewClient({
         if (!liveTurnPendingRef.current) setStatus("ended");
       }
     } catch (caught) {
+      if (queuedSessionRefreshRef.current) return;
       if (caught instanceof ApiClientError && caught.code === "SESSION_NOT_FOUND") {
         stopPollingRef.current = true;
         sessionCheckedRef.current = false;
@@ -714,18 +723,116 @@ export function VoiceInterviewClient({
         );
       }
       // Other failures are transient; the next tick retries.
+    } finally {
+      window.clearTimeout(timeout);
     }
   }, [sessionId]);
+
+  // Coalesce fallback checks, but queue one fresh read when a saved answer
+  // arrives during an older request. The older response must not win the race.
+  const poll = useCallback(
+    (reason: "event" | "fallback" = "event"): Promise<void> => {
+      if (!sessionId || stopPollingRef.current) return Promise.resolve();
+      const current = sessionRefreshRef.current;
+      if (current) {
+        if (reason === "fallback" || queuedSessionRefreshRef.current) {
+          return queuedSessionRefreshRef.current ?? current;
+        }
+        const queued = current.then(() => {
+          if (queuedSessionRefreshRef.current === queued) queuedSessionRefreshRef.current = null;
+          return readSession();
+        });
+        queuedSessionRefreshRef.current = queued;
+        sessionRefreshRef.current = queued;
+        void queued.finally(() => {
+          if (queuedSessionRefreshRef.current === queued) queuedSessionRefreshRef.current = null;
+          if (sessionRefreshRef.current === queued) sessionRefreshRef.current = null;
+        });
+        return queued;
+      }
+
+      const request = readSession();
+      sessionRefreshRef.current = request;
+      void request.finally(() => {
+        if (sessionRefreshRef.current === request) sessionRefreshRef.current = null;
+      });
+      return request;
+    },
+    [readSession, sessionId]
+  );
 
   useEffect(() => {
     if (agentState === "speaking") revealLatestAgentTurn();
   }, [agentState, revealLatestAgentTurn, turns]);
 
   useEffect(() => {
-    void poll();
-    const timer = window.setInterval(() => void poll(), POLL_MS);
-    return () => window.clearInterval(timer);
+    if (document.visibilityState === "visible" && navigator.onLine !== false) void poll();
   }, [poll]);
+
+  useEffect(() => {
+    const recoveryDelay = !sessionChecked
+      ? SESSION_RETRY_MS
+      : status === "live"
+        ? SESSION_LIVE_RECOVERY_MS
+        : SESSION_CONNECTING_RECOVERY_MS;
+    let timer: number | null = null;
+    let cancelled = false;
+    let lastWakeAt = Number.NEGATIVE_INFINITY;
+
+    const clearTimer = () => {
+      if (timer !== null) window.clearTimeout(timer);
+      timer = null;
+    };
+    const schedule = () => {
+      clearTimer();
+      if (
+        cancelled ||
+        stopPollingRef.current ||
+        status === "ended" ||
+        sessionUnavailable ||
+        document.visibilityState !== "visible" ||
+        navigator.onLine === false
+      )
+        return;
+      // Spread interviews started together across the database read window.
+      const delay = Math.round(recoveryDelay * (0.9 + Math.random() * 0.2));
+      timer = window.setTimeout(async () => {
+        timer = null;
+        await poll("fallback");
+        schedule();
+      }, delay);
+    };
+    const refreshOnReturn = () => {
+      if (
+        status === "ended" ||
+        sessionUnavailable ||
+        document.visibilityState !== "visible" ||
+        navigator.onLine === false
+      ) {
+        clearTimer();
+        return;
+      }
+      if (Date.now() - lastWakeAt > 1_000) {
+        lastWakeAt = Date.now();
+        void poll();
+      }
+      schedule();
+    };
+
+    schedule();
+    window.addEventListener("focus", refreshOnReturn);
+    window.addEventListener("online", refreshOnReturn);
+    window.addEventListener("offline", clearTimer);
+    document.addEventListener("visibilitychange", refreshOnReturn);
+    return () => {
+      cancelled = true;
+      clearTimer();
+      window.removeEventListener("focus", refreshOnReturn);
+      window.removeEventListener("online", refreshOnReturn);
+      window.removeEventListener("offline", clearTimer);
+      document.removeEventListener("visibilitychange", refreshOnReturn);
+    };
+  }, [poll, sessionChecked, sessionUnavailable, status]);
 
   useEffect(() => {
     if (!typedSending) return;
@@ -1358,7 +1465,15 @@ export function VoiceInterviewClient({
           key={`gemini-live-${persona.id}-${connectionAttempt}`}
           sessionId={sessionId}
           interviewerName={persona.name}
-          onStatus={setStatus}
+          onStatus={(nextStatus) => {
+            setStatus(nextStatus);
+            if (
+              nextStatus === "live" &&
+              document.visibilityState === "visible" &&
+              navigator.onLine !== false
+            )
+              void poll();
+          }}
           onAgentState={(nextState) => {
             if (nextState === "thinking") liveTurnPendingRef.current = true;
             setAgentState(nextState);

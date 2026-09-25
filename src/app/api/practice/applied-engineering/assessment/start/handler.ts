@@ -6,11 +6,11 @@ import {
   getSharedGuard,
   type SharedLease
 } from "@/server/rate-limit/shared-guard";
-import { apiError, appliedEngineeringOwner, parseAppliedEngineeringJson } from "../../_shared";
+import { apiError, appliedEngineeringMutationOwner, parseAppliedEngineeringJson } from "../../_shared";
 export async function POST(r: NextRequest) {
   let lease: SharedLease | undefined;
   try {
-    const { ownerId, app } = await appliedEngineeringOwner(RATE_LIMIT_POLICIES.practiceState);
+    const { ownerId, app } = await appliedEngineeringMutationOwner(RATE_LIMIT_POLICIES.practiceState);
     const input = await parseAppliedEngineeringJson(
       r,
       appliedEngineeringAssessmentStartInputSchema

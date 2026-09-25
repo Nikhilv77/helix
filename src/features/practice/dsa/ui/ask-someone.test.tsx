@@ -93,12 +93,25 @@ describe("AskSomeone", () => {
     expect(screen.getByText("Invitations sent to 2 Trailmates — waiting")).toBeTruthy();
   });
 
-  it("shows a blurred toast and does not send when no helper is available", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(
-        jsonResponse({ success: true, data: { id: null, status: null, helperCount: 0 } })
-      );
+  it("shows a blurred toast when the server finds no helper", async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (input === "/api/help/request" && init?.method === "POST") {
+        return Promise.resolve(
+          jsonResponse(
+            {
+              success: false,
+              error: {
+                code: "HELP_NO_AVAILABLE_HELPERS",
+                message:
+                  "Your invitation was not sent. Keep working with Maya and try again shortly."
+              }
+            },
+            false
+          )
+        );
+      }
+      return Promise.resolve(jsonResponse({ success: true, data: { id: null, status: null } }));
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     render(
@@ -114,12 +127,6 @@ describe("AskSomeone", () => {
       />
     );
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    // helperCount is null until the availability response lands in state, and
-    // waitFor above only proves the call was made. Clicking on the null branch
-    // takes the "helpers available" path and actually sends, which is what made
-    // this test fail roughly one run in three.
-    await act(async () => {});
     expect(screen.queryByText(/Trailmates are available right now/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Ask a mate" }));
 
@@ -128,7 +135,10 @@ describe("AskSomeone", () => {
     expect(screen.getByTestId("help-flow-notice-backdrop").className).toContain(
       "backdrop-blur-[5px]"
     );
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/help/request",
+      expect.objectContaining({ method: "POST" })
+    );
   });
 
   it("shows the server cooldown as a live timer on Ask a mate", async () => {

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CandidateProfile } from "@/lib/shared/types";
 
 const mocks = vi.hoisted(() => ({
-  requireOnboardedProfile: vi.fn(),
+  profileGet: vi.fn(),
   home: vi.fn(),
   insights: vi.fn(),
   activity: vi.fn(),
@@ -20,32 +20,60 @@ const mocks = vi.hoisted(() => ({
   architectureDesignCurrent: vi.fn(),
   architectureDesignAnalytics: vi.fn(),
   aiMlSummaries: vi.fn(),
+  cachedPersonalizedPlan: vi.fn(),
+  dsaCurrentBlock: vi.fn(),
   logError: vi.fn()
 }));
 
-vi.mock("@/server/auth/onboarding-guard", () => ({
-  requireOnboardedProfile: mocks.requireOnboardedProfile
+vi.mock("@clerk/nextjs/server", () => ({
+  auth: async () => ({ userId: "user-1" })
+}));
+
+vi.mock("@/features/interviews/server/owner", () => ({
+  authenticatedOwnerId: () => "owner-1"
+}));
+
+vi.mock("@/server/auth/request-user", () => ({
+  getUserIdForRequest: async () => "user-1"
+}));
+
+vi.mock("next/navigation", () => ({
+  redirect: (path: string) => {
+    throw new Error(`NEXT_REDIRECT:${path}`);
+  }
+}));
+
+vi.mock("@/features/interviews/server/cached-personalized-plan", () => ({
+  cachedPersonalizedPlan: mocks.cachedPersonalizedPlan
 }));
 
 // The page reads three services. Mocking only `home` made every test throw
 // inside Promise.all before reaching its assertion.
 vi.mock("@/server/app-container", () => ({
   getAppContainer: () => ({
+    profileService: { get: mocks.profileGet },
+    practiceHomeSnapshotStore: {
+      readOrBuild: async (_ownerId: string, build: () => Promise<{ view: { props: unknown } }>) =>
+        (await build()).view.props
+    },
     practiceRoadmapService: { home: mocks.home, activity: mocks.activity },
     interviewService: { insights: mocks.insights },
     dsaService: { fullPlan: mocks.fullPlan },
+    dsaPracticeBlockStore: { currentWithReadiness: mocks.dsaCurrentBlock },
     frontendRoadmapService: { questionStatuses: mocks.questionStatuses },
     practiceEvidenceStore: { refresh: mocks.practiceEvidence },
     coreTechnicalEligibilityService: { forProfile: mocks.coreTechnicalEligibility },
-    coreTechnicalPracticeService: { current: mocks.coreTechnicalCurrent },
-    coreTechnicalWorkspaceAnalyticsService: { practice: mocks.coreTechnicalAnalytics },
+    coreTechnicalPracticeService: { currentEntryBlock: mocks.coreTechnicalCurrent },
+    coreTechnicalWorkspaceAnalyticsService: { entrySummary: mocks.coreTechnicalAnalytics },
     appliedEngineeringEligibilityService: { forProfile: mocks.appliedEngineeringEligibility },
-    appliedEngineeringPracticeService: { current: mocks.appliedEngineeringCurrent },
-    appliedEngineeringWorkspaceAnalyticsService: { practice: mocks.appliedEngineeringAnalytics },
+    appliedEngineeringPracticeService: { currentEntryBlock: mocks.appliedEngineeringCurrent },
+    appliedEngineeringWorkspaceAnalyticsService: {
+      entrySummary: mocks.appliedEngineeringAnalytics
+    },
     architectureDesign: {
       eligibility: { forProfile: mocks.architectureDesignEligibility },
-      practice: { current: mocks.architectureDesignCurrent },
-      workspaceAnalytics: { practice: mocks.architectureDesignAnalytics }
+      practice: { currentEntryBlock: mocks.architectureDesignCurrent },
+      workspaceAnalytics: { entrySummary: mocks.architectureDesignAnalytics }
     },
     aiMlPracticeService: { summaries: mocks.aiMlSummaries }
   })
@@ -62,9 +90,12 @@ import PracticePage from "./page";
 describe("PracticePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.profileGet.mockResolvedValue(onboardedProfile());
     mocks.insights.mockResolvedValue(null);
     mocks.activity.mockResolvedValue([]);
     mocks.fullPlan.mockResolvedValue(null);
+    mocks.cachedPersonalizedPlan.mockResolvedValue({ id: "plan-1" });
+    mocks.dsaCurrentBlock.mockResolvedValue(null);
     mocks.questionStatuses.mockResolvedValue({});
     mocks.practiceEvidence.mockResolvedValue(null);
     mocks.coreTechnicalEligibility.mockResolvedValue({
@@ -103,18 +134,13 @@ describe("PracticePage", () => {
   });
 
   it("does not reach the Practice generator when the onboarding guard rejects access", async () => {
-    mocks.requireOnboardedProfile.mockRejectedValue(new Error("NEXT_REDIRECT:/"));
+    mocks.profileGet.mockResolvedValue(onboardedProfile({ onboardingCompletedAt: null }));
 
-    await expect(PracticePage()).rejects.toThrow("NEXT_REDIRECT:/");
+    await expect(PracticePage()).rejects.toThrow("NEXT_REDIRECT:/onboarding");
     expect(mocks.home).not.toHaveBeenCalled();
   });
 
   it("shows a recoverable error state without claiming saved progress was lost", async () => {
-    mocks.requireOnboardedProfile.mockResolvedValue({
-      userId: "user-1",
-      ownerId: "owner-1",
-      profile: { resume: { fullName: "Asha Verma" } } as CandidateProfile
-    });
     mocks.home.mockRejectedValue(new Error("temporary database error"));
 
     render(await PracticePage());
@@ -123,7 +149,13 @@ describe("PracticePage", () => {
       "We couldn’t prepare your practice path"
     );
     expect(screen.getByRole("alert").textContent).toContain("Your saved progress is safe");
-    expect(mocks.home).toHaveBeenCalledWith("owner-1");
+    expect(mocks.home).toHaveBeenCalledWith(
+      "owner-1",
+      undefined,
+      expect.anything(),
+      expect.any(Promise),
+      expect.any(Function)
+    );
     expect(mocks.logError).toHaveBeenCalledWith({
       event: "practice.roadmap_generation_failed",
       ownerId: "owner-1",
@@ -132,11 +164,6 @@ describe("PracticePage", () => {
   });
 
   it("keeps a disabled Architecture card visible when Architecture reads fail", async () => {
-    mocks.requireOnboardedProfile.mockResolvedValue({
-      userId: "user-1",
-      ownerId: "owner-1",
-      profile: { resume: { fullName: "Asha Verma" } } as CandidateProfile
-    });
     mocks.home.mockResolvedValue(practiceRoadmap());
     mocks.architectureDesignEligibility.mockRejectedValue(new Error("temporary failure"));
     mocks.architectureDesignCurrent.mockRejectedValue(new Error("temporary failure"));
@@ -147,7 +174,9 @@ describe("PracticePage", () => {
     expect(screen.getByRole("link", { name: /DSA.*Start session/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Architecture & Design" })).toBeInTheDocument();
     expect(
-      screen.getByText("Architecture & Design availability could not be checked. Please refresh the page.")
+      screen.getByText(
+        "Architecture & Design availability could not be checked. Please refresh the page."
+      )
     ).toBeInTheDocument();
     expect(screen.getByRole("article", { name: /Architecture & Design/i })).toHaveAttribute(
       "aria-disabled",
@@ -156,15 +185,7 @@ describe("PracticePage", () => {
   });
 
   it("shows the three AI/ML sessions and hides DSA", async () => {
-    mocks.requireOnboardedProfile.mockResolvedValue({
-      userId: "user-1",
-      ownerId: "owner-1",
-      profile: {
-        targetRole: "ai-ml",
-        level: "0-2",
-        resume: { fullName: "Asha Verma" }
-      } as CandidateProfile
-    });
+    mocks.profileGet.mockResolvedValue(onboardedProfile({ targetRole: "ai-ml", level: "0-2" }));
     mocks.home.mockResolvedValue(practiceRoadmap());
 
     render(await PracticePage());
@@ -183,11 +204,7 @@ describe("PracticePage", () => {
   });
 
   it("links AI/ML Architecture when a reviewed scenario is available", async () => {
-    mocks.requireOnboardedProfile.mockResolvedValue({
-      userId: "user-1",
-      ownerId: "owner-1",
-      profile: { targetRole: "ai-ml", resume: { fullName: "Asha Verma" } } as CandidateProfile
-    });
+    mocks.profileGet.mockResolvedValue(onboardedProfile({ targetRole: "ai-ml" }));
     mocks.home.mockResolvedValue(practiceRoadmap());
     mocks.architectureDesignEligibility.mockResolvedValue({ available: true });
 
@@ -199,27 +216,56 @@ describe("PracticePage", () => {
     );
   });
 
+  it.each([
+    ["frontend", "Frontend"],
+    ["data", "Data"]
+  ] as const)("shows DSA plus the %s story tracks and no Node.js tracks", async (role, label) => {
+    mocks.profileGet.mockResolvedValue(onboardedProfile({ targetRole: role }));
+    mocks.home.mockResolvedValue(practiceRoadmap());
+
+    render(await PracticePage());
+
+    expect(screen.getByRole("heading", { name: "DSA" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: new RegExp(`Core Technical · ${label}`) })
+    ).toHaveAttribute("href", `/practice/${role}/core-technical`);
+    expect(
+      screen.getByRole("link", { name: new RegExp(`Applied Engineering · ${label}`) })
+    ).toHaveAttribute("href", `/practice/${role}/applied-engineering`);
+    expect(mocks.aiMlSummaries).toHaveBeenCalledWith("owner-1", role);
+    expect(screen.queryByRole("article", { name: /Architecture & Design/i })).toBeNull();
+    expect(screen.queryByText(/Node\.js/)).toBeNull();
+  });
+
   it("warns rather than silently claiming zero AI/ML progress when the database read fails", async () => {
-    mocks.requireOnboardedProfile.mockResolvedValue({
-      userId: "user-1",
-      ownerId: "owner-1",
-      profile: { targetRole: "ai-ml", resume: { fullName: "Asha Verma" } } as CandidateProfile
-    });
+    mocks.profileGet.mockResolvedValue(onboardedProfile({ targetRole: "ai-ml" }));
     mocks.home.mockResolvedValue(practiceRoadmap());
     mocks.aiMlSummaries.mockRejectedValue(new Error("temporary database error"));
 
     render(await PracticePage());
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Your saved AI/ML progress is temporarily unavailable"
+      "Your saved practice progress is temporarily unavailable"
     );
     expect(mocks.logError).toHaveBeenCalledWith({
-      event: "practice.ai_ml_progress_read_failed",
+      event: "practice.story_progress_read_failed",
+      discipline: "ai-ml",
       ownerId: "owner-1",
       reason: "temporary database error"
     });
   });
 });
+
+function onboardedProfile(overrides: Partial<CandidateProfile> = {}): CandidateProfile {
+  return {
+    targetRole: "fullstack",
+    level: "0-2",
+    onboardingCompletedAt: 1,
+    preparationOnboarding: { completedAt: 1 },
+    resume: { fullName: "Asha Verma", projects: [], experience: [] },
+    ...overrides
+  } as CandidateProfile;
+}
 
 function practiceRoadmap() {
   return {

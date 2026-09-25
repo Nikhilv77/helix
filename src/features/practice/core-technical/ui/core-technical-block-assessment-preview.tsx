@@ -1,5 +1,7 @@
 "use client";
 
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
+
 import Image from "next/image";
 import { ArrowRight, Check, Loader2, Play, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -73,7 +75,7 @@ export function CoreTechnicalBlockAssessmentPreview({
     setStarting(true);
     setStartError(null);
     try {
-      const response = await fetch("/api/practice/core-technical/assessment/start", {
+      const response = await workspaceMutationFetch("/api/practice/core-technical/assessment/start", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

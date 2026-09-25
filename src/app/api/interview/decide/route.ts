@@ -2,11 +2,11 @@ import { z } from "zod";
 import { after } from "next/server";
 import type { NextRequest } from "next/server";
 import { getAppContainer } from "@/server/app-container";
+import { refreshPracticeHome } from "@/features/practice/shared/server/refresh-practice-home";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
 import { authorizeInterviewSession } from "@/features/interviews/server/session-access";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
-import { usesGeminiLedConversation } from "@/features/interviews/domain/gemini-live-conversation";
 
 export const dynamic = "force-dynamic";
 
@@ -60,36 +60,27 @@ export async function POST(request: NextRequest) {
       "answer"
     );
     const guard = getSharedGuard(app.config);
-    await guard.enforce(RATE_LIMIT_POLICIES.answerEvaluation, parsed.data.sessionId);
-    const lease = await guard.acquire(
+    const lease = await guard.enforceAndAcquire(
+      { policy: RATE_LIMIT_POLICIES.answerEvaluation, identity: parsed.data.sessionId },
       {
-        namespace: "answer-evaluate",
-        ttlMs: 65_000,
-        code: "ANSWER_EVALUATION_IN_PROGRESS",
-        message: "The previous answer is still being evaluated."
-      },
-      parsed.data.sessionId
+        policy: {
+          namespace: "answer-evaluate",
+          ttlMs: 65_000,
+          code: "ANSWER_EVALUATION_IN_PROGRESS",
+          message: "The previous answer is still being evaluated."
+        },
+        identity: parsed.data.sessionId
+      }
     );
 
     try {
       const now = Date.now();
-      const existing =
-        access.kind === "owner"
-          ? await app.interviewService.getOwnedActive(access.ownerId, parsed.data.sessionId)
-          : await app.interviewService.get(parsed.data.sessionId);
-      if (usesGeminiLedConversation(existing.setup) && !parsed.data.liveProposal) {
-        throw new ApiRouteError(
-          400,
-          "LIVE_PROPOSAL_REQUIRED",
-          "The live interviewer must complete this turn before it can be saved."
-        );
-      }
-      const defaultEnd = Math.max(0, now - existing.startedAt);
-
+      // The service reads the session once, checks the live proposal, and
+      // fills omitted timing from the session start.
       const answer = {
         text: parsed.data.userAnswer,
-        startMs: parsed.data.startMs ?? defaultEnd,
-        endMs: parsed.data.endMs ?? defaultEnd
+        startMs: parsed.data.startMs,
+        endMs: parsed.data.endMs
       };
       const answerResult =
         access.kind === "owner"
@@ -100,7 +91,8 @@ export async function POST(request: NextRequest) {
               now,
               parsed.data.turnId,
               parsed.data.liveProposal,
-              parsed.data.submissionSource
+              parsed.data.submissionSource,
+              { requireLiveProposal: true }
             )
           : await app.interviewService.answer(
               parsed.data.sessionId,
@@ -108,7 +100,8 @@ export async function POST(request: NextRequest) {
               now,
               parsed.data.turnId,
               parsed.data.liveProposal,
-              parsed.data.submissionSource
+              parsed.data.submissionSource,
+              { requireLiveProposal: true }
             );
       const { response } = answerResult;
       // Recovery runs outside the spoken-turn response. The job itself was
@@ -146,6 +139,9 @@ export async function POST(request: NextRequest) {
                 )
               : app.architectureDesign.assessment.finalizeInterviewBySession(parsed.data.sessionId)
           ]);
+          if (access.kind === "owner" && access.ownerId.startsWith("user:")) {
+            await refreshPracticeHome(access.ownerId);
+          }
         });
       }
 

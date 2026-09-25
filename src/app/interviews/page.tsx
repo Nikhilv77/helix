@@ -1,55 +1,39 @@
 import { InterviewsView } from "@/features/interviews/ui/history/interviews-view";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
-import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
+import { getUserIdForRequest } from "@/server/auth/request-user";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import {
+  buildInterviewsHomeForOwner,
+  currentInterviewQuota
+} from "@/features/interviews/server/load-interviews-home";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
+export const unstable_dynamicStaleTime = 30;
+export const maxDuration = 60;
 export const metadata = privatePageMetadata(
   "Interviews",
   "Start a Trailgrad interview and review the evidence your previous rounds produced."
 );
 
-/** Starting rounds, competency evidence and history — moved off Home. */
+/** Read one prepared owner-scoped entry snapshot on a warm visit. */
 export default async function InterviewsPage() {
-  const app = getAppContainer();
-  const interviewService = app.interviewService;
-  const { ownerId, profile: candidateProfile } = await requireOnboardedProfile();
+  const userId = await getUserIdForRequest();
+  if (!userId) redirect("/");
+  const ownerId = authenticatedOwnerId(userId);
+  const data = await getAppContainer().workspacePageSnapshotStore.readOrBuild(
+    ownerId,
+    "interviews",
+    () => buildInterviewsHomeForOwner(ownerId)
+  );
 
-  try {
-    const [quota, sessions, coreRounds, appliedRounds, personalizedPlan, roadmap] =
-      await Promise.all([
-        interviewService.quota(ownerId),
-        interviewService.history(ownerId),
-        app.coreTechnicalWorkspaceAnalyticsService
-          .rounds(ownerId)
-          .catch(() => ({ history: [], reports: [] })),
-        app.appliedEngineeringWorkspaceAnalyticsService
-          .rounds(ownerId)
-          .catch(() => ({ history: [], reports: [] })),
-        app.personalizedInterviewPlanningService.activePlan(ownerId).catch(() => null),
-        app.frontendRoadmapService.home(ownerId).catch(() => null)
-      ]);
-    const combinedSessions = [...sessions, ...coreRounds.history, ...appliedRounds.history]
-      .sort((left, right) => right.updatedAt - left.updatedAt)
-      .slice(0, 50);
-    return (
-      <InterviewsView
-        quota={quota}
-        sessions={combinedSessions}
-        profile={candidateProfile}
-        personalizedPlan={personalizedPlan}
-        roadmap={roadmap}
-      />
-    );
-  } catch {
-    return (
-      <InterviewsView
-        quota={{ used: 0, limit: 2 }}
-        sessions={[]}
-        profile={candidateProfile}
-        personalizedPlan={null}
-        roadmap={null}
-      />
-    );
-  }
+  return (
+    <InterviewsView
+      quota={currentInterviewQuota(data)}
+      sessions={data.sessions}
+      firstName={data.firstName}
+      roadmapSessions={data.roadmapSessions}
+    />
+  );
 }

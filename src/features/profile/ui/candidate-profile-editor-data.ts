@@ -13,7 +13,12 @@ import {
 import type { Level, Role } from "@/lib/shared/types";
 export { profileAvatars } from "@/features/profile/domain/profile-images";
 
-export const roleOptions: Array<{ value: Role; label: string; detail: string; icon: typeof Code2 }> = [
+export const roleOptions: Array<{
+  value: Role;
+  label: string;
+  detail: string;
+  icon: typeof Code2;
+}> = [
   { value: "backend", label: "Backend", detail: "APIs, data, reliability", icon: Database },
   { value: "frontend", label: "Frontend", detail: "UI systems, state, performance", icon: Code2 },
   { value: "fullstack", label: "Full-stack", detail: "Product systems end to end", icon: Blocks },
@@ -32,17 +37,6 @@ export const levelOptions: Array<{ value: Level; label: string; detail: string }
   { value: "0-2", label: "0–2 years", detail: "Early career" },
   { value: "3-5", label: "3–5 years", detail: "Owns meaningful scope" },
   { value: "5-plus", label: "5+ years", detail: "Leads systems or teams" }
-];
-
-export const focusOptions = [
-  "Technical depth",
-  "System design",
-  "Coding",
-  "Communication",
-  "Ownership",
-  "Impact",
-  "Leadership",
-  "Behavioral stories"
 ];
 
 export const focusAreaDetails: Record<string, string> = {
@@ -66,10 +60,6 @@ export const focusAreaIcons: Record<string, typeof Code2> = {
   Leadership: Target,
   "Behavioral stories": Quote
 };
-
-/** One input treatment for the page, so nothing drifts field to field. */
-export const fieldClass =
-  "w-full rounded-xl bg-[#1a1b1f] text-cream outline-none ring-1 ring-inset ring-white/[0.08] transition placeholder:text-cream/35 hover:bg-[#202126] focus:bg-[#202126] focus:ring-2 focus:ring-[#F26E01]/30";
 
 export const profileCovers = [
   {
@@ -130,11 +120,3 @@ export function hashProfileSeed(seed: string) {
   }
   return hash >>> 0;
 }
-
-
-export const statTones = {
-  mint: "bg-[#71d6a5]/16 text-[#a9f0cd] ring-1 ring-inset ring-[#71d6a5]/28",
-  sky: "bg-[#F26E01]/12 text-[#ffbd8f] ring-1 ring-inset ring-[#F26E01]/25",
-  amber: "bg-[#efcf84]/16 text-[#f7e3ae] ring-1 ring-inset ring-[#efcf84]/30",
-  cream: "bg-cream/[0.14] text-cream ring-1 ring-inset ring-cream/25"
-} as const;

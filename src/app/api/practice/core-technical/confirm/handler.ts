@@ -3,7 +3,7 @@ import { coreTechnicalFocusConfirmationSchema } from "@/features/practice/core-t
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import {
-  coreTechnicalMutationOwner,
+  coreTechnicalOwner,
   parseCoreTechnicalJson,
   requireCoreTechnicalLaunchEligibility
 } from "../_shared";
@@ -11,7 +11,7 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    const { ownerId, app, profile } = await coreTechnicalMutationOwner(
+    const { ownerId, app, profile } = await coreTechnicalOwner(
       RATE_LIMIT_POLICIES.practiceState
     );
     await requireCoreTechnicalLaunchEligibility(app, profile);

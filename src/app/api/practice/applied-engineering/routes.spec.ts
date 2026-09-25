@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/app/api/practice/applied-engineering/_shared", () => ({
   apiError: mocks.apiError,
   appliedEngineeringOwner: mocks.owner,
+  appliedEngineeringMutationOwner: mocks.owner,
   parseAppliedEngineeringJson: mocks.parseJson,
   requireAppliedEngineeringEligibility: mocks.eligibility
 }));

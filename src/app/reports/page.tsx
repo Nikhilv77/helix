@@ -1,73 +1,36 @@
 import { ReportsView } from "@/features/reports/ui/reports-view";
-import { disciplineLabel } from "@/lib/shared/labels";
-import type { ReportsOverview } from "@/features/reports/contracts/reports";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
-import { requireOnboardedProfile } from "@/server/auth/onboarding-guard";
+import { buildReportsPageData } from "@/features/reports/server/reports-page-data";
+import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { getUserIdForRequest } from "@/server/auth/request-user";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
+export const unstable_dynamicStaleTime = 30;
+export const maxDuration = 60;
 export const metadata = privatePageMetadata(
   "Reports",
   "Every Trailgrad interview round you have run, scored and compared side by side."
 );
 
-function emptyOverview(now: number): ReportsOverview {
-  return {
-    generatedAt: now,
-    totalRounds: 0,
-    completedRounds: 0,
-    inProgressRounds: 0,
-    scoredRounds: 0,
-    questionsAnswered: 0,
-    questionsAsked: 0,
-    totalMinutes: 0,
-    readinessScore: null,
-    latestScore: null,
-    firstScore: null,
-    bestScore: null,
-    scoreDelta: null,
-    trend: [],
-    competencies: [],
-    matrix: { rounds: [], rows: [] },
-    roundTypes: [],
-    families: [],
-    pressure: { probes: 0, challenges: 0, clarifications: 0, interruptions: 0, perRound: 0 },
-    recurringGaps: [],
-    rounds: [],
-    latest: null,
-    best: null,
-    latestCompletedReport: null
-  };
-}
-
 /** Every round, scored and compared — the cross-round view of your reports. */
 export default async function ReportsPage() {
-  const { ownerId, profile } = await requireOnboardedProfile();
+  const userId = await getUserIdForRequest();
+  if (!userId) redirect("/");
+  const ownerId = authenticatedOwnerId(userId);
   const container = getAppContainer();
   const now = Date.now();
-  const coreRounds = await container.coreTechnicalWorkspaceAnalyticsService
-    .rounds(ownerId)
-    .catch(() => ({ history: [], reports: [] }));
-
-  const [overview, quota] = await Promise.all([
-    // History lives in the session store; if it cannot be read the page still
-    // renders its empty state rather than failing the whole route.
-    container.interviewService
-      .reportsOverview(ownerId, 50, now, coreRounds.reports)
-      .catch(() => null),
-    container.interviewService.quota(ownerId).catch(() => ({ used: 0, limit: 2 }))
-  ]);
-
-  const fullName = profile.resume?.fullName?.trim() ?? "";
-
-  return (
-    <ReportsView
-      overview={overview ?? emptyOverview(now)}
-      quota={quota}
-      candidate={{
-        name: fullName,
-        discipline: profile.targetRole ? disciplineLabel(profile.targetRole) : ""
-      }}
-    />
+  const page = await container.workspacePageSnapshotStore.readOrBuild(ownerId, "reports", () =>
+    buildReportsPageData(ownerId, now)
   );
+  const quota = {
+    used: Math.min(
+      page.quotaLimit,
+      page.quotaStartedAt.filter((startedAt) => startedAt >= now - 86_400_000).length
+    ),
+    limit: page.quotaLimit
+  };
+
+  return <ReportsView overview={page.reports} quota={quota} candidate={page.candidate} />;
 }

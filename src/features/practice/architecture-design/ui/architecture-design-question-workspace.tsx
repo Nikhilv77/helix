@@ -1,17 +1,16 @@
 "use client";
 
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
+
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { useState } from "react";
 import { SystemDesignCanvas } from "@/features/interviews/ui/voice/components/system-design-canvas";
 import { StoryPracticeQuestionWorkspace } from "@/features/practice/shared/ui/story-practice-question-workspace";
 import type {
-  ArchitectureDesignPublicBlock,
   ArchitectureDesignPublicQuestion
 } from "@/features/practice/architecture-design/server/practice.service";
-import {
-  architectureDesignBlockView,
-  architectureDesignQuestionView
-} from "./architecture-design-adapter";
+import type { StoryPracticeQuestionBlockView } from "@/features/practice/shared/ui/view-contracts";
+import { architectureDesignQuestionView } from "./architecture-design-adapter";
 import { ARCHITECTURE_DESIGN_WORKSPACE_EXPERIENCE } from "./architecture-design-experience";
 
 export function ArchitectureDesignQuestionWorkspace({
@@ -19,14 +18,14 @@ export function ArchitectureDesignQuestionWorkspace({
   initialQuestion,
   stageTitle
 }: {
-  block: ArchitectureDesignPublicBlock;
+  block: StoryPracticeQuestionBlockView;
   initialQuestion: ArchitectureDesignPublicQuestion;
   stageTitle: string;
 }) {
   const canvasRequired = initialQuestion.order >= 2;
   return (
     <StoryPracticeQuestionWorkspace
-      block={architectureDesignBlockView(block)}
+      block={block}
       initialQuestion={architectureDesignQuestionView(initialQuestion)}
       stageTitle={stageTitle}
       experience={ARCHITECTURE_DESIGN_WORKSPACE_EXPERIENCE}
@@ -134,7 +133,7 @@ function ArchitectureKnowledgeCheck({
     setPending(true);
     setError(null);
     try {
-      const response = await fetch("/api/practice/architecture-design/knowledge-check", {
+      const response = await workspaceMutationFetch("/api/practice/architecture-design/knowledge-check", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ questionId, selectedChoiceIndex: selected })

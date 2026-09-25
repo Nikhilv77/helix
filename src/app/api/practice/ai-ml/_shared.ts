@@ -2,7 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import type { z } from "zod";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
-import { requireCompletedPreparationOnboarding } from "@/server/auth/preparation-onboarding-api-guard";
+import { storyDisciplineForRole } from "@/features/practice/story-tracks/domain/story-disciplines";
+import { requireCompletedPreparationOnboardingState } from "@/server/auth/preparation-onboarding-api-guard";
 import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { getSharedGuard, type RateLimitPolicy } from "@/server/rate-limit/shared-guard";
@@ -12,13 +13,15 @@ export async function aiMlStoryOwner(policy: RateLimitPolicy) {
   if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
   const ownerId = authenticatedOwnerId(userId);
   const app = getAppContainer();
-  const profile = await app.profileService.get(ownerId);
-  requireCompletedPreparationOnboarding(profile);
-  if (profile.targetRole !== "ai-ml") {
+  const state = await app.profileService.workspaceShellState(ownerId);
+  requireCompletedPreparationOnboardingState(state);
+  // Frontend, data, and AI/ML story practice share these handlers; each
+  // question is owner-scoped, and its session records the discipline.
+  if (!storyDisciplineForRole(state.targetRole)) {
     throw new ApiRouteError(
       409,
       "AI_ML_PRACTICE_ROLE_REQUIRED",
-      "AI/ML practice requires an AI/ML target role."
+      "Story practice requires an AI/ML, frontend, or data target role."
     );
   }
   await getSharedGuard(app.config).enforce(policy, ownerId);

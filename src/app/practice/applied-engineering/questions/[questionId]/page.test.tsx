@@ -1,36 +1,87 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NotFoundErrorException } from "@/server/common/exceptions/not-found-error.exception";
 
-const mocks = vi.hoisted(() => ({ current: vi.fn(), historyRead: vi.fn(), notFound: vi.fn(() => { throw new Error("NEXT_NOT_FOUND"); }) }));
-vi.mock("@/server/auth/onboarding-guard", () => ({ requireOnboardedProfile: () => Promise.resolve({ ownerId: "owner-one" }) }));
-vi.mock("@/server/app-container", () => ({ getAppContainer: () => ({
-  appliedEngineeringPracticeService: { current: mocks.current },
-  appliedEngineeringHistoryService: { read: mocks.historyRead }
-}) }));
-vi.mock("next/navigation", async (importOriginal) => ({ ...(await importOriginal<typeof import("next/navigation")>()), notFound: mocks.notFound }));
-vi.mock("@/features/practice/applied-engineering/ui/applied-engineering-question-workspace", () => ({
-  AppliedEngineeringQuestionWorkspace: ({ block, initialQuestion, stageTitle }: { block: { id: string }; initialQuestion: { id: string }; stageTitle: string }) => <div data-testid="workspace" data-block={block.id} data-question={initialQuestion.id} data-stage={stageTitle} />
+const mocks = vi.hoisted(() => ({ questionWorkspace: vi.fn() }));
+
+vi.mock("@/server/auth/onboarding-guard", () => ({
+  requireOnboardedOwner: () => Promise.resolve({ ownerId: "owner-one" })
 }));
+vi.mock("@/server/app-container", () => ({
+  getAppContainer: () => ({
+    appliedEngineeringPracticeService: { questionWorkspace: mocks.questionWorkspace }
+  })
+}));
+vi.mock(
+  "@/features/practice/applied-engineering/ui/applied-engineering-question-workspace",
+  () => ({
+    AppliedEngineeringQuestionWorkspace: (props: {
+      block: { id: string };
+      initialQuestion: { id: string };
+      stageTitle: string;
+    }) => (
+      <div
+        data-testid="workspace"
+        data-block={props.block.id}
+        data-question={props.initialQuestion.id}
+        data-stage={props.stageTitle}
+      />
+    )
+  })
+);
 
 import AppliedEngineeringQuestionPage from "./page";
 
 describe("AppliedEngineeringQuestionPage", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("reads an owned historical question from the selected frozen incident", async () => {
-    mocks.historyRead.mockResolvedValue(block("old", "question-one"));
-    render(await AppliedEngineeringQuestionPage({ params: Promise.resolve({ questionId: "question-one" }), searchParams: Promise.resolve({ block: "old" }) }));
-    expect(mocks.historyRead).toHaveBeenCalledWith("owner-one", "old");
+  it("reads the question from the URL-selected block for the signed-in owner", async () => {
+    mocks.questionWorkspace.mockResolvedValue(workspace("historical-block", "question-one"));
+
+    render(
+      await AppliedEngineeringQuestionPage({
+        params: Promise.resolve({ questionId: "question-one" }),
+        searchParams: Promise.resolve({ block: "historical-block" })
+      })
+    );
+
+    expect(mocks.questionWorkspace).toHaveBeenCalledWith(
+      "owner-one",
+      "question-one",
+      "historical-block"
+    );
+    expect(screen.getByTestId("workspace")).toHaveAttribute("data-block", "historical-block");
     expect(screen.getByTestId("workspace")).toHaveAttribute("data-stage", "Find the bottleneck");
   });
 
-  it("returns to Applied Engineering for missing and foreign resources", async () => {
-    mocks.historyRead.mockRejectedValue(new NotFoundErrorException("APPLIED_ENGINEERING_BLOCK_NOT_FOUND", "not found"));
-    await expect(AppliedEngineeringQuestionPage({ params: Promise.resolve({ questionId: "question-one" }), searchParams: Promise.resolve({ block: "foreign" }) })).rejects.toThrow("NEXT_REDIRECT");
+  it("lets the service choose the current block when the URL has none", async () => {
+    mocks.questionWorkspace.mockResolvedValue(workspace("current-block", "question-one"));
+
+    render(
+      await AppliedEngineeringQuestionPage({
+        params: Promise.resolve({ questionId: "question-one" }),
+        searchParams: Promise.resolve({})
+      })
+    );
+
+    expect(mocks.questionWorkspace).toHaveBeenCalledWith("owner-one", "question-one", null);
+    expect(screen.getByTestId("workspace")).toHaveAttribute("data-block", "current-block");
+  });
+
+  it("returns to Applied Engineering for a missing question or a foreign block", async () => {
+    mocks.questionWorkspace.mockResolvedValue(null);
+
+    await expect(
+      AppliedEngineeringQuestionPage({
+        params: Promise.resolve({ questionId: "question-one" }),
+        searchParams: Promise.resolve({ block: "foreign-block" })
+      })
+    ).rejects.toThrow("NEXT_REDIRECT");
   });
 });
 
-function block(id: string, questionId: string) {
-  return { id, incident: { stages: [{ order: 1, title: "Find the bottleneck" }] }, questions: [{ id: questionId, order: 1 }] };
+function workspace(blockId: string, questionId: string) {
+  return {
+    block: { id: blockId, story: { stages: [{ order: 1, title: "Find the bottleneck" }] } },
+    question: { id: questionId, order: 1 }
+  };
 }

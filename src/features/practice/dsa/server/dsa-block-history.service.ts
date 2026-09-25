@@ -147,9 +147,11 @@ export class DsaBlockHistoryService {
   async read(
     ownerId: string,
     requestedBlockId: string | null,
-    currentStatuses: Record<string, string>
+    currentStatuses: Record<string, string>,
+    includeTranscript = true,
+    preloadedBlocks?: DsaPracticeBlockRecord[]
   ): Promise<DsaBlockHistoryView | null> {
-    const blocks = await this.store.history(ownerId);
+    const blocks = preloadedBlocks ?? (await this.store.history(ownerId));
     if (!blocks.length) return null;
 
     const selectedIndex = requestedBlockId
@@ -165,9 +167,8 @@ export class DsaBlockHistoryService {
       );
     }
 
-    const sessionIds = blocks.flatMap((block) =>
-      block.assessment?.interviewSessionId ? [block.assessment.interviewSessionId] : []
-    );
+    const selectedSessionId = blocks[selectedIndex]?.assessment?.interviewSessionId;
+    const sessionIds = includeTranscript && selectedSessionId ? [selectedSessionId] : [];
     const sessions = sessionIds.length
       ? await this.prisma.interviewSession.findMany({
           where: { ownerId, id: { in: sessionIds } },
@@ -177,15 +178,15 @@ export class DsaBlockHistoryService {
     const transcriptBySession = new Map(
       sessions.map((session) => [session.id, sanitizeTranscript(session.state)])
     );
-    const items = blocks.map((block) => this.present(block, currentStatuses, transcriptBySession));
+    const selected = this.present(blocks[selectedIndex]!, currentStatuses, transcriptBySession);
 
     return {
-      selected: items[selectedIndex]!,
+      selected,
       // Store history is newest first: previous goes to the older block and
       // next returns toward the current/newer block.
-      previousBlockId: items[selectedIndex + 1]?.id ?? null,
-      nextBlockId: items[selectedIndex - 1]?.id ?? null,
-      totalBlocks: items.length
+      previousBlockId: blocks[selectedIndex + 1]?.id ?? null,
+      nextBlockId: blocks[selectedIndex - 1]?.id ?? null,
+      totalBlocks: blocks.length
     };
   }
 

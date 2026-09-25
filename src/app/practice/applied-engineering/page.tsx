@@ -24,31 +24,33 @@ export default async function AppliedEngineeringPracticePage({
   const { ownerId, profile } = await requireOnboardedProfile();
   const app = getAppContainer();
   const allowEarlyAssessmentStart = app.config?.nodeEnv === "development";
-  const recovery = app.appliedEngineeringAssessmentService
-    .recoverCurrentInterview(ownerId)
-    .catch(() => null);
   const query = await searchParams;
   const requestedBlockId = typeof query.block === "string" ? query.block : null;
-  await recovery;
-  const [eligibility, currentBlock, historyList] = await Promise.all([
+  const [eligibility, initialBlock, initialHistory] = await Promise.all([
     app.appliedEngineeringEligibilityService.forProfile(profile),
-    app.appliedEngineeringPracticeService.current(ownerId),
+    requestedBlockId
+      ? app.appliedEngineeringHistoryService.read(ownerId, requestedBlockId).catch((error) => {
+          if (
+            error instanceof NotFoundErrorException &&
+            error.code === "APPLIED_ENGINEERING_BLOCK_NOT_FOUND"
+          ) redirect("/practice/applied-engineering");
+          throw error;
+        })
+      : app.appliedEngineeringPracticeService.current(ownerId),
     app.appliedEngineeringHistoryService.list(ownerId)
   ]);
-
-  let block = currentBlock;
-  if (requestedBlockId) {
-    try {
-      block = await app.appliedEngineeringHistoryService.read(ownerId, requestedBlockId);
-    } catch (error) {
-      if (
-        error instanceof NotFoundErrorException &&
-        error.code === "APPLIED_ENGINEERING_BLOCK_NOT_FOUND"
-      ) {
-        redirect("/practice/applied-engineering");
-      }
-      throw error;
-    }
+  let block = initialBlock;
+  let historyList = initialHistory;
+  if (
+    !requestedBlockId &&
+    block?.assessment &&
+    ["IN_PROGRESS", "FINALIZING"].includes(block.assessment.status)
+  ) {
+    await app.appliedEngineeringAssessmentService.recoverCurrentInterview(ownerId).catch(() => null);
+    [block, historyList] = await Promise.all([
+      app.appliedEngineeringPracticeService.current(ownerId),
+      app.appliedEngineeringHistoryService.list(ownerId)
+    ]);
   }
 
   const needsFirstIncident =

@@ -1,5 +1,7 @@
 "use client";
 
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
+
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Clock3, Loader2, LockKeyhole, Play, RotateCcw } from "lucide-react";
@@ -915,7 +917,7 @@ function readAnswerDraft(key: string): Record<string, string> | null {
 }
 
 async function post<T>(url: string, body: unknown, experienceLabel: string): Promise<T> {
-  const response = await fetch(url, {
+  const response = await workspaceMutationFetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body)

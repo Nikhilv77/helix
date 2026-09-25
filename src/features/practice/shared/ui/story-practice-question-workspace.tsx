@@ -1,7 +1,8 @@
 "use client";
 
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
+
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -30,7 +31,7 @@ import { PracticeCodeViewer } from "@/features/practice/shared/ui/practice-code-
 import type { StoryPracticeWorkspaceExperience as StoryPracticeWorkspaceExperienceContract } from "@/features/practice/shared/ui/contracts";
 import type {
   StoryPracticeAttemptWork,
-  StoryPracticeBlockView,
+  StoryPracticeQuestionBlockView,
   StoryPracticeDraftWork,
   StoryPracticeQuestionView
 } from "@/features/practice/shared/ui/view-contracts";
@@ -60,7 +61,7 @@ export type StoryPracticeWorkspaceExperience =
   StoryPracticeWorkspaceExperienceContract<StoryPracticeQuestionView>;
 
 export type StoryPracticeQuestionWorkspaceProps = {
-  block: StoryPracticeBlockView;
+  block: StoryPracticeQuestionBlockView;
   initialQuestion: StoryPracticeQuestionView;
   stageTitle: string;
   experience: StoryPracticeWorkspaceExperience;
@@ -97,7 +98,6 @@ export function StoryPracticeQuestionWorkspace({
   responseTool,
   structuredAnswerPrompts
 }: StoryPracticeQuestionWorkspaceProps) {
-  const router = useRouter();
   const [question, setQuestion] = useState(initialQuestion);
   const interaction = question.question.interaction;
   const workKind = interaction
@@ -258,7 +258,6 @@ export function StoryPracticeQuestionWorkspace({
       setConfirmLearn(false);
       if (usesModalReview) setReviewOpen(true);
       else setPanelTab("review");
-      router.refresh();
     } catch (cause) {
       setError(messageFrom(cause, "Your answer could not be evaluated. Your draft is safe."));
     } finally {
@@ -281,7 +280,6 @@ export function StoryPracticeQuestionWorkspace({
       setLearnError(null);
       if (usesModalReview) setReviewOpen(true);
       else setPanelTab("review");
-      router.refresh();
     } catch (cause) {
       setLearnError(messageFrom(cause, "Learn could not be confirmed. Your draft is safe."));
     } finally {
@@ -1594,7 +1592,7 @@ function QuestionLink({
   routeBase
 }: {
   blockId: string;
-  question: StoryPracticeQuestionView | null;
+  question: Pick<StoryPracticeQuestionView, "id" | "order"> | null;
   direction: "previous" | "next";
   routeBase: string;
 }) {
@@ -1807,7 +1805,7 @@ function responseGuidance(format: StoryPracticeQuestionView["question"]["format"
 }
 
 async function post<T>(url: string, body: unknown, experienceLabel: string): Promise<T> {
-  const response = await fetch(url, {
+  const response = await workspaceMutationFetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body)

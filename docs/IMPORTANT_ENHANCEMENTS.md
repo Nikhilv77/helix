@@ -18,8 +18,9 @@ design is:
    panel opens, or the user performs a state-changing action.
 3. Retain a slow, visible-tab fallback for users who do not grant notification
    permission.
-4. Treat interview state synchronization as a separate system. Do not remove its
-   1.5-second polling until an event-driven replacement has been verified.
+4. Treat interview state synchronization as a separate system. Gemini Live now
+   refreshes saved state after actions and uses a visible-tab recovery fallback;
+   confirm every interview path before reducing that fallback further.
 
 This design has no new required paid vendor. It minimizes Vercel invocations and lets
 Neon scale to zero more often, but `$0 forever` cannot be guaranteed because usage and
@@ -34,7 +35,7 @@ migrated as one feature.
 | --- | --- | --- | --- |
 | Peer help | Requests `/api/help/status` every 15 seconds while the page is visible; fetches inbox and active state after a change | Detect requests, claims, cancellations, and call state | High recurring invocation and database load |
 | General notifications | Polls `/api/notifications/status` with 60-second, 120-second, then 5-minute backoff | Update the notification badge and inbox | Already substantially optimized; lower priority |
-| Voice interviews | Polls interview session state every 1.5 seconds | Synchronize transcript, progress, questions, and completion | Very high frequency, but removing it without a replacement can break interviews |
+| Voice interviews | Refreshes after saved turns and reconnection, plus visible-tab recovery checks at 5–30 seconds depending on state | Synchronize transcript, progress, questions, and completion | Interview-mode verification is still needed |
 
 Relevant implementations:
 
@@ -213,26 +214,22 @@ than Pusher. Neither should be described as guaranteed free forever.
 
 ## 8. Interview polling is a separate enhancement
 
-The interview client currently polls approximately every 1.5 seconds. It synchronizes
-session state, transcript turns, question progress, phase changes, and completion. The
-browser also performs direct refreshes after some persisted-answer events, but that does
-not prove the interval is redundant for every interview path.
+The Gemini Live interview client no longer has a global 1.5-second interval.
+It reads the durable session on entry, after a saved answer or skip, when Gemini
+reconnects, and when the visible tab regains focus or network. A single in-flight
+read coalesces recovery checks and queues a fresh read after a saved action.
+The fallback retries after 5 seconds until the first session loads, checks every
+10 seconds while connecting, and every 30 seconds while live. It stops in hidden
+tabs and after the session ends. Gemini continues to handle live audio and
+transcription; LiveKit remains in Trailmate.
 
-Recommended migration sequence:
-
-1. Inventory every server-side state transition that the interval currently discovers.
-2. Add an event or direct response path for each transition.
-3. Refresh after persisted answers and reconnect/focus events.
-4. Restrict temporary polling to phases awaiting an asynchronous server decision.
-5. Use exponential backoff with a defined maximum interval.
-6. Add reconnect and missed-event recovery using the authoritative session endpoint.
-7. Remove the global 1.5-second interval only after voice, typed, resume, fundamentals,
-   DSA, completion, and reconnect tests pass.
+Before reducing the fallback further, verify voice, typed, resume, fundamentals,
+DSA, completion, and reconnect flows against the saved session and check request
+volume during active interviews.
 
 Long-lived Server-Sent Events are not automatically the cheapest option on Vercel:
-provisioned memory remains allocated while a function waits on I/O. Existing LiveKit
-data channels or short event-triggered reconciliation may fit the current architecture
-better.
+provisioned memory remains allocated while a function waits on I/O. Short
+event-triggered reconciliation fits the current Gemini Live architecture.
 
 ## 9. Delivery plan
 
@@ -261,12 +258,12 @@ better.
 - Monitor missed-event reports and time-to-notification.
 - Tune or remove the fallback only after delivery reliability is demonstrated.
 
-### Phase 4: Optimize interview synchronization
+### Phase 4: Verify interview synchronization
 
-- Add event-driven coverage for every interview state transition.
-- Limit polling to unresolved asynchronous states and back it off.
-- Run regression tests across every supported interview mode.
-- Remove the 1.5-second global interval after parity is proven.
+- Check saved turns, question progression, completion, and reconnect in every
+  supported interview mode with the reduced recovery checks.
+- Measure active-interview request volume and missed updates before reducing
+  the fallback further.
 
 ## 10. Acceptance criteria
 
@@ -286,8 +283,8 @@ The notification enhancement is complete when:
 - Vercel and Neon usage dashboards show a material reduction from the pre-migration
   baseline.
 
-The interview synchronization enhancement is complete only when removing the global
-1.5-second interval does not regress transcript persistence, question progression,
+The interview synchronization enhancement is complete only when the new recovery
+cadence is confirmed not to regress transcript persistence, question progression,
 completion, audio teardown, reconnect behavior, or report generation.
 
 ## 11. Decision summary

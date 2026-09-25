@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
+import type { ManageAccountProfile } from "@/features/account/contracts/manage-account";
 import type { CandidateInterviewProfile } from "@/features/interviews/domain/personalized-plan";
 import {
   CANDIDATE_INTERVIEW_PROFILE_SCHEMA_VERSION,
@@ -33,14 +34,111 @@ import {
 } from "@/features/preparation-onboarding/server/preparation-onboarding-state";
 import { compileCandidateInterviewProfile } from "@/features/interviews/server/candidate-profile-compiler";
 import type { PrismaService } from "@/server/database/prisma.service";
+import { Logger } from "@/server/common/logger";
 
 const roles = new Set<Role>(["backend", "frontend", "fullstack", "data", "ai-ml", "pm"]);
 const levels = new Set<Level>(["fresher", "0-2", "3-5", "5-plus"]);
 const dsaEditorLanguages = new Set(["javascript", "python", "cpp", "java"]);
+const logger = new Logger("ProfileService");
 export type DsaEditorLanguagePreference = "javascript" | "python" | "cpp" | "java";
 
 export class ProfileService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Manage only needs settings and the resume name; keep large resume JSON in Postgres. */
+  async manageAccountState(ownerId: string): Promise<
+    ManageAccountProfile & {
+      onboardingCompletedAt: number | null;
+      preparationCompletedAt: number | null;
+    }
+  > {
+    const startedAt = Date.now();
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        onboardingCompletedAt: Date | null;
+        preparationOnboarding: unknown;
+        workspaceAccent: string;
+        teacherId: string | null;
+        profileImage: string | null;
+        resumeFullName: string | null;
+        teacherNotificationsEnabled: boolean;
+        helpNotificationsEnabled: boolean;
+      }>
+    >(Prisma.sql`
+      SELECT "onboardingCompletedAt", "preparationOnboarding",
+        "workspaceAccent", "teacherId", "profileImage",
+        "resumeAnalysis"->>'fullName' AS "resumeFullName",
+        "teacherNotificationsEnabled", "helpNotificationsEnabled"
+      FROM "CandidateProfile"
+      WHERE "ownerId" = ${ownerId}
+    `);
+    if (Date.now() - startedAt >= 1_000) {
+      logger.warn({ event: "manage_account_read_slow", durationMs: Date.now() - startedAt });
+    }
+    const stored = rows[0];
+    return {
+      onboardingCompletedAt: stored?.onboardingCompletedAt?.getTime() ?? null,
+      preparationCompletedAt: publicPreparationOnboardingState(stored?.preparationOnboarding)
+        .completedAt,
+      workspaceAccent: isWorkspaceAccent(stored?.workspaceAccent)
+        ? stored.workspaceAccent
+        : DEFAULT_WORKSPACE_ACCENT,
+      teacherId: stored?.teacherId ?? null,
+      profileImage: stored?.profileImage ?? null,
+      resumeFullName: stored?.resumeFullName ?? null,
+      teacherNotificationsEnabled: stored?.teacherNotificationsEnabled ?? true,
+      helpNotificationsEnabled: stored?.helpNotificationsEnabled ?? true
+    };
+  }
+
+  /** Only the fields required to render and gate the shared workspace shell. */
+  async workspaceShellState(ownerId: string): Promise<{
+    onboardingCompletedAt: number | null;
+    preparationCompletedAt: number | null;
+    level: Level | null;
+    teacherId: string | null;
+    profileImage: string | null;
+    workspaceAccent: WorkspaceAccent;
+    dsaEditorLanguage: DsaEditorLanguagePreference;
+    targetRole: Role | null;
+  } | null> {
+    const startedAt = Date.now();
+    const stored = await this.prisma.candidateProfile.findUnique({
+      where: { ownerId },
+      select: {
+        onboardingCompletedAt: true,
+        preparationOnboarding: true,
+        level: true,
+        teacherId: true,
+        profileImage: true,
+        workspaceAccent: true,
+        dsaEditorLanguage: true,
+        targetRole: true
+      }
+    });
+    if (Date.now() - startedAt >= 1_000) {
+      logger.warn({
+        event: "workspace_shell_profile_read_slow",
+        durationMs: Date.now() - startedAt
+      });
+    }
+    if (!stored) return null;
+    return {
+      onboardingCompletedAt: stored.onboardingCompletedAt?.getTime() ?? null,
+      preparationCompletedAt: publicPreparationOnboardingState(stored.preparationOnboarding)
+        .completedAt,
+      level: isLevel(stored.level) ? stored.level : null,
+      teacherId: stored.teacherId,
+      profileImage: stored.profileImage,
+      workspaceAccent: isWorkspaceAccent(stored.workspaceAccent)
+        ? stored.workspaceAccent
+        : DEFAULT_WORKSPACE_ACCENT,
+      dsaEditorLanguage: isDsaEditorLanguage(stored.dsaEditorLanguage)
+        ? stored.dsaEditorLanguage
+        : "javascript",
+      targetRole: isRole(stored.targetRole) ? stored.targetRole : null
+    };
+  }
 
   /** Small auth/redirect projection for onboarding routes. Avoids loading the
    * resume JSON and immutable profile snapshot when only flow state is needed. */
@@ -101,12 +199,39 @@ export class ProfileService {
   }
 
   async get(ownerId: string): Promise<CandidateProfile> {
+    const startedAt = Date.now();
     const stored = await this.prisma.candidateProfile.findUnique({
       where: { ownerId },
-      include: {
+      select: {
+        targetRole: true,
+        level: true,
+        targetCompany: true,
+        targetDate: true,
+        headline: true,
+        context: true,
+        coverImage: true,
+        profileImage: true,
+        workspaceAccent: true,
+        teacherId: true,
+        helpNotificationsEnabled: true,
+        teacherNotificationsEnabled: true,
+        focusAreas: true,
+        stories: true,
+        updatedAt: true,
+        onboardingCompletedAt: true,
+        preparationOnboarding: true,
+        resumeAnalysis: true,
+        resumeFileName: true,
+        resumeUploadedAt: true,
+        resumeConfidence: true,
+        activeResumeVersionId: true,
+        resumeMimeType: true,
         activeResumeVersion: { select: { sourceResumeFingerprint: true } }
       }
     });
+    if (Date.now() - startedAt >= 1_000) {
+      logger.warn({ event: "full_profile_read_slow", durationMs: Date.now() - startedAt });
+    }
 
     if (!stored) return emptyProfile();
 
@@ -348,7 +473,6 @@ export class ProfileService {
         data: { activeResumeVersionId: version.id }
       });
     });
-
   }
 
   /**

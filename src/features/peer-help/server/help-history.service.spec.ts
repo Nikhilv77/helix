@@ -93,16 +93,9 @@ describe("help history", () => {
     ]);
     const prisma = {
       helpRequest: { findMany: helpRequestFindMany },
-      candidateProfile: {
-        findMany: vi.fn().mockResolvedValue([
-          {
-            ownerId: "private-learner-id",
-            headline: "Frontend candidate",
-            profileImage: "/images/profile/avatars/avatar-01.jpg",
-            resumeAnalysis: { fullName: "Asha Verma" }
-          }
-        ])
-      }
+      $queryRaw: rawQuery({
+        profiles: [profile("private-learner-id", "Asha Verma", "Frontend candidate", AVATAR_1)]
+      })
     } as unknown as PrismaService;
 
     const result = await new HelpHistoryService(prisma).history({
@@ -133,9 +126,8 @@ describe("help history", () => {
   });
 
   it("returns only the lightweight counts used by the simplified Help page", async () => {
-    const queryRaw = vi
-      .fn()
-      .mockResolvedValueOnce([
+    const queryRaw = rawQuery({
+      counts: [
         {
           helpReceived: 4,
           peopleHelped: 1,
@@ -144,29 +136,12 @@ describe("help history", () => {
           positiveHelps: 1,
           availabilityCredits: 1
         }
-      ])
-      .mockResolvedValueOnce([]);
+      ],
+      leaderboard: [],
+      profiles: [profile("owner-1", "Asha Verma", "Frontend candidate", AVATAR_1)]
+    });
     const prisma = {
-      helpRequest: {
-        findFirst: vi.fn().mockResolvedValue(null)
-      },
-      candidateProfile: {
-        findMany: vi.fn().mockImplementation(({ where }) => {
-          const ownerIds = where.ownerId.in as string[];
-          return Promise.resolve(
-            ownerIds.includes("owner-1")
-              ? [
-                  {
-                    ownerId: "owner-1",
-                    headline: "Frontend candidate",
-                    profileImage: "/images/profile/avatars/avatar-01.jpg",
-                    resumeAnalysis: { fullName: "Asha Verma" }
-                  }
-                ]
-              : []
-          );
-        })
-      },
+      helpRequest: { findFirst: vi.fn().mockResolvedValue(null) },
       $queryRaw: queryRaw
     } as unknown as PrismaService;
 
@@ -174,7 +149,7 @@ describe("help history", () => {
       viewer: {
         label: "Asha Verma",
         headline: "Frontend candidate",
-        profileImage: "/images/profile/avatars/avatar-01.jpg"
+        profileImage: AVATAR_1
       },
       helpReceived: 4,
       peopleHelped: 1,
@@ -185,34 +160,26 @@ describe("help history", () => {
       activeConversation: null,
       topHelpers: []
     });
-    expect(queryRaw).toHaveBeenCalledTimes(2);
+    // Counters, leaderboard, and the viewer's profile: one statement each.
+    expect(queryRaw).toHaveBeenCalledTimes(3);
   });
 
   it("aggregates the leaderboard in SQL and shares it for 45 seconds", async () => {
     let now = 1_000;
     const dateNow = vi.spyOn(Date, "now").mockImplementation(() => now);
-    const queryRaw = vi.fn().mockResolvedValue([
-      { helperId: "helper-1", helpedCount: 8, thankedCount: 6 },
-      { helperId: "helper-2", helpedCount: 11, thankedCount: 4 }
-    ]);
-    const profileFindMany = vi.fn().mockResolvedValue([
-      {
-        ownerId: "helper-1",
-        headline: "Backend candidate",
-        profileImage: "/images/profile/avatars/avatar-01.jpg",
-        resumeAnalysis: { fullName: "Asha Verma" }
-      },
-      {
-        ownerId: "helper-2",
-        headline: null,
-        profileImage: null,
-        resumeAnalysis: { fullName: "Dev Shah" }
-      }
-    ]);
-    const service = new HelpHistoryService({
-      $queryRaw: queryRaw,
-      candidateProfile: { findMany: profileFindMany }
-    } as unknown as PrismaService);
+    const queryRaw = rawQuery({
+      leaderboard: [
+        { helperId: "helper-1", helpedCount: 8, thankedCount: 6 },
+        { helperId: "helper-2", helpedCount: 11, thankedCount: 4 }
+      ],
+      profiles: [
+        profile("helper-1", "Asha Verma", "Backend candidate", AVATAR_1),
+        profile("helper-2", "Dev Shah", null, null)
+      ]
+    });
+    const leaderboardReads = () => callsMatching(queryRaw, LEADERBOARD_SQL);
+    const profileReads = () => callsMatching(queryRaw, PROFILE_SQL);
+    const service = new HelpHistoryService({ $queryRaw: queryRaw } as unknown as PrismaService);
 
     try {
       const [first, concurrent] = await Promise.all([service.topHelpers(), service.topHelpers()]);
@@ -233,17 +200,17 @@ describe("help history", () => {
         }
       ]);
       expect(concurrent).toEqual(first);
-      expect(queryRaw).toHaveBeenCalledTimes(1);
-      expect(profileFindMany).toHaveBeenCalledTimes(1);
+      expect(leaderboardReads()).toBe(1);
+      expect(profileReads()).toBe(1);
 
       now = 45_999;
       await service.topHelpers();
-      expect(queryRaw).toHaveBeenCalledTimes(1);
+      expect(leaderboardReads()).toBe(1);
 
       now = 46_001;
       await service.topHelpers();
-      expect(queryRaw).toHaveBeenCalledTimes(2);
-      expect(profileFindMany).toHaveBeenCalledTimes(2);
+      expect(leaderboardReads()).toBe(2);
+      expect(profileReads()).toBe(2);
     } finally {
       dateNow.mockRestore();
     }
@@ -284,22 +251,12 @@ describe("help history", () => {
           { id: "expired", learnerId: "owner-1", helperId: null }
         ])
       },
-      candidateProfile: {
-        findMany: vi.fn().mockResolvedValue([
-          {
-            ownerId: "learner-1",
-            headline: null,
-            profileImage: "/images/profile/avatars/avatar-01.jpg",
-            resumeAnalysis: { fullName: "Asha Verma" }
-          },
-          {
-            ownerId: "helper-1",
-            headline: null,
-            profileImage: "/images/profile/avatars/avatar-02.jpg",
-            resumeAnalysis: { fullName: "Dev Shah" }
-          }
-        ])
-      }
+      $queryRaw: rawQuery({
+        profiles: [
+          profile("learner-1", "Asha Verma", null, AVATAR_1),
+          profile("helper-1", "Dev Shah", null, "/images/profile/avatars/avatar-02.jpg")
+        ]
+      })
     } as unknown as PrismaService;
 
     const participants = await new HelpHistoryService(prisma).notificationParticipants("owner-1", [
@@ -333,3 +290,43 @@ describe("help history", () => {
     ).rejects.toBeInstanceOf(InvalidHelpHistoryCursorError);
   });
 });
+
+const AVATAR_1 = "/images/profile/avatars/avatar-01.jpg";
+const PROFILE_SQL = 'FROM "CandidateProfile"';
+const LEADERBOARD_SQL = 'GROUP BY request."helperId"';
+
+type ProfileRow = {
+  ownerId: string;
+  headline: string | null;
+  profileImage: string | null;
+  fullName: string | null;
+};
+
+function profile(
+  ownerId: string,
+  fullName: string,
+  headline: string | null,
+  profileImage: string | null
+): ProfileRow {
+  return { ownerId, fullName, headline, profileImage };
+}
+
+/** Fake `$queryRaw` that answers each statement by the table it reads. */
+function rawQuery(responses: {
+  counts?: unknown[];
+  leaderboard?: unknown[];
+  profiles?: ProfileRow[];
+}) {
+  return vi.fn(async ({ sql, values }: { sql: string; values: unknown[] }) => {
+    if (sql.includes(PROFILE_SQL)) {
+      return (responses.profiles ?? []).filter((row) => values.includes(row.ownerId));
+    }
+    if (sql.includes("request_counts")) return responses.counts ?? [];
+    if (sql.includes(LEADERBOARD_SQL)) return responses.leaderboard ?? [];
+    throw new Error(`Unexpected query: ${sql}`);
+  });
+}
+
+function callsMatching(query: ReturnType<typeof rawQuery>, fragment: string): number {
+  return query.mock.calls.filter(([statement]) => statement.sql.includes(fragment)).length;
+}

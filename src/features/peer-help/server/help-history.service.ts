@@ -41,6 +41,7 @@ interface HelpPollingStatusRow {
   latestInvitationAt: Date | null;
   engagementCount: number;
   latestEngagementAt: Date | null;
+  liveEngagementCount: number;
 }
 
 interface HistoryCursor {
@@ -64,6 +65,13 @@ export class HelpHistoryService {
    * active-session reconciliation when nothing changed.
    */
   async pollingStatus(ownerId: string): Promise<{ version: string }> {
+    const { version } = await this.pollingStatusWithMaintenance(ownerId);
+    return { version };
+  }
+
+  async pollingStatusWithMaintenance(
+    ownerId: string
+  ): Promise<{ version: string; needsMaintenance: boolean }> {
     const invitationCutoff = new Date(Date.now() - DEFAULT_TTL_MS);
     const rows = await this.prisma.$queryRaw<HelpPollingStatusRow[]>(Prisma.sql`
       WITH invitations AS (
@@ -78,7 +86,10 @@ export class HelpHistoryService {
       engagements AS (
         SELECT
           COUNT(*)::int AS "engagementCount",
-          MAX(request."updatedAt") AS "latestEngagementAt"
+          MAX(request."updatedAt") AS "latestEngagementAt",
+          COUNT(*) FILTER (WHERE request."status" IN (
+            'OPEN'::"HelpRequestStatus", 'CLAIMED'::"HelpRequestStatus"
+          ))::int AS "liveEngagementCount"
         FROM "HelpRequest" request
         WHERE request."learnerId" = ${ownerId}
            OR request."helperId" = ${ownerId}
@@ -91,7 +102,8 @@ export class HelpHistoryService {
       invitationCount: 0,
       latestInvitationAt: null,
       engagementCount: 0,
-      latestEngagementAt: null
+      latestEngagementAt: null,
+      liveEngagementCount: 0
     };
 
     return {
@@ -100,7 +112,8 @@ export class HelpHistoryService {
         row.latestInvitationAt?.getTime() ?? 0,
         row.engagementCount,
         row.latestEngagementAt?.getTime() ?? 0
-      ].join(":")
+      ].join(":"),
+      needsMaintenance: row.liveEngagementCount > 0
     };
   }
 
@@ -351,15 +364,17 @@ export class HelpHistoryService {
   async participants(ownerIds: string[]): Promise<Map<string, HelpHistoryParticipant>> {
     const uniqueIds = [...new Set(ownerIds.filter(Boolean))];
     if (uniqueIds.length === 0) return new Map();
-    const profiles = await this.prisma.candidateProfile.findMany({
-      where: { ownerId: { in: uniqueIds } },
-      select: {
-        ownerId: true,
-        headline: true,
-        profileImage: true,
-        resumeAnalysis: true
-      }
-    });
+    const profiles = await this.prisma.$queryRaw<Array<{
+      ownerId: string;
+      headline: string | null;
+      profileImage: string | null;
+      fullName: string | null;
+    }>>(Prisma.sql`
+      SELECT "ownerId", "headline", "profileImage",
+        "resumeAnalysis"->>'fullName' AS "fullName"
+      FROM "CandidateProfile"
+      WHERE "ownerId" IN (${Prisma.join(uniqueIds)})
+    `);
     return new Map(
       profiles.map((profile) => [profile.ownerId, presentHelpParticipant(profile)] as const)
     );

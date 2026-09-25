@@ -3,8 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
-  enforce: vi.fn(),
-  acquire: vi.fn(),
+  enforceAndAcquire: vi.fn(),
   release: vi.fn(),
   dsaTransfer: vi.fn(),
   coreTransfer: vi.fn(),
@@ -16,7 +15,7 @@ vi.mock("@clerk/nextjs/server", () => ({ auth: mocks.auth }));
 vi.mock("@/features/interviews/server/owner", () => ({ authenticatedOwnerId: () => "owner-1" }));
 vi.mock("@/server/rate-limit/shared-guard", () => ({
   RATE_LIMIT_POLICIES: { codeExecution: { namespace: "test" } },
-  getSharedGuard: () => ({ enforce: mocks.enforce, acquire: mocks.acquire })
+  getSharedGuard: () => ({ enforceAndAcquire: mocks.enforceAndAcquire })
 }));
 vi.mock("@/server/app-container", () => ({
   getAppContainer: () => ({
@@ -36,7 +35,7 @@ describe("POST /api/code/run Core Technical assessment", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.auth.mockResolvedValue({ userId: "user-1" });
-    mocks.acquire.mockResolvedValue({ release: mocks.release });
+    mocks.enforceAndAcquire.mockResolvedValue({ release: mocks.release });
     mocks.dsaTransfer.mockResolvedValue(null);
     mocks.coreTransfer.mockResolvedValue({
       kind: "core-technical",

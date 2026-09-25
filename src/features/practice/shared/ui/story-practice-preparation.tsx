@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Check, ChevronDown, Code2, Loader2, Network } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { StoryPracticePreparationExperience } from "@/features/practice/shared/ui/contracts";
+import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
 
 export type { StoryPracticePreparationExperience } from "@/features/practice/shared/ui/contracts";
 
@@ -277,7 +278,7 @@ export function StoryPracticePreparation({ experience }: StoryPracticePreparatio
 }
 
 async function post(url: string, body: unknown, subjectNoun: string): Promise<unknown> {
-  const response = await fetch(url, {
+  const response = await workspaceMutationFetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body)

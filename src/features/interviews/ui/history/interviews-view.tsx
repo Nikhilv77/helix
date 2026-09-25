@@ -15,20 +15,16 @@ import {
 import { DocumentTitle } from "@/components/document-title";
 import { RoadmapSessionCard as SharedRoadmapSessionCard } from "@/components/workspace/shared/roadmap-session-card";
 import {
-  interviewRoadmapSessions,
   roadmapSessionHref,
   type InterviewRoadmapSession
 } from "@/features/interviews/domain/interview-roadmap-sessions";
-import type { PersonalizedInterviewPlan } from "@/features/interviews/domain/personalized-plan";
-import type { FrontendRoadmapHome } from "@/lib/roadmap/roadmap";
-import type { CandidateProfile, InterviewHistoryItem } from "@/lib/shared/types";
+import type { InterviewHistoryItem } from "@/lib/shared/types";
 
 interface InterviewsViewProps {
   quota: { used: number; limit: number };
   sessions: InterviewHistoryItem[];
-  profile: CandidateProfile;
-  personalizedPlan: PersonalizedInterviewPlan | null;
-  roadmap: FrontendRoadmapHome | null;
+  firstName: string;
+  roadmapSessions: InterviewRoadmapSession[];
 }
 
 /**
@@ -54,9 +50,8 @@ const sessionIcons: Record<string, LucideIcon> = {
 export function InterviewsView({
   quota,
   sessions,
-  profile,
-  personalizedPlan,
-  roadmap
+  firstName,
+  roadmapSessions
 }: InterviewsViewProps) {
   const remaining = Math.max(0, quota.limit - quota.used);
   const exhausted = remaining === 0;
@@ -72,12 +67,6 @@ export function InterviewsView({
         ? "/practice/applied-engineering"
         : `/interview/voice?session=${active.sessionId}`
     : null;
-  const roadmapSessions = interviewRoadmapSessions({
-    personalizedPlan,
-    roadmap,
-    history: sessions
-  });
-  const firstName = profile.resume?.fullName?.trim().split(/\s+/)[0] ?? "";
   const introCopy = firstName
     ? `${firstName}, choose the interview session that feels most useful right now. Each round is shaped around your saved profile and a focused agenda, so you can practise with intent and leave knowing exactly what to sharpen next.`
     : "Choose the interview session that feels most useful right now. Each round is shaped around your saved profile and a focused agenda, so you can practise with intent and leave knowing exactly what to sharpen next.";
