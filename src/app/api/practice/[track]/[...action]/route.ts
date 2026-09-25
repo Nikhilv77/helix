@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { after } from "next/server";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
+import { timeAction } from "@/server/http/action-timing";
 import { refreshPracticeHome } from "@/features/practice/shared/server/refresh-practice-home";
 
 import { ApiRouteError } from "@/server/http/api-error";
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     );
   }
 
-  const response = await handler(request);
+  const response = await timeAction(`practice.${path}`, () => handler(request));
   if (response.ok && !["draft", "hint", "run"].includes(action.at(-1) ?? "")) {
     after(async () => {
       const { userId } = await auth();
@@ -132,7 +133,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
 export async function GET(request: NextRequest, context: RouteContext) {
   const { track, action } = await context.params;
   if (track === "architecture-design" && action.length === 2 && action[0] === "canvas") {
-    return architectureCanvasGet(request, action[1]!);
+    return timeAction("practice.architecture-design/canvas.get", () =>
+      architectureCanvasGet(request, action[1]!)
+    );
   }
   return apiError(
     new ApiRouteError(404, "NOT_FOUND", "Practice route not found"),
@@ -143,7 +146,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
 export async function PUT(request: NextRequest, context: RouteContext) {
   const { track, action } = await context.params;
   if (track === "architecture-design" && action.length === 2 && action[0] === "canvas") {
-    return architectureCanvasPut(request, action[1]!);
+    return timeAction("practice.architecture-design/canvas.put", () =>
+      architectureCanvasPut(request, action[1]!)
+    );
   }
   return apiError(
     new ApiRouteError(404, "NOT_FOUND", "Practice route not found"),

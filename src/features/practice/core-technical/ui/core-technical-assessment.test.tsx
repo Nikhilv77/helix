@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CoreTechnicalPublicBlock } from "@/features/practice/core-technical/server/practice.service";
 
@@ -126,7 +126,7 @@ describe("CoreTechnicalAssessment", () => {
     expect(bodies[1]).toEqual(bodies[0]);
   });
 
-  it("restores the exact server-checkpointed FINALIZING submission after refresh", async () => {
+  it("waits for server grading, then retries the exact checkpointed submission if it stalls", async () => {
     const submission = {
       requestId: FINALIZE_REQUEST_ID,
       responses: prompts().map((prompt) => ({
@@ -138,13 +138,28 @@ describe("CoreTechnicalAssessment", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       response({ assessment: makeAssessment("COMPLETED") })
     );
-    render(
-      <CoreTechnicalAssessment block={makeBlock("FINALIZING", { submission })} terminalCount={8} />
-    );
+    vi.useFakeTimers();
+    try {
+      render(
+        <CoreTechnicalAssessment
+          block={makeBlock("FINALIZING", { submission })}
+          terminalCount={8}
+        />
+      );
 
-    expect(screen.getByDisplayValue(submission.responses[0]!.answer)).toHaveAttribute("readonly");
-    expect(screen.getByRole("status")).toHaveTextContent("Finalizing");
-    fireEvent.click(screen.getByRole("button", { name: "Retry report" }));
+      expect(screen.getByDisplayValue(submission.responses[0]!.answer)).toHaveAttribute("readonly");
+      // Grading runs on the server, so the page waits and refreshes itself.
+      expect(screen.getByRole("status")).toHaveTextContent("Grading");
+      expect(screen.getByRole("button", { name: "Grading…" })).toBeDisabled();
+      act(() => vi.advanceTimersByTime(5_000));
+      expect(mocks.refresh).toHaveBeenCalledTimes(1);
+
+      // After three minutes without a report, the exact submission can be retried.
+      act(() => vi.advanceTimersByTime(180_000));
+      fireEvent.click(screen.getByRole("button", { name: "Retry report" }));
+    } finally {
+      vi.useRealTimers();
+    }
     await screen.findByRole("heading", { name: "Practice path results" });
     expect(requestBodies()[0]).toEqual({
       assessmentId: ASSESSMENT_ID,

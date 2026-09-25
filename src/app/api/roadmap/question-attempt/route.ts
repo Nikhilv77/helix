@@ -8,6 +8,7 @@ import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { requireCompletedPreparationOnboardingState } from "@/server/auth/preparation-onboarding-api-guard";
 import { schedulePracticeHomeRefresh } from "@/features/practice/shared/server/refresh-practice-home";
 import { invalidateDsaPage } from "@/features/practice/dsa/server/cached-dsa-page";
+import { timeAction } from "@/server/http/action-timing";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,16 @@ const attemptSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  // Name the timing by attempt kind; open, complete, and skip cost differently.
+  const body = (await request
+    .clone()
+    .json()
+    .catch(() => null)) as { action?: unknown } | null;
+  const kind = typeof body?.action === "string" ? body.action : "unknown";
+  return timeAction(`dsa.question-attempt.${kind}`, () => handlePost(request));
+}
+
+async function handlePost(request: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");

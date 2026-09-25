@@ -61,7 +61,9 @@ describe("story-practice assessment state parity", () => {
       } else if (status === "IN_PROGRESS") {
         expect(screen.getByRole("button", { name: /Continue assessment/i })).toBeInTheDocument();
       } else if (status === "FINALIZING") {
-        expect(screen.getByRole("button", { name: /Retry report/i })).toBeInTheDocument();
+        // Grading runs on the server; the page waits instead of offering a retry.
+        expect(screen.getByText(/Grading your answers/i)).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: /Retry report/i })).toBeNull();
       } else {
         expect(screen.getByText("Preparation complete")).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: /Continue/i })).toBeNull();

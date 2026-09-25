@@ -6,7 +6,12 @@ const mocks = vi.hoisted(() => ({
   current: vi.fn(),
   historyList: vi.fn(),
   historyRead: vi.fn(),
-  recoverCurrentInterview: vi.fn()
+  recoverCurrentInterview: vi.fn(),
+  after: vi.fn()
+}));
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  after: mocks.after
 }));
 vi.mock("@/server/auth/onboarding-guard", () => ({
   requireOnboardedProfile: () =>
@@ -56,17 +61,23 @@ describe("AppliedEngineeringPracticePage", () => {
     expect(mocks.recoverCurrentInterview).not.toHaveBeenCalled();
   });
 
-  it("recovers an interrupted assessment before showing the current incident", async () => {
-    mocks.current
-      .mockResolvedValueOnce({ id: "current", ordinal: 1, assessment: { status: "IN_PROGRESS" } })
-      .mockResolvedValueOnce({ id: "current", ordinal: 1, assessment: { status: "COMPLETED" } });
+  it("schedules recovery of an interrupted assessment instead of waiting for grading", async () => {
+    mocks.current.mockResolvedValue({
+      id: "current",
+      ordinal: 1,
+      assessment: { status: "FINALIZING" }
+    });
     mocks.historyList.mockResolvedValue([{ id: "current", ordinal: 1, isCurrent: true }]);
 
     render(await AppliedEngineeringPracticePage({ searchParams: Promise.resolve({}) }));
 
-    expect(mocks.recoverCurrentInterview).toHaveBeenCalledWith("owner-one");
-    expect(mocks.current).toHaveBeenCalledTimes(2);
+    // The page renders the saved state at once; grading repair runs after the response.
     expect(screen.getByTestId("incident")).toHaveAttribute("data-block", "current");
+    expect(mocks.current).toHaveBeenCalledTimes(1);
+    expect(mocks.recoverCurrentInterview).not.toHaveBeenCalled();
+    expect(mocks.after).toHaveBeenCalledTimes(1);
+    await mocks.after.mock.calls[0]![0]();
+    expect(mocks.recoverCurrentInterview).toHaveBeenCalledWith("owner-one");
   });
 
   it("loads only the owner's requested history block and derives navigation", async () => {

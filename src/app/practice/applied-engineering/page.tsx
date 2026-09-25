@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { AppliedEngineeringOverview } from "@/features/practice/applied-engineering/ui/applied-engineering-overview";
 import { AppliedEngineeringTechnologyWelcome } from "@/features/practice/applied-engineering/ui/applied-engineering-technology-welcome";
@@ -33,24 +34,28 @@ export default async function AppliedEngineeringPracticePage({
           if (
             error instanceof NotFoundErrorException &&
             error.code === "APPLIED_ENGINEERING_BLOCK_NOT_FOUND"
-          ) redirect("/practice/applied-engineering");
+          )
+            redirect("/practice/applied-engineering");
           throw error;
         })
       : app.appliedEngineeringPracticeService.current(ownerId),
     app.appliedEngineeringHistoryService.list(ownerId)
   ]);
-  let block = initialBlock;
-  let historyList = initialHistory;
+  const block = initialBlock;
+  const historyList = initialHistory;
   if (
     !requestedBlockId &&
     block?.assessment &&
     ["IN_PROGRESS", "FINALIZING"].includes(block.assessment.status)
   ) {
-    await app.appliedEngineeringAssessmentService.recoverCurrentInterview(ownerId).catch(() => null);
-    [block, historyList] = await Promise.all([
-      app.appliedEngineeringPracticeService.current(ownerId),
-      app.appliedEngineeringHistoryService.list(ownerId)
-    ]);
+    // Repair a finished room whose deferred report was interrupted, after the
+    // response: grading takes tens of seconds and the page polls for the report.
+    after(() =>
+      app.appliedEngineeringAssessmentService.recoverCurrentInterview(ownerId).then(
+        () => undefined,
+        () => undefined
+      )
+    );
   }
 
   const needsFirstIncident =

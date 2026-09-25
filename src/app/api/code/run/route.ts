@@ -17,6 +17,7 @@ import {
   resultMarker
 } from "@/features/practice/dsa/server/code-test-harness";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
+import { timeAction } from "@/server/http/action-timing";
 
 export const dynamic = "force-dynamic";
 
@@ -125,7 +126,11 @@ async function modernPythonLanguage(
   return modern;
 }
 
-export async function POST(request: NextRequest) {
+export function POST(request: NextRequest) {
+  return timeAction("dsa.code-run", () => handlePost(request));
+}
+
+async function handlePost(request: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");

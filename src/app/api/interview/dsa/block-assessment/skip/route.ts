@@ -6,6 +6,7 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authorizeInterviewSession } from "@/features/interviews/server/session-access";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import { refreshPracticeHome } from "@/features/practice/shared/server/refresh-practice-home";
+import { timeAction } from "@/server/http/action-timing";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -18,7 +19,11 @@ const skipSchema = z.object({
 });
 
 /** Records an explicit zero for the active transfer-code prompt and advances once. */
-export async function POST(request: NextRequest) {
+export function POST(request: NextRequest) {
+  return timeAction("dsa.block-assessment.skip", () => handlePost(request));
+}
+
+async function handlePost(request: NextRequest) {
   try {
     const parsed = skipSchema.safeParse(await readJson(request));
     if (!parsed.success) {

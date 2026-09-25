@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { ArchitectureDesignOverview } from "@/features/practice/architecture-design/ui/architecture-design-overview";
 import { ArchitectureDesignTechnologyWelcome } from "@/features/practice/architecture-design/ui/architecture-design-technology-welcome";
@@ -33,24 +34,28 @@ export default async function ArchitectureDesignPracticePage({
           if (
             error instanceof NotFoundErrorException &&
             error.code === "ARCHITECTURE_DESIGN_BLOCK_NOT_FOUND"
-          ) redirect("/practice/architecture-design");
+          )
+            redirect("/practice/architecture-design");
           throw error;
         })
       : services.practice.current(ownerId),
     services.history.list(ownerId)
   ]);
-  let block = initialBlock;
-  let historyList = initialHistory;
+  const block = initialBlock;
+  const historyList = initialHistory;
   if (
     !requestedBlockId &&
     block?.assessment &&
     ["IN_PROGRESS", "FINALIZING"].includes(block.assessment.status)
   ) {
-    await services.assessment.recoverCurrentInterview(ownerId).catch(() => null);
-    [block, historyList] = await Promise.all([
-      services.practice.current(ownerId),
-      services.history.list(ownerId)
-    ]);
+    // Repair a finished room whose deferred report was interrupted, after the
+    // response: grading takes tens of seconds and the page polls for the report.
+    after(() =>
+      services.assessment.recoverCurrentInterview(ownerId).then(
+        () => undefined,
+        () => undefined
+      )
+    );
   }
 
   const needsFirstScenario = !block && eligibility.available;

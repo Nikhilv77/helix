@@ -402,6 +402,63 @@ describe("Core Technical assessment, adaptation, and history lifecycle", () => {
     );
   });
 
+  it("leaves a fresh FINALIZING claim to the request already grading it", async () => {
+    const harness = finalizeHarness({ status: "FINALIZING", claimedMsAgo: 30_000 });
+
+    const result = await harness.service.finalize("owner-1", harness.input);
+
+    expect(result.status).toBe("FINALIZING");
+    expect(harness.evaluate).not.toHaveBeenCalled();
+    expect(harness.assessmentUpdate).not.toHaveBeenCalled();
+  });
+
+  it("returns the claim at once and grades only when the scheduled work runs", async () => {
+    const harness = finalizeHarness({ status: "IN_PROGRESS" });
+    const scheduled: Array<() => Promise<void>> = [];
+
+    const result = await harness.service.finalize("owner-1", harness.input, null, {
+      schedule: (work) => scheduled.push(work)
+    });
+
+    expect(result.status).toBe("FINALIZING");
+    expect(harness.evaluate).not.toHaveBeenCalled();
+    expect(scheduled).toHaveLength(1);
+    await scheduled[0]!();
+    expect(harness.evaluate).toHaveBeenCalledOnce();
+    expect(harness.reportCreate).toHaveBeenCalledOnce();
+  });
+
+  it("takes over a stale FINALIZING claim whose grader stopped", async () => {
+    const harness = finalizeHarness({ status: "FINALIZING", claimedMsAgo: 10 * 60_000 });
+
+    await harness.service.finalize("owner-1", harness.input);
+
+    expect(harness.assessmentUpdate).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ data: expect.objectContaining({ status: "FINALIZING" }) })
+    );
+    expect(harness.evaluate).toHaveBeenCalledOnce();
+    expect(harness.reportCreate).toHaveBeenCalledOnce();
+  });
+
+  it("makes a failed grading immediately retryable", async () => {
+    const harness = finalizeHarness({ status: "IN_PROGRESS" });
+    harness.evaluate.mockRejectedValue(new Error("model timeout"));
+
+    await expect(harness.service.finalize("owner-1", harness.input)).rejects.toMatchObject({
+      code: "CORE_TECHNICAL_ASSESSMENT_EVALUATION_FAILED"
+    });
+    expect(harness.claimReset).toHaveBeenCalledWith({
+      where: {
+        id: ASSESSMENT_ID,
+        ownerId: "owner-1",
+        status: "FINALIZING",
+        finalizationRequestId: REQUEST_ID
+      },
+      data: { updatedAt: new Date(0) }
+    });
+  });
+
   it("returns an existing completed report without evaluating or creating a duplicate", async () => {
     const snapshot = assessmentSnapshot();
     const report = reportWith(ranking().rankNextStory(focus(), adaptiveEvidence()));
@@ -594,6 +651,99 @@ describe("Core Technical assessment, adaptation, and history lifecycle", () => {
     expect(historyBlock).toHaveBeenCalledWith("owner-1", BLOCK_ID);
   });
 });
+
+/** Finalize fixtures: the claim transaction record, evidence, and the reads around them. */
+function finalizeHarness(claim: { status: "IN_PROGRESS" | "FINALIZING"; claimedMsAgo?: number }) {
+  const snapshot = assessmentSnapshot();
+  const responses = snapshot.prompts.map((prompt) => ({
+    promptId: prompt.id,
+    answer: `A complete assessment response for ${prompt.id}.`
+  }));
+  const report = reportWith(ranking().rankNextStory(focus(), adaptiveEvidence()));
+  const transcript = {
+    schemaVersion: 1 as const,
+    assessmentId: ASSESSMENT_ID,
+    blockId: BLOCK_ID,
+    entries: snapshot.prompts.map((prompt, index) => ({
+      promptId: prompt.id,
+      order: prompt.order,
+      kind: prompt.kind,
+      prompt: prompt.prompt,
+      answer: responses[index]!.answer
+    }))
+  };
+  const assessmentUpdate = vi.fn();
+  const reportCreate = vi.fn();
+  const tx = {
+    $executeRaw: vi.fn(),
+    coreTechnicalAssessment: {
+      findFirst: vi
+        .fn()
+        .mockResolvedValueOnce({
+          id: ASSESSMENT_ID,
+          blockId: BLOCK_ID,
+          status: claim.status,
+          finalizationRequestId: claim.status === "FINALIZING" ? REQUEST_ID : null,
+          updatedAt: new Date(NOW.getTime() - (claim.claimedMsAgo ?? 0)),
+          assessmentSnapshot: snapshot,
+          report: null,
+          block: { isCurrent: true }
+        })
+        .mockResolvedValueOnce({
+          blockId: BLOCK_ID,
+          status: "FINALIZING",
+          finalizationRequestId: REQUEST_ID,
+          report: null,
+          block: { storyVersion: { storyKey: first.story.key } }
+        }),
+      update: assessmentUpdate
+    },
+    coreTechnicalAssessmentReport: { create: reportCreate },
+    coreTechnicalBlock: { update: vi.fn() },
+    coreTechnicalStoryProgress: { update: vi.fn() }
+  };
+  const evidenceBlock = {
+    id: BLOCK_ID,
+    ordinal: 1,
+    focusRevision: { focusSnapshot: focus() },
+    storyVersion: { storyKey: first.story.key },
+    questions: evidenceQuestions({ learnedFirst: true, acceptedCodeRuns: 1 })
+  };
+  const finalizingRead = readAssessment("FINALIZING", snapshot);
+  const claimReset = vi.fn().mockResolvedValue({ count: 1 });
+  const prisma = {
+    $transaction: vi.fn().mockImplementation((work) => work(tx)),
+    coreTechnicalAssessment: {
+      // Evidence for grading is recognised by its `select`; every other read
+      // is the public projection, which stays FINALIZING in these fixtures.
+      findFirst: vi
+        .fn()
+        .mockImplementation(async (query: { select?: { block?: unknown } }) =>
+          query.select?.block ? { block: evidenceBlock } : finalizingRead
+        ),
+      updateMany: claimReset
+    },
+    coreTechnicalBlock: {
+      findMany: vi.fn().mockResolvedValue([
+        {
+          storyVersion: { storyKey: first.story.key },
+          questions: first.questionBlock.questions.map((question) => ({
+            privateSnapshot: question
+          }))
+        }
+      ])
+    }
+  } as unknown as PrismaService;
+  const evaluate = vi.fn().mockResolvedValue({ report, transcript, evidence: adaptiveEvidence() });
+  return {
+    service: new CoreTechnicalAssessmentService(prisma, { evaluate }, () => NOW),
+    input: { assessmentId: ASSESSMENT_ID, requestId: REQUEST_ID, responses },
+    evaluate,
+    assessmentUpdate,
+    reportCreate,
+    claimReset
+  };
+}
 
 function assessmentSnapshot() {
   return buildCoreTechnicalAssessmentSnapshot({

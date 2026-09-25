@@ -1,3 +1,5 @@
+import { Logger } from "@/server/common/logger";
+import type { z } from "zod";
 import {
   CoreTechnicalAssessmentStatus,
   CoreTechnicalBlockStatus,
@@ -53,7 +55,18 @@ const assessmentReadSelect = {
   }
 } satisfies Prisma.CoreTechnicalAssessmentSelect;
 
+/** A FINALIZING claim younger than this is assumed to still be grading. */
+const FINALIZATION_STALE_MS = 180_000;
+const logger = new Logger("CoreTechnicalAssessment");
+
+type FinalizeInput = z.output<typeof coreTechnicalAssessmentFinalizeInputSchema>;
+type AssessmentSnapshot = z.output<typeof coreTechnicalAssessmentSnapshotSchema>;
+/** When given, grading runs after the response instead of inside the request. */
+type FinalizeOptions = { schedule?: (work: () => Promise<void>) => void };
+
 export class CoreTechnicalAssessmentService {
+  private readonly grading = new Map<string, Promise<void>>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly evaluator: Pick<CoreTechnicalAssessmentEvaluator, "evaluate">,
@@ -181,7 +194,8 @@ export class CoreTechnicalAssessmentService {
     trustedCodeEvidence: {
       codeExecution: NonNullable<InterviewState["codeExecutions"]>[string] | null;
       codeSkipped: boolean;
-    } | null = null
+    } | null = null,
+    options: FinalizeOptions = {}
   ) {
     const input = coreTechnicalAssessmentFinalizeInputSchema.parse(rawInput);
     const responseFingerprint = fingerprint(input.responses);
@@ -194,6 +208,7 @@ export class CoreTechnicalAssessmentService {
           blockId: true,
           status: true,
           finalizationRequestId: true,
+          updatedAt: true,
           assessmentSnapshot: true,
           report: { select: { id: true } },
           block: { select: { isCurrent: true } }
@@ -238,6 +253,13 @@ export class CoreTechnicalAssessmentService {
           "This assessment is already being finalized."
         );
       }
+      if (
+        assessment.status === CoreTechnicalAssessmentStatus.FINALIZING &&
+        this.now().getTime() - assessment.updatedAt.getTime() < FINALIZATION_STALE_MS
+      ) {
+        // A request already claimed this grading and is still inside its window.
+        return { completed: false as const, grading: true as const };
+      }
       const snapshot = coreTechnicalAssessmentSnapshotSchema.parse(assessment.assessmentSnapshot);
       assertResponses(snapshot, input.responses);
       if (snapshot.submission && snapshot.submission.responseFingerprint !== responseFingerprint) {
@@ -268,8 +290,56 @@ export class CoreTechnicalAssessmentService {
       });
       return { completed: false as const, snapshot: withSubmission };
     }, transactionOptions);
-    if (phase.completed) return this.read(ownerId, input.assessmentId);
+    if (phase.completed || "grading" in phase) return this.read(ownerId, input.assessmentId);
+    if (options.schedule) {
+      // The claim is committed; grade after the response and let the page poll.
+      options.schedule(() =>
+        this.gradeOnce(ownerId, input, phase.snapshot).catch((error: unknown) => {
+          logger.error({
+            event: "practice.assessment_grading_failed",
+            assessmentId: input.assessmentId,
+            reason: error instanceof Error ? error.message : String(error)
+          });
+        })
+      );
+      return this.read(ownerId, input.assessmentId);
+    }
+    await this.gradeOnce(ownerId, input, phase.snapshot);
+    return this.read(ownerId, input.assessmentId);
+  }
 
+  /**
+   * One grading per assessment on this instance. A failure clears the claim's
+   * freshness so the saved submission can be retried at once.
+   */
+  private gradeOnce(ownerId: string, input: FinalizeInput, snapshot: AssessmentSnapshot) {
+    const running = this.grading.get(input.assessmentId);
+    if (running) return running;
+    const run = this.grade(ownerId, input, snapshot)
+      .catch(async (error: unknown) => {
+        await this.prisma.coreTechnicalAssessment
+          .updateMany({
+            where: {
+              id: input.assessmentId,
+              ownerId,
+              status: CoreTechnicalAssessmentStatus.FINALIZING,
+              finalizationRequestId: input.requestId
+            },
+            data: { updatedAt: new Date(0) }
+          })
+          .catch(() => undefined);
+        throw error;
+      })
+      .finally(() => this.grading.delete(input.assessmentId));
+    this.grading.set(input.assessmentId, run);
+    return run;
+  }
+
+  private async grade(
+    ownerId: string,
+    input: FinalizeInput,
+    snapshot: AssessmentSnapshot
+  ): Promise<void> {
     const evidence = await this.loadEvidence(ownerId, input.assessmentId);
     const finalizedAt = this.now();
     let evaluated;
@@ -279,8 +349,8 @@ export class CoreTechnicalAssessmentService {
         blockId: evidence.block.id,
         storyKey: evidence.block.storyVersion.storyKey,
         focus: coreTechnicalConfirmedFocusSchema.parse(evidence.block.focusRevision.focusSnapshot),
-        snapshot: phase.snapshot,
-        responses: phase.snapshot.submission!.responses,
+        snapshot: snapshot,
+        responses: snapshot.submission!.responses,
         questions: evidence.block.questions,
         priorStoryKeys: evidence.history.map((block) => block.storyVersion.storyKey),
         priorTopicKeys: evidence.history.flatMap((block) =>
@@ -349,7 +419,6 @@ export class CoreTechnicalAssessmentService {
         })
       ]);
     }, transactionOptions);
-    return this.read(ownerId, input.assessmentId);
   }
 
   /** Converts a completed shared voice-room transcript into the existing Core report contract. */

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { CoreTechnicalOverview } from "@/features/practice/core-technical/ui/core-technical-overview";
 import { CoreTechnicalTechnologyWelcome } from "@/features/practice/core-technical/ui/core-technical-technology-welcome";
@@ -32,25 +33,28 @@ export default async function CoreTechnicalPracticePage({
           if (
             error instanceof NotFoundErrorException &&
             error.code === "CORE_TECHNICAL_BLOCK_NOT_FOUND"
-          ) redirect("/practice/core-technical");
+          )
+            redirect("/practice/core-technical");
           throw error;
         })
       : app.coreTechnicalPracticeService.current(ownerId),
     app.coreTechnicalHistoryService.list(ownerId)
   ]);
-  let block = initialBlock;
-  let historyList = initialHistory;
+  const block = initialBlock;
+  const historyList = initialHistory;
   if (
     !requestedBlockId &&
     block?.assessment &&
     ["IN_PROGRESS", "FINALIZING"].includes(block.assessment.status)
   ) {
-    // A terminal room remains authoritative if deferred finalization failed.
-    await app.coreTechnicalAssessmentService.recoverCurrentInterview(ownerId).catch(() => null);
-    [block, historyList] = await Promise.all([
-      app.coreTechnicalPracticeService.current(ownerId),
-      app.coreTechnicalHistoryService.list(ownerId)
-    ]);
+    // Repair a finished room whose deferred report was interrupted, after the
+    // response: grading takes tens of seconds and the page polls for the report.
+    after(() =>
+      app.coreTechnicalAssessmentService.recoverCurrentInterview(ownerId).then(
+        () => undefined,
+        () => undefined
+      )
+    );
   }
 
   const needsFirstStory =

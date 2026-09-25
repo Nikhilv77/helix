@@ -10,13 +10,18 @@ import {
   resolveInterviewOwner
 } from "@/features/interviews/server/owner";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
+import { timeAction } from "@/server/http/action-timing";
 
 export const dynamic = "force-dynamic";
 
 const startSchema = z.object({ blockId: z.string().uuid() });
 
 /** Starts (or resumes) the one frozen assessment attached to the current DSA block. */
-export async function POST(request: NextRequest) {
+export function POST(request: NextRequest) {
+  return timeAction("dsa.block-assessment.start", () => handlePost(request));
+}
+
+async function handlePost(request: NextRequest) {
   try {
     const app = getAppContainer();
     const owner = await resolveInterviewOwner(request, app.config);

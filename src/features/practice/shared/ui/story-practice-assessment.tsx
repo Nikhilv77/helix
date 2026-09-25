@@ -26,6 +26,10 @@ type SavedSubmission = NonNullable<AssessmentSnapshot["submission"]>;
 type AssessmentResponse = AssessmentSnapshot["prompts"][number] extends { id: string }
   ? { promptId: string; answer: string }
   : never;
+/** How often a grading page refreshes, and how long before retry is offered. */
+const GRADING_POLL_MS = 5_000;
+const GRADING_PATIENCE_MS = 180_000;
+
 type PendingAction = "start" | "finalize" | "continue" | null;
 
 export type StoryPracticeAssessmentExperience = StoryPracticeAssessmentExperienceContract<
@@ -108,6 +112,28 @@ export function StoryPracticeAssessment({
       headingRef.current?.focus();
     }
   }, [recoverySubmission, status]);
+
+  // Grading runs on the server after the answers are saved. Refresh until the
+  // report lands, and offer a retry only when it takes unusually long.
+  const grading = status === "FINALIZING";
+  const [gradingSlow, setGradingSlow] = useState(false);
+  useEffect(() => {
+    if (!grading) {
+      setGradingSlow(false);
+      return;
+    }
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => {
+      if (Date.now() - startedAt >= GRADING_PATIENCE_MS) {
+        setGradingSlow(true);
+        window.clearInterval(timer);
+        return;
+      }
+      if (document.visibilityState === "visible") router.refresh();
+    }, GRADING_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [grading, router]);
+  const waitingForGrade = grading && !gradingSlow && !error && pending !== "finalize";
 
   if (!assessment || status === "LOCKED") {
     if (assessment && allowEarlyStart && block.isCurrent) {
@@ -218,23 +244,35 @@ export function StoryPracticeAssessment({
         <h3 className="mt-2 font-display text-[1.5rem] font-semibold text-cream">
           {teacher.name} is building your report
         </h3>
-        <p className="mt-2 text-[14px] leading-6 text-cream/58">
-          Your full voice transcript is saved. You can safely retry report generation without
-          repeating the assessment.
-        </p>
-        <button
-          type="button"
-          onClick={() => void finalizeAssessment()}
-          disabled={pending === "finalize"}
-          className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-wait disabled:opacity-65"
-        >
-          {pending === "finalize" ? (
+        {waitingForGrade ? (
+          <p
+            role="status"
+            className="mt-2 inline-flex items-center gap-2 text-[14px] leading-6 text-cream/58"
+          >
             <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" />
-          ) : (
-            <RotateCcw size={14} aria-hidden="true" />
-          )}
-          {pending === "finalize" ? "Building report…" : "Retry report"}
-        </button>
+            Grading your answers. This page updates automatically when the report is ready.
+          </p>
+        ) : (
+          <p className="mt-2 text-[14px] leading-6 text-cream/58">
+            Your full voice transcript is saved. You can safely retry report generation without
+            repeating the assessment.
+          </p>
+        )}
+        {waitingForGrade ? null : (
+          <button
+            type="button"
+            onClick={() => void finalizeAssessment()}
+            disabled={pending === "finalize"}
+            className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-cream px-4 text-[12px] font-semibold text-[#090a0b] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-wait disabled:opacity-65"
+          >
+            {pending === "finalize" ? (
+              <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" />
+            ) : (
+              <RotateCcw size={14} aria-hidden="true" />
+            )}
+            {pending === "finalize" ? "Building report…" : "Retry report"}
+          </button>
+        )}
         {error ? <ActionError message={error} /> : null}
       </AssessmentPreviewFrame>
     );
@@ -307,22 +345,26 @@ export function StoryPracticeAssessment({
             {retryingFinalization ? "Complete your saved report" : "Five-prompt evidence defence"}
           </h3>
           <p className="mt-2 max-w-[39rem] text-[13px] leading-5 text-cream/52">
-            {status === "FINALIZING"
-              ? "Your answers are checkpointed by the server. Retry the exact saved submission to finish the report."
-              : recoverySubmission
-                ? "The submission outcome is unknown, so your answers and request ID are frozen for one exact retry."
-                : "Answer every prompt. Drafts remain in this browser until the server checkpoints the complete submission."}
+            {waitingForGrade
+              ? `Your answers are saved. ${teacher.name} is grading them, and this page updates automatically.`
+              : status === "FINALIZING"
+                ? "Your answers are checkpointed by the server. Retry the exact saved submission to finish the report."
+                : recoverySubmission
+                  ? "The submission outcome is unknown, so your answers and request ID are frozen for one exact retry."
+                  : "Answer every prompt. Drafts remain in this browser until the server checkpoints the complete submission."}
           </p>
         </div>
         <StateBadge
           label={
-            status === "FINALIZING"
-              ? "Finalizing"
-              : recoverySubmission
-                ? "Submission interrupted"
-                : "In progress"
+            waitingForGrade
+              ? "Grading"
+              : status === "FINALIZING"
+                ? "Finalizing"
+                : recoverySubmission
+                  ? "Submission interrupted"
+                  : "In progress"
           }
-          loading={pending === "finalize"}
+          loading={pending === "finalize" || waitingForGrade}
         />
       </div>
 
@@ -381,19 +423,21 @@ export function StoryPracticeAssessment({
         <button
           type="button"
           onClick={() => void finalizeAssessment()}
-          disabled={pending !== null}
+          disabled={pending !== null || waitingForGrade}
           className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-cream px-5 py-2.5 text-[14px] font-semibold text-[#17181a] transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-wait disabled:opacity-55 sm:w-auto"
         >
-          {pending === "finalize" ? (
+          {pending === "finalize" || waitingForGrade ? (
             <Loader2 size={15} className="motion-safe:animate-spin" aria-hidden="true" />
           ) : retryingFinalization ? (
             <RotateCcw size={14} aria-hidden="true" />
           ) : null}
           {pending === "finalize"
-            ? "Building report…"
-            : retryingFinalization
-              ? "Retry report"
-              : "Submit all answers"}
+            ? "Saving answers…"
+            : waitingForGrade
+              ? "Grading…"
+              : retryingFinalization
+                ? "Retry report"
+                : "Submit all answers"}
         </button>
       ) : null}
     </AssessmentFrame>

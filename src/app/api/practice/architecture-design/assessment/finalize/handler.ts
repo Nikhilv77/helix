@@ -1,4 +1,4 @@
-import type { NextRequest } from "next/server";
+import { after, type NextRequest } from "next/server";
 import { architectureDesignAssessmentFinalizeInputSchema } from "@/features/practice/architecture-design/domain/assessment-contracts";
 import { apiSuccess } from "@/server/http/api-response";
 import {
@@ -6,13 +6,18 @@ import {
   getSharedGuard,
   type SharedLease
 } from "@/server/rate-limit/shared-guard";
-import { apiError, architectureDesignMutationOwner, parseArchitectureDesignJson } from "../../_shared";
-
+import {
+  apiError,
+  architectureDesignMutationOwner,
+  parseArchitectureDesignJson
+} from "../../_shared";
 
 export async function POST(request: NextRequest) {
   let lease: SharedLease | undefined;
   try {
-    const { ownerId, app } = await architectureDesignMutationOwner(RATE_LIMIT_POLICIES.answerEvaluation);
+    const { ownerId, app } = await architectureDesignMutationOwner(
+      RATE_LIMIT_POLICIES.answerEvaluation
+    );
     const input = await parseArchitectureDesignJson(
       request,
       architectureDesignAssessmentFinalizeInputSchema
@@ -27,7 +32,9 @@ export async function POST(request: NextRequest) {
       `${ownerId}:${input.assessmentId}`
     );
     return apiSuccess({
-      assessment: await app.architectureDesign.assessment.finalize(ownerId, input)
+      assessment: await app.architectureDesign.assessment.finalize(ownerId, input, {
+        schedule: (work) => after(work)
+      })
     });
   } catch (error) {
     return apiError(error, request.nextUrl.pathname);

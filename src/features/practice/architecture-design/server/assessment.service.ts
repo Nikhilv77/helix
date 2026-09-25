@@ -1,3 +1,5 @@
+import { Logger } from "@/server/common/logger";
+import type { z } from "zod";
 import {
   ArchitectureAssessmentStatus,
   ArchitectureBlockStatus,
@@ -49,7 +51,18 @@ const assessmentReadSelect = {
   }
 } satisfies Prisma.ArchitectureAssessmentSelect;
 
+/** A FINALIZING claim younger than this is assumed to still be grading. */
+const FINALIZATION_STALE_MS = 180_000;
+const logger = new Logger("ArchitectureDesignAssessment");
+
+type FinalizeInput = z.output<typeof architectureDesignAssessmentFinalizeInputSchema>;
+type AssessmentSnapshot = z.output<typeof architectureDesignAssessmentSnapshotSchema>;
+/** When given, grading runs after the response instead of inside the request. */
+type FinalizeOptions = { schedule?: (work: () => Promise<void>) => void };
+
 export class ArchitectureDesignAssessmentService {
+  private readonly grading = new Map<string, Promise<void>>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly evaluator: Pick<ArchitectureDesignAssessmentEvaluator, "evaluate">,
@@ -239,7 +252,7 @@ export class ArchitectureDesignAssessmentService {
     return this.finalizeInterviewOwned(ownerId, assessment.id);
   }
 
-  async finalize(ownerId: string, rawInput: unknown) {
+  async finalize(ownerId: string, rawInput: unknown, options: FinalizeOptions = {}) {
     const input = architectureDesignAssessmentFinalizeInputSchema.parse(rawInput);
     const responseFingerprint = storyPracticeFingerprint(input.responses);
     const phase = await this.prisma.$transaction(async (tx) => {
@@ -249,6 +262,7 @@ export class ArchitectureDesignAssessmentService {
         select: {
           status: true,
           finalizationRequestId: true,
+          updatedAt: true,
           assessmentSnapshot: true,
           report: { select: { id: true } },
           block: { select: { isCurrent: true } }
@@ -290,6 +304,13 @@ export class ArchitectureDesignAssessmentService {
           "This assessment is already being finalized."
         );
       }
+      if (
+        assessment.status === ArchitectureAssessmentStatus.FINALIZING &&
+        this.now().getTime() - assessment.updatedAt.getTime() < FINALIZATION_STALE_MS
+      ) {
+        // A request already claimed this grading and is still inside its window.
+        return { completed: false as const, grading: true as const };
+      }
       const snapshot = architectureDesignAssessmentSnapshotSchema.parse(
         assessment.assessmentSnapshot
       );
@@ -317,8 +338,56 @@ export class ArchitectureDesignAssessmentService {
       });
       return { completed: false as const, snapshot: withSubmission };
     }, transactionOptions);
-    if (phase.completed) return this.read(ownerId, input.assessmentId);
+    if (phase.completed || "grading" in phase) return this.read(ownerId, input.assessmentId);
+    if (options.schedule) {
+      // The claim is committed; grade after the response and let the page poll.
+      options.schedule(() =>
+        this.gradeOnce(ownerId, input, phase.snapshot).catch((error: unknown) => {
+          logger.error({
+            event: "practice.assessment_grading_failed",
+            assessmentId: input.assessmentId,
+            reason: error instanceof Error ? error.message : String(error)
+          });
+        })
+      );
+      return this.read(ownerId, input.assessmentId);
+    }
+    await this.gradeOnce(ownerId, input, phase.snapshot);
+    return this.read(ownerId, input.assessmentId);
+  }
 
+  /**
+   * One grading per assessment on this instance. A failure clears the claim's
+   * freshness so the saved submission can be retried at once.
+   */
+  private gradeOnce(ownerId: string, input: FinalizeInput, snapshot: AssessmentSnapshot) {
+    const running = this.grading.get(input.assessmentId);
+    if (running) return running;
+    const run = this.grade(ownerId, input, snapshot)
+      .catch(async (error: unknown) => {
+        await this.prisma.architectureAssessment
+          .updateMany({
+            where: {
+              id: input.assessmentId,
+              ownerId,
+              status: ArchitectureAssessmentStatus.FINALIZING,
+              finalizationRequestId: input.requestId
+            },
+            data: { updatedAt: new Date(0) }
+          })
+          .catch(() => undefined);
+        throw error;
+      })
+      .finally(() => this.grading.delete(input.assessmentId));
+    this.grading.set(input.assessmentId, run);
+    return run;
+  }
+
+  private async grade(
+    ownerId: string,
+    input: FinalizeInput,
+    snapshot: AssessmentSnapshot
+  ): Promise<void> {
     const evidence = await this.loadEvidence(ownerId, input.assessmentId);
     const finalizedAt = this.now();
     let evaluated: Awaited<ReturnType<ArchitectureDesignAssessmentEvaluator["evaluate"]>>;
@@ -330,8 +399,8 @@ export class ArchitectureDesignAssessmentService {
         focus: architectureDesignConfirmedFocusSchema.parse(
           evidence.block.focusRevision.focusSnapshot
         ),
-        snapshot: phase.snapshot,
-        responses: phase.snapshot.submission!.responses,
+        snapshot: snapshot,
+        responses: snapshot.submission!.responses,
         questions: evidence.block.questions,
         priorScenarioKeys: evidence.history.map((block) => block.scenarioVersion.scenarioKey),
         priorTopicKeys: evidence.history.flatMap((block) =>
@@ -405,7 +474,6 @@ export class ArchitectureDesignAssessmentService {
         })
       ]);
     }, transactionOptions);
-    return this.read(ownerId, input.assessmentId);
   }
 
   private async loadEvidence(ownerId: string, assessmentId: string) {
