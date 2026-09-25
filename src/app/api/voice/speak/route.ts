@@ -1,23 +1,24 @@
 import { createHash } from "node:crypto";
 import { auth } from "@clerk/nextjs/server";
-import { GoogleGenAI, Modality } from "@google/genai";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { MAYA, personaById, type InterviewerPersona } from "@/lib/avatars/personas";
+import { MAYA, personaById } from "@/lib/avatars/personas";
 import { getAppContainer } from "@/server/app-container";
 import { Logger } from "@/server/common/logger";
 import { apiError } from "@/server/http/api-response";
 import { ApiRouteError } from "@/server/http/api-error";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
+import {
+  GEMINI_TTS_MODEL,
+  GEMINI_TTS_STYLE_VERSION,
+  synthesizeGemini
+} from "@/server/voice/gemini-speech";
 
 export const dynamic = "force-dynamic";
 
 const DEEPGRAM_SPEAK_ENDPOINT = "https://api.deepgram.com/v1/speak";
-const GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts";
-const GEMINI_TTS_STYLE_VERSION = "teacher-natural-v1";
 const SPEECH_TIMEOUT_MS = 15_000;
-const GEMINI_SPEECH_TIMEOUT_MS = 30_000;
 
 /** Identical lines are synthesised once per instance instead of on every replay. */
 const CACHE_LIMIT = 64;
@@ -27,6 +28,12 @@ interface CachedAudio {
 }
 
 const audioCache = new Map<string, CachedAudio>();
+
+/**
+ * After Gemini refuses for quota, go straight to Deepgram until the quota is
+ * expected back, instead of paying for a refusal on every line. Per instance.
+ */
+let geminiQuotaPausedUntil = 0;
 
 const logger = new Logger("VoiceSpeak");
 
@@ -64,7 +71,9 @@ export async function GET(request: NextRequest) {
     const config = getAppContainer().config;
     const persona = personaById(parsed.data.persona) ?? MAYA;
     const fallbackModel = persona.voice || config.deepgramTtsModel;
-    const useGemini = parsed.data.delivery !== "fast" && Boolean(config.geminiApiKey);
+    const geminiPaused = Date.now() < geminiQuotaPausedUntil && Boolean(config.deepgramApiKey);
+    const useGemini =
+      parsed.data.delivery !== "fast" && Boolean(config.geminiApiKey) && !geminiPaused;
     const cacheKey = createHash("sha256")
       .update(
         useGemini
@@ -94,6 +103,16 @@ export async function GET(request: NextRequest) {
         rememberAudio(cacheKey, generated);
         return audioResponse(generated, "miss");
       } catch (error) {
+        if (error instanceof ApiRouteError && error.code === "SPEECH_QUOTA_EXHAUSTED") {
+          const retryAfterMs = Number(error.details.retryAfterMs) || 60_000;
+          geminiQuotaPausedUntil = Date.now() + retryAfterMs;
+          logger.warn(
+            JSON.stringify({
+              event: "voice.gemini_quota_paused",
+              resumesAt: new Date(geminiQuotaPausedUntil).toISOString()
+            })
+          );
+        }
         const fallbackKey = createHash("sha256")
           .update(`deepgram:${fallbackModel}:${parsed.data.text}`)
           .digest("hex");
@@ -219,62 +238,6 @@ async function synthesizeDeepgram(input: {
   }
 }
 
-async function synthesizeGemini(input: {
-  text: string;
-  apiKey: string;
-  persona: InterviewerPersona;
-}): Promise<CachedAudio> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), GEMINI_SPEECH_TIMEOUT_MS);
-
-  try {
-    const client = new GoogleGenAI({ apiKey: input.apiKey });
-    const response = await client.models.generateContent({
-      model: GEMINI_TTS_MODEL,
-      contents: `Read the transcript exactly as written. Do not add, omit, paraphrase, or explain anything.
-
-You are ${input.persona.name}, a one-to-one technical interview coach speaking directly to one learner. Your manner is: ${input.persona.manner}
-
-Understand the sentence before speaking it. Use natural emphasis based on meaning, brief pauses at punctuation, and a comfortable conversational pace around 145 words per minute. Sound present and human, not like an announcer or an audiobook narrator. Never read these directions aloud.
-
-Transcript:
-${input.text}`,
-      config: {
-        abortSignal: controller.signal,
-        responseModalities: [Modality.AUDIO],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: input.persona.geminiVoice }
-          }
-        }
-      }
-    });
-    const part = response.candidates?.[0]?.content?.parts?.find((candidate) =>
-      Boolean(candidate.inlineData?.data)
-    );
-    const encoded = part?.inlineData?.data ?? response.data;
-    if (!encoded) throw new Error("Gemini TTS returned no audio");
-
-    const bytes = Buffer.from(encoded, "base64");
-    const mimeType = part?.inlineData?.mimeType?.toLowerCase() ?? "audio/l16;rate=24000";
-    if (mimeType.includes("l16") || mimeType.includes("pcm")) {
-      return { bytes: pcmToWav(bytes, sampleRateFromMimeType(mimeType)), contentType: "audio/wav" };
-    }
-    return { bytes, contentType: mimeType };
-  } catch (error) {
-    if (error instanceof ApiRouteError) throw error;
-    throw new ApiRouteError(
-      controller.signal.aborted ? 504 : 502,
-      controller.signal.aborted ? "SPEECH_TIMEOUT" : "SPEECH_PROVIDER_FAILED",
-      controller.signal.aborted
-        ? "Trailgrad voice took too long to respond. Try again in a moment."
-        : "Trailgrad could not generate the voice line right now."
-    );
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
 function rememberAudio(key: string, audio: CachedAudio): void {
   if (audioCache.size >= CACHE_LIMIT) {
     const oldest = audioCache.keys().next().value;
@@ -293,34 +256,6 @@ function audioResponse(audio: CachedAudio, cache: "hit" | "miss"): Response {
       "x-trailgrad-voice-cache": cache
     }
   });
-}
-
-function sampleRateFromMimeType(mimeType: string): number {
-  const match = /rate=(\d+)/i.exec(mimeType);
-  const sampleRate = Number(match?.[1] ?? 24_000);
-  return Number.isFinite(sampleRate) && sampleRate > 0 ? sampleRate : 24_000;
-}
-
-function pcmToWav(pcm: Buffer, sampleRate: number): Buffer {
-  const header = Buffer.alloc(44);
-  const channels = 1;
-  const bitsPerSample = 16;
-  const blockAlign = (channels * bitsPerSample) / 8;
-
-  header.write("RIFF", 0);
-  header.writeUInt32LE(36 + pcm.length, 4);
-  header.write("WAVE", 8);
-  header.write("fmt ", 12);
-  header.writeUInt32LE(16, 16);
-  header.writeUInt16LE(1, 20);
-  header.writeUInt16LE(channels, 22);
-  header.writeUInt32LE(sampleRate, 24);
-  header.writeUInt32LE(sampleRate * blockAlign, 28);
-  header.writeUInt16LE(blockAlign, 32);
-  header.writeUInt16LE(bitsPerSample, 34);
-  header.write("data", 36);
-  header.writeUInt32LE(pcm.length, 40);
-  return Buffer.concat([header, pcm]);
 }
 
 async function collect(stream: ReadableStream<Uint8Array>): Promise<Buffer> {

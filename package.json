@@ -27,6 +27,7 @@
     "dsa-cases:verify": "tsx scripts/dsa-cases/generate.mjs",
     "compatibility:audit": "pnpm db:verify:dev && node --env-file-if-exists=.env --env-file=.env.local scripts/audit-compatibility-data.mjs",
     "seed:preflight": "pnpm db:verify:dev && node --env-file-if-exists=.env --env-file=.env.local scripts/preflight-seed.mjs",
+    "voice:greetings": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/generate-teacher-greetings.ts",
     "avatar:optimize": "node scripts/optimize-avatar.mjs",
     "data:reset-user": "pnpm db:verify:dev && node --env-file-if-exists=.env --env-file=.env.local scripts/reset-user-data.mjs",
     "format": "prettier --write \"{src,test,prisma}/**/*.{ts,tsx,js,json,md,prisma}\" \"*.{json,md,yml}\"",

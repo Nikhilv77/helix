@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  preloadVoiceLine: vi.fn(),
   avatarProps: null as {
     url: string;
     onModelReady?: (url: string) => void;
@@ -29,6 +30,10 @@ vi.mock("next/dynamic", () => ({
 }));
 
 vi.mock("@/infrastructure/realtime/use-maya-voice", () => ({
+  preloadVoiceLine: mocks.preloadVoiceLine,
+  // Maya's greeting is the only one pre-generated in these tests.
+  staticGreetingUrl: (_line: string, personaId?: string) =>
+    personaId === "maya" ? "/voice/greetings/maya.wav" : null,
   useMayaVoice: () => ({
     state: "idle",
     speak: mocks.speak,
@@ -64,6 +69,17 @@ describe("TeacherStep model handoff", () => {
     expect(mocks.speak).toHaveBeenCalledWith(expect.any(String), "daniel");
   });
 
+  it("preloads only neighbouring greetings that exist as static files", () => {
+    mocks.preloadVoiceLine.mockClear();
+    render(
+      <TeacherStep selected="pooja" onSelect={() => undefined} onContinue={() => undefined} />
+    );
+
+    // Pooja's neighbours are Daniel and Maya; only Maya has a pre-generated file.
+    expect(mocks.preloadVoiceLine).toHaveBeenCalledTimes(1);
+    expect(mocks.preloadVoiceLine).toHaveBeenCalledWith(expect.any(String), "maya");
+  });
+
   it("shows a loader instead of moving the card while the requested teacher loads", () => {
     render(
       <TeacherStep selected="daniel" onSelect={() => undefined} onContinue={() => undefined} />
@@ -71,10 +87,7 @@ describe("TeacherStep model handoff", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Next teacher" }));
 
-    expect(screen.getByTestId("teacher-avatar")).toHaveAttribute(
-      "data-url",
-      "/avatars/pooja.glb"
-    );
+    expect(screen.getByTestId("teacher-avatar")).toHaveAttribute("data-url", "/avatars/pooja.glb");
     expect(screen.getByText("LOADING POOJA...")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next teacher" })).toBeDisabled();
     expect(screen.getByRole("button", { name: /continue with pooja/i })).toBeDisabled();

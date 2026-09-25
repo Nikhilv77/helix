@@ -9,7 +9,11 @@ import {
   ONBOARDING_PERSONAS,
   type InterviewerPersona
 } from "@/lib/avatars/personas";
-import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
+import {
+  preloadVoiceLine,
+  staticGreetingUrl,
+  useMayaVoice
+} from "@/infrastructure/realtime/use-maya-voice";
 import { PRIMARY_BUTTON } from "../flow/onboarding-data";
 
 const AvatarStage = dynamic(
@@ -91,6 +95,17 @@ export function TeacherStep({
   const speaking = state === "speaking" || state === "loading";
   const voiceBroken = state === "unavailable";
   const loadingTeacher = loadingTeacherId !== null;
+
+  // Warm the focused and neighbouring greetings. Only pre-generated static
+  // files are preloaded, so browsing never spends live text-to-speech quota.
+  useEffect(() => {
+    for (const personaIndex of [index, left, right]) {
+      const persona = ONBOARDING_PERSONAS[personaIndex]!;
+      if (staticGreetingUrl(persona.greeting, persona.id)) {
+        preloadVoiceLine(persona.greeting, persona.id);
+      }
+    }
+  }, [index, left, right]);
 
   // Centring a teacher is the selection. There is no separate commit step —
   // whoever is on the stage when Continue is pressed is the one who teaches.
