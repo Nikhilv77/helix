@@ -3,9 +3,11 @@ import { resolve } from "node:path";
 
 const functionsDirectory = resolve(".vercel/output/functions");
 const HOBBY_FUNCTION_LIMIT = 12;
-// Vercel's deployed Node runtime reports rhel-openssl-3.0.x to Prisma even
-// when the build output function configuration advertises arm64.
-const productionPrismaEngine = "libquery_engine-rhel-openssl-3.0.x.so.node";
+// API and server-rendered page functions require different Prisma targets.
+const productionPrismaEngines = [
+  "libquery_engine-rhel-openssl-3.0.x.so.node",
+  "libquery_engine-linux-arm64-openssl-3.0.x.so.node",
+];
 
 async function findFunctionBundles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -58,7 +60,7 @@ for (const bundle of bundles) {
   }
 
   prismaBundleCount += 1;
-  if (!files.some((file) => file.endsWith(`/${productionPrismaEngine}`))) {
+  if (productionPrismaEngines.some((engine) => !files.some((file) => file.endsWith(`/${engine}`)))) {
     missingEngines.push(
       `${bundle.slice(functionsDirectory.length + 1)} (${config.architecture ?? "unknown architecture"})`
     );
