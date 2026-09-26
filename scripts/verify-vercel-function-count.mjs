@@ -1,8 +1,11 @@
-import { readdir } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const HOBBY_FUNCTION_LIMIT = 12;
 const functionsDirectory = resolve(".vercel/output/functions");
+const HOBBY_FUNCTION_LIMIT = 12;
+// Vercel's deployed Node runtime reports rhel-openssl-3.0.x to Prisma even
+// when the build output function configuration advertises arm64.
+const productionPrismaEngine = "libquery_engine-rhel-openssl-3.0.x.so.node";
 
 async function findFunctionBundles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -38,19 +41,44 @@ try {
   throw error;
 }
 
-const relativeBundles = bundles.map((path) => path.slice(functionsDirectory.length + 1)).sort();
+let prismaBundleCount = 0;
+const missingEngines = [];
 
-console.log(
-  `Vercel output contains ${relativeBundles.length}/${HOBBY_FUNCTION_LIMIT} physical function bundles.`
-);
+for (const bundle of bundles) {
+  const config = JSON.parse(await readFile(resolve(bundle, ".vc-config.json"), "utf8"));
+  const files = Object.keys(config.filePathMap ?? {});
 
-for (const bundle of relativeBundles) {
-  console.log(`- ${bundle}`);
+  if (files.includes(".env") || files.includes(".env.local")) {
+    console.error(`Deployment stopped: local environment files are bundled in ${bundle}.`);
+    process.exit(1);
+  }
+
+  if (!files.some((file) => file.includes("/.prisma/client/index.js"))) {
+    continue;
+  }
+
+  prismaBundleCount += 1;
+  if (!files.some((file) => file.endsWith(`/${productionPrismaEngine}`))) {
+    missingEngines.push(
+      `${bundle.slice(functionsDirectory.length + 1)} (${config.architecture ?? "unknown architecture"})`
+    );
+  }
 }
 
-if (relativeBundles.length > HOBBY_FUNCTION_LIMIT) {
+console.log(`Vercel output contains ${bundles.length} route bundles; checked ${prismaBundleCount} Prisma bundles.`);
+
+if (bundles.length > HOBBY_FUNCTION_LIMIT) {
   console.error(
-    `Deployment stopped: ${relativeBundles.length} functions exceed the Hobby limit of ${HOBBY_FUNCTION_LIMIT}.`
+    `Deployment stopped: ${bundles.length} functions exceed the Hobby limit of ${HOBBY_FUNCTION_LIMIT}.`
+  );
+  process.exit(1);
+}
+
+if (prismaBundleCount === 0 || missingEngines.length > 0) {
+  console.error(
+    prismaBundleCount === 0
+      ? "Deployment stopped: no Prisma bundles were found in the Vercel output."
+      : `Deployment stopped: the production Prisma engine is missing from:\n${missingEngines.join("\n")}`
   );
   process.exit(1);
 }

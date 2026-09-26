@@ -6,8 +6,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "dev": "pnpm db:verify:dev && prisma generate && next dev --port 3001",
-    "build": "prisma generate && next build",
-    "deploy:production": "npx --yes vercel@59.14.0 build --prod --scope team_zfXWEzCRfwwxeR2Z6hG4uuw8 && pnpm vercel:verify && npx --yes vercel@59.14.0 deploy --prebuilt --prod --scope team_zfXWEzCRfwwxeR2Z6hG4uuw8",
+    "build": "prisma generate && node scripts/prune-prisma-deploy-engines.mjs && next build",
+    "deploy:production": "TRAILGRAD_PRUNE_PRISMA_NATIVE=1 npx --yes vercel@59.14.0 build --prod --scope team_zfXWEzCRfwwxeR2Z6hG4uuw8 && node scripts/prepare-vercel-artifact.mjs && pnpm vercel:verify && npx --yes vercel@59.14.0 deploy --prebuilt --prod --scope team_zfXWEzCRfwwxeR2Z6hG4uuw8",
     "db:migrate:production": "node scripts/migrate-production.mjs",
     "start": "next start --port 3001",
     "lint": "eslint .",

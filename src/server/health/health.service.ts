@@ -28,7 +28,16 @@ export class HealthService {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
       return true;
-    } catch {
+    } catch (error) {
+      const details = error instanceof Error ? error.message : String(error);
+      console.error("[HealthService] database check failed", {
+        name: error instanceof Error ? error.name : "UnknownError",
+        code: typeof error === "object" && error !== null && "code" in error ? error.code : undefined,
+        message: details
+          .replace(/postgres(?:ql)?:\/\/\S+/gi, "[database URL]")
+          .replace(/(?:DATABASE_URL|DIRECT_URL)=\S+/g, "[database URL]")
+          .slice(0, 1200)
+      });
       return false;
     }
   }
