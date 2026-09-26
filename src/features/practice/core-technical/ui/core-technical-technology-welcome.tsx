@@ -1,5 +1,6 @@
 "use client";
 
+import { TEACHER_VOICE_LINES } from "@/features/practice/shared/domain/teacher-voice-lines";
 import type { StoryPracticeTechnologyWelcomeExperience } from "@/features/practice/shared/ui/contracts";
 import { StoryPracticeTechnologyWelcome } from "@/features/practice/shared/ui/story-practice-technology-welcome";
 
@@ -10,12 +11,9 @@ export function CoreTechnicalTechnologyWelcome() {
     apiBase: "/api/practice/core-technical",
     routeBase: "/practice/core-technical",
     heading: "Building your practice path from your profile",
-    choosingScript:
-      "I’m using your resume, target role, level, and assessment history to choose the right technical focus.",
-    confirmingScript: () =>
-      "I’m using your resume, target role, level, and assessment history to choose the right technical focus.",
-    generatingScript:
-      "I’m preparing a focused set of recurring interview questions, code evidence, and learning guides for your level.",
+    choosingScript: TEACHER_VOICE_LINES.coreTechnicalWelcome,
+    confirmingScript: () => TEACHER_VOICE_LINES.coreTechnicalWelcome,
+    generatingScript: TEACHER_VOICE_LINES.coreTechnicalPreparing,
     options: [
       {
         value: "automatic",

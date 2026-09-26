@@ -1,5 +1,6 @@
 "use client";
 
+import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -224,7 +225,16 @@ export function DsaBlockAssessmentClient({
         ? `I can see your run. All ${payload.data.tests.length} tests passed. Add your reasoning and submit when you are ready.`
         : `I can see the output. ${passed} of ${payload.data.tests.length} tests passed. Review the failing case and try again.`;
       setRunGuidance(cue);
-      void voice.speak(cue, teacher.id, { delivery: "quality" });
+      // The exact counts are on screen; the spoken cue is pre-recorded.
+      void voice.speak(
+        pickLine(
+          payload.data.accepted
+            ? TEACHER_LINES.assessmentRun.passed
+            : TEACHER_LINES.assessmentRun.failed
+        ),
+        teacher.id,
+        { delivery: "quality" }
+      );
     } catch (caught) {
       setLastRunCode(null);
       setError(caught instanceof Error ? caught.message : "Code execution failed.");
@@ -588,7 +598,9 @@ function ReviewReference({ question }: { question: InterviewQuestion }) {
         ) : null}
       </div>
       <p className="mt-6 whitespace-pre-wrap text-sm leading-7 text-cream/62">
-        {reference?.problemStatement ?? question.codeTask ?? "Review the original problem before answering."}
+        {reference?.problemStatement ??
+          question.codeTask ??
+          "Review the original problem before answering."}
       </p>
 
       {example ? (

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, AudioLines, Loader2, Play, Volume2 } from "lucide-react";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect } from "react";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import type { StoryPracticeIntroExperience } from "@/features/practice/shared/ui/contracts";
 import type { StoryPracticeBlockView } from "@/features/practice/shared/ui/view-contracts";
@@ -29,10 +29,7 @@ export function StoryPracticeIntro({
   const speaking = state === "speaking";
   const nextQuestion = block.questions.find(({ status }) => status === "ACTIVE") ?? null;
   const exactPercent = (terminalCount / Math.max(block.questions.length, 1)) * 100;
-  const script = useMemo(
-    () => experience.script(block.story.title),
-    [block.story.title, experience]
-  );
+  const script = experience.script;
 
   const say = useCallback(() => {
     setAwaitingGesture(false);

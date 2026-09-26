@@ -1,5 +1,6 @@
 "use client";
 
+import { TEACHER_VOICE_LINES } from "@/features/practice/shared/domain/teacher-voice-lines";
 import type {
   AppliedEngineeringTechnology,
   AppliedEngineeringTechnologyOption
@@ -18,12 +19,10 @@ export function AppliedEngineeringTechnologyWelcome({
     apiBase: "/api/practice/applied-engineering",
     routeBase: "/practice/applied-engineering",
     heading: "What do you want to get better at?",
-    choosingScript:
-      "Welcome to Applied Engineering practice. Which technology should we use for your production incidents?",
-    confirmingScript: (selectedLabel) =>
-      `Great${selectedLabel ? `—let’s work in ${selectedLabel}` : " choice"}. I’ll prepare a focused production engineering path.`,
-    generatingScript:
-      "I’m preparing a reviewed incident with practical diagnosis, repair, testing, and rollout questions.",
+    choosingScript: TEACHER_VOICE_LINES.appliedEngineeringWelcome,
+    // The chosen technology is shown on screen; the spoken line stays fixed.
+    confirmingScript: () => TEACHER_VOICE_LINES.appliedEngineeringConfirming,
+    generatingScript: TEACHER_VOICE_LINES.appliedEngineeringPreparing,
     options: technologies,
     buildConfirmation: (language) => ({ language }),
     buildPreparation: (focusRevisionId, requestId) => ({ requestId, focusRevisionId })

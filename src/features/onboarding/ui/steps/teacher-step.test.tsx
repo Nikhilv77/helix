@@ -32,8 +32,8 @@ vi.mock("next/dynamic", () => ({
 vi.mock("@/infrastructure/realtime/use-maya-voice", () => ({
   preloadVoiceLine: mocks.preloadVoiceLine,
   // Maya's greeting is the only one pre-generated in these tests.
-  staticGreetingUrl: (_line: string, personaId?: string) =>
-    personaId === "maya" ? "/voice/greetings/maya.wav" : null,
+  staticVoiceUrl: (_line: string, personaId?: string) =>
+    personaId === "maya" ? "/voice/maya.mp3" : null,
   useMayaVoice: () => ({
     state: "idle",
     speak: mocks.speak,

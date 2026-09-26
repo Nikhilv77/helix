@@ -18,7 +18,10 @@ import {
   type TechnicalDeepDiveBlueprintIds
 } from "@/features/interviews/domain/technical-deep-dive";
 import { PREP_SESSIONS, type PrepSession } from "@/lib/roadmap/frontend-plan";
-import { findTemplate, type InterviewTemplate } from "@/features/interviews/domain/interview-templates";
+import {
+  findTemplate,
+  type InterviewTemplate
+} from "@/features/interviews/domain/interview-templates";
 import { pageTitle } from "@/lib/shared/seo";
 import type { Intensity, InterviewSetup, Level, Role, RoundType } from "@/lib/shared/types";
 import { type WorkspaceAccent, workspaceAccentCssVariables } from "@/lib/workspace/accent";

@@ -1,5 +1,6 @@
 "use client";
 
+import { TEACHER_VOICE_LINES } from "@/features/practice/shared/domain/teacher-voice-lines";
 import type {
   StoryPracticeLibraryExperience,
   StoryPracticeIntroExperience
@@ -39,8 +40,7 @@ export function AiMlStoryOverview({
       subjectNoun: "path",
       label,
       description: storyDiscipline(session.discipline).overviewDescription,
-      script: (title) =>
-        `Let's work through ${title}. Read the evidence, explain your decision, and check what would change it.`
+      script: TEACHER_VOICE_LINES.storyTrackIntro
     }
   };
   const entries: StoryPracticeLibraryEntryView[] = session.blocks.map((block) => ({

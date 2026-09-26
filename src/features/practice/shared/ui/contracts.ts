@@ -63,7 +63,8 @@ export type StoryPracticeIntroExperience = Pick<
 > & {
   label: string;
   description: string;
-  script: (title: string) => string;
+  /** A fixed spoken line, so its audio can be pre-generated per teacher. */
+  script: string;
 };
 
 export type StoryPracticeAssessmentExperience<

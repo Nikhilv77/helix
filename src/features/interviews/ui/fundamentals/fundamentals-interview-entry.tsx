@@ -1,5 +1,6 @@
 "use client";
 
+import { TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import { InterviewLaunchStage } from "@/features/interviews/ui/shared/interview-launch-stage";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 
@@ -28,7 +29,8 @@ export function FundamentalsInterviewEntry({
     : {
         eyebrow: "Computer fundamentals",
         headline: `${greeting} let's go under the framework.`,
-        body: `Three parts. Quick checks across ${named || "the core areas"}, then I'll ask you to explain the mechanism behind a few of them, and we'll finish by diagnosing something real. After each answer I'll show you the model I was listening for.`
+        body: `Three parts. Quick checks across ${named || "the core areas"}, then I'll ask you to explain the mechanism behind a few of them, and we'll finish by diagnosing something real. After each answer I'll show you the model I was listening for.`,
+        spokenVariants: TEACHER_LINES.interviewLaunch.fundamentals
       };
 
   return (

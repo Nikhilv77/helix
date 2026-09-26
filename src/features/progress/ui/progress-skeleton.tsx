@@ -5,7 +5,11 @@ function SkeletonLine({ className }: { className: string }) {
 /** A black, page-shaped transition for Maya's progress briefing. */
 export function ProgressSkeleton() {
   return (
-    <main className="progress-skeleton min-h-[100svh] w-full bg-black" aria-busy="true" aria-label="Loading progress">
+    <main
+      className="progress-skeleton min-h-[100svh] w-full bg-black"
+      aria-busy="true"
+      aria-label="Loading progress"
+    >
       <div className="mx-auto flex min-h-[100svh] w-full max-w-5xl flex-col items-center px-4 pb-20 pt-8 sm:px-6 sm:pt-10 lg:px-8 lg:pt-12">
         <section className="flex min-h-[calc(100svh-9rem)] w-full flex-col items-center justify-center py-8">
           <div className="w-full max-w-2xl">

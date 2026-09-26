@@ -21,9 +21,7 @@ export function StoryPracticeTechnologyWelcome<TValue extends string>({
   const router = useRouter();
   const requestPending = useRef(false);
   const automaticOption = experience.autoStart ? (experience.options[0] ?? null) : null;
-  const [phase, setPhase] = useState<PreparationPhase>(
-    automaticOption ? "confirming" : "choosing"
-  );
+  const [phase, setPhase] = useState<PreparationPhase>(automaticOption ? "confirming" : "choosing");
   const [selected, setSelected] = useState<TValue | null>(automaticOption?.value ?? null);
   const [error, setError] = useState<string | null>(null);
   const { state: voiceState, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();

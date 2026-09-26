@@ -1,5 +1,6 @@
 "use client";
 
+import { TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import { InterviewLaunchStage } from "@/features/interviews/ui/shared/interview-launch-stage";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 
@@ -24,7 +25,7 @@ export function HiringManagerInterviewEntry({
         eyebrow: "Hiring manager interview",
         headline: `${greeting} James is ready for your final conversation.`,
         body: "James will focus on how you work with people, handle unclear situations, respond to feedback, and choose the right role. Give honest examples and explain what you did and what happened.",
-        script: `Hi ${firstName || "there"}. James is ready for your final conversation. Use real examples of how you work with people, handle difficult situations, and make decisions. He will take over now.`
+        spokenVariants: TEACHER_LINES.interviewLaunch.hiringManager
       };
 
   return (

@@ -1,5 +1,6 @@
+import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import {
   ArrowRight,
   Clock3,
@@ -221,8 +222,8 @@ function CompletionDebrief({
   const teacher = useWorkspaceTeacher();
   const { state, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
   const spoken = useRef(false);
-  const parameterLead = evaluationParameters.slice(0, 3).join(", ");
-  const voiceLine = `${interviewerName} has reported back to me about your ${evaluationLabel} interview. I’ll walk you through ${parameterLead || "the relevant evaluation parameters"}, what worked, and what to improve next. Finishing the interview is progress by itself—keep going.`;
+  // The interviewer and rubric are shown on screen; the spoken line is pre-recorded.
+  const voiceLine = useMemo(() => pickLine(TEACHER_LINES.interviewDebrief), []);
   const speaking = state === "speaking" || state === "loading";
   const speakDebrief = useCallback(() => {
     if (spoken.current && !speaking) spoken.current = false;

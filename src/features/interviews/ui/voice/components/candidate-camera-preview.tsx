@@ -31,10 +31,7 @@ export function CandidateCameraPreview({
   }, [onDisable, stream]);
 
   return (
-    <section
-      aria-label="Your camera preview"
-      className={`border-t ${INTERVIEW_PANEL_RULE} p-3`}
-    >
+    <section aria-label="Your camera preview" className={`border-t ${INTERVIEW_PANEL_RULE} p-3`}>
       <div className="interview-camera-preview group relative aspect-video overflow-hidden rounded-xl border border-white/[0.09] bg-[#090a0c] shadow-[inset_0_1px_0_rgba(255,255,255,0.045),0_14px_35px_rgba(0,0,0,0.24)]">
         <video
           ref={videoRef}

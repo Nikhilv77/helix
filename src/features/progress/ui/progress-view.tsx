@@ -1,5 +1,6 @@
 "use client";
 
+import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import Link from "next/link";
 import { ArrowRight, Braces, Flame, Target, TrendingUp, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from "react";
@@ -226,9 +227,11 @@ function buildProgressBriefing(
           text: "Choose any suggested question. Your pace and consistency will appear after your first solve."
         }
       ],
-      voiceLine:
-        `${name}, you haven't started practice yet. ` +
-        "Complete one question to unlock your progress.",
+      voiceLine: pickLine(
+        hasInterviewEvidence
+          ? TEACHER_LINES.progress.notStartedAfterInterview
+          : TEACHER_LINES.progress.notStarted
+      ),
       primaryCta: "Start practice",
       primaryHref: "/practice"
     };
@@ -261,27 +264,18 @@ function buildProgressBriefing(
         text: nextMove
       }
     ],
-    voiceLine: conciseProgressVoiceLine(name, recentSolved, activeDays, currentStreak, target),
+    voiceLine: spokenProgressLine(recentSolved, currentStreak),
     primaryCta: "Continue practice",
     primaryHref: "/practice"
   };
 }
 
-function conciseProgressVoiceLine(
-  name: string,
-  recentSolved: number,
-  activeDays: number,
-  currentStreak: number,
-  target: number
-): string {
-  const pace = recentSolved
-    ? `You completed ${recentSolved} focused ${pluralize("block", recentSolved)} across ${activeDays} active ${pluralize("day", activeDays)} in the last seven days.`
-    : "You have no completed practice blocks in the last seven days.";
-  const continuity = currentStreak
-    ? `Your streak is ${currentStreak} ${pluralize("day", currentStreak)}.`
-    : "Your next session is a clean restart.";
-
-  return `Good, ${name}. ${pace} ${continuity} Keep the next session to ${target} focused ${pluralize("completion", target)}.`;
+/** Pre-recorded phrasing for the learner's current rhythm; numbers stay on screen. */
+function spokenProgressLine(recentSolved: number, currentStreak: number): string {
+  if (recentSolved === 0) return pickLine(TEACHER_LINES.progress.quiet);
+  if (currentStreak >= 3) return pickLine(TEACHER_LINES.progress.streak);
+  if (currentStreak > 0) return pickLine(TEACHER_LINES.progress.building);
+  return pickLine(TEACHER_LINES.progress.restart);
 }
 
 function paceCopy(recentSolved: number, activeDays: number): string {

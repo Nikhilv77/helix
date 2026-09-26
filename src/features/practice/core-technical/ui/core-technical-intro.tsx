@@ -1,5 +1,6 @@
 "use client";
 
+import { TEACHER_VOICE_LINES } from "@/features/practice/shared/domain/teacher-voice-lines";
 import {
   StoryPracticeIntro,
   type StoryPracticeIntroExperience,
@@ -11,8 +12,7 @@ export const CORE_TECHNICAL_INTRO_EXPERIENCE: StoryPracticeIntroExperience = {
   routeBase: "/practice/core-technical",
   subjectNoun: "practice path",
   description: "Learn the practical questions that come up repeatedly in technical interviews.",
-  script: (title) =>
-    `I’ve prepared “${title}” around practical interview questions. Start with the concrete problem, explain what is happening, then show how you would fix it.`
+  script: TEACHER_VOICE_LINES.coreTechnicalIntro
 };
 
 export function CoreTechnicalIntro({

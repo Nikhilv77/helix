@@ -81,6 +81,9 @@ importers:
         specifier: ^3.25.2
         version: 3.25.2(zod@3.25.76)
     devDependencies:
+      '@breezystack/lamejs':
+        specifier: ^1.2.7
+        version: 1.2.7
       '@eslint/js':
         specifier: ^9.39.5
         version: 9.39.5
@@ -189,6 +192,9 @@ packages:
   '@bramus/specificity@2.4.2':
     resolution: {integrity: sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw==}
     hasBin: true
+
+  '@breezystack/lamejs@1.2.7':
+    resolution: {integrity: sha512-6wc7ck65ctA75Hq7FYHTtTvGnYs6msgdxiSUICQ+A01nVOWg6rqouZB8IdyteRlfpYYiFovkf67dIeOgWIUzTA==}
 
   '@bufbuild/protobuf@1.10.1':
     resolution: {integrity: sha512-wJ8ReQbHxsAfXhrf9ixl0aYbZorRuOWpBNzm8pL8ftmSxQx/wnJD5Eg861NwJU/czy2VXFIebCeZnZrI9rktIQ==}
@@ -3051,6 +3057,8 @@ snapshots:
   '@bramus/specificity@2.4.2':
     dependencies:
       css-tree: 3.2.1
+
+  '@breezystack/lamejs@1.2.7': {}
 
   '@bufbuild/protobuf@1.10.1': {}
 

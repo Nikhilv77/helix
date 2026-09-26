@@ -30,7 +30,9 @@ export function ResumeDocumentPreview({
     <section
       className={`${INTERVIEW_PANEL_SHELL} flex min-h-[24rem] min-w-0 flex-col overflow-hidden xl:min-h-0`}
     >
-      <header className={`flex shrink-0 items-center justify-between gap-3 border-b ${INTERVIEW_PANEL_RULE} px-4 py-3`}>
+      <header
+        className={`flex shrink-0 items-center justify-between gap-3 border-b ${INTERVIEW_PANEL_RULE} px-4 py-3`}
+      >
         <div className="flex min-w-0 items-center gap-2.5">
           <FileText size={15} aria-hidden="true" className="shrink-0 text-cream/40" />
           <p className="truncate text-sm font-medium text-cream/72">{resume.fileName}</p>
@@ -114,7 +116,10 @@ function SheetBlock({ block, highlight }: { block: SheetSection; highlight: stri
         ) : block.kind === "lines" ? (
           <ul className="space-y-2">
             {block.lines.map((line, index) => (
-              <li key={`${block.key}-${index}`} className="flex gap-2.5 text-sm leading-6 text-cream/64">
+              <li
+                key={`${block.key}-${index}`}
+                className="flex gap-2.5 text-sm leading-6 text-cream/64"
+              >
                 <span
                   aria-hidden="true"
                   className="mt-2.5 h-1 w-1 shrink-0 rounded-full bg-[var(--workspace-accent)]"

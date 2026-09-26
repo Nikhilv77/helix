@@ -1,5 +1,6 @@
 "use client";
 
+import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -75,7 +76,24 @@ export function ChapterSession({
     setPhase("solve");
   }, [seenKey]);
 
-  const lineFor = useCallback((item: BriefBeat) => `${item.title} ${item.body}`, []);
+  // Spoken beats are pre-recorded. Chapter names and counts stay on screen, and
+  // the varied opening and hand-off are chosen once so preloading plays the same line.
+  const spokenOpening = useMemo(() => pickLine(TEACHER_LINES.chapter.opening), []);
+  const spokenHandoff = useMemo(() => pickLine(TEACHER_LINES.chapter.solve), []);
+  const lineFor = useCallback(
+    (item: BriefBeat) => {
+      const fixed: Record<string, string | undefined> = {
+        why: spokenOpening,
+        concepts: TEACHER_LINES.chapter.ideas[0],
+        approach: TEACHER_LINES.chapter.approaches[0],
+        mistakes: TEACHER_LINES.chapter.traps[0],
+        signals: TEACHER_LINES.chapter.signals[0],
+        start: spokenHandoff
+      };
+      return fixed[item.id] ?? `${item.title} ${item.body}`;
+    },
+    [spokenHandoff, spokenOpening]
+  );
 
   const say = useCallback(
     (line: string) => {

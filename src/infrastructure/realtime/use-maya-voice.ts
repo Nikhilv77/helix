@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { personaById } from "@/lib/avatars/personas";
-import { GREETING_AUDIO } from "@/lib/avatars/greeting-audio.generated";
-import { GEMINI_TTS_STYLE_VERSION } from "@/lib/avatars/voice-style";
+import { staticVoiceUrl } from "@/lib/avatars/static-voice";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { attachElement, detachVoice } from "./voice-bus";
 
@@ -22,21 +21,8 @@ export interface VoicePlaybackCallbacks {
 const preloadedAudio = new Map<string, HTMLAudioElement>();
 const PRELOAD_LIMIT = 10;
 
-/**
- * A teacher's fixed greeting served as a static file, when one was generated
- * for exactly this text, voice, and style. Anything else uses live speech.
- */
-export function staticGreetingUrl(line: string, personaId?: string): string | null {
-  const persona = personaById(personaId);
-  const greeting = persona ? GREETING_AUDIO[persona.id] : undefined;
-  return persona &&
-    greeting &&
-    greeting.text === line &&
-    greeting.voice === persona.geminiVoice &&
-    greeting.style === GEMINI_TTS_STYLE_VERSION
-    ? greeting.src
-    : null;
-}
+/** A pre-generated line served from the CDN; see `@/lib/avatars/static-voice`. */
+export { staticVoiceUrl };
 
 export function voiceUrl(
   line: string,
@@ -44,8 +30,8 @@ export function voiceUrl(
   delivery?: VoicePlaybackCallbacks["delivery"]
 ): string {
   if (delivery !== "fast") {
-    const greeting = staticGreetingUrl(line, personaId);
-    if (greeting) return greeting;
+    const staticLine = staticVoiceUrl(line, personaId);
+    if (staticLine) return staticLine;
   }
   const persona = personaId ? `&persona=${encodeURIComponent(personaId)}` : "";
   const deliveryMode = delivery === "fast" ? "&delivery=fast" : "";

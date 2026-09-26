@@ -1,5 +1,6 @@
 "use client";
 
+import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -284,7 +285,16 @@ export function CoreTechnicalBlockAssessmentClient({
         ? `I can see your run. All ${payload.data.tests.length} tests passed. Check your boundary edge cases and submit when you are ready.`
         : `I can see the output. ${passed} of ${payload.data.tests.length} tests passed. Review the failing case and try again.`;
       setRunGuidance(cue);
-      void voice.speak(cue, teacher.id, { delivery: "quality" });
+      // The exact counts are on screen; the spoken cue is pre-recorded.
+      void voice.speak(
+        pickLine(
+          payload.data.accepted
+            ? TEACHER_LINES.assessmentRun.passed
+            : TEACHER_LINES.assessmentRun.failed
+        ),
+        teacher.id,
+        { delivery: "quality" }
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "That code could not be run.");
     } finally {

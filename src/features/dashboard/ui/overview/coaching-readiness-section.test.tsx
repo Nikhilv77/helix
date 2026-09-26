@@ -1,3 +1,4 @@
+import { TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DashboardOverviewData } from "@/features/dashboard/contracts/dashboard-overview";
@@ -116,6 +117,9 @@ describe("CoachingReadinessSection", () => {
 
     expect(voiceMocks.speak).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Play teacher summary" }));
-    expect(voiceMocks.speak).toHaveBeenCalledWith(data.coaching.spokenSummary);
+    // The spoken line is a pre-recorded phrasing for the coaching state.
+    expect(TEACHER_LINES.coaching["interview-with-practice"]).toContain(
+      voiceMocks.speak.mock.calls[0]?.[0]
+    );
   });
 });

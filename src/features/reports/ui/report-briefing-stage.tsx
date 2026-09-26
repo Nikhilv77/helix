@@ -1,5 +1,6 @@
 "use client";
 
+import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import Link from "next/link";
 import { ArrowRight, Download, Signal, Target, TriangleAlert, Volume2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
@@ -16,9 +17,8 @@ import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 
 const openingPhaseTimers = [1900, 3900];
-const emptyReportVoiceLine = "Take your first interview to unlock your reports.";
-const exhaustedEmptyReportVoiceLine =
-  "Your daily interview limit is reached. Come back tomorrow for your report.";
+const emptyReportVoiceLine = TEACHER_LINES.reportBriefing.empty[0];
+const exhaustedEmptyReportVoiceLine = TEACHER_LINES.reportBriefing.exhausted[0];
 
 export type ReportCandidate = {
   /** Full name from the parsed resume; blank until one is uploaded. */
@@ -125,8 +125,17 @@ function buildBriefingCopy(
     candidateName: candidate.name,
     candidateDiscipline:
       candidate.discipline || (overview.latest ? disciplineLabel(overview.latest.role) : ""),
-    voiceLine: `Great job. So far, so good. ${verdict} Your strongest signal is ${strongest}. Your repeat gap is ${gapLabel}. Next, ${nextAction}`,
-    preparedVoiceLine: `Check this out. I created a report for you that will help you understand what is working, what needs attention, and what to practice next. Read it carefully, then work on the weakness that keeps showing up.`
+    // Verdict, strengths, and gaps are on screen; the spoken lines are pre-recorded.
+    voiceLine: pickLine(
+      TEACHER_LINES.reportBriefing[
+        score !== null && score >= 75
+          ? "strong"
+          : score !== null && score >= 45
+            ? "steady"
+            : "starting"
+      ]
+    ),
+    preparedVoiceLine: pickLine(TEACHER_LINES.reportBriefing.prepared)
   };
 }
 

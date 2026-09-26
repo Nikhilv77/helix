@@ -1,5 +1,6 @@
 "use client";
 
+import { TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import { InterviewLaunchStage } from "@/features/interviews/ui/shared/interview-launch-stage";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 
@@ -37,7 +38,7 @@ export function TechnicalProjectsInterviewEntry({
           body: projectName
             ? `Claire will begin with three short technical decisions, then go deeply into ${projectName}: what you built, how it worked, what failed, and the trade-offs you owned.`
             : "Claire will begin with three short technical decisions, then deeply examine one grounded project or production scenario: how it worked, what failed, and the trade-offs involved.",
-          script: `Hi ${firstName || "there"}. Claire will lead your Core Technical and Projects interview. She'll begin with three short technical decisions, then go deeply into one project—what you built, how it worked, what failed, and the trade-offs you owned. Answer as you would in a real engineering interview.`
+          spokenVariants: TEACHER_LINES.interviewLaunch.technicalProjects
         };
 
   return (

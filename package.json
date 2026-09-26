@@ -27,7 +27,7 @@
     "dsa-cases:verify": "tsx scripts/dsa-cases/generate.mjs",
     "compatibility:audit": "pnpm db:verify:dev && node --env-file-if-exists=.env --env-file=.env.local scripts/audit-compatibility-data.mjs",
     "seed:preflight": "pnpm db:verify:dev && node --env-file-if-exists=.env --env-file=.env.local scripts/preflight-seed.mjs",
-    "voice:greetings": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/generate-teacher-greetings.ts",
+    "voice:lines": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/generate-static-voice.mts",
     "avatar:optimize": "node scripts/optimize-avatar.mjs",
     "data:reset-user": "pnpm db:verify:dev && node --env-file-if-exists=.env --env-file=.env.local scripts/reset-user-data.mjs",
     "format": "prettier --write \"{src,test,prisma}/**/*.{ts,tsx,js,json,md,prisma}\" \"*.{json,md,yml}\"",
@@ -65,6 +65,7 @@
     "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
+    "@breezystack/lamejs": "^1.2.7",
     "@eslint/js": "^9.39.5",
     "@gltf-transform/core": "^4.4.2",
     "@gltf-transform/extensions": "^4.4.2",

@@ -1,5 +1,6 @@
 "use client";
 
+import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo } from "react";
 import { ArrowRight, Loader2, Play, Volume2 } from "lucide-react";
@@ -41,27 +42,15 @@ export function PracticeIntro({
       null,
     [roadmap]
   );
-  const chapterPercent = Math.round(activeChapter?.progressPercent ?? 0);
 
+  // Focus names and percentages are on screen; the spoken line is pre-recorded.
   const script = useMemo(() => {
-    if (recommendation) {
-      const reason =
-        recommendation.source === "performance"
-          ? `Your recent solutions make ${recommendation.focusLabel} the best next focus.`
-          : `Your assessment makes ${recommendation.focusLabel} the best place to start.`;
-      return `${reason} ${recommendation.rationale}`;
-    }
-    if (!roadmap || total === 0) {
-      return `${purpose} Focus on recognizing the pattern before you write code.`;
-    }
-    if (completed === 0) {
-      return `Start with ${activeChapter?.title ?? "the first pattern"}. Name the pattern before you code, then explain why it fits.`;
-    }
-    if (completed >= total) {
-      return `You finished the DSA path. Revisit anything you skipped, then carry these patterns into your next interview.`;
-    }
-    return `You’re ${chapterPercent}% through this pattern. Keep the approach clear before you optimise it.`;
-  }, [activeChapter, chapterPercent, completed, purpose, recommendation, roadmap, total]);
+    if (recommendation) return pickLine(TEACHER_LINES.practiceIntro.focus);
+    if (!roadmap || total === 0) return pickLine(TEACHER_LINES.practiceIntro.empty);
+    if (completed === 0) return pickLine(TEACHER_LINES.practiceIntro.first);
+    if (completed >= total) return pickLine(TEACHER_LINES.practiceIntro.complete);
+    return pickLine(TEACHER_LINES.practiceIntro.ongoing);
+  }, [completed, recommendation, roadmap, total]);
 
   const say = useCallback(() => {
     setAwaitingGesture(false);

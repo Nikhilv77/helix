@@ -1,3 +1,4 @@
+import { TEACHER_VOICE_LINES } from "@/features/practice/shared/domain/teacher-voice-lines";
 import type { StoryPracticeAssessmentExperience } from "@/features/practice/shared/ui/story-practice-assessment";
 import type { StoryPracticeIntroExperience } from "@/features/practice/shared/ui/story-practice-intro";
 import type { StoryPracticeOverviewExperience } from "@/features/practice/shared/ui/story-practice-overview";
@@ -27,8 +28,7 @@ export const APPLIED_ENGINEERING_INTRO_EXPERIENCE: StoryPracticeIntroExperience 
   routeBase: "/practice/applied-engineering",
   subjectNoun: "incident",
   description: "Build production judgment through one connected engineering incident.",
-  script: (title) =>
-    `Your next incident is “${title}.” Follow the evidence, isolate the root cause, then ship the repair safely.`
+  script: TEACHER_VOICE_LINES.appliedEngineeringIntro
 };
 
 export const APPLIED_ENGINEERING_ASSESSMENT_EXPERIENCE: StoryPracticeAssessmentExperience = {

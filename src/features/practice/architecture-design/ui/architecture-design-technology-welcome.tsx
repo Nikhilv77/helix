@@ -1,5 +1,6 @@
 "use client";
 
+import { TEACHER_VOICE_LINES } from "@/features/practice/shared/domain/teacher-voice-lines";
 import type { StoryPracticeTechnologyWelcomeExperience } from "@/features/practice/shared/ui/contracts";
 import { StoryPracticeTechnologyWelcome } from "@/features/practice/shared/ui/story-practice-technology-welcome";
 
@@ -17,12 +18,9 @@ const experience: StoryPracticeTechnologyWelcomeExperience<"role-aligned"> = {
   apiBase: "/api/practice/architecture-design",
   routeBase: "/practice/architecture-design",
   heading: "Preparing your role-aligned system design path",
-  choosingScript:
-    "Welcome to Architecture and Design practice. Let’s build the system-design path aligned to your role.",
-  confirmingScript: () =>
-    "Great—let’s work through a role-aligned system design. I’ll use your interview context to choose the best starting scenario.",
-  generatingScript:
-    "I’m preparing a reviewed scenario with requirements, data, architecture, reliability, and evolution questions.",
+  choosingScript: TEACHER_VOICE_LINES.architectureDesignWelcome,
+  confirmingScript: () => TEACHER_VOICE_LINES.architectureDesignConfirming,
+  generatingScript: TEACHER_VOICE_LINES.architectureDesignPreparing,
   options: ROLE_ALIGNED_PATH,
   autoStart: true,
   buildConfirmation: () => ({ path: "role-aligned" }),

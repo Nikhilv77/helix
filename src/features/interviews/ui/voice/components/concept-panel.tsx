@@ -27,7 +27,6 @@ export function ConceptPanel({
   correct: boolean | null;
   areas: FundamentalsAreaSummary[];
 }) {
-
   return (
     <section
       className={`${INTERVIEW_PANEL_SHELL} flex min-h-[22rem] min-w-0 flex-col overflow-hidden xl:min-h-0`}

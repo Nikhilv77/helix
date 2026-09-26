@@ -1,5 +1,6 @@
 "use client";
 
+import { TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import { InterviewLaunchStage } from "@/features/interviews/ui/shared/interview-launch-stage";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 
@@ -40,9 +41,7 @@ export function ResumeInterviewEntry({
           body: named
             ? `James will lead your resume and behavioural interview. He will start with your background and recent work, then go deeper into your experience, projects, and the skills you listed, including ${named}. Your progress is strongest when you give specific examples: what you owned, the decision you made, and what changed. Take a moment to get ready, then answer clearly and honestly.`
             : "James will lead your resume and behavioural interview. He will start with your background and recent work, then go deeper into your experience, projects, and technical judgement. Your progress is strongest when you give specific examples: what you owned, the decision you made, and what changed. Take a moment to get ready, then answer clearly and honestly.",
-          script: named
-            ? `Hi ${firstName || "there"}. James is ready for your resume interview. Give clear examples from your work, projects, and ${named}. He will take over now.`
-            : `Hi ${firstName || "there"}. James is ready for your resume interview. Give clear examples of what you owned, the decisions you made, and the results. He will take over now.`
+          spokenVariants: TEACHER_LINES.interviewLaunch.resume
         };
 
   return (

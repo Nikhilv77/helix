@@ -1,5 +1,6 @@
 "use client";
 
+import { TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import { InterviewLaunchStage } from "@/features/interviews/ui/shared/interview-launch-stage";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 
@@ -44,7 +45,7 @@ export function DsaInterviewEntry({
             eyebrow: roundLabel,
             headline: `${greeting} Claire is ready for your technical interview.`,
             body: "Claire will lead two focused coding problems using important questions you have already practised. Explain your reasoning when it helps; she will give you quiet space while you code.",
-            script: `Hi ${firstName || "there"}. Claire will take your DSA interview. You’ll solve two coding problems and explain your approach, correctness, complexity, and edge cases. Think out loud when it helps, but Claire will give you quiet space while you code.`
+            spokenVariants: TEACHER_LINES.interviewLaunch.dsa
           };
 
   return (

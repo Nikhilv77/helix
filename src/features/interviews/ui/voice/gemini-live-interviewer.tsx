@@ -1142,11 +1142,7 @@ export const GeminiLiveInterviewer = forwardRef<
                         }
                       }
                     }
-                    if (
-                      closingResponsePending &&
-                      completedApprovedTurn &&
-                      !approvedResponseText
-                    ) {
+                    if (closingResponsePending && completedApprovedTurn && !approvedResponseText) {
                       // Playback completion normally closes the room. If it
                       // completed before this packet, finish the durable turn.
                       completeClosingResponse();

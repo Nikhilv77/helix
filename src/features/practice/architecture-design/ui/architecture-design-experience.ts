@@ -1,3 +1,4 @@
+import { TEACHER_VOICE_LINES } from "@/features/practice/shared/domain/teacher-voice-lines";
 import type { StoryPracticeAssessmentExperience } from "@/features/practice/shared/ui/story-practice-assessment";
 import type { StoryPracticeIntroExperience } from "@/features/practice/shared/ui/story-practice-intro";
 import type { StoryPracticeOverviewExperience } from "@/features/practice/shared/ui/story-practice-overview";
@@ -38,8 +39,7 @@ export const ARCHITECTURE_DESIGN_INTRO_EXPERIENCE: StoryPracticeIntroExperience 
   routeBase: ARCHITECTURE_DESIGN_ROUTE_BASE,
   subjectNoun: "scenario",
   description: "Build system-design judgment through one connected architecture scenario.",
-  script: (title) =>
-    `Your next design scenario is “${title}.” Frame the requirements, trace the system, then defend the trade-offs.`
+  script: TEACHER_VOICE_LINES.architectureDesignIntro
 };
 
 export const ARCHITECTURE_DESIGN_ASSESSMENT_EXPERIENCE: StoryPracticeAssessmentExperience = {

@@ -1,10 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { GREETING_AUDIO } from "@/lib/avatars/greeting-audio.generated";
+import { ALL_TEACHER_LINES } from "@/lib/voice/teacher-lines";
+import { STATIC_VOICE_LINES } from "@/lib/avatars/static-voice.generated";
 import { ALL_PERSONAS, personaById } from "@/lib/avatars/personas";
 import { GEMINI_TTS_STYLE_VERSION } from "@/lib/avatars/voice-style";
-import { staticGreetingUrl, voiceUrl } from "./use-maya-voice";
+import { staticVoiceUrl, voiceUrl } from "./use-maya-voice";
 
 describe("voiceUrl", () => {
   it("requests the streaming delivery path for time-sensitive James speech", () => {
@@ -16,37 +17,52 @@ describe("voiceUrl", () => {
   });
 });
 
-describe("pre-generated teacher greetings", () => {
-  const generated = Object.keys(GREETING_AUDIO);
-
-  it("serves a teacher's exact greeting from its static file", () => {
-    for (const personaId of generated) {
-      const persona = personaById(personaId)!;
-      expect(voiceUrl(persona.greeting, persona.id)).toBe(GREETING_AUDIO[personaId]!.src);
+describe("pre-generated teacher lines", () => {
+  it("serves each manifest line's exact text from its static file", () => {
+    for (const line of STATIC_VOICE_LINES) {
+      expect(voiceUrl(line.text, line.persona)).toBe(line.src);
     }
   });
 
-  it("uses live speech for any other line, and for the fast path", () => {
-    for (const personaId of generated) {
-      const persona = personaById(personaId)!;
-      expect(staticGreetingUrl(`${persona.greeting} Extra.`, persona.id)).toBeNull();
-      expect(voiceUrl(persona.greeting, persona.id, "fast")).toContain("/api/voice/speak");
+  it("uses live speech for any other text, another teacher, and the fast path", () => {
+    for (const line of STATIC_VOICE_LINES) {
+      expect(staticVoiceUrl(`${line.text} Extra.`, line.persona)).toBeNull();
+      expect(voiceUrl(line.text, line.persona, "fast")).toContain("/api/voice/speak");
     }
-  });
-
-  it("keeps every manifest entry in step with its persona and on disk", () => {
-    for (const [personaId, entry] of Object.entries(GREETING_AUDIO)) {
-      const persona = ALL_PERSONAS.find((candidate) => candidate.id === personaId);
-      // A stale entry would silently fall back to live speech; regenerate instead.
-      expect(persona, `${personaId} is no longer a persona`).toBeDefined();
-      expect(entry.text, `${personaId} greeting changed; run pnpm voice:greetings`).toBe(
-        persona!.greeting
+    const [first] = STATIC_VOICE_LINES;
+    if (first) {
+      const other = ALL_PERSONAS.find(
+        (persona) =>
+          !STATIC_VOICE_LINES.some(
+            (line) => line.persona === persona.id && line.text === first.text
+          )
       );
-      expect(entry.voice).toBe(persona!.geminiVoice);
-      expect(entry.style).toBe(GEMINI_TTS_STYLE_VERSION);
-      const file = join(process.cwd(), "public", entry.src);
-      expect(existsSync(file), `${entry.src} is missing`).toBe(true);
-      expect(readFileSync(file).subarray(0, 4).toString()).toBe("RIFF");
+      if (other) expect(staticVoiceUrl(first.text, other.id)).toBeNull();
+    }
+  });
+
+  it("keeps every manifest entry current and its MP3 on disk", () => {
+    const wanted = new Set([
+      ...ALL_PERSONAS.map((persona) => `${persona.id}\n${persona.greeting}`),
+      ...ALL_PERSONAS.flatMap((persona) =>
+        ALL_TEACHER_LINES.map((text) => `${persona.id}\n${text}`)
+      )
+    ]);
+    for (const line of STATIC_VOICE_LINES) {
+      const persona = personaById(line.persona);
+      // A stale entry silently falls back to live speech; regenerate instead.
+      expect(persona, `${line.persona} is no longer a persona`).not.toBeNull();
+      expect(
+        wanted.has(`${line.persona}\n${line.text}`),
+        `${line.src} no longer matches its text; run pnpm voice:lines`
+      ).toBe(true);
+      expect(line.voice).toBe(persona!.geminiVoice);
+      expect(line.style).toBe(GEMINI_TTS_STYLE_VERSION);
+      const file = join(process.cwd(), "public", line.src);
+      expect(existsSync(file), `${line.src} is missing`).toBe(true);
+      const header = readFileSync(file).subarray(0, 3);
+      // MPEG frame sync or an ID3 tag.
+      expect(header[0] === 0xff || header.toString() === "ID3").toBe(true);
     }
   });
 });

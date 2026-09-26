@@ -11,7 +11,7 @@ import {
 } from "@/lib/avatars/personas";
 import {
   preloadVoiceLine,
-  staticGreetingUrl,
+  staticVoiceUrl,
   useMayaVoice
 } from "@/infrastructure/realtime/use-maya-voice";
 import { PRIMARY_BUTTON } from "../flow/onboarding-data";
@@ -101,7 +101,7 @@ export function TeacherStep({
   useEffect(() => {
     for (const personaIndex of [index, left, right]) {
       const persona = ONBOARDING_PERSONAS[personaIndex]!;
-      if (staticGreetingUrl(persona.greeting, persona.id)) {
+      if (staticVoiceUrl(persona.greeting, persona.id)) {
         preloadVoiceLine(persona.greeting, persona.id);
       }
     }

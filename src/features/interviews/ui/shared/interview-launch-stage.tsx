@@ -1,5 +1,6 @@
 "use client";
 
+import { pickLine } from "@/lib/voice/teacher-lines";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
@@ -17,6 +18,8 @@ export interface InterviewLaunchCopy {
   body: string;
   /** What Maya says out loud. Defaults to the body copy. */
   script?: string | string[];
+  /** Pre-recorded phrasings; one is spoken instead of `script`. */
+  spokenVariants?: readonly string[];
 }
 
 interface InterviewStartPayload {
@@ -120,8 +123,13 @@ export function InterviewLaunchStage({
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const { state, speak, stop, awaitingGesture, setAwaitingGesture } = useMayaVoice();
   const scriptLines = useMemo(
-    () => (Array.isArray(copy.script) ? copy.script : [copy.script ?? copy.body]),
-    [copy.body, copy.script]
+    () =>
+      copy.spokenVariants?.length
+        ? [pickLine(copy.spokenVariants)]
+        : Array.isArray(copy.script)
+          ? copy.script
+          : [copy.script ?? copy.body],
+    [copy.body, copy.script, copy.spokenVariants]
   );
   const script = scriptLines.join(" ");
   const continueToInterview = useCallback(() => {

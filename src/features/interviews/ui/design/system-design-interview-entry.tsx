@@ -1,5 +1,6 @@
 "use client";
 
+import { TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import { InterviewLaunchStage } from "@/features/interviews/ui/shared/interview-launch-stage";
 import type { WorkspaceAccent } from "@/lib/workspace/accent";
 
@@ -38,7 +39,7 @@ export function SystemDesignInterviewEntry({
                 eyebrow: "System Design interview",
                 headline: `${greeting} Claire has an open-ended design problem for you.`,
                 body: "You’ll discover requirements, estimate scale, build the architecture on a canvas, deep-dive one boundary, and adapt the design under changing constraints.",
-                script: `Hi ${firstName || "there"}. Claire will give you an intentionally incomplete system-design prompt. Ask questions first, then draw and defend the architecture like you would in a real interview.`
+                spokenVariants: TEACHER_LINES.interviewLaunch.systemDesign
               }
       }
       workspaceAccent={workspaceAccent}

@@ -1,5 +1,6 @@
 "use client";
 
+import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -28,7 +29,9 @@ export function CoachingReadinessSection({
       stop();
       return;
     }
-    void speak(data.coaching.spokenSummary);
+    const variants: readonly string[] | undefined =
+      TEACHER_LINES.coaching[data.coaching.state as keyof typeof TEACHER_LINES.coaching];
+    void speak(variants ? pickLine(variants) : data.coaching.spokenSummary);
   };
 
   return (

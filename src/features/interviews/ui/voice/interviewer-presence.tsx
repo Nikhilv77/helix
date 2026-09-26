@@ -23,11 +23,7 @@ const CREAM = "239, 232, 214";
  * who is not there. Presence comes from responsiveness, not resemblance —
  * every line here moves because of actual sound in the room.
  */
-export function InterviewerPresence({
-  agentTrack,
-  localTrack,
-  state
-}: InterviewerPresenceProps) {
+export function InterviewerPresence({ agentTrack, localTrack, state }: InterviewerPresenceProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const agentAnalyser = useAnalyser(agentTrack);
   const localAnalyser = useAnalyser(localTrack);
@@ -136,13 +132,7 @@ function drawThinkingOrbit(
     const pulse = reduced ? 1 : 0.72 + Math.sin(phase * 3 + index * 1.8) * 0.28;
     ctx.fillStyle = `rgba(${CREAM}, ${0.3 + pulse * 0.45})`;
     ctx.beginPath();
-    ctx.arc(
-      cx + Math.cos(angle) * orbit,
-      cy + Math.sin(angle) * orbit,
-      2.3 + pulse * 1.7,
-      0,
-      TAU
-    );
+    ctx.arc(cx + Math.cos(angle) * orbit, cy + Math.sin(angle) * orbit, 2.3 + pulse * 1.7, 0, TAU);
     ctx.fill();
   }
 }
@@ -309,7 +299,11 @@ function drawListeningArc(
 
 /** Web Audio analyser bound to a live MediaStreamTrack. */
 function useAnalyser(track: MediaStreamTrack | null) {
-  const ref = useRef<{ node: AnalyserNode | null; buffer: Uint8Array | null; freq: Uint8Array | null }>({
+  const ref = useRef<{
+    node: AnalyserNode | null;
+    buffer: Uint8Array | null;
+    freq: Uint8Array | null;
+  }>({
     node: null,
     buffer: null,
     freq: null

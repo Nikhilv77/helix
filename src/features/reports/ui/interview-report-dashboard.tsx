@@ -1,5 +1,6 @@
 "use client";
 
+import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import {
   ArrowUpRight,
   CalendarDays,
@@ -109,10 +110,14 @@ function InterviewReportContent({
   const spokenMessage = useRef<string | null>(null);
   const speaking = voiceState === "speaking";
   const speakSummary = useCallback(() => {
-    void speak(mayaMessage).then((result) => {
+    // The personal summary stays on screen; the spoken line is a pre-recorded
+    // phrasing for the same performance band.
+    const score = roundParameterScore(report);
+    const band = score >= 75 ? "strong" : score >= 45 ? "steady" : "starting";
+    void speak(pickLine(TEACHER_LINES.reportSummary[band])).then((result) => {
       if (result !== "blocked") spokenMessage.current = mayaMessage;
     });
-  }, [mayaMessage, speak]);
+  }, [mayaMessage, report, speak]);
 
   useEffect(() => {
     if (awaitingGesture || spokenMessage.current === mayaMessage) return;

@@ -1,3 +1,4 @@
+import { TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProgressBriefingOverview } from "@/features/progress/contracts/progress";
@@ -47,7 +48,7 @@ describe("ProgressView", () => {
     vi.clearAllMocks();
   });
 
-  it("speaks a compact progress summary while keeping the full coaching visible", async () => {
+  it("speaks a pre-recorded line for the current rhythm while the numbers stay on screen", async () => {
     vi.useFakeTimers();
     render(<ProgressView overview={overview} firstName="Arjun" starterQuestions={[]} />);
 
@@ -56,9 +57,9 @@ describe("ProgressView", () => {
     });
 
     const spoken = voiceMocks.speak.mock.calls[0]?.[0] as string;
-    expect(spoken).toContain("You completed 1 focused block");
-    expect(spoken).toContain("Keep the next session to 1 focused completion");
-    expect(spoken.length).toBeLessThan(240);
+    // A one-day streak is the "building" band; its exact numbers are written below.
+    expect(TEACHER_LINES.progress.building).toContain(spoken);
+    expect(screen.getByText(/You completed 1 focused block/)).toBeInTheDocument();
   });
 
   it("keeps opened attempts in the simple empty state until the first solve", () => {
