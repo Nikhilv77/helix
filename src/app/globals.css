@@ -1010,12 +1010,42 @@ html[data-theme="light"] .onboarding-theme .onboarding-secondary-button:hover {
   box-shadow: 0 0 12px color-mix(in srgb, var(--workspace-accent) 35%, transparent);
 }
 
-/* Smooth native chapter disclosure without shipping an animation runtime. */
-.dsa-chapter-details {
+/* Back-link spinner: shown only if navigation takes long enough to notice. */
+.back-link-spinner {
+  animation:
+    back-link-spinner-rotate 0.9s linear infinite,
+    back-link-spinner-appear 1ms linear 120ms both;
+}
+
+@keyframes back-link-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes back-link-spinner-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-link-spinner {
+    animation: back-link-spinner-appear 1ms linear 120ms both;
+  }
+}
+
+/* Smooth native disclosures (chapters, question review) without an animation runtime. */
+.dsa-chapter-details,
+.smooth-disclosure {
   interpolate-size: allow-keywords;
 }
 
-.dsa-chapter-details::details-content {
+.dsa-chapter-details::details-content,
+.smooth-disclosure::details-content {
   block-size: 0;
   overflow: clip;
   opacity: 0;
@@ -1025,12 +1055,14 @@ html[data-theme="light"] .onboarding-theme .onboarding-secondary-button:hover {
     content-visibility 480ms allow-discrete;
 }
 
-.dsa-chapter-details[open]::details-content {
+.dsa-chapter-details[open]::details-content,
+.smooth-disclosure[open]::details-content {
   block-size: auto;
   opacity: 1;
 }
 
-.dsa-chapter-body {
+.dsa-chapter-body,
+.smooth-disclosure-body {
   transform: translate3d(0, -10px, 0);
   opacity: 0;
   transition:
@@ -1039,18 +1071,21 @@ html[data-theme="light"] .onboarding-theme .onboarding-secondary-button:hover {
   will-change: transform, opacity;
 }
 
-.dsa-chapter-details[open] .dsa-chapter-body {
+.dsa-chapter-details[open] .dsa-chapter-body,
+.smooth-disclosure[open] .smooth-disclosure-body {
   transform: translate3d(0, 0, 0);
   opacity: 1;
 }
 
 @starting-style {
-  .dsa-chapter-details[open]::details-content {
+  .dsa-chapter-details[open]::details-content,
+  .smooth-disclosure[open]::details-content {
     block-size: 0;
     opacity: 0;
   }
 
-  .dsa-chapter-details[open] .dsa-chapter-body {
+  .dsa-chapter-details[open] .dsa-chapter-body,
+  .smooth-disclosure[open] .smooth-disclosure-body {
     transform: translate3d(0, -10px, 0);
     opacity: 0;
   }
@@ -1058,7 +1093,9 @@ html[data-theme="light"] .onboarding-theme .onboarding-secondary-button:hover {
 
 @media (prefers-reduced-motion: reduce) {
   .dsa-chapter-details::details-content,
-  .dsa-chapter-body {
+  .dsa-chapter-body,
+  .smooth-disclosure::details-content,
+  .smooth-disclosure-body {
     transition: none;
   }
 }

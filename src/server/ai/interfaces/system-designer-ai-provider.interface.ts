@@ -38,6 +38,13 @@ export interface GenerateStructuredRequest<T> {
   timeoutMs?: number;
   /** Overrides AI_MAX_RETRIES + 1 for this call only. */
   maxAttempts?: number;
+  /**
+   * Sends a second identical request if the first has not answered within this
+   * many milliseconds, and uses whichever succeeds first. For short calls a
+   * learner waits on, where a stalled request would otherwise hold the whole
+   * timeout. Providers without support ignore it.
+   */
+  hedgeAfterMs?: number;
   /** Cancels this request without retrying or exposing provider details. */
   signal?: AbortSignal;
   /** Receives metadata only; providers must never include prompt or response content. */

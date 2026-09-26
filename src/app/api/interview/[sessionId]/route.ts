@@ -46,6 +46,10 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
         ? await app.interviewService.endOwned(access.ownerId, id)
         : await app.interviewService.end(id);
     after(async () => {
+      // Grade any queued answers before an assessment report is written.
+      await app.interviewEvaluationRecoveryService
+        .runBatch(5, Date.now(), { sessionId: id })
+        .catch(() => undefined);
       await Promise.allSettled([
         access.kind === "owner"
           ? app.dsaBlockAssessmentFinalizationService.finalizeOwned(access.ownerId, id)

@@ -13,9 +13,9 @@ from the CDN (about 0.1 s). Lines that depend on the learner stay live.
 | Item | State |
 | --- | --- |
 | Active provider | **Deepgram** (default in code; override with `NEXT_PUBLIC_TTS_PROVIDER`) |
-| Deepgram set | **794 of 794** lines (98 fixed lines × 8 teachers + 10 greetings), generated 2026-09-26 in 5.4 minutes |
+| Deepgram set | **946 of 946** lines (117 fixed lines × 8 teachers + 10 greetings); the 19 block-assessment lines were added 2026-09-26 in 46 s |
 | Gemini set | 8 of 794 (greetings for Maya, Claire, Daniel, Olivia, James, Alex, Sophia, Ryan) |
-| Files | 802 MP3s in `public/voice/`, 32 MB |
+| Files | 954 MP3s in `public/voice/`, 35 MB |
 | Behaviour for missing files | Falls back to live speech automatically; nothing breaks |
 
 ## Switching providers
@@ -83,6 +83,7 @@ To switch to Gemini (for example after enabling Gemini billing):
 | DSA practice intro | Focus, empty, first chapter, ongoing, complete | 2 each |
 | Assessment run cue | Tests passed, tests failed (DSA and Core Technical) | 2 each |
 | Chapter lesson beats | Opening, ideas, approaches, traps, signals, hand-off | 1–2 each |
+| DSA block assessment | Opening, quick-check verdict (right/wrong, next check or coding), coding submitted/skipped, finished. The screen keeps the full feedback, explanation, and next question. | 2–3 each |
 
 ## Still generated live (by design)
 

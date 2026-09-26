@@ -59,6 +59,10 @@ async function handlePost(request: NextRequest) {
 
     if (result.response.phase === "done") {
       after(async () => {
+        // An earlier problem's grade may still be queued; the report needs it.
+        await app.interviewEvaluationRecoveryService
+          .runBatch(5, Date.now(), { sessionId: parsed.data.sessionId })
+          .catch(() => undefined);
         await Promise.allSettled([
           app.dsaBlockAssessmentFinalizationService.finalizeOwned(
             access.ownerId,

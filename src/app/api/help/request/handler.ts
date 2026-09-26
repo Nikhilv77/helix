@@ -15,6 +15,12 @@ import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-
 import { reconcileHelpForOwnerBestEffort } from "@/features/peer-help/server/help-maintenance";
 
 const logger = new Logger("HelpRequest");
+/**
+ * The most mates one request invites, best-ranked first. While fewer people
+ * than this are eligible, every eligible mate is invited, so a small community
+ * still reaches everyone who could help; the cap only matters as it grows.
+ */
+export const MAX_HELP_INVITATIONS = 150;
 
 const selectionSchema = z
   .object({
@@ -84,8 +90,11 @@ export async function POST(request: NextRequest) {
     const question = detail.question;
 
     const app = getAppContainer();
-    await reconcileHelpForOwnerBestEffort(app, ownerId);
-    await getSharedGuard(app.config).enforce(RATE_LIMIT_POLICIES.helpRequest, ownerId);
+    const guard = getSharedGuard(app.config);
+    await Promise.all([
+      reconcileHelpForOwnerBestEffort(app, ownerId),
+      guard.enforce(RATE_LIMIT_POLICIES.helpRequestAttempt, ownerId)
+    ]);
 
     const helpers = await app.helperMatchingService.findHelpers(
       question.slug,
@@ -99,6 +108,9 @@ export async function POST(request: NextRequest) {
         "No Trailmates are available right now, so your invitation was not sent."
       );
     }
+    // Spent only once someone can actually be invited; finding nobody leaves
+    // the learner free to try again later.
+    await guard.enforce(RATE_LIMIT_POLICIES.helpRequest, ownerId);
 
     const context = {
       code: parsed.data.code,
@@ -112,16 +124,18 @@ export async function POST(request: NextRequest) {
       timeSpentMs: parsed.data.timeSpentMs
     };
 
-    const helpRequest = await app.helpRequestService.open({
-      learnerId: ownerId,
-      questionSlug: parsed.data.slug,
-      language: parsed.data.language,
-      context
-    });
+    const [helpRequest, learner] = await Promise.all([
+      app.helpRequestService.open({
+        learnerId: ownerId,
+        questionSlug: parsed.data.slug,
+        language: parsed.data.language,
+        context
+      }),
+      app.helpHistoryService.participant(ownerId)
+    ]);
 
     // Help invitations are in-app-only database writes. Await them so the UI
     // never says "delivered" when no invitation row was actually recorded.
-    const learner = await app.helpHistoryService.participant(ownerId);
     const failing = context.failingTests;
     const body =
       failing === null
@@ -130,7 +144,7 @@ export async function POST(request: NextRequest) {
             failing === 1 ? "test" : "tests"
           }.`;
     const invitationsSent = await app.notificationService.deliverHelpRequestInvitations(
-      helpers.map((helper) => helper.ownerId),
+      helpers.slice(0, MAX_HELP_INVITATIONS).map((helper) => helper.ownerId),
       {
         title: `${learner.label} asked for a mate for ${question.title}`,
         body,

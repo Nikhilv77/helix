@@ -1,6 +1,6 @@
+import { BackLinkIcon } from "@/components/workspace/shared/back-link-icon";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { DsaTopics } from "@/features/practice/dsa/ui/dsa-topics";
 import { privatePageMetadata } from "@/lib/shared/seo";
 import { getAppContainer } from "@/server/app-container";
@@ -125,7 +125,7 @@ export default async function DsaPracticePage({
         href="/practice"
         className="mb-5 inline-flex h-9 items-center gap-2 rounded-lg px-2.5 text-[12.5px] font-semibold text-cream/52 transition hover:bg-white/[0.055] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
       >
-        <ArrowLeft size={14} aria-hidden="true" />
+        <BackLinkIcon size={14} />
         Back to Practice
       </Link>
       {plan ? (

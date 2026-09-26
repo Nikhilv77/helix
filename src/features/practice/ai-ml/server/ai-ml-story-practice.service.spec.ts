@@ -81,6 +81,10 @@ function service(database: Record<string, unknown>, ai = vi.fn()) {
   );
 }
 
+/** Prisma returns the created attempt row. */
+async function savedAttempt({ data }: { data: Record<string, unknown> }) {
+  return { id: "attempt-1", createdAt: new Date("2026-09-26T00:00:00Z"), ...data };
+}
 describe("AiMlStoryPracticeService", () => {
   it("adds only missing authored paths and keeps the original cohort in the first path", async () => {
     const legacyRows = Array.from({ length: 8 }, (_, index) => ({
@@ -517,13 +521,18 @@ describe("AiMlStoryPracticeService", () => {
     const before = await subject.question(ownerId, questionId);
     expect(before.revealedHints).toEqual([]);
     expect(before.authorizedAnswer).toBeNull();
-    await subject.revealHint(ownerId, { questionId, hintNumber: 1 });
+    findFirst.mockClear();
+    const after = await subject.revealHint(ownerId, { questionId, hintNumber: 1 });
     expect(updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ ownerId, revealedHintCount: 0 }),
         data: { revealedHintCount: 1 }
       })
     );
+    // The response is rendered from the row already read, not a second query.
+    expect(findFirst).toHaveBeenCalledOnce();
+    expect(after.revealedHints).toHaveLength(1);
+    expect(after.authorizedAnswer).toBeNull();
   });
 
   it("keeps evidence aligned with a frozen legacy answer after a catalog rewrite", async () => {
@@ -563,15 +572,16 @@ describe("AiMlStoryPracticeService", () => {
 
   it("saves a written draft without committing an evaluated answer", async () => {
     const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const findFirst = vi.fn().mockResolvedValue(questionRow());
     const subject = service({
       aiMlPracticeQuestion: {
-        findFirst: vi.fn().mockResolvedValue(questionRow()),
+        findFirst,
         findMany: vi.fn().mockResolvedValue([{ id: questionId, publicSnapshot }]),
         updateMany
       }
     });
 
-    await subject.saveDraft(ownerId, {
+    const saved = await subject.saveDraft(ownerId, {
       questionId,
       draft: { kind: "text", text: "The future timestamp leaks." }
     });
@@ -580,6 +590,45 @@ describe("AiMlStoryPracticeService", () => {
       where: { id: questionId, ownerId, status: AiMlPracticeQuestionStatus.ACTIVE },
       data: { draft: { kind: "text", text: "The future timestamp leaks." } }
     });
+    expect(findFirst).toHaveBeenCalledOnce();
+    expect(saved.draft).toEqual({ kind: "text", text: "The future timestamp leaks." });
+    expect(saved.latestAttempt).toBeNull();
+  });
+
+  it("re-reads a draft only when the question closed before the save", async () => {
+    const findFirst = vi
+      .fn()
+      .mockResolvedValueOnce(questionRow())
+      .mockResolvedValueOnce(questionRow({ status: AiMlPracticeQuestionStatus.LEARNED }));
+    const subject = service({
+      aiMlPracticeQuestion: {
+        findFirst,
+        updateMany: vi.fn().mockResolvedValue({ count: 0 })
+      }
+    });
+
+    const saved = await subject.saveDraft(ownerId, {
+      questionId,
+      draft: { kind: "text", text: "Too late." }
+    });
+
+    expect(findFirst).toHaveBeenCalledTimes(2);
+    expect(saved.status).toBe("LEARNED");
+    expect(saved.draft).toBeNull();
+  });
+
+  it("marks a question learned and reveals its answer from one read", async () => {
+    const findFirst = vi.fn().mockResolvedValue(questionRow());
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const subject = service({
+      aiMlPracticeQuestion: { findFirst, updateMany, count: vi.fn().mockResolvedValue(1) }
+    });
+
+    const learned = await subject.learn(ownerId, { questionId, confirmed: true });
+
+    expect(findFirst).toHaveBeenCalledOnce();
+    expect(learned.status).toBe("LEARNED");
+    expect(learned.authorizedAnswer).not.toBeNull();
   });
 
   it("grades a choice deterministically without calling the text evaluator", async () => {
@@ -595,7 +644,7 @@ describe("AiMlStoryPracticeService", () => {
       answer: choice.answer,
       correctChoiceIndex: selected
     };
-    const attemptCreate = vi.fn().mockResolvedValue({});
+    const attemptCreate = vi.fn(savedAttempt);
     const tx = {
       $executeRaw: vi.fn(),
       aiMlPracticeQuestion: {
@@ -655,7 +704,7 @@ describe("AiMlStoryPracticeService", () => {
         update: vi.fn().mockResolvedValue({}),
         count: vi.fn().mockResolvedValue(1)
       },
-      aiMlPracticeAttempt: { create: vi.fn().mockResolvedValue({}) },
+      aiMlPracticeAttempt: { create: vi.fn(savedAttempt) },
       aiMlPracticeSession: { update: vi.fn() }
     };
     const row = questionRow();
@@ -687,7 +736,7 @@ describe("AiMlStoryPracticeService", () => {
 
   it("grades written evidence with the frozen rubric and persists the reviewed attempt", async () => {
     const generateStructured = vi.fn().mockResolvedValue(feedback);
-    const attemptCreate = vi.fn().mockResolvedValue({});
+    const attemptCreate = vi.fn(savedAttempt);
     const update = vi.fn().mockResolvedValue({});
     const tx = {
       $executeRaw: vi.fn(),
@@ -756,7 +805,7 @@ describe("AiMlStoryPracticeService", () => {
       interactionRubric: question.interactionRubric
     };
     const row = questionRow({ publicSnapshot: source, privateSnapshot: hidden });
-    const create = vi.fn().mockResolvedValue({});
+    const create = vi.fn(savedAttempt);
     const lock = vi.fn();
     const tx = {
       $executeRaw: lock,

@@ -351,11 +351,14 @@ describe("CoreTechnicalQuestionWorkspace", () => {
     );
     fireEvent.click(screen.getByRole("radio", { name: "Promise callback" }));
 
-    await waitFor(() =>
-      expect(fetch).toHaveBeenCalledWith(
-        "/api/practice/core-technical/draft",
-        expect.objectContaining({ body: expect.stringContaining('"selectedChoiceIndex":1') })
-      )
+    // Drafts save one second after the last change.
+    await waitFor(
+      () =>
+        expect(fetch).toHaveBeenCalledWith(
+          "/api/practice/core-technical/draft",
+          expect.objectContaining({ body: expect.stringContaining('"selectedChoiceIndex":1') })
+        ),
+      { timeout: 3_000 }
     );
 
     fireEvent.click(screen.getByRole("tab", { name: /Hints/i }));
@@ -635,8 +638,8 @@ function makeRun(accepted: boolean) {
       codeFingerprint: `sha256:${"b".repeat(64)}`,
       testSuiteFingerprint: `sha256:${"c".repeat(64)}`,
       runnerIdentity: "test-sandbox",
-      runnerVersion: "core-technical-nodejs-22.23.2-isolated-v1",
-      runtimeVersion: "22.23.2",
+      runnerVersion: "core-technical-nodejs-22.22.2-isolated-v1",
+      runtimeVersion: "22.22.2",
       limits: {
         timeoutMs: 1_000,
         memoryMb: 64,

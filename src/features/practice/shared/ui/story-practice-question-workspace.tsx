@@ -1,5 +1,6 @@
 "use client";
 
+import { BackLinkIcon } from "@/components/workspace/shared/back-link-icon";
 import { workspaceMutationFetch } from "@/lib/workspace/summary-cache-invalidation";
 
 import Link from "next/link";
@@ -47,6 +48,9 @@ import {
   type InteractiveResponse
 } from "../domain/interactive-response";
 import { StoryPracticeLearningGuide } from "./story-practice-learning-guide";
+
+/** Drafts are the most frequent practice write; save after a real pause in typing. */
+const DRAFT_SAVE_DELAY_MS = 1_000;
 
 type PendingAction = "hint" | "run" | "attempt" | "learn" | null;
 type QuestionPanelTab = "description" | "hints" | "review";
@@ -173,7 +177,7 @@ export function StoryPracticeQuestionWorkspace({
           setDraftState("unsaved");
           setError(messageFrom(cause, "Your draft could not be saved. Try editing it again."));
         });
-    }, 600);
+    }, DRAFT_SAVE_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [draft, draftSignature, experience.apiBase, experience.label, mutable, question.id]);
 
@@ -304,7 +308,7 @@ export function StoryPracticeQuestionWorkspace({
           title={`Back to ${experience.subjectNoun}`}
           className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-cream/48 transition hover:bg-white/[0.055] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
         >
-          <ArrowLeft size={16} aria-hidden="true" />
+          <BackLinkIcon size={16} />
         </Link>
 
         <div className="min-w-0 flex-1">

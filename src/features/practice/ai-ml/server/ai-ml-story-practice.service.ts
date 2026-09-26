@@ -66,6 +66,23 @@ type SessionRow = Prisma.AiMlPracticeSessionGetPayload<{
 }>;
 type QuestionRow = SessionRow["questions"][number];
 
+const QUESTION_VIEW_INCLUDE = {
+  attempt: true,
+  session: {
+    select: {
+      track: true,
+      discipline: true,
+      questions: {
+        select: { id: true, publicSnapshot: true },
+        orderBy: { order: "asc" }
+      }
+    }
+  }
+} as const satisfies Prisma.AiMlPracticeQuestionInclude;
+type QuestionViewRow = Prisma.AiMlPracticeQuestionGetPayload<{
+  include: typeof QUESTION_VIEW_INCLUDE;
+}>;
+
 export type AiMlStorySession = {
   discipline: StoryDiscipline;
   track: PersistedAiMlPracticeTrack;
@@ -343,22 +360,20 @@ export class AiMlStoryPracticeService {
   }
 
   async question(ownerId: string, questionId: string): Promise<StoryPracticeQuestionView> {
+    return this.questionView(await this.questionRow(ownerId, questionId));
+  }
+
+  private async questionRow(ownerId: string, questionId: string): Promise<QuestionViewRow> {
     const row = await this.prisma.aiMlPracticeQuestion.findFirst({
       where: { id: questionId, ownerId },
-      include: {
-        attempt: true,
-        session: {
-          select: {
-            track: true,
-            questions: {
-              select: { id: true, publicSnapshot: true },
-              orderBy: { order: "asc" }
-            }
-          }
-        }
-      }
+      include: QUESTION_VIEW_INCLUDE
     });
     if (!row) throw new NotFoundErrorException("AI_ML_QUESTION_NOT_FOUND", "Question not found.");
+    return row;
+  }
+
+  /** Writes render from the row they already read instead of reading it again. */
+  private questionView(row: QuestionViewRow): StoryPracticeQuestionView {
     const track =
       row.session.track === DatabaseTrack.CORE_TECHNICAL ? "core-technical" : "applied-engineering";
     const peers = row.session.questions;
@@ -430,19 +445,24 @@ export class AiMlStoryPracticeService {
 
   async saveDraft(ownerId: string, raw: unknown) {
     const input = interactivePracticeSaveDraftInputSchema.parse(raw);
-    const question = await this.question(ownerId, input.questionId);
+    const row = await this.questionRow(ownerId, input.questionId);
+    const question = this.questionView(row);
     if (question.status !== "ACTIVE") return question;
     assertAnswerShape(question.question, input.draft);
-    await this.prisma.aiMlPracticeQuestion.updateMany({
+    const draft = input.draft ? json(input.draft) : null;
+    const updated = await this.prisma.aiMlPracticeQuestion.updateMany({
       where: { id: input.questionId, ownerId, status: AiMlPracticeQuestionStatus.ACTIVE },
-      data: { draft: input.draft ? json(input.draft) : Prisma.JsonNull }
+      data: { draft: draft ?? Prisma.JsonNull }
     });
-    return this.question(ownerId, input.questionId);
+    // The question closed in between; show what was actually saved.
+    if (!updated.count) return this.question(ownerId, input.questionId);
+    return this.questionView({ ...row, draft: draft as Prisma.JsonValue | null });
   }
 
   async revealHint(ownerId: string, raw: unknown) {
     const input = storyPracticeRevealHintInputSchema.parse(raw);
-    const question = await this.question(ownerId, input.questionId);
+    const row = await this.questionRow(ownerId, input.questionId);
+    const question = this.questionView(row);
     if (question.status !== "ACTIVE") return question;
     assertStoryPracticeHintOrder(
       question.revealedHints.length,
@@ -464,8 +484,9 @@ export class AiMlStoryPracticeService {
           "AI_ML_HINT_CONFLICT",
           "Hint state changed. Refresh and try again."
         );
+      return this.questionView({ ...row, revealedHintCount: input.hintNumber });
     }
-    return this.question(ownerId, input.questionId);
+    return question;
   }
 
   async submitAttempt(ownerId: string, raw: unknown) {
@@ -475,11 +496,7 @@ export class AiMlStoryPracticeService {
         "AI_ML_CODE_UNSUPPORTED",
         "This practice question does not accept code."
       );
-    const row = await this.prisma.aiMlPracticeQuestion.findFirst({
-      where: { id: input.questionId, ownerId },
-      include: { attempt: true, session: { select: { discipline: true } } }
-    });
-    if (!row) throw new NotFoundErrorException("AI_ML_QUESTION_NOT_FOUND", "Question not found.");
+    const row = await this.questionRow(ownerId, input.questionId);
     const workFingerprint = storyPracticeFingerprint(input.work);
     if (row.attempt) {
       if (
@@ -491,7 +508,7 @@ export class AiMlStoryPracticeService {
           "This question already has a saved answer."
         );
       }
-      const question = await this.question(ownerId, input.questionId);
+      const question = this.questionView(row);
       return { attempt: question.latestAttempt, question };
     }
     if (row.status !== AiMlPracticeQuestionStatus.ACTIVE) {
@@ -543,8 +560,10 @@ export class AiMlStoryPracticeService {
               isStoryDiscipline(row.session.discipline) ? row.session.discipline : "ai-ml"
             );
     }
+    let saved: { attempt: NonNullable<QuestionViewRow["attempt"]>; completedAt: Date } | null =
+      null;
     try {
-      await this.prisma.$transaction(async (tx) => {
+      saved = await this.prisma.$transaction(async (tx) => {
         await lockAiMlPracticeOwner(tx, ownerId);
         const current = await tx.aiMlPracticeQuestion.findFirst({
           where: { id: row.id, ownerId },
@@ -560,7 +579,7 @@ export class AiMlStoryPracticeService {
               "This question already has a saved answer."
             );
           }
-          return;
+          return null;
         }
         if (current?.contentFingerprint !== row.contentFingerprint) {
           throw new ConflictErrorException(
@@ -574,7 +593,7 @@ export class AiMlStoryPracticeService {
             "This question is already complete."
           );
         }
-        await tx.aiMlPracticeAttempt.create({
+        const attempt = await tx.aiMlPracticeAttempt.create({
           data: {
             ownerId,
             questionId: row.id,
@@ -593,15 +612,17 @@ export class AiMlStoryPracticeService {
             })
           }
         });
+        const completedAt = new Date();
         await tx.aiMlPracticeQuestion.update({
           where: { id: row.id },
           data: {
             status: AiMlPracticeQuestionStatus.COMPLETED,
-            completedAt: new Date(),
+            completedAt,
             draft: Prisma.JsonNull
           }
         });
         await completeSessionIfTerminal(tx, row.sessionId);
+        return { attempt, completedAt };
       });
     } catch (error) {
       if (!isUniqueConflict(error)) throw error;
@@ -620,32 +641,39 @@ export class AiMlStoryPracticeService {
         );
       }
     }
-    const question = await this.question(ownerId, input.questionId);
+    const question = saved
+      ? this.questionView({
+          ...row,
+          attempt: saved.attempt,
+          status: AiMlPracticeQuestionStatus.COMPLETED,
+          completedAt: saved.completedAt,
+          draft: null
+        })
+      : await this.question(ownerId, input.questionId);
     return { attempt: question.latestAttempt, question };
   }
 
   async learn(ownerId: string, raw: unknown) {
     const input = storyPracticeLearnInputSchema.parse(raw);
-    const row = await this.prisma.aiMlPracticeQuestion.findFirst({
-      where: { id: input.questionId, ownerId },
-      select: { id: true, sessionId: true, status: true }
-    });
-    if (!row) throw new NotFoundErrorException("AI_ML_QUESTION_NOT_FOUND", "Question not found.");
-    if (row.status === AiMlPracticeQuestionStatus.ACTIVE) {
-      await this.prisma.$transaction(async (tx) => {
-        await lockAiMlPracticeOwner(tx, ownerId);
-        await tx.aiMlPracticeQuestion.updateMany({
-          where: { id: row.id, ownerId, status: AiMlPracticeQuestionStatus.ACTIVE },
-          data: {
-            status: AiMlPracticeQuestionStatus.LEARNED,
-            learnedAt: new Date(),
-            draft: Prisma.JsonNull
-          }
-        });
-        await completeSessionIfTerminal(tx, row.sessionId);
+    const row = await this.questionRow(ownerId, input.questionId);
+    if (row.status !== AiMlPracticeQuestionStatus.ACTIVE) return this.questionView(row);
+    const learnedAt = new Date();
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await lockAiMlPracticeOwner(tx, ownerId);
+      const result = await tx.aiMlPracticeQuestion.updateMany({
+        where: { id: row.id, ownerId, status: AiMlPracticeQuestionStatus.ACTIVE },
+        data: { status: AiMlPracticeQuestionStatus.LEARNED, learnedAt, draft: Prisma.JsonNull }
       });
-    }
-    return this.question(ownerId, input.questionId);
+      await completeSessionIfTerminal(tx, row.sessionId);
+      return result.count > 0;
+    });
+    if (!updated) return this.question(ownerId, input.questionId);
+    return this.questionView({
+      ...row,
+      status: AiMlPracticeQuestionStatus.LEARNED,
+      learnedAt,
+      draft: null
+    });
   }
 
   private async evaluateText(

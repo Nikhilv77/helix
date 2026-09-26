@@ -9,6 +9,7 @@ import {
   type TechnicalAnswerEvaluationInput
 } from "./technical-answer-evaluator";
 import type { CodeExecutionEvidence, InterviewSetup, PlannedQuestion } from "./types";
+import { evaluationProfileForSetup } from "@/features/interviews/domain/evaluation-profile";
 
 const setup: InterviewSetup = {
   role: "frontend",
@@ -117,6 +118,42 @@ describe("technical answer evaluator", () => {
 
     expect(result.score).toBe(44);
     expect(result.verdict).toBe("incorrect");
+  });
+
+  it("rescales parameter scores the model returned out of ten", () => {
+    const keys = evaluationProfileForSetup(setup).parameters.map((parameter) => parameter.key);
+    const result = normalizeTechnicalEvaluation(
+      {
+        ...rawEvaluation,
+        score: 84,
+        verdict: "mostly-correct",
+        rubricScores: keys.map((rubricKey, index) => ({
+          rubricKey,
+          score: [9, 8, 10, 5, 8, 5][index] ?? 7,
+          rationale: "Scored out of ten."
+        }))
+      },
+      input(null)
+    );
+
+    expect(result.rubricScores.map((item) => item.score)).toEqual(
+      keys.map((_key, index) => ([9, 8, 10, 5, 8, 5][index] ?? 7) * 10)
+    );
+  });
+
+  it("keeps genuinely low parameter scores on the hundred-point scale", () => {
+    const keys = evaluationProfileForSetup(setup).parameters.map((parameter) => parameter.key);
+    const result = normalizeTechnicalEvaluation(
+      {
+        ...rawEvaluation,
+        score: 8,
+        verdict: "incorrect",
+        rubricScores: keys.map((rubricKey) => ({ rubricKey, score: 5, rationale: "Weak." }))
+      },
+      input(null)
+    );
+
+    expect(result.rubricScores.map((item) => item.score)).toEqual(keys.map(() => 5));
   });
 
   it("does not treat successful execution without tests as proof of correctness", () => {

@@ -45,10 +45,10 @@ const STATIC_ITEMS: StaticSearchItem[] = [
   },
   {
     id: "dsa-questions",
-    title: "DSA question bank",
-    description: "Browse coding questions, patterns, notes, and solutions.",
+    title: "DSA practice",
+    description: "Practise coding questions by pattern, with notes and solutions.",
     keywords: "algorithms data structures coding leetcode patterns",
-    href: "/dsa-questions"
+    href: "/practice/dsa"
   },
   {
     id: "interviews",

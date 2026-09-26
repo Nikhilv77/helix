@@ -344,4 +344,81 @@ describe("GeminiProvider", () => {
     });
     expect(aborted).toBe(true);
   });
+
+  describe("hedged requests", () => {
+    /** First call never answers until aborted; later calls answer at once. */
+    function stallThenAnswer() {
+      const aborted: boolean[] = [];
+      const generateContent = vi.fn((params: GenerateContentParameters) => {
+        const call = generateContent.mock.calls.length - 1;
+        aborted[call] = false;
+        if (call > 0) {
+          return Promise.resolve({ text: JSON.stringify({ ok: true, message: "second" }) });
+        }
+        return new Promise<GeminiGenerateContentResponse>((_resolve, reject) => {
+          params.config?.abortSignal?.addEventListener("abort", () => {
+            aborted[call] = true;
+            reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+          });
+        });
+      });
+      return { generateContent, aborted };
+    }
+
+    it("races a second request when the first stalls and cancels the loser", async () => {
+      const { generateContent, aborted } = stallThenAnswer();
+      const provider = new GeminiProvider(createConfig(), createClient(generateContent));
+
+      await expect(
+        provider.generateStructured(createRequest({ hedgeAfterMs: 20, timeoutMs: 1_000 }))
+      ).resolves.toEqual({ ok: true, message: "second" });
+      expect(generateContent).toHaveBeenCalledTimes(2);
+      expect(aborted[0]).toBe(true);
+    });
+
+    it("sends only one request when the first answers before the hedge", async () => {
+      const generateContent = vi.fn(() =>
+        Promise.resolve({ text: JSON.stringify({ ok: true, message: "first" }) })
+      );
+      const provider = new GeminiProvider(createConfig(), createClient(generateContent));
+
+      await expect(
+        provider.generateStructured(createRequest({ hedgeAfterMs: 50 }))
+      ).resolves.toEqual({ ok: true, message: "first" });
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      expect(generateContent).toHaveBeenCalledOnce();
+    });
+
+    it("leaves an early failure to the retry loop instead of hedging it", async () => {
+      const generateContent = vi
+        .fn()
+        .mockRejectedValueOnce(Object.assign(new Error("unavailable"), { status: 503 }))
+        .mockResolvedValue({ text: JSON.stringify({ ok: true, message: "retried" }) });
+      const provider = new GeminiProvider(createConfig(), createClient(generateContent));
+
+      await expect(
+        provider.generateStructured(createRequest({ hedgeAfterMs: 500, maxAttempts: 2 }))
+      ).resolves.toEqual({ ok: true, message: "retried" });
+      expect(generateContent).toHaveBeenCalledTimes(2);
+    });
+
+    it("still times out when every request stalls", async () => {
+      const generateContent = vi.fn(
+        (params: GenerateContentParameters) =>
+          new Promise<GeminiGenerateContentResponse>((_resolve, reject) => {
+            params.config?.abortSignal?.addEventListener("abort", () =>
+              reject(Object.assign(new Error("aborted"), { name: "AbortError" }))
+            );
+          })
+      );
+      const provider = new GeminiProvider(createConfig(), createClient(generateContent));
+
+      await expect(
+        provider.generateStructured(
+          createRequest({ hedgeAfterMs: 10, timeoutMs: 60, maxAttempts: 1 })
+        )
+      ).rejects.toMatchObject({ code: "AI_TIMEOUT" });
+      expect(generateContent).toHaveBeenCalledTimes(2);
+    });
+  });
 });

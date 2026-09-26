@@ -86,6 +86,17 @@ export const RATE_LIMIT_POLICIES = {
     message: "You can send a new help request ten minutes after the previous one."
   },
   /**
+   * Bounds how often someone can check for available mates. Separate from
+   * `helpRequest` so finding nobody available does not spend that quota.
+   */
+  helpRequestAttempt: {
+    namespace: "help-request-attempt",
+    limit: 6,
+    windowMs: 60_000,
+    code: "HELP_REQUEST_RATE_LIMITED",
+    message: "Too many Trailmate requests were tried just now. Wait a moment and try again."
+  },
+  /**
    * Independent from opening requests: somebody who has used their request
    * quota must still be able to leave an unsafe interaction immediately.
    */

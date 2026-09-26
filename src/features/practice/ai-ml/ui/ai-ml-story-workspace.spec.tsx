@@ -283,8 +283,10 @@ describe("AI/ML shared question workspace", () => {
     fireEvent.change(screen.getByRole("spinbutton", { name: /Decision threshold/ }), {
       target: { value: "0.4" }
     });
-    await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith("/api/practice/ai-ml/draft", expect.anything())
+    // Drafts save one second after the last change.
+    await waitFor(
+      () => expect(fetchMock).toHaveBeenCalledWith("/api/practice/ai-ml/draft", expect.anything()),
+      { timeout: 3_000 }
     );
     const draftCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith("/draft"))!;
     expect(JSON.parse(draftCall[1]!.body as string).draft).toEqual({

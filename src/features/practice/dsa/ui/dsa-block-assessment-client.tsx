@@ -1,9 +1,10 @@
 "use client";
 
+import { BackLinkIcon } from "@/components/workspace/shared/back-link-icon";
 import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
+import { blockAssessmentMoment } from "@/features/practice/dsa/domain/block-assessment-speech";
 import Link from "next/link";
 import {
-  ArrowLeft,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -72,6 +73,8 @@ export function DsaBlockAssessmentClient({
   const questionStartedAt = useRef(Date.now());
   const lastQuestionIndex = useRef<number | null>(null);
   const spoken = useRef(new Set<string>());
+  /** What the teacher last said aloud, for the replay button. */
+  const lastSpoken = useRef<string | null>(null);
   const latestSessionRead = useRef(0);
   const activeSessionReads = useRef(0);
   const lastSessionReadAt = useRef(0);
@@ -164,13 +167,27 @@ export function DsaBlockAssessmentClient({
   );
   const latestGuidance = guidanceTurns.at(-1) ?? null;
 
+  const speak = useCallback(
+    (line: string) => {
+      lastSpoken.current = line;
+      void voice.speak(line, teacher.id, { delivery: "quality" });
+    },
+    [teacher.id, voice.speak]
+  );
+
+  // The screen shows the full guidance. Aloud, a pre-recorded line gives the
+  // verdict and what comes next, so it starts at once and costs nothing.
   useEffect(() => {
-    if (!latestGuidance) return;
+    if (!session || !latestGuidance) return;
     const key = turnKey(latestGuidance);
     if (spoken.current.has(key)) return;
     spoken.current.add(key);
-    void voice.speak(latestGuidance.text, teacher.id, { delivery: "quality" });
-  }, [latestGuidance, teacher.id, voice.speak]);
+    const moment = blockAssessmentMoment(session.turns, session.turns.lastIndexOf(latestGuidance), {
+      done: session.phase === "done",
+      kind: session.currentQuestion?.kind ?? null
+    });
+    speak(moment ? pickLine(TEACHER_LINES.blockAssessment[moment]) : latestGuidance.text);
+  }, [latestGuidance, session, speak]);
 
   const submitMcq = async () => {
     if (!session || !selectedOption || sending) return;
@@ -226,14 +243,12 @@ export function DsaBlockAssessmentClient({
         : `I can see the output. ${passed} of ${payload.data.tests.length} tests passed. Review the failing case and try again.`;
       setRunGuidance(cue);
       // The exact counts are on screen; the spoken cue is pre-recorded.
-      void voice.speak(
+      speak(
         pickLine(
           payload.data.accepted
             ? TEACHER_LINES.assessmentRun.passed
             : TEACHER_LINES.assessmentRun.failed
-        ),
-        teacher.id,
-        { delivery: "quality" }
+        )
       );
     } catch (caught) {
       setLastRunCode(null);
@@ -305,7 +320,7 @@ export function DsaBlockAssessmentClient({
               aria-label="Leave assessment"
               className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.07] text-cream/52 transition hover:bg-white/[0.05] hover:text-cream"
             >
-              <ArrowLeft size={16} />
+              <BackLinkIcon size={16} />
             </Link>
             <p className="truncate text-sm font-semibold text-cream">Block mastery checkpoint</p>
           </div>
@@ -331,8 +346,7 @@ export function DsaBlockAssessmentClient({
             voiceState={voice.state}
             awaitingGesture={voice.awaitingGesture}
             onReplay={() => {
-              const line = runGuidance ?? latestGuidance?.text;
-              if (line) void voice.speak(line, teacher.id);
+              if (lastSpoken.current) speak(lastSpoken.current);
             }}
           />
 

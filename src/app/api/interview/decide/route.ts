@@ -106,9 +106,15 @@ export async function POST(request: NextRequest) {
       const { response } = answerResult;
       // Recovery runs outside the spoken-turn response. The job itself was
       // persisted with the answer, so a serverless shutdown only delays it.
-      after(() => app.interviewEvaluationRecoveryService.runBatch(2));
-      if (response.phase === "done") {
+      if (response.phase !== "done") {
+        after(() => app.interviewEvaluationRecoveryService.runBatch(2));
+      } else {
         after(async () => {
+          // Grade this interview's queued answers before writing any report,
+          // or the report would freeze without them.
+          await app.interviewEvaluationRecoveryService
+            .runBatch(5, Date.now(), { sessionId: parsed.data.sessionId })
+            .catch(() => undefined);
           await Promise.allSettled([
             access.kind === "owner"
               ? app.dsaBlockAssessmentFinalizationService.finalizeOwned(
@@ -142,6 +148,7 @@ export async function POST(request: NextRequest) {
           if (access.kind === "owner" && access.ownerId.startsWith("user:")) {
             await refreshPracticeHome(access.ownerId);
           }
+          await app.interviewEvaluationRecoveryService.runBatch(2).catch(() => undefined);
         });
       }
 

@@ -12,6 +12,7 @@ import {
   CORE_TECHNICAL_RUNNER_VERSION
 } from "./runner-contracts";
 import { CORE_TECHNICAL_RUNNER_REGISTRY, CoreTechnicalRunnerService } from "./runner.service";
+import { LocalIsolatedNode22Executor } from "./sandbox-process";
 import { VercelSandboxNode22Executor } from "./vercel-sandbox-executor";
 
 const generatedDirectory = path.resolve(
@@ -41,7 +42,7 @@ describe("Core Technical runner contracts", () => {
         language: "javascript",
         runtime: "nodejs",
         contractRuntimeVersion: "22",
-        runtimeVersion: "22.23.2",
+        runtimeVersion: "22.22.2",
         runnerVersion: CORE_TECHNICAL_RUNNER_VERSION,
         entrypoint: "solution.mjs"
       }
@@ -66,8 +67,10 @@ describe("Core Technical runner contracts", () => {
     const files = new Map<string, string>();
     const stop = vi.fn().mockResolvedValue(undefined);
     const runCommand = vi.fn(async ({ args }: { args?: string[] }) => {
-      if (args?.[0] === "--version") return command("v22.23.2\n");
-      const request = JSON.parse(files.get("/vercel/sandbox/core-technical/request.json")!);
+      if (args?.[0] === "--version") return command("v22.22.2\n");
+      const request = JSON.parse(
+        files.get(`${args![0]!.replace("/supervisor.mjs", "")}/request.json`)!
+      );
       return command(
         `__TRAILGRAD_SANDBOX_SUPERVISOR__${request.nonce}:${JSON.stringify({
           reason: "completed",
@@ -86,7 +89,8 @@ describe("Core Technical runner contracts", () => {
       runCommand,
       stop
     });
-    const executor = new VercelSandboxNode22Executor(create);
+    const deferred: Promise<unknown>[] = [];
+    const executor = new VercelSandboxNode22Executor(create, (task) => deferred.push(task));
 
     const result = await executor.execute({
       mode: "check",
@@ -105,13 +109,70 @@ describe("Core Technical runner contracts", () => {
     );
     expect(result).toMatchObject({
       reason: "completed",
-      runtimeVersion: "22.23.2",
+      runtimeVersion: "22.22.2",
       sandboxIdentity: "vercel-firecracker-node22-v1"
     });
-    expect(files.get("/vercel/sandbox/core-technical/solution.mjs")).toBe(
+    expect(files.get("/vercel/sandbox/core-technical/1/solution.mjs")).toBe(
       "export const answer = 42;"
     );
+    // Shutdown is handed off rather than awaited by the request.
+    expect(deferred).toHaveLength(1);
+    await Promise.all(deferred);
     expect(stop).toHaveBeenCalledOnce();
+  });
+
+  it("checks and tests a submission in one sandbox without waiting for it to stop", async () => {
+    const files = new Map<string, string>();
+    let stopped = false;
+    const stop = vi.fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      stopped = true;
+    });
+    const runCommand = vi.fn(async ({ args }: { args?: string[] }) => {
+      if (args?.[0] === "--version") return command("v22.22.2\n");
+      const directory = args![0]!.replace("/supervisor.mjs", "");
+      const request = JSON.parse(files.get(`${directory}/request.json`)!);
+      const stdin = request.stdin ? JSON.parse(request.stdin) : null;
+      const results = (stdin?.tests ?? []).map((_: unknown, index: number) => ({
+        index,
+        passed: true
+      }));
+      return command(
+        `__TRAILGRAD_SANDBOX_SUPERVISOR__${request.nonce}:${JSON.stringify({
+          reason: "completed",
+          exitCode: 0,
+          stdout: stdin
+            ? `__TRAILGRAD_CORE_TECHNICAL_RESULT__${stdin.nonce}:${JSON.stringify({ results })}\n`
+            : "",
+          stderr: "",
+          durationMs: 12,
+          peakMemoryMb: 40
+        })}\n`
+      );
+    });
+    const create = vi.fn().mockResolvedValue({
+      writeFiles: vi.fn(async (values: Array<{ path: string; content: string }>) => {
+        for (const value of values) files.set(value.path, value.content);
+      }),
+      runCommand,
+      stop
+    });
+    const runner = new CoreTechnicalRunnerService(
+      new VercelSandboxNode22Executor(create, () => undefined)
+    );
+    const question = executableQuestions[0]!;
+
+    const result = await runner.run(question, question.referenceSolution!);
+
+    expect(result.accepted).toBe(true);
+    expect(create).toHaveBeenCalledOnce();
+    expect(runCommand.mock.calls.filter(([call]) => call.args?.[0] === "--version")).toHaveLength(
+      1
+    );
+    expect(files.has("/vercel/sandbox/core-technical/1/solution.mjs")).toBe(true);
+    expect(files.has("/vercel/sandbox/core-technical/2/harness.mjs")).toBe(true);
+    expect(stop).toHaveBeenCalledOnce();
+    expect(stopped).toBe(false);
   });
 
   it("stops the remote sandbox and fails closed when its Node patch differs", async () => {
@@ -123,14 +184,14 @@ describe("Core Technical runner contracts", () => {
     });
 
     await expect(
-      new VercelSandboxNode22Executor(create).execute({
+      new VercelSandboxNode22Executor(create, () => undefined).execute({
         mode: "check",
         sourceCode: "export {};",
         timeoutMs: 1_000,
         memoryMb: 64,
         outputLimitBytes: 65_536
       })
-    ).rejects.toThrow("does not provide pinned Node.js 22.23.2");
+    ).rejects.toThrow("does not provide pinned Node.js 22.22.2");
     expect(stop).toHaveBeenCalledOnce();
   });
 });
@@ -138,13 +199,30 @@ describe("Core Technical runner contracts", () => {
 isolated("Core Technical pinned local sandbox", () => {
   const runner = new CoreTechnicalRunnerService();
 
+  it("reuses a passing audit for identical question content", async () => {
+    const local = new LocalIsolatedNode22Executor();
+    const execute = vi.fn((request: Parameters<typeof local.execute>[0]) => local.execute(request));
+    const counted = new CoreTechnicalRunnerService({
+      runtimeVersion: local.runtimeVersion,
+      sandboxIdentity: local.sandboxIdentity,
+      execute
+    });
+    const question = executableQuestions[0]!;
+
+    expect((await counted.auditQuestion(question)).valid).toBe(true);
+    const executions = execute.mock.calls.length;
+    expect(executions).toBeGreaterThan(0);
+    expect((await counted.auditQuestion(structuredClone(question))).valid).toBe(true);
+    expect(execute).toHaveBeenCalledTimes(executions);
+  });
+
   it("parses starters, rejects them through tests, passes references, and kills every mutant", async () => {
     for (const question of executableQuestions) {
       const audit = await runner.auditQuestion(question);
       expect(audit).toMatchObject({
         valid: true,
         runnerVersion: CORE_TECHNICAL_RUNNER_VERSION,
-        runtimeVersion: "22.23.2",
+        runtimeVersion: "22.22.2",
         starter: { compiled: true, rejectedByTests: true },
         reference: { compiled: true, passed: true },
         failures: []
@@ -163,7 +241,7 @@ isolated("Core Technical pinned local sandbox", () => {
       accepted: true,
       status: "accepted",
       runnerVersion: CORE_TECHNICAL_RUNNER_VERSION,
-      runtimeVersion: "22.23.2",
+      runtimeVersion: "22.22.2",
       hiddenTests: { passed: 1, total: 1 },
       limits: {
         outputBytes: CORE_TECHNICAL_OUTPUT_LIMIT_BYTES,

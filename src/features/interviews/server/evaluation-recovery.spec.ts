@@ -86,6 +86,21 @@ describe("interview evaluation recovery", () => {
     );
   });
 
+  it("can grade only one interview's queued answers", async () => {
+    const repository = {
+      claim: vi.fn().mockResolvedValue([]),
+      apply: vi.fn(),
+      fail: vi.fn()
+    } satisfies EvaluationRecoveryRepository;
+    const service = new InterviewEvaluationRecoveryService(repository, {
+      evaluate: vi.fn()
+    } as unknown as TechnicalAnswerEvaluator);
+
+    await service.runBatch(5, 1_000, { sessionId: "session-1" });
+
+    expect(repository.claim).toHaveBeenCalledWith(5, 1_000, "session-1");
+  });
+
   it("moves exhausted failures to the dead-letter path", async () => {
     const repository = {
       claim: vi.fn().mockResolvedValue([job(5, 5)]),

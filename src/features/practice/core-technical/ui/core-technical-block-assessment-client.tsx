@@ -1,9 +1,9 @@
 "use client";
 
+import { BackLinkIcon } from "@/components/workspace/shared/back-link-icon";
 import { pickLine, TEACHER_LINES } from "@/lib/voice/teacher-lines";
 import Link from "next/link";
 import {
-  ArrowLeft,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -383,7 +383,7 @@ export function CoreTechnicalBlockAssessmentClient({
               aria-label="Leave assessment"
               className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.07] text-cream/52 transition hover:bg-white/[0.05] hover:text-cream"
             >
-              <ArrowLeft size={16} />
+              <BackLinkIcon size={16} />
             </Link>
             <p className="truncate text-sm font-semibold text-cream">
               {session.setup.templateTitle ??

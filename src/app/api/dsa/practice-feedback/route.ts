@@ -9,6 +9,7 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { authenticatedOwnerId } from "@/features/interviews/server/owner";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import { timeAction } from "@/server/http/action-timing";
+import { wasAcceptedRun } from "@/features/practice/dsa/server/accepted-run";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,11 @@ const cachedFeedbackSchema = z.object({
   headline: z.string().trim().min(1).max(96),
   markdown: z.string().trim().min(1).max(2_000),
   voiceScript: z.string().trim().min(1).max(900),
-  followUp: z.string().trim().min(1).max(240)
+  followUp: z.string().trim().min(1).max(240),
+  // Absent from debriefs cached before highlights existed.
+  highlight: z
+    .object({ startLine: z.number().int().min(1), endLine: z.number().int().min(1) })
+    .optional()
 });
 
 export function POST(request: NextRequest) {
@@ -64,9 +69,19 @@ async function handlePost(request: NextRequest) {
     )
       .update(parsed.data.code)
       .digest("hex")}`;
-    const cached = cachedFeedbackSchema.safeParse(
-      await guard.getCached("dsa-practice-feedback", cacheIdentity)
-    );
+    // The runner, not the request body, decides whether this code was accepted.
+    const [storedFeedback, accepted] = await Promise.all([
+      guard.getCached("dsa-practice-feedback", cacheIdentity),
+      wasAcceptedRun(guard, ownerId, parsed.data.slug, parsed.data.code)
+    ]);
+    if (!accepted) {
+      throw new ApiRouteError(
+        422,
+        "SOLUTION_NOT_ACCEPTED",
+        "Run a passing solution before asking for feedback."
+      );
+    }
+    const cached = cachedFeedbackSchema.safeParse(storedFeedback);
     if (cached.success) return apiSuccess(cached.data);
 
     await guard.enforce(RATE_LIMIT_POLICIES.answerEvaluation, ownerId);

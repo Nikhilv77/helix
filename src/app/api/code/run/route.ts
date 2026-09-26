@@ -18,6 +18,7 @@ import {
 } from "@/features/practice/dsa/server/code-test-harness";
 import { getSharedGuard, RATE_LIMIT_POLICIES } from "@/server/rate-limit/shared-guard";
 import { timeAction } from "@/server/http/action-timing";
+import { rememberAcceptedRun } from "@/features/practice/dsa/server/accepted-run";
 
 export const dynamic = "force-dynamic";
 
@@ -454,6 +455,14 @@ async function handlePost(request: NextRequest) {
             recordedAt: Date.now(),
             codeHash: codeFingerprint(parsed.data.code)
           }
+        );
+      }
+
+      // Saved before responding: the browser asks for the teacher debrief as
+      // soon as it sees an accepted run.
+      if (slug && data.accepted && parsed.data.sessionId === undefined) {
+        await rememberAcceptedRun(guard, ownerId, slug, parsed.data.code).catch((cacheError) =>
+          console.error("[code-run] Could not record the accepted run", cacheError)
         );
       }
 

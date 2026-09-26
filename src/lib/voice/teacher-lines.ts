@@ -174,6 +174,47 @@ export const TEACHER_LINES = {
       "Not all tests passed yet. Look at the failing case closely, then run it again."
     ]
   },
+  /**
+   * DSA block assessment. The screen shows the full feedback, explanation, and
+   * next question; the teacher says only the verdict and where things go next.
+   */
+  blockAssessment: {
+    opening: [
+      "Well done finishing this block. We'll start with a few quick questions, then a fresh coding problem. Everything is on screen, so take your time.",
+      "Nice work getting through the block. This checkpoint has some quick checks first, then a new problem to solve. You can answer everything on screen.",
+      "Let's see how well this block has settled in. A few short questions come first, then an unseen coding problem. Read each one carefully."
+    ],
+    reviewCorrectNext: [
+      "Exactly. Here's the next one.",
+      "That's right. Let's keep going.",
+      "Yes, that's the right read. On to the next question."
+    ],
+    reviewIncorrectNext: [
+      "Not quite. The reasoning is on screen. Let's try the next one.",
+      "That one doesn't hold. Have a look at why, then take the next question.",
+      "Close, but not this time. Read the explanation, then keep going."
+    ],
+    reviewCorrectToCode: [
+      "Exactly. That's the quick checks done. Now let's solve a fresh problem.",
+      "That's right, and that finishes the review. Time for a new coding problem."
+    ],
+    reviewIncorrectToCode: [
+      "Not quite, and the reasoning is on screen. That finishes the review, so let's move to a fresh problem.",
+      "That one doesn't hold, but the review is done. Let's see how you handle something new."
+    ],
+    codeNext: [
+      "Thanks, I have your solution. Let's try one more problem.",
+      "Got it. Here's your next problem."
+    ],
+    codeSkippedNext: [
+      "No problem. Let's move to the next problem.",
+      "That's fine. Here's the next one."
+    ],
+    done: [
+      "That's the full checkpoint. Nice work. I'm preparing your results now.",
+      "You've finished the checkpoint. Your results will be ready in a moment."
+    ]
+  },
   chapter: {
     opening: [
       "Let's take this chapter. I'll set up the pattern, then you solve.",

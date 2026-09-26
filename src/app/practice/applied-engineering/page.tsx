@@ -1,7 +1,8 @@
+import { BackLinkIcon } from "@/components/workspace/shared/back-link-icon";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { ArrowLeft, LockKeyhole } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
 import { AppliedEngineeringOverview } from "@/features/practice/applied-engineering/ui/applied-engineering-overview";
 import { AppliedEngineeringTechnologyWelcome } from "@/features/practice/applied-engineering/ui/applied-engineering-technology-welcome";
 import { appliedEngineeringTechnologyOptions } from "@/features/practice/applied-engineering/domain/technology-focus";
@@ -77,7 +78,7 @@ export default async function AppliedEngineeringPracticePage({
         href="/practice"
         className="mb-5 inline-flex h-9 items-center gap-2 rounded-lg px-2.5 text-[12.5px] font-semibold text-cream/52 transition hover:bg-white/[0.055] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
       >
-        <ArrowLeft size={14} aria-hidden="true" />
+        <BackLinkIcon size={14} />
         Back to Practice
       </Link>
 

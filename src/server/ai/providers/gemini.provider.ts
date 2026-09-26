@@ -57,7 +57,25 @@ export class GeminiProvider implements SystemDesignerAIProvider {
 
       try {
         const response = await this.withTimeout(
-          (signal) => this.generateContent(request, model, signal),
+          (signal) =>
+            request.hedgeAfterMs
+              ? this.hedged(
+                  (hedgeSignal) => this.generateContent(request, model, hedgeSignal),
+                  request.hedgeAfterMs,
+                  signal,
+                  () =>
+                    this.logger.log(
+                      JSON.stringify({
+                        event: "ai.provider.hedge",
+                        provider: PROVIDER_NAME,
+                        operation: request.operation,
+                        model,
+                        attempt,
+                        afterMs: request.hedgeAfterMs
+                      })
+                    )
+                )
+              : this.generateContent(request, model, signal),
           request.operation,
           request.timeoutMs ?? this.config.aiTimeoutMs,
           request.signal
@@ -177,6 +195,51 @@ export class GeminiProvider implements SystemDesignerAIProvider {
     };
 
     return this.client.models.generateContent(params);
+  }
+
+  /**
+   * Starts `run`, and starts it once more if nothing has come back after
+   * `delayMs`. The first success wins and the other request is cancelled; the
+   * call fails only when every started request has failed.
+   */
+  private hedged<R>(
+    run: (signal: AbortSignal) => Promise<R>,
+    delayMs: number,
+    signal: AbortSignal,
+    onHedge: () => void
+  ): Promise<R> {
+    return new Promise<R>((resolve, reject) => {
+      const controllers: AbortController[] = [];
+      let running = 0;
+      let settled = false;
+      const finish = (callback: () => void) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(hedgeTimer);
+        for (const controller of controllers) controller.abort();
+        callback();
+      };
+      const launch = () => {
+        const controller = new AbortController();
+        controllers.push(controller);
+        running += 1;
+        run(AbortSignal.any([signal, controller.signal])).then(
+          (value) => finish(() => resolve(value)),
+          (error: unknown) => {
+            running -= 1;
+            // Before the hedge fires, a fast failure is left to the retry loop.
+            if (running === 0) finish(() => reject(error));
+          }
+        );
+      };
+      const hedgeTimer = setTimeout(() => {
+        if (settled || signal.aborted) return;
+        onHedge();
+        launch();
+      }, delayMs);
+      launch();
+      signal.addEventListener("abort", () => clearTimeout(hedgeTimer), { once: true });
+    });
   }
 
   private parseAndValidateResponse<T>(

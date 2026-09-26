@@ -149,19 +149,18 @@ export class HelpRequestService {
       throw new HelpRequestError("REQUEST_EXPIRED");
     }
 
-    if (!(await this.isQualified(helperId, existing.questionSlug, existing.language))) {
-      throw new HelpRequestError("NOT_QUALIFIED");
-    }
-    if (!(await this.isHelperAvailable(helperId))) {
-      throw new HelpRequestError("HELPER_UNAVAILABLE");
-    }
-
-    // Hiding a request is presentation; refusing the claim is the actual rule.
-    // A blocked helper who kept the id from an earlier page must still be
-    // stopped here.
-    if (this.safety && (await this.safety.isBlocked(existing.learnerId, helperId))) {
-      throw new HelpRequestError("NOT_THE_HELPER");
-    }
+    // Independent preflight reads, run together; they are reported in the
+    // same order as before. Hiding a request is presentation; refusing the
+    // claim is the actual rule, so a blocked helper who kept the id from an
+    // earlier page is still stopped here.
+    const [qualified, available, blocked] = await Promise.all([
+      this.isQualified(helperId, existing.questionSlug, existing.language),
+      this.isHelperAvailable(helperId),
+      this.safety ? this.safety.isBlocked(existing.learnerId, helperId) : false
+    ]);
+    if (!qualified) throw new HelpRequestError("NOT_QUALIFIED");
+    if (!available) throw new HelpRequestError("HELPER_UNAVAILABLE");
+    if (blocked) throw new HelpRequestError("NOT_THE_HELPER");
 
     /*
      * This UPDATE is the authorization boundary, not merely the write.

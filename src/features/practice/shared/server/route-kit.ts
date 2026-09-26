@@ -27,6 +27,20 @@ type RouteApp = {
   };
 };
 
+/**
+ * Reads the profile and spends the rate limit in parallel (database and Redis
+ * are separate round trips). A profile failure is reported before a limit.
+ */
+export async function profileAndRateLimit<T>(
+  profile: Promise<T>,
+  rateLimit: Promise<void> | undefined
+): Promise<T> {
+  const [read, limit] = await Promise.allSettled([profile, rateLimit]);
+  if (read.status === "rejected") throw read.reason;
+  if (limit.status === "rejected") throw limit.reason;
+  return read.value;
+}
+
 type RouteErrorResponder = (error: unknown, path: string) => Response;
 
 export function createStoryPracticeRouteAccess<TApp extends RouteApp>(config: {
@@ -43,9 +57,11 @@ export function createStoryPracticeRouteAccess<TApp extends RouteApp>(config: {
     if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
     const ownerId = authenticatedOwnerId(userId);
     const app = config.getApp();
-    const profile = await app.profileService.get(ownerId);
+    const profile = await profileAndRateLimit(
+      app.profileService.get(ownerId),
+      policy && getSharedGuard(app.config).enforce(policy, ownerId)
+    );
     config.requireOnboarding(profile);
-    if (policy) await getSharedGuard(app.config).enforce(policy, ownerId);
     return { ownerId, app, profile };
   }
 
@@ -54,9 +70,11 @@ export function createStoryPracticeRouteAccess<TApp extends RouteApp>(config: {
     if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
     const ownerId = authenticatedOwnerId(userId);
     const app = config.getApp();
-    const state = await app.profileService.workspaceShellState(ownerId);
+    const state = await profileAndRateLimit(
+      app.profileService.workspaceShellState(ownerId),
+      policy && getSharedGuard(app.config).enforce(policy, ownerId)
+    );
     requireCompletedPreparationOnboardingState(state);
-    if (policy) await getSharedGuard(app.config).enforce(policy, ownerId);
     return { ownerId, app, targetRole: state.targetRole };
   }
 

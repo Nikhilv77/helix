@@ -4,8 +4,8 @@ import type {
 } from "@/features/practice/core-technical/domain/question-contracts";
 import type { z } from "zod";
 
-export const CORE_TECHNICAL_NODE_RUNTIME_VERSION = "22.23.2" as const;
-export const CORE_TECHNICAL_RUNNER_VERSION = "core-technical-nodejs-22.23.2-isolated-v1" as const;
+export const CORE_TECHNICAL_NODE_RUNTIME_VERSION = "22.22.2" as const;
+export const CORE_TECHNICAL_RUNNER_VERSION = "core-technical-nodejs-22.22.2-isolated-v1" as const;
 export const CORE_TECHNICAL_OUTPUT_LIMIT_BYTES = 64 * 1024;
 
 export type CoreTechnicalTestCase = z.infer<typeof coreTechnicalTestCaseSchema>;
@@ -43,11 +43,23 @@ export type SandboxExecutionRequest = {
   outputLimitBytes: number;
 };
 
+/** A short-lived sandbox reused for a known sequence of runs (for example check, then test). */
+export interface SandboxSession {
+  execute(request: SandboxExecutionRequest): Promise<SandboxExecution>;
+  /** Releases the sandbox without making the caller wait for it to shut down. */
+  close(): void;
+}
+
 /** The only interface allowed to cross from application code into untrusted execution. */
 export interface CoreTechnicalSandboxExecutor {
   readonly runtimeVersion: typeof CORE_TECHNICAL_NODE_RUNTIME_VERSION;
   readonly sandboxIdentity: string;
   execute(request: SandboxExecutionRequest): Promise<SandboxExecution>;
+  /**
+   * Optional: executors with expensive startup reuse one sandbox for `runs`
+   * executions of at most `timeoutMs` each.
+   */
+  openSession?(plan: { runs: number; timeoutMs: number }): SandboxSession;
 }
 
 export type CoreTechnicalVisibleTestResult = {

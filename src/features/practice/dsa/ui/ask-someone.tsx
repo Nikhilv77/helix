@@ -13,7 +13,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CodeSelection, WorkspaceTestCase } from "@/features/peer-help/domain/snapshot";
 import type { HelpHistoryParticipant } from "@/features/peer-help/contracts/help-history";
 import { peerHelpRoomHref } from "@/features/peer-help/domain/help-room-navigation";
-import { showCurrentPeerHelp } from "@/features/peer-help/ui/help-ui-events";
+import {
+  showCurrentPeerHelp,
+  WORKSPACE_HELP_CHANGED_EVENT
+} from "@/features/peer-help/ui/help-ui-events";
 
 type LiveRequest = { id: string; status: string | null; helper: HelpHistoryParticipant | null };
 type HelpNotice =
@@ -21,6 +24,7 @@ type HelpNotice =
 
 const DELIVERY_SECONDS = 15;
 const DEFAULT_COOLDOWN_MS = 10 * 60_000;
+const LIVE_FALLBACK_REFRESH_MS = 60_000;
 
 /**
  * The human-help escalation, sitting beside Run code.
@@ -124,15 +128,19 @@ export function AskSomeone({
   }, [slug]);
 
   // Keep every live transition authoritative. A helper claim can return to OPEN
-  // if they never enter the room, so CLAIMED must keep polling too.
+  // if they never enter the room, so CLAIMED must keep listening too. The
+  // workspace help poll already detects claims and hand-backs every 15 s, so
+  // this follows its change signal and keeps only a slow fallback of its own.
   useEffect(() => {
     if (!live) return;
-    const refreshOnFocus = () => void refresh();
-    const timer = window.setInterval(refreshOnFocus, 15_000);
-    window.addEventListener("focus", refreshOnFocus);
+    const refreshNow = () => void refresh();
+    const timer = window.setInterval(refreshNow, LIVE_FALLBACK_REFRESH_MS);
+    window.addEventListener("focus", refreshNow);
+    window.addEventListener(WORKSPACE_HELP_CHANGED_EVENT, refreshNow);
     return () => {
       window.clearInterval(timer);
-      window.removeEventListener("focus", refreshOnFocus);
+      window.removeEventListener("focus", refreshNow);
+      window.removeEventListener(WORKSPACE_HELP_CHANGED_EVENT, refreshNow);
     };
   }, [live?.status, refresh]);
 

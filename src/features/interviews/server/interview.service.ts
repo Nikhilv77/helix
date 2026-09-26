@@ -100,6 +100,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** A spoken conversation should never wait on the model's full provider timeout. */
 const DECIDER_BUDGET_MS = LIVE_DECISION_DEADLINE_MS;
 const EVALUATOR_BUDGET_MS = LIVE_EVALUATION_DEADLINE_MS;
+/**
+ * A block-assessment coding submission is graded before the response. The
+ * learner is not mid-conversation, and its report needs the grade: a deferred
+ * one could land after the report was already written.
+ */
+const BLOCK_ASSESSMENT_EVALUATOR_BUDGET_MS = 12_000;
 
 export interface StartResult {
   state: InterviewState;
@@ -750,60 +756,91 @@ export class InterviewService {
       );
     }
 
+    // A block-assessment coding submission ends that problem: there is no
+    // conversation to steer and no follow-up to ask, so the model decider is
+    // skipped. The time goes to grading instead, so the score exists before the
+    // assessment can finish and be finalized.
+    const blockAssessmentCodeSubmission =
+      !isDialogueRepair &&
+      withAnswer.setup.dsaBlockAssessment?.kind === "dsa-block-assessment" &&
+      question.kind === "code" &&
+      submissionSource === "workspace";
     const turnStartedAt = Date.now();
     const [raw, evaluationResult] = await Promise.all([
-      liveProposal
+      blockAssessmentCodeSubmission
         ? Promise.resolve({
-            ...liveProposal,
-            action:
-              isDialogueRepair && liveProposal.action !== "respond"
-                ? ("respond" as const)
-                : liveProposal.action,
-            missing: isDialogueRepair ? ("none" as const) : liveProposal.missing,
-            acknowledgement: isDialogueRepair ? "" : liveProposal.acknowledgement,
-            candidateResponse:
-              isDialogueRepair && !liveProposal.candidateResponse?.trim()
-                ? candidateConversationFallback(answer.text, conversationHistory)
-                : liveProposal.candidateResponse,
+            action: "move_on" as const,
+            missing: "none" as const,
+            reason: "block assessment code submission completes the problem",
+            acknowledgement: "",
+            line: "",
+            candidateResponse: "",
             runtime: {
               engineVersion: INTERVIEW_ENGINE_VERSION,
-              promptVersion: "gemini-live-conversation-v2",
+              promptVersion: INTERVIEW_DECIDER_PROMPT_VERSION,
               durationMs: 0,
               usedFallback: false,
               calls: []
             }
           })
-        : this.decideWithFallback({
-            setup: withAnswer.setup,
-            questionAsked: question.text,
-            evidenceAnchor: question.evidenceAnchor,
-            competency: question.competency,
-            intent: question.intent,
-            questionKind: question.kind === "mcq" ? "code" : question.kind,
-            language: question.language,
-            codeTask: question.codeTask,
-            codeSnippet: question.codeSnippet,
-            mustHit: question.mustHit,
-            userAnswer: answer.text,
-            followUpCount: withAnswer.followUpCount,
-            maxFollowUps: question.maxFollowUps,
-            interviewStage: question.stage,
-            topicLabel: topicLabelFor(withAnswer.setup, question),
-            blueprintDifficulty: question.blueprintDifficulty,
-            rubric: rubricFor(withAnswer.setup, question),
-            followUpPolicy: withAnswer.setup.personalizedBlueprint?.followUpPolicy,
-            fallbackProbe: question.probeIfMissing,
-            evidenceLedger: withAnswer.evidence?.[String(withAnswer.questionIndex)],
-            dsaInterviewerGuide: question.dsaInterviewerGuide,
-            coreTechnicalInterviewerGuide: question.coreTechnicalInterviewerGuide,
-            storyPracticeInterviewerGuide: question.storyPracticeInterviewerGuide,
-            acceptsCandidateQuestions: question.acceptsCandidateQuestions,
-            candidateTurnMode,
-            conversationHistory
-          }),
+        : liveProposal
+          ? Promise.resolve({
+              ...liveProposal,
+              action:
+                isDialogueRepair && liveProposal.action !== "respond"
+                  ? ("respond" as const)
+                  : liveProposal.action,
+              missing: isDialogueRepair ? ("none" as const) : liveProposal.missing,
+              acknowledgement: isDialogueRepair ? "" : liveProposal.acknowledgement,
+              candidateResponse:
+                isDialogueRepair && !liveProposal.candidateResponse?.trim()
+                  ? candidateConversationFallback(answer.text, conversationHistory)
+                  : liveProposal.candidateResponse,
+              runtime: {
+                engineVersion: INTERVIEW_ENGINE_VERSION,
+                promptVersion: "gemini-live-conversation-v2",
+                durationMs: 0,
+                usedFallback: false,
+                calls: []
+              }
+            })
+          : this.decideWithFallback({
+              setup: withAnswer.setup,
+              questionAsked: question.text,
+              evidenceAnchor: question.evidenceAnchor,
+              competency: question.competency,
+              intent: question.intent,
+              questionKind: question.kind === "mcq" ? "code" : question.kind,
+              language: question.language,
+              codeTask: question.codeTask,
+              codeSnippet: question.codeSnippet,
+              mustHit: question.mustHit,
+              userAnswer: answer.text,
+              followUpCount: withAnswer.followUpCount,
+              maxFollowUps: question.maxFollowUps,
+              interviewStage: question.stage,
+              topicLabel: topicLabelFor(withAnswer.setup, question),
+              blueprintDifficulty: question.blueprintDifficulty,
+              rubric: rubricFor(withAnswer.setup, question),
+              followUpPolicy: withAnswer.setup.personalizedBlueprint?.followUpPolicy,
+              fallbackProbe: question.probeIfMissing,
+              evidenceLedger: withAnswer.evidence?.[String(withAnswer.questionIndex)],
+              dsaInterviewerGuide: question.dsaInterviewerGuide,
+              coreTechnicalInterviewerGuide: question.coreTechnicalInterviewerGuide,
+              storyPracticeInterviewerGuide: question.storyPracticeInterviewerGuide,
+              acceptsCandidateQuestions: question.acceptsCandidateQuestions,
+              candidateTurnMode,
+              conversationHistory
+            }),
       isDialogueRepair
         ? Promise.resolve({ evaluation: undefined, recovery: undefined })
-        : this.evaluateAnswer(withAnswer, question, now, Boolean(liveProposal))
+        : this.evaluateAnswer(
+            withAnswer,
+            question,
+            now,
+            Boolean(liveProposal),
+            blockAssessmentCodeSubmission ? BLOCK_ASSESSMENT_EVALUATOR_BUDGET_MS : undefined
+          )
     ]);
 
     const requestedAction =
@@ -1311,7 +1348,8 @@ export class InterviewService {
     state: InterviewState,
     question: PlannedQuestion,
     now: number,
-    defer = false
+    defer = false,
+    budgetMs = EVALUATOR_BUDGET_MS
   ): Promise<{
     evaluation: QuestionEvaluation | null;
     recovery?: EvaluationRecoveryMutation;
@@ -1357,7 +1395,7 @@ export class InterviewService {
     try {
       const evaluation = await withinAbortable(
         (signal) => this.answerEvaluator!.evaluate({ ...input, signal }),
-        EVALUATOR_BUDGET_MS,
+        budgetMs,
         "Interview answer evaluator"
       );
       return { evaluation, recovery: { action: "resolve", questionIndex } };

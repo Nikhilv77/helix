@@ -177,17 +177,17 @@ function Hints({
       )}
 
       {question.keyInsight && allRevealed ? (
-        <details className="group mt-4 overflow-hidden rounded-xl border border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)]">
+        <details className="smooth-disclosure group mt-4 overflow-hidden rounded-xl border border-[var(--workspace-accent-border)] bg-[var(--workspace-accent-soft)]">
           <summary className="flex cursor-pointer list-none items-center gap-2.5 p-4 [&::-webkit-details-marker]:hidden">
             <Target size={15} aria-hidden="true" className="text-[var(--workspace-accent)]" />
             <span className="min-w-0 flex-1 text-[13px] font-semibold text-cream">Key insight</span>
             <ChevronDown
               size={14}
               aria-hidden="true"
-              className="text-cream/42 transition-transform group-open:rotate-180"
+              className="text-cream/42 transition-transform duration-300 ease-out group-open:rotate-180"
             />
           </summary>
-          <p className="border-t border-white/[0.07] px-4 pb-4 pt-3 text-[13.5px] leading-6 text-cream/72">
+          <p className="smooth-disclosure-body border-t border-white/[0.07] px-4 pb-4 pt-3 text-[13.5px] leading-6 text-cream/72">
             {question.keyInsight}
           </p>
         </details>
@@ -263,7 +263,7 @@ function ReviewDisclosure({
   children: ReactNode;
 }) {
   return (
-    <details className="group overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.025]">
+    <details className="smooth-disclosure group overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.025]">
       <summary className="flex cursor-pointer list-none items-center gap-2.5 p-4 [&::-webkit-details-marker]:hidden">
         {icon === "warning" ? (
           <AlertTriangle size={14} aria-hidden="true" className="text-[var(--workspace-accent)]" />
@@ -277,10 +277,10 @@ function ReviewDisclosure({
         <ChevronDown
           size={14}
           aria-hidden="true"
-          className="text-cream/36 transition-transform group-open:rotate-180"
+          className="text-cream/36 transition-transform duration-300 ease-out group-open:rotate-180"
         />
       </summary>
-      <div className="border-t border-white/[0.06] px-4 pb-4 pt-3 text-[13px] leading-6 text-cream/66">
+      <div className="smooth-disclosure-body border-t border-white/[0.06] px-4 pb-4 pt-3 text-[13px] leading-6 text-cream/66">
         {children}
       </div>
     </details>

@@ -1,7 +1,8 @@
+import { BackLinkIcon } from "@/components/workspace/shared/back-link-icon";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, ChevronRight, Clock, ExternalLink } from "lucide-react";
+import { ChevronRight, Clock, ExternalLink } from "lucide-react";
 import { DsaProblemPanel } from "@/features/practice/dsa/ui/dsa-problem-panel";
 import { DsaQuestionActions } from "@/features/practice/dsa/ui/dsa-question-actions";
 import { DsaQuestionWorkspace } from "@/features/practice/dsa/ui/dsa-question-workspace";
@@ -33,7 +34,7 @@ export default async function DsaQuestionPage({ params }: { params: Promise<{ sl
   const found = findQuestion(slug);
   if (!found) redirect("/practice/dsa");
 
-  const { question, phase, phaseSlug } = found;
+  const { question, phase } = found;
   const phaseQuestions = dsaPhases().find((item) => item.phase === phase)?.questions ?? [question];
   const patternQuestions = phaseQuestions.filter(
     (item) => item.primaryPattern === question.primaryPattern
@@ -69,12 +70,12 @@ export default async function DsaQuestionPage({ params }: { params: Promise<{ sl
       <div className="mx-auto flex min-h-0 w-full max-w-[112rem] flex-col gap-2 xl:h-full">
         <header className="flex shrink-0 flex-wrap items-center gap-3 rounded-xl border border-white/[0.08] bg-[#141619] px-3 py-2.5 sm:px-4">
           <Link
-            href={`/dsa-questions#${phaseSlug}`}
-            aria-label={`Back to ${phase}`}
-            title={`Back to ${phase}`}
+            href="/practice/dsa"
+            aria-label="Back to DSA practice"
+            title="Back to DSA practice"
             className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-cream/48 transition hover:bg-white/[0.055] hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--workspace-accent-border)]"
           >
-            <ArrowLeft size={16} aria-hidden="true" />
+            <BackLinkIcon size={16} />
           </Link>
 
           <div className="min-w-0 flex-1">

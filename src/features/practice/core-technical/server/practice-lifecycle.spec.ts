@@ -462,8 +462,8 @@ function runResult(accepted: boolean): CoreTechnicalRunResult {
     codeFingerprint: `sha256:${"c".repeat(64)}`,
     testSuiteFingerprint: `sha256:${"d".repeat(64)}`,
     runnerIdentity: "test-sandbox",
-    runnerVersion: "core-technical-nodejs-22.23.2-isolated-v1",
-    runtimeVersion: "22.23.2",
+    runnerVersion: "core-technical-nodejs-22.22.2-isolated-v1",
+    runtimeVersion: "22.22.2",
     limits: {
       timeoutMs: 1_000,
       memoryMb: 64,

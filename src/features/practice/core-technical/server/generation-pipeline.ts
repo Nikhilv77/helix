@@ -121,15 +121,18 @@ export class CoreTechnicalGenerationPipeline {
   }
 
   private async auditExecutableQuestions(questionBlock: FrozenQuestionBlock): Promise<void> {
-    for (const question of questionBlock.questions.filter(
-      (candidate) => candidate.runnerContract
-    )) {
-      const audit = await this.dependencies.runner.auditQuestion(question);
-      if (!audit.valid) {
-        throw new Error(
-          `Executable question ${question.key} failed the pinned runner audit: ${audit.failures.join("; ")}`
-        );
-      }
-    }
+    // Each audit runs in its own sandbox, so the questions are checked together.
+    await Promise.all(
+      questionBlock.questions
+        .filter((candidate) => candidate.runnerContract)
+        .map(async (question) => {
+          const audit = await this.dependencies.runner.auditQuestion(question);
+          if (!audit.valid) {
+            throw new Error(
+              `Executable question ${question.key} failed the pinned runner audit: ${audit.failures.join("; ")}`
+            );
+          }
+        })
+    );
   }
 }

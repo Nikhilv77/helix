@@ -94,6 +94,9 @@ export class TechnicalAnswerEvaluator {
       // and overwrite the question with `evaluation-unavailable`. Fail over to
       // Gemini after one attempt while there is still latency budget left.
       maxAttempts: 1,
+      // Only reachable with a longer budget (block-assessment grading); the
+      // live one-second deadline ends first.
+      hedgeAfterMs: 5_000,
       signal: input.signal,
       onTrace: (trace) => calls.push(trace)
     });
@@ -188,10 +191,9 @@ export function normalizeTechnicalEvaluation(
   const score = executionBoundedScore(semanticScore, raw.verdict, input.execution);
   const verdict = boundedVerdict(raw.verdict, score);
   const rawRubricScores = new Map(
-    uniqueBy(raw.rubricScores, (item) => item.rubricKey.trim().toLowerCase()).map((item) => [
-      item.rubricKey.trim().toLowerCase(),
-      item
-    ])
+    uniqueBy(rubricScoresOutOf100(raw), (item) => item.rubricKey.trim().toLowerCase()).map(
+      (item) => [item.rubricKey.trim().toLowerCase(), item]
+    )
   );
 
   return {
@@ -229,6 +231,18 @@ export function normalizeTechnicalEvaluation(
     execution: input.execution,
     evaluatedAt: input.evaluatedAt
   };
+}
+
+/**
+ * Models sometimes score parameters out of 10 while the overall score is out
+ * of 100 (seen as 9, 8, 10 beside an overall in the eighties). When every
+ * parameter is 10 or less but the overall is above 10, rescale them.
+ */
+function rubricScoresOutOf100(raw: RawTechnicalEvaluation): RawTechnicalEvaluation["rubricScores"] {
+  const scores = raw.rubricScores;
+  const tenPointScale =
+    raw.score > 10 && scores.length > 0 && scores.every((item) => item.score <= 10);
+  return tenPointScale ? scores.map((item) => ({ ...item, score: item.score * 10 })) : scores;
 }
 
 function groundedEvidenceQuotes(quotes: string[], answers: string[]): string[] {
@@ -368,6 +382,7 @@ Scoring rules:
 - Failed supplied tests or compilation must be reflected in the score and gaps.
 
 Return one overall score plus rubricScores with exactly these keys: ${profile.parameters.map((parameter) => parameter.key).join(", ")}.
+Every score, overall and per key, must be out of 100 (not out of 10).
 Use up to two short evidenceQuotes copied exactly from the candidate's answer. The summary and gaps must identify concrete evidence, not writing style.`;
 }
 

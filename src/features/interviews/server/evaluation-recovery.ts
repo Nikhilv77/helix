@@ -37,7 +37,7 @@ export interface ClaimedEvaluationJob {
 }
 
 export interface EvaluationRecoveryRepository {
-  claim(limit?: number, now?: number): Promise<ClaimedEvaluationJob[]>;
+  claim(limit?: number, now?: number, sessionId?: string): Promise<ClaimedEvaluationJob[]>;
   apply(
     job: ClaimedEvaluationJob,
     evaluation: QuestionEvaluation,
@@ -54,9 +54,14 @@ export class InterviewEvaluationRecoveryService {
     private readonly evaluator: TechnicalAnswerEvaluator
   ) {}
 
+  /**
+   * Grades queued answers. With `sessionId`, only that interview's jobs are
+   * taken, so a finished assessment can be graded before its report is written.
+   */
   async runBatch(
     limit = 5,
-    now = Date.now()
+    now = Date.now(),
+    options: { sessionId?: string } = {}
   ): Promise<{
     claimed: number;
     recovered: number;
@@ -64,7 +69,11 @@ export class InterviewEvaluationRecoveryService {
     retried: number;
     deadLettered: number;
   }> {
-    const jobs = await this.repository.claim(Math.max(1, Math.min(limit, 20)), now);
+    const jobs = await this.repository.claim(
+      Math.max(1, Math.min(limit, 20)),
+      now,
+      options.sessionId
+    );
     const result = {
       claimed: jobs.length,
       recovered: 0,
@@ -107,9 +116,10 @@ export class InterviewEvaluationRecoveryService {
 export class PrismaEvaluationRecoveryRepository implements EvaluationRecoveryRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async claim(limit = 5, now = Date.now()): Promise<ClaimedEvaluationJob[]> {
+  async claim(limit = 5, now = Date.now(), sessionId?: string): Promise<ClaimedEvaluationJob[]> {
     const available = await this.prisma.interviewEvaluationJob.findMany({
       where: {
+        ...(sessionId ? { sessionId } : {}),
         OR: [
           { status: PENDING, availableAt: { lte: new Date(now) } },
           { status: PROCESSING, leaseUntil: { lte: new Date(now) } }

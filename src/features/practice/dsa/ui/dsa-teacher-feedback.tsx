@@ -3,11 +3,18 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, ChevronRight, MessageCircleQuestion, RefreshCw, X } from "lucide-react";
-import { DsaCodeEditor, type DsaEditorLanguage } from "@/features/interviews/ui/dsa/dsa-code-editor";
+import {
+  DsaCodeEditor,
+  type DsaEditorLanguage
+} from "@/features/interviews/ui/dsa/dsa-code-editor";
 import { MayaStage } from "@/components/workspace/shared/maya/maya-stage";
 import { useWorkspaceTeacher } from "@/lib/avatars/teacher-context";
 import { useMayaVoice } from "@/infrastructure/realtime/use-maya-voice";
 import type { DsaPracticeFeedback } from "@/features/practice/dsa/server/practice-feedback.service";
+import {
+  DSA_FEEDBACK_HIGHLIGHT_MAX_LINES,
+  type DsaFeedbackHighlight
+} from "@/features/practice/dsa/domain/feedback-highlight";
 
 /**
  * What the run scored, carried so the debrief can say it.
@@ -59,7 +66,14 @@ export function DsaTeacherFeedback({
   const feedback = state.status === "ready" ? state.feedback : null;
   const isOpen = state.status !== "idle";
   const isSpeaking = voiceState === "speaking";
-  const snippet = useMemo(() => codeExcerpt(state.status === "idle" ? "" : state.code), [state]);
+  const snippet = useMemo(
+    () =>
+      codeExcerpt(
+        state.status === "idle" ? "" : state.code,
+        state.status === "ready" ? state.feedback.highlight : undefined
+      ),
+    [state]
+  );
   const feedbackLanguage = state.status === "ready" ? state.language : "javascript";
 
   // The workspace has nested scrolling panels. Rendering at document.body
@@ -329,24 +343,34 @@ function toMarkdownBlocks(markdown: string): MarkdownBlock[] {
 }
 
 /** Lines that are setup, never the interesting part of a solution. */
-const BOILERPLATE = /^\s*(import|package|using|#include|from\s+\S+\s+import|public\s+class|class\s+\w+\s*\{?\s*$)/;
+const BOILERPLATE =
+  /^\s*(import|package|using|#include|from\s+\S+\s+import|public\s+class|class\s+\w+\s*\{?\s*$)/;
 
 /**
- * Picks the part of a solution worth showing back.
+ * Picks the part of a solution worth showing back: the lines the teacher's
+ * feedback praises when the model named them, otherwise a heuristic.
  *
  * The previous heuristic searched every line for `HashMap`, `for (` and friends
  * — and `import java.util.HashMap;` matches, so a Java solve was shown its own
  * import block under the heading "a good part of your code". Boilerplate is
  * excluded before the search so the anchor lands on real logic.
  */
-function codeExcerpt(code: string): string {
-  const lines = code.split("\n");
+function codeExcerpt(code: string, highlight?: DsaFeedbackHighlight): string {
+  // Line numbers refer to the trimmed code the server reviewed.
+  const lines = code.trim().split("\n");
+  if (highlight) {
+    const excerpt = lines
+      .slice(highlight.startLine - 1, highlight.endLine)
+      .slice(0, DSA_FEEDBACK_HIGHLIGHT_MAX_LINES);
+    if (excerpt.some((line) => line.trim())) return dedent(excerpt).join("\n");
+  }
   const interesting = /\b(new\s+(Set|Map)|HashSet|HashMap|for\s*\(|while\s*\(|if\s*\(|return\s+)/;
 
   // The signature first when there is one: it names what the code does, and
   // the lines under it are the solution. Anchoring on the first `return`
   // instead showed Python solves the middle of their own loop.
-  const definition = /^\s*(def\s+\w+|(public|private|protected|static|final|\s)*[\w<>[\]]+\s+\w+\s*\(|function\s+\w+|const\s+\w+\s*=\s*(\(|function|async))/;
+  const definition =
+    /^\s*(def\s+\w+|(public|private|protected|static|final|\s)*[\w<>[\]]+\s+\w+\s*\(|function\s+\w+|const\s+\w+\s*=\s*(\(|function|async))/;
   let index = lines.findIndex((line) => !BOILERPLATE.test(line) && definition.test(line));
 
   if (index < 0) {
@@ -365,6 +389,13 @@ function codeExcerpt(code: string): string {
     .slice(start, start + 6)
     .join("\n")
     .trim();
+}
+
+/** Removes the indentation shared by every line, so a nested loop starts at the left edge. */
+function dedent(lines: string[]): string[] {
+  const indents = lines.filter((line) => line.trim()).map((line) => /^\s*/.exec(line)![0].length);
+  const shared = Math.min(...indents);
+  return lines.map((line) => line.slice(shared));
 }
 
 function inlineMarkdown(text: string) {
@@ -387,7 +418,6 @@ function inlineMarkdown(text: string) {
     return <Fragment key={index}>{part}</Fragment>;
   });
 }
-
 
 /**
  * States what the run actually cleared.

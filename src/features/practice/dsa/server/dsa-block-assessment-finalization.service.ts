@@ -358,16 +358,42 @@ function hasTerminalEvidenceForEveryQuestion(state: InterviewState): boolean {
 function codeHashFromAnswer(answer: string): string | null {
   return fencedCodeFingerprint(answer);
 }
-function rubricScore(
+/**
+ * The answer evaluator scores coding answers with the DSA interview parameters,
+ * not this report's metric names, so each metric reads its closest parameter.
+ * Code quality has no parameter of its own and uses the overall implementation
+ * score. Before this mapping only `communication` matched, and the other
+ * metrics were always 0.
+ */
+const EVALUATOR_KEYS_BY_METRIC: Record<
+  Exclude<DsaBlockAssessmentMetric, "correctness-edge-cases">,
+  readonly string[]
+> = {
+  "pattern-recognition": ["pattern-recognition", "approach-reasoning"],
+  efficiency: ["efficiency", "complexity-scalability"],
+  "code-quality": ["code-quality"],
+  communication: ["communication"]
+};
+
+export function rubricScore(
   state: InterviewState,
   index: number,
   metric: DsaBlockAssessmentMetric
 ): number {
-  return (
-    state.questionEvaluations?.[String(index)]?.rubricScores.find(
-      (score) => score.rubricKey === metric
-    )?.score ?? 0
-  );
+  const evaluation = state.questionEvaluations?.[String(index)];
+  if (!evaluation || evaluation.source === "evaluation-unavailable") return 0;
+  const keys = metric === "correctness-edge-cases" ? [metric] : EVALUATOR_KEYS_BY_METRIC[metric];
+  // Evaluations saved before the evaluator enforced a 100-point scale can hold
+  // parameters out of ten beside an overall score out of a hundred.
+  const tenPointScale =
+    evaluation.score > 10 &&
+    evaluation.rubricScores.length > 0 &&
+    evaluation.rubricScores.every((item) => item.score <= 10);
+  for (const key of keys) {
+    const score = evaluation.rubricScores.find((item) => item.rubricKey === key)?.score;
+    if (typeof score === "number") return tenPointScale ? score * 10 : score;
+  }
+  return metric === "code-quality" ? evaluation.score : 0;
 }
 function average(values: number[]): number {
   return values.length

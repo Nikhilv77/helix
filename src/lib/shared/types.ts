@@ -330,6 +330,8 @@ export interface Turn {
   endedInterview?: boolean;
   /** Conversational request (for example, needing a break); informational, not assessed. */
   assessmentExcluded?: boolean;
+  /** Candidate explicitly skipped a block-assessment coding problem. */
+  skipped?: boolean;
 }
 
 /** The model a fundamentals question was testing, shown once it is answered. */

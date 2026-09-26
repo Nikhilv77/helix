@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { vi } from "vitest";
 vi.mock("@/features/practice/dsa/domain/block-assessment", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/features/practice/dsa/domain/block-assessment")>();
+  const actual =
+    await importOriginal<typeof import("@/features/practice/dsa/domain/block-assessment")>();
   return { ...actual, parseDsaBlockAssessmentSnapshot: (value: unknown) => value };
 });
-import { scoreBlockAssessment } from "./dsa-block-assessment-finalization.service";
+import { rubricScore, scoreBlockAssessment } from "./dsa-block-assessment-finalization.service";
 import { DsaBlockAssessmentFinalizationService } from "./dsa-block-assessment-finalization.service";
 import type { DsaBlockAssessmentSnapshot } from "@/features/practice/dsa/domain/block-assessment";
 import type { InterviewState } from "@/features/interviews/server/types";
@@ -337,5 +338,69 @@ describe("DsaBlockAssessmentFinalizationService", () => {
       assessmentId: ASSESSMENT
     });
     expect(terminal.writes.map((write) => write.table)).toEqual(["assessment", "block"]);
+  });
+});
+
+describe("block assessment rubric mapping", () => {
+  function stateWith(evaluation: Record<string, unknown>) {
+    return { questionEvaluations: { "6": evaluation } } as unknown as InterviewState;
+  }
+
+  it("reads the evaluator's DSA parameters for the report metrics", () => {
+    const state = stateWith({
+      source: "semantic-evaluator",
+      score: 84,
+      rubricScores: [
+        { rubricKey: "approach-reasoning", score: 90 },
+        { rubricKey: "complexity-scalability", score: 70 },
+        { rubricKey: "communication", score: 75 }
+      ]
+    });
+
+    expect(rubricScore(state, 6, "pattern-recognition")).toBe(90);
+    expect(rubricScore(state, 6, "efficiency")).toBe(70);
+    expect(rubricScore(state, 6, "communication")).toBe(75);
+    // No parameter of its own: the overall implementation score.
+    expect(rubricScore(state, 6, "code-quality")).toBe(84);
+  });
+
+  it("reads a stored evaluation whose parameters were scored out of ten", () => {
+    const state = stateWith({
+      source: "semantic-evaluator",
+      score: 78,
+      rubricScores: [
+        { rubricKey: "approach-reasoning", score: 8 },
+        { rubricKey: "complexity-scalability", score: 5 },
+        { rubricKey: "communication", score: 5 }
+      ]
+    });
+
+    expect(rubricScore(state, 6, "pattern-recognition")).toBe(80);
+    expect(rubricScore(state, 6, "efficiency")).toBe(50);
+    expect(rubricScore(state, 6, "code-quality")).toBe(78);
+  });
+
+  it("prefers a metric's own key and scores an unavailable evaluation as zero", () => {
+    expect(
+      rubricScore(
+        stateWith({
+          source: "semantic-evaluator",
+          score: 50,
+          rubricScores: [
+            { rubricKey: "efficiency", score: 95 },
+            { rubricKey: "complexity-scalability", score: 10 }
+          ]
+        }),
+        6,
+        "efficiency"
+      )
+    ).toBe(95);
+    expect(
+      rubricScore(
+        stateWith({ source: "evaluation-unavailable", score: 0, rubricScores: [] }),
+        6,
+        "code-quality"
+      )
+    ).toBe(0);
   });
 });

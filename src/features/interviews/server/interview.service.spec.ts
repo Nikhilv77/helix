@@ -1037,6 +1037,62 @@ describe("InterviewService resume round", () => {
     expect((await store.get(started.state.id))?.phase).toBe("questioning");
   });
 
+  it("finishes a block-assessment coding problem on submit and grades it before responding", async () => {
+    const evaluation: QuestionEvaluation = {
+      source: "semantic-evaluator",
+      score: 88,
+      verdict: "mostly-correct",
+      confidence: 0.8,
+      summary: "Correct single-pass solution.",
+      strengths: [],
+      gaps: [],
+      rubricScores: [{ rubricKey: "approach-reasoning", score: 90, rationale: "Clear." }],
+      answerExcerpts: [],
+      execution: null,
+      evaluatedAt: 2_000
+    };
+    const { service, decide, evaluate } = harness(questions, evaluation);
+    // Slower than the one-second live deadline, well inside the grading budget.
+    evaluate.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve(evaluation), 1_200))
+    );
+    const assessmentSetup: InterviewSetup = {
+      ...setup,
+      dsaBlockAssessment: {
+        kind: "dsa-block-assessment",
+        blockId: "11111111-1111-4111-8111-111111111111",
+        assessmentId: "22222222-2222-4222-8222-222222222222",
+        snapshotVersion: 1,
+        rubricVersion: 1
+      }
+    };
+    // Frozen plans written before `maxFollowUps: 0` still move on.
+    const codeQuestion: PlannedQuestion = { ...questions[0]!, kind: "code" };
+    const started = await service.start(assessmentSetup, "user-1", 1_000, [
+      codeQuestion,
+      codeQuestion
+    ]);
+
+    const result = await service.answerOwned(
+      "user-1",
+      started.state.id,
+      {
+        text: "```javascript\nreturn [0, 1];\n```\n\nReasoning and complexity: O(n).",
+        startMs: 100,
+        endMs: 200
+      },
+      1_200,
+      undefined,
+      undefined,
+      "workspace"
+    );
+
+    expect(decide).not.toHaveBeenCalled();
+    expect(result.decision.action).toBe("move_on");
+    expect(result.state.questionIndex).toBe(1);
+    expect(result.state.questionEvaluations?.["0"]?.source).toBe("semantic-evaluator");
+  });
+
   it("grades a frozen block-review MCQ through the server-side resolver, not a plan answer index", async () => {
     const { service, decide } = harness();
     service.setBlockAssessmentMcqGrader({

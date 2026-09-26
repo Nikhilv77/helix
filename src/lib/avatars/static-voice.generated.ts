@@ -22,6 +22,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "alex",
+    "text": "Thanks, I have your solution. Let's try one more problem.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-01717b91ff64.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
     "text": "Focus on recognising the pattern before you write code.",
     "voice": "aura-2-zeus-en",
     "style": "aura-v1",
@@ -66,6 +74,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-zeus-en",
     "style": "aura-v1",
     "src": "/voice/alex-08d4784c1115.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
+    "text": "That's right. Let's keep going.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-0cacd68885b1.mp3"
   },
   {
     "provider": "deepgram",
@@ -118,10 +134,26 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "alex",
+    "text": "That's right, and that finishes the review. Time for a new coding problem.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-25d44a010cf1.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
     "text": "Every test passed. Explain your approach, then submit when you're happy with it.",
     "voice": "aura-2-zeus-en",
     "style": "aura-v1",
     "src": "/voice/alex-26706e0e282a.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
+    "text": "That one doesn't hold, but the review is done. Let's see how you handle something new.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-28b6a88f14c7.mp3"
   },
   {
     "provider": "deepgram",
@@ -150,10 +182,26 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "alex",
+    "text": "Not quite. The reasoning is on screen. Let's try the next one.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-31022185d1d6.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
     "text": "Looking at your resume, I've chosen a place to start. One completed block will give me stronger evidence.",
     "voice": "aura-2-zeus-en",
     "style": "aura-v1",
     "src": "/voice/alex-32e907543e28.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
+    "text": "Nice work getting through the block. This checkpoint has some quick checks first, then a new problem to solve. You can answer everything on screen.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-3410ff9d9b96.mp3"
   },
   {
     "provider": "deepgram",
@@ -254,6 +302,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "alex",
+    "text": "Exactly. Here's the next one.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-5135cf0c5ff0.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
     "text": "Start with the first pattern. Name the pattern before you code, then explain why it fits.",
     "voice": "aura-2-zeus-en",
     "style": "aura-v1",
@@ -310,6 +366,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "alex",
+    "text": "Well done finishing this block. We'll start with a few quick questions, then a fresh coding problem. Everything is on screen, so take your time.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-62c117f1835b.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
     "text": "You're making steady progress. I've noted what worked and one thing to tighten before your next interview.",
     "voice": "aura-2-zeus-en",
     "style": "aura-v1",
@@ -322,6 +386,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-zeus-en",
     "style": "aura-v1",
     "src": "/voice/alex-6a7c59c07d5b.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
+    "text": "That's fine. Here's the next one.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-6c34de4e3c86.mp3"
   },
   {
     "provider": "deepgram",
@@ -374,6 +446,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "alex",
+    "text": "Yes, that's the right read. On to the next question.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-79560d441b5f.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
     "text": "Take your first interview to unlock your reports.",
     "voice": "aura-2-zeus-en",
     "style": "aura-v1",
@@ -386,6 +466,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-zeus-en",
     "style": "aura-v1",
     "src": "/voice/alex-81b06a469125.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
+    "text": "That one doesn't hold. Have a look at why, then take the next question.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-8455ce539989.mp3"
   },
   {
     "provider": "deepgram",
@@ -422,10 +510,26 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "alex",
+    "text": "Got it. Here's your next problem.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-8d7a8995d2f2.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
     "text": "Your recent work points to the next best focus. Start there, and name the pattern before you code.",
     "voice": "aura-2-zeus-en",
     "style": "aura-v1",
     "src": "/voice/alex-8e99b9293ba4.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
+    "text": "Close, but not this time. Read the explanation, then keep going.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-90ce6c88ec44.mp3"
   },
   {
     "provider": "deepgram",
@@ -630,10 +734,58 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "alex",
+    "text": "That's the full checkpoint. Nice work. I'm preparing your results now.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-bc65cf4a5819.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
+    "text": "Not quite, and the reasoning is on screen. That finishes the review, so let's move to a fresh problem.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-bd2004cd880c.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
+    "text": "Let's see how well this block has settled in. A few short questions come first, then an unseen coding problem. Read each one carefully.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-bef856aba4b0.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
+    "text": "No problem. Let's move to the next problem.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-c3db89652a34.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
+    "text": "You've finished the checkpoint. Your results will be ready in a moment.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-c6b00ae04463.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
     "text": "I’m preparing a focused set of recurring interview questions, code evidence, and learning guides for your level.",
     "voice": "aura-2-zeus-en",
     "style": "aura-v1",
     "src": "/voice/alex-c9f765d618d6.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "alex",
+    "text": "Exactly. That's the quick checks done. Now let's solve a fresh problem.",
+    "voice": "aura-2-zeus-en",
+    "style": "aura-v1",
+    "src": "/voice/alex-cbc123373c6c.mp3"
   },
   {
     "provider": "deepgram",
@@ -822,6 +974,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "daniel",
+    "text": "Not quite. The reasoning is on screen. Let's try the next one.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-077053424ae9.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
     "text": "Some practice this week, which is good. Pick a regular time and let the streak start again.",
     "voice": "aura-2-orion-en",
     "style": "aura-v1",
@@ -830,10 +990,26 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "daniel",
+    "text": "Yes, that's the right read. On to the next question.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-0ae67f7ed389.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
     "text": "Let's begin with the first pattern. Say which idea the problem needs before you start writing.",
     "voice": "aura-2-orion-en",
     "style": "aura-v1",
     "src": "/voice/daniel-0bdad78b5017.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
+    "text": "Not quite, and the reasoning is on screen. That finishes the review, so let's move to a fresh problem.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-0c7cbfba5d82.mp3"
   },
   {
     "provider": "deepgram",
@@ -886,6 +1062,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "daniel",
+    "text": "That's fine. Here's the next one.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-2383b7f8f63d.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
     "text": "Looking at your resume, I've chosen a place to start. One completed block will give me stronger evidence.",
     "voice": "aura-2-orion-en",
     "style": "aura-v1",
@@ -898,6 +1082,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-orion-en",
     "style": "aura-v1",
     "src": "/voice/daniel-2c0d2ba14761.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
+    "text": "Well done finishing this block. We'll start with a few quick questions, then a fresh coding problem. Everything is on screen, so take your time.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-2caa59502b0a.mp3"
   },
   {
     "provider": "deepgram",
@@ -934,6 +1126,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "daniel",
+    "text": "Close, but not this time. Read the explanation, then keep going.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-341fabbb20b7.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
     "text": "Great choice. I’ll prepare a focused production engineering path.",
     "voice": "aura-2-orion-en",
     "style": "aura-v1",
@@ -946,6 +1146,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-orion-en",
     "style": "aura-v1",
     "src": "/voice/daniel-35fb733a16b0.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
+    "text": "No problem. Let's move to the next problem.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-3842190413a1.mp3"
   },
   {
     "provider": "deepgram",
@@ -998,10 +1206,26 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "daniel",
+    "text": "That one doesn't hold, but the review is done. Let's see how you handle something new.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-537c7c68787d.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
     "text": "Every test passed. Explain your approach, then submit when you're happy with it.",
     "voice": "aura-2-orion-en",
     "style": "aura-v1",
     "src": "/voice/daniel-540fd15a8db2.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
+    "text": "That's right, and that finishes the review. Time for a new coding problem.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-560a1b319191.mp3"
   },
   {
     "provider": "deepgram",
@@ -1158,6 +1382,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "daniel",
+    "text": "That one doesn't hold. Have a look at why, then take the next question.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-7d8c0f0865e5.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
     "text": "Start with the first pattern. Name the pattern before you code, then explain why it fits.",
     "voice": "aura-2-orion-en",
     "style": "aura-v1",
@@ -1190,6 +1422,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "daniel",
+    "text": "Nice work getting through the block. This checkpoint has some quick checks first, then a new problem to solve. You can answer everything on screen.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-8ce5eeb7d676.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
     "text": "Your baseline shows where to start. Begin with the focus area I've highlighted.",
     "voice": "aura-2-orion-en",
     "style": "aura-v1",
@@ -1210,6 +1450,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-orion-en",
     "style": "aura-v1",
     "src": "/voice/daniel-8d659a902425.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
+    "text": "Let's see how well this block has settled in. A few short questions come first, then an unseen coding problem. Read each one carefully.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-8e8b66d35621.mp3"
   },
   {
     "provider": "deepgram",
@@ -1342,6 +1590,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "daniel",
+    "text": "Exactly. Here's the next one.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-a44fc588f729.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
     "text": "Let's go under the framework. I'll start with quick checks, ask you to explain a few mechanisms, then we'll diagnose a real problem together.",
     "voice": "aura-2-orion-en",
     "style": "aura-v1",
@@ -1370,6 +1626,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-orion-en",
     "style": "aura-v1",
     "src": "/voice/daniel-b106ce84882c.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
+    "text": "Exactly. That's the quick checks done. Now let's solve a fresh problem.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-b36a202a2a56.mp3"
   },
   {
     "provider": "deepgram",
@@ -1414,10 +1678,26 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "daniel",
+    "text": "Thanks, I have your solution. Let's try one more problem.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-bd2a6190e463.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
     "text": "Good to see you again. Pick up where you left off with one small step.",
     "voice": "aura-2-orion-en",
     "style": "aura-v1",
     "src": "/voice/daniel-c0cba12677dd.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
+    "text": "That's the full checkpoint. Nice work. I'm preparing your results now.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-c46f25d26893.mp3"
   },
   {
     "provider": "deepgram",
@@ -1470,6 +1750,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "daniel",
+    "text": "That's right. Let's keep going.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-d63e7a2c5d53.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
     "text": "Before another interview, spend one practice block on the gap your last round revealed.",
     "voice": "aura-2-orion-en",
     "style": "aura-v1",
@@ -1498,6 +1786,22 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-orion-en",
     "style": "aura-v1",
     "src": "/voice/daniel-e0d2a5bfdc65.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
+    "text": "You've finished the checkpoint. Your results will be ready in a moment.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-e57e224d6b9b.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "daniel",
+    "text": "Got it. Here's your next problem.",
+    "voice": "aura-2-orion-en",
+    "style": "aura-v1",
+    "src": "/voice/daniel-e794ad1c0655.mp3"
   },
   {
     "provider": "deepgram",
@@ -1630,10 +1934,26 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "ethan",
+    "text": "That's right. Let's keep going.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-07f46d09f46d.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
     "text": "Welcome back. This interview gives us a useful starting point. Don't be discouraged; this is exactly what practice is for.",
     "voice": "aura-2-arcas-en",
     "style": "aura-v1",
     "src": "/voice/ethan-090f1ae5b18f.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
+    "text": "Thanks, I have your solution. Let's try one more problem.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-09929e49b8f8.mp3"
   },
   {
     "provider": "deepgram",
@@ -1654,6 +1974,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "ethan",
+    "text": "You've finished the checkpoint. Your results will be ready in a moment.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-0d60bf9e43b5.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
     "text": "You have an interview in progress. Finish it while the context is still fresh.",
     "voice": "aura-2-arcas-en",
     "style": "aura-v1",
@@ -1666,6 +1994,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-arcas-en",
     "style": "aura-v1",
     "src": "/voice/ethan-102653513351.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
+    "text": "That's fine. Here's the next one.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-145bddc0811b.mp3"
   },
   {
     "provider": "deepgram",
@@ -1686,6 +2022,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "ethan",
+    "text": "That one doesn't hold, but the review is done. Let's see how you handle something new.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-181ffd8866ce.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
     "text": "Your coding interview is ready. Claire has two problems for you. Think out loud when it helps, and she'll give you room to write the code.",
     "voice": "aura-2-arcas-en",
     "style": "aura-v1",
@@ -1698,6 +2042,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-arcas-en",
     "style": "aura-v1",
     "src": "/voice/ethan-1c4e6fd46c20.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
+    "text": "Got it. Here's your next problem.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-2406a6e5a731.mp3"
   },
   {
     "provider": "deepgram",
@@ -1798,10 +2150,42 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "ethan",
+    "text": "Exactly. That's the quick checks done. Now let's solve a fresh problem.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-3d3635356f05.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
+    "text": "Not quite. The reasoning is on screen. Let's try the next one.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-3e98130193c7.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
+    "text": "Let's see how well this block has settled in. A few short questions come first, then an unseen coding problem. Read each one carefully.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-3f52f3b32716.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
     "text": "I can see your run. All the tests passed. Add your reasoning and submit when you are ready.",
     "voice": "aura-2-arcas-en",
     "style": "aura-v1",
     "src": "/voice/ethan-400deb44f741.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
+    "text": "No problem. Let's move to the next problem.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-47d2c7db864d.mp3"
   },
   {
     "provider": "deepgram",
@@ -1818,6 +2202,22 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-arcas-en",
     "style": "aura-v1",
     "src": "/voice/ethan-492a99820d7c.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
+    "text": "Not quite, and the reasoning is on screen. That finishes the review, so let's move to a fresh problem.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-4c056436d744.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
+    "text": "Well done finishing this block. We'll start with a few quick questions, then a fresh coding problem. Everything is on screen, so take your time.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-4ecdd8b80fff.mp3"
   },
   {
     "provider": "deepgram",
@@ -1842,6 +2242,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-arcas-en",
     "style": "aura-v1",
     "src": "/voice/ethan-56d3b947e604.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
+    "text": "Yes, that's the right read. On to the next question.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-5b7c7aea55cb.mp3"
   },
   {
     "provider": "deepgram",
@@ -1882,6 +2290,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-arcas-en",
     "style": "aura-v1",
     "src": "/voice/ethan-6b66c1ceb51c.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
+    "text": "Exactly. Here's the next one.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-6c645e048b49.mp3"
   },
   {
     "provider": "deepgram",
@@ -2014,6 +2430,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "ethan",
+    "text": "That's the full checkpoint. Nice work. I'm preparing your results now.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-800d92d2d941.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
     "text": "That round is done, and your interviewer has shared their notes with me. I'll show you what landed and where to focus next. Well done for finishing.",
     "voice": "aura-2-arcas-en",
     "style": "aura-v1",
@@ -2134,6 +2558,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "ethan",
+    "text": "Close, but not this time. Read the explanation, then keep going.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-a8331b718932.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
     "text": "It's been a quiet week. Start small with one focused completion, then build the routine back up.",
     "voice": "aura-2-arcas-en",
     "style": "aura-v1",
@@ -2242,6 +2674,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-arcas-en",
     "style": "aura-v1",
     "src": "/voice/ethan-c453ecc29998.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
+    "text": "That one doesn't hold. Have a look at why, then take the next question.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-c854028c13c3.mp3"
   },
   {
     "provider": "deepgram",
@@ -2382,6 +2822,22 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "ethan",
+    "text": "Nice work getting through the block. This checkpoint has some quick checks first, then a new problem to solve. You can answer everything on screen.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-f699b6a9f6e3.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
+    "text": "That's right, and that finishes the review. Time for a new coding problem.",
+    "voice": "aura-2-arcas-en",
+    "style": "aura-v1",
+    "src": "/voice/ethan-f93f8c7baeb2.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ethan",
     "text": "Your system design round is ready. Start by asking Claire questions about the requirements, then sketch the architecture and defend your trade-offs.",
     "voice": "aura-2-arcas-en",
     "style": "aura-v1",
@@ -2430,6 +2886,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "maya",
+    "text": "Nice work getting through the block. This checkpoint has some quick checks first, then a new problem to solve. You can answer everything on screen.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-05d8e4bdea0b.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
     "text": "Welcome back. This interview gives us a useful starting point. Don't be discouraged; this is exactly what practice is for.",
     "voice": "aura-2-asteria-en",
     "style": "aura-v1",
@@ -2474,6 +2938,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-asteria-en",
     "style": "aura-v1",
     "src": "/voice/maya-14dc7d486795.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
+    "text": "That's fine. Here's the next one.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-18b37d98b76b.mp3"
   },
   {
     "provider": "deepgram",
@@ -2590,6 +3062,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "maya",
+    "text": "Close, but not this time. Read the explanation, then keep going.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-31b43499592b.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
     "text": "Claire will lead your Core Technical and Projects interview. She'll start with three short technical decisions, then go deep into one project you built.",
     "voice": "aura-2-asteria-en",
     "style": "aura-v1",
@@ -2646,10 +3126,26 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "maya",
+    "text": "Not quite, and the reasoning is on screen. That finishes the review, so let's move to a fresh problem.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-461bff53357b.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
     "text": "The traps I want you to avoid. These are the mistakes recorded against the questions in this chapter. Read them once now — they are much cheaper to avoid than to debug.",
     "voice": "aura-2-asteria-en",
     "style": "aura-v1",
     "src": "/voice/maya-4723ae949773.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
+    "text": "That's right, and that finishes the review. Time for a new coding problem.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-472e4e9cc10e.mp3"
   },
   {
     "provider": "deepgram",
@@ -2714,6 +3210,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-asteria-en",
     "style": "aura-v1",
     "src": "/voice/maya-530e368016ad.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
+    "text": "That's the full checkpoint. Nice work. I'm preparing your results now.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-53c51b61fd93.mp3"
   },
   {
     "provider": "deepgram",
@@ -2790,6 +3294,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "maya",
+    "text": "That one doesn't hold, but the review is done. Let's see how you handle something new.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-6ed0d84592a2.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
     "text": "Some practice this week, which is good. Pick a regular time and let the streak start again.",
     "voice": "aura-2-asteria-en",
     "style": "aura-v1",
@@ -2842,6 +3354,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-asteria-en",
     "style": "aura-v1",
     "src": "/voice/maya-789c442f9763.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
+    "text": "Got it. Here's your next problem.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-78db3971ed9f.mp3"
   },
   {
     "provider": "deepgram",
@@ -2966,6 +3486,22 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "maya",
+    "text": "You've finished the checkpoint. Your results will be ready in a moment.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-a6e1c41025f0.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
+    "text": "Let's see how well this block has settled in. A few short questions come first, then an unseen coding problem. Read each one carefully.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-a98d6b63169a.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
     "text": "Now you solve. I'll stay beside each question with hints if you get stuck. Take them one at a time, and mark each one done so I can keep your path current.",
     "voice": "aura-2-asteria-en",
     "style": "aura-v1",
@@ -2982,6 +3518,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "maya",
+    "text": "Well done finishing this block. We'll start with a few quick questions, then a fresh coding problem. Everything is on screen, so take your time.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-b292a48e92f6.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
     "text": "Your interview gave us a starting signal. One completed practice question will begin your progress history.",
     "voice": "aura-2-asteria-en",
     "style": "aura-v1",
@@ -2990,10 +3534,26 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "maya",
+    "text": "That's right. Let's keep going.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-b7e98e03de88.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
     "text": "Your daily interview limit is reached. Come back tomorrow for your report.",
     "voice": "aura-2-asteria-en",
     "style": "aura-v1",
     "src": "/voice/maya-bd5dccb6eb39.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
+    "text": "No problem. Let's move to the next problem.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-c40349def54e.mp3"
   },
   {
     "provider": "deepgram",
@@ -3038,10 +3598,34 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "maya",
+    "text": "Exactly. Here's the next one.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-cde3fb553811.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
     "text": "What a strong answer looks like. This is what an interviewer is listening for while you work. Narrate these as you go, even when you are still writing.",
     "voice": "aura-2-asteria-en",
     "style": "aura-v1",
     "src": "/voice/maya-d02c472ff15b.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
+    "text": "That one doesn't hold. Have a look at why, then take the next question.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-d25c4f1fbf5d.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
+    "text": "Yes, that's the right read. On to the next question.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-d719590dd2fb.mp3"
   },
   {
     "provider": "deepgram",
@@ -3166,6 +3750,22 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "maya",
+    "text": "Exactly. That's the quick checks done. Now let's solve a fresh problem.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-f36e0fde6a96.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
+    "text": "Not quite. The reasoning is on screen. Let's try the next one.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-f3f594b9ed1e.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
     "text": "Strong work in that interview. You're building a real signal, so hold on to what worked.",
     "voice": "aura-2-asteria-en",
     "style": "aura-v1",
@@ -3194,6 +3794,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-asteria-en",
     "style": "aura-v1",
     "src": "/voice/maya-fc09571116de.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "maya",
+    "text": "Thanks, I have your solution. Let's try one more problem.",
+    "voice": "aura-2-asteria-en",
+    "style": "aura-v1",
+    "src": "/voice/maya-fe87e830a503.mp3"
   },
   {
     "provider": "deepgram",
@@ -3238,6 +3846,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "olivia",
+    "text": "Got it. Here's your next problem.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-071a3ae14208.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
     "text": "Your coding interview is ready. Claire has two problems for you. Think out loud when it helps, and she'll give you room to write the code.",
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
@@ -3250,6 +3866,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
     "src": "/voice/olivia-0a4676b8b052.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
+    "text": "Exactly. Here's the next one.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-0aa31311dd00.mp3"
   },
   {
     "provider": "deepgram",
@@ -3274,6 +3898,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
     "src": "/voice/olivia-0f717701f59f.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
+    "text": "Close, but not this time. Read the explanation, then keep going.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-113d2fa90af1.mp3"
   },
   {
     "provider": "deepgram",
@@ -3342,6 +3974,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "olivia",
+    "text": "That's right, and that finishes the review. Time for a new coding problem.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-288ade1a6867.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
     "text": "Looking at your resume, I've chosen a place to start. One completed block will give me stronger evidence.",
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
@@ -3374,6 +4014,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "olivia",
+    "text": "No problem. Let's move to the next problem.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-37963d2433d2.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
     "text": "Now you solve. I'll stay beside each question with hints if you get stuck. Take them one at a time, and mark each one done so I can keep your path current.",
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
@@ -3398,6 +4046,22 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "olivia",
+    "text": "That one doesn't hold. Have a look at why, then take the next question.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-3f3da772df85.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
+    "text": "Not quite. The reasoning is on screen. Let's try the next one.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-3f98ac93d65e.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
     "text": "Welcome back. Your progress is still here, so restart with one question. No need to catch up all at once.",
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
@@ -3418,6 +4082,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
     "src": "/voice/olivia-463a04b04026.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
+    "text": "Nice work getting through the block. This checkpoint has some quick checks first, then a new problem to solve. You can answer everything on screen.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-46a6c2e0aec6.mp3"
   },
   {
     "provider": "deepgram",
@@ -3450,6 +4122,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
     "src": "/voice/olivia-4d1a17e7f86f.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
+    "text": "That's the full checkpoint. Nice work. I'm preparing your results now.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-4e0736092d4f.mp3"
   },
   {
     "provider": "deepgram",
@@ -3494,6 +4174,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "olivia",
+    "text": "Not quite, and the reasoning is on screen. That finishes the review, so let's move to a fresh problem.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-5917ceddaf7f.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
     "text": "Great—let’s work through a role-aligned system design. I’ll use your interview context to choose the best starting scenario.",
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
@@ -3506,6 +4194,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
     "src": "/voice/olivia-5e12bda4aa86.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
+    "text": "Thanks, I have your solution. Let's try one more problem.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-61ef1d3bebde.mp3"
   },
   {
     "provider": "deepgram",
@@ -3554,6 +4250,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
     "src": "/voice/olivia-785217c93d78.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
+    "text": "You've finished the checkpoint. Your results will be ready in a moment.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-7adcb51f6f84.mp3"
   },
   {
     "provider": "deepgram",
@@ -3638,10 +4342,26 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "olivia",
+    "text": "Let's see how well this block has settled in. A few short questions come first, then an unseen coding problem. Read each one carefully.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-907b8c2e712b.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
     "text": "Three parts today. Quick checks across the core areas, then the mechanism behind a few of them, and we finish by diagnosing something real.",
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
     "src": "/voice/olivia-91f082e97eb7.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
+    "text": "That's right. Let's keep going.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-923d2b94e25b.mp3"
   },
   {
     "provider": "deepgram",
@@ -3782,6 +4502,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "olivia",
+    "text": "That one doesn't hold, but the review is done. Let's see how you handle something new.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-b9c74d73710e.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
     "text": "You've been showing up consistently. That return pattern matters more than any single long session.",
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
@@ -3814,6 +4542,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "olivia",
+    "text": "That's fine. Here's the next one.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-cda3f97dd4c5.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
     "text": "The ideas that keep coming back. These are the concepts your questions in this chapter actually test. If you can name which one a problem needs, you have already done most of the thinking.",
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
@@ -3834,6 +4570,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
     "src": "/voice/olivia-d69da5ef27e4.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
+    "text": "Yes, that's the right read. On to the next question.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-d7545267cb48.mp3"
   },
   {
     "provider": "deepgram",
@@ -3866,6 +4610,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
     "src": "/voice/olivia-e0b34a824f91.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
+    "text": "Well done finishing this block. We'll start with a few quick questions, then a fresh coding problem. Everything is on screen, so take your time.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-e167298c32fe.mp3"
   },
   {
     "provider": "deepgram",
@@ -3974,6 +4726,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "olivia",
+    "text": "Exactly. That's the quick checks done. Now let's solve a fresh problem.",
+    "voice": "aura-2-luna-en",
+    "style": "aura-v1",
+    "src": "/voice/olivia-f9f5d9a336f3.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "olivia",
     "text": "Here's a new chapter. I'll walk you through the key ideas first, then it's your turn.",
     "voice": "aura-2-luna-en",
     "style": "aura-v1",
@@ -4018,6 +4778,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-helena-en",
     "style": "aura-v1",
     "src": "/voice/pooja-1171175c70d1.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Well done finishing this block. We'll start with a few quick questions, then a fresh coding problem. Everything is on screen, so take your time.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-11b0a2709355.mp3"
   },
   {
     "provider": "deepgram",
@@ -4142,6 +4910,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "pooja",
+    "text": "That one doesn't hold. Have a look at why, then take the next question.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-30655d64c510.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
     "text": "Before another interview, spend one practice block on the gap your last round revealed.",
     "voice": "aura-2-helena-en",
     "style": "aura-v1",
@@ -4150,10 +4926,34 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "pooja",
+    "text": "That's fine. Here's the next one.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-3255526da7bc.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
     "text": "Now you solve. I'll stay beside each question with hints if you get stuck. Take them one at a time, and mark each one done so I can keep your path current.",
     "voice": "aura-2-helena-en",
     "style": "aura-v1",
     "src": "/voice/pooja-34a9dbde5b9e.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Got it. Here's your next problem.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-34da99b957a7.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Let's see how well this block has settled in. A few short questions come first, then an unseen coding problem. Read each one carefully.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-3514e294c1d2.mp3"
   },
   {
     "provider": "deepgram",
@@ -4182,6 +4982,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "pooja",
+    "text": "That one doesn't hold, but the review is done. Let's see how you handle something new.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-4028a12b3af0.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
     "text": "I’m preparing a focused set of recurring interview questions, code evidence, and learning guides for your level.",
     "voice": "aura-2-helena-en",
     "style": "aura-v1",
@@ -4202,6 +5010,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-helena-en",
     "style": "aura-v1",
     "src": "/voice/pooja-424a7a4d1a9c.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Thanks, I have your solution. Let's try one more problem.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-45dbc2b1b077.mp3"
   },
   {
     "provider": "deepgram",
@@ -4230,10 +5046,26 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "pooja",
+    "text": "Close, but not this time. Read the explanation, then keep going.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-4cfad9036b13.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
     "text": "I've got the feedback from your interview. Let's look at your strengths first, then the one or two things worth practising next.",
     "voice": "aura-2-helena-en",
     "style": "aura-v1",
     "src": "/voice/pooja-4ec8791b4f80.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Exactly. That's the quick checks done. Now let's solve a fresh problem.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-51d0cfca0f45.mp3"
   },
   {
     "provider": "deepgram",
@@ -4334,6 +5166,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "pooja",
+    "text": "You've finished the checkpoint. Your results will be ready in a moment.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-76b2662f1631.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
     "text": "That round is done, and your interviewer has shared their notes with me. I'll show you what landed and where to focus next. Well done for finishing.",
     "voice": "aura-2-helena-en",
     "style": "aura-v1",
@@ -4382,6 +5222,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "pooja",
+    "text": "No problem. Let's move to the next problem.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-8baf4bbc9a43.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
     "text": "Your turn. Hints are there if you get stuck. Work through the questions one at a time and mark each one done.",
     "voice": "aura-2-helena-en",
     "style": "aura-v1",
@@ -4394,6 +5242,22 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-helena-en",
     "style": "aura-v1",
     "src": "/voice/pooja-8f4661e22cb9.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Not quite, and the reasoning is on screen. That finishes the review, so let's move to a fresh problem.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-8fbc4fec8621.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "That's right. Let's keep going.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-90369a5774ce.mp3"
   },
   {
     "provider": "deepgram",
@@ -4426,6 +5290,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-helena-en",
     "style": "aura-v1",
     "src": "/voice/pooja-948dcc7cd6af.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "That's right, and that finishes the review. Time for a new coding problem.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-9583322d2d86.mp3"
   },
   {
     "provider": "deepgram",
@@ -4614,6 +5486,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "pooja",
+    "text": "Exactly. Here's the next one.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-cbbce058f9f9.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
     "text": "I've put your interview results together. Let's see what's working and what to practise next.",
     "voice": "aura-2-helena-en",
     "style": "aura-v1",
@@ -4626,6 +5506,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-helena-en",
     "style": "aura-v1",
     "src": "/voice/pooja-cdcd367bf000.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Yes, that's the right read. On to the next question.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-cfc0da34f9cd.mp3"
   },
   {
     "provider": "deepgram",
@@ -4674,6 +5562,22 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-helena-en",
     "style": "aura-v1",
     "src": "/voice/pooja-dbdfb88fdde1.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Nice work getting through the block. This checkpoint has some quick checks first, then a new problem to solve. You can answer everything on screen.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-dde4f7d8aedc.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
+    "text": "Not quite. The reasoning is on screen. Let's try the next one.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-e1ac842294f4.mp3"
   },
   {
     "provider": "deepgram",
@@ -4774,6 +5678,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "pooja",
+    "text": "That's the full checkpoint. Nice work. I'm preparing your results now.",
+    "voice": "aura-2-helena-en",
+    "style": "aura-v1",
+    "src": "/voice/pooja-fcf56601a47f.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "pooja",
     "text": "Your latest interview shows one skill that needs attention. Start with one focused practice block.",
     "voice": "aura-2-helena-en",
     "style": "aura-v1",
@@ -4794,6 +5706,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-orpheus-en",
     "style": "aura-v1",
     "src": "/voice/ryan-02e778afadb6.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
+    "text": "Exactly. Here's the next one.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-0bb9fa00382d.mp3"
   },
   {
     "provider": "deepgram",
@@ -4830,6 +5750,22 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "ryan",
+    "text": "Exactly. That's the quick checks done. Now let's solve a fresh problem.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-183bf9358dcd.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
+    "text": "Thanks, I have your solution. Let's try one more problem.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-195563b863a2.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
     "text": "Welcome back. This interview gives us a useful starting point. Don't be discouraged; this is exactly what practice is for.",
     "voice": "aura-2-orpheus-en",
     "style": "aura-v1",
@@ -4858,6 +5794,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-orpheus-en",
     "style": "aura-v1",
     "src": "/voice/ryan-1f5746dfcb73.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
+    "text": "Not quite, and the reasoning is on screen. That finishes the review, so let's move to a fresh problem.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-225905a4cb59.mp3"
   },
   {
     "provider": "deepgram",
@@ -5038,6 +5982,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "ryan",
+    "text": "You've finished the checkpoint. Your results will be ready in a moment.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-59ede7cb66cb.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
     "text": "Your interview gave us a starting signal. One completed practice question will begin your progress history.",
     "voice": "aura-2-orpheus-en",
     "style": "aura-v1",
@@ -5050,6 +6002,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-orpheus-en",
     "style": "aura-v1",
     "src": "/voice/ryan-5e3ab4afdfa3.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
+    "text": "That one doesn't hold, but the review is done. Let's see how you handle something new.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-5e4e801c5c08.mp3"
   },
   {
     "provider": "deepgram",
@@ -5134,10 +6094,26 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "ryan",
+    "text": "Nice work getting through the block. This checkpoint has some quick checks first, then a new problem to solve. You can answer everything on screen.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-734dd40ac308.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
     "text": "Check this out. I created a report for you that shows what is working, what needs attention, and what to practise next.",
     "voice": "aura-2-orpheus-en",
     "style": "aura-v1",
     "src": "/voice/ryan-751d38c9993b.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
+    "text": "That's right. Let's keep going.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-75f0199d7a01.mp3"
   },
   {
     "provider": "deepgram",
@@ -5182,6 +6158,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "ryan",
+    "text": "Got it. Here's your next problem.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-9200139fedb9.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
     "text": "You haven't solved a practice question yet. Complete one question to start tracking your progress.",
     "voice": "aura-2-orpheus-en",
     "style": "aura-v1",
@@ -5206,6 +6190,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "ryan",
+    "text": "That's fine. Here's the next one.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-9c69186a761b.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
     "text": "I've picked your first focus from your baseline. One completed block will tell me more.",
     "voice": "aura-2-orpheus-en",
     "style": "aura-v1",
@@ -5226,6 +6218,22 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-orpheus-en",
     "style": "aura-v1",
     "src": "/voice/ryan-a0a0a7b62ffa.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
+    "text": "Let's see how well this block has settled in. A few short questions come first, then an unseen coding problem. Read each one carefully.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-a1cc9402e2ce.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
+    "text": "That's the full checkpoint. Nice work. I'm preparing your results now.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-a52f03e2f4a0.mp3"
   },
   {
     "provider": "deepgram",
@@ -5382,6 +6390,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "ryan",
+    "text": "No problem. Let's move to the next problem.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-c931b54cd396.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
     "text": "Good effort in that round. The foundation is there. A little focused practice will make the next one stronger.",
     "voice": "aura-2-orpheus-en",
     "style": "aura-v1",
@@ -5394,6 +6410,22 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-orpheus-en",
     "style": "aura-v1",
     "src": "/voice/ryan-ca9c697d76de.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
+    "text": "Not quite. The reasoning is on screen. Let's try the next one.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-cc922b52dd2c.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
+    "text": "That's right, and that finishes the review. Time for a new coding problem.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-ccb263cb7e76.mp3"
   },
   {
     "provider": "deepgram",
@@ -5418,6 +6450,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-orpheus-en",
     "style": "aura-v1",
     "src": "/voice/ryan-d1ace0b62659.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
+    "text": "Yes, that's the right read. On to the next question.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-d55cbb51f9ad.mp3"
   },
   {
     "provider": "deepgram",
@@ -5494,6 +6534,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "ryan",
+    "text": "Close, but not this time. Read the explanation, then keep going.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-e3b79b1db065.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
     "text": "You finished the DSA path. Revisit anything you skipped, then carry these patterns into your next interview.",
     "voice": "aura-2-orpheus-en",
     "style": "aura-v1",
@@ -5526,6 +6574,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "ryan",
+    "text": "Well done finishing this block. We'll start with a few quick questions, then a fresh coding problem. Everything is on screen, so take your time.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-eb3c6e5f9222.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
     "text": "Path complete. Well done. Review any skipped questions, and use these patterns in your next interview.",
     "voice": "aura-2-orpheus-en",
     "style": "aura-v1",
@@ -5538,6 +6594,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-orpheus-en",
     "style": "aura-v1",
     "src": "/voice/ryan-f2c678af5595.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "ryan",
+    "text": "That one doesn't hold. Have a look at why, then take the next question.",
+    "voice": "aura-2-orpheus-en",
+    "style": "aura-v1",
+    "src": "/voice/ryan-f46346a15155.mp3"
   },
   {
     "provider": "deepgram",
@@ -5598,6 +6662,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "sophia",
+    "text": "That's the full checkpoint. Nice work. I'm preparing your results now.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-09ed570ac9ff.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
     "text": "Good start. One more completed question will make your plan sharper.",
     "voice": "aura-2-hera-en",
     "style": "aura-v1",
@@ -5622,10 +6694,26 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "sophia",
+    "text": "Not quite. The reasoning is on screen. Let's try the next one.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-10339a2a6238.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
     "text": "Start by naming the pattern each problem needs, then write the code.",
     "voice": "aura-2-hera-en",
     "style": "aura-v1",
     "src": "/voice/sophia-14f4f08014b9.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
+    "text": "Exactly. That's the quick checks done. Now let's solve a fresh problem.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-1544596d41b6.mp3"
   },
   {
     "provider": "deepgram",
@@ -5666,6 +6754,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-hera-en",
     "style": "aura-v1",
     "src": "/voice/sophia-2700d3ffe9ab.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
+    "text": "Thanks, I have your solution. Let's try one more problem.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-2760c6cba436.mp3"
   },
   {
     "provider": "deepgram",
@@ -5734,6 +6830,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "sophia",
+    "text": "Exactly. Here's the next one.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-415fcae932b7.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
     "text": "You haven't solved a practice question yet. Complete one question to start tracking your progress.",
     "voice": "aura-2-hera-en",
     "style": "aura-v1",
@@ -5742,10 +6846,26 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "sophia",
+    "text": "Nice work getting through the block. This checkpoint has some quick checks first, then a new problem to solve. You can answer everything on screen.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-44885434b1ec.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
     "text": "We've got a clear baseline now. Start with the gap that keeps showing up, and your next round will feel different.",
     "voice": "aura-2-hera-en",
     "style": "aura-v1",
     "src": "/voice/sophia-458f998e24a9.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
+    "text": "That's fine. Here's the next one.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-49c4763eef57.mp3"
   },
   {
     "provider": "deepgram",
@@ -5818,6 +6938,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-hera-en",
     "style": "aura-v1",
     "src": "/voice/sophia-5d65cee53362.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
+    "text": "That's right, and that finishes the review. Time for a new coding problem.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-5f3e5e432f8d.mp3"
   },
   {
     "provider": "deepgram",
@@ -5942,6 +7070,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "sophia",
+    "text": "Well done finishing this block. We'll start with a few quick questions, then a fresh coding problem. Everything is on screen, so take your time.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-7b4f3039f7c1.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
     "text": "James is ready for your final conversation. Use real examples of how you work with people, handle difficult situations, and make decisions. He will take over now.",
     "voice": "aura-2-hera-en",
     "style": "aura-v1",
@@ -5962,6 +7098,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-hera-en",
     "style": "aura-v1",
     "src": "/voice/sophia-878a56b00920.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
+    "text": "That one doesn't hold, but the review is done. Let's see how you handle something new.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-890b0d895978.mp3"
   },
   {
     "provider": "deepgram",
@@ -6038,6 +7182,22 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "sophia",
+    "text": "That one doesn't hold. Have a look at why, then take the next question.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-9956aa2e036a.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
+    "text": "No problem. Let's move to the next problem.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-9b4943a6971f.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
     "text": "Your report is ready. Read it carefully, then work on the weakness that keeps showing up.",
     "voice": "aura-2-hera-en",
     "style": "aura-v1",
@@ -6102,10 +7262,26 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "sophia",
+    "text": "Yes, that's the right read. On to the next question.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-ac512e3c5d06.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
     "text": "Welcome back. This interview gives us a useful starting point. Don't be discouraged; this is exactly what practice is for.",
     "voice": "aura-2-hera-en",
     "style": "aura-v1",
     "src": "/voice/sophia-ac86d24a57aa.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
+    "text": "Close, but not this time. Read the explanation, then keep going.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-b0a9486dbb0b.mp3"
   },
   {
     "provider": "deepgram",
@@ -6134,10 +7310,26 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "sophia",
+    "text": "That's right. Let's keep going.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-b62ce42b9b84.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
     "text": "Here is your next incident. Follow the evidence, isolate the root cause, then ship the repair safely.",
     "voice": "aura-2-hera-en",
     "style": "aura-v1",
     "src": "/voice/sophia-b7196e9ac393.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
+    "text": "Let's see how well this block has settled in. A few short questions come first, then an unseen coding problem. Read each one carefully.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-b9d8a29f5284.mp3"
   },
   {
     "provider": "deepgram",
@@ -6278,6 +7470,14 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
   {
     "provider": "deepgram",
     "persona": "sophia",
+    "text": "Not quite, and the reasoning is on screen. That finishes the review, so let's move to a fresh problem.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-da55f0044fba.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
     "text": "Your interviewer has reported back to me. Let's walk through what worked and what to improve next. Finishing the interview is progress by itself.",
     "voice": "aura-2-hera-en",
     "style": "aura-v1",
@@ -6290,6 +7490,22 @@ export const STATIC_VOICE_LINES: readonly StaticVoiceLine[] = [
     "voice": "aura-2-hera-en",
     "style": "aura-v1",
     "src": "/voice/sophia-de115fba08a1.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
+    "text": "Got it. Here's your next problem.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-e2460cb919ab.mp3"
+  },
+  {
+    "provider": "deepgram",
+    "persona": "sophia",
+    "text": "You've finished the checkpoint. Your results will be ready in a moment.",
+    "voice": "aura-2-hera-en",
+    "style": "aura-v1",
+    "src": "/voice/sophia-e636670c152f.mp3"
   },
   {
     "provider": "deepgram",

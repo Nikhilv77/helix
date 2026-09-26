@@ -1,3 +1,4 @@
+import { BackLinkIcon } from "@/components/workspace/shared/back-link-icon";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Clock3, SkipForward } from "lucide-react";
 import { BlockAssessmentPreview } from "@/features/practice/dsa/ui/block-assessment-preview";
@@ -285,7 +286,7 @@ function BlockTranscript({ history }: { history: DsaBlockHistoryView }) {
           href={`/practice/dsa?block=${encodeURIComponent(history.selected.id)}&panel=overview`}
           className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-white/[0.08] px-3 text-xs font-semibold text-cream/65"
         >
-          <ArrowLeft size={13} aria-hidden="true" /> Return to overview
+          <BackLinkIcon size={13} /> Return to overview
         </Link>
       </div>
       {turns?.length ? (

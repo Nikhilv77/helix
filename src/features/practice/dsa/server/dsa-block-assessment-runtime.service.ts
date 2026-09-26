@@ -458,6 +458,8 @@ export function buildAssessmentPlan(snapshot: DsaBlockAssessmentSnapshot): Plann
       edgeCases: question.edgeCases.slice(0, 4)
     },
     answerFormat: "typed" as const,
+    // Submitting the code completes the problem; the checkpoint asks no follow-ups.
+    maxFollowUps: 0,
     competency: question.primaryPattern,
     rubricKeys: [
       "pattern-recognition",

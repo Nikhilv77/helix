@@ -50,16 +50,22 @@ export function DsaQuestionActions({
 
   function skip() {
     setError(null);
-
-    // The write recalculates the whole roadmap and takes seconds against a
-    // remote database. Showing the result immediately and rolling back on
-    // failure keeps the click feeling instant without ever claiming progress
-    // that did not persist.
     const previous = marked;
     setMarked("skip");
     const requestId = requestIds.current.skip ?? crypto.randomUUID();
     requestIds.current.skip = requestId;
 
+    if (nextHref) {
+      // The next question does not depend on this write, which recalculates
+      // the whole roadmap. Move on at once and let it finish in the
+      // background; retries reuse the request id, so the server records the
+      // skip once.
+      void recordAttemptWithRetry(slug, "skip", requestId);
+      startTransition(() => router.push(nextHref));
+      return;
+    }
+
+    // The last question stays here, so show the saved state or roll back.
     startTransition(async () => {
       const ok = await recordAttempt(slug, "skip", requestId)
         .then(() => true)
@@ -70,12 +76,7 @@ export function DsaQuestionActions({
         setError("Could not save. Check your connection and try again.");
         return;
       }
-
-      if (nextHref) {
-        router.push(nextHref);
-      } else {
-        router.refresh();
-      }
+      router.refresh();
     });
   }
 
@@ -143,10 +144,35 @@ async function recordAttempt(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
+    // Lets a write started just before leaving the page still complete.
+    keepalive: true,
     body: JSON.stringify({ requestId, dsaQuestionSlug: slug, action })
   });
 
   if (!response.ok) {
     throw new Error("Attempt tracking failed");
+  }
+}
+
+const SKIP_RETRY_DELAYS_MS = [1_000, 3_000];
+
+/** A background write has no screen to report on, so it retries before giving up. */
+async function recordAttemptWithRetry(
+  slug: string,
+  action: AttemptAction,
+  requestId: string
+): Promise<void> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await recordAttempt(slug, action, requestId);
+      return;
+    } catch (error) {
+      const delay = SKIP_RETRY_DELAYS_MS[attempt];
+      if (delay === undefined) {
+        console.error("[dsa] Could not record the skip", error);
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
   }
 }

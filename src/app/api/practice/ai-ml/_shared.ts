@@ -7,13 +7,17 @@ import { requireCompletedPreparationOnboardingState } from "@/server/auth/prepar
 import { getAppContainer } from "@/server/app-container";
 import { ApiRouteError } from "@/server/http/api-error";
 import { getSharedGuard, type RateLimitPolicy } from "@/server/rate-limit/shared-guard";
+import { profileAndRateLimit } from "@/features/practice/shared/server/route-kit";
 
 export async function aiMlStoryOwner(policy: RateLimitPolicy) {
   const { userId } = await auth();
   if (!userId) throw new ApiRouteError(401, "AUTH_REQUIRED", "Authentication is required");
   const ownerId = authenticatedOwnerId(userId);
   const app = getAppContainer();
-  const state = await app.profileService.workspaceShellState(ownerId);
+  const state = await profileAndRateLimit(
+    app.profileService.workspaceShellState(ownerId),
+    getSharedGuard(app.config).enforce(policy, ownerId)
+  );
   requireCompletedPreparationOnboardingState(state);
   // Frontend, data, and AI/ML story practice share these handlers; each
   // question is owner-scoped, and its session records the discipline.
@@ -24,7 +28,6 @@ export async function aiMlStoryOwner(policy: RateLimitPolicy) {
       "Story practice requires an AI/ML, frontend, or data target role."
     );
   }
-  await getSharedGuard(app.config).enforce(policy, ownerId);
   return { ownerId, app };
 }
 

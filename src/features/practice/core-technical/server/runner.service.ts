@@ -15,7 +15,8 @@ import {
   type CoreTechnicalSandboxExecutor,
   type CoreTechnicalTestCase,
   type ExecutableCoreTechnicalQuestion,
-  type SandboxExecution
+  type SandboxExecution,
+  type SandboxExecutionRequest
 } from "./runner-contracts";
 import { LocalIsolatedNode22Executor } from "./sandbox-process";
 
@@ -32,6 +33,9 @@ export const CORE_TECHNICAL_RUNNER_REGISTRY = Object.freeze([
   })
 ]);
 
+const PASSED_AUDIT_CACHE_LIMIT = 500;
+
+type Execute = (request: SandboxExecutionRequest) => Promise<SandboxExecution>;
 type InternalTestResult = { index: number; passed: boolean; diagnostic?: string };
 
 /**
@@ -40,6 +44,8 @@ type InternalTestResult = { index: number; passed: boolean; diagnostic?: string 
  * crosses the injected OS-sandbox interface.
  */
 export class CoreTechnicalRunnerService {
+  private readonly passedAudits = new Map<string, CoreTechnicalQuestionRunnerAudit>();
+
   constructor(
     private readonly executor: CoreTechnicalSandboxExecutor = new LocalIsolatedNode22Executor()
   ) {}
@@ -58,6 +64,15 @@ export class CoreTechnicalRunnerService {
   async run(rawQuestion: unknown, code: string): Promise<CoreTechnicalRunResult> {
     const question = executableQuestion(rawQuestion);
     this.assertSupported(question);
+    // A syntax check and the tests share one sandbox.
+    return this.withSandbox(question, 2, (execute) => this.runWith(execute, question, code));
+  }
+
+  private async runWith(
+    execute: Execute,
+    question: ExecutableCoreTechnicalQuestion,
+    code: string
+  ): Promise<CoreTechnicalRunResult> {
     if (code.length < 1 || code.length > 12_000) {
       throw new Error("Core Technical code must contain between 1 and 12000 characters");
     }
@@ -69,14 +84,14 @@ export class CoreTechnicalRunnerService {
         hiddenTests: question.hiddenTests
       })
     );
-    const compile = await this.execute(question, code, "check");
+    const compile = await this.check(execute, question, code);
     if (compile.reason !== "completed") {
       return this.executionFailure(question, fingerprint, suiteFingerprint, compile, true);
     }
 
     const tests = [...question.publicTests, ...question.hiddenTests];
     const nonce = randomBytes(24).toString("hex");
-    const execution = await this.executor.execute({
+    const execution = await execute({
       mode: "test",
       sourceCode: code,
       harnessCode: testHarness(),
@@ -120,14 +135,39 @@ export class CoreTechnicalRunnerService {
   async auditQuestion(rawQuestion: unknown): Promise<CoreTechnicalQuestionRunnerAudit> {
     const question = executableQuestion(rawQuestion);
     this.assertSupported(question);
+    // The runtime is pinned, so a passing audit of identical content holds for
+    // every learner who is given that question.
+    const key = `${this.executor.sandboxIdentity}:${fingerprintValue(question)}`;
+    const cached = this.passedAudits.get(key);
+    if (cached) return cached;
+    // Starter, reference, and each mutant: a check and a test run apiece.
+    const runs = 2 * (2 + question.wrongSolutions.length);
+    const audit = await this.withSandbox(question, runs, (execute) =>
+      this.auditWith(execute, question)
+    );
+    if (audit.valid) {
+      if (this.passedAudits.size >= PASSED_AUDIT_CACHE_LIMIT) {
+        this.passedAudits.delete(this.passedAudits.keys().next().value!);
+      }
+      this.passedAudits.set(key, audit);
+    }
+    return audit;
+  }
+
+  private async auditWith(
+    execute: Execute,
+    question: ExecutableCoreTechnicalQuestion
+  ): Promise<CoreTechnicalQuestionRunnerAudit> {
     const failures: string[] = [];
-    const starterCompile = await this.execute(question, question.starterCode, "check");
+    const starterCompile = await this.check(execute, question, question.starterCode);
     const starterRun =
-      starterCompile.reason === "completed" ? await this.run(question, question.starterCode) : null;
-    const referenceCompile = await this.execute(question, question.referenceSolution, "check");
+      starterCompile.reason === "completed"
+        ? await this.runWith(execute, question, question.starterCode)
+        : null;
+    const referenceCompile = await this.check(execute, question, question.referenceSolution);
     const referenceRun =
       referenceCompile.reason === "completed"
-        ? await this.run(question, question.referenceSolution)
+        ? await this.runWith(execute, question, question.referenceSolution)
         : null;
 
     if (starterCompile.reason !== "completed") failures.push("Starter code does not parse");
@@ -139,9 +179,9 @@ export class CoreTechnicalRunnerService {
 
     const wrongSolutions: CoreTechnicalQuestionRunnerAudit["wrongSolutions"] = [];
     for (const wrongSolution of question.wrongSolutions) {
-      const compile = await this.execute(question, wrongSolution.code, "check");
+      const compile = await this.check(execute, question, wrongSolution.code);
       const compiled = compile.reason === "completed";
-      const result = compiled ? await this.run(question, wrongSolution.code) : null;
+      const result = compiled ? await this.runWith(execute, question, wrongSolution.code) : null;
       const rejected = result?.status === "tests-failed";
       wrongSolutions.push({ name: wrongSolution.name, compiled, rejected });
       if (!compiled) failures.push(`Wrong-solution mutant does not parse: ${wrongSolution.name}`);
@@ -185,13 +225,30 @@ export class CoreTechnicalRunnerService {
     }
   }
 
-  private execute(
+  private async withSandbox<T>(
     question: ExecutableCoreTechnicalQuestion,
-    sourceCode: string,
-    mode: "check"
+    runs: number,
+    work: (execute: Execute) => Promise<T>
+  ): Promise<T> {
+    const session = this.executor.openSession?.({
+      runs,
+      timeoutMs: question.runnerContract.timeoutMs
+    });
+    if (!session) return work((request) => this.executor.execute(request));
+    try {
+      return await work((request) => session.execute(request));
+    } finally {
+      session.close();
+    }
+  }
+
+  private check(
+    execute: Execute,
+    question: ExecutableCoreTechnicalQuestion,
+    sourceCode: string
   ): Promise<SandboxExecution> {
-    return this.executor.execute({
-      mode,
+    return execute({
+      mode: "check",
       sourceCode,
       timeoutMs: question.runnerContract.timeoutMs,
       memoryMb: question.runnerContract.memoryMb,
